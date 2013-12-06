@@ -179,28 +179,28 @@ class UserThreadRepoImpl @Inject() (
 
   def markRead(user: Id[User], threadOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit = {
     threadOpt.map{ thread =>
-      (for (row <- table if row.user === user && row.thread === thread) yield row.unread).update(false)
+      (for (row <- table if row.user === user && row.thread === thread) yield row.unread ~ row.updatedAt).update((false, clock.now()))
     } getOrElse {
-      (for (row <- table if row.user === user) yield row.unread).update(false)
+      (for (row <- table if row.user === user) yield row.unread ~ row.updatedAt).update((false, clock.now()))
     }
   }
 
   def markAllReadAtOrBefore(userId: Id[User], timeCutoff: DateTime)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user === userId && row.notificationUpdatedAt <= timeCutoff) yield row.unread).update(false)
+    (for (row <- table if row.user === userId && row.notificationUpdatedAt <= timeCutoff) yield row.unread ~ row.updatedAt).update((false, clock.now()))
   }
 
   def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, unread: Boolean)(implicit session: RWSession) : Unit = {
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther < message.id.get))
-      .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.notificationEmailed)
-      .update((notifJson, message.id.get, unread, message.createdAt, false))
+      .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.notificationEmailed ~ row.updatedAt)
+      .update((notifJson, message.id.get, unread, message.createdAt, false, clock.now()))
 
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && row.lastMsgFromOther === message.id.get)
-      .map(row => row.lastNotification ~ row.notificationEmailed)
-      .update((notifJson, false))
+      .map(row => row.lastNotification ~ row.notificationEmailed ~ row.updatedAt)
+      .update((notifJson, false, clock.now()))
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {  //Note: minor race condition
-    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastSeen < timestamp || row.lastSeen.isNull)) yield row.lastSeen).update(timestamp)
+    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastSeen < timestamp || row.lastSeen.isNull)) yield row.lastSeen ~ row.updatedAt).update((timestamp, clock.now()))
   }
 
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
@@ -212,14 +212,14 @@ class UserThreadRepoImpl @Inject() (
 
   def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession): Unit = {
     threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen).update(timestamp)
+      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen ~ row.updatedAt).update((timestamp, clock.now()))
     } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen).update(timestamp)
+      (for (row <- table if row.user===userId) yield row.notificationLastSeen ~ row.updatedAt).update((timestamp, clock.now()))
     }
   }
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
-    (for (row <- table if row.id === userThreadId) yield row.muted).update(muted)
+    (for (row <- table if row.id === userThreadId) yield row.muted ~ row.updatedAt).update((muted, clock.now()))
   }
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {
@@ -297,8 +297,8 @@ class UserThreadRepoImpl @Inject() (
 
   def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], message: Message)(implicit session: RWSession): Unit = {
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther <= message.id.get))
-      .map(row => row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt)
-      .update((message.id.get, false, message.createdAt))
+      .map(row => row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.updatedAt)
+      .update((message.id.get, false, message.createdAt, clock.now()))
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
@@ -309,7 +309,7 @@ class UserThreadRepoImpl @Inject() (
     relevantMessageOpt.map{ relevantMessage =>
       (for (row <- table if row.id===id && row.lastMsgFromOther===relevantMessage) yield row.notificationEmailed).update(true)
     } getOrElse {
-      (for (row <- table if row.id===id) yield row.notificationEmailed).update(true)
+      (for (row <- table if row.id===id) yield row.notificationEmailed ~ row.updatedAt).update((true, clock.now()))
     }
   }
 
@@ -320,11 +320,11 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user === userId && row.thread === threadId) yield row.unread).update(true)
+    (for (row <- table if row.user === userId && row.thread === threadId) yield row.unread ~ row.updatedAt).update((true, clock.now()))
   }
 
   def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId &&row.thread===threadId && row.lastMsgFromOther===messageId) yield row.lastNotification).update(newJson)
+    (for (row <- table if row.user===userId &&row.thread===threadId && row.lastMsgFromOther===messageId) yield row.lastNotification ~ row.updatedAt).update((newJson, clock.now()))
   }
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession) : Seq[UserThread] = {
@@ -340,7 +340,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive).update(lastActive)
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive ~ row.updatedAt).update((lastActive, clock.now()))
   }
 
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
