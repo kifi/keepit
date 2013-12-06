@@ -119,4 +119,5 @@ class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLogg
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = {}
   def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = {}
   def delete(userId: Id[User]): Unit = {}
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 }
