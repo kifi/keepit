@@ -1,6 +1,8 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
+
+import com.keepit.commanders._
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
@@ -9,7 +11,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier, HealthcheckPlugin}
 import com.keepit.common.time._
-import com.keepit.controllers.core.BookmarkInterner
+import com.keepit.commanders.BookmarkInterner
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -41,7 +43,7 @@ private object SendableBookmark {
 class ExtBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  bookmarkManager: BookmarkInterner,
+  bookmarkInterner: BookmarkInterner,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
@@ -51,7 +53,8 @@ class ExtBookmarksController @Inject() (
   healthcheck: HealthcheckPlugin,
   heimdal: HeimdalServiceClient,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  airbrake: AirbrakeNotifier)
+  airbrake: AirbrakeNotifier,
+  bookmarksCommander: BookmarksCommander)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -80,7 +83,7 @@ class ExtBookmarksController @Inject() (
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
-        addTagToUrl(request.user, request.experiments, url, tag.id.get)
+        bookmarksCommander.addTagToUrl(request.user, request.experiments, url, tag.id.get)
         Ok(Json.toJson(SendableTag from tag))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
@@ -93,7 +96,7 @@ class ExtBookmarksController @Inject() (
     val name = (request.body \ "name").as[String]
     val tag = db.readWrite { implicit s =>
       getOrCreateTag(request.userId, name) tap { tag =>
-        addTagToUrl(request.user, request.experiments, url, tag.id.get)
+        bookmarksCommander.addTagToUrl(request.user, request.experiments, url, tag.id.get)
       }
     }
     Ok(Json.toJson(SendableTag from tag))
@@ -190,7 +193,7 @@ class ExtBookmarksController @Inject() (
           log.debug("adding bookmarks of user %s".format(userId))
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
-          val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
+          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
           //the bookmarks list may be very large!
           bookmarks.grouped(50) foreach { chunk =>
             searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
@@ -236,34 +239,4 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  private def addTagToUrl(user: User, experiments: Set[ExperimentType],
-      url: String, tagId: Id[Collection])(implicit s: RWSession): KeepToCollection = {
-    log.debug(s"adding tag $tagId to url $url")
-    val uriOpt = uriRepo.getByUri(url)
-    val bookmarkIdOpt: Option[Id[Bookmark]] = uriOpt map { uri =>
-      log.debug(s"found uri $uri for url $url")
-      val bookmarkOpt = bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get)
-      bookmarkOpt map { b =>
-        log.debug(s"found bookmark $b for uri ${uri.id.get}")
-        b.id.get
-      }
-    } flatten
-
-    val bookmarkId = bookmarkIdOpt getOrElse {
-      log.debug(s"did not found bookmark, creating a new one for url $url")
-      val newBookmark = bookmarkManager.internBookmarks(
-        Json.obj("url" -> url), user, experiments, BookmarkSource.hover
-      ).head
-      log.debug(s"created new bookmark $newBookmark for url $url")
-      newBookmark.id.get
-    }
-    keepToCollectionRepo.getOpt(bookmarkId, tagId) match {
-      case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>
-        ktc
-      case Some(ktc) =>
-        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-      case None =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = tagId))
-    }
-  }
 }
