@@ -34,6 +34,21 @@ class MobileBookmarksController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
+  implicit val writesKeepInfo = new FullKeepInfoWriter()
+
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      bookmarksCommander.allKeeps(before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
+        Ok(Json.obj(
+          "collection" -> res._1,
+          "before" -> before,
+          "after" -> after,
+          "keeps" -> res._2
+        ))
+      }
+    }
+  }
+
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
     Async {
       for {

@@ -117,7 +117,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     schedulerOpt.map{ scheduler =>
       if (instances.size < serviceType.minInstances){
         airbrake.get.notify(s"PANIC! Service cluster for ${serviceType} too small!")
-      } else if (instances.size < serviceType.minInstances) {
+      } else if (instances.size < serviceType.warnInstances) {
         if (scheduledWarning.isEmpty) {
           scheduledWarning = Some(scheduler.scheduleOnce(20 minutes){
             airbrake.get.notify(s"Service cluster for ${serviceType} too small!")

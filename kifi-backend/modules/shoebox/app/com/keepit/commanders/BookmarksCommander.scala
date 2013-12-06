@@ -3,6 +3,10 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.Future
+
+import com.keepit.commanders.KeepInfosWithCollection._
+import com.keepit.commanders.KeepInfo._
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -19,6 +23,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.SearchServiceClient
 import com.keepit.heimdal._
+import com.keepit.common.social.BasicUserRepo
 
 import play.api.Play.current
 import play.api.libs.functional.syntax._
@@ -28,6 +33,21 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
+
+case class FullKeepInfo(bookmark: Bookmark, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
+
+class FullKeepInfoWriter extends Writes[FullKeepInfo] {
+  def writes(info: FullKeepInfo) = Json.obj(
+    "id" -> info.bookmark.externalId.id,
+    "title" -> info.bookmark.title,
+    "url" -> info.bookmark.url,
+    "isPrivate" -> info.bookmark.isPrivate,
+    "createdAt" -> info.bookmark.createdAt,
+    "others" -> info.others,
+    "keepers" -> info.users,
+    "collections" -> info.collections.map(_.id)
+  )
+}
 
 object KeepInfo {
   implicit val format = (
@@ -61,10 +81,34 @@ class BookmarksCommander @Inject() (
     heimdal: HeimdalServiceClient,
     searchClient: SearchServiceClient,
     keepToCollectionRepo: KeepToCollectionRepo,
+    basicUserRepo: BasicUserRepo,
     uriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo
  ) extends Logging {
+
+  def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
+    val (keeps, collectionOpt) = db.readOnly { implicit s =>
+      val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
+      val keeps = bookmarkRepo.getByUser(userId, before, after, collectionOpt map (_.id.get), count)
+      (keeps, collectionOpt)
+    }
+    searchClient.sharingUserInfo(userId, keeps.map(_.uriId)) map { infos =>
+      log.info(s"got sharingUserInfo: $infos")
+      db.readOnly { implicit s =>
+        val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
+        val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+        (keeps zip infos).map { case (keep, info) =>
+          val collIds =
+            keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
+          val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+          FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
+        }
+      }
+    } map { keepsInfo =>
+      (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
+    }
+  }
 
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: HeimdalContextBuilder, source: BookmarkSource):
                   (Seq[KeepInfo], Option[Int]) = {
