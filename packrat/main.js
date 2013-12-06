@@ -202,7 +202,7 @@ var mixpanel = {
       'event': eventName,
       'properties': properties
     };
-    if (typeof session != 'undefined' && session.user) {
+    if (session) {
       this.send(data);
     } else {
       this.queue.push(data);
@@ -639,7 +639,7 @@ api.port.on({
     var whichEvent = data[0];
     ajax("search", "POST", "/search/events/" + whichEvent, data[1]);
   },
-  track_pane_viewed: function(type){
+  track_pane_viewed: function(type) {
     mixpanel.track("viewed_pane", {'type': type});
   },
   send_message: function(data, respond, tab) {
