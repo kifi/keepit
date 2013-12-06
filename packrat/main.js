@@ -188,6 +188,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 // ===== Event logging
 
 var mixpanel = {
+  enabled: true,
   queue: [],
   batch: [],
   sendBatch: function(){
@@ -206,22 +207,24 @@ var mixpanel = {
     }
   },
   track: function(eventName, properties) {
-    var that = this;
-    if (!this.sendTimer) {
-      this.sendTimer = setInterval(function(){
-        that.sendBatch();
-      }, 60000);
-    }
-    log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
-    properties.time = Date.now();
-    var data = {
-      'event': eventName,
-      'properties': properties
-    };
-    if (session) {
-      this.augmentAndBatch(data);
-    } else {
-      this.queue.push(data);
+    if (this.enabled) {
+      var that = this;
+      if (!this.sendTimer) {
+        this.sendTimer = setInterval(function(){
+          that.sendBatch();
+        }, 60000);
+      }
+      log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
+      properties.time = Date.now();
+      var data = {
+        'event': eventName,
+        'properties': properties
+      };
+      if (session) {
+        this.augmentAndBatch(data);
+      } else {
+        this.queue.push(data);
+      }
     }
   },
   catchUp: function() {
