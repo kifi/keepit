@@ -482,7 +482,7 @@ class AdminUserController @Inject() (
         properties += ("$created", user.createdAt)
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
-        properties += ("admin", com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
+        properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
         val keeps = bookmarkRepo.getCountByUser(userId)
         val publicKeeps = bookmarkRepo.getCountByUser(userId, includePrivate = false)
