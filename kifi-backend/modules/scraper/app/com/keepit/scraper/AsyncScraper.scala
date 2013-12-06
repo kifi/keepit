@@ -55,7 +55,7 @@ class AsyncScraper @Inject() (
     }
     val isUnscrapableF = for {
       fetchStatus <- future { httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input)) }
-      isUnscrapable <- helper.asyncIsUnscrapableP(url, fetchStatus.destinationUrl) if fetchStatus.statusCode == HttpStatus.SC_OK
+      isUnscrapable <- helper.isUnscrapableP(url, fetchStatus.destinationUrl) if fetchStatus.statusCode == HttpStatus.SC_OK
     } yield isUnscrapable
 
     isUnscrapableF map { isUnscrapable =>
@@ -257,7 +257,7 @@ class AsyncScraper @Inject() (
     } flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          helper.asyncIsUnscrapableP(url, fetchStatus.destinationUrl) map { isUnscrapable =>
+          helper.isUnscrapableP(url, fetchStatus.destinationUrl) map { isUnscrapable =>
             if (isUnscrapable) {
               NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
             } else {
