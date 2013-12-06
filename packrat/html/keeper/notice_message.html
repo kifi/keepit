@@ -1,5 +1,4 @@
 <div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
-{{^inbox}}
   <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{author.id}}/pics/200/{{author.pictureName}}">
   <div class="kifi-notice-name">
     {{#oneParticipant}}
@@ -27,28 +26,4 @@
   </div>
   <div class="kifi-notice-text">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
   <time class="kifi-notice-when" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
-{{/inbox}}
-{{#inbox}}
-  <div class="kifi-notice-mosaic kifi-notice-mosaic-{{picturedParticipants.length}}">
-  {{#picturedParticipants}}
-    <div class="kifi-notice-pic kifi-notice-pic-{{picIndex}}" style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"></div>
-  {{/picturedParticipants}}
-  </div>
-  <div class="kifi-notice-kicker"><div class="kifi-notice-dir"></div></div>
-  <div class="kifi-notice-names{{#nameSeriesLength}} kifi-notice-names-{{nameSeriesLength}}{{/nameSeriesLength}}">
-    {{#namedParticipant}}
-      <span class="kifi-notice-name">{{firstName}} {{lastName}}</span>
-    {{/namedParticipant}}
-    {{#namedParticipants}}
-      <span class="kifi-notice-name kifi-notice-name-{{nameIndex}}">{{firstName}}</span>
-    {{/namedParticipants}}
-    {{#otherParticipants.length}}
-      <a class="kifi-notice-n-others" href="javascript:" data-names="{{otherParticipantsJson}}">{{otherParticipants.length}} others</a>
-    {{/otherParticipants.length}}
-  </div>
-  <a class="kifi-notice-link" href="{{url}}" target="_blank">{{title}}</a>
-  <div class="kifi-notice-author">{{authorShortName}}: </div>
-  <div class="kifi-notice-blurb">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
-  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
-{{/inbox}}
 </div>

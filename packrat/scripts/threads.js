@@ -23,9 +23,9 @@ panes.threads = function () {
 
   var $list = $();
   return {
-    render: function ($container) {
+    render: function ($paneBox) {
       api.port.emit('threads', function (threads) {
-        renderThreads($container, threads, session.prefs);
+        renderThreads($paneBox, $paneBox.find('.kifi-pane-tall'), threads, session.prefs);
         api.port.on(handlers);
         threads.forEach(function (th) {
           api.port.emit('thread', {id: th.id});  // preloading
@@ -33,7 +33,7 @@ panes.threads = function () {
       });
     }};
 
-  function renderThreads($container, threads, prefs) {
+  function renderThreads($paneBox, $tall, threads, prefs) {
     threads.forEach(function (t) {
       var n = messageCount(t);
       t.messageCount = n < -9 ? '9+' : Math.abs(n);
@@ -55,7 +55,7 @@ panes.threads = function () {
       thread: 'thread',
       compose: 'compose'
     }))
-    .prependTo($container)
+    .prependTo($tall)
     .on('mousedown', 'a[href^="x-kifi-sel:"]', lookMouseDown)
     .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
       e.preventDefault();
@@ -68,26 +68,26 @@ panes.threads = function () {
     })
     .find('time').timeago();
 
-    $list = $container.find('.kifi-threads-list').preventAncestorScroll();
+    $list = $tall.find('.kifi-threads-list').preventAncestorScroll();
     var $scroll = $list.parent();
-    var compose = initCompose($container, prefs.enterToSend, {onSubmit: sendMessage});
-    var heighter = maintainHeight($scroll[0], $list[0], $container[0], [compose.form()]);
+    var compose = initCompose($tall, prefs.enterToSend, {onSubmit: sendMessage});
+    var heighter = maintainHeight($scroll[0], $list[0], $tall[0], [compose.form()]);
 
     $scroll.antiscroll({x: false});
     var scroller = $scroll.data('antiscroll');
     $(window).on('resize.threads', scroller.refresh.bind(scroller));
 
-    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    $paneBox.on('kifi:remove', function () {
       $list.length = 0;
       $(window).off('resize.threads');
       compose.destroy();
       heighter.destroy();
       api.port.off(handlers);
     });
-    if ($box.data('shown')) {
+    if ($paneBox.data('shown')) {
       compose.focus();
     } else {
-      $box.on('kifi:shown', compose.focus);
+      $paneBox.on('kifi:shown', compose.focus);
     }
   }
 

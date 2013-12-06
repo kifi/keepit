@@ -296,6 +296,7 @@ var socketHandlers = {
   experiments: function(exp) {
     log("[socket:experiments]", exp)();
     session.experiments = exp;
+    api.log = exp.indexOf('extension_logging') >= 0;
   },
   new_friends: function(fr) {
     log("[socket:new_friends]", fr)();
@@ -968,11 +969,9 @@ function removeNotificationPopups(associatedId) {
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
-  if (!session || session.experiments.indexOf('inbox') < 0) {
-    for (var i = n.participants ? n.participants.length : 0; i--;) {
-      if (n.participants[i].id == session.user.id) {
-        n.participants.splice(i, 1);
-      }
+  for (var i = n.participants ? n.participants.length : 0; i--;) {
+    if (n.participants[i].id == session.user.id) {
+      n.participants.splice(i, 1);
     }
   }
 }
@@ -1200,6 +1199,28 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   forEachTabAt.apply(null, args);
 }
 
+
+var DEFAULT_RES = 5;
+var MAX_RES_FOR_NEW = 2;
+var TWO_WEEKS = 1000 * 60 * 60 * 24 * 7 * 2;
+function getSearchMaxResults(request) {
+  if (request.lastUUID) {
+    return DEFAULT_RES;
+  }
+
+  var pref = api.prefs.get("maxResults");
+  if (pref !== DEFAULT_RES) {
+    return pref;
+  }
+
+  var joined = session.joined;
+  if (joined && (Date.now() - joined) < TWO_WEEKS) {
+    return MAX_RES_FOR_NEW;
+  }
+
+  return DEFAULT_RES;
+}
+
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
@@ -1218,7 +1239,7 @@ function searchOnServer(request, respond) {
   var when, params = {
       q: request.query,
       f: request.filter && request.filter.who,
-      maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
+      maxHits: getSearchMaxResults(request),
       lastUUID: request.lastUUID,
       context: request.context,
       kifiVersion: api.version};
@@ -1793,6 +1814,8 @@ function startSession(callback, retryMs) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     unstore('logout');
 
+    api.log = data.experiments.indexOf('extension_logging') >= 0;
+    data.joined = data.joined ? new Date(data.joined) : null;
     session = data;
     session.prefs = {}; // to come via socket
     socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&eip=" + (session.eip || ""), socketHandlers, function onConnect() {
@@ -1805,8 +1828,8 @@ function startSession(callback, retryMs) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        syncNumUnreadUnmutedThreads();
       }
-      syncNumUnreadUnmutedThreads();
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");

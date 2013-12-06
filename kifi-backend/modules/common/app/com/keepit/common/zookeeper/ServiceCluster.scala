@@ -6,22 +6,28 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
 
 import play.api.libs.json._
 
-import com.google.inject.{Inject, Singleton}
+import akka.actor.{Scheduler,Cancellable}
+
+import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
 
-class ServiceCluster(val serviceType: ServiceType) extends Logging {
+class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], schedulerOpt: Option[Scheduler] = None) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
   private var routingList: Vector[ServiceInstance] = Vector()
   private val nextRoutingInstance = new AtomicInteger(1)
+
+  private var scheduledWarning: Option[Cancellable] = None
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
@@ -108,6 +114,20 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     leader = findLeader(newInstances)
     instances = newInstances
     resetRoutingList()
+    schedulerOpt.map{ scheduler =>
+      if (instances.size < serviceType.minInstances){
+        airbrake.get.notify(s"PANIC! Service cluster for ${serviceType} too small!")
+      } else if (instances.size < serviceType.warnInstances) {
+        if (scheduledWarning.isEmpty) {
+          scheduledWarning = Some(scheduler.scheduleOnce(20 minutes){
+            airbrake.get.notify(s"Service cluster for ${serviceType} too small!")
+          })
+        }
+      } else {
+        scheduledWarning.map(_.cancel())
+        scheduledWarning = None
+      }
+    }
   }
 
   private def resetRoutingList() =

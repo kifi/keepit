@@ -21,13 +21,12 @@ case class FakeActionAuthenticatorModule() extends ScalaModule {
 
   @Singleton
   @Provides
-  def actionAuthenticator: ActionAuthenticator = fakeActionAuthenticator
+  def actionAuthenticator(myFakeActionAuthenticator: FakeActionAuthenticator): ActionAuthenticator = myFakeActionAuthenticator
 
   @Singleton
   @Provides
-  def fakeActionAuthenticator: FakeActionAuthenticator = authenticator
+  def fakeActionAuthenticator: FakeActionAuthenticator = new FakeActionAuthenticator
 
-  lazy val authenticator = new FakeActionAuthenticator
 }
 
 case class FakeIdentity(user: User) extends Identity {

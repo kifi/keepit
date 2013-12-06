@@ -26,6 +26,9 @@ case class Bookmark(
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] {
+
+  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source]"
+
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
@@ -96,17 +99,18 @@ class LatestBookmarkUriCache(stats: CacheStatistics, accessLog: AccessLog, inner
 object BookmarkStates extends States[Bookmark]
 
 case class BookmarkSource(value: String) {
-  implicit def getValue = value
-  implicit def source(value: String) = BookmarkSource(value)
   override def toString = value
 }
 
 object BookmarkSource {
-  implicit def source(value: String) = BookmarkSource(value)
   val hover = BookmarkSource("HOVER_KEEP")
   val initLoad = BookmarkSource("INIT_LOAD")
   val site = BookmarkSource("SITE")
   val mobile = BookmarkSource("MOBILE")
+  val email = BookmarkSource("EMAIL")
+  val unknown = BookmarkSource("UNKNOWN")
+
+  val valid = Set(hover, initLoad, site, mobile, email)
 }
 
 object BookmarkFactory {

@@ -26,7 +26,7 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
     "serialize" in {
       withInjector() { implicit injector =>
         val service = RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.DEV_MODE)
-        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], ServiceType.TEST_MODE::Nil)
+        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], null, ServiceType.TEST_MODE::Nil)
         val json = RemoteService.toJson(service)
         val deserialized = RemoteService.fromJson(json)
         deserialized === service
@@ -41,7 +41,7 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
     "register" in {
       withInjector() { implicit injector =>
         val zk = inject[ZooKeeperClient]
-        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], ServiceType.TEST_MODE::Nil)
+        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], null, ServiceType.TEST_MODE::Nil)
         val registeredInstance = discovery.register(doKeepAlive = false)
         fromByteArray(zk.get(registeredInstance.node)) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
       }

@@ -36,8 +36,6 @@ object ExperimentType {
 
   val ADMIN = ExperimentType("admin")
   val FAKE = ExperimentType("fake")
-  val BLOCK = ExperimentType("block")
-  val INACTIVE = ExperimentType("inactive")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
   val NOT_SENSITIVE = ExperimentType("not sensitive")
   val CAN_INVITE = ExperimentType("can invite")
@@ -47,16 +45,15 @@ object ExperimentType {
   val INBOX = ExperimentType("inbox")
   val DEMO = ExperimentType("demo")
   val TSEARCH = ExperimentType("tsearch")
+  val EXTENSION_LOGGING = ExperimentType("extension_logging")
 
-  val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE, BLOCK, INACTIVE)
+  val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE)
   val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
 
   def get(str: String): ExperimentType = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
     case FAKE.value => FAKE
-    case BLOCK.value => BLOCK
     case NOT_SENSITIVE.value => NOT_SENSITIVE
-    case INACTIVE.value => INACTIVE
     case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
     case CAN_INVITE.value => CAN_INVITE
     case GMAIL_INVITE.value => GMAIL_INVITE
@@ -65,12 +62,12 @@ object ExperimentType {
     case INBOX.value => INBOX
     case DEMO.value => DEMO
     case TSEARCH.value => TSEARCH
+    case EXTENSION_LOGGING.value => EXTENSION_LOGGING
   }
 
-  val irrelevant = List(FAKE, BLOCK, INACTIVE)
   def getUserStatus(experiments: Set[ExperimentType]): String =
-    if (irrelevant.exists(experiments.contains)) "irrelevant"
-    else if (experiments.contains(ADMIN)) "admin"
+    if (experiments.contains(FAKE)) FAKE.value
+    else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
 }
 

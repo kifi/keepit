@@ -474,12 +474,15 @@ class AdminUserController @Inject() (
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(userId)
     else {
-      val properties = new EventContextBuilder
+      heimdal.setUserAlias(user.id.get, user.externalId)
+      val properties = new HeimdalContextBuilder
       db.readOnly { implicit session =>
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
         properties += ("state", user.state.value)
+        properties += ("userId", user.id.get.id)
+        properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
         val keeps = bookmarkRepo.getCountByUser(userId)
         val publicKeeps = bookmarkRepo.getCountByUser(userId, includePrivate = false)

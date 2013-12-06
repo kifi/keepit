@@ -31,8 +31,23 @@ class MobileBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   bookmarksCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
-  userEventContextBuilder: EventContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+
+  implicit val writesKeepInfo = new FullKeepInfoWriter()
+
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      bookmarksCommander.allKeeps(before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
+        Ok(Json.obj(
+          "collection" -> res._1,
+          "before" -> before,
+          "after" -> after,
+          "keeps" -> res._2
+        ))
+      }
+    }
+  }
 
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
     Async {
@@ -50,9 +65,9 @@ class MobileBookmarksController @Inject() (
 
   def keepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
-      val contextBuilder = userEventContextBuilder(request)
-      val source = "MOBILE"
-      contextBuilder += ("source", source)
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder.addRequestInfo(request)
+      val source = BookmarkSource.mobile
       val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)
       Ok(Json.obj(
         "keeps" -> keeps,

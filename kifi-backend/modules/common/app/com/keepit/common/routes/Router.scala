@@ -163,6 +163,9 @@ object Search extends Service {
                      "&" + rawQuery
         ServiceRoute(GET, "/internal/search?" + params)
     }
+
+    def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/leaveOneOut", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
+    def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/allSubsets", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
   }
 }
 
@@ -190,6 +193,7 @@ object Heimdal extends Service {
     def deleteUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delete", Param("userId", userId))
     def incrementUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/increment", Param("userId", userId))
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
+    def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
   }
 }
 
@@ -223,6 +227,7 @@ object Scraper extends Service {
     def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
     def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleP")
+    def getBasicArticleWithExtractor() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleWithExtractor")
   }
 }
 

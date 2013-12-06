@@ -40,7 +40,7 @@ class ServiceClusterTest extends Specification {
 
   "ServiceCluster" should {
     "find node" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE)
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, null)
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
@@ -65,7 +65,7 @@ class ServiceClusterTest extends Specification {
     }
 
     "RR router" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE)
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, null)
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
