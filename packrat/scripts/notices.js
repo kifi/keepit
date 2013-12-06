@@ -53,20 +53,21 @@ panes.notices = function () {
 
   var $list;
   return {
-    render: function ($container) {
+    render: function ($paneBox) {
       api.port.emit('notifications', function (o) {
-        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
+        renderNotices($paneBox, o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
+  function renderNotices($paneBox, notices, timeLastSeen, numNotVisited) {
     var $box = $(render('html/keeper/notices', {}));
     $list = $box.find('.kifi-notices-list')
       .append(notices.map(renderNotice).join(''))
       .preventAncestorScroll();
     $list.find('time').timeago();
-    $box.appendTo($container.find('.kifi-notices-cart')).antiscroll({x: false});
+    $box.appendTo($paneBox.find('.kifi-notices-cart')).antiscroll({x: false});
+
     var scroller = $box.data('antiscroll');
     $(window).on('resize.notices', scroller.refresh.bind(scroller));
 
@@ -106,7 +107,7 @@ panes.notices = function () {
       });
     });
 
-    var $paneBox = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    $paneBox.on('kifi:remove', function () {
       $list = null;
       $(window).off('resize.notices');
       api.port.off(handlers);
