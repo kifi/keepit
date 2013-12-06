@@ -130,5 +130,66 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
         bookmarks(0) === bookmark1
       }
     }
-  }
+
+
+    "add tag and create bookmark if not there" in {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        val userRepo = inject[UserRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        val urlRepo = inject[URLRepo]
+        val bookmarkRepo = inject[BookmarkRepo]
+        val hover = BookmarkSource("HOVER_KEEP")
+        val db = inject[Database]
+
+        val (user, collections) = db.readWrite {implicit s =>
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+
+          uriRepo.count === 0
+          val normalizationService = inject[NormalizationService]
+
+          val collectionRepo = inject[CollectionRepo]
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+                            Nil
+
+          (user1, collections)
+        }
+
+        db.readOnly {implicit s =>
+          bookmarkRepo.getByUser(user.id.get, None, None, None, 100).size === 0
+          val uris = uriRepo.all
+          uris.size === 0
+        }
+
+        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.addTag(collections(0).externalId).toString
+        path === s"/tags/${collections(0).externalId}/addToKeep"
+
+        inject[FakeActionAuthenticator].setUser(user)
+        val request = FakeRequest("POST", path).withJsonBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+          {"id":"${collections(0).externalId}","name":"myCollaction1"}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+
+        db.readWrite {implicit s =>
+          val keeps = bookmarkRepo.getByUser(user.id.get, None, None, None, 100)
+          println(keeps mkString "\n")
+          keeps.size === 1
+        }
+
+        val bookmarks = db.readOnly { implicit s =>
+          bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
+        }
+        bookmarks.size === 1
+        bookmarks(0).url === "http://www.google.com/"
+      }
+    }  }
 }
