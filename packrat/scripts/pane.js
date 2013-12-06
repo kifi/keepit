@@ -283,12 +283,8 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function populatePane($box, name, locator) {
-    var $tall = $box.find(".kifi-pane-tall");
-    if (name === 'thread') {
-      $tall.css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-    }
     api.require('scripts/' + name + '.js', function () {
-      panes[name].render($tall, locator);
+      panes[name].render($box, locator);
     });
   };
 
