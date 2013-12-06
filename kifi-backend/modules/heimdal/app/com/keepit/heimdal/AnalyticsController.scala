@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.heimdal.SpecificEventSet
 import com.keepit.model.User
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 
 //Might want to change this to a custom play one
 
@@ -240,6 +240,13 @@ class AnalyticsController @Inject() (
     val properties = Json.fromJson[HeimdalContext](request.body.asJson.get).get
     Async { SafeFuture {
       userEventLoggingRepo.setUserProperties(userId, properties)
+      Ok
+    }}
+  }
+
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = Action { request =>
+    Async { SafeFuture {
+      userEventLoggingRepo.setUserAlias(userId, externalId)
       Ok
     }}
   }

@@ -8,7 +8,7 @@ import com.keepit.model.{Gender, User}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import scala.concurrent.Future
 
 class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
@@ -68,6 +68,18 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       "$delete" -> JsString("")
     )
     sendData("http://api.mixpanel.com/engage", data)
+  }
+
+  def alias(userId: Id[User], externalId: ExternalId[User]) = {
+    val data = Json.obj(
+      "event" -> "$create_alias",
+      "properties" -> Json.obj(
+        "token" -> JsString(projectToken),
+        "distinct_id" -> externalId.id,
+        "alias" -> JsString(getDistinctId(userId))
+      )
+    )
+    sendData("http://api.mixpanel.com/track", data)
   }
 
 
