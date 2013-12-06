@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Failure
 import scala.util.Success
 
-class AsyncScrapeProcessorPlugin @Inject() (asyncScraper:AsyncScraper) extends ScrapeProcessorPlugin with Logging {
+class AsyncScrapeProcessor @Inject() (asyncScraper:AsyncScraper) extends ScrapeProcessor with Logging {
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     asyncScraper.asyncFetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
