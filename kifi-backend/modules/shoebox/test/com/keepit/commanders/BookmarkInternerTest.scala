@@ -1,4 +1,4 @@
-package com.keepit.controllers.core
+package com.keepit.commanders
 
 import com.keepit.test._
 import play.api.test.Helpers._

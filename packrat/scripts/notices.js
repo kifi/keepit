@@ -53,25 +53,24 @@ panes.notices = function () {
     }
   };
 
-  var $notices, $markAll, inbox;
+  var $notices, $markAll;
   return {
-    render: function ($container) {
+    render: function ($paneBox) {
       api.port.emit('notifications', function (o) {
-        inbox = ~session.experiments.indexOf('inbox');
-        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
+        renderNotices($paneBox, $paneBox.find('.kifi-pane-tall'), o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
+  function renderNotices($paneBox, $tall, notices, timeLastSeen, numNotVisited) {
     $notices = $(render('html/keeper/notices', {}))
       .append(notices.map(renderNotice).join(''))
-      .appendTo($container)
+      .appendTo($tall)
       .preventAncestorScroll();
     $notices.find('time').timeago();
-    $container.antiscroll({x: false});
+    $tall.antiscroll({x: false});
 
-    var scroller = $container.data('antiscroll');
+    var scroller = $tall.data('antiscroll');
     $(window).on('resize.notices', scroller.refresh.bind(scroller));
 
     $notices.on('click', '.kifi-notice', function (e) {
@@ -108,13 +107,13 @@ panes.notices = function () {
       });
     });
 
-    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    $paneBox.on('kifi:remove', function () {
       $notices = $markAll = null;
       $(window).off('resize.notices');
       api.port.off(handlers);
     });
 
-    $markAll = $box.find('.kifi-pane-mark-notices-read').click(function () {
+    $markAll = $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
       var o = $notices.find('.kifi-notice').toArray().reduce(function (o, el) {
         var t = new Date(el.dataset.createdAt);
         return t > o.time ? {time: t, id: el.dataset.id} : o;
@@ -133,58 +132,15 @@ panes.notices = function () {
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
-    notice.inbox = inbox;
     switch (notice.category) {
     case 'message':
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
-      if (!inbox) {
-        notice.oneParticipant = nParticipants === 1;
-        notice.twoParticipants = nParticipants === 2;
-        notice.threeParticipants = nParticipants === 3;
-        notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
-      } else {
-        if (notice.authors === 1) {
-          notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
-        } else if (notice.firstAuthor > 1) {
-          participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
-        }
-        var nPicsMax = notice.isSent ? 4 : 3;
-        notice.picturedParticipants = nParticipants <= nPicsMax ?
-          notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
-          participants.slice(0, nPicsMax);
-        notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
-        var nNamesMax = 4;
-        if (notice.isReceived) {
-          notice.namedParticipant = notice.author;
-        } else if (notice.isSent) {
-          if (nParticipants === 2) {
-            notice.namedParticipant = participants[1];
-          } else if (nParticipants - 1 <= nNamesMax) {
-            notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
-          } else {
-            notice.namedParticipants = participants.slice(1, nNamesMax);
-            notice.otherParticipants = participants.slice(nNamesMax);
-            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
-          }
-        } else {
-          if (nParticipants === 2) {
-            notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
-          } else if (nParticipants <= nNamesMax) {
-            notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
-          } else {
-            notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
-            notice.otherParticipants = participants.slice(nNamesMax - 1);
-            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
-          }
-        }
-        if (notice.namedParticipants) {
-          notice.nameIndex = counter();
-          notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
-        }
-        notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
-      }
+      notice.oneParticipant = nParticipants === 1;
+      notice.twoParticipants = nParticipants === 2;
+      notice.threeParticipants = nParticipants === 3;
+      notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
       return render('html/keeper/notice_message', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
