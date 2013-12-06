@@ -74,7 +74,9 @@ class BookmarkInterner @Inject() (
       case JsArray(elements) => elements.map(getBookmarksFromJson).flatten
       case json: JsObject if json.keys.contains("children") => getBookmarksFromJson(json \ "children")
       case json: JsObject => Seq(json)
-      case e => throw new Exception("can't figure what to do with %s".format(e)) // bad! ruins an import!
+      case _ =>
+        airbrake.notify(s"error parsing bookmark import json $value")
+        Seq()
     }
   }
 
