@@ -332,7 +332,7 @@ var api = function() {
 
     var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
 
-    var js = api.prefs.get('suppressLog') ? 'function log() {return log}' : '', injected;
+    var js = api.log ? '' : 'function log() {return log}', injected;
     chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
       injected = arr[0] || {};
       done(0);
@@ -676,3 +676,5 @@ var api = function() {
     timers: window,
     version: chrome.app.getDetails().version};
 }();
+
+delete localStorage[':suppressLog'];  // TODO: remove in Jan 2014
