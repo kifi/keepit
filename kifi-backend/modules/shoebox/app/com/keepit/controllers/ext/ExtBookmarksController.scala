@@ -187,7 +187,7 @@ class ExtBookmarksController @Inject() (
       case BookmarkSource("PLUGIN_START") => Forbidden
       case _ =>
         SafeFuture {
-          log.info("adding bookmarks of user %s".format(userId))
+          log.debug("adding bookmarks of user %s".format(userId))
           val experiments = request.experiments
           val user = db.readOnly { implicit s => userRepo.get(userId) }
           val bookmarks = bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
@@ -238,14 +238,24 @@ class ExtBookmarksController @Inject() (
 
   private def addTagToUrl(user: User, experiments: Set[ExperimentType],
       url: String, tagId: Id[Collection])(implicit s: RWSession): KeepToCollection = {
-    val bookmarkIdOpt = for {
-      uri <- uriRepo.getByUri(url)
-      bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get)
-    } yield bookmark.id.get
+    log.debug(s"adding tag $tagId to url $url")
+    val uriOpt = uriRepo.getByUri(url)
+    val bookmarkIdOpt: Option[Id[Bookmark]] = uriOpt map { uri =>
+      log.debug(s"found uri $uri for url $url")
+      val bookmarkOpt = bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get)
+      bookmarkOpt map { b =>
+        log.debug(s"found bookmark $b for uri ${uri.id.get}")
+        b.id.get
+      }
+    } flatten
+
     val bookmarkId = bookmarkIdOpt getOrElse {
-      bookmarkManager.internBookmarks(
+      log.debug(s"did not found bookmark, creating a new one for url $url")
+      val newBookmark = bookmarkManager.internBookmarks(
         Json.obj("url" -> url), user, experiments, BookmarkSource.hover
-      ).head.id.get
+      ).head
+      log.debug(s"created new bookmark $newBookmark for url $url")
+      newBookmark.id.get
     }
     keepToCollectionRepo.getOpt(bookmarkId, tagId) match {
       case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>

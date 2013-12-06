@@ -268,9 +268,10 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val (user, collections) = inject[Database].readWrite { implicit session =>
           val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
-          val collections = inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction1")) ::
-                            inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction2")) ::
-                            inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction3")) ::
+          val collectionRepo = inject[CollectionRepo]
+          val collections = collectionRepo.save(Collection(userId = user.id.get, name = "myCollaction1")) ::
+                            collectionRepo.save(Collection(userId = user.id.get, name = "myCollaction2")) ::
+                            collectionRepo.save(Collection(userId = user.id.get, name = "myCollaction3")) ::
                             Nil
           (user, collections)
         }
