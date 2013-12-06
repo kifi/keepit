@@ -231,10 +231,16 @@ exports.request = function(method, url, data, done, fail) {
 exports.postRawAsForm = function(url, data) {
   var options = {
     url: url,
-    contentType: "Content-Type", "application/x-www-form-urlencoded",
+    contentType: "application/x-www-form-urlencoded",
     content: data
   }
   require("sdk/request").Request(options).post();
+};
+
+exports.util = {
+  btoa: function(str){
+    return require("sdk/base64").encode(str);
+  }
 };
 
 exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupported");

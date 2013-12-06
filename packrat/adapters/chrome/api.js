@@ -539,6 +539,11 @@ var api = function() {
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.send(data);
     },
+    util: {
+      btoa: function (str) {
+        return btoa(str);
+      }
+    },
     requestUpdateCheck: function() {
       if (updateVersion) {
         chrome.runtime.reload();

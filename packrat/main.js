@@ -193,8 +193,9 @@ var mixpanel = {
   batch: [],
   sendBatch: function(){
     if (this.batch.length > 0) {
-      var dataString = "data=" + btoa(unescape(encodeURIComponent(JSON.stringify(this.batch))));
-      api.postAsForm("https://api.mixpanel.com/track/", dataString);
+      var json = JSON.stringify(this.batch);
+      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
       this.batch = [];
     }
   },
@@ -210,7 +211,7 @@ var mixpanel = {
     if (this.enabled) {
       var that = this;
       if (!this.sendTimer) {
-        this.sendTimer = setInterval(function(){
+        this.sendTimer = api.timers.setInterval(function(){
           that.sendBatch();
         }, 60000);
       }
