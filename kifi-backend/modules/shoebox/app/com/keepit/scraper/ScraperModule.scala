@@ -10,7 +10,7 @@ trait ScraperModule extends ScalaModule
 case class ScraperImplModule() extends ScraperModule {
 
   def configure {
-    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
   }
 
