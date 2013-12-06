@@ -52,21 +52,19 @@ class Scraper @Inject() (
       scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
     log.info("[run] got %s uris to scrape".format(tasks.length))
-    val scrapedArticles = if (config.disableScraperService) tasks.map{ case (uri, info) => safeProcessURI(uri, info) } else {
-      log.info(s"[run] invoke (remote) Scraper service; uris(len=${tasks.length}) $tasks")
-      val buf = new mutable.ArrayBuffer[(NormalizedURI, Option[Article])]
-      tasks.grouped(scraperConfig.batchSize).foreach { g =>  // revisit rate-limit
-        val futures = g.map { case (uri, info) =>
-          scraperServiceClient.asyncScrapeWithInfo(uri, info)
-        }
-        val res:Seq[(NormalizedURI, Option[Article])] = futures.map(f => Await.result(f, 10 seconds)) // revisit
-        log.info(s"[run] (remote) results=$res")
-        buf ++= res
-        res
+
+    log.info(s"[run] invoke (remote) Scraper service; uris(len=${tasks.length}) $tasks")
+    val buf = new mutable.ArrayBuffer[(NormalizedURI, Option[Article])]
+    tasks.grouped(scraperConfig.batchSize).foreach { g =>  // revisit rate-limit
+      val futures = g.map { case (uri, info) =>
+        scraperServiceClient.asyncScrapeWithInfo(uri, info)
       }
-      buf.toSeq
+      val res:Seq[(NormalizedURI, Option[Article])] = futures.map(f => Await.result(f, 10 seconds)) // revisit
+      log.info(s"[run] (remote) results=$res")
+      buf ++= res
+      res
     }
-    scrapedArticles
+    buf.toSeq
   }
 
   def schedule(): Unit = {
@@ -95,24 +93,20 @@ class Scraper @Inject() (
     log.info("[schedule] got %s uris to scrape".format(tasks.length))
     Statsd.gauge("scraper.scheduler.uris.count", tasks.length)
     val ts = System.currentTimeMillis
-    if (config.disableScraperService) {
-      val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
-    } else {
-      tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
-        val futures = g map { case (uri, info) =>
-          db.readWrite { implicit s =>
-            val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // TODO: batch
-            val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
-            ScrapeRequest(uri, savedInfo, proxyOpt)
-          }
-        } map { case sr =>
-          scraperServiceClient.scheduleScrapeWithRequest(sr)
+    tasks.grouped(scraperConfig.batchSize).foreach { g => // revisit rate-limit
+      val futures = g map { case (uri, info) =>
+        db.readWrite { implicit s =>
+          val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // TODO: batch
+        val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+          ScrapeRequest(uri, savedInfo, proxyOpt)
         }
-        Await.result(Future sequence (futures), 5 seconds) // todo: remove arbitrary await
-        log.info(s"[schedule-WithRequest] (remote) finished scheduling batch (sz=${g.length}) ${g.map(_._1.url).mkString}") // todo: ScheduleResult
+      } map { case sr =>
+        scraperServiceClient.scheduleScrapeWithRequest(sr)
       }
-      log.info(s"[schedule-WithRequest] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
+      Await.result(Future sequence (futures), 5 seconds) // todo: remove arbitrary await
+      log.info(s"[schedule-WithRequest] (remote) finished scheduling batch (sz=${g.length}) ${g.map(_._1.url).mkString}") // todo: ScheduleResult
     }
+    log.info(s"[schedule-WithRequest] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
