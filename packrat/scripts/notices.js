@@ -42,25 +42,27 @@ panes.notices = function () {
     notifications_visited: function (o) {
       log('[notifications_visited]', o)();
       markVisited(o.category, o.time, o.threadId, o.id);
-      $markAll.toggle(o.numNotVisited > 0);
+      $markAll.toggle(o.anyUnread);
     },
     all_notifications_visited: function (o) {
       log('[all_notifications_visited]', o)();
       markAllVisited(o.id, o.time);
-      $markAll.toggle(o.numNotVisited > 0);
+      $markAll.toggle(o.anyUnread);
     }
   };
 
   var $list;
   return {
-    render: function ($paneBox) {
-      api.port.emit('notifications', function (o) {
-        renderNotices($paneBox, o.notifications, o.timeLastSeen, o.numNotVisited);
+    render: function ($paneBox, locator) {
+      var subPane = locator.substr(10) || 'page';
+      $paneBox.find('.kifi-notices-filter-' + subPane).removeAttr('href');
+      api.port.emit('get_threads', subPane, function (o) {
+        renderThem($paneBox, subPane, o.threads, o.timeLastSeen, o.anyUnread);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($paneBox, notices, timeLastSeen, numNotVisited) {
+  function renderThem($paneBox, subPane, notices, timeLastSeen, anyUnread) {
     var $box = $(render('html/keeper/notices', {}));
     $list = $box.find('.kifi-notices-list')
       .append(notices.map(renderNotice).join(''))
@@ -121,7 +123,7 @@ panes.notices = function () {
       }, {time: 0});
       api.port.emit('all_notifications_visited', o);
       // not updating DOM until response received due to bulk nature of action
-    }).toggle(numNotVisited > 0);
+    }).toggle(anyUnread);
 
     if (notices.length && new Date(notices[0].time) > new Date(timeLastSeen)) {
       api.port.emit('notifications_read', notices[0].time);

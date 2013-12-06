@@ -230,7 +230,7 @@ var socketHandlers = {
     allThreads = new ThreadList(threadsById, arr.map(getThreadId), numUnreadUnmuted, timeLastSeen);
     allThreads.includesOldest = arr.length < NOTIFICATION_BATCH_SIZE;
     while (allThreadsCallbacks.length) {
-      allThreadsCallbacks.shift()();
+      allThreadsCallbacks.shift()(allThreads);
     }
     tellVisibleTabsNoticeCountIfChanged();
   },
@@ -537,17 +537,6 @@ api.port.on({
     markRead('global', o.threadId, o.messageId, o.time);
     socket.send(['set_global_read', o.messageId]);
   },
-  threads: function(_, respond, tab) {
-    var pt = pageThreads[tab.nUri];
-    if (pt) {
-      reply(pt);
-    } else {
-      (pageThreadsCallbacks[tab.nUri] || (pageThreadsCallbacks[tab.nUri] = [])).push(reply);
-    }
-    function reply(pt) {
-      respond(pt.ids.map(idToThread));
-    }
-  },
   thread: function(data, respond, tab) {
     var msgs = messageData[data.id];
     if (msgs) {
@@ -566,18 +555,30 @@ api.port.on({
       }
     }
   },
-  notifications: function(_, respond) {
-    if (allThreads) {
-      reply();
-    } else {
-      allThreadsCallbacks.push(reply);
-    }
-    function reply() {
+  get_threads: function(kind, respond, tab) {
+    switch (kind) {
+    case 'all':
+      if (allThreads) {
+        reply(allThreads);
+      } else {
+        allThreadsCallbacks.push(reply);
+      }
       syncNumUnreadUnmutedThreads(); // sanity checking
+      break;
+    case 'page':
+      var pt = pageThreads[tab.nUri];
+      if (pt) {
+        reply(pt);
+      } else {
+        (pageThreadsCallbacks[tab.nUri] || (pageThreadsCallbacks[tab.nUri] = [])).push(reply);
+      }
+      break;
+    }
+    function reply(tl) {
       respond({
-        notifications: allThreads.ids.slice(0, NOTIFICATION_BATCH_SIZE).map(idToThread),
-        timeLastSeen: allThreads.lastSeen.toISOString(),
-        numNotVisited: allThreads.numUnreadUnmuted});
+        threads: tl.ids.slice(0, NOTIFICATION_BATCH_SIZE).map(idToThread),
+        timeLastSeen: tl.lastSeen && tl.lastSeen.toISOString(),
+        anyUnread: tl.anyUnread()});
     }
   },
   old_notifications: function(timeStr, respond) {
@@ -861,7 +862,7 @@ function markRead(category, threadId, messageId, timeStr) {
         time: timeStr,
         threadId: threadId,
         id: messageId,
-        numNotVisited: allThreads.numUnreadUnmuted});
+        anyUnread: allThreads.anyUnread()});
     });
 
     tellVisibleTabsNoticeCountIfChanged();
@@ -886,7 +887,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     api.tabs.emit(tab, "all_notifications_visited", {
       id: id,
       time: timeStr,
-      numNotVisited: allThreads.numUnreadUnmuted});
+      anyUnread: allThreads.anyUnread()});
   });
 
   tellVisibleTabsNoticeCountIfChanged();
