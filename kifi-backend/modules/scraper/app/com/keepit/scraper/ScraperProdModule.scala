@@ -7,5 +7,5 @@ import com.keepit.common.store.ScraperProdStoreModule
 case class ScraperProdModule() extends ScraperServiceModule(
   cacheModule = ScraperCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   storeModule = ScraperProdStoreModule(),
-  scraperModule = ScraperImplModule()
+  scrapeProcessorModule = ScrapeProcessorImplModule()
 ) with CommonProdModule

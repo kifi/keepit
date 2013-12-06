@@ -50,7 +50,8 @@ GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.co
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
-GET     /internal/search/semanticVector/leaveOneOut @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean)
+GET     /internal/search/semanticVector/leaveOneOut @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean)
+GET     /internal/search/semanticVector/allSubsets @com.keepit.controllers.search.SemanticVectorController.allSubsets(queryText: String, stem: Boolean, useSketch: Boolean)
 
 GET 	/internal/search/cache/warmResultClick   @com.keepit.controllers.search.SearchCacheController.warmResultClick()
 

@@ -84,11 +84,14 @@ class UserRepoImpl @Inject() (
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(user.id.get)
     else {
+      heimdal.setUserAlias(user.id.get, user.externalId)
       val properties = new HeimdalContextBuilder
       properties += ("$first_name", user.firstName)
       properties += ("$last_name", user.lastName)
       properties += ("$created", user.createdAt)
       properties += ("state", user.state.value)
+      properties += ("userId", user.id.get.id)
+      properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
       heimdal.setUserProperties(user.id.get, properties.data.toSeq: _*)
     }
   }

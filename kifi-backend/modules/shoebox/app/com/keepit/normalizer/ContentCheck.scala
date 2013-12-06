@@ -15,7 +15,7 @@ trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolea
 
 case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit scraperPlugin: ScraperPlugin) extends ContentCheck with Logging {
 
-  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url).map { articleOption =>
+  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url, None).map { articleOption =>
     articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
   }
 
@@ -51,7 +51,7 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate) = {
-    for { idArticleOption <- scraperPlugin.scrapeBasicArticleWithExtractor(publicProfileCandidate.url, Some(ExtractorProviderTypes.LINKEDIN_ID)) } yield {println(idArticleOption); idArticleOption match {
+    for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(ExtractorProviderTypes.LINKEDIN_ID)) } yield {println(idArticleOption); idArticleOption match {
       case Some(idArticle) => idArticle.content == privateProfileId.toString
       case None => {
         log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")

@@ -6,18 +6,15 @@ import com.keepit.model._
 import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import com.keepit.scraper.extractor.{ExtractorProviderTypes, ExtractorProviderType, ExtractorFactory}
+import com.keepit.scraper.extractor.ExtractorProviderTypes
 import com.keepit.common.logging.Logging
-import com.keepit.search.ArticleStore
 import com.keepit.model.ScrapeInfo
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.store.S3ScreenshotStore
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
-  scrapeProcessor: ScrapeProcessorPlugin
+  scrapeProcessor: ScrapeProcessor
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
 
   def getBasicArticle(url:String) = Action { request =>

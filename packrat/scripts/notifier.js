@@ -108,7 +108,7 @@ var notifier = function () {
   }
 
   function fadeItem($item, params) {
-    $item.animate({opacity: 0}, params.fadeOutMs || 300).animate({height: 0}, 300, removeItem);
+    $item.animate({opacity: 0}, params.fadeOutMs || 300).animate({height: 0}, 300, removeItem.bind(null, $item));
   }
 
   function removeItem($item) {

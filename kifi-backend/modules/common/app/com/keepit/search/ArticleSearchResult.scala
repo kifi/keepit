@@ -91,14 +91,15 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 
   override def equals(other: Any) = {
     other match {
-      case that: com.keepit.search.Scoring => that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore
+      case that: com.keepit.search.Scoring =>
+        that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore &&
+        recencyScore == that.recencyScore && usefulPage == that.usefulPage
       case _ => false
     }
   }
 
   override def hashCode() = {
-    val prime = 41
-    prime * (prime * (prime + textScore.hashCode) + normalizedTextScore.hashCode) + bookmarkScore.hashCode
+    (textScore.hashCode ^ normalizedTextScore.hashCode ^ bookmarkScore.hashCode ^ recencyScore.hashCode ^ usefulPage.hashCode)
   }
 }
 

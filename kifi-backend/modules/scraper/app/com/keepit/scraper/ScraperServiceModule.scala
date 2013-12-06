@@ -10,7 +10,7 @@ import com.keepit.scraper.extractor.ExtractorFactory
 abstract class ScraperServiceModule(
   val cacheModule: CacheModule,
   val storeModule: StoreModule,
-  val scraperModule: ScraperModule
+  val scrapeProcessorModule: ScrapeProcessorModule
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

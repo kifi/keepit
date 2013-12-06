@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
-import com.google.inject.{Singleton, ProvidedBy, Provider, Inject}
-import play.api.{Play, Plugin}
+import com.google.inject._
+import play.api.Play
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -9,51 +9,47 @@ import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
-import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.File
-import scala.concurrent.{Future, Await}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
-import com.keepit.common.db.Id
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import akka.routing.{SmallestMailboxRouter}
+import akka.routing.SmallestMailboxRouter
 import play.api.Play.current
-import scala.Some
 import scala.util.Success
 
 
-@ProvidedBy(classOf[ScrapeProcessorPluginProvider])
-trait ScrapeProcessorPlugin extends Plugin {
+@ProvidedBy(classOf[ScrapeProcessorProvider])
+trait ScrapeProcessor {
   def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
   def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]):Future[(NormalizedURI, Option[Article])]
   def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit
 }
 
 @Singleton
-class ScrapeProcessorPluginProvider @Inject() (
+class ScrapeProcessorProvider @Inject() (
   scraperConfig: ScraperConfig,
-  asyncScrapeProcessor:AsyncScrapeProcessorPlugin,
-  syncScrapeProcessor:ScrapeProcessorPluginImpl
-) extends Provider[ScrapeProcessorPlugin] with Logging {
+  asyncScrapeProcessor:AsyncScrapeProcessor,
+  syncScrapeProcessor:SyncScrapeProcessor
+) extends Provider[ScrapeProcessor] with Logging {
 
   lazy val plugin = if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor
-  log.info(s"[ScrapeProcessorPluginProvider] created with: $scraperConfig")
+  log.info(s"[ScrapeProcessorProvider] created with: $scraperConfig")
 
   def get = plugin
 }
 
-class ScrapeProcessorPluginImpl @Inject() (
+class SyncScrapeProcessor @Inject() (
   scraperConfig: ScraperConfig,
   sysProvider:   Provider[ActorSystem],
-  procProvider:  Provider[ScrapeProcessor]
-) extends ScrapeProcessorPlugin with Logging {
+  procProvider:  Provider[SyncScraperActor]
+) extends ScrapeProcessor with Logging {
 
   lazy val system = sysProvider.get
   lazy val actor = {
@@ -80,7 +76,7 @@ case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpP
 case class FetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType])
 case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
 
-class ScrapeProcessor @Inject() (
+class SyncScraperActor @Inject() (
   airbrake:AirbrakeNotifier,
   config: ScraperConfig,
   syncScraper: SyncScraper,
@@ -88,7 +84,7 @@ class ScrapeProcessor @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  helper: ShoeboxDbCallbackHelper
+  helper: SyncShoeboxDbCallbacks
 ) extends FortyTwoActor(airbrake) with Logging {
 
   log.info(s"[ScraperProcessor-actor] created $this")
@@ -106,7 +102,7 @@ class ScrapeProcessor @Inject() (
       }
       val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
       val res = fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !(helper.isUnscrapableP(url, fetchStatus.destinationUrl)) => Some(syncScraper.basicArticle(url, extractor))
+        case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(syncScraper.basicArticle(url, extractor))
         case _ => None
       }
       log.info(s"[FetchArticle] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$res")
@@ -138,7 +134,7 @@ class SyncScraper @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  helper: ShoeboxDbCallbackHelper
+  helper: SyncShoeboxDbCallbacks
 ) extends Logging {
   
   implicit val myConfig = config
@@ -290,7 +286,7 @@ class SyncScraper @Inject() (
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          if (helper.isUnscrapableP(url, fetchStatus.destinationUrl)) {
+          if (helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) {
             NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
@@ -383,34 +379,3 @@ class SyncScraper @Inject() (
 
 }
 
-class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) {
-
-  val awaitTimeout = config.syncAwaitTimeout seconds
-  implicit val serviceCallTimeout = config.serviceCallTimeout
-
-  def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]] = {
-    uri.id match {
-      case Some(id) => shoeboxServiceClient.getNormalizedURI(id).map(Some(_))
-      case None => shoeboxServiceClient.getNormalizedURIByURL(uri.url)
-    }
-  }
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]) = Await.result(asyncIsUnscrapableP(url, destinationUrl), awaitTimeout)
-
-  def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = Await.result(getNormalizedUri(uri), awaitTimeout)
-  def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = Await.result(saveNormalizedUri(uri), awaitTimeout)
-  def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = Await.result(saveScrapeInfo(info), awaitTimeout)
-  def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Bookmark] = Await.result(getBookmarksByUriWithoutTitle(uriId), awaitTimeout)
-  def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = Await.result(getLatestBookmark(uriId), awaitTimeout)
-  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = Await.result(recordPermanentRedirect(uri, redirect), awaitTimeout)
-  def syncSaveBookmark(bookmark:Bookmark):Bookmark = Await.result(saveBookmark(bookmark), awaitTimeout)
-
-  def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)
-  def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Future[Seq[Bookmark]] = shoeboxServiceClient.getBookmarksByUriWithoutTitle(uriId)
-  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Bookmark]] = shoeboxServiceClient.getLatestBookmark(uriId)
-  def saveBookmark(bookmark:Bookmark): Future[Bookmark] = shoeboxServiceClient.saveBookmark(bookmark)
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
-  def asyncIsUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
-
-}

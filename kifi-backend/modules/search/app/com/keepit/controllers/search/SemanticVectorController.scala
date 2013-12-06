@@ -15,9 +15,16 @@ class SemanticVectorController @Inject()(articleIndexer: ArticleIndexer) extends
   val stemAnalyzer = DefaultAnalyzer.forParsingWithStemmer
 
   // return: subQuery -> similarityScore
-  def leaveOneOut(queryText: String, stem: Boolean) = Action { request =>
+  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = Action { request =>
     val s = new SemanticContextAnalyzer(searcher, analyzer, stemAnalyzer)
-    val scores = s.leaveOneOut(queryText, stem).toArray.sortBy(-_._2)
+    val scores = s.leaveOneOut(queryText, stem, useSketch)
+    val rv = scores.foldLeft(Map.empty[String, Float]){ case (m , (subTerms, score)) => m + (subTerms.map{_.text}.mkString(" ") -> score)}
+    Ok(Json.toJson(rv))
+  }
+
+   def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean) = Action { request =>
+    val s = new SemanticContextAnalyzer(searcher, analyzer, stemAnalyzer)
+    val scores = s.allSubsets(queryText, stem, useSketch)
     val rv = scores.foldLeft(Map.empty[String, Float]){ case (m , (subTerms, score)) => m + (subTerms.map{_.text}.mkString(" ") -> score)}
     Ok(Json.toJson(rv))
   }

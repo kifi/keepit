@@ -5,12 +5,14 @@ import com.keepit.inject.AppScoped
 import com.google.inject.{Provides, Singleton}
 import com.keepit.scraper.extractor.{ExtractorFactoryImpl, ExtractorFactory}
 
-trait ScraperModule extends ScalaModule
+trait ScrapeProcessorModule extends ScalaModule
 
-case class ScraperImplModule() extends ScraperModule {
+case class ScrapeProcessorImplModule() extends ScrapeProcessorModule {
 
   def configure {
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
+    bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
+    bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
   }
 
   @Singleton

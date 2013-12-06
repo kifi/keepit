@@ -12,7 +12,6 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.social.{BasicUserRepo}
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
@@ -33,7 +32,6 @@ class BookmarksController @Inject() (
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    basicUserRepo: BasicUserRepo,
     uriRepo: NormalizedURIRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
@@ -44,18 +42,7 @@ class BookmarksController @Inject() (
   )
   extends WebsiteController(actionAuthenticator) {
 
-  implicit val writesKeepInfo = new Writes[(Bookmark, Set[BasicUser], Set[ExternalId[Collection]], Int)] {
-    def writes(info: (Bookmark, Set[BasicUser], Set[ExternalId[Collection]], Int)) = Json.obj(
-      "id" -> info._1.externalId.id,
-      "title" -> info._1.title,
-      "url" -> info._1.url,
-      "isPrivate" -> info._1.isPrivate,
-      "createdAt" -> info._1.createdAt,
-      "others" -> info._4,
-      "keepers" -> info._2,
-      "collections" -> info._3.map(_.id)
-    )
-  }
+  implicit val writesKeepInfo = new FullKeepInfoWriter()
 
   def updateCollectionOrdering() = AuthenticatedAction(parse.tolerantJson) { request =>
     implicit val externalIdFormat = ExternalId.format[Collection]
@@ -151,33 +138,14 @@ class BookmarksController @Inject() (
     }
   }
 
-  def allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int) =
-      AuthenticatedJsonAction { request =>
-    val (keeps, collectionOpt) = db.readOnly { implicit s =>
-      val collectionOpt = (collection map {id: String => collectionRepo.getByUserAndExternalId(request.userId, ExternalId(id))}).flatten
-      val keeps = bookmarkRepo.getByUser(request.userId, before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map (_.id.get), count)
-      (keeps, collectionOpt)
-    }
-    log.info(s"keeps for: before $before after $after collections $collectionOpt: $keeps")
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int) = AuthenticatedJsonAction { request =>
     Async {
-      searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
-        log.info(s"got sharingUserInfo: $infos")
-        db.readOnly { implicit s =>
-          val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
-          val collIdToExternalId = collectionRepo.getByUser(request.userId).map(c => c.id.get -> c.externalId).toMap
-          (keeps zip infos).map { case (keep, info) =>
-            val collIds =
-              keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
-            val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-            (keep, info.sharingUserIds map idToBasicUser, collIds, others)
-          }
-        }
-      } map { keepsInfo =>
+      bookmarksCommander.allKeeps(before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
         Ok(Json.obj(
-          "collection" -> collectionOpt.map(BasicCollection fromCollection _),
+          "collection" -> res._1,
           "before" -> before,
           "after" -> after,
-          "keeps" -> keepsInfo
+          "keeps" -> res._2
         ))
       }
     }

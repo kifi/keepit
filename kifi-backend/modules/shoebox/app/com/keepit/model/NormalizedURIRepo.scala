@@ -5,6 +5,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.logging.Logging
+
 import org.joda.time.DateTime
 import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -32,7 +34,7 @@ class NormalizedURIRepoImpl @Inject() (
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo])
-extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
+extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -119,7 +121,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
     Statsd.time(key = "normalizedURIRepo.getByNormalizedUrl") {
-        val hash = NormalizedURI.hashUrl(normalizedUrl)
+      val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
         (for (t <- table if t.urlHash === hash) yield t).firstOption
       }
@@ -129,10 +131,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   //using readonly db when exist, don't use cache
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String] = {
     val prenormalizedUrl = prenormalize(url)
+    log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
     val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
         case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
         case uri => uri
       }
+    log.debug(s"located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
     normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
   }
 
