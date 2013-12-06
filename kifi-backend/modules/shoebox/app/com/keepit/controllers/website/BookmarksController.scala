@@ -39,7 +39,7 @@ class BookmarksController @Inject() (
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
     bookmarksCommander: BookmarksCommander,
-    searchClient: SearchServiceClient,
+    val searchClient: SearchServiceClient,
     heimdalContextBuilder: HeimdalContextBuilderFactory
   )
   extends WebsiteController(actionAuthenticator) {
@@ -55,16 +55,6 @@ class BookmarksController @Inject() (
       "keepers" -> info._2,
       "collections" -> info._3.map(_.id)
     )
-  }
-
-  private def getBookmarkExternalId(id: String): Option[ExternalId[Bookmark]] = {
-    db.readOnly { implicit s => ExternalId.asOpt[Bookmark](id).flatMap(bookmarkRepo.getOpt) } map (_.externalId)
-  }
-
-  private def getCollectionByExternalId(userId: Id[User], id: String): Option[Collection] = {
-    db.readOnly { implicit s =>
-      ExternalId.asOpt[Collection](id).flatMap(collectionRepo.getByUserAndExternalId(userId, _))
-    }
   }
 
   def updateCollectionOrdering() = AuthenticatedAction(parse.tolerantJson) { request =>
@@ -163,34 +153,32 @@ class BookmarksController @Inject() (
 
   def allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int) =
       AuthenticatedJsonAction { request =>
-    (before map getBookmarkExternalId, after map getBookmarkExternalId,
-        collection map { getCollectionByExternalId(request.userId, _) }) match {
-      case (Some(None), _, _) => BadRequest(Json.obj("error" -> s"Invalid id for before: ${before.get}"))
-      case (_, Some(None), _) => BadRequest(Json.obj("error" -> s"Invalid id for after: ${after.get}"))
-      case (_, _, Some(None)) => BadRequest(Json.obj("error" -> s"Invalid id for collection: ${collection.get}"))
-      case (beforeId, afterId, coll) => Async {
-        val keeps = db.readOnly { implicit s =>
-          bookmarkRepo.getByUser(request.userId, beforeId.flatten, afterId.flatten, coll.flatten.map(_.id.get), count)
-        }
-        searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
-          db.readOnly { implicit s =>
-            val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
-            val collIdToExternalId = collectionRepo.getByUser(request.userId).map(c => c.id.get -> c.externalId).toMap
-            (keeps zip infos).map { case (keep, info) =>
-              val collIds =
-                keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
-              val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-              (keep, info.sharingUserIds map idToBasicUser, collIds, others)
-            }
+    val (keeps, collectionOpt) = db.readOnly { implicit s =>
+      val collectionOpt = (collection map {id: String => collectionRepo.getByUserAndExternalId(request.userId, ExternalId(id))}).flatten
+      val keeps = bookmarkRepo.getByUser(request.userId, before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map (_.id.get), count)
+      (keeps, collectionOpt)
+    }
+    log.info(s"keeps for: before $before after $after collections $collectionOpt: $keeps")
+    Async {
+      searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
+        log.info(s"got sharingUserInfo: $infos")
+        db.readOnly { implicit s =>
+          val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
+          val collIdToExternalId = collectionRepo.getByUser(request.userId).map(c => c.id.get -> c.externalId).toMap
+          (keeps zip infos).map { case (keep, info) =>
+            val collIds =
+              keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
+            val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+            (keep, info.sharingUserIds map idToBasicUser, collIds, others)
           }
-        } map { keepsInfo =>
-          Ok(Json.obj(
-            "collection" -> coll.flatten.map(BasicCollection fromCollection _),
-            "before" -> before,
-            "after" -> after,
-            "keeps" -> keepsInfo
-          ))
         }
+      } map { keepsInfo =>
+        Ok(Json.obj(
+          "collection" -> collectionOpt.map(BasicCollection fromCollection _),
+          "before" -> before,
+          "after" -> after,
+          "keeps" -> keepsInfo
+        ))
       }
     }
   }

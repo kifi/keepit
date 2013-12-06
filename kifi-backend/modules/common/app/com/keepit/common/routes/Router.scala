@@ -164,7 +164,7 @@ object Search extends Service {
         ServiceRoute(GET, "/internal/search?" + params)
     }
 
-    def leaveOneOut(queryText: String, stem: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/leaveOneOut", Param("queryText", queryText), Param("stem", stem))
+    def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/leaveOneOut", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
   }
 }
 
