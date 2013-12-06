@@ -192,7 +192,7 @@ var mixpanel = {
   send: function(data) {
     data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
     data.properties.distinct_id = session.user.id;
-    var dataString = btoa(JSON.stringify(data));
+    var dataString = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
     api.request("GET", "https://api.mixpanel.com/track/?data=" + dataString);
   },
   track: function(eventName, properties) {
