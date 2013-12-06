@@ -95,7 +95,8 @@ exports.log.error = function(exception, context) {
   console.error(exception.stack);
 };
 
-exports.noop = function() {};
+// TODO: actually toggle content script logging
+exports.toggleLogging = exports.noop = function () {};
 
 exports.on = {
   beforeSearch: new Listeners,
