@@ -48,7 +48,6 @@ class BookmarkInterner @Inject() (
         case (None, Some(bu)) => false
         case (None, None) => true
       }
-      true
     }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
 
