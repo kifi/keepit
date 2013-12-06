@@ -17,7 +17,6 @@ import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
-import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.SafeFuture
@@ -193,6 +192,37 @@ class BookmarksCommander @Inject() (
         case false => Seq()
       }
       ((activated ++ created).toSet, removed.toSet)
+    }
+  }
+
+  def addTagToUrl(user: User, experiments: Set[ExperimentType],
+      url: String, tagId: Id[Collection])(implicit s: RWSession): KeepToCollection = {
+    log.debug(s"adding tag $tagId to url $url")
+    val uriOpt = uriRepo.getByUri(url)
+    val bookmarkIdOpt: Option[Id[Bookmark]] = uriOpt map { uri =>
+      log.debug(s"found uri $uri for url $url")
+      val bookmarkOpt = bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get)
+      bookmarkOpt map { b =>
+        log.debug(s"found bookmark $b for uri ${uri.id.get}")
+        b.id.get
+      }
+    } flatten
+
+    val bookmarkId = bookmarkIdOpt getOrElse {
+      log.debug(s"did not found bookmark, creating a new one for url $url")
+      val newBookmark = bookmarkInterner.internBookmarks(
+        Json.obj("url" -> url), user, experiments, BookmarkSource.hover
+      ).head
+      log.debug(s"created new bookmark $newBookmark for url $url")
+      newBookmark.id.get
+    }
+    keepToCollectionRepo.getOpt(bookmarkId, tagId) match {
+      case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>
+        ktc
+      case Some(ktc) =>
+        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+      case None =>
+        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = tagId))
     }
   }
 }

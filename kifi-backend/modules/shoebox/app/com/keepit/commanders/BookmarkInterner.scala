@@ -1,4 +1,4 @@
-package com.keepit.controllers.core
+package com.keepit.commanders
 
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
