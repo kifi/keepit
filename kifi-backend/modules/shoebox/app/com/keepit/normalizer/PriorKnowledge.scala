@@ -1,12 +1,12 @@
 package com.keepit.normalizer
 
 import com.keepit.model.UrlPatternRuleRepo
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.slick.DBSession.RSession
 
 @Singleton
-class PriorKnowledge @Inject() (urlPatternRuleRepo: UrlPatternRuleRepo, scraperPlugin: ScraperPlugin) {
+class PriorKnowledge @Inject() (urlPatternRuleRepo: UrlPatternRuleRepo, scraperPlugin: ScrapeSchedulerPlugin) {
   implicit val scraper = scraperPlugin
 
   def getContentChecks(referenceUrl: String)(implicit session: RSession): Seq[ContentCheck] = {

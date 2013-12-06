@@ -18,13 +18,12 @@ import com.keepit.common.time._
 import play.modules.statsd.api.Statsd
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-case object Scrape
+case object ScheduleScrape
 
 private[scraper] class ScrapeScheduler @Inject() (
     scraperConfig: ScraperConfig,
     airbrake: AirbrakeNotifier,
     db: Database,
-    articleStore: ArticleStore,
     scrapeInfoRepo: ScrapeInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -32,7 +31,7 @@ private[scraper] class ScrapeScheduler @Inject() (
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case Scrape => schedule()
+    case ScheduleScrape => schedule()
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -82,7 +81,7 @@ private[scraper] class ScrapeScheduler @Inject() (
 
 }
 
-class ScraperPluginImpl @Inject() (
+class ScrapeSchedulerPluginImpl @Inject() (
     db: Database,
     scrapeInfoRepo: ScrapeInfoRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -90,7 +89,7 @@ class ScraperPluginImpl @Inject() (
     scraperConfig: ScraperConfig,
     scraperClient: ScraperServiceClient,
     val schedulingProperties: SchedulingProperties) //only on leader
-  extends ScraperPlugin with SchedulingPlugin with Logging {
+  extends ScrapeSchedulerPlugin with SchedulingPlugin with Logging {
 
   implicit val actorTimeout = Timeout(scraperConfig.actorTimeout)
 
@@ -98,7 +97,7 @@ class ScraperPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
-    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, Scrape)
+    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape)
   }
 
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
