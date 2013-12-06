@@ -798,7 +798,8 @@ api.port.on({
       }
     }
     if (o.new) {
-      mixpanel.track("viewed_pane", {'type': o.new}); //TODO: probably need to parse locator a bit for easier human consumption/spec naming compliance
+      var fragments = o.new.split("/");
+      mixpanel.track("user_viewed_pane", {'type': fragments.length>1 ? fragments[1] : o.new});
       var arr = tabsByLocator[o.new];
       if (arr) {
         arr = arr.filter(idIsNot(tab.id));
