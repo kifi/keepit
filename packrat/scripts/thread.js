@@ -26,19 +26,19 @@ panes.thread = function () {
 
   var $holder = $(), buffer = {};
   return {
-    render: function ($container, locator) {
+    render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
+      var $who = $paneBox.find('.kifi-thread-who');  // TODO: uncomment code below once header is pre-rendered again
+      var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
-        var $box = $container.closest('.kifi-pane-box');
-        var $who = $box.find('.kifi-thread-who');
-        renderThread($container, $box, $who, th.id, th.messages, session);
+        renderThread($paneBox, $tall, $who, th.id, th.messages, session);
         api.port.emit('participants', th.id, function (participants) {
           window.messageHeader.init($who, th.id, participants);
         });
         api.port.on(handlers);
       });
-      var $redirected = $container.find('.kifi-thread-redirected').click(function () {
+      var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));
       });
       if ($redirected.length) {
@@ -46,7 +46,7 @@ panes.thread = function () {
       }
     }};
 
-  function renderThread($container, $box, $who, threadId, messages, session) {
+  function renderThread($paneBox, $tall, $who, threadId, messages, session) {
     messages.forEach(function (m) {
       m.isLoggedInUser = m.user.id === session.user.id;
     });
@@ -63,23 +63,23 @@ panes.thread = function () {
       message: 'message',
       compose: 'compose'
     }))
-    .prependTo($container)
+    .prependTo($tall)
     .on('mousedown', 'a[href^="x-kifi-sel:"]', lookMouseDown)
     .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
       e.preventDefault();
     })
     .find('time').timeago();
 
-    $holder = $container.find('.kifi-scroll-inner').preventAncestorScroll().data('threadId', threadId);
-    var $scroll = $container.find('.kifi-scroll-wrap');
-    var compose = initCompose($container, session.prefs.enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
-    var heighter = maintainHeight($scroll[0], $holder[0], $container[0], [$who[0], compose.form()]);
+    $holder = $tall.find('.kifi-scroll-inner').preventAncestorScroll().data('threadId', threadId);
+    var $scroll = $tall.find('.kifi-scroll-wrap');
+    var compose = initCompose($tall, session.prefs.enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
+    var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
     $scroll.antiscroll({x: false});
     var scroller = $scroll.data('antiscroll');
     $(window).on('resize.thread', scroller.refresh.bind(scroller));
 
-    $box.on('kifi:remove', function () {
+    $paneBox.on('kifi:remove', function () {
       if ($holder.length && this.contains($holder[0])) {
         window.messageHeader.destroy();
         $holder = $();
@@ -89,10 +89,10 @@ panes.thread = function () {
         api.port.off(handlers);
       }
     });
-    if ($box.data('shown')) {
+    if ($paneBox.data('shown')) {
       compose.focus();
     } else {
-      $box.on('kifi:shown', compose.focus);
+      $paneBox.on('kifi:shown', compose.focus);
     }
 
     // It's important that we check the buffer after rendering the messages, to avoid creating a window
