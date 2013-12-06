@@ -8,14 +8,10 @@ import com.keepit.search.ArticleStore
 import com.keepit.model._
 import com.keepit.scraper.extractor.ExtractorFactory
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.model.ScrapeInfo
-import com.keepit.search.Article
-import com.keepit.normalizer.NormalizationService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
-import scala.collection.mutable
 import play.modules.statsd.api.Statsd
 
 @Singleton
@@ -27,36 +23,11 @@ class Scraper @Inject() (
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   airbrake: AirbrakeNotifier,
-  bookmarkRepo: BookmarkRepo,
   urlPatternRuleRepo: UrlPatternRuleRepo,
-  s3ScreenshotStore: S3ScreenshotStore,
-  normalizationServiceProvider: Provider[NormalizationService],
   scraperServiceClient:ScraperServiceClient
 ) extends Logging {
 
   implicit val config = scraperConfig
-
-  def run(): Seq[(NormalizedURI, Option[Article])] = {
-    val startedTime = currentDateTime
-    log.info("[run] starting a new scrape round")
-    val tasks = db.readOnly { implicit s =>
-      scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
-    }
-    log.info("[run] got %s uris to scrape".format(tasks.length))
-
-    log.info(s"[run] invoke (remote) Scraper service; uris(len=${tasks.length}) $tasks")
-    val buf = new mutable.ArrayBuffer[(NormalizedURI, Option[Article])]
-    tasks.grouped(scraperConfig.batchSize).foreach { g =>  // revisit rate-limit
-      val futures = g.map { case (uri, info) =>
-        scraperServiceClient.asyncScrapeWithInfo(uri, info)
-      }
-      val res:Seq[(NormalizedURI, Option[Article])] = futures.map(f => Await.result(f, 10 seconds)) // revisit
-      log.info(s"[run] (remote) results=$res")
-      buf ++= res
-      res
-    }
-    buf.toSeq
-  }
 
   def schedule(): Unit = {
     log.info("[schedule] starting a new scrape round")

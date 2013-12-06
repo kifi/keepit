@@ -227,7 +227,6 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
 
-GET     /admin/scrape               @com.keepit.controllers.admin.ScraperAdminController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
