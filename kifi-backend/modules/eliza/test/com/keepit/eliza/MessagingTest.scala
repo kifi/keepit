@@ -18,6 +18,8 @@ import com.keepit.social.BasicUser
 import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
+import com.keepit.heimdal.{HeimdalContextBuilderFactory, FakeHeimdalServiceClientImpl}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -32,7 +34,9 @@ class MessagingTest extends Specification with DbTestInjector {
     val clock = inject[Clock]
     val uriNormalizationUpdater: UriNormalizationUpdater = null
     val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater, urbanAirship)
+    val heimdal = new FakeHeimdalServiceClientImpl(inject[AirbrakeNotifier])
+    val heimdalContextBuilder = inject[HeimdalContextBuilderFactory]
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater, urbanAirship, heimdal, heimdalContextBuilder)
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)

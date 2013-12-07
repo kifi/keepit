@@ -169,6 +169,11 @@ class ExtBookmarksController @Inject() (
     } match {
       case Some(bookmark) =>
         searchClient.updateURIGraph()
+        SafeFuture {
+          val madePrivate = if (priv) 1 else -1
+          val madePublic = - madePrivate
+          heimdal.incrementUserProperties(request.userId, "privateKeeps" -> madePrivate, "publicKeeps" -> madePublic)
+        }
         Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
       case None => NotFound
     }

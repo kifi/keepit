@@ -250,21 +250,17 @@ class ExtMessagingController @Inject() (
     },
     "set_message_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
+      implicit val context = authenticatedWebSocketsContextBuilder(socket)
+      context += ("global", false)
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
-      SafeFuture {
-        val context = messagingContextBuilder(socket, msgExtId, false).build
-        heimdal.trackEvent(UserEvent(socket.userId.id, context, UserEventTypes.NOTIFICATION_READ))
-      }
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
-      messagingController.setNotificationReadForMessage(socket.userId, ExternalId[Message](messageId))
+      implicit val context = authenticatedWebSocketsContextBuilder(socket)
+      context += ("global", true)
+      messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
-      SafeFuture {
-        val context = messagingContextBuilder(socket, msgExtId, true).build
-        heimdal.trackEvent(UserEvent(socket.userId.id, context, UserEventTypes.NOTIFICATION_READ))
-      }
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
       messagingController.getThreadInfos(socket.userId, url).map{ case (_, threadInfos) =>
@@ -299,11 +295,4 @@ class ExtMessagingController @Inject() (
       //else discard!
     }
   )
-
-  private def messagingContextBuilder(socketInfo: SocketInfo, messageId: ExternalId[Message], global: Boolean): HeimdalContextBuilder = {
-    val contextBuilder = authenticatedWebSocketsContextBuilder(socketInfo)
-    contextBuilder += ("messageExternalId", messageId.id)
-    contextBuilder += ("global", global)
-    contextBuilder
-  }
 }
