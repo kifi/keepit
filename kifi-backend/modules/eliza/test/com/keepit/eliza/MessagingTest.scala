@@ -14,6 +14,7 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import com.keepit.social.BasicUser
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 
 import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
@@ -35,7 +36,7 @@ class MessagingTest extends Specification with DbTestInjector {
     val uriNormalizationUpdater: UriNormalizationUpdater = null
     val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
     val heimdal = new FakeHeimdalServiceClientImpl(inject[AirbrakeNotifier])
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater, urbanAirship, heimdal)
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater, urbanAirship, heimdal, inject[HeimdalContextBuilderFactory])
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)
