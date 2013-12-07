@@ -2,12 +2,8 @@ package com.keepit.scraper
 
 import org.apache.lucene.analysis.standard.StandardTokenizer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.store.InputStreamDataInput
-import org.apache.lucene.store.OutputStreamDataOutput
 import org.apache.lucene.util.Version
 import java.io.StringReader
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
 import java.util.Arrays
 import javax.xml.bind.DatatypeConverter._
 import scala.math._
