@@ -104,7 +104,7 @@ class UserCommander @Inject() (
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
-    val (numBms, numFriends) = db.readOnly{ implicit s =>
+    val (numBms, numFriends) = db.readOnly{ implicit s => //using cache
       (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
