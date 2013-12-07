@@ -31,7 +31,7 @@ import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
-import com.keepit.heimdal.{HeimdalServiceClient, UserEventTypes, UserEvent, HeimdalContextBuilder}
+import com.keepit.heimdal._
 
 
 //For migration only
@@ -65,7 +65,8 @@ class MessagingController @Inject() (
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
     urbanAirship: UrbanAirship,
-    heimdal: HeimdalServiceClient)
+    heimdal: HeimdalServiceClient,
+    heimdalContextBuilder: HeimdalContextBuilderFactory)
   extends ElizaServiceController with MessagingIndexHelper with Logging {
 
   //for indexing data requests
@@ -324,6 +325,19 @@ class MessagingController @Inject() (
 
       db.readWrite(attempts=2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
+      }
+
+      val sentAt = currentDateTime
+      SafeFuture {
+        val context = heimdalContextBuilder()
+        context += ("action", "sent")
+        context += ("global", false)
+        context += ("muted", muted)
+        context += ("messageExternalId", message.externalId.id)
+        context += ("threadId", thread.id.get)
+        context += ("channel", "kifi")
+        context += ("url", thread.nUrl.getOrElse(""))
+        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, sentAt))
       }
 
       shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator(locator))
@@ -892,14 +906,20 @@ class MessagingController @Inject() (
       db.readWrite(attempts=2) { implicit session =>
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
+
+      val clearedAt = currentDateTime
+      SafeFuture {
+        context += ("action", "cleared")
+        context += ("messageExternalId", message.externalId.id)
+        context += ("threadId", thread.id.get)
+        context += ("channel", "kifi")
+        context += ("url", thread.nUrl.getOrElse(""))
+        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
+      }
+
+      notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
+      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadThreadCount(userId)))
     }
-    val clearedAt = currentDateTime
-    SafeFuture {
-      context += ("messageExternalId", message.externalId.id)
-      heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.NOTIFICATION_READ, clearedAt))
-    }
-    notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
-    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadThreadCount(userId)))
   }
 
   def setNotificationUnread(userId: Id[User], threadExtId: ExternalId[MessageThread]) : Unit = {
