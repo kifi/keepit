@@ -51,7 +51,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
-        messagingController.getLatestSendableNotifications(user1, 20).length === 0
+        messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20).length === 0
 
         val (thread2, msg2) = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
 

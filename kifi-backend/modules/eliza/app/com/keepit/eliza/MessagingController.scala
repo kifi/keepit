@@ -756,6 +756,24 @@ class MessagingController @Inject() (
     }
   }
 
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getLatestSendableNotificationsNotJustFromMe(userId, howMany)
+    }
+  }
+
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsNotJustFromMeBefore(userId, time, howMany)
+    }
+  }
+
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsNotJustFromMeSince(userId, time)
+    }
+  }
+
   def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
     db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotifications(userId, howMany)

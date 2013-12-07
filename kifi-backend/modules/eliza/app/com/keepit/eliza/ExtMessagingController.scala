@@ -201,16 +201,16 @@ class ExtMessagingController @Inject() (
     // pre-inbox notification/thread handlers (soon will be obsolete)
 
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
+      val notices = messagingController.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt)
       val numUnreadUnmuted = messagingController.getUnreadUnmutedThreadCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, numUnreadUnmuted, END_OF_TIME))
     },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
-      val notices = messagingController.getSendableNotificationsSince(socket.userId, parseStandardTime(time))
+      val notices = messagingController.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time))
       socket.channel.push(Json.arr("missed_notifications", notices, currentDateTime))
     },
     "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
-      val notices = messagingController.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      val notices = messagingController.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       socket.channel.push(Json.arr(requestId.toLong, notices))
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
