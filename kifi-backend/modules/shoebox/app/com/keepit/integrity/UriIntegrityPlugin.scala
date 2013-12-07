@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import scala.concurrent.duration._
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.plugin.SchedulingProperties
@@ -44,7 +44,7 @@ class UriIntegrityActor @Inject()(
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier,
-  scraper: ScraperPlugin
+  scraper: ScrapeSchedulerPlugin
 ) extends FortyTwoActor(airbrake) with Logging {
 
   /** tricky point: make sure (user, uri) pair is unique.  */

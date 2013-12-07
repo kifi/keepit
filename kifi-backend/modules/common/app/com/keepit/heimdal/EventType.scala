@@ -17,15 +17,19 @@ object UserEventTypes {
   val EXTENSION_INSTALL = EventType("extension_install")
   val INVITE_SENT = EventType("invite_sent")
 
+  // Activity
+  val WS_CONNECT = EventType("ws_connect")
+  val WS_DISCONNECT = EventType("ws_disconnect")
+
   // Keeping
   val KEEP = EventType("keep")
 
   // Messaging
-  val WS_CONNECT = EventType("ws_connect")
-  val WS_DISCONNECT = EventType("ws_disconnect")
   val NEW_MESSAGE = EventType("new_message")
   val REPLY_MESSAGE = EventType("reply_message")
-  val NOTIFICATION_READ = EventType("notification_read")
+
+  // Notifications
+  val WAS_NOTIFIED = EventType("was_notified")
 
   // Search
   val PERFORMED_SEARCH = EventType("performed_search")
