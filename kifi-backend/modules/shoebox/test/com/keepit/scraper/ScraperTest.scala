@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.search.ArticleStore
 import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxTestInjector}
-import com.keepit.scraper.extractor.{ExtractorFactory, Extractor, TikaBasedExtractor}
+import com.keepit.scraper.extractor.{ExtractorFactory, Extractor}
 import org.specs2.mutable._
 import org.apache.http.HttpStatus
 import org.apache.http.protocol.BasicHttpContext
