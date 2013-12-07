@@ -542,6 +542,12 @@ var api = function() {
     util: {
       btoa: function (str) {
         return btoa(str);
+      },
+      getBrowser: function() {
+        return "Chrome";
+      },
+      getBrowserDetailsOrUserAgent: function() {
+        return navigator.appVersion;
       }
     },
     requestUpdateCheck: function() {
