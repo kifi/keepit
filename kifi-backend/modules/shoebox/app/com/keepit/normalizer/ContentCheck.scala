@@ -1,9 +1,9 @@
 package com.keepit.normalizer
 
 import scala.concurrent.Future
-import com.keepit.scraper.{ScrapeSchedulerPlugin, ScraperConfig, Signature}
+import com.keepit.scraper.{ScrapeSchedulerPlugin, Signature}
 import com.keepit.model.Normalization
-import com.keepit.scraper.extractor.{ExtractorProviderTypes, LinkedInIdExtractor}
+import com.keepit.scraper.extractor.{ExtractorProviderTypes}
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
