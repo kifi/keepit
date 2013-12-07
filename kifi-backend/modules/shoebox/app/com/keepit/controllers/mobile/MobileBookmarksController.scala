@@ -31,6 +31,7 @@ class MobileBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   bookmarksCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
+  collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -97,4 +98,15 @@ class MobileBookmarksController @Inject() (
     }
   }
 
+  def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    db.readWrite { implicit s =>
+      collectionRepo.getOpt(id) map { tag =>
+        bookmarksCommander.addTagToUrl(request.user, request.experiments, url, tag.id.get)
+        Ok(Json.toJson(SendableTag from tag))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> "noSuchTag"))
+      }
+    }
+  }
 }

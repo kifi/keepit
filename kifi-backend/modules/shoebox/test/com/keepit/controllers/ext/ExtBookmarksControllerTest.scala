@@ -191,5 +191,6 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
         bookmarks.size === 1
         bookmarks(0).url === "http://www.google.com/"
       }
-    }  }
+    }
+  }
 }
