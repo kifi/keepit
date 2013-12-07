@@ -68,6 +68,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       "$delete" -> JsString("")
     )
     sendData("http://api.mixpanel.com/engage", data)
+    sendData("http://api.mixpanel.com/engage", data + ("$ignore_alias" -> JsBoolean(true)))
   }
 
   def alias(userId: Id[User], externalId: ExternalId[User]) = {
