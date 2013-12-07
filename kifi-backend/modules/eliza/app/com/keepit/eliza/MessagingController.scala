@@ -334,7 +334,7 @@ class MessagingController @Inject() (
         context += ("global", false)
         context += ("muted", muted)
         context += ("messageExternalId", message.externalId.id)
-        context += ("threadId", thread.id.get)
+        context += ("threadId", thread.id.get.id)
         context += ("channel", "kifi")
         context += ("url", thread.nUrl.getOrElse(""))
         heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, sentAt))
@@ -911,7 +911,7 @@ class MessagingController @Inject() (
       SafeFuture {
         context += ("action", "cleared")
         context += ("messageExternalId", message.externalId.id)
-        context += ("threadId", thread.id.get)
+        context += ("threadId", thread.id.get.id)
         context += ("channel", "kifi")
         context += ("url", thread.nUrl.getOrElse(""))
         heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
