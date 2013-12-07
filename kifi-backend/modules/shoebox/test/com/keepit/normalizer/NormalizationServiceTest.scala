@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{BasicArticle, FakeScraperModule}
+import com.keepit.scraper.{BasicArticle, FakeScrapeSchedulerModule}
 import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Await
@@ -39,7 +39,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     TestFortyTwoModule(),
     FakeDiscoveryModule(),
-    FakeScraperModule(Some(fakeArticles)),
+    FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),
     StandaloneTestActorSystemModule(),
     TestElizaServiceClientModule(),

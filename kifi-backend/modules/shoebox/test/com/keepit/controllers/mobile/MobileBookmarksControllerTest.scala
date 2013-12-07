@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
 
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.FakeScraperModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders._
@@ -48,7 +48,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScraperModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),

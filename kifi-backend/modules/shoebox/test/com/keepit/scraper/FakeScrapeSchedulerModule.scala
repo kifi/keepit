@@ -6,7 +6,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.db.slick.DBSession.RWSession
 
-case class FakeScraperModule(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]] = None) extends ScraperModule {
+case class FakeScrapeSchedulerModule(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]] = None) extends ScrapeSchedulerModule {
   override def configure() {}
 
   @Provides @Singleton
