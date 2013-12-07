@@ -109,4 +109,11 @@ class MobileBookmarksController @Inject() (
       }
     }
   }
+
+  def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    bookmarksCommander.removeTag(id, url, request.userId)
+    Ok(Json.obj())
+  }
+
 }
