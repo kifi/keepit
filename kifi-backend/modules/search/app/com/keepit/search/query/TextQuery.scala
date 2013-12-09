@@ -91,8 +91,9 @@ class TextQuery extends Query with Logging {
 
   def getSemanticBoost(): Float = semanticBoost
 
-  def addSemanticVectorQuery(field: String, text: String): Unit = {
+  def addSemanticVectorQuery(field: String, text: String, useContextVector: Boolean = false): Unit = {
     val query = SemanticVectorQuery(new Term(field, text))
+    query.useContextVector = useContextVector
     semanticVectorQuery = semanticVectorQuery match {
       case disjunct: DisjunctionMaxQuery =>
         totalSubQueryCnt += 1
