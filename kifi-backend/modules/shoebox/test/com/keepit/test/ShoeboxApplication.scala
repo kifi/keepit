@@ -18,7 +18,7 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.scraper.{ProdScraperServiceClientModule, TestScraperServiceClientModule, FakeScraperModule}
+import com.keepit.scraper.{ProdScraperServiceClientModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.normalizer.TestNormalizationServiceModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule

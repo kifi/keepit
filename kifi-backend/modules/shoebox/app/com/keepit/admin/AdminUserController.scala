@@ -461,6 +461,14 @@ class AdminUserController @Inject() (
     }}
   }
 
+  def deleteAllMixpanelProfiles() = AdminHtmlAction { implicit request =>
+    Async { SafeFuture {
+      val allUsers = db.readOnly { implicit s => userRepo.all }
+      allUsers.foreach(user => heimdal.deleteUser(user.id.get))
+      Ok("All user profiles have been deleted from Mixpanel")
+    }}
+  }
+
   def resetAllMixpanelProfiles() = AdminHtmlAction { implicit request =>
     Async { SafeFuture {
       val allUsers = db.readOnly { implicit s => userRepo.all }
@@ -471,10 +479,10 @@ class AdminUserController @Inject() (
 
   private def doResetMixpanelProfile(user: User) = {
     val userId = user.id.get
+    heimdal.setUserAlias(user.id.get, user.externalId)
     if (user.state == UserStates.INACTIVE)
       heimdal.deleteUser(userId)
     else {
-      heimdal.setUserAlias(user.id.get, user.externalId)
       val properties = new HeimdalContextBuilder
       db.readOnly { implicit session =>
         properties += ("$first_name", user.firstName)
