@@ -2030,9 +2030,25 @@ $(function () {
 		friendsShowing.length = 0;
 	}
 
+	function startsWith(str, prefix) {
+		return str.lastIndexOf(prefix, 0) === 0
+	}
+
+	var FB_PREFIX = 'http://graph.facebook.com';
+	var FBS_PREFIX = 'https://graph.facebook.com';
+	var LI_PREFIX = 'http://m.c.lnkd.licdn.com';
+	var LIS_PREFIX = 'https://www.linkedin.com';
+
 	function normalizeFriend(obj) {
 		obj.label = obj.label || '';
-		obj.image = obj.image || '';
+		var image = obj.image || '';
+		if (startsWith(image, FB_PREFIX)) {
+			image = FBS_PREFIX + image.substring(FB_PREFIX.length);
+		}
+		else if (startsWith(image, LI_PREFIX)) {
+			image = LIS_PREFIX + image.substring(LI_PREFIX.length);
+		}
+		obj.image = image;
 		obj.status = obj.status || '';
 
 		var val = obj.value;
