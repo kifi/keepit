@@ -63,6 +63,12 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
 
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
+
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
+
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): Seq[JsObject]
+
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
   def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
@@ -167,6 +173,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
+  // todo: Remove, not needed and breaks repo conventions
   def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean = false)(implicit session: RWSession) : UserThread = {
     val userThread = UserThread(
         id=None,
@@ -218,11 +225,49 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.id === userThreadId) yield row.muted ~ row.updatedAt).update((muted, clock.now()))
   }
 
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.lastMsgFromOther.isNotNull &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastMsgFromOther.isNotNull &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.notificationUpdatedAt > time &&
+                            row.lastMsgFromOther.isNotNull &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
     val rawNotifications =
       (for (row <- table if row.user === userId &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -234,7 +279,7 @@ class UserThreadRepoImpl @Inject() (
       (for (row <- table if row.user === userId &&
                             row.notificationUpdatedAt < time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -246,7 +291,7 @@ class UserThreadRepoImpl @Inject() (
       (for (row <- table if row.user === userId &&
                             row.notificationUpdatedAt > time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .map(row => row.lastNotification ~ row.unread)
       .list
@@ -258,7 +303,7 @@ class UserThreadRepoImpl @Inject() (
       (for (row <- table if row.user === userId &&
                             row.unread &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -271,7 +316,7 @@ class UserThreadRepoImpl @Inject() (
                             row.unread &&
                             row.notificationUpdatedAt < time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -283,7 +328,7 @@ class UserThreadRepoImpl @Inject() (
       (for (row <- table if row.user === userId &&
                             row.muted &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -296,7 +341,7 @@ class UserThreadRepoImpl @Inject() (
                             row.muted &&
                             row.notificationUpdatedAt < time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -308,7 +353,7 @@ class UserThreadRepoImpl @Inject() (
      (for (row <- table if row.user === userId &&
                            row.started &&
                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                           !row.lastNotification.isNull) yield row)
+                           row.lastNotification.isNotNull) yield row)
      .sortBy(row => (row.notificationUpdatedAt) desc)
      .take(howMany).map(row => row.lastNotification ~ row.unread)
      .list
@@ -321,7 +366,7 @@ class UserThreadRepoImpl @Inject() (
                             row.started &&
                             row.notificationUpdatedAt < time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -333,7 +378,7 @@ class UserThreadRepoImpl @Inject() (
       (for (row <- table if row.user === userId &&
                             row.uriId === uriId &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
@@ -346,7 +391,7 @@ class UserThreadRepoImpl @Inject() (
                             row.uriId === uriId &&
                             row.notificationUpdatedAt < time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            !row.lastNotification.isNull) yield row)
+                            row.lastNotification.isNotNull) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
