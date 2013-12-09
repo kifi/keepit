@@ -112,6 +112,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (refinements >= 0) {
       sendSearchedEvent("refinement");
     }
+    tKifiResultsReceived = null;
     var t1 = tQuery = Date.now();
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
