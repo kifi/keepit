@@ -611,7 +611,6 @@ class MessagingController @Inject() (
       val messages = getThreadMessages(thread, pageOpt)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
       (thread, messages.map { message =>
-        log.info(s"[get_thread] WHOOOOOOP ${thread.participants}\n\n\n${thread.participants.map(_.allNonUsers)}")
         val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
         MessageWithBasicUser(
           id           = message.externalId,
