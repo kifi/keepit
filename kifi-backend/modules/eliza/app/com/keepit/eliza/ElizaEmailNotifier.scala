@@ -78,7 +78,7 @@ class ElizaEmailNotifierActor @Inject() (
           val formattedTitle = if(title.length > 50) title.take(50) + "..." else title
 
           val email = ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi Notifications"),
+            from = EmailAddresses.NOTIFICATIONS, fromName = Some("Kifi Notifications"),
             to = List(),
             subject = s"""New messages on "${formattedTitle}" with $authorFirst""",
             htmlBody = emailBody,
