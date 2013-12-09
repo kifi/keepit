@@ -7,8 +7,8 @@ import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.ExperimentType
 import com.google.inject.{Inject, Singleton}
-import net.sf.uadetector.service.UADetectorServiceFactory
 import com.keepit.common.net.UserAgent
+import com.keepit.common.time.DateTimeJsonFormat
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -31,7 +31,7 @@ object SimpleContextData {
       case ContextStringData(value) => JsString(value)
       case ContextDoubleData(value) => JsNumber(value)
       case ContextBoolean(value) => JsBoolean(value)
-      case ContextDate(value) => Json.toJson(value)
+      case ContextDate(value) => DateTimeJsonFormat.writes(value)
     }
   }
 
@@ -43,7 +43,7 @@ object SimpleContextData {
   implicit def fromContextStringData(simpleContextData: SimpleContextData): Option[String] = Some(simpleContextData) collect { case ContextStringData(value) => value }
   implicit def fromContextDoubleData(simpleContextData: SimpleContextData): Option[Double] = Some(simpleContextData) collect { case ContextDoubleData(value) => value }
   implicit def fromContextBoolean(simpleContextData: SimpleContextData): Option[Boolean] = Some(simpleContextData) collect { case ContextBoolean(value) => value }
-  implicit def fromContextDate(simpleContextData: SimpleContextData) = Some(simpleContextData) collect { case ContextDate(value) => value }
+  implicit def fromContextDate(simpleContextData: SimpleContextData): Option[DateTime] = Some(simpleContextData) collect { case ContextDate(value) => value }
 }
 
 object ContextData {

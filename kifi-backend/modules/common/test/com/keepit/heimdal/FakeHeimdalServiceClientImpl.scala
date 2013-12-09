@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.model.User
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -46,4 +46,6 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit = {}
 
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {}
+
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 }

@@ -41,7 +41,7 @@ object ServiceType {
       case _ => ServiceStatus.UP
     }
 
-    override val minInstances = 3
+    override val minInstances = 2
     override val warnInstances = 4
   }
 

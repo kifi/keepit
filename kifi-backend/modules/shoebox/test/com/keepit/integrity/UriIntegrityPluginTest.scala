@@ -10,7 +10,7 @@ import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
-import com.keepit.scraper.FakeScraperModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
@@ -18,7 +18,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
   "uri integrity plugin" should {
     "work" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScraperModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

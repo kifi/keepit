@@ -30,6 +30,14 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
     if (vNorm == 0 || wNorm == 0) 0f else prod/(vNorm * wNorm).toFloat
   }
 
+  def similarity(query1: String, query2: String, stem: Boolean): Float = {
+    val (terms1, terms2) = (getTerms(query1, stem), getTerms(query2, stem))
+    if ( terms1.size == 0 || terms2.size == 0) 0f
+    else {
+      val (v1, v2) = (searcher.getSemanticVector(terms1), searcher.getSemanticVector(terms2))
+      v1.similarity(v2)
+    }
+  }
 
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Set[(Set[Term], Float)] = {
     val terms = getTerms(queryText, stem)
@@ -46,5 +54,27 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
         (subTerms, completeVector.similarity(subVector))
       }
     }
+  }
+
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Set[(Set[Term], Float)] = {
+     val terms = getTerms(queryText, stem)
+    if (useSketch) {
+      val completeSketch = searcher.getSemanticVectorSketch(terms)
+      terms.subsets.toSet.filter(!_.isEmpty) map { subTerms: Set[Term] =>
+        val subSketch = searcher.getSemanticVectorSketch(subTerms)
+        (subTerms, cosineDistance(subSketch.vec, completeSketch.vec))
+      }
+    } else {
+      val completeVector = searcher.getSemanticVector(terms)
+      terms.subsets.toSet.filter(! _.isEmpty) map { subTerms: Set[Term] =>
+        val subVector = searcher.getSemanticVector(subTerms)
+        (subTerms, completeVector.similarity(subVector))
+      }
+    }
+  }
+
+  def getSemanticVector(query: String): SemanticVector = {
+    val terms = getTerms(query, stem = true)
+    searcher.getSemanticVector(terms)
   }
 }

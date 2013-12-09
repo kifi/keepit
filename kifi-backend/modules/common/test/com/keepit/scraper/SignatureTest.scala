@@ -1,11 +1,6 @@
 package com.keepit.scraper
 
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import scala.math._
 import scala.util.Random
 
 class SignatureTest extends Specification {

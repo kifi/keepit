@@ -8,6 +8,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.serializer.TraversableFormat
 import com.keepit.common.logging.Logging
+import scala.math._
 
 case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
@@ -69,6 +70,7 @@ object ArticleSearchResult extends Logging {
 
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
+  val nonTextBoostFactor = (1.0d - (1.0d/(1.0d + (pow(4.0d * textScore, 4.0d))))).toFloat // don't boost too much by bookmark/recency if textScore is too low.
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
   var boostedRecencyScore: Float = Float.NaN
@@ -78,11 +80,11 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
     boostedBookmarkScore = bookmarkScore * bookmarkBoost
     boostedRecencyScore = recencyScore * recencyBoost
 
-    (boostedTextScore + boostedBookmarkScore + boostedRecencyScore) * (if (usefulPage) usefulPageBoost else 1.0f)
+    (boostedTextScore + (boostedBookmarkScore + boostedRecencyScore) * nonTextBoostFactor) * (if (usefulPage) usefulPageBoost else 1.0f)
   }
 
   override def toString() = {
-    s"Scoring($textScore, $normalizedTextScore, $bookmarkScore, $recencyScore, $usefulPage, $boostedTextScore, $boostedBookmarkScore, $boostedRecencyScore)"
+    s"Scoring($textScore, $normalizedTextScore, $bookmarkScore, $recencyScore, $usefulPage, $boostedTextScore, $boostedBookmarkScore, $boostedRecencyScore, nonTextBoostFactor)"
   }
 
   def canEqual(other: Any) = {
@@ -91,14 +93,15 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 
   override def equals(other: Any) = {
     other match {
-      case that: com.keepit.search.Scoring => that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore
+      case that: com.keepit.search.Scoring =>
+        that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore &&
+        recencyScore == that.recencyScore && usefulPage == that.usefulPage
       case _ => false
     }
   }
 
   override def hashCode() = {
-    val prime = 41
-    prime * (prime * (prime + textScore.hashCode) + normalizedTextScore.hashCode) + bookmarkScore.hashCode
+    (textScore.hashCode ^ normalizedTextScore.hashCode ^ bookmarkScore.hashCode ^ recencyScore.hashCode ^ usefulPage.hashCode)
   }
 }
 

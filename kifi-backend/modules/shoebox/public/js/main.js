@@ -3575,12 +3575,14 @@ $(function () {
 	// render initial view
 	$(window).trigger('statechange');
 
+	/*
 	// auto-update my keeps
 	setTimeout(function refresh() {
 		updateCollections();
 		addNewKeeps();
 		setTimeout(refresh, 25000 + 5000 * Math.random());
 	}, 30000);
+	*/
 
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {
