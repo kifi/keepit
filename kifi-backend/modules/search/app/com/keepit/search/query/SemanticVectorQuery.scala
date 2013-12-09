@@ -44,6 +44,8 @@ class SemanticVectorQuery(val term: Term) extends Query {
 
   override def extractTerms(out: JSet[Term]): Unit = out.add(term)
 
+  var useContextVector: Boolean = false
+
   override def toString(s: String) = {
     "semanticvector(%s)%s".format(term.toString(), ToStringUtils.boost(getBoost()))
   }
@@ -95,8 +97,10 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     val contextSketch = searcher.getContextSketch
-    val weight = (searcher.numOfContextTerms - 1).toFloat / searcher.numOfContextTerms
-    val vector = searcher.getSemanticVector(query.term, contextSketch, weight)
+    val vector = if (query.useContextVector) SemanticVector.vectorize(contextSketch) else {
+      val weight = (searcher.numOfContextTerms - 1).toFloat / searcher.numOfContextTerms
+      searcher.getSemanticVector(query.term, contextSketch, weight)
+    }
 
     val tp = searcher.getSemanticVectorEnum(context, query.term, context.reader.getLiveDocs)
     if (tp != null) new SemanticVectorScorerImpl(this, tp, vector, value) else new EmptySemanticVectorScorerImpl(this, vector)

@@ -13,8 +13,15 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
 
   private val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
 
-  def apply(lang: Lang, proximityBoost: Float = 0.0f, semanticBoost: Float = 0.0f, phraseBoost: Float = 0.0f,
-            siteBoost: Float = 0.0f, concatBoost: Float = 0.0f, homePageBoost: Float = 0.0f): MainQueryParser = {
+  def apply(lang: Lang, config: SearchConfig): MainQueryParser = {
+    val proximityBoost = config.asFloat("proximityBoost")
+    val semanticBoost = config.asFloat("semanticBoost")
+    val phraseBoost = config.asFloat("phraseBoost")
+    val siteBoost = config.asFloat("siteBoost")
+    val concatBoost = config.asFloat("concatBoost")
+    val homePageBoost = config.asFloat("homePageBoost")
+    val useContextVector = config.asBoolean("useContextVector")
+
     new MainQueryParser(
       lang,
       DefaultAnalyzer.forParsing(lang),
@@ -25,6 +32,7 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
       siteBoost,
       concatBoost,
       homePageBoost,
+      useContextVector,
       phraseDetector,
       phraseDetectionConsolidator,
       monitoredAwait
