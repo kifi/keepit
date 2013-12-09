@@ -47,6 +47,20 @@
  	</form>
  	<p id = "similarScore"></p>
 
+
+ 	<div><strong>Semantic Vector Visualization</strong></div>
+  <div>Compare semantic vectors of two words or phrases</div>
+  <form id = "visualize">
+  	<div>
+  		<input id = "visualQuery1" type = "text" value = "">
+  		<input id = "visualQuery2" type = "text" value = "">
+  		<button type = "submit">submit</button>
+  	</div>
+ 	</form>
+ 	<p id = "visualizeResult"></p>
+
+
+
 <script type="text/javascript">
 
 	$(document).ready(function(){
@@ -75,6 +89,17 @@
 			function done(data) { $("#similarScore").empty().prepend(data) }
       function fail() { alert("bad") }
 
+		})
+
+		<!-- visualization -->
+		$("#visualize").submit(function(){
+			event.preventDefault();
+			$.post('@com.keepit.controllers.admin.routes.AdminSemanticVectorController.visualize',
+			{query1: $("#visualQuery1").val(), query2: $("#visualQuery2").val()}
+			).done(done).fail(fail);
+
+			function done(data) { $("#visualizeResult").empty().prepend(data) }
+      function fail() { alert("bad") }
 		})
 
 	});
