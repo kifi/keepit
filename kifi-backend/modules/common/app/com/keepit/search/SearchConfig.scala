@@ -77,7 +77,7 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
       "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
       "showExperts" -> "suggest experts when search returns hits",
-      "forbidEmptyFriendlyHits" -> "when hits doesn't contain bookmarks from me or my friends, collapse result in the initial search"
+      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
