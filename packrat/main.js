@@ -196,7 +196,7 @@ var mixpanel = {
       var json = JSON.stringify(this.batch);
       var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
       api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
-      this.batch = [];
+      this.batch.length = 0;
     }
   },
   augmentAndBatch: function(data) {
@@ -211,11 +211,8 @@ var mixpanel = {
   },
   track: function(eventName, properties) {
     if (this.enabled) {
-      var that = this;
       if (!this.sendTimer) {
-        this.sendTimer = api.timers.setInterval(function(){
-          that.sendBatch();
-        }, 60000);
+        this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
       log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
       properties.time = Date.now();
@@ -232,7 +229,7 @@ var mixpanel = {
   },
   catchUp: function() {
     var that = this;
-    this.queue.forEach(function(data){
+    this.queue.forEach(function (data) {
       that.augmentAndBatch(data);
     });
     this.queue = [];
