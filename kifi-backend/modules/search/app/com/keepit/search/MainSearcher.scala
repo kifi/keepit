@@ -97,7 +97,7 @@ class MainSearcher(
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val homePageBoost = config.asFloat("homePageBoost")
-  private[this] val collapseWhenMyhitsEmpty = config.asBoolean("collapseWhenMyhitsEmpty")
+  private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
@@ -259,7 +259,6 @@ class MainSearcher(
     val othersTotal = othersHits.totalHits
 
     val hits = createQueue(numHitsToReturn)
-    var numMyHitsToReturn = 0
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     // and others high score (used for tailcutting of others hits)
@@ -301,7 +300,6 @@ class MainSearcher(
           h.scoring = new Scoring(h.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost)
           hits.insert(h)
-          numMyHitsToReturn += 1
           true
         } else {
           numCollectStats > 0
@@ -352,32 +350,36 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      val othersThreshold = othersHighScore * tailCutting
-      val othersNorm = max(highScore, othersHighScore)
-      val queue = createQueue(numHitsToReturn - hits.size)
+    var onlyContainsOthersHits = false
 
-      othersHits.toRankedIterator.forall{ case (h, rank) =>
-        val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-        if (score > othersThreshold) {
-          h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
-          if (h.bookmarkCount > 0) {
-            h.scoring = new Scoring(h.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-            h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
-            queue.insert(h)
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
+      if ( !forbidEmptyFriendlyHits || (forbidEmptyFriendlyHits && hits.size == 0)){
+        val othersThreshold = othersHighScore * tailCutting
+        val othersNorm = max(highScore, othersHighScore)
+        val queue = createQueue(numHitsToReturn - hits.size)
+        if (hits.size == 0) onlyContainsOthersHits = true
+        othersHits.toRankedIterator.forall{ case (h, rank) =>
+          val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+          if (score > othersThreshold) {
+            h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
+            if (h.bookmarkCount > 0) {
+              h.scoring = new Scoring(h.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+              h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
+              queue.insert(h)
+            }
+            true
+          } else {
+            false
           }
-          true
-        } else {
-          false
         }
+        queue.foreach{ h => hits.insert(h) }
       }
-      queue.foreach{ h => hits.insert(h) }
     }
 
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val (show, svVar) = classify(hitList, personalizedSearcher, numMyHitsToReturn, collapseWhenMyhitsEmpty)
+    val (show, svVar) =  if (filter.isDefault && isInitialSearch && (forbidEmptyFriendlyHits && onlyContainsOthersHits)) (false, -1f) else classify(hitList, personalizedSearcher)
 
     // insert a new content if any (after show/no-show classification)
     newContent.foreach { h =>
@@ -414,27 +416,24 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher], numMyHitsToReturn: Int, collapseWhenMyhitsEmpty: Boolean) = {
+  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
     def classify(hit: MutableArticleHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
       (if (hit.isMyBookmark) hit.scoring.recencyScore/5.0f else 0.0f) + hit.scoring.textScore > minScore
     }
 
     if (filter.isDefault && isInitialSearch) {
-      if (numMyHitsToReturn > 0 || !collapseWhenMyhitsEmpty){
-        val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
-        val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+      val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
+      val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
-        val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
+      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
 
-        // simple classifier
-        val show = (parsedQuery, personalizedSearcher) match {
-          case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, minScore))
-          case _ => true
-        }
-        (show, svVar)
-      } else (false, -1f)
-
+      // simple classifier
+      val show = (parsedQuery, personalizedSearcher) match {
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, minScore))
+        case _ => true
+      }
+      (show, svVar)
     } else {
       (true, -1f)
     }
