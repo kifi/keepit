@@ -14,6 +14,7 @@
 
 // (same as match pattern above)
 var searchUrlRe = /^https?:\/\/www\.google\.(?:com|com\.(?:a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(?:ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(?:|search|webhp)(?:[?#].*)?$/;
+var pageSession = Math.random().toString(16).slice(2);
 
 $.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
@@ -174,7 +175,9 @@ if (searchUrlRe.test(document.URL)) !function() {
           "thirdPartyShownTime": tGoogleResultsShown - tQuery,
           "kifiResultsClicked": clicks.kifi.length,
           "searchResultsClicked": clicks.google.length,
-          "refinements": refinements
+          "refinements": refinements,
+          "pageSession": pageSession,
+          "action": "unload"
         }
       ]);
     }
@@ -258,7 +261,8 @@ if (searchUrlRe.test(document.URL)) !function() {
           "resultUrl": href,
           "query": response.query,
           "hit": isKifi ? response.hits[resIdx] : null,
-          "refinements": refinements
+          "refinements": refinements,
+          "pageSession": pageSession
         }
       ]);
     }
