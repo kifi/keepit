@@ -22,6 +22,7 @@ import scala.collection.JavaConversions._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
+import com.keepit.search.SearchConfig
 
 class ArticleIndexerTest extends Specification with ApplicationInjector {
 
@@ -66,9 +67,11 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
         contentLang = Some(Lang("en")))
     }
 
+    val searchConfig = SearchConfig.defaultConfig.apply("siteBoost" -> "1.0")
+
     class Searchable(indexer: ArticleIndexer) {
       def search(queryString: String, percentMatch: Float = 0.0f): Seq[Hit] = {
-        val parser = parserFactory(Lang("en"), siteBoost = 1.0f)
+        val parser = parserFactory(Lang("en"), searchConfig)
         parser.setPercentMatch(percentMatch)
         val searcher = indexer.getSearcher
         parser.parse(queryString, None) match {

@@ -72,4 +72,9 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
       }
     }
   }
+
+  def getSemanticVector(query: String): SemanticVector = {
+    val terms = getTerms(query, stem = true)
+    searcher.getSemanticVector(terms)
+  }
 }

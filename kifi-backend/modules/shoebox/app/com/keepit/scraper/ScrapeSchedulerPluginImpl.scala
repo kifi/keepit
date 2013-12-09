@@ -68,7 +68,7 @@ private[scraper] class ScrapeScheduler @Inject() (
     } map { sr =>
       scraperServiceClient.scheduleScrapeWithRequest(sr)
     }
-    log.info(s"[schedule] finished scheduling ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
+    log.info(s"[schedule] submitted ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }
 
 }

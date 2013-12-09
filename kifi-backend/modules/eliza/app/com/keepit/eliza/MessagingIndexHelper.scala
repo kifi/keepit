@@ -29,7 +29,7 @@ trait MessagingIndexHelper{
 
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber): Future[ThreadContent] = {
     val thread = db.readOnly{ implicit session => threadRepo.get(threadId) }
-    val participants : Seq[Id[User]] = thread.participants.map(_.all).getOrElse(Set[Id[User]]()).toSeq
+    val participants : Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(participants)
 
     val messages : Seq[Message] = db.readOnly{ implicit session => 
