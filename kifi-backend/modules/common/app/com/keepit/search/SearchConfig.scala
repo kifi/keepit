@@ -143,9 +143,14 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   }
 
   def getConfigByUserSegment(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
-    val segFuture = shoeboxClient.getUserSegment(userId)
-    val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
-    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, queryText, seg.value)
+    userConfig.get(userId.id) match {
+      case Some(config) => (config, None)
+      case None => if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else {
+        val segFuture = shoeboxClient.getUserSegment(userId)
+        val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
+        assignConfig(userId, queryText, seg.value)
+      }
+    }
   }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
