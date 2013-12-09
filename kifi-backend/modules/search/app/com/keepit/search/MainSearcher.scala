@@ -353,7 +353,7 @@ class MainSearcher(
     var onlyContainsOthersHits = false
 
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      if ( !forbidEmptyFriendlyHits || (forbidEmptyFriendlyHits && hits.size == 0)){
+      if ( !forbidEmptyFriendlyHits || (forbidEmptyFriendlyHits && hits.size == 0) || !filter.isDefault || !isInitialSearch){
         val othersThreshold = othersHighScore * tailCutting
         val othersNorm = max(highScore, othersHighScore)
         val queue = createQueue(numHitsToReturn - hits.size)
