@@ -61,27 +61,37 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification]
 
-  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
-
-  def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime]
-
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
+
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
+
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
+
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): Seq[JsObject]
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
+
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): Seq[JsObject]
+
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
+
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
 
   def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
+
   def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
-  def getSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[JsObject]
+  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
 
-  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int
+  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[JsObject]
 
-  def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsObject]
+  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
 
-  def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
+  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
@@ -179,28 +189,28 @@ class UserThreadRepoImpl @Inject() (
 
   def markRead(user: Id[User], threadOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit = {
     threadOpt.map{ thread =>
-      (for (row <- table if row.user === user && row.thread === thread) yield row.unread).update(false)
+      (for (row <- table if row.user === user && row.thread === thread) yield row.unread ~ row.updatedAt).update((false, clock.now()))
     } getOrElse {
-      (for (row <- table if row.user === user) yield row.unread).update(false)
+      (for (row <- table if row.user === user) yield row.unread ~ row.updatedAt).update((false, clock.now()))
     }
   }
 
   def markAllReadAtOrBefore(userId: Id[User], timeCutoff: DateTime)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user === userId && row.notificationUpdatedAt <= timeCutoff) yield row.unread).update(false)
+    (for (row <- table if row.user === userId && row.notificationUpdatedAt <= timeCutoff) yield row.unread ~ row.updatedAt).update((false, clock.now()))
   }
 
   def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, unread: Boolean)(implicit session: RWSession) : Unit = {
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther < message.id.get))
-      .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.notificationEmailed)
-      .update((notifJson, message.id.get, unread, message.createdAt, false))
+      .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.notificationEmailed ~ row.updatedAt)
+      .update((notifJson, message.id.get, unread, message.createdAt, false, clock.now()))
 
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && row.lastMsgFromOther === message.id.get)
-      .map(row => row.lastNotification ~ row.notificationEmailed)
-      .update((notifJson, false))
+      .map(row => row.lastNotification ~ row.notificationEmailed ~ row.updatedAt)
+      .update((notifJson, false, clock.now()))
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {  //Note: minor race condition
-    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastSeen < timestamp || row.lastSeen.isNull)) yield row.lastSeen).update(timestamp)
+    (for (row <- table if row.user===userId && row.thread===threadId && (row.lastSeen < timestamp || row.lastSeen.isNull)) yield row.lastSeen ~ row.updatedAt).update((timestamp, clock.now()))
   }
 
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
@@ -210,85 +220,185 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession): Unit = {
-    threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen).update(timestamp)
-    } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen).update(timestamp)
-    }
-  }
-
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
-    (for (row <- table if row.id === userThreadId) yield row.muted).update(muted)
+    (for (row <- table if row.id === userThreadId) yield row.muted ~ row.updatedAt).update((muted, clock.now()))
   }
 
-  def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime] = {
-    threadIdOpt.map{ threadId =>
-      (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationLastSeen.?).firstOption flatten
-    } getOrElse {
-      (for (row <- table if row.user===userId) yield row.notificationLastSeen.?).firstOption flatten
-    }
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.lastMsgFromOther.isNotNull &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastMsgFromOther.isNotNull &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.notificationUpdatedAt > time &&
+                            row.lastMsgFromOther.isNotNull &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
   }
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId && !row.lastMsgFromOther.isNull && row.lastNotification =!= JsNull.asInstanceOf[JsValue] && !row.lastNotification.isNull) yield row)
-                            .sortBy(row => (row.notificationUpdatedAt) desc)
-                            .take(howMany).map(row => row.lastNotification ~ row.unread)
-                            .list
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.notificationUpdatedAt > time &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .map(row => row.lastNotification ~ row.unread)
+      .list
     updateSendableNotifications(rawNotifications)
   }
 
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId && row.unread) yield row)
-                            .sortBy(row => (row.notificationUpdatedAt) desc)
-                            .take(howMany).map(row => row.lastNotification ~ row.unread)
-                            .list
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.unread &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.unread &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
     updateSendableNotifications(rawNotifications)
   }
 
   def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId && row.muted && !row.lastMsgFromOther.isNull && row.lastNotification =!= JsNull.asInstanceOf[JsValue] && !row.lastNotification.isNull) yield row)
-                            .sortBy(row => (row.notificationUpdatedAt) desc)
-                            .take(howMany).map(row => row.lastNotification ~ row.unread)
-                            .list
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.muted &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.muted &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
     updateSendableNotifications(rawNotifications)
   }
 
   def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId && row.started && row.lastNotification =!= JsNull.asInstanceOf[JsValue] && !row.lastNotification.isNull) yield row)
-                            .sortBy(row => (row.notificationUpdatedAt) desc)
-                            .take(howMany).map(row => row.lastNotification ~ row.unread)
-                            .list
+    val rawNotifications =
+     (for (row <- table if row.user === userId &&
+                           row.started &&
+                           row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                           row.lastNotification.isNotNull) yield row)
+     .sortBy(row => (row.notificationUpdatedAt) desc)
+     .take(howMany).map(row => row.lastNotification ~ row.unread)
+     .list
     updateSendableNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId && row.uriId === uriId && row.lastNotification =!= JsNull.asInstanceOf[JsValue] && !row.lastNotification.isNull) yield row)
-                        .sortBy(row => (row.notificationUpdatedAt) desc)
-                        .map(row => row.lastNotification ~ row.unread)
-                        .list
+  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.started &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
     updateSendableNotifications(rawNotifications)
   }
 
-  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
+  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.uriId === uriId &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
+    val rawNotifications =
+      (for (row <- table if row.user === userId &&
+                            row.uriId === uriId &&
+                            row.notificationUpdatedAt < time &&
+                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                            row.lastNotification.isNotNull) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => row.lastNotification ~ row.unread)
+      .list
+    updateSendableNotifications(rawNotifications)
+  }
+
+  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {
     Query((for (row <- table if row.user === userId && row.unread && !row.muted) yield row).length).first
-  }
-
-  def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId && row.notificationUpdatedAt > after && !row.lastMsgFromOther.isNull && row.lastNotification =!= JsNull.asInstanceOf[JsValue] && !row.lastNotification.isNull) yield row)
-                            .sortBy(row => (row.notificationUpdatedAt) desc)
-                            .map(row => row.lastNotification ~ row.unread)
-                            .list
-    updateSendableNotifications(rawNotifications)
-  }
-
-  def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user===userId && row.notificationUpdatedAt < before && !row.lastMsgFromOther.isNull && row.lastNotification =!= JsNull.asInstanceOf[JsValue] && !row.lastNotification.isNull) yield row)
-                            .sortBy(row => (row.notificationUpdatedAt) desc)
-                            .map(row => row.lastNotification ~ row.unread)
-                            .take(howMany)
-                            .list
-    updateSendableNotifications(rawNotifications)
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
@@ -297,19 +407,19 @@ class UserThreadRepoImpl @Inject() (
 
   def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], message: Message)(implicit session: RWSession): Unit = {
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther <= message.id.get))
-      .map(row => row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt)
-      .update((message.id.get, false, message.createdAt))
+      .map(row => row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.updatedAt)
+      .update((message.id.get, false, message.createdAt, clock.now()))
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
-    (for (row <- table if row.replyable && row.unread && !row.notificationEmailed && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
+    (for (row <- table if row.replyable && row.unread && !row.notificationEmailed && row.notificationUpdatedAt < before) yield row).list
   }
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession) : Unit = {
     relevantMessageOpt.map{ relevantMessage =>
       (for (row <- table if row.id===id && row.lastMsgFromOther===relevantMessage) yield row.notificationEmailed).update(true)
     } getOrElse {
-      (for (row <- table if row.id===id) yield row.notificationEmailed).update(true)
+      (for (row <- table if row.id===id) yield row.notificationEmailed ~ row.updatedAt).update((true, clock.now()))
     }
   }
 
@@ -320,11 +430,11 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user === userId && row.thread === threadId) yield row.unread).update(true)
+    (for (row <- table if row.user === userId && row.thread === threadId) yield row.unread ~ row.updatedAt).update((true, clock.now()))
   }
 
   def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId &&row.thread===threadId && row.lastMsgFromOther===messageId) yield row.lastNotification).update(newJson)
+    (for (row <- table if row.user===userId &&row.thread===threadId && row.lastMsgFromOther===messageId) yield row.lastNotification ~ row.updatedAt).update((newJson, clock.now()))
   }
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession) : Seq[UserThread] = {
@@ -340,7 +450,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive).update(lastActive)
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastActive ~ row.updatedAt).update((lastActive, clock.now()))
   }
 
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {

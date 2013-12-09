@@ -30,7 +30,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
 trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
-    require(injector.instance[ScraperPlugin].enabled)
+    require(injector.instance[ScrapeSchedulerPlugin].enabled)
     require(injector.instance[SocialGraphPlugin].enabled)
     require(injector.instance[SocialGraphRefresher].enabled)
     require(injector.instance[MailSenderPlugin].enabled)

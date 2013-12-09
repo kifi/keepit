@@ -1,4 +1,4 @@
-package com.keepit.controllers.core
+package com.keepit.commanders
 
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
@@ -6,7 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.KestrelCombinator
@@ -26,7 +26,7 @@ import java.util.UUID
 class BookmarkInterner @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
-  scraper: ScraperPlugin,
+  scraper: ScrapeSchedulerPlugin,
   bookmarkRepo: BookmarkRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
@@ -39,7 +39,16 @@ class BookmarkInterner @Inject() (
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
     val parseStart = System.currentTimeMillis()
-    val bookmarks = getBookmarksFromJson(value)
+    val bookmarks = getBookmarksFromJson(value).sortWith { case (a, b) =>
+      val aUrl = (a \ "url").asOpt[String]
+      val bUrl = (b \ "url").asOpt[String]
+      (aUrl, bUrl) match {
+        case (Some(au), Some(bu)) => au < bu
+        case (Some(au), None) => true
+        case (None, Some(bu)) => false
+        case (None, None) => true
+      }
+    }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
 
     var count = new AtomicInteger(0)
@@ -74,7 +83,9 @@ class BookmarkInterner @Inject() (
       case JsArray(elements) => elements.map(getBookmarksFromJson).flatten
       case json: JsObject if json.keys.contains("children") => getBookmarksFromJson(json \ "children")
       case json: JsObject => Seq(json)
-      case e => throw new Exception("can't figure what to do with %s".format(e)) // bad! ruins an import!
+      case _ =>
+        airbrake.notify(s"error parsing bookmark import json $value")
+        Seq()
     }
   }
 
@@ -109,6 +120,8 @@ class BookmarkInterner @Inject() (
       if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
         Try(scraper.scheduleScrape(uri))
       }
+
+      session.conn.commit()
 
       Some((bookmark, uri, isNewKeep))
     } else {

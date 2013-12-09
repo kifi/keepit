@@ -1,14 +1,7 @@
 package com.keepit.dev
 
-import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.cache.ScraperCacheModule
-import com.keepit.common.net.ProdHttpClientModule
-import com.keepit.inject.ProdFortyTwoModule
-import com.keepit.common.actor.DevActorSystemModule
-import com.keepit.common.zookeeper.DevDiscoveryModule
-import com.keepit.social.RemoteSecureSocialModule
-import com.keepit.scraper.{ScraperImplModule, ScraperServiceModule}
-import com.keepit.common.healthcheck.ProdHealthCheckModule
+import com.keepit.scraper.{ScrapeProcessorImplModule, ScraperServiceModule}
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperTestStoreModule
@@ -16,7 +9,7 @@ import com.keepit.common.store.ScraperTestStoreModule
 case class ScraperTestModule() extends ScraperServiceModule (
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperTestStoreModule(),
-  scraperModule = ScraperImplModule()
+  scrapeProcessorModule = ScrapeProcessorImplModule()
 ) with CommonDevModule {
 
 }
