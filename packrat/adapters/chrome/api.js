@@ -533,6 +533,23 @@ var api = function() {
       }
       xhr.send(data);
     },
+    postRawAsForm: function(uri, data) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", uri, true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+    },
+    util: {
+      btoa: function (str) {
+        return btoa(str);
+      },
+      getBrowser: function() {
+        return "Chrome";
+      },
+      getBrowserDetailsOrUserAgent: function() {
+        return navigator.appVersion;
+      }
+    },
     requestUpdateCheck: function() {
       if (updateVersion) {
         chrome.runtime.reload();

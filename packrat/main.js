@@ -187,6 +187,56 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
+var mixpanel = {
+  enabled: true,
+  queue: [],
+  batch: [],
+  sendBatch: function(){
+    if (this.batch.length > 0) {
+      var json = JSON.stringify(this.batch);
+      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
+      this.batch.length = 0;
+    }
+  },
+  augmentAndBatch: function(data) {
+    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    data.properties.distinct_id = session.user.id;
+    data.properties.browser = api.util.getBrowser();
+    data.properties.browserDetails = api.util.getBrowserDetailsOrUserAgent();
+    this.batch.push(data);
+    if (this.batch.length > 10) {
+      this.sendBatch();
+    }
+  },
+  track: function(eventName, properties) {
+    if (this.enabled) {
+      if (!this.sendTimer) {
+        this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
+      }
+      log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
+      properties.time = Date.now();
+      var data = {
+        'event': eventName,
+        'properties': properties
+      };
+      if (session) {
+        this.augmentAndBatch(data);
+      } else {
+        this.queue.push(data);
+      }
+    }
+  },
+  catchUp: function() {
+    var that = this;
+    this.queue.forEach(function (data) {
+      that.augmentAndBatch(data);
+    });
+    this.queue = [];
+  }
+};
+
+
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
@@ -768,6 +818,8 @@ api.port.on({
       }
     }
     if (o.new) {
+      var fragments = o.new.split("/");
+      mixpanel.track("user_viewed_pane", {'type': fragments.length>1 ? fragments[1] : o.new});
       var arr = tabsByLocator[o.new];
       if (arr) {
         arr = arr.filter(idIsNot(tab.id));
@@ -1802,6 +1854,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    mixpanel.catchUp();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
