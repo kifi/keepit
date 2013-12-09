@@ -86,6 +86,8 @@ object HeimdalContext {
 
     def writes(context: HeimdalContext) : JsValue = Json.toJson(context.data)
   }
+
+  val empty = HeimdalContext(Map.empty)
 }
 
 class HeimdalContextBuilder {

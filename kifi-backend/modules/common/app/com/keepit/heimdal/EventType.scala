@@ -23,6 +23,7 @@ object UserEventTypes {
 
   // Keeping
   val KEEP = EventType("keep")
+  val KEPT = EventType("kept")
 
   // Messaging
   val NEW_MESSAGE = EventType("new_message")
