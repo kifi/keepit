@@ -21,6 +21,7 @@ import com.keepit.normalizer.NormalizationCandidate
 import scala.util.Try
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.UUID
+import com.keepit.heimdal.HeimdalContext
 
 @Singleton
 class BookmarkInterner @Inject() (
@@ -31,11 +32,12 @@ class BookmarkInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
+  keptAnalytics: KeptAnalytics,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
-  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Seq[Bookmark] = {
+  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
     val parseStart = System.currentTimeMillis()
@@ -68,12 +70,10 @@ class BookmarkInterner @Inject() (
     }.flatten.toList
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
-    val persistedBookmarks = persistedBookmarksWithUris.map { case (bm, uri, isNewBookmark) =>
-      if (isNewBookmark) {
-        Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-      }
-      bm
-    }.toList
+    val newKeeps = persistedBookmarksWithUris collect { case (bm, uri, isNewBookmark) if isNewBookmark => bm }
+    keptAnalytics.keptPages(user.id.get, newKeeps, context)
+
+    val persistedBookmarks = persistedBookmarksWithUris.map(_._1)
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
   }
@@ -89,7 +89,7 @@ class BookmarkInterner @Inject() (
     }
   }
 
-  def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],
+  private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis
     bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {

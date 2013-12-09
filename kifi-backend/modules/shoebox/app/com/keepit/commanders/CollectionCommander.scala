@@ -8,10 +8,10 @@ import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.search.SearchServiceClient
 
-import play.api.Play.current
 import play.api.libs.json.Json
 
 import com.google.inject.Inject
+import com.keepit.heimdal._
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -29,7 +29,8 @@ class CollectionCommander @Inject() (
   collectionRepo: CollectionRepo,
   userValueRepo: UserValueRepo,
   searchClient: SearchServiceClient,
-  keepToCollectionRepo: KeepToCollectionRepo) extends Logging {
+  keepToCollectionRepo: KeepToCollectionRepo,
+  keptAnalytics: KeptAnalytics) extends Logging {
 
   val CollectionOrderingKey = "user_collection_ordering"
 
@@ -77,7 +78,7 @@ class CollectionCommander @Inject() (
     newCollectionIds
   }
 
-  def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection]): Either[BasicCollection, CollectionSaveFail] = {
+  def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
     val saved: Option[Either[BasicCollection, CollectionSaveFail]] = collectionOpt map { basicCollection =>
       basicCollection.copy(id = ExternalId.asOpt(id))
     } map { basicCollection =>
@@ -93,6 +94,7 @@ class CollectionCommander @Inject() (
                 val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
                 updateCollectionOrdering(userId)
                 searchClient.updateURIGraph()
+                keptAnalytics.renamedTag(userId, coll, newColl, context)
                 Left(BasicCollection.fromCollection(newColl))
               } getOrElse {
                 Right(CollectionSaveFail(s"Collection not found for id $id"))
@@ -103,6 +105,7 @@ class CollectionCommander @Inject() (
                   getOrElse Collection(userId = userId, name = name))
               updateCollectionOrdering(userId)
               searchClient.updateURIGraph()
+              keptAnalytics.createdTag(userId, newColl, context)
               Left(BasicCollection.fromCollection(newColl))
             }
           } else {

@@ -150,4 +150,10 @@ class HeimdalContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery
     contextBuilder.addServiceInfo(serviceDiscovery)
     contextBuilder
   }
+
+  def withRequestInfo(request: RequestHeader): HeimdalContextBuilder = {
+    val contextBuilder = apply()
+    contextBuilder.addRequestInfo(request)
+    contextBuilder
+  }
 }

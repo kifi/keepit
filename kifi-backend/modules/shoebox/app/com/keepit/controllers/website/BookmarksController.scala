@@ -70,10 +70,9 @@ class BookmarksController @Inject() (
   def keepMultiple() = AuthenticatedJsonAction { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
-        val contextBuilder = heimdalContextBuilder()
-        contextBuilder.addRequestInfo(request)
         val source = BookmarkSource.site
-        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, contextBuilder, source)
+        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, source)
         log.info(s"kept ${keeps.size} new keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
@@ -92,6 +91,7 @@ class BookmarksController @Inject() (
 
   def unkeepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
       Ok(Json.obj(
         "removedKeeps" -> deactivatedKeepInfos
@@ -129,10 +129,10 @@ class BookmarksController @Inject() (
   }
 
   def unkeep(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { b =>
-      db.readWrite { implicit s => bookmarkRepo.save(b withActive false) }
-      searchClient.updateURIGraph()
-      Ok(Json.obj())
+    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { bookmark =>
+      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
+      Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
     } getOrElse {
       NotFound(Json.obj("error" -> "Keep not found"))
     }
@@ -166,6 +166,7 @@ class BookmarksController @Inject() (
   }
 
   def saveCollection(id: String) = AuthenticatedJsonAction { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     collectionCommander.saveCollection(id, request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))

@@ -5,18 +5,10 @@ import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
-import com.keepit.commanders.KeepInfosWithCollection._
-import com.keepit.commanders.KeepInfo._
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.net.URI
-import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationService
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.SafeFuture
@@ -24,12 +16,9 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.heimdal._
 import com.keepit.common.social.BasicUserRepo
 
-import play.api.Play.current
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import com.keepit.common.KestrelCombinator
 
 case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
 
@@ -77,13 +66,13 @@ object KeepInfosWithCollection {
 class BookmarksCommander @Inject() (
     db: Database,
     bookmarkInterner: BookmarkInterner,
-    heimdal: HeimdalServiceClient,
     searchClient: SearchServiceClient,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
     uriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
-    collectionRepo: CollectionRepo
+    collectionRepo: CollectionRepo,
+    keptAnalytics: KeptAnalytics
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -109,48 +98,26 @@ class BookmarksCommander @Inject() (
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], contextBuilder: HeimdalContextBuilder, source: BookmarkSource):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
-    val tStart = currentDateTime
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source).map(KeepInfo.fromBookmark)
-
-    //Analytics
-    SafeFuture{
-      keeps.foreach { bookmark =>
-        contextBuilder += ("source", source.value)
-        contextBuilder += ("isPrivate", bookmark.isPrivate)
-        contextBuilder += ("url", bookmark.url)
-        contextBuilder += ("hasTitle", bookmark.title.isDefined)
-
-        heimdal.trackEvent(UserEvent(user.id.get.id, contextBuilder.build, UserEventTypes.KEEP, tStart))
-      }
-      val kept = keeps.length
-      val keptPrivate = keeps.count(_.isPrivate)
-      val keptPublic = kept - keptPrivate
-      heimdal.incrementUserProperties(user.id.get, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
-    }
+    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
-      case Right(name) => db.readWrite { implicit s =>
-        Some(collectionRepo.getByUserAndName(user.id.get, name, excludeState = None) match {
-          case Some(c) if c.isActive => c
-          case Some(c) => collectionRepo.save(c.copy(state = CollectionStates.ACTIVE))
-          case None => collectionRepo.save(Collection(userId = user.id.get, name = name))
-        })
-      }
+      case Right(name) => Some(getOrCreateTag(user.id.get, name))
     } map { coll =>
-      addToCollection(keeps.map(_.id.get).toSet, coll)._1.size
+      tagKeeps(coll, keeps)._1.size
     }
     SafeFuture{
       searchClient.updateURIGraph()
     }
-    (keeps, addedToCollection)
+    (keeps.map(KeepInfo.fromBookmark), addedToCollection)
   }
 
-  def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User]): Seq[KeepInfo] = {
-    val deactivatedKeepInfos = db.readWrite { implicit s =>
+  def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+
+    val deactivatedBookmarks = db.readWrite { implicit s =>
       keepInfos.map { ki =>
         val url = ki.url
         db.readWrite { implicit s =>
@@ -161,80 +128,55 @@ class BookmarksCommander @Inject() (
           }
         }
       }
-    }.flatten.map(KeepInfo.fromBookmark(_))
-    SafeFuture {
-      val unkept = keepInfos.length
-      val unkeptPrivate = keepInfos.count(_.isPrivate)
-      val unkeptPublic = unkept - unkeptPrivate
-      heimdal.incrementUserProperties(userId, "keeps" -> - unkept, "privateKeeps" -> - unkeptPrivate, "publicKeeps" -> - unkeptPublic)
-    }
+    }.flatten
+
+    val deactivatedKeepInfos = deactivatedBookmarks.map(KeepInfo.fromBookmark(_))
+    keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos
   }
 
-  private def addToCollection(keepExtIds: Set[ExternalId[Bookmark]], collection: Collection,
-      removeOthers: Boolean = false): (Set[KeepToCollection], Set[KeepToCollection]) = {
+  def tagKeeps(tag: Collection, keeps: Seq[Bookmark], removeOthers: Boolean = false)(implicit context: HeimdalContext): (Set[KeepToCollection], Set[KeepToCollection]) = {
     db.readWrite(attempts = 2) { implicit s =>
-      val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
-      val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
-      val created = (keepIds -- existing.map(_.bookmarkId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
+      val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
+      val existing = keepToCollectionRepo.getByCollection(tag.id.get, excludeState = None).toSet
+      val created = (keepsById.keySet -- existing.map(_.bookmarkId)) map { bid =>
+        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = tag.id.get))
       }
       val activated = existing collect {
-        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
+        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
       val removed = removeOthers match {
         case true => existing.collect {
-          case ktc if ktc.state == KeepToCollectionStates.ACTIVE && !keepIds.contains(ktc.bookmarkId) =>
+          case ktc if ktc.state == KeepToCollectionStates.ACTIVE && !keepsById.contains(ktc.bookmarkId) =>
             keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
         }
         case false => Seq()
       }
-      ((activated ++ created).toSet, removed.toSet)
+      val tagged = (activated ++ created).toSet
+      val untagged = removed.toSet
+      val taggingAt = currentDateTime
+      tagged.foreach(ktc => keptAnalytics.taggedPage(tag, keepsById(ktc.bookmarkId), context, taggingAt))
+      untagged.foreach(ktc => keptAnalytics.untaggedPage(tag, keepsById(ktc.bookmarkId), context, taggingAt))
+      (tagged, untagged)
     }
   }
 
-  def addTagToUrl(user: User, experiments: Set[ExperimentType],
-      url: String, tagId: Id[Collection])(implicit s: RWSession): KeepToCollection = {
-    log.debug(s"adding tag $tagId to url $url")
-    val uriOpt = uriRepo.getByUri(url)
-    val bookmarkIdOpt: Option[Id[Bookmark]] = uriOpt map { uri =>
-      log.debug(s"found uri $uri for url $url")
-      val bookmarkOpt = bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get)
-      bookmarkOpt map { b =>
-        log.debug(s"found bookmark $b for uri ${uri.id.get}")
-        b.id.get
-      }
-    } flatten
-
-    val bookmarkId = bookmarkIdOpt getOrElse {
-      log.debug(s"did not found bookmark, creating a new one for url $url")
-      val newBookmark = bookmarkInterner.internBookmarks(
-        Json.obj("url" -> url), user, experiments, BookmarkSource.hover
-      ).head
-      log.debug(s"created new bookmark $newBookmark for url $url")
-      newBookmark.id.get
-    }
-    keepToCollectionRepo.getOpt(bookmarkId, tagId) match {
-      case Some(ktc) if ktc.state == KeepToCollectionStates.ACTIVE =>
-        ktc
-      case Some(ktc) =>
-        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-      case None =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmarkId, collectionId = tagId))
-    }
+  def tagUrl(tag: Collection, json: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
+    val bookmark = bookmarkInterner.internBookmarks(json, user, experiments, source, kifiInstallationId)
+    tagKeeps(tag, bookmark)
   }
 
-  def getOrCreateTag(userId: Id[User], name: String): Collection = {
+  def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
     val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
     val collection = db.readOnly { implicit s =>
       collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) }
-      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) }
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) } tap(keptAnalytics.createdTag(userId, _, context))
+      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap(keptAnalytics.createdTag(userId, _, context))
     }
   }
 
