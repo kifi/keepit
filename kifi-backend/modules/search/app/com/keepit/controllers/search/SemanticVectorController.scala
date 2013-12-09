@@ -34,4 +34,11 @@ class SemanticVectorController @Inject()(articleIndexer: ArticleIndexer) extends
     val score = s.similarity(query1, query2, stem)
     Ok(Json.toJson(score))
   }
+
+  def visualizeSemanticVector() = Action(parse.json){ request =>
+    val queries = Json.fromJson[Seq[String]](request.body).get
+    val s = new SemanticContextAnalyzer(searcher, analyzer, stemAnalyzer)
+    val rv = queries.map{ q => s.getSemanticVector(q).toBinary }
+    Ok(Json.toJson(rv))
+  }
 }
