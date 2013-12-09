@@ -68,7 +68,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     }
   }
 
-  function sendSearchedEvent(reason) {
+  function sendSearchedEvent(endedWith) {
     api.port.emit("log_search_event", [
       "searchEnded",
       {
@@ -84,7 +84,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "searchResultsClicked": clicks.google.length,
         "refinements": refinements,
         "pageSession": pageSession,
-        "reason": reason
+        "endedWith": endedWith
       }
     ]);
   }
