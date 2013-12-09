@@ -109,6 +109,9 @@ if (searchUrlRe.test(document.URL)) !function() {
     $status.removeAttr("data-n").removeClass("kifi-promote").parent().addClass("kifi-loading");
     $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
 
+    if (refinements >= 0) {
+      sendSearchedEvent("refinement");
+    }
     var t1 = tQuery = Date.now();
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
