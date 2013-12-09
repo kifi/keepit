@@ -68,6 +68,27 @@ if (searchUrlRe.test(document.URL)) !function() {
     }
   }
 
+  function sendSearchedEvent(reason) {
+    api.port.emit("log_search_event", [
+      "searchEnded",
+      {
+        "origin": window.location.origin,
+        "uuid": response.uuid,
+        "experimentId": response.experimentId,
+        "kifiResults": response.hits.length,
+        "kifiCollapsed": !response.expanded,
+        "kifiTime": tKifiResultsReceived - tQuery,
+        "kifiShownTime": tKifiResultsShown - tQuery,
+        "thirdPartyShownTime": tGoogleResultsShown - tQuery,
+        "kifiResultsClicked": clicks.kifi.length,
+        "searchResultsClicked": clicks.google.length,
+        "refinements": refinements,
+        "pageSession": pageSession,
+        "reason": reason
+      }
+    ]);
+  }
+
   function search(fallbackQuery, newFilter, isFirst) {
     if (isVertical) return;
 
@@ -162,24 +183,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     search();  // needed for switch from shopping to web search, for example
   }).on("beforeunload", function(e) {
     if (response.query === query) {
-      api.port.emit("log_search_event", [
-        "searchEnded",
-        {
-          "origin": window.location.origin,
-          "uuid": response.uuid,
-          "experimentId": response.experimentId,
-          "kifiResults": response.hits.length,
-          "kifiCollapsed": !response.expanded,
-          "kifiTime": tKifiResultsReceived - tQuery,
-          "kifiShownTime": tKifiResultsShown - tQuery,
-          "thirdPartyShownTime": tGoogleResultsShown - tQuery,
-          "kifiResultsClicked": clicks.kifi.length,
-          "searchResultsClicked": clicks.google.length,
-          "refinements": refinements,
-          "pageSession": pageSession,
-          "action": "unload"
-        }
-      ]);
+      sendSearchedEvent("unload");
     }
   });
 
