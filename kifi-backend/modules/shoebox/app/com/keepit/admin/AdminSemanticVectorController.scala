@@ -15,20 +15,6 @@ class AdminSemanticVectorController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator){
 
-//  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = AdminHtmlAction{ implicit request =>
-//    val t1 = System.currentTimeMillis
-//    val scores = Await.result(searchClient.leaveOneOut(queryText, stem, useSketch), 5 seconds).toArray.sortBy(-_._2)
-//    val elapse = System.currentTimeMillis - t1
-//    Ok(s"time elapsed: ${elapse} millis.\nFull query: ${queryText} \n" + scores.map{ x => x._1 + " ---> " + x._2}.mkString("\n"))
-//  }
-//
-//  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean) = AdminHtmlAction{ implicit request =>
-//    val t1 = System.currentTimeMillis
-//    val scores = Await.result(searchClient.allSubsets(queryText, stem, useSketch), 5 seconds).toArray.sortBy(-_._2)
-//    val elapse = System.currentTimeMillis - t1
-//    Ok(s"time elapsed: ${elapse} millis.\nFull query: ${queryText} \n" + scores.map{ x => x._1 + " ---> " + x._2}.mkString("\n"))
-//  }
-
   def analysis() = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
