@@ -239,15 +239,13 @@ exports.postRawAsForm = function(url, data) {
 
 exports.util = {
   btoa: function(str) {
-    return require("sdk/base64").encode(str);
-  },
-  getBrowser: function() {
-    return "Firefox";
-  },
-  getBrowserDetailsOrUserAgent: function() {
-    var system = require("sdk/system");
-    return system.name + "/" + system.version + "/" + system.platform;
+    return require('sdk/base64').encode(str);
   }
+};
+
+exports.browser = {
+  name: 'Firefox',
+  userAgent: Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).userAgent
 };
 
 exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupported");

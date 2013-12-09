@@ -202,8 +202,8 @@ var mixpanel = {
   augmentAndBatch: function(data) {
     data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
     data.properties.distinct_id = session.user.id;
-    data.properties.browser = api.util.getBrowser();
-    data.properties.browserDetails = api.util.getBrowserDetailsOrUserAgent();
+    data.properties.browser = api.browser.name;
+    data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
     if (this.batch.length > 10) {
       this.sendBatch();
