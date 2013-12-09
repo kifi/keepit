@@ -6,22 +6,14 @@
   // allById is a read-only object for looking up threads by their IDs
   // recentThreadIds should be contiguous and in chronological order, newest first
   // numUnreadUnmnuted may refer to threads not yet represented in this ThreadList
-  function ThreadList(allById, recentThreadIds, numUnreadUnmuted, lastSeenTimeStr) {
+  function ThreadList(allById, recentThreadIds, numUnreadUnmuted) {
     this.allById = allById;
     this.ids = recentThreadIds;
     this.numUnreadUnmuted = numUnreadUnmuted || 0;
-    this.lastSeen = lastSeenTimeStr ? new Date(lastSeenTimeStr) : null;
   };
   ThreadList.prototype = {
     contains: function (threadId) {
       return this.ids.indexOf(threadId) >= 0;
-    },
-    updateLastSeen: function(timeStr) {
-      var time = new Date(timeStr);
-      if (!this.lastSeen || this.lastSeen < time) {
-        this.lastSeen = time;
-        return true;
-      }
     },
     insertAll: function(arr) {
       arr.forEach(this.insert.bind(this));
