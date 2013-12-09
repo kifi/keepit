@@ -25,8 +25,8 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     properties.data ++= event.context.data
     properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
     userId.foreach(id => properties += ("userId", id.id))
+    if (!properties.data.contains("token")) { properties += ("token", projectToken) }
     properties += ("distinct_id", distinctId)
-    properties += ("token", projectToken)
     properties += ("time", event.time.getMillis)
 
     for (superProperties <- superPropertiesFuture recover { case _ : Throwable => Seq.empty } ) yield {
@@ -68,6 +68,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       "$delete" -> JsString("")
     )
     sendData("http://api.mixpanel.com/engage", data)
+    sendData("http://api.mixpanel.com/engage", data + ("$ignore_alias" -> JsBoolean(true)))
   }
 
   def alias(userId: Id[User], externalId: ExternalId[User]) = {

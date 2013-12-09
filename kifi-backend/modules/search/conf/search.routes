@@ -52,6 +52,7 @@ GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.Se
 
 GET     /internal/search/semanticVector/leaveOneOut @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean)
 GET     /internal/search/semanticVector/allSubsets @com.keepit.controllers.search.SemanticVectorController.allSubsets(queryText: String, stem: Boolean, useSketch: Boolean)
+GET     /internal/search/semanticVector/similarity @com.keepit.controllers.search.SemanticVectorController.similarity(query1: String, query2: String, stem: Boolean)
 
 GET 	/internal/search/cache/warmResultClick   @com.keepit.controllers.search.SearchCacheController.warmResultClick()
 

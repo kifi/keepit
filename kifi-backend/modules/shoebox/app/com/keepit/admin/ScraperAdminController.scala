@@ -6,7 +6,7 @@ import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.search.ArticleStore
 
 import views.html
@@ -14,7 +14,7 @@ import views.html
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  scraper: ScraperPlugin,
+  scraper: ScrapeSchedulerPlugin,
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
