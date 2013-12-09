@@ -238,4 +238,16 @@ class BookmarksCommander @Inject() (
     }
   }
 
+  def removeTag(id: ExternalId[Collection], url: String, userId: Id[User]): Unit = {
+    db.readWrite { implicit s =>
+      for {
+        uri <- uriRepo.getByUri(url)
+        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, userId)
+        collection <- collectionRepo.getOpt(id)
+      } {
+        keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
+      }
+    }
+  }
+
 }

@@ -1,7 +1,6 @@
 package com.keepit.scraper.extractor
 
 import org.specs2.mutable._
-import org.apache.tika.sax.WriteOutContentHandler
 
 class URITokenizerTest extends Specification {
   "URITokenizerTest" should {

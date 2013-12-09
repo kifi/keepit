@@ -59,15 +59,7 @@ class ExtBookmarksController @Inject() (
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    db.readWrite { implicit s =>
-      for {
-        uri <- uriRepo.getByUri(url)
-        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
-        collection <- collectionRepo.getOpt(id)
-      } {
-        keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
-      }
-    }
+    bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }
 
@@ -169,6 +161,11 @@ class ExtBookmarksController @Inject() (
     } match {
       case Some(bookmark) =>
         searchClient.updateURIGraph()
+        SafeFuture {
+          val madePrivate = if (priv) 1 else -1
+          val madePublic = - madePrivate
+          heimdal.incrementUserProperties(request.userId, "privateKeeps" -> madePrivate, "publicKeeps" -> madePublic)
+        }
         Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
       case None => NotFound
     }

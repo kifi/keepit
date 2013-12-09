@@ -28,6 +28,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   private val nextRoutingInstance = new AtomicInteger(1)
 
   private var scheduledWarning: Option[Cancellable] = None
+  private var scheduledPanic: Option[Cancellable] = None
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
@@ -116,7 +117,11 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     resetRoutingList()
     schedulerOpt.map{ scheduler =>
       if (instances.size < serviceType.minInstances){
-        airbrake.get.notify(s"PANIC! Service cluster for ${serviceType} too small!")
+        if (scheduledPanic.isEmpty) {
+          scheduledPanic = Some(scheduler.scheduleOnce(3 minutes){
+            airbrake.get.notify(s"PANIC! Service cluster for ${serviceType} too small!")
+          })
+        }
       } else if (instances.size < serviceType.warnInstances) {
         if (scheduledWarning.isEmpty) {
           scheduledWarning = Some(scheduler.scheduleOnce(20 minutes){
@@ -125,7 +130,9 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
         }
       } else {
         scheduledWarning.map(_.cancel())
+        scheduledPanic.map(_.cancel())
         scheduledWarning = None
+        scheduledPanic = None
       }
     }
   }

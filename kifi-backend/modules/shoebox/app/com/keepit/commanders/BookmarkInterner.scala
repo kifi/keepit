@@ -6,7 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.KestrelCombinator
@@ -26,7 +26,7 @@ import java.util.UUID
 class BookmarkInterner @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
-  scraper: ScraperPlugin,
+  scraper: ScrapeSchedulerPlugin,
   bookmarkRepo: BookmarkRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
