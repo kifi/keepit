@@ -52,10 +52,10 @@ class ElizaEmailNotifierActor @Inject() (
       unseenUserThreads.foreach { userThread =>
         val thread = db.readOnly { implicit session =>  threadRepo.get(userThread.thread) }
 
-        val participantSet : Set[Id[User]] = thread.participants.map(_.all).getOrElse(Set())
+        val userParticipantSet : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set())
         val userIsActiveFuture = shoebox.getUsers(Seq(userThread.user)).map(_.headOption.map(_.state == UserStates.ACTIVE).getOrElse(false))
-        val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 5 seconds)
-        val otherParticipants = (participantSet - userThread.user).map(id2BasicUser(_))
+        val id2BasicUser = Await.result(shoebox.getBasicUsers(userParticipantSet.toSeq), 5 seconds)
+        val otherParticipants = (userParticipantSet - userThread.user).map(id2BasicUser(_))
 
         val unseenMessages =  db.readOnly { implicit session => userThread.lastSeen.map{ lastSeen =>
           messageRepo.getAfter(thread.id.get, lastSeen).filter(_.from.isDefined)

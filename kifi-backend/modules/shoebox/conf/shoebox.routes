@@ -107,6 +107,7 @@ GET     /m/1/collections/all                @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
+POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
 
 ##########################################
 # Website
@@ -314,8 +315,10 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/search/semanticVector/leaveOneOut       @com.keepit.controllers.admin.AdminSemanticVectorController.leaveOneOut(queryText: String, stem: Boolean ?= true, useSketch: Boolean ?= false)
-GET     /admin/search/semanticVector/allSubsets       @com.keepit.controllers.admin.AdminSemanticVectorController.allSubsets(queryText: String, stem: Boolean ?= true, useSketch: Boolean ?= false)
+GET     /admin/search/semanticVector                      @com.keepit.controllers.admin.AdminSemanticVectorController.index
+POST     /admin/search/semanticVector/analysis            @com.keepit.controllers.admin.AdminSemanticVectorController.analysis
+POST     /admin/search/semanticVector/similarity          @com.keepit.controllers.admin.AdminSemanticVectorController.similarity
+POST     /admin/search/semanticVector/visualize           @com.keepit.controllers.admin.AdminSemanticVectorController.visualize
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])

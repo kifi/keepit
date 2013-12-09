@@ -125,7 +125,6 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
       }
     }
 
-
     "add tag" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)

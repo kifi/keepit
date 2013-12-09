@@ -19,7 +19,9 @@ import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
 import com.keepit.heimdal.{HeimdalContextBuilderFactory, FakeHeimdalServiceClientImpl}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
+import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
+import com.keepit.eliza.model.NonUserParticipant
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -36,7 +38,8 @@ class MessagingTest extends Specification with DbTestInjector {
     val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
     val heimdal = new FakeHeimdalServiceClientImpl(inject[AirbrakeNotifier])
     val heimdalContextBuilder = inject[HeimdalContextBuilderFactory]
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock, uriNormalizationUpdater, urbanAirship, heimdal, heimdalContextBuilder)
+    val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier(clock))
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, abookServiceClient, clock, uriNormalizationUpdater, urbanAirship, heimdal, heimdalContextBuilder)
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)
@@ -53,7 +56,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
-        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
+        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
         messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20).length === 0
 
@@ -88,8 +91,8 @@ class MessagingTest extends Specification with DbTestInjector {
           }
         }
 
-        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Seq, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
-        val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Seq, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
+        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
+        val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
 
         messagingController.getUnreadUnmutedThreadCount(user1) === 0
 
