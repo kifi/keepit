@@ -73,7 +73,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       def search(queryString: String, percentMatch: Float = 0.0f): Seq[Hit] = {
         val parser = parserFactory(Lang("en"), searchConfig)
         parser.setPercentMatch(percentMatch)
-        val searcher = indexer.getSearcher
+        val searcher = indexer.getSearcher.withSemanticContext
         parser.parse(queryString, None) match {
           case Some(query) => searcher.search(query)
           case None => Seq.empty[Hit]
