@@ -10,7 +10,7 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
-class KeptAnalytics @Inject() (heimdal : HeimdalServiceClient) {
+class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
   def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
     val renamedAt = currentDateTime
     SafeFuture {

@@ -30,7 +30,7 @@ class CollectionCommander @Inject() (
   userValueRepo: UserValueRepo,
   searchClient: SearchServiceClient,
   keepToCollectionRepo: KeepToCollectionRepo,
-  keptAnalytics: KeptAnalytics) extends Logging {
+  keptAnalytics: KeepingAnalytics) extends Logging {
 
   val CollectionOrderingKey = "user_collection_ordering"
 

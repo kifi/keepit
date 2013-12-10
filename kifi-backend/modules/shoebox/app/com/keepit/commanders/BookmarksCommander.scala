@@ -72,7 +72,7 @@ class BookmarksCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
-    keptAnalytics: KeptAnalytics
+    keptAnalytics: KeepingAnalytics
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {

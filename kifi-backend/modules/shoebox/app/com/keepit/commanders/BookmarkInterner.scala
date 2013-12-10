@@ -32,7 +32,7 @@ class BookmarkInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
-  keptAnalytics: KeptAnalytics,
+  keptAnalytics: KeepingAnalytics,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
