@@ -36,6 +36,7 @@ var toaster = (function () {
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
+      draftDefault: 'Check this out.',
       submitButtonLabel: 'Send',
       submitTip: (session.prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
       snapshotUri: api.url('images/snapshot.png')
