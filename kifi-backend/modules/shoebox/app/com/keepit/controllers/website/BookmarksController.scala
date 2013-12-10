@@ -228,3 +228,4 @@ class BookmarksController @Inject() (
       "mutualKeeps" -> db.readOnly { implicit s => bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
     ))
   }
+}

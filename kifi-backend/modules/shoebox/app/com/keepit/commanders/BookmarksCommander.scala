@@ -176,15 +176,17 @@ class BookmarksCommander @Inject() (
   }
 
   def removeFromCollection(collection: Collection, keeps: Seq[Bookmark])(implicit context: HeimdalContext): Set[KeepToCollection] = {
-    val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
-    val removed = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
-      case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
-        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+    db.readWrite(attempts = 2) { implicit s =>
+      val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
+      val removed = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
+        case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
+          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+      }
+      val removedAt = currentDateTime
+      removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.bookmarkId), context, removedAt))
+      searchClient.updateURIGraph()
+      removed.toSet
     }
-    val removedAt = currentDateTime
-    removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.bookmarkId), context, removedAt))
-    searchClient.updateURIGraph()
-    removed.toSet
   }
 
   def tagUrl(tag: Collection, json: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
