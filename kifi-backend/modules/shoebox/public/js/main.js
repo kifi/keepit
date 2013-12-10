@@ -1024,12 +1024,13 @@ $(function () {
 
 			var $emails = $('.profile-email-accounts tbody').empty();
 			$.getJSON(xhrBase + '/user/abooks').done(function (abooks) {
-				(abooks || []).forEach(function(abook) {
+				(abooks || []).forEach(function (abook) {
 					$emails.append(gmailAccountTmpl({
 						id: abook.id,
 						status: abook.state,
 						email: abook.ownerEmail,
-						contactCount: abook.numProcessed + ' / ' + abook.numContacts
+						importedCount: abook.numProcessed,
+						totalCount: abook.numContacts
 					}));
 				});
 			});
