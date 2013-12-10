@@ -84,7 +84,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     replaceAll("""\$[0-9]""", "").
     replaceAll("""\$class""", "")
 
-  private def formatParams(params: Map[String,Seq[String]]) = params.isEmpty match {
+  private def formatParams(params: Map[String, Seq[String]]) = params.isEmpty match {
     case false =>
       (<params>{params.flatMap(e => {
           <var key={e._1}>{e._2.mkString(" ")}</var>
