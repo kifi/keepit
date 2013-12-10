@@ -387,14 +387,19 @@ class UserController @Inject() (
     }
   }
 
-  def uploadBinaryUserPicture() = AuthenticatedJsonAction(allowPending = false, bodyParser = parse.temporaryFile) { implicit request =>
-    s3ImageStore.uploadTemporaryPicture(request.body.file) match {
-      case Success((token, pictureUrl)) =>
-        Ok(Json.obj("token" -> token, "url" -> pictureUrl))
-      case Failure(ex) =>
-        airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
-        BadRequest(JsNumber(0))
+  def uploadBinaryUserPicture() = AuthenticatedJsonAction(allowPending = false, bodyParser = parse.maxLength(1024 * 1024 * 10, parse.temporaryFile)) { implicit request =>
+    request.body match {
+      case Left(err) => BadRequest("0")
+      case Right(tempFile) =>
+        s3ImageStore.uploadTemporaryPicture(tempFile.file) match {
+          case Success((token, pictureUrl)) =>
+            Ok(Json.obj("token" -> token, "url" -> pictureUrl))
+          case Failure(ex) =>
+            airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
+            BadRequest(JsNumber(0))
+        }
     }
+
   }
 
   private case class UserPicInfo(
