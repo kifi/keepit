@@ -43,7 +43,6 @@ class MainQueryParser(
   override val siteBoost: Float,
   override val concatBoost: Float,
   homePageBoost: Float,
-  useContextVector: Boolean,
   phraseDetector: PhraseDetector,
   phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
   monitoredAwait: MonitoredAwait
@@ -83,7 +82,7 @@ class MainQueryParser(
         if (semanticBoost > 0.0f) {
           textQueries.foreach{ textQuery =>
             textQuery.setSemanticBoost(semanticBoost)
-            textQuery.stems.map{ stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text, useContextVector) }
+            textQuery.stems.map{ stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text) }
           }
         }
 
