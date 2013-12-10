@@ -314,6 +314,11 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(locator);
       }
     },
+    pushState: function(loc) {
+      if (paneHistory[0] !== loc) {
+        paneHistory.unshift(loc);
+      }
+    },
     back: function (fallbackLocator) {
       showPane(paneHistory[1] || fallbackLocator, true);
     },
