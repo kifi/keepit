@@ -6,6 +6,7 @@ import LinkedInProvider._
 import play.api.libs.ws.WS
 import play.api.{Logger, Application}
 import securesocial.core.{IdentityId, AuthenticationException, SocialUser}
+import play.api.libs.json.JsArray
 
 /**
  * A LinkedIn Provider (OAuth2)
@@ -39,7 +40,7 @@ class LinkedInProvider(application: Application)
           val lastName = (me \ LastName).asOpt[String].getOrElse("")
           val fullName = (me \ FormattedName).asOpt[String].getOrElse("")
           val emailAddress = (me \ EmailAddress).asOpt[String]
-          val avatarUrl = (me \ PictureUrl).asOpt[String]
+          val avatarUrl = (me \ PictureUrl \ "values").asOpt[JsArray].map(_(0).asOpt[String]).flatten
 
           SocialUser(user).copy(
             identityId = IdentityId(userId, id),
@@ -61,7 +62,7 @@ class LinkedInProvider(application: Application)
 }
 
 object LinkedInProvider {
-  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-url::(original))?format=json&oauth2_access_token="
+  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-urls::(original);secure=true)?format=json&oauth2_access_token="
   val LinkedIn = "linkedin"
   val ErrorCode = "errorCode"
   val Message = "message"
@@ -72,5 +73,5 @@ object LinkedInProvider {
   val LastName = "lastName"
   val EmailAddress = "emailAddress"
   val FormattedName = "formattedName"
-  val PictureUrl = "pictureUrl"
+  val PictureUrl = "pictureUrls"
 }
