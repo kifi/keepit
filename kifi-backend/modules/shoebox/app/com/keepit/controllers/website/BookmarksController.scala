@@ -110,21 +110,22 @@ class BookmarksController @Inject() (
   }
 
   def updateKeepInfo(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { b =>
-      request.body.asJson.flatMap { newJson =>
-        val oldJson = Json.toJson(KeepInfo.fromBookmark(b))
-        Json.fromJson[KeepInfo](oldJson.as[JsObject] deepMerge newJson.as[JsObject]).asOpt
-      } map { keepInfo =>
-        val newKeepInfo = KeepInfo.fromBookmark(db.readWrite { implicit s => bookmarkRepo.save(b.withTitle(keepInfo.title).withPrivate(keepInfo.isPrivate)) })
-        searchClient.updateURIGraph()
-        Ok(Json.obj(
-          "keep" -> newKeepInfo
-        ))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
+    val toBeUpdated = request.body.asJson map { json =>
+      val isPrivate = (json \ "isPrivate").asOpt[Boolean]
+      val title = (json \ "title").asOpt[String]
+      (isPrivate, title)
+    }
+
+    toBeUpdated match {
+      case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
+      case Some((isPrivate, title)) => db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { bookmark =>
+        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+        contextBuilder += ("source", BookmarkSource.site.value)
+        bookmarksCommander.updateKeep(bookmark, isPrivate, title)(contextBuilder.build) getOrElse bookmark
+      } match {
+        case None => NotFound(Json.obj("error" -> "Keep not found"))
+        case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromBookmark(keep)))
       }
-    } getOrElse {
-      NotFound(Json.obj("error" -> "Keep not found"))
     }
   }
 

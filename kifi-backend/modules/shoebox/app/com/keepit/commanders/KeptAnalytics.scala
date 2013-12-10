@@ -88,18 +88,28 @@ class KeptAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
-  def updatedPrivacy(updatedKeep: Bookmark, context: HeimdalContext): Unit = SafeFuture {
+  def updatedKeep(oldKeep: Bookmark, updatedKeep: Bookmark, context: HeimdalContext): Unit = SafeFuture {
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++ context.data
-    val action = if (updatedKeep.isPrivate) "madeKeepPrivate" else "madeKeepPublic"
-    contextBuilder += ("action", action)
+    contextBuilder += ("action", "updatedKeep")
     contextBuilder += ("url", updatedKeep.url)
-    heimdal.trackEvent(UserEvent(updatedKeep.userId.id, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
+    if (oldKeep.isPrivate != updatedKeep.isPrivate) {
+      if (updatedKeep.isPrivate) {
+        contextBuilder += ("updatedPrivacy", "private")
+        heimdal.incrementUserProperties(updatedKeep.userId, "privateKeeps" -> 1, "publicKeeps" -> -1)
+      } else {
+        contextBuilder += ("updatedPrivacy", "public")
+        heimdal.incrementUserProperties(updatedKeep.userId, "privateKeeps" -> -1, "publicKeeps" -> 1)
+      }
+    }
 
-    val madePrivate = if (updatedKeep.isPrivate) 1 else -1
-    val madePublic = - madePrivate
-    heimdal.incrementUserProperties(updatedKeep.userId, "privateKeeps" -> madePrivate, "publicKeeps" -> madePublic)
-}
+    if (oldKeep.title != updatedKeep.title) {
+      contextBuilder += ("updatedTitle", updatedKeep.title.getOrElse(""))
+      contextBuilder += ("oldTitle", oldKeep.title.getOrElse(""))
+    }
+
+    heimdal.trackEvent(UserEvent(updatedKeep.userId.id, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
+  }
 
   def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, time: DateTime = currentDateTime): Unit = {}
   def untaggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, time: DateTime = currentDateTime): Unit = {}

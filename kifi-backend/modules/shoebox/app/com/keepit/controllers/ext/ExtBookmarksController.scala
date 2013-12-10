@@ -51,7 +51,6 @@ class ExtBookmarksController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
-  heimdal: HeimdalServiceClient,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   airbrake: AirbrakeNotifier,
   bookmarksCommander: BookmarksCommander)
@@ -59,6 +58,7 @@ class ExtBookmarksController @Inject() (
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }
@@ -152,7 +152,11 @@ class ExtBookmarksController @Inject() (
     }
     val maybeOk = for {
       bookmark <- bookmarkOpt
-      updatedBookmark <- bookmarksCommander.updatePrivacy(bookmark, priv)
+      updatedBookmark <- {
+        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+        contextBuilder += ("source", BookmarkSource.hover.value)
+        bookmarksCommander.updateKeep(bookmark, Some(priv), None)(contextBuilder.build)
+      }
     } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
 
     maybeOk getOrElse NotFound
