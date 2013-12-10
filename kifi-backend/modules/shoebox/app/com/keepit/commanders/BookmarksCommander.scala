@@ -182,12 +182,12 @@ class BookmarksCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) } tap(keptAnalytics.createdTag(userId, _, context))
-      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap(keptAnalytics.createdTag(userId, _, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) } tap(keptAnalytics.createdTag(_, context))
+      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap(keptAnalytics.createdTag(_, context))
     }
   }
 
-  def removeTag(id: ExternalId[Collection], url: String, userId: Id[User]): Unit = {
+  def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit = {
     db.readWrite { implicit s =>
       for {
         uri <- uriRepo.getByUri(url)
@@ -195,6 +195,7 @@ class BookmarksCommander @Inject() (
         collection <- collectionRepo.getOpt(id)
       } {
         keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
+        keptAnalytics.untaggedPage(collection, bookmark, context)
       }
     }
   }

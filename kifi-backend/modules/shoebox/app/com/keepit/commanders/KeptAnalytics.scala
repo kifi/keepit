@@ -11,26 +11,39 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
 class KeptAnalytics @Inject() (heimdal : HeimdalServiceClient) {
-  def renamedTag(userId: Id[User], oldCollection: Collection, newCollection: Collection, context: HeimdalContext): Unit = {
+  def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
     val renamedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++ context.data
       contextBuilder += ("action", "renamedTag")
-      contextBuilder += ("oldName", oldCollection.name)
-      contextBuilder += ("newName", newCollection.name)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.KEPT, renamedAt))
+      contextBuilder += ("oldName", oldTag.name)
+      contextBuilder += ("newName", newTag.name)
+      heimdal.trackEvent(UserEvent(oldTag.userId.id, contextBuilder.build, UserEventTypes.KEPT, renamedAt))
     }
   }
 
-  def createdTag(userId: Id[User], newCollection: Collection, context: HeimdalContext): Unit = {
+  def createdTag(newTag: Collection, context: HeimdalContext): Unit = {
     val createdAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++ context.data
       contextBuilder += ("action", "createdTag")
-      contextBuilder += ("name", newCollection.name)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.KEPT, createdAt))
+      contextBuilder += ("name", newTag.name)
+      heimdal.trackEvent(UserEvent(newTag.userId.id, contextBuilder.build, UserEventTypes.KEPT, createdAt))
+      heimdal.incrementUserProperties(newTag.userId, "tags" -> 1)
+    }
+  }
+
+  def deletedTag(oldTag: Collection, context: HeimdalContext): Unit = {
+    val deletedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++ context.data
+      contextBuilder += ("action", "deletedTag")
+      contextBuilder += ("name", oldTag.name)
+      heimdal.trackEvent(UserEvent(oldTag.userId.id, contextBuilder.build, UserEventTypes.KEPT, deletedAt))
+      heimdal.incrementUserProperties(oldTag.userId, "tags" -> -1)
     }
   }
 

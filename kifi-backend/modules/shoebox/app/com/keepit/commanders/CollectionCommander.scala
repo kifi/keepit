@@ -94,7 +94,7 @@ class CollectionCommander @Inject() (
                 val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
                 updateCollectionOrdering(userId)
                 searchClient.updateURIGraph()
-                keptAnalytics.renamedTag(userId, coll, newColl, context)
+                keptAnalytics.renamedTag(coll, newColl, context)
                 Left(BasicCollection.fromCollection(newColl))
               } getOrElse {
                 Right(CollectionSaveFail(s"Collection not found for id $id"))
@@ -105,7 +105,7 @@ class CollectionCommander @Inject() (
                   getOrElse Collection(userId = userId, name = name))
               updateCollectionOrdering(userId)
               searchClient.updateURIGraph()
-              keptAnalytics.createdTag(userId, newColl, context)
+              keptAnalytics.createdTag(newColl, context)
               Left(BasicCollection.fromCollection(newColl))
             }
           } else {
@@ -119,5 +119,14 @@ class CollectionCommander @Inject() (
     saved.getOrElse {
       Right(CollectionSaveFail("Could not parse collection from body"))
     }
+  }
+
+  def deleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
+    db.readWrite { implicit s =>
+      collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
+      updateCollectionOrdering(collection.userId)
+    }
+    keptAnalytics.deletedTag(collection, context)
+    searchClient.updateURIGraph()
   }
 }

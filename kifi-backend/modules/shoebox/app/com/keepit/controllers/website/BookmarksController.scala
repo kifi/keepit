@@ -175,12 +175,9 @@ class BookmarksController @Inject() (
 
   def deleteCollection(id: ExternalId[Collection]) = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
-      db.readWrite { implicit s =>
-        collectionRepo.save(coll.copy(state = CollectionStates.INACTIVE))
-        collectionCommander.updateCollectionOrdering(request.userId)
-      }
-      searchClient.updateURIGraph()
-      Ok(Json.obj())
+      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      collectionCommander.deleteCollection(coll)
+      Ok(Json.obj("deleted" -> coll.name))
     } getOrElse {
       NotFound(Json.obj("error" -> s"Collection not found for id $id"))
     }
