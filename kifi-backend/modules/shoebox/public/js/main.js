@@ -647,9 +647,6 @@ $(function () {
 			var scale = $photo.innerWidth() / details.size;
 			var $myPic = $('.my-pic');
 			var myScale = $myPic.innerWidth() / details.size;
-			console.log(details);
-			console.log(details);
-			console.log(details);
 			$('.my-pic').css({
 				'background-image': 'url(' + localPhotoUrl + ')',
 				'background-size': myScale * details.width + 'px auto',
@@ -1019,10 +1016,23 @@ $(function () {
 		return str ? str.charAt(0).toUpperCase() + str.substring(1) : '';
 	}
 
+	var gmailAccountTmpl = Handlebars.compile($('#gmail-account').html());
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
 			updateMe(me);
+
+			var $emails = $('.profile-email-accounts tbody').empty();
+			$.getJSON(xhrBase + '/user/abooks').done(function (abooks) {
+				(abooks || []).forEach(function(abook) {
+					$emails.append(gmailAccountTmpl({
+						id: abook.id,
+						status: abook.state,
+						email: abook.ownerEmail,
+						contactCount: abook.numProcessed + ' / ' + abook.numContacts
+					}));
+				});
+			});
 
 			setTimeout(function () {
 				$('.profile-first-name')
@@ -1634,7 +1644,6 @@ $(function () {
 
 	function isConnected(networks, network) {
 		return networks.some(function (netw) {
-			console.log(netw);
 			return netw.network === network;
 		});
 	}
@@ -1682,7 +1691,6 @@ $(function () {
 			$.getJSON(xhrBase + '/user/abooks').done(function (abooks) {
 				$nwFriendsLoading.hide();
 
-				console.log(this, arguments);
 				var hasAbook = Boolean(abooks && abooks.length);
 				var id, email, error;
 				var importing = hasAbook && abooks.some(function (abook) {
@@ -1692,7 +1700,6 @@ $(function () {
 					}
 					error = isAbookFailed(abook.state);
 					if (!error && abook.state !== 'active') {
-						console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
 						id = abook.id;
 						email = abook.ownerEmail;
 						return true;

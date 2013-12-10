@@ -339,20 +339,10 @@
 							<a class="profile-nw nw-email import-gmail" href="javascript:void(0)">Import another Gmail account</a>
 							<div class="profile-email-accounts-title">
 								<span>Your imported accounts: </span>
-								<a class="profile-email-accounts-refresh" href="javascript:void(0)">Refresh all</a>
+								<!-- <a class="profile-email-accounts-refresh" href="javascript:void(0)">Refresh all</a> -->
 							</div>
 							<table class="profile-email-accounts">
 								<tbody>
-									<tr class="profile-email-account" data-template>
-										<td class="profile-email-status"></td>
-										<td class="profile-email-address">joonho1101@gmail.com{{email}}</td>
-										<td class="profile-email-separator">|</td>
-										<td class="profile-email-contact-count">2,333 out of 12,000{{contactCount}} contacts imported</td>
-										<td class="profile-email-separator">|</td>
-										<td class="profile-email-remove">
-											<a href="javascript:void(0)">Remove</a>
-										</td>
-									</tr>
 								</tbody>
 							</table>
 						</div>
@@ -781,6 +771,23 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 			</form>
 		</div>
 	</script>
+
+	<script type="text/x-handlebars" id="gmail-account">
+		<tr class="profile-email-account {{status}}" data-id="{{id}}">
+			<td class="profile-email-status"></td>
+			<td class="profile-email-address">{{email}}</td>
+			<td class="profile-email-separator">|</td>
+			<td class="profile-email-contact-count">{{contactCount}} contacts imported</td>
+			<!--
+			<td class="profile-email-separator">|</td>
+			<td class="profile-email-remove">
+				<a href="javascript:void(0)">Remove</a>
+			</td>
+			-->
+		</tr>
+	</script>
+
+
 
 	<div class="dialog photo-dialog" style="display:none">
 	  <div class="photo-dialog-cell">
