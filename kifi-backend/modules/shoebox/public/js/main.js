@@ -533,7 +533,6 @@ $(function () {
 	var PHOTO_UPLOAD_FORM_URL = '/auth/upload-multipart-image';
 
 	function initProfilePhotoUpload() {
-		var $photo = $('.profile-image');
 		$('.profile-image-file').change(function () {
 			console.log('photo selected', this.files, URL, this, arguments);
 			if (this.files && URL) {
@@ -590,6 +589,7 @@ $(function () {
 
 	var iframeDeferred;
 	function uploadPhotoIframe(form) {
+		var $photo = $('.profile-image');
 		$photo.css('background-image', 'none').addClass('unset');
 
 		if (iframeDeferred) {
@@ -609,6 +609,7 @@ $(function () {
 			} catch (err) {
 			}
 			$photo.css('background-image', o ? 'url(' + o.url + ')' : '').removeClass('unset');
+			$('.my-pic').css('background-image', o ? 'url(' + o.url + ')' : '');
 			$(form).removeAttr('method target action');
 		});
 		form.method = 'POST';
@@ -637,7 +638,18 @@ $(function () {
 		photoDialog
 		.show(localPhotoUrl)
 		.done(function (details) {
+			var $photo = $('.profile-image');
 			var scale = $photo.innerWidth() / details.size;
+			var $myPic = $('.my-pic');
+			var myScale = $myPic.innerWidth() / details.size;
+			console.log(details);
+			console.log(details);
+			console.log(details);
+			$('.my-pic').css({
+				'background-image': 'url(' + localPhotoUrl + ')',
+				'background-size': myScale * details.width + 'px auto',
+				'background-position': -(myScale * details.x) + 'px ' + -(myScale * details.y) + 'px'
+			});
 			$photo.css({
 				'background-image': 'url(' + localPhotoUrl + ')',
 				'background-size': scale * details.width + 'px auto',
