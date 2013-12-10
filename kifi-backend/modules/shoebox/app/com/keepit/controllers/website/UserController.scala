@@ -16,7 +16,6 @@ import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{Promise => PlayPromise}
 import play.api.libs.Comet
@@ -34,14 +33,9 @@ import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
 import com.keepit.model.SocialConnection
-import scala.util.Failure
 import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import scala.util.Success
+import play.api.libs.json._
+import scala.util.{Success, Failure}
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.json.JsObject
 
