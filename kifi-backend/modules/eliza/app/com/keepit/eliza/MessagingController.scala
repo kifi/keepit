@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.social.{BasicNonUser, BasicUser}
+import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
@@ -241,9 +241,11 @@ class MessagingController @Inject() (
         (message.externalId, message.createdAt)
       }.toMap
 
+      val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set()).map(NonUserParticipant.toBasicNonUser)
+
       ElizaThreadInfo(
         externalId = thread.externalId,
-        participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
+        participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
         digest = lastMessage.messageText,
         lastAuthor = userId2BasicUser(lastMessage.from.get).externalId,
         messageCount = messagesByThread(thread.id.get).length,
@@ -673,12 +675,13 @@ class MessagingController @Inject() (
       }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
-        shoebox.getBasicUsers(thread.participants.get.userParticipants.keys.toSeq) map { basicUsers =>
+        shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
           val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
 
           val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
           val theTitle: String = thread.pageTitle.getOrElse("New conversation")
+          val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
           val notificationJson = Json.obj(
             "id"           -> message.externalId.id,
             "time"         -> message.createdAt,
@@ -687,7 +690,7 @@ class MessagingController @Inject() (
             "url"          -> thread.nUrl,
             "title"        -> theTitle,
             "author"       -> basicUsers(adderUserId),
-            "participants" -> basicUsers.values.toSeq,
+            "participants" -> participants,
             "locator"      -> ("/messages/" + thread.externalId),
             "unread"       -> true,
             "category"     -> "message"
@@ -714,8 +717,7 @@ class MessagingController @Inject() (
             }
           }
 
-          val userParticipants = basicUsers.values.toSeq
-          val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, userParticipants)
+          val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
           modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
             thread.participants.map(_.allUsers.par.foreach { userId =>
               notificationRouter.sendToUser(
@@ -724,7 +726,7 @@ class MessagingController @Inject() (
               )
               notificationRouter.sendToUser(
                 userId,
-                Json.arr("thread_participants", thread.externalId.id, userParticipants)
+                Json.arr("thread_participants", thread.externalId.id, participants)
               )
             })
           }
@@ -925,6 +927,9 @@ class MessagingController @Inject() (
           val threadIds = userThreadRepo.getThreads(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
+
+        println("XXXXXXXXXXXXXXXXXXXXXXXXXX\n\n")
+        println(threads.toString)
         (nUri.url, buildThreadInfos(userId, threads, Some(url)))
       } else {
         (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
