@@ -124,10 +124,11 @@ panes.notices = function () {
       $cubby.css('overflow', '');
     });
     $list = $new.find('.kifi-notices-list').data('kind', kindNew);
-    api.port.emit('pane', {
-      old: formatLocator($aOld.data('kind')),
-      new: formatLocator($aNew.data('kind'))
-    });
+
+    var locatorOld = formatLocator($aOld.data('kind'));
+    var locatorNew = formatLocator($aNew.data('kind'));
+    pane.pushState(locatorNew);
+    api.port.emit('pane', {old: locatorOld, new: locatorNew});
   }
 
   function renderOne(notice) {
