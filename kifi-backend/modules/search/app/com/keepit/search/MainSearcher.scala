@@ -91,6 +91,9 @@ class MainSearcher(
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
+  private[this] val homePageBoost = config.asFloat("homePageBoost")
+  private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
+
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
@@ -343,32 +346,36 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      val othersThreshold = othersHighScore * tailCutting
-      val othersNorm = max(highScore, othersHighScore)
-      val queue = createQueue(numHitsToReturn - hits.size)
+    var onlyContainsOthersHits = false
 
-      othersHits.toRankedIterator.forall{ case (h, rank) =>
-        val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-        if (score > othersThreshold) {
-          h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
-          if (h.bookmarkCount > 0) {
-            h.scoring = new Scoring(h.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-            h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
-            queue.insert(h)
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
+      if ( !forbidEmptyFriendlyHits || (forbidEmptyFriendlyHits && hits.size == 0) || !filter.isDefault || !isInitialSearch){
+        val othersThreshold = othersHighScore * tailCutting
+        val othersNorm = max(highScore, othersHighScore)
+        val queue = createQueue(numHitsToReturn - hits.size)
+        if (hits.size == 0) onlyContainsOthersHits = true
+        othersHits.toRankedIterator.forall{ case (h, rank) =>
+          val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+          if (score > othersThreshold) {
+            h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
+            if (h.bookmarkCount > 0) {
+              h.scoring = new Scoring(h.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+              h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
+              queue.insert(h)
+            }
+            true
+          } else {
+            false
           }
-          true
-        } else {
-          false
         }
+        queue.foreach{ h => hits.insert(h) }
       }
-      queue.foreach{ h => hits.insert(h) }
     }
 
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val (show, svVar) = classify(hitList, personalizedSearcher)
+    val (show, svVar) =  if (filter.isDefault && isInitialSearch && (forbidEmptyFriendlyHits && onlyContainsOthersHits)) (false, -1f) else classify(hitList, personalizedSearcher)
 
     // insert a new content if any (after show/no-show classification)
     newContent.foreach { h =>
