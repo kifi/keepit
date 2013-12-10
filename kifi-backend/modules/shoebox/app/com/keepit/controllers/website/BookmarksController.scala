@@ -199,7 +199,7 @@ class BookmarksController @Inject() (
     }
   }
 
-  def keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false) = AuthenticatedJsonAction { request =>
+  def keepToCollection(id: ExternalId[Collection]) = AuthenticatedJsonAction { request =>
     implicit val externalIdFormat = ExternalId.format[Bookmark]
     db.readOnly { implicit s =>
       collectionRepo.getByUserAndExternalId(request.userId, id)
@@ -207,8 +207,8 @@ class BookmarksController @Inject() (
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
         val keeps = db.readOnly { implicit session => keepExtIds.map(bookmarkRepo.get) }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
-        val (added, removed) = bookmarksCommander.addToCollection(collection, keeps, removeOthers)
-        Ok(Json.obj("added" -> added.size, "removed" -> removed.size))
+        val added = bookmarksCommander.addToCollection(collection, keeps)
+        Ok(Json.obj("added" -> added.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
       }
