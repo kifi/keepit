@@ -148,46 +148,45 @@ panes.notices = function () {
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
-      // TODO: fix indentation below
-        if (notice.authors === 1) {
-          notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
-        } else if (notice.firstAuthor > 1) {
-          participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
-        }
-        var nPicsMax = notice.isSent ? 4 : 3;
-        notice.picturedParticipants = nParticipants <= nPicsMax ?
-          notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
-          participants.slice(0, nPicsMax);
-        notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
-        var nNamesMax = 4;
-        if (notice.isReceived) {
-          notice.namedParticipant = notice.author;
-        } else if (notice.isSent) {
-          if (nParticipants === 2) {
-            notice.namedParticipant = participants[1];
-          } else if (nParticipants - 1 <= nNamesMax) {
-            notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
-          } else {
-            notice.namedParticipants = participants.slice(1, nNamesMax);
-            notice.otherParticipants = participants.slice(nNamesMax);
-            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
-          }
+      if (notice.authors === 1) {
+        notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
+      } else if (notice.firstAuthor > 1) {
+        participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
+      }
+      var nPicsMax = notice.isSent ? 4 : 3;
+      notice.picturedParticipants = nParticipants <= nPicsMax ?
+        notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
+        participants.slice(0, nPicsMax);
+      notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
+      var nNamesMax = 4;
+      if (notice.isReceived) {
+        notice.namedParticipant = notice.author;
+      } else if (notice.isSent) {
+        if (nParticipants === 2) {
+          notice.namedParticipant = participants[1];
+        } else if (nParticipants - 1 <= nNamesMax) {
+          notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
         } else {
-          if (nParticipants === 2) {
-            notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
-          } else if (nParticipants <= nNamesMax) {
-            notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
-          } else {
-            notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
-            notice.otherParticipants = participants.slice(nNamesMax - 1);
-            notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
-          }
+          notice.namedParticipants = participants.slice(1, nNamesMax);
+          notice.otherParticipants = participants.slice(nNamesMax);
+          notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
         }
-        if (notice.namedParticipants) {
-          notice.nameIndex = counter();
-          notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
+      } else {
+        if (nParticipants === 2) {
+          notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
+        } else if (nParticipants <= nNamesMax) {
+          notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
+        } else {
+          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
+          notice.otherParticipants = participants.slice(nNamesMax - 1);
+          notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
         }
-        notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
+      }
+      if (notice.namedParticipants) {
+        notice.nameIndex = counter();
+        notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
+      }
+      notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
       return render('html/keeper/notice_message', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
