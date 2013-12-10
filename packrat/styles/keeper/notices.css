@@ -1,3 +1,10 @@
+.kifi-notices-page-count:not(:empty):before {
+  content: '(';
+  margin-left: 5px;
+}
+.kifi-notices-page-count:not(:empty):after {
+  content: ')';
+}
 .kifi-pane-mark-notices-read {
   position: absolute;
   top: 8px;

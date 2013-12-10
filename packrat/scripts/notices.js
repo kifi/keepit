@@ -78,6 +78,10 @@ panes.notices = function () {
         //   // not updating DOM until response received due to bulk nature of action
         // });
       });
+
+      api.port.emit('get_page_thread_count', function (n) {
+        $paneBox.find('.kifi-notices-page-count').text(n || 0);
+      });
     }};
 
   function renderList($box, kind, o) {
