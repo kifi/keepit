@@ -136,6 +136,13 @@ class BookmarksCommander @Inject() (
     deactivatedKeepInfos
   }
 
+  def updatePrivacy(keep: Bookmark, isPrivate: Boolean)(implicit context: HeimdalContext): Option[Bookmark] = Some(keep) collect { case keep if keep.isPrivate != isPrivate =>
+    val updatedKeep = db.readWrite { implicit s => bookmarkRepo.save(keep.withPrivate(isPrivate)) }
+    searchClient.updateURIGraph()
+    keptAnalytics.updatedPrivacy(updatedKeep, context)
+    updatedKeep
+  }
+
   def tagKeeps(tag: Collection, keeps: Seq[Bookmark], removeOthers: Boolean = false)(implicit context: HeimdalContext): (Set[KeepToCollection], Set[KeepToCollection]) = {
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap

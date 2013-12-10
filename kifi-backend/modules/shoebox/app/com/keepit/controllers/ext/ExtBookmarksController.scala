@@ -145,24 +145,17 @@ class ExtBookmarksController @Inject() (
   def updatePrivacy() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
     val (url, priv) = ((json \ "url").as[String], (json \ "private").as[Boolean])
-    db.readWrite { implicit s =>
-      // TODO: use uriRepo.internByUri(url, NormalizationCandidate(json):_*) to utilize "canonical" & "og"
+    val bookmarkOpt = db.readOnly { implicit s =>
       uriRepo.getByUri(url).flatMap { uri =>
-        bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
-          bookmarkRepo.save(b.withPrivate(priv))
-        }
+        bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
       }
-    } match {
-      case Some(bookmark) =>
-        searchClient.updateURIGraph()
-        SafeFuture {
-          val madePrivate = if (priv) 1 else -1
-          val madePublic = - madePrivate
-          heimdal.incrementUserProperties(request.userId, "privateKeeps" -> madePrivate, "publicKeeps" -> madePublic)
-        }
-        Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
-      case None => NotFound
     }
+    val maybeOk = for {
+      bookmark <- bookmarkOpt
+      updatedBookmark <- bookmarksCommander.updatePrivacy(bookmark, priv)
+    } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
+
+    maybeOk getOrElse NotFound
   }
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks

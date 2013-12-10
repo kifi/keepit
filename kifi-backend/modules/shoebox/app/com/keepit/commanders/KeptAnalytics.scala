@@ -59,13 +59,13 @@ class KeptAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     val unkeptAt = currentDateTime
 
     SafeFuture {
-      keeps.foreach { bookmark =>
+      keeps.foreach { keep =>
         val contextBuilder = new HeimdalContextBuilder
         contextBuilder.data ++ context.data
         contextBuilder += ("action", "unkeptPage")
-        contextBuilder += ("isPrivate", bookmark.isPrivate)
-        contextBuilder += ("url", bookmark.url)
-        contextBuilder += ("hasTitle", bookmark.title.isDefined)
+        contextBuilder += ("isPrivate", keep.isPrivate)
+        contextBuilder += ("url", keep.url)
+        contextBuilder += ("hasTitle", keep.title.isDefined)
         heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.KEPT, unkeptAt))
       }
       val unkept = keeps.length
@@ -74,6 +74,19 @@ class KeptAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       heimdal.incrementUserProperties(userId, "keeps" -> - unkept, "privateKeeps" -> - unkeptPrivate, "publicKeeps" -> - unkeptPublic)
     }
   }
+
+  def updatedPrivacy(updatedKeep: Bookmark, context: HeimdalContext): Unit = SafeFuture {
+    val contextBuilder = new HeimdalContextBuilder
+    contextBuilder.data ++ context.data
+    val action = if (updatedKeep.isPrivate) "madeKeepPrivate" else "madeKeepPublic"
+    contextBuilder += ("action", action)
+    contextBuilder += ("url", updatedKeep.url)
+    heimdal.trackEvent(UserEvent(updatedKeep.userId.id, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
+
+    val madePrivate = if (updatedKeep.isPrivate) 1 else -1
+    val madePublic = - madePrivate
+    heimdal.incrementUserProperties(updatedKeep.userId, "privateKeeps" -> madePrivate, "publicKeeps" -> madePublic)
+}
 
   def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, time: DateTime = currentDateTime): Unit = {}
   def untaggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, time: DateTime = currentDateTime): Unit = {}
