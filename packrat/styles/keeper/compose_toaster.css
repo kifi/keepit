@@ -27,6 +27,36 @@
   transform: translateY(100%);
   transition-timing-function: ease-in;
 }
+.kifi-toast-other {
+  position: absolute;
+  top: -48px;
+  left: 0;
+  right: 0;
+  line-height: 36px;
+  font-size: 12px;
+  text-align: center;
+  background-color: #d4dce3;
+  border-radius: 3px;
+  color: #3b485c;
+  cursor: pointer;
+}
+.kifi-toast-other:hover,
+.kifi-toast-other:focus {
+  background-color: #d8e0e6; /* tint 10% */
+}
+.kifi-toast-other:active {
+  background-color: #c9d1d8; /* shade 5% */
+}
+.kifi-toast-other-n {
+  text-decoration: underline;
+  color: inherit !important;
+}
+.kifi-toast-other-n::before {
+  content: attr(data-n) ' ';
+}
+.kifi-toast-other-n:not([data-n='1'])::after {
+  content: 's';
+}
 .kifi-toast-top {
   border-radius: 3px 3px 0 0;
   padding: 0 9px;

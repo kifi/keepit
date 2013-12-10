@@ -67,7 +67,7 @@ panes.notices = function () {
           $(window).off('resize.notices');
           api.port.off(handlers);
         })
-        .on('click', '.kifi-notices-filter[href]', switchTabs);
+        .on('click', '.kifi-notices-filter[href]', onSubTabClick);
 
         // $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
         //   var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
@@ -79,9 +79,15 @@ panes.notices = function () {
         // });
       });
 
-      api.port.emit('get_page_thread_count', function (n) {
-        $paneBox.find('.kifi-notices-page-count').text(n || 0);
+      api.port.emit('get_page_thread_count', function (o) {
+        $paneBox.find('.kifi-notices-page-count').text(o.count || 0);
       });
+    },
+    switchTo: function (locator) {
+      var kind = locToKind(locator);
+      if (kind !== $list.data('kind')) {
+        onSubTabClick.call($list.closest('.kifi-pane-box').find('.kifi-notices-filter-' + kind)[0], {which: 1});
+      }
     }};
 
   function renderList($box, kind, o) {
@@ -102,7 +108,8 @@ panes.notices = function () {
     // $markAllRead.toggle(o.anyUnread);
   }
 
-  function switchTabs() {
+  function onSubTabClick(e) {
+    if (e.which !== 1) return;
     var $aNew = $(this).removeAttr('href');
     var $aOld = $aNew.siblings('.kifi-notices-filter:not([href])').attr('href', 'javascript:');
     var back = $aNew.index() < $aOld.index();
@@ -310,6 +317,10 @@ panes.notices = function () {
 
   function formatLocator(kind) {
     return kind && kind !== 'page' ? '/messages:' + kind : '/messages';
+  }
+
+  function locToKind(locator) {
+    return /^\/messages(?:$|:)/.test(locator) ? locator.substr(10) || 'page' : null;
   }
 }();
 

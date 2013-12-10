@@ -569,7 +569,7 @@ api.port.on({
       (threadListCallbacks[tab.nUri] || (threadListCallbacks[tab.nUri] = [])).push(reply);
     }
     function reply(tl) {
-      respond(tl.ids.length);
+      respond({count: tl.ids.length, id: tl.ids.length === 1 ? tl.ids[0] : undefined});
     }
   },
   get_threads: function(kind, respond, tab) {
