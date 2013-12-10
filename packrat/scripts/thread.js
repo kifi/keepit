@@ -1,6 +1,5 @@
 // @require styles/keeper/thread.css
 // @require styles/keeper/compose.css
-// @require scripts/html/keeper/message_header.js
 // @require scripts/html/keeper/messages.js
 // @require scripts/html/keeper/message.js
 // @require scripts/html/keeper/compose.js

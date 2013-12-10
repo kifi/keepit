@@ -80,6 +80,12 @@ for s in $(find scripts -name '*.js'); do
   if [ -n "$js" ]; then
     jsDeps=("${jsDeps[@]}" "\n  \"$s\": [\n$(echo "$js" | sed -e 's/^/    "/g' -e 's/$/",/g')\n  ]")
   fi
+  for r in $req; do
+    if [ ! -e "out/chrome/$r" ]; then
+      echo "ERROR: missing dependency $r"
+      exit 1;
+    fi
+  done
 done
 savedIFS="$IFS"
 IFS=,
