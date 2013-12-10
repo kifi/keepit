@@ -39,6 +39,11 @@ panes.thread = function () {
         });
         api.port.on(handlers);
       });
+
+      $paneBox.on('click', '.kifi-message-header-back', function () {
+        pane.back($redirected.length ? '/messages:all' : '/messages');
+      });
+
       var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));
       });

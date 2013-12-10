@@ -314,6 +314,9 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(locator);
       }
     },
+    back: function (fallbackLocator) {
+      showPane(paneHistory[1] || fallbackLocator, true);
+    },
     compose: function(trigger) {
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
