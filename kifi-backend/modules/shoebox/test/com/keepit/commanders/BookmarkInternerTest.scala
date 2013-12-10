@@ -1,4 +1,4 @@
-package com.keepit.controllers.core
+package com.keepit.commanders
 
 import com.keepit.test._
 import play.api.test.Helpers._
@@ -6,13 +6,16 @@ import org.specs2.mutable.Specification
 import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
-import com.keepit.scraper.FakeScraperModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.heimdal.HeimdalContext
 
 class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector {
 
+  implicit val context = HeimdalContext.empty
+
   "BookmarkInterner" should {
     "persist bookmark" in {
-      running(new ShoeboxApplication(FakeScraperModule())) {
+      running(new ShoeboxApplication(FakeScrapeSchedulerModule())) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -31,7 +34,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
     }
 
     "persist bookmarks" in {
-      running(new ShoeboxApplication(FakeScraperModule())) {
+      running(new ShoeboxApplication(FakeScrapeSchedulerModule())) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -51,7 +54,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
       }
     }
     "persist bookmarks with one bad url" in {
-      running(new ShoeboxApplication(FakeScraperModule())) {
+      running(new ShoeboxApplication(FakeScrapeSchedulerModule())) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -76,7 +79,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
       }
     }
     "reactivate inactive bookmarks for the same url" in {
-      running(new ShoeboxApplication(FakeScraperModule())) {
+      running(new ShoeboxApplication(FakeScrapeSchedulerModule())) {
         val user = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Smith"))
         }

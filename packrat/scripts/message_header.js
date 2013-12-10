@@ -2,8 +2,6 @@
 // @require scripts/render.js
 // @require scripts/message_participants.js
 // @require scripts/message_muter.js
-// @require scripts/html/keeper/message_header.js
-// @require styles/keeper/message_header.css
 
 /**
  * ---------------------
@@ -53,7 +51,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		/**
 		 * Renders and initializes a message header box.
 		 */
-		init: function ($parent, threadId, participants) {
+		init: function ($el, threadId, participants) {
 			if (this.initialized) {
 				this.destroy();
 			}
@@ -62,7 +60,8 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.initialized = true;
 			this.status = {};
 			this.claimPlugins();
-			this.$el = $(this.render()).appendTo($parent);
+			this.$el = $el;
+			this.render();
 			this.initPlugins();
 			this.initEvents();
 		},
@@ -217,18 +216,11 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			}, []).join(' ');
 		},
 
-		/**
-		 * Renders and returns a html.
-		 *
-		 * @return {string} A rendered html
-		 */
 		render: function () {
-			return win.render('html/keeper/message_header', {
-				status: this.renderStatusClasses(),
-				buttons: this.renderPlugins('button'),
-				options: this.renderPlugins('option'),
-				content: this.renderPlugins('content')
-			});
+			this.$el.addClass(this.renderStatusClasses());
+			this.$el.find('.kifi-message-header-options').html(this.renderPlugins('option'));
+			this.$el.find('.kifi-message-header-buttons').html(this.renderPlugins('button'));
+			this.$el.find('.kifi-message-header-content').html(this.renderPlugins('content'));
 		},
 
 		claimPlugins: function () {

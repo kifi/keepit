@@ -62,6 +62,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   val term = query.term
 
+  searcher.addContextTerm(query.term)
+
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
@@ -71,7 +73,6 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 
   override def normalize(norm: Float, topLevelBoost: Float) {
-    searcher.addContextTerm(query.term)
     value = query.getBoost * norm * topLevelBoost
   }
 
@@ -94,12 +95,9 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val contextSketch = searcher.getContextSketch
-    val weight = (searcher.numOfContextTerms - 1).toFloat / searcher.numOfContextTerms
-    val vector = searcher.getSemanticVector(query.term, contextSketch, weight)
-
+    val contextVector = searcher.getContextVector
     val tp = searcher.getSemanticVectorEnum(context, query.term, context.reader.getLiveDocs)
-    if (tp != null) new SemanticVectorScorerImpl(this, tp, vector, value) else new EmptySemanticVectorScorerImpl(this, vector)
+    if (tp != null) new SemanticVectorScorerImpl(this, tp, contextVector, value) else new EmptySemanticVectorScorerImpl(this, contextVector)
   }
 }
 

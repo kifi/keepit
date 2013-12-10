@@ -20,6 +20,8 @@ class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
   def similarity(data: Array[Byte], offset: Int) = SemanticVector.similarity(bytes, data, offset)
 
   def set(data: Array[Byte], offset: Int, length: Int) = System.arraycopy(data, offset, bytes, 0, length)
+
+  def toBinary = bytes.map{ x => String.format("%8s",  (x & 0xFF).toBinaryString).replace(' ', '0') }.mkString(" ")
 }
 
 object SemanticVector {

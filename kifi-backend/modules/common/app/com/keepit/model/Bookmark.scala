@@ -26,6 +26,9 @@ case class Bookmark(
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] {
+
+  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source]"
+
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)

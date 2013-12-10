@@ -1,4 +1,4 @@
-package com.keepit.controllers.core
+package com.keepit.commanders
 
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
@@ -6,7 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.KestrelCombinator
@@ -21,25 +21,36 @@ import com.keepit.normalizer.NormalizationCandidate
 import scala.util.Try
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.UUID
+import com.keepit.heimdal.HeimdalContext
 
 @Singleton
 class BookmarkInterner @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
-  scraper: ScraperPlugin,
+  scraper: ScrapeSchedulerPlugin,
   bookmarkRepo: BookmarkRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
+  keptAnalytics: KeepingAnalytics,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
-  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Seq[Bookmark] = {
+  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
     val parseStart = System.currentTimeMillis()
-    val bookmarks = getBookmarksFromJson(value)
+    val bookmarks = getBookmarksFromJson(value).sortWith { case (a, b) =>
+      val aUrl = (a \ "url").asOpt[String]
+      val bUrl = (b \ "url").asOpt[String]
+      (aUrl, bUrl) match {
+        case (Some(au), Some(bu)) => au < bu
+        case (Some(au), None) => true
+        case (None, Some(bu)) => false
+        case (None, None) => true
+      }
+    }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
 
     var count = new AtomicInteger(0)
@@ -59,12 +70,10 @@ class BookmarkInterner @Inject() (
     }.flatten.toList
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
-    val persistedBookmarks = persistedBookmarksWithUris.map { case (bm, uri, isNewBookmark) =>
-      if (isNewBookmark) {
-        Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-      }
-      bm
-    }.toList
+    val newKeeps = persistedBookmarksWithUris collect { case (bm, uri, isNewBookmark) if isNewBookmark => bm }
+    keptAnalytics.keptPages(user.id.get, newKeeps, context)
+
+    val persistedBookmarks = persistedBookmarksWithUris.map(_._1)
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
   }
@@ -74,11 +83,13 @@ class BookmarkInterner @Inject() (
       case JsArray(elements) => elements.map(getBookmarksFromJson).flatten
       case json: JsObject if json.keys.contains("children") => getBookmarksFromJson(json \ "children")
       case json: JsObject => Seq(json)
-      case e => throw new Exception("can't figure what to do with %s".format(e)) // bad! ruins an import!
+      case _ =>
+        airbrake.notify(s"error parsing bookmark import json $value")
+        Seq()
     }
   }
 
-  def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],
+  private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis
     bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
@@ -109,6 +120,8 @@ class BookmarkInterner @Inject() (
       if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
         Try(scraper.scheduleScrape(uri))
       }
+
+      session.conn.commit()
 
       Some((bookmark, uri, isNewKeep))
     } else {

@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.controllers.core.BookmarkInterner
+import com.keepit.commanders.BookmarkInterner
 import com.keepit.model.{BookmarkSource, EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -23,6 +23,7 @@ import javax.mail.internet.{InternetAddress, MimeMultipart}
 import javax.mail.search._
 import play.api.libs.json.Json
 import play.api.Plugin
+import com.keepit.heimdal.HeimdalContext
 
 private case object FetchNewKeeps
 
@@ -100,6 +101,7 @@ class MailToKeepActor @Inject() (
                 )
               case (Some(user), uris) =>
                 for (uri <- uris) {
+                  implicit val context = HeimdalContext.empty
                   val bookmark = bookmarkInterner.internBookmarks(Json.obj(
                     "url" -> uri.toString,
                     "isPrivate" -> (keepType == KeepType.Private)

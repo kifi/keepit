@@ -2,7 +2,16 @@
   <a class="kifi-pane-back" href="javascript:" data-loc="/messages"></a>
   <div class="kifi-pane-title">Messages</div>
   <div class="kifi-thread-background"></div>
-  <div class="kifi-thread-who">{{{header}}}</div>
+  <div class="kifi-thread-who">
+    <div class="kifi-message-header">
+      <div class="kifi-message-header-bar">
+        <a class="kifi-message-header-option-button" href="javascript:"><span></span></a>
+        <ul class="kifi-message-header-options"></ul>
+        <ul class="kifi-message-header-buttons"></ul>
+      </div>
+      <div class="kifi-message-header-content"></div>
+    </div>
+  </div>
   <div class="kifi-pane-tall">
   {{#redirected}}
     <div class="kifi-thread-redirected">

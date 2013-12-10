@@ -19,6 +19,7 @@ trait UserEventLoggingRepo extends EventRepo[UserEvent] {
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit
   def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit
   def delete(userId: Id[User]): Unit
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
 }
 
 class ProdUserEventLoggingRepo(
@@ -46,6 +47,7 @@ class ProdUserEventLoggingRepo(
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
   def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = mixpanel.setUserProperties(userId, properties)
   def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit = mixpanel.alias(userId, externalId)
 
   override def persist(userEvent: UserEvent) : Unit = {
     val augmentors = Seq(new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient))
@@ -117,4 +119,5 @@ class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLogg
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = {}
   def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = {}
   def delete(userId: Id[User]): Unit = {}
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 }

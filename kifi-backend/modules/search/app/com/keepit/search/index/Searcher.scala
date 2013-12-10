@@ -198,23 +198,45 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
     if (tp != null) new SemanticVectorEnum(tp) else null
   }
 
+  def numOfContextTerms: Int = 0
+  def addContextTerm(term: Term): Unit = throw new UnsupportedOperationException("not available. create a new searcher instance usiung withSemanticContext")
+  def getContextSketch: Sketch = throw new UnsupportedOperationException("not available. create a new searcher instance with SearchSemanticContext")
+  def getContextVector: SemanticVector = throw new UnsupportedOperationException("not available. create a new searcher instance using withSemanticContext")
+
+  def withSemanticContext: Searcher = new Searcher(indexReader) with SearchSemanticContext
+}
+
+trait SearchSemanticContext extends Searcher {
+
   private[this] var contextTerms = Set.empty[Term]
+  private[this] var contextSketch: Option[Sketch] = None
+  private[this] var contextVector: Option[SemanticVector] = None
 
-  def numOfContextTerms = contextTerms.size
+  override def numOfContextTerms: Int = contextTerms.size
 
-  def addContextTerm(term: Term): Unit = { // weight.normalize should call this
+  override def addContextTerm(term: Term): Unit = { // SemanticVectorWeight constructor should call this
+    contextSketch = None
+    contextVector = None
     contextTerms += term
   }
 
-  private[this] var contextSketch: Option[Sketch] = None
-
-  def getContextSketch: Sketch = { // only weight.scorer should call this
+  override def getContextSketch: Sketch = {
     contextSketch match {
       case Some(sketch) => sketch
       case None =>
         val sketch = getSemanticVectorSketch(contextTerms)
         contextSketch = Some(sketch)
         sketch
+    }
+  }
+
+  override def getContextVector: SemanticVector = {
+    contextVector match {
+      case Some(vector) => vector
+      case None =>
+        val vector = SemanticVector.vectorize(getContextSketch)
+        contextVector = Some(vector)
+        vector
     }
   }
 }

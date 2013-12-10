@@ -70,6 +70,9 @@ trait SearchServiceClient extends ServiceClient {
     rawQuery: String): Future[String]
 
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
+  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
+  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
 }
 
 class SearchServiceClientImpl(
@@ -235,6 +238,25 @@ class SearchServiceClientImpl(
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
     call(Search.internal.leaveOneOut(queryText, stem, useSketch)).map{ r =>
       Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
+     call(Search.internal.allSubsets(queryText, stem, useSketch)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = {
+    call(Search.internal.semanticSimilarity(query1, query2, stem)).map{ r =>
+      Json.fromJson[Float](r.json).get
+    }
+  }
+
+  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = {
+    val payload = Json.toJson(queries)
+    call(Search.internal.visualizeSemanticVector(), payload).map{ r =>
+      Json.fromJson[Seq[String]](r.json).get
     }
   }
 }
