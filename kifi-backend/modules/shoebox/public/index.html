@@ -763,6 +763,25 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 		</div>
 	</script>
 
+	<script type="text/x-handlebars" id="primary-email-change-dialog">
+		<div class="dialog primary-email-change-dialog">
+			<form method="POST" action="{{url}}" class="dialog-content" data-template>
+				<div class="dialog-header">You are about to change your primary email</div>
+				<a href="javascript:" class="dialog-cancel">×</a>
+				<div class="dialog-content-body">
+					<p>You are about to change your primary email to <span class="email-address">{{email}}</span>.</p>
+					<p>We will send a verification email to this email address to prove that you own it.</p>
+					<p>To verify, please click on the verification link on the email.</p>
+					<div class="dialog-buttons">
+						<button class="dialog-submit" type="submit">Ok</button>
+						<button class="dialog-cancel">Cancel</button>
+						<div class="clear"></div>
+					</div>
+				</div>
+			</form>
+		</div>
+	</script>
+
 	<div class="dialog photo-dialog" style="display:none">
 	  <div class="photo-dialog-cell">
 		<div class="photo-dialog-box">

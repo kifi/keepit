@@ -486,6 +486,8 @@ $(function () {
 				var $this = $(this),
 					val = trimInputValue($this.val());
 				$this
+					.data('prevValue', $this.data('value'));
+				$this
 					.val(val)
 					.data('value', val);
 			})
@@ -495,7 +497,10 @@ $(function () {
 			.removeClass('edit');
 
 		if ($input.attr('name') === 'email') {
-			saveNewPrimaryEmail($input.val());
+			saveNewPrimaryEmail($input.val(), function () {
+				var prev = $input.data('prevValue');
+				$input.val(prev).data('value', prev);
+			});
 		}
 		else {
 			saveProfileInfo();
@@ -924,19 +929,45 @@ $(function () {
 		}
 	}
 
-	function saveNewPrimaryEmail(email) {
+	var emailChangeTmpl = Handlebars.compile($('#primary-email-change-dialog').html());
+	function showEmailChangeDialog(email, success, cancel) {
+		var $dialog = $(emailChangeTmpl({
+				email: email
+			}))
+			.appendTo(document.body)
+			.on('click', '.dialog-cancel', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+
+				if (cancel) {
+					cancel(false);
+				}
+			})
+			.on('submit', 'form', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+
+				if (success) {
+					success(true);
+				}
+			})
+			.dialog('show');
+	}
+
+	function saveNewPrimaryEmail(email, cancel) {
 		if (getPrimaryEmailAddress() === email) {
 			// already primary
 			return false;
 		}
+		showEmailChangeDialog(email, function () {
+			var props = getProfileCopy();
+			var emails = props.emails;
+			removeEmailInfo(emails, email);
+			unsetPrimary(emails);
+			emails.unshift([email, true]);
 
-		var props = getProfileCopy();
-		var emails = props.emails;
-		removeEmailInfo(emails, email);
-		unsetPrimary(emails);
-		emails.unshift([email, true]);
-
-		return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+			$.postJson(xhrBase + '/user/me', props).success(updateMe);
+		}, cancel);
 	}
 
 	function saveProfileInfo() {

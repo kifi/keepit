@@ -1236,3 +1236,37 @@ a.photo-dialog-submit:active {
 a.photo-dialog-submit:focus {
   outline-color: #888;
 }
+
+.primary-email-change-dialog .dialog-content {
+  width: 450px;
+}
+
+.primary-email-change-dialog .email-address {
+  color: #73787f;
+}
+.primary-email-change-dialog .dialog-submit {
+  float: right;
+  background-color: #71a6ec;
+}
+.primary-email-change-dialog .dialog-submit:focus,
+.primary-email-change-dialog .dialog-submit:hover {
+  background-color: #8BC0FF;
+}
+.primary-email-change-dialog .dialog-submit:active {
+  background-color: #588DD3;
+}
+.primary-email-change-dialog .dialog-buttons .dialog-cancel {
+  float: left;
+  background-color: #b8c5d1;
+}
+.primary-email-change-dialog .dialog-buttons .dialog-cancel:focus,
+.primary-email-change-dialog .dialog-buttons .dialog-cancel:hover {
+  background-color: #C5D2DE;
+}
+.primary-email-change-dialog .dialog-buttons .dialog-cancel:active {
+  background-color: #9FACB8;
+}
+
+.clear {
+  clear: both;
+}
