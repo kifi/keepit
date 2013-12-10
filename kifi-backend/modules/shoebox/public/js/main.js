@@ -861,6 +861,8 @@ $(function () {
 
 	// end of profile photo upload
 
+	// profile email management
+	//
 	var PRIMARY_INDEX = 0,
 		ADDRESS = 0,
 		PRIMARY = 1,
@@ -1006,6 +1008,12 @@ $(function () {
 		});
 		$disconnectDialog.dialog('show');
 	}
+
+	// profile email contacts
+	$(document).on('click', '.import-gmail', function (e) {
+		e.preventDefault();
+		submitForm(wwwDomain + '/importContacts');
+	});
 
 	function ucfirst(str) {
 		return str ? str.charAt(0).toUpperCase() + str.substring(1) : '';
