@@ -58,20 +58,20 @@ class ExtBookmarksController @Inject() (
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
     bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }
 
   def createTag() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
     Ok(Json.toJson(SendableTag from tag))
   }
 
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
         bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.hover, request.kifiInstallationId)
@@ -84,7 +84,7 @@ class ExtBookmarksController @Inject() (
 
   def addToUrl() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
     bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.hover, request.kifiInstallationId)
     Ok(Json.toJson(SendableTag from tag))
@@ -132,7 +132,7 @@ class ExtBookmarksController @Inject() (
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
       val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
       Ok(Json.obj(
         "removedKeep" -> deactivatedKeepInfo
@@ -153,9 +153,8 @@ class ExtBookmarksController @Inject() (
     val maybeOk = for {
       bookmark <- bookmarkOpt
       updatedBookmark <- {
-        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-        contextBuilder += ("source", BookmarkSource.hover.value)
-        bookmarksCommander.updateKeep(bookmark, Some(priv), None)(contextBuilder.build)
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+        bookmarksCommander.updateKeep(bookmark, Some(priv), None)
       }
     } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
 

@@ -80,7 +80,7 @@ class MobileBookmarksController @Inject() (
   }
 
   def unkeepMultiple() = AuthenticatedJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
       Ok(Json.obj(
@@ -92,7 +92,7 @@ class MobileBookmarksController @Inject() (
   }
 
   def saveCollection() = AuthenticatedJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     collectionCommander.saveCollection("", request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
@@ -100,7 +100,7 @@ class MobileBookmarksController @Inject() (
   }
 
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     db.readOnly { implicit s => collectionRepo.getOpt(id) } map { tag =>
       bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.mobile, request.kifiInstallationId)
       Ok(Json.toJson(SendableTag from tag))
@@ -111,7 +111,7 @@ class MobileBookmarksController @Inject() (
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }

@@ -119,9 +119,8 @@ class BookmarksController @Inject() (
     toBeUpdated match {
       case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
       case Some((isPrivate, title)) => db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { bookmark =>
-        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-        contextBuilder += ("source", BookmarkSource.site.value)
-        bookmarksCommander.updateKeep(bookmark, isPrivate, title)(contextBuilder.build) getOrElse bookmark
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+        bookmarksCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
       } match {
         case None => NotFound(Json.obj("error" -> "Keep not found"))
         case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromBookmark(keep)))
@@ -131,7 +130,7 @@ class BookmarksController @Inject() (
 
   def unkeep(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
       val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
       Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
     } getOrElse {
@@ -167,7 +166,7 @@ class BookmarksController @Inject() (
   }
 
   def saveCollection(id: String) = AuthenticatedJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
     collectionCommander.saveCollection(id, request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
@@ -176,7 +175,7 @@ class BookmarksController @Inject() (
 
   def deleteCollection(id: ExternalId[Collection]) = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
       collectionCommander.deleteCollection(coll)
       Ok(Json.obj("deleted" -> coll.name))
     } getOrElse {
@@ -187,15 +186,10 @@ class BookmarksController @Inject() (
   def removeKeepsFromCollection(id: ExternalId[Collection]) = AuthenticatedJsonAction { request =>
     implicit val externalIdFormat = ExternalId.format[Bookmark]
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
-      request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
-        val removed = db.readWrite { implicit s =>
-          val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
-          keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
-            case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-          }
-        }
-        searchClient.updateURIGraph()
+      request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
+        val keeps = db.readOnly { implicit s => keepExtIds.flatMap(bookmarkRepo.getOpt(_)) }
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+        val removed = bookmarksCommander.removeFromCollection(collection, keeps)
         Ok(Json.obj("removed" -> removed.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
@@ -205,14 +199,15 @@ class BookmarksController @Inject() (
     }
   }
 
-  def keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false) =AuthenticatedJsonAction { request =>
+  def keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false) = AuthenticatedJsonAction { request =>
     implicit val externalIdFormat = ExternalId.format[Bookmark]
     db.readOnly { implicit s =>
       collectionRepo.getByUserAndExternalId(request.userId, id)
     } map { collection =>
-      request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
-        val (added, removed) = addToCollection(keepExtIds, collection, removeOthers)
-        searchClient.updateURIGraph()
+      request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
+        val keeps = db.readOnly { implicit session => keepExtIds.map(bookmarkRepo.get) }
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+        val (added, removed) = bookmarksCommander.addToCollection(collection, keeps, removeOthers)
         Ok(Json.obj("added" -> added.size, "removed" -> removed.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
@@ -233,27 +228,3 @@ class BookmarksController @Inject() (
       "mutualKeeps" -> db.readOnly { implicit s => bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
     ))
   }
-
-  private def addToCollection(keepExtIds: Set[ExternalId[Bookmark]], collection: Collection,
-      removeOthers: Boolean = false): (Set[KeepToCollection], Set[KeepToCollection]) = {
-    db.readWrite(attempts = 2) { implicit s =>
-      val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
-      val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
-      val created = (keepIds -- existing.map(_.bookmarkId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
-      }
-      val activated = existing collect {
-        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
-          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-      }
-      val removed = removeOthers match {
-        case true => existing.collect {
-          case ktc if ktc.state == KeepToCollectionStates.ACTIVE && !keepIds.contains(ktc.bookmarkId) =>
-            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-        }
-        case false => Seq()
-      }
-      ((activated ++ created).toSet, removed.toSet)
-    }
-  }
-}

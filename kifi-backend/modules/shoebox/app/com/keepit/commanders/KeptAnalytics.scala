@@ -111,6 +111,19 @@ class KeptAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     heimdal.trackEvent(UserEvent(updatedKeep.userId.id, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
   }
 
-  def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, time: DateTime = currentDateTime): Unit = {}
-  def untaggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, time: DateTime = currentDateTime): Unit = {}
+  def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit =
+    changedTag(tag, keep, "taggedPage", context, taggedAt)
+  def untaggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, untaggedAt: DateTime = currentDateTime): Unit =
+    changedTag(tag, keep, "untaggedPage", context, untaggedAt)
+
+  private def changedTag(tag: Collection, keep: Bookmark, action: String, context: HeimdalContext, changedAt: DateTime): Unit = SafeFuture {
+    val contextBuilder = new HeimdalContextBuilder
+    contextBuilder.data ++ context.data
+    contextBuilder += ("action", action)
+    contextBuilder += ("tag", tag.name)
+    contextBuilder += ("isPrivate", keep.isPrivate)
+    contextBuilder += ("url", keep.url)
+    contextBuilder += ("hasTitle", keep.title.isDefined)
+    heimdal.trackEvent(UserEvent(tag.userId.id, contextBuilder.build, UserEventTypes.KEPT, changedAt))
+  }
 }

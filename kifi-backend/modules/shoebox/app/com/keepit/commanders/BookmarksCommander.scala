@@ -107,7 +107,7 @@ class BookmarksCommander @Inject() (
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
       case Right(name) => Some(getOrCreateTag(user.id.get, name))
     } map { coll =>
-      tagKeeps(coll, keeps)._1.size
+      addToCollection(coll, keeps)._1.size
     }
     SafeFuture{
       searchClient.updateURIGraph()
@@ -148,12 +148,12 @@ class BookmarksCommander @Inject() (
     } else None
   }
 
-  def tagKeeps(tag: Collection, keeps: Seq[Bookmark], removeOthers: Boolean = false)(implicit context: HeimdalContext): (Set[KeepToCollection], Set[KeepToCollection]) = {
+  def addToCollection(collection: Collection, keeps: Seq[Bookmark], removeOthers: Boolean = false)(implicit context: HeimdalContext): (Set[KeepToCollection], Set[KeepToCollection]) = {
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
-      val existing = keepToCollectionRepo.getByCollection(tag.id.get, excludeState = None).toSet
+      val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
       val created = (keepsById.keySet -- existing.map(_.bookmarkId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = tag.id.get))
+        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
@@ -166,18 +166,30 @@ class BookmarksCommander @Inject() (
         }
         case false => Seq()
       }
+      searchClient.updateURIGraph()
       val tagged = (activated ++ created).toSet
       val untagged = removed.toSet
       val taggingAt = currentDateTime
-      tagged.foreach(ktc => keptAnalytics.taggedPage(tag, keepsById(ktc.bookmarkId), context, taggingAt))
-      untagged.foreach(ktc => keptAnalytics.untaggedPage(tag, keepsById(ktc.bookmarkId), context, taggingAt))
+      tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.bookmarkId), context, taggingAt))
       (tagged, untagged)
     }
   }
 
+  def removeFromCollection(collection: Collection, keeps: Seq[Bookmark])(implicit context: HeimdalContext): Set[KeepToCollection] = {
+    val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
+    val removed = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
+      case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
+        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+    }
+    val removedAt = currentDateTime
+    removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.bookmarkId), context, removedAt))
+    searchClient.updateURIGraph()
+    removed.toSet
+  }
+
   def tagUrl(tag: Collection, json: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
     val bookmark = bookmarkInterner.internBookmarks(json, user, experiments, source, kifiInstallationId)
-    tagKeeps(tag, bookmark)
+    addToCollection(tag, bookmark)
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {

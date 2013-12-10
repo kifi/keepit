@@ -5,7 +5,7 @@ import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.model.ExperimentType
+import com.keepit.model.{BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.net.UserAgent
 import com.keepit.common.time.DateTimeJsonFormat
@@ -154,6 +154,12 @@ class HeimdalContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery
   def withRequestInfo(request: RequestHeader): HeimdalContextBuilder = {
     val contextBuilder = apply()
     contextBuilder.addRequestInfo(request)
+    contextBuilder
+  }
+
+  def withRequestInfoAndSource(request: RequestHeader, source: BookmarkSource) = {
+    val contextBuilder = withRequestInfo(request)
+    contextBuilder += ("source", source.value)
     contextBuilder
   }
 }
