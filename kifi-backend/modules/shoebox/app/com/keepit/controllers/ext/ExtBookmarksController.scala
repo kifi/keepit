@@ -180,7 +180,9 @@ class ExtBookmarksController @Inject() (
     val json = request.body
 
     val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource(_)) getOrElse BookmarkSource.unknown
-    if (!BookmarkSource.valid.contains(bookmarkSource)) airbrake.notify(AirbrakeError(message = Some(s"Invalid bookmark source: $bookmarkSource"), method = Some("ExtBookmarksController.addBookmarks"), details = Some(json.toString)))
+    if (!BookmarkSource.valid.contains(bookmarkSource)) {
+      airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(s"Invalid bookmark source: $bookmarkSource")))
+    }
     bookmarkSource match {
       case BookmarkSource("PLUGIN_START") => Forbidden
       case _ =>
