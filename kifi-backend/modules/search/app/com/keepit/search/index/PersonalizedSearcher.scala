@@ -46,7 +46,7 @@ class PersonalizedSearcher(
   scaledWeightMyBookMarks: Int,
   scaledWeightClickHistory: Int
 )
-extends Searcher(indexReader) with Logging {
+extends Searcher(indexReader) with SearchSemanticContext with Logging {
   import PersonalizedSearcher._
 
   lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
