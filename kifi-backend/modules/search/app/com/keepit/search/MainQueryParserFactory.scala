@@ -20,7 +20,6 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
     val siteBoost = config.asFloat("siteBoost")
     val concatBoost = config.asFloat("concatBoost")
     val homePageBoost = config.asFloat("homePageBoost")
-    val useContextVector = config.asBoolean("useContextVector")
 
     new MainQueryParser(
       lang,
@@ -32,7 +31,6 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
       siteBoost,
       concatBoost,
       homePageBoost,
-      useContextVector,
       phraseDetector,
       phraseDetectionConsolidator,
       monitoredAwait
