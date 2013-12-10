@@ -29,7 +29,7 @@
 }
 .kifi-toast-top {
   border-radius: 3px 3px 0 0;
-  padding: 0 5px;
+  padding: 0 9px;
   background: #34495e;
 }
 .kifi-toast-title {
@@ -39,19 +39,19 @@
 }
 .kifi-toast-x {
   position: absolute;
-  right: 6px;
-  top: 6px;
-  height: 16px;
-  width: 16px;
+  top: 0;
+  right: 0;
+  height: 28px;
+  width: 28px;
   z-index: 2;
-  border-radius: 50%;
+  border-top-right-radius: inherit;
 }
 .kifi-toast-x:before,
 .kifi-toast-x:after {
   content: ' ';
   position: absolute;
-  top: 3px;
-  bottom: 3px;
+  top: 9px;
+  bottom: 9px;
   left: 50%;
   width: 2px;
   background: #ddd;
@@ -83,5 +83,6 @@
   border-top: none !important;
 }
 .kifi-toast .kifi-compose-draft {
-  min-height: 42px;
+  min-height: 64px;
+  max-height: 142px;
 }
