@@ -561,6 +561,17 @@ api.port.on({
       }
     }
   },
+  get_page_thread_count: function(_, respond, tab) {
+    var list = threadLists[tab.nUri];
+    if (list) {
+      reply(list);
+    } else {
+      (threadListCallbacks[tab.nUri] || (threadListCallbacks[tab.nUri] = [])).push(reply);
+    }
+    function reply(tl) {
+      respond(tl.ids.length);
+    }
+  },
   get_threads: function(kind, respond, tab) {
     var listKey = kind === 'page' ? tab.nUri : kind;
     var list = threadLists[listKey];
