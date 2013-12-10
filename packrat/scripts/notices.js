@@ -145,6 +145,7 @@ panes.notices = function () {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
+      notice.title = notice.title || notice.url.replace(/^http:\/\//, '');
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
