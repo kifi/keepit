@@ -7,7 +7,7 @@ import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, 
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
@@ -31,6 +31,34 @@ import com.keepit.common.akka.SafeFuture
 import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
+import play.api.mvc.{Result, Request}
+import scala.util.{Failure, Success}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
+import play.api.data.Form
+import play.api.data.Forms._
+import com.keepit.model.SocialConnection
+import scala.util.Failure
+import com.keepit.model.EmailAddress
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsNumber
+import scala.util.Success
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.json.JsObject
+import com.keepit.model.SocialConnection
+import scala.util.Failure
+import com.keepit.model.EmailAddress
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsNumber
+import scala.util.Success
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.json.JsObject
 
 class UserController @Inject() (
   db: Database,
@@ -50,7 +78,10 @@ class UserController @Inject() (
   userCommander: UserCommander,
   elizaServiceClient: ElizaServiceClient,
   clock: Clock,
-  abookServiceClient: ABookServiceClient
+  s3ImageStore: S3ImageStore,
+  abookServiceClient: ABookServiceClient,
+  airbrakeNotifier: AirbrakeNotifier,
+  emailAddressRepo: EmailAddressRepo
 ) extends WebsiteController(actionAuthenticator) {
 
   def friends() = AuthenticatedJsonAction { request =>
@@ -354,6 +385,74 @@ class UserController @Inject() (
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs
     }
+  }
+
+  def uploadBinaryUserPicture() = AuthenticatedJsonAction(allowPending = false, bodyParser = parse.temporaryFile) { implicit request =>
+    s3ImageStore.uploadTemporaryPicture(request.body.file) match {
+      case Success((token, pictureUrl)) =>
+        Ok(Json.obj("token" -> token, "url" -> pictureUrl))
+      case Failure(ex) =>
+        airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
+        BadRequest(JsNumber(0))
+    }
+  }
+
+  private case class UserPicInfo(
+    picToken: Option[String],
+    picHeight: Option[Int], picWidth: Option[Int],
+    cropX: Option[Int], cropY: Option[Int],
+    cropSize: Option[Int])
+  private val userPicForm = Form[UserPicInfo](
+    mapping(
+      "picToken" -> optional(text),
+      "picHeight" -> optional(number),
+      "picWidth" -> optional(number),
+      "cropX" -> optional(number),
+      "cropY" -> optional(number),
+      "cropSize" -> optional(number)
+    )(UserPicInfo.apply)(UserPicInfo.unapply)
+  )
+  def setUserPicture() = AuthenticatedJsonAction(allowPending = false) { implicit request =>
+    userPicForm.bindFromRequest.fold(
+    formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
+    { case UserPicInfo(picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
+        val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize)
+        picToken.map { token =>
+          s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
+        }
+        Ok("0")
+    })
+  }
+  private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
+    for {
+      h <- picHeight
+      w <- picWidth
+      x <- cropX
+      y <- cropY
+      s <- cropSize
+    } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
+  }
+
+  private val url = current.configuration.getString("application.baseUrl").get
+  def resendVerificationEmail(email: String) = AuthenticatedJsonAction { implicit request =>
+    db.readWrite { implicit s =>
+      emailAddressRepo.getByAddressOpt(email) match {
+        case Some(emailAddr) if emailAddr.userId == request.userId =>
+          val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
+          val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(GenericEmailAddress(email)),
+            subject = "Kifi.com | Please confirm your email address",
+            htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
+            category = ElectronicMailCategory("email_confirmation")
+          ))
+          Ok("0")
+        case _ =>
+          Forbidden("0")
+      }
+    }
+    Ok
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
