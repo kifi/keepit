@@ -5,14 +5,14 @@ import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicUserLikeEntity, BasicUser}
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class ElizaThreadInfo(
     externalId: ExternalId[MessageThread],
-    participants: Seq[BasicUser],
+    participants: Seq[BasicUserLikeEntity],
     digest: String,
     lastAuthor: ExternalId[User],
     messageCount: Long,
@@ -27,7 +27,7 @@ case class ElizaThreadInfo(
 object ElizaThreadInfo {
   implicit val writesThreadInfo = (
     (__ \ 'id).write(ExternalId.format[MessageThread]) and
-    (__ \ 'participants).write[Seq[BasicUser]] and
+    (__ \ 'participants).write[Seq[BasicUserLikeEntity]] and
     (__ \ 'digest).write[String] and
     (__ \ 'lastAuthor).write(ExternalId.format[User]) and
     (__ \ 'messageCount).write[Long] and

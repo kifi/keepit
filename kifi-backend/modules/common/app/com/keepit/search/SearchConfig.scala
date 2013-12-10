@@ -17,6 +17,7 @@ import com.keepit.common.logging.Logging
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      "useContextVector" -> "false",
       "enableWarp" -> "true",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
@@ -44,10 +45,12 @@ object SearchConfig {
       "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
-      "showExperts" -> "false"
+      "showExperts" -> "false",
+      "forbidEmptyFriendlyHits" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
+      "useContextVector" -> "use the context vector as the query semantic vector",
       "enableWarp" -> "warp",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
@@ -75,7 +78,8 @@ object SearchConfig {
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
       "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
-      "showExperts" -> "suggest experts when search returns hits"
+      "showExperts" -> "suggest experts when search returns hits",
+      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)

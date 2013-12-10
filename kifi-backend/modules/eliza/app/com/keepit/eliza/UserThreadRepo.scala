@@ -173,6 +173,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
+  // todo: Remove, not needed and breaks repo conventions
   def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean = false)(implicit session: RWSession) : UserThread = {
     val userThread = UserThread(
         id=None,
