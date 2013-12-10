@@ -65,15 +65,20 @@ var pane = pane || function () {  // idempotent for Chrome
   function showPane(locator, back, paramsArg, redirected) {
     log('[showPane]', locator, back ? 'back' : '')();
     var deferred = Q.defer();
-    if (locator !== (paneHistory && paneHistory[0])) {
-      var name = toPaneName(locator);
+    var locatorCurr = paneHistory && paneHistory[0];
+    var nameCurr = locatorCurr && toPaneName(locatorCurr);
+    var name = toPaneName(locator);
+    if (locator === locatorCurr) {
+      deferred.resolve();
+    } else if (name === nameCurr) {
+      panes[name].switchTo(locator);
+      deferred.resolve();
+    } else {
       (createPaneParams[name] || function (cb) {cb({})})(function (params) {
         params.redirected = redirected;
         showPaneContinued(locator, back, name, params);
         deferred.resolve();
       }, locator, paramsArg);
-    } else {
-      deferred.resolve();
     }
     return deferred.promise;
   }

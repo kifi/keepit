@@ -52,11 +52,17 @@ var toaster = (function () {
     $(document).data('esc').add(hide);
     pane.onHide.add(hide);
 
+    api.port.emit('get_page_thread_count', function (o) {
+      if (o.count) {
+        $toaster.find('.kifi-toast-other-n').attr('data-n', o.count).parent().show().data(o).click(onOthersClick);
+      }
+    });
+
     var deferred = Q.defer();
 
     $toaster.layout()
     .on('transitionend', $.proxy(onShown, null, deferred))
-    .removeClass('kifi-down')
+    .removeClass('kifi-down');
 
     return deferred.promise;
   }
@@ -98,6 +104,17 @@ var toaster = (function () {
           locator: '/messages/' + resp.threadId,
           paramsArg: recipients});
       });
+  }
+
+  function onOthersClick(e) {
+    if (e.which !== 1) return;
+    hide();
+    var data = $(this).data();
+    if (data.count === 1) {
+      pane.show({locator: '/messages/' + data.id});
+    } else {
+      pane.show({locator: '/messages'});
+    }
   }
 
   function idOf(o) {
