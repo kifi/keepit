@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -25,29 +25,14 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
-import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.common.akka.SafeFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{Result, Request}
-import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
-import com.keepit.model.SocialConnection
-import scala.util.Failure
-import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import scala.util.Success
-import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.json.JsObject
 import com.keepit.model.SocialConnection
 import scala.util.Failure
 import com.keepit.model.EmailAddress
