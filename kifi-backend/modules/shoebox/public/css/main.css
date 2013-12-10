@@ -42,7 +42,7 @@ a.my-settings-wrapper { position: relative; top: -10px; display: block; width: 6
 .my-settings-wrapper:hover .my-settings { transform: none; -webkit-transform: none }
 .my-settings-wrapper:active .my-settings { background: #929FAF }
 
-.my-settings-icon { display: inline-block; width: 15px; height: 15px; background-image: url(../img/pencil.png); background-repeat: no-repeat; background-size: 15px 15px; margin-top: 14px }
+.my-settings-icon { display: inline-block; width: 15px; height: 15px; background-image: url(../img/gear-white.png); background-repeat: no-repeat; background-size: 15px 15px; margin-top: 14px }
 .my-settings-text { display: block }
 
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
@@ -364,7 +364,22 @@ a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-le
 .not-connected > a.profile-nw { background-color: #dbdee3; }
 .not-connected > .profile-nw-connected { visibility: hidden; }
 
-.profile-nw-connected { position: relative; display: block; color: #818691; margin-top: 8px; padding-left: 21px; font-size: 12px; line-height: 17px; font-weight: 200; letter-spacing: .8px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 1px; overflow: hidden; }
+.profile-nw-connected { 
+position: relative;
+display: block;
+color: #818691;
+margin-top: 8px;
+padding-left: 16px;
+font-size: 12px;
+line-height: 15px;
+font-weight: 200;
+letter-spacing: .8px;
+background-image: url(../img/check-green.png);
+background-repeat: no-repeat;
+background-size: auto 15px;
+background-position: 0;
+overflow: hidden;
+}
 .profile-placeholder {}
 .profile-connected { position: absolute; color: #818691; transition: top .3s ease }
 .profile-disconnect { position: absolute; top: 100%; transition: top .3s ease; }
@@ -372,13 +387,21 @@ a.profile-nw {display: inline-block; color: white; padding: 8px 16px; padding-le
 .profile-networks > li:hover .profile-connected { top: -100% }
 .profile-networks > li:hover .profile-disconnect { top: 0 }
 
-.profile-email-accounts { margin-top: 6px }
+.profile-email-accounts { margin-top: 6px; border-collapse: collapse; border-spacing: 0; }
+.profile-email-accounts td, th { padding: 0 }
 .profile-email-accounts-refresh { margin-left: 5px; font-size: 12px }
 .profile-email-accounts-refresh:hover { text-decoration: underline }
-.profile-email-account {font-size: 12px; line-height: 18px; font-weight: 200; }
-.profile-email-status { width: 17px; background-image: url(../img/tag-icon-small.png); background-repeat: no-repeat; background-size: auto 15px; background-position: 0 2px }
+.profile-email-account {font-size: 12px; line-height: 22px; font-weight: 200; }
+td.profile-email-status {
+width: 15px;
+background-image: url(../img/check-green.png);
+background-repeat: no-repeat;
+background-size: auto 15px;
+background-position: 0;
+padding-right: 8px;
+}
 .profile-email-address {color: #818691 }
-.profile-email-separator {color: #9fb1c3; padding: 0 7px }
+td.profile-email-separator {color: #9fb1c3; padding: 0 8px }
 .profile-email-remove a:hover {text-decoration: underline}
 .profile-email-contact-count {color: #9fb1c3; }
 
@@ -977,8 +1000,10 @@ a.friend-nw-google[href] {background-color: #e9644b}
   .friend-actions>*>a::before,
   .connect-button::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-19.2x.png)}
-  .my-pic::before {background-image: url(../img/pencil.2x.png)}
+  .my-settings-icon {background-image: url(../img/gear-white.2x.png)}
   .blog>header {background-image: url(../img/news.2x.png)}
+  .profile-nw-connected { background-image: url(../img/check-green.2x.png); }
+  td.profile-email-status { background-image: url(../img/check-green.2x.png); }
 }
 
 .fancybox-inner {font-size: 16px}
