@@ -928,8 +928,6 @@ class MessagingController @Inject() (
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
 
-        println("XXXXXXXXXXXXXXXXXXXXXXXXXX\n\n")
-        println(threads.toString)
         (nUri.url, buildThreadInfos(userId, threads, Some(url)))
       } else {
         (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
