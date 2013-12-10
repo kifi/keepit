@@ -22,7 +22,6 @@ object UserEventTypes {
   val WS_DISCONNECT = EventType("ws_disconnect")
 
   // Keeping
-  val KEEP = EventType("keep")
   val KEPT = EventType("kept")
 
   // Messaging
