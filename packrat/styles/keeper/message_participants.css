@@ -246,8 +246,12 @@
   background-position: 50%;
   vertical-align: middle;
 }
-.kifi-message-add-participant:hover {
-  background-color: #d7dade;
+.kifi-message-add-participant:hover,
+.kifi-message-add-participant:focus {
+  background-color: #fafbfd;
+}
+.kifi-message-add-participant:active {
+  background-color: #e3e6eb;
 }
 .kifi-message-add-participant.kifi-active {
   background-color: #b8c5d1;

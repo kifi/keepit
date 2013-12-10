@@ -268,6 +268,7 @@ a.kifi-pane-settings.kifi-active {
   background: #fafafa;
 }
 .kifi-pane-notices > .kifi-pane-tall {
+  top: 64px;
   overflow: hidden;
 }
 .kifi-pane-tall .kifi-scroll-inner {
@@ -413,6 +414,30 @@ a.kifi-notices-filter:link.kifi-active {
   border-bottom: 1px solid #e1e8e9;
   height: 29px;
 }
+.kifi-message-header-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 29px;
+  width: 40px;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAANCAYAAACgu+4kAAAAhUlEQVQoz2NgwAKWbdwTCsSvgNiWgVQA1BQCxL+B+D8QPyVVczAQ/4Jq/gPE0aRoDgLin1DNIDqYFM0BSJp/ALEPKZr9kDT/h3rhHZH4GsiAN0iaScYgA3zQXPCTBBfcxOaNL0DsQk78owekPzmGIEflb5LSAY7EdIuBHADNC7eB2JCQWgAA7Qor6QE9CgAAAABJRU5ErkJggg==);
+  background-repeat: no-repeat;
+  background-position: 12px 8px;
+  background-size: auto 13px;
+  border-right: 1px solid #e1e8e9;
+}
+.kifi-message-header-back:hover,
+.kifi-message-header-back:focus {
+  background-color: #fafbfd;
+}
+.kifi-message-header-back:active {
+  background-color: #e3e6eb;
+}
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .kifi-message-header-back {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAaCAYAAADWm14/AAAA/klEQVRIx2NgIBEs27inGog/AXERA70B0NIKIP6PhPPoaXk+muUg/A+IXelheSrUsv9YcAatLY8D4r84LN8KxGy0tDwUiP8MlOW+QPxzoCx3G0jL7YH460BZbg4tZAbEckMg/oDDchB+BMR3qYhvwrMwkKEDxK/wWE4r/BnmgJsDYDkYwxxwY6AdoDVAUfABORHqA/E7PIofUjkRXgfiZPScYIYnJ6wGYlZ61Hw2eAqiNTQtC5Ac4QLE33E4Yh29HOGNpz7YQC9HBOOpjjfRyxHReByxhV6OSMbTJIuiV6M0F4vloISqQ8+WcQmS5aAE6jMQfYMyIL4DxCHUMA8A9zHhD/EO7d8AAAAASUVORK5CYII=);
+  }
+}
 .kifi-message-header-buttons {
   position: relative;
   float: right;
@@ -446,7 +471,10 @@ a.kifi-notices-filter:link.kifi-active {
 }
 .kifi-message-header-option-button:hover,
 .kifi-message-header-option-button:focus {
-  background-color: #d7dade;
+  background-color: #fafbfd;
+}
+.kifi-message-header-option-button:active {
+  background-color: #e3e6eb;
 }
 .kifi-message-header.kifi-option-expanded .kifi-message-header-option-button {
   background-color: #b8c5d1;
