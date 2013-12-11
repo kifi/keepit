@@ -448,7 +448,7 @@ class AuthController @Inject() (
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Kifi.com |  Please confirm your email address",
+            subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
             category = ElectronicMailCategory("email_confirmation")
           ))
