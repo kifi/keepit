@@ -55,7 +55,7 @@ class BookmarkInterner @Inject() (
 
     var count = new AtomicInteger(0)
     val total = bookmarks.size
-    val batchConcurrency = 5
+    val batchConcurrency = 1
     val batchSize = 100
     val persistedBookmarksWithUris = bookmarks.grouped(batchSize).grouped(batchConcurrency).map { concurrentGroup =>
       concurrentGroup.par.map { bms =>
