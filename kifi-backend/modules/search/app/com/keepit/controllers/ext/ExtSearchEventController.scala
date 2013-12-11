@@ -28,6 +28,7 @@ import com.keepit.search.ClickedURI
 import scala.Some
 import com.keepit.search.BrowsedURI
 import com.keepit.search.ArticleSearchResult
+import com.keepit.common.akka.SafeFuture
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -49,44 +50,45 @@ class ExtSearchEventController @Inject() (
     val userId = request.userId
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val isDemo = request.experiments.contains(ExperimentType.DEMO)
     val query = basicSearchContext.query
 
-    checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
-    SearchEngine.get(resultSource) match {
+    Async(SafeFuture {
+      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
+      SearchEngine.get(resultSource) match {
 
-      case SearchEngine.Kifi => {
-        val personalSearchResult = (json \ "hit").as[PersonalSearchResult]
-        shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
-          val uriId = uri.id.get
-          clickHistoryTracker.add(userId, ClickedURI(uriId))
-          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
-          if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
-        }
-        searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(personalSearchResult), contextBuilder)
-      }
-
-      case theOtherGuys => {
-        val searchResultUrl = (json \ "resultUrl").as[String]
-
-        getDestinationUrl(searchResultUrl, theOtherGuys).foreach { url =>
-          shoeboxClient.getNormalizedURIByURL(url).onSuccess {
-            case Some(uri) =>
-              val uriId = uri.id.get
-              clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
-              resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
-            case None =>
-              resultClickedTracker.moderate(userId, query)
+        case SearchEngine.Kifi => {
+          val personalSearchResult = (json \ "hit").as[PersonalSearchResult]
+          shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
+            val uriId = uri.id.get
+            clickHistoryTracker.add(userId, ClickedURI(uriId))
+            resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
+            if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
           }
+          searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(personalSearchResult), contextBuilder)
         }
-        searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, theOtherGuys, resultPosition, None, contextBuilder)
+
+        case theOtherGuys => {
+          val searchResultUrl = (json \ "resultUrl").as[String]
+
+          getDestinationUrl(searchResultUrl, theOtherGuys).foreach { url =>
+            shoeboxClient.getNormalizedURIByURL(url).onSuccess {
+              case Some(uri) =>
+                val uriId = uri.id.get
+                clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
+                resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
+              case None =>
+                resultClickedTracker.moderate(userId, query)
+            }
+          }
+          searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, theOtherGuys, resultPosition, None, contextBuilder)
+        }
       }
-    }
-    Ok
+      Ok
+    })
   }
 
   def endedSearch = AuthenticatedJsonToJsonAction { request =>
@@ -100,10 +102,12 @@ class ExtSearchEventController @Inject() (
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
     val endedWith = (json \ "endedWith").as[String]
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.searched")
-    searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
-    Ok
+    Async(SafeFuture {
+      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.searched")
+      searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
+      Ok
+    })
   }
 
   def updateBrowsingHistory() = AuthenticatedJsonToJsonAction { request =>
