@@ -35,7 +35,6 @@ if (searchUrlRe.test(document.URL)) !function() {
   var refinements = -1;   // how many times the user has refined the search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
-  var timesPaginated = 0;
   var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
@@ -86,8 +85,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "thirdPartyResultsClicked": clicks.google.length,
         "refinements": refinements,
         "pageSession": pageSession,
-        "endedWith": endedWith,
-        "timesPaginated": timesPaginated
+        "endedWith": endedWith
       }
     ]);
   }
@@ -282,8 +280,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "query": response.query,
           "hit": isKifi ? response.hits[resIdx] : null,
           "refinements": refinements,
-          "pageSession": pageSession,
-          "timesPaginated": timesPaginated
+          "pageSession": pageSession
         }
       ]);
     }
