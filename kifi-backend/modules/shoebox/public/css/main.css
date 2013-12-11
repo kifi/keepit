@@ -1183,13 +1183,20 @@ a.profile-email-pending-cancel {
 
 .profile-email-addresses-arrow {
   display: block;
+  background-image: url(../img/arrow-gray-right.png);
+  background-repeat: no-repeat;
+  background-position: 4px 4px;
   float: left;
-  color: #b8c5d1;
-  background: #b8c5d1;
-  width: 20px;
-  height: 17px;
-  margin-right: 11px;
+  width: 10px;
+  height: 10px;
+  padding: 4px;
+  padding-right: 2px;
   vertical-align: middle;
+}
+
+.profile-email-addresses.opened .profile-email-addresses-arrow {
+  background-image: url(../img/arrow-gray-down.png);
+  background-position: 0 7px;
 }
 
 .profile-email-address-manage {
@@ -1302,12 +1309,17 @@ a.profile-email-address-add {
 .profile-email-address-item-arrow {
   position: absolute;
   display: block;
-  top: 4px;
+  top: 5px;
   right: 0;
-  color: #b8c5d1;
-  background: #b8c5d1;
-  width: 20px;
-  height: 17px;
+  display: block;
+  background-image: url(../img/arrow-gray-down.png);
+  background-repeat: no-repeat;
+  background-position: 3px 6px;
+  width: 10px;
+  height: 10px;
+  padding: 3px;
+  background-color: #FFF;
+  border: 1px solid #CCC;
   vertical-align: middle;
   cursor: pointer;
 }
@@ -1316,9 +1328,9 @@ a.profile-email-address-add {
   display: none;
   position: absolute;
   top: 100%;
-  right: 0;
+  right: -1px;
   background: white;
-  border: 1px solid #a7aaa9;
+  border: 1px solid #cccccc;
   z-index: 1;
 }
 
