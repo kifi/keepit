@@ -707,6 +707,7 @@ span.long-text, a.long-text {display: inline-block}
 .dialog {z-index: 100; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(227, 224, 226, 0.8); -webkit-transition: opacity .3s linear; transition: opacity .3s linear}
 .dialog.showing {opacity: 1}
 .dialog-content {position: fixed; left: 50%; top: 50%; background: #faf8f7; border: 1px solid #f2eeed; border-radius: 5px; box-shadow: 6px 12px 1px #d1d7df; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+.dialog>.dialog-content>h1 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 .dialog>.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 
 /* welcome dialog */
