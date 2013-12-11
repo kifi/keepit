@@ -99,18 +99,16 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    if (concatBoost > 0.0f && clauses.size <= 42) { // if we have too many terms, don't concat terms
-      val adder = new ConcatQueryAdder(concatBoost)
-      adder.addConcatQueries(queries)
-    }
+    // if we have too many terms, don't concat terms
+    if (concatBoost > 0.0f && clauses.size <= 42) ConcatQueryAdder.addConcatQueries(queries, concatBoost)
 
     getBooleanQuery(clauses)
   }
 }
 
-class ConcatQueryAdder(concatBoost: Float){
+object ConcatQueryAdder{
 
-  private def addConcatQuery(textQuery: TextQuery, concat: (String, String)): Unit = {
+  private def addConcatQuery(textQuery: TextQuery, concat: (String, String), concatBoost: Float): Unit = {
     val (t1, t2) = concat
 
     textQuery.concatStems += t2
@@ -152,7 +150,7 @@ class ConcatQueryAdder(concatBoost: Float){
   }
 
   // side effect
-  def addConcatQueries(queries: ArrayBuffer[(QuerySpec, TextQuery)]) {
+  def addConcatQueries(queries: ArrayBuffer[(QuerySpec, TextQuery)], concatBoost: Float) {
 
     val emptyQuery = new TextQuery
     var prevTextQuery: TextQuery = null
@@ -162,13 +160,13 @@ class ConcatQueryAdder(concatBoost: Float){
           // concat phrase in the current query
           if (currTextQuery.terms.length > 1) {
             val c = concat(emptyQuery, currTextQuery)
-            addConcatQuery(currTextQuery, c)
+            addConcatQuery(currTextQuery, c, concatBoost)
           }
           // concat with the previous query
           if (prevTextQuery != null) {
             val c = concat(prevTextQuery, currTextQuery)
-            addConcatQuery(prevTextQuery, c)
-            addConcatQuery(currTextQuery, c)
+            addConcatQuery(prevTextQuery, c, concatBoost)
+            addConcatQuery(currTextQuery, c, concatBoost)
           }
           prevTextQuery = currTextQuery
         } else {
