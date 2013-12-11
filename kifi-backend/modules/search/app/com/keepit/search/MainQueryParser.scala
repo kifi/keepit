@@ -128,7 +128,7 @@ class MainQueryParser(
     }
   }
 
-  private[this] def svTerms: Seq[Term] = {
+  def svTerms: Seq[Term] = {
     textQueries.flatMap{ _.stems.map{ t => new Term("sv", t.text) } }
   }
 
