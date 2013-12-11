@@ -928,6 +928,7 @@ a.undo-link[href]:hover {
   padding: 18px;
   padding-right: 27px;
   color: #566278;
+  overflow: auto;
 }
 
 .profile>h2 {
