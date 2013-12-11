@@ -75,11 +75,10 @@ case class HealthcheckHost(host: String) extends AnyVal {
 
 @ImplementedBy(classOf[RemoteHealthcheckMailSender])
 trait HealthcheckMailSender extends Logging {
-  def playMode: Mode
   def sendMail(email: ElectronicMail): Unit
 }
 
-class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice, val playMode: Mode) extends HealthcheckMailSender {
+class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice, playMode: Mode) extends HealthcheckMailSender {
   def sendMail(email: ElectronicMail): Unit = playMode match {
     case Prod => postOffice.queueMail(email)
     case _ => log.info(s"skip sending email: $email")
