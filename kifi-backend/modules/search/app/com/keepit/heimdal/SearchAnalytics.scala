@@ -36,7 +36,6 @@ case class BasicSearchContext(
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
   thirdPartyShownTime: Option[Int],
-  moreResultsClicked: Option[Int],
   kifiResultsClicked: Option[Int],
   thirdPartyResultsClicked: Option[Int]
 )
@@ -56,7 +55,6 @@ object BasicSearchContext {
     (__ \ 'kifiTime).readNullable[Int] and
     (__ \ 'kifiShownTime).readNullable[Int] and
     (__ \ 'thirdPartyShownTime).readNullable[Int] and
-    (__ \ 'timesPaginated).readNullable[Int] and
     (__ \ 'kifiResultsClicked).readNullable[Int] and
     (__ \ 'thirdPartyResultsClicked).readNullable[Int]
   )(BasicSearchContext.apply _)
@@ -152,13 +150,8 @@ class SearchAnalytics @Inject() (
 
     // Kifi Results
 
-    contextBuilder += ("initialKifiResults", initialSearchResult.hits.length)
-    contextBuilder += ("initialPersonalResults", initialSearchResult.myTotal)
-    contextBuilder += ("initialFriendsResults", initialSearchResult.friendsTotal)
-    contextBuilder += ("initialOthersResults", initialSearchResult.othersTotal)
-
     contextBuilder += ("kifiResults", searchContext.kifiResults)
-    searchContext.moreResultsClicked.foreach { count => contextBuilder += ("moreResultsClicked", count) }
+    contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
     searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
     searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
 
@@ -173,14 +166,6 @@ class SearchAnalytics @Inject() (
     searchContext.thirdPartyShownTime.foreach { thirdPartyShown => contextBuilder += ("thirdPartyShownTime", thirdPartyShown) }
     for { kifiShown <- searchContext.kifiShownTime; thirdPartyShown <- searchContext.thirdPartyShownTime } yield { contextBuilder += ("kifiDelay", kifiShown - thirdPartyShown) }
     for { kifiShown <- searchContext.kifiShownTime; kifiLatency <- searchContext.kifiTime } yield { contextBuilder += ("kifiRenderingTime", kifiShown - kifiLatency)}
-
-
-    // Data Consistency Checks
-
-    searchContext.moreResultsClicked.foreach { count =>
-      if (count != latestSearchResult.pageNumber)
-        airbrake.notify(AirbrakeError(new Exception(s"Inconsistent number of Kifi Result Pages: received ${count} but expected ${latestSearchResult.pageNumber}")))
-    }
   }
 
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
