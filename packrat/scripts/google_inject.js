@@ -35,6 +35,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   var refinements = -1;   // how many times the user has refined the search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
+  var timesPaginated = 0;
   var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
@@ -85,7 +86,8 @@ if (searchUrlRe.test(document.URL)) !function() {
         "thirdPartyResultsClicked": clicks.google.length,
         "refinements": refinements,
         "pageSession": pageSession,
-        "endedWith": endedWith
+        "endedWith": endedWith,
+        "timesPaginated": timesPaginated
       }
     ]);
   }
@@ -119,6 +121,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
     tKifiResultsReceived = null;
     tKifiResultsShown = null;
+    timesPaginated = 0;
     var t1 = tQuery = Date.now();
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
@@ -279,7 +282,8 @@ if (searchUrlRe.test(document.URL)) !function() {
           "query": response.query,
           "hit": isKifi ? response.hits[resIdx] : null,
           "refinements": refinements,
-          "pageSession": pageSession
+          "pageSession": pageSession,
+          "timesPaginated": timesPaginated
         }
       ]);
     }
@@ -547,6 +551,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (!response.mayHaveMore) {
       $list.find(".kifi-res-more").hide(200);
     }
+    timesPaginated++;
   }
 
   function processHit(hit) {
