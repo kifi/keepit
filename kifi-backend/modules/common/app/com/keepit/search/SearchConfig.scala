@@ -45,7 +45,8 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
       "showExperts" -> "false",
-      "forbidEmptyFriendlyHits" -> "false"
+      "forbidEmptyFriendlyHits" -> "false",
+      "useNonPersonalizedContextVector" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -77,7 +78,8 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
       "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
       "showExperts" -> "suggest experts when search returns hits",
-      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search"
+      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
+      "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
