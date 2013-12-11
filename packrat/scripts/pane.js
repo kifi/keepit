@@ -310,7 +310,10 @@ var pane = pane || function () {  // idempotent for Chrome
     toggle: function (trigger, locator) {
       locator = locator || '/messages:all';
       if ($pane) {
-        if (locator === paneHistory[0]) {
+        if (window.toaster && toaster.showing()) {
+          toaster.hide();
+          showPane(locator);
+        } else if (locator === paneHistory[0]) {
           hidePane(trigger === 'keeper');
         } else {
           showPane(locator);
@@ -318,14 +321,6 @@ var pane = pane || function () {  // idempotent for Chrome
       } else if (!$('html').hasClass('kifi-pane-parent')) { // ensure it's finished hiding
         showPane(locator);
       }
-    },
-    pushState: function(loc) {
-      if (paneHistory[0] !== loc) {
-        paneHistory.unshift(loc);
-      }
-    },
-    back: function (fallbackLocator) {
-      showPane(paneHistory[1] || fallbackLocator, true);
     },
     compose: function(trigger) {
       log('[pane:compose]', trigger)();
@@ -336,7 +331,7 @@ var pane = pane || function () {  // idempotent for Chrome
           showPane('/messages:all').then(toggleToaster);
         }
         function toggleToaster() {
-          toaster.toggleIn($pane).done(function (compose) {
+          toaster.toggle($pane).done(function (compose) {
             compose && compose.focus();
           });
         }
@@ -358,6 +353,14 @@ var pane = pane || function () {  // idempotent for Chrome
     getThreadId: function () {
       var locator = this.getLocator();
       return locator && locator.split('/')[2];
+    },
+    pushState: function(loc) {
+      if (paneHistory[0] !== loc) {
+        paneHistory.unshift(loc);
+      }
+    },
+    back: function (fallbackLocator) {
+      showPane(paneHistory[1] || fallbackLocator, true);
     },
     onHide: new Listeners
   };
