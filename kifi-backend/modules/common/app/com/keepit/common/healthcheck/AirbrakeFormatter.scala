@@ -35,6 +35,12 @@ object ErrorWithStack {
       error.getStackTrace.filter(
         e => e != null &&
         e.getFileName != null &&
+        !e.getClassName.startsWith("org.jboss.netty") &&
+        !e.getClassName.startsWith("com.ning.http") &&
+        !e.getClassName.startsWith("scala.collection.IterableLike") &&
+        !e.getClassName.startsWith("scala.collection.AbstractIterable") &&
+        !e.getClassName.startsWith("scala.collection.TraversableLike") &&
+        !e.getClassName.startsWith("scala.collection.AbstractTraversable") &&
         !e.getFileName.contains("Airbrake") &&
         e.getFileName != "Option.scala" &&
         e.getFileName != "Action.scala" &&
@@ -42,6 +48,8 @@ object ErrorWithStack {
         e.getFileName != "ForkJoinPool.java" &&
         e.getFileName != "ForkJoinWorkerThread.java" &&
         e.getFileName != "Threads.scala" &&
+        e.getFileName != "Promise.scala" &&
+        e.getFileName != "Future.scala" &&
         e.getFileName != "AbstractDispatcher.scala"))
 }
 
@@ -76,7 +84,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     replaceAll("""\$[0-9]""", "").
     replaceAll("""\$class""", "")
 
-  private def formatParams(params: Map[String,Seq[String]]) = params.isEmpty match {
+  private def formatParams(params: Map[String, Seq[String]]) = params.isEmpty match {
     case false =>
       (<params>{params.flatMap(e => {
           <var key={e._1}>{e._2.mkString(" ")}</var>
@@ -138,7 +146,12 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
         <project-root>{service.currentService}</project-root>
         <environment-name>{modeToRailsNaming}</environment-name>
         <app-version>{service.currentVersion}</app-version>
-        <hostname>{service.baseUrl}</hostname>
+        <hostname>{
+          serviceDiscovery.thisInstance map { instance =>
+            val info = instance.remoteService.amazonInstanceInfo
+            s"https://console.aws.amazon.com/ec2/v2/home?region=us-west-1#Instances:instancesFilter=all-instances;instanceTypeFilter=all-instance-types;search=${info.instanceId}"
+          } getOrElse "NA"
+        }</hostname>
       </server-environment>
     </notice>
 

@@ -218,6 +218,17 @@ var api = function() {
     }
   });
 
+  chrome.webRequest.onBeforeRequest.addListener(function () {
+    dispatch.call(api.on.beforeSearch);
+  }, {
+    tabId: -1,
+    types: ['main_frame', 'other'],
+    urls: [
+      'https://www.google.com/webhp?sourceid=chrome-instant*',
+      'https://www.google.com/complete/search?client=chrome-omni*'
+    ]
+  });
+
   var pages = {};  // by tab.id in "normal" windows only
   var normalTab = {};  // by tab.id (true if tab is in a "normal" window)
   var selectedTabIds = {};  // by window.id in "normal" windows only
@@ -253,6 +264,22 @@ var api = function() {
           delete page.toEmit;
         }
       }
+    },
+    "api:iframe": function(o, _, page) {
+      var toUrl = chrome.runtime.getURL;
+      chrome.tabs.executeScript(page.id, {
+        allFrames: true,
+        code: [
+          'if (window !== top && document.URL === "', o.url, '") {',
+          " document.head.innerHTML='", o.styles.map(function(path) {return '<link rel="stylesheet" href="' + toUrl(path) + '">'}).join(''), "';",
+          ' ', JSON.stringify(o.scripts.map(function (path) {return toUrl(path)})), '.forEach(function(url) {',
+          '  var s = document.createElement("SCRIPT");',
+          '  s.src = url;',
+          '  document.head.appendChild(s);',
+          ' });',
+          '}'].join(''),
+        runAt: 'document_end'
+      });
     },
     "api:reload": function() {
       if (!api.isPackaged()) {
@@ -295,6 +322,7 @@ var api = function() {
     this.handling && this.postMessage(["api:respond", callbackId, response]);
   }
 
+  var doLogging = false;
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
@@ -305,7 +333,7 @@ var api = function() {
 
     var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
 
-    var js = api.prefs.get('suppressLog') ? 'function log() {return log}' : '', injected;
+    var js = doLogging ? '' : 'function log() {return log}', injected;
     chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
       injected = arr[0] || {};
       done(0);
@@ -415,6 +443,7 @@ var api = function() {
     },
     loadReason: "enable",  // assuming "enable" by elimination
     on: {
+      beforeSearch: new Listeners,
       search: new Listeners,
       install: new Listeners,
       update: new Listeners,
@@ -503,6 +532,19 @@ var api = function() {
         xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
       }
       xhr.send(data);
+    },
+    postRawAsForm: function(uri, data) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", uri, true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+    },
+    util: {
+      btoa: window.btoa.bind(window)
+    },
+    browser: {
+      name: 'Chrome',
+      userAgent: navigator.userAgent
     },
     requestUpdateCheck: function() {
       if (updateVersion) {
@@ -645,6 +687,11 @@ var api = function() {
         blur: new Listeners,
         loading: new Listeners,
         unload: new Listeners}},
+    toggleLogging: function (bool) {
+      doLogging = bool;
+    },
     timers: window,
     version: chrome.app.getDetails().version};
 }();
+
+delete localStorage[':suppressLog'];  // TODO: remove in Jan 2014

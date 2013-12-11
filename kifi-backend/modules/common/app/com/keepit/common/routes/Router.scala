@@ -109,7 +109,13 @@ object Shoebox extends Service {
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def isUnscrapable(url: String, destinationUrl: Option[String]) = ServiceRoute(GET, "/internal/shoebox/database/isUnscrapable", Param("url", url), Param("destinationUrl", destinationUrl))
     def isUnscrapableP() = ServiceRoute(POST, "/internal/shoebox/database/isUnscrapableP")
+    def scraped() = ServiceRoute(POST, "/internal/shoebox/database/scraped")
+    def scrapeFailed() = ServiceRoute(POST, "/internal/shoebox/database/scrapeFailed")
     def getFriendRequestBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestBySender", Param("senderId", senderId) )
+    def getUserValue(userId: Id[User], key: String) = ServiceRoute(GET, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
+    def setUserValue(userId: Id[User], key: String) = ServiceRoute(POST, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
+    def getUserSegment(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/userSegment", Param("userId", userId))
+    def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = ServiceRoute(GET, "/internal/shoebox/database/extensionVersion", Param("installationId", installationId))
   }
 }
 
@@ -148,6 +154,22 @@ object Search extends Service {
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
     def getSearchDefaultConfig = ServiceRoute(GET, "/internal/search/defaultSearchConfig/defaultSearchConfig")
     def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
+    def search(
+        userId: Id[User],
+        noSearchExperiments: Boolean,
+        acceptLangs: Seq[String],
+        rawQuery: String) = {
+        val params = "userId=" + userId.id.toString +
+                     "&nse=" + noSearchExperiments +
+                     "&al=" + acceptLangs.mkString(",") +
+                     "&" + rawQuery
+        ServiceRoute(GET, "/internal/search?" + params)
+    }
+
+    def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/leaveOneOut", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
+    def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/allSubsets", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
+    def semanticSimilarity(query1: String, query2: String, stem: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/similarity", Param("query1", query1), Param("query2", query2), Param("stem", stem))
+    def visualizeSemanticVector() = ServiceRoute(POST, "/internal/search/semanticVector/visualize")
   }
 }
 
@@ -172,12 +194,16 @@ object Heimdal extends Service {
     def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int, window: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit), Param("window", window))
     def getEventDescriptors(repo: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/eventDescriptors")
     def updateEventDescriptor(repo: String) = ServiceRoute(POST, s"/internal/heimdal/$repo/eventDescriptors")
-    def engageUser() = ServiceRoute(POST, s"/internal/heimdal/user/engage")
+    def deleteUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delete", Param("userId", userId))
+    def incrementUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/increment", Param("userId", userId))
+    def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
+    def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
   }
 }
 
 object ABook extends Service {
   object internal {
+    def importContactsP(userId:Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/importContactsP")
     def importContacts(userId:Id[User], provider:String, accessToken:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/importContacts", Param("provider", provider), Param("accessToken", accessToken))
     def uploadForUser(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/uploadForUser?userId=${userId.id}")
     def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
@@ -186,9 +212,13 @@ object ABook extends Service {
     def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfo", Param("userId", userId), Param("id", id))
     def getContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContacts", Param("maxRows", maxRows))
     def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
+    def getEContactCount(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactCount")
     def getEContactById(contactId:Id[EContact]) = ServiceRoute(GET, s"/internal/abook/getEContactById", Param("contactId", contactId))
     def getEContactByEmail(userId:Id[User], email:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactByEmail", Param("email", email))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
+    def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
+    def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOrCreateEContact", Param("email", email), Param("name", name), Param("firstName", firstName), Param("lastName", lastName))
+    def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/queryEContacts", Param("limit", limit), Param("search", search), Param("after", after))
   }
 }
 
@@ -196,9 +226,12 @@ object Scraper extends Service {
   object internal {
     def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
     def asyncScrapeArticleWithInfo() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithInfo")
+    def asyncScrapeArticleWithRequest() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithRequest")
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
+    def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
     def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
-    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
+    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleP")
+    def getBasicArticleWithExtractor() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleWithExtractor")
   }
 }
 

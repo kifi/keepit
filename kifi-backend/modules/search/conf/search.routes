@@ -4,13 +4,16 @@
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 GET     /search/warmUp              @com.keepit.controllers.ext.ExtSearchController.warmUp()
 GET     /search/message             @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
-POST    /search/events/resultClicked @com.keepit.controllers.ext.ExtSearchEventController.resultClicked()
-POST    /search/events/searchEnded  @com.keepit.controllers.ext.ExtSearchEventController.searchEnded()
+POST    /search/events/resultClicked @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
+POST    /search/events/searchEnded  @com.keepit.controllers.ext.ExtSearchEventController.endedSearch()
+POST    /search/events/searched     @com.keepit.controllers.ext.ExtSearchEventController.searched()
 POST    /search/events/browsed      @com.keepit.controllers.ext.ExtSearchEventController.updateBrowsingHistory()
 GET     /search/users/page          @com.keepit.controllers.ext.ExtUserSearchController.page(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
 GET     /search/users/search        @com.keepit.controllers.ext.ExtUserSearchController.search(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 
 # INTERNAL ROUTES/Search
+GET     /internal/search            @com.keepit.controllers.ext.ExtSearchController.internalSearch(userId: Long, nse: Boolean, al: String, q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+
 GET     /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
 POST    /internal/search/events/resultClicked  @com.keepit.controllers.search.SearchEventController.logResultClicked()
@@ -47,6 +50,11 @@ GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.
 GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+GET     /internal/search/semanticVector/leaveOneOut   @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean)
+GET     /internal/search/semanticVector/allSubsets    @com.keepit.controllers.search.SemanticVectorController.allSubsets(queryText: String, stem: Boolean, useSketch: Boolean)
+GET     /internal/search/semanticVector/similarity    @com.keepit.controllers.search.SemanticVectorController.similarity(query1: String, query2: String, stem: Boolean)
+POST     /internal/search/semanticVector/visualize     @com.keepit.controllers.search.SemanticVectorController.visualizeSemanticVector
 
 GET 	/internal/search/cache/warmResultClick   @com.keepit.controllers.search.SearchCacheController.warmResultClick()
 

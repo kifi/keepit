@@ -8,5 +8,5 @@ case class SpellCorrectorModule() extends ScalaModule {
 
   @Singleton
   @Provides
-  def spellCorrector(indexer: SpellIndexer) = new SpellCorrectorImpl(indexer, true)
+  def spellCorrector(indexer: SpellIndexer) = new SpellCorrectorImpl(indexer, "viterbi", true, true)
 }

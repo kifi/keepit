@@ -3,9 +3,11 @@
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
 // @require scripts/html/keeper/notice_message.js
-// @require scripts/formatting.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/formatting.js
 // @require scripts/prevent_ancestor_scroll.js
 
 // There are several kinds of events that the notifications pane must handle:
@@ -53,24 +55,22 @@ panes.notices = function () {
 
   var $notices, $markAll;
   return {
-    render: function ($container) {
+    render: function ($paneBox) {
       api.port.emit('notifications', function (o) {
-        renderNotices($container, o.notifications, o.timeLastSeen, o.numNotVisited);
+        renderNotices($paneBox, $paneBox.find('.kifi-pane-tall'), o.notifications, o.timeLastSeen, o.numNotVisited);
         api.port.on(handlers);
       });
     }};
 
-  function renderNotices($container, notices, timeLastSeen, numNotVisited) {
+  function renderNotices($paneBox, $tall, notices, timeLastSeen, numNotVisited) {
     $notices = $(render('html/keeper/notices', {}))
-      .append(notices.map(function (n) {
-        return renderNotice(n);
-      }).join(''))
-      .appendTo($container)
+      .append(notices.map(renderNotice).join(''))
+      .appendTo($tall)
       .preventAncestorScroll();
     $notices.find('time').timeago();
-    $container.antiscroll({x: false});
+    $tall.antiscroll({x: false});
 
-    var scroller = $container.data('antiscroll');
+    var scroller = $tall.data('antiscroll');
     $(window).on('resize.notices', scroller.refresh.bind(scroller));
 
     $notices.on('click', '.kifi-notice', function (e) {
@@ -95,15 +95,25 @@ panes.notices = function () {
         }
       }
       return false;
-    }).scroll(onScroll);
+    })
+    .scroll(onScroll)
+    .hoverfu('.kifi-notice-n-others', function(configureHover) {
+      var $a = $(this);
+      render('html/keeper/others', {names: $a.data('names')}, function(html) {
+        configureHover(html, {
+          mustHoverFor: 100,
+          position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'}
+        });
+      });
+    });
 
-    var $box = $container.closest('.kifi-pane-box').on('kifi:remove', function () {
+    $paneBox.on('kifi:remove', function () {
       $notices = $markAll = null;
       $(window).off('resize.notices');
       api.port.off(handlers);
     });
 
-    $markAll = $box.find('.kifi-pane-mark-notices-read').click(function () {
+    $markAll = $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
       var o = $notices.find('.kifi-notice').toArray().reduce(function (o, el) {
         var t = new Date(el.dataset.createdAt);
         return t > o.time ? {time: t, id: el.dataset.id} : o;
@@ -124,8 +134,9 @@ panes.notices = function () {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
+      var participants = notice.participants;
+      var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
-      var nParticipants = notice.participants.length;
       notice.oneParticipant = nParticipants === 1;
       notice.twoParticipants = nParticipants === 2;
       notice.threeParticipants = nParticipants === 3;
@@ -144,7 +155,7 @@ panes.notices = function () {
       $notices.find('.kifi-notice[data-id="' + n.id + '"]').remove();
       $notices.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
     });
-    $(notices.map(function (n) {return renderNotice(n, true)}).join(''))
+    $(notices.map(renderNotice).join(''))
       .find('time').timeago().end()
       .prependTo($notices);
     api.port.emit('notifications_read', notices[0].time);
@@ -179,7 +190,7 @@ panes.notices = function () {
         api.port.emit('old_notifications', $oldest.find('time').attr('datetime'), function (notices) {
           if ($notices) {
             if (notices.length) {
-              $(notices.map(function (n) {return renderNotice(n, false)}).join(''))
+              $(notices.map(renderNotice).join(''))
                 .find('time').timeago().end()
                 .appendTo($notices);
             } else {
@@ -191,10 +202,40 @@ panes.notices = function () {
     }
   }
 
+  function counter() {
+    var i = 0;
+    return function() {
+      return i++;
+    };
+  }
+
   function dateWithoutMs(t) { // until db has ms precision
     var d = new Date(t);
     d.setMilliseconds(0);
     return d;
+  }
+
+  function idIsNot(id) {
+    return function (o) {
+      return o.id !== id;
+    };
+  }
+
+  function makeFirstNameYou(id) {
+    return function (o) {
+      if (o.id === id) {
+        o.firstName = 'You';
+      }
+      return o;
+    };
+  }
+
+  function toNamesJson(users) {
+    return JSON.stringify(users.map(toName));
+  }
+
+  function toName(user) {
+    return user.firstName + ' ' + user.lastName;
   }
 }();
 

@@ -1,13 +1,13 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.search.{ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache}
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.usersegment.UserSegmentCache
 
 case class
 ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
@@ -64,13 +64,13 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def socialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoUserCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+  def socialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoUserCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
-  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoNetworkCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -164,8 +164,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def socialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserConnectionsCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 6 hours))
+  def socialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserConnectionsCache(stats, accessLog, (outerRepo, 6 hours))
 
   @Singleton
   @Provides
@@ -186,4 +186,14 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides
   def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ArticleSearchResultCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserSegmentCache(stats, accessLog, (innerRepo, 12 hours), (outerRepo, 1 day))
+
+  @Provides
+  @Singleton
+  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

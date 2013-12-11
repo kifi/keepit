@@ -2,7 +2,8 @@
 #INTERNAL ROUTES/ABook
 ##########################################
 
-GET     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User], provider:String, accessToken:String)
+POST    /internal/abook/:userId/importContactsP                 @com.keepit.abook.ABookController.importContactsP(userId:Id[User])
+GET     /internal/abook/:userId/importContacts                  @com.keepit.abook.ABookController.importContacts(userId:Id[User], provider:String, accessToken:String)
 
 POST     /internal/abook/:origin/uploadForUser                  @com.keepit.abook.ABookController.upload(userId:Id[User], origin:ABookOriginType) 
 
@@ -12,10 +13,15 @@ GET      /internal/abook/:userId/getABookInfos                  @com.keepit.aboo
 GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
 GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.ABookController.getContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getEContacts                   @com.keepit.abook.ABookController.getEContacts(userId:Id[User], maxRows:Int)
+GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.ABookController.getEContactCount(userId:Id[User])
 GET      /internal/abook/getEContactById                        @com.keepit.abook.ABookController.getEContactById(contactId:Id[EContact])
 GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email:String)
 GET      /internal/abook/:userId/getSimpleContactInfos          @com.keepit.abook.ABookController.getSimpleContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
+GET      /internal/abook/:userId/getOrCreateEContact            @com.keepit.abook.ABookController.getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName: Option[String], lastName: Option[String])
+
+GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
+GET      /internal/abook/:userId/queryEContacts                 @com.keepit.abook.ABookController.queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
 
 ->  / common.Routes
 

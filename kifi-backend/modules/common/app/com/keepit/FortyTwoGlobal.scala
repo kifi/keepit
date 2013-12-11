@@ -25,6 +25,10 @@ import play.utils.Threads
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
 
+  //used to identify instance of applciation. used to debug intest mode
+  val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
+  println(s"########## starting FortyTwoGlobal $globalId")
+
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
   } catch {
@@ -123,6 +127,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
+    if (app.mode != Mode.Test && app.mode != Mode.Dev) Thread.sleep(21000)
+    println("<<<<<< done sleeping")
+    log.info("<<<<<< done sleeping")
     try {
       if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.instance[HealthcheckPlugin].reportStop()
       injector.instance[AppScope].onStop(app)

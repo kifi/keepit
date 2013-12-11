@@ -1,5 +1,5 @@
 // @require styles/keeper/pane.css
-// @require scripts/lib/p.min.js
+// @require scripts/lib/q.min.js
 // @require scripts/keeper.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_settings.js
@@ -65,12 +65,11 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function showPane(locator, back, paramsArg, redirected) {
     log('[showPane]', locator, back ? 'back' : '')();
-    var deferred = P.defer();
+    var deferred = Q.defer();
     if (locator !== (paneHistory && paneHistory[0])) {
       var name = toPaneName(locator);
       (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
         params.redirected = redirected;
-        params.inbox = ~session.experiments.indexOf('inbox');
         showPaneContinued(locator, back, name, params);
         deferred.resolve();
       }, locator, paramsArg);
@@ -85,7 +84,7 @@ var pane = pane || function () {  // idempotent for Chrome
     if ($pane) {
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
       keeper.onPaneChange(locator);
-      var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
+      var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden").layout();
       var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
       var $old = $cart.find(".kifi-pane-box");
       var $new = $(render('html/keeper/pane_' + name, params))[left ? "prependTo" : "appendTo"]($cart).layout();
@@ -177,7 +176,7 @@ var pane = pane || function () {  // idempotent for Chrome
         var btn = this;
         render("html/keeper/titled_tip", {
           dir: "below",
-          cssClass: 'kifi-pane-settings-tip' + (~session.experiments.indexOf('inbox') ? ' kifi-pane-v2-settings-tip' : ''),
+          cssClass: 'kifi-pane-settings-tip',
           title: "Settings",
           html: "Customize your Kifi<br>experience."
         }, function (html) {
@@ -297,12 +296,8 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function populatePane($box, name, locator) {
-    var $tall = $box.find(".kifi-pane-tall");
-    if (name == "thread") {
-      $tall.css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-    }
-    api.require("scripts/" + name + ".js", function () {
-      panes[name].render($tall, locator);
+    api.require('scripts/' + name + '.js', function () {
+      panes[name].render($box, locator);
     });
   };
 
@@ -321,7 +316,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      if (!locator || (locator === '/messages' && ~session.experiments.indexOf('inbox'))) {
+      if (!locator) {
         locator = '/notices';
       }
       if ($pane) {
@@ -338,13 +333,13 @@ var pane = pane || function () {  // idempotent for Chrome
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
         if ($pane) {
-          showToaster();
+          toggleToaster();
         } else {
-          showPane('/notices').then(showToaster);
+          showPane('/notices').then(toggleToaster);
         }
-        function showToaster() {
-          toaster.showNewIn($pane).done(function (compose) {
-            compose.focus();
+        function toggleToaster() {
+          toaster.toggleIn($pane).done(function (compose) {
+            compose && compose.focus();
           });
         }
       });

@@ -1,5 +1,8 @@
 package com.keepit.scraper
 
+import com.keepit.common.store.ScraperTestStoreModule
+import com.keepit.common.cache._
+import com.keepit.inject.CommonDevModule
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
 import com.keepit.common.logging.Logging
@@ -13,11 +16,17 @@ import net.spy.memcached.MemcachedClient
 import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
 import com.keepit.test.{DeprecatedTestRemoteGlobal, DeprecatedTestApplication}
-import com.keepit.dev.ScraperDevGlobal
 import java.io.File
 
+case class ScraperTestModule() extends ScraperServiceModule (
+  cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
+  storeModule = ScraperTestStoreModule(),
+  scrapeProcessorModule = ScrapeProcessorImplModule()
+) with CommonDevModule { }
 
-class DeprecatedScraperApplication() extends DeprecatedTestApplication(new DeprecatedTestRemoteGlobal(ScraperDevGlobal.module), useDb = false, path = new File("./modules/scraper/")) {
+
+class DeprecatedScraperApplication(global: DeprecatedTestRemoteGlobal)
+  extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/scraper/")) {
 }
 
 class ScraperModuleTest extends Specification with Logging with ApplicationInjector {
@@ -26,9 +35,12 @@ class ScraperModuleTest extends Specification with Logging with ApplicationInjec
     classOf[ScraperController] isAssignableFrom clazz
   }
 
+  val global = new DeprecatedTestRemoteGlobal(ScraperTestModule())
+
   "Module" should {
     "instantiate controllers" in {
-      running(new DeprecatedScraperApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
+      running(new DeprecatedScraperApplication(global).
+          withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

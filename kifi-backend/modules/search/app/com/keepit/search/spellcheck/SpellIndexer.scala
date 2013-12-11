@@ -10,8 +10,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.index.DefaultAnalyzer
 
 case class SpellCheckerConfig(
-  wordFreqThreshold: Float = 0.001f,
-  distance: String = "ngram"
+  wordFreqThreshold: Float = 0.003f,
+  distance: String = "composite"
 )
 
 object SpellCheckerFactory {

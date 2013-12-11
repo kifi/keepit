@@ -1,12 +1,13 @@
 package com.keepit.abook
 
 import com.google.inject.{ImplementedBy, Inject}
-import com.keepit.model.{ABookOriginType, User, ABookInfo}
+import com.keepit.model.{OAuth2Token, ABookOriginType, User, ABookInfo}
 import com.keepit.common.db.slick._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
 trait ABookInfoRepo extends Repo[ABookInfo] {
@@ -15,6 +16,7 @@ trait ABookInfoRepo extends Repo[ABookInfo] {
   def findByUserIdOriginAndOwnerId(userId:Id[User], origin:ABookOriginType, ownerId:Option[String])(implicit session:RSession):Option[ABookInfo]
   def findByUserIdAndOrigin(userId:Id[User], origin:ABookOriginType)(implicit session:RSession):Seq[ABookInfo]
   def findByUserId(userId:Id[User])(implicit session:RSession):Seq[ABookInfo]
+  def isOverdue(id:Id[ABookInfo], due:DateTime = currentDateTime)(implicit session:RSession):Boolean
 }
 
 class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[ABookInfo] with ABookInfoRepo with Logging {
@@ -29,9 +31,10 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     def ownerId = column[String]("owner_id")
     def ownerEmail = column[String]("owner_email")
     def rawInfoLoc = column[String]("raw_info_loc")
+    def oauth2TokenId = column[Id[OAuth2Token]]("oauth2_token_id")
     def numContacts = column[Int]("num_contacts", O.Nullable)
     def numProcessed = column[Int]("num_processed", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ origin ~ ownerId.? ~ ownerEmail.? ~ rawInfoLoc.? ~ numContacts.? ~ numProcessed.? <> (ABookInfo.apply _, ABookInfo.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ origin ~ ownerId.? ~ ownerEmail.? ~ rawInfoLoc.? ~ oauth2TokenId.? ~ numContacts.? ~ numProcessed.? <> (ABookInfo.apply _, ABookInfo.unapply _)
   }
 
   def getById(id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo] = {
@@ -55,5 +58,9 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
   def findByUserId(userId: Id[User])(implicit session: RSession): Seq[ABookInfo] = {
     val q = for { c <- table if c.userId === userId } yield c
     q.list
+  }
+
+  def isOverdue(id: Id[ABookInfo], due: DateTime)(implicit session: RSession): Boolean = {
+    (for{ c <- table if c.id === id && c.updatedAt >= due} yield c).firstOption.isDefined
   }
 }

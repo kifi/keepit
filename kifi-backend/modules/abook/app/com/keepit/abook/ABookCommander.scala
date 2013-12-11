@@ -9,6 +9,12 @@ import play.api.libs.json.{JsArray, Json, JsValue}
 import scala.ref.WeakReference
 import com.keepit.common.logging.Logging
 import scala.collection.mutable
+import scala.concurrent._
+import scala.concurrent.duration._
+import com.keepit.common.time._
+import com.keepit.common.db.slick._
+import scala.util.{Try, Failure, Success}
+import java.text.Normalizer
 
 class ABookCommander @Inject() (
   db:Database,
@@ -19,6 +25,8 @@ class ABookCommander @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends Logging {
 
+  val overdueThreshold = sys.props.getOrElse("abook.upload.overdue.threshold", "10").toInt // minutes
+
   def toS3Key(userId:Id[User], origin:ABookOriginType, abookOwnerInfo:Option[ABookOwnerInfo]):String = {
     val k = s"${userId.id}_${origin.name}"
     val ownerId = for (abookOwner <- abookOwnerInfo; ownerId <- abookOwner.id) yield ownerId
@@ -28,7 +36,14 @@ class ABookCommander @Inject() (
     }
   }
 
-  def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], json: JsValue): ABookInfo = {
+  def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Option[ABookInfo] = {
+    db.readOnly(attempts = 2) { implicit s =>
+      abookInfoRepo.getByUserIdAndABookId(userId, id)
+    }
+  }
+
+
+  def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): ABookInfo = {
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
 
@@ -36,44 +51,59 @@ class ABookCommander @Inject() (
     s3 += (s3Key -> abookRawInfo)
     log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
 
-    val abookInfoEntry = db.readWrite { implicit session =>
-      val (abookInfo, entryOpt) = origin match {
+    val numContacts = abookRawInfo.numContacts orElse {
+      (json \ "contacts").asOpt[JsArray] map { _.value.length }
+    }
+    val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
+      val (abookInfo, dbEntryOpt) = origin match {
         case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
-          val numContacts = abookRawInfo.numContacts orElse {
-            (json \ "contacts").asOpt[JsArray] map { _.value.length }
-          }
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), numContacts = numContacts, state = ABookInfoStates.PENDING)
-          val entryOpt = {
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
+          val dbEntryOpt = {
             val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
             if (s.isEmpty) None else Some(s(0))
           }
-          (abookInfo, entryOpt)
+          (abookInfo, dbEntryOpt)
         }
         case ABookOrigins.GMAIL => {
           val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException("Owner info not set for $userId and $origin"))
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), numContacts = abookRawInfo.numContacts, state = ABookInfoStates.PENDING)
-          val entryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
-          (abookInfo, entryOpt)
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id),  numContacts = numContacts, state = ABookInfoStates.INACTIVE)
+          val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
+          (abookInfo, dbEntryOpt)
         }
       }
-      val entry = entryOpt match {
-        case Some(oldVal) => {
-          log.info(s"[upload($userId,$origin)] current entry: $oldVal")
-          oldVal
+      val savedEntry = dbEntryOpt match {
+        case Some(currEntry) => {
+          log.info(s"[upload($userId,$origin)] current entry: $currEntry")
+          abookInfoRepo.save(currEntry.withNumContacts(numContacts))
         }
         case None => abookInfoRepo.save(abookInfo)
       }
-      entry
+      savedEntry
     }
-    contactsUpdater.asyncProcessContacts(userId, origin, abookInfoEntry, s3Key, WeakReference(json))
-    log.info(s"[upload($userId,$origin)] created abookEntry: $abookInfoEntry")
-    abookInfoEntry
+    val (proceed, updatedEntry) = if (savedABookInfo.state != ABookInfoStates.PENDING) {
+      val updated = db.readWrite(attempts = 2) { implicit s =>
+        abookInfoRepo.save(savedABookInfo.withState(ABookInfoStates.PENDING))
+      }
+      (true, updated)
+    } else {
+      val isOverdue = db.readOnly(attempts = 2) { implicit s =>
+        abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
+      }
+      log.warn(s"[upload($userId,$origin)] $savedABookInfo already in PENDING state; overdue=$isOverdue")
+      (isOverdue, savedABookInfo)
+    }
+
+    if (proceed) {
+      contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
+      log.info(s"[upload($userId,$origin)] scheduled for processing: $updatedEntry")
+    }
+    updatedEntry
   }
 
   def getContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly {
+    db.readOnly(attempts = 2) {
       implicit session =>
         contactRepo.getByUserIdIter(userId, maxRows).foreach {
           jsonBuilder += Json.toJson(_)
@@ -85,7 +115,7 @@ class ABookCommander @Inject() (
   }
 
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
-    val econtactOpt = db.readOnly { implicit s =>
+    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getById(contactId)
     }
     log.info(s"[getEContactByIdDirect($contactId)] res=$econtactOpt")
@@ -93,7 +123,7 @@ class ABookCommander @Inject() (
   }
 
   def getEContactByEmailDirect(userId:Id[User], email:String):Option[JsValue] = {
-    val econtactOpt = db.readOnly { implicit s =>
+    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getByUserIdAndEmail(userId, email)
     }
     log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
@@ -103,7 +133,7 @@ class ABookCommander @Inject() (
   def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly {
+    db.readOnly(attempts = 2) {
       implicit session =>
         econtactRepo.getByUserIdIter(userId, maxRows).foreach {
           jsonBuilder += Json.toJson(_)
@@ -115,7 +145,7 @@ class ABookCommander @Inject() (
   }
 
   def getABookRawInfosDirect(userId: Id[User]): JsValue = {
-    val abookInfos = db.readOnly {
+    val abookInfos = db.readOnly(attempts = 2) {
       implicit session =>
         abookInfoRepo.findByUserId(userId)
     }
@@ -130,5 +160,53 @@ class ABookCommander @Inject() (
     log.info(s"[getContactsRawInfo(${userId})=$abookRawInfos json=$json")
     json
   }
+
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Try[EContact] = {
+    val res = db.readWrite(attempts = 2) { implicit s =>
+      econtactRepo.getOrCreate(userId, email, name, firstName, lastName)
+    }
+    log.info(s"[getOrCreateEContact($userId,$email,${name.getOrElse("")})] res=$res")
+    res
+  }
+
+  // todo: removeme (inefficient)
+  def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = {
+    @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+    @inline def mkId(email:String) = s"email/$email"
+    val searchTerms = search match {
+      case Some(s) if s.trim.length > 0 => s.split("[@\\s+]").filterNot(_.isEmpty).map(normalize)
+      case _ => Array.empty[String]
+    }
+    @inline def searchScore(s: String): Int = {
+      if (s.isEmpty) 0
+      else if (searchTerms.isEmpty) 1
+      else {
+        val name = normalize(s)
+        if (searchTerms.exists(!name.contains(_))) 0
+        else {
+          val names = name.split("\\s+").filterNot(_.isEmpty)
+          names.count(n => searchTerms.exists(n.startsWith))*2 +
+            names.count(n => searchTerms.exists(n.contains)) +
+            (if (searchTerms.exists(name.startsWith)) 1 else 0)
+        }
+      }
+    }
+
+    val contacts = db.readOnly(attempts = 2) { implicit s =>
+      econtactRepo.getByUserId(userId)
+    }
+    val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
+    val paged = after match {
+      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
+        case hd +: tl => tl
+        case tl => tl
+      }
+      case _ => filtered
+    }
+    val eContacts = paged.take(limit)
+    log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] searchTerms=$searchTerms res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
+    eContacts
+  }
+
 
 }

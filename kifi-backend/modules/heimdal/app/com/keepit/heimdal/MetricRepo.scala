@@ -7,10 +7,10 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsObject, JsNull, JsArray, Json, Writes, JsValue}
 
-import reactivemongo.bson.{BSONDocument, BSONDateTime, BSONArray}
+import reactivemongo.bson.{BSONDocument, BSONDateTime, BSONArray, BSONBoolean}
 import reactivemongo.api.collections.default.BSONCollection
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 
@@ -37,6 +37,10 @@ class MetricRepo(val collection: BSONCollection, protected val airbrake: Airbrak
     new DateTime(doc.getAs[BSONDateTime]("time").get.value),
     doc.getAs[BSONArray]("data").get.values.toSeq.map(_.asInstanceOf[BSONDocument])
   )
+
+  def allLean: Future[Seq[MetricData]] = collection.find(BSONDocument(), BSONDocument("data.users" -> BSONBoolean(false))).cursor.toList.map{ docs =>
+    docs.map(fromBSON(_))
+  }
 }
 
 

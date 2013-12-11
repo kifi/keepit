@@ -55,24 +55,59 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
   }
 
   "mobileController" should {
+
+    "get currentUser" in {
+      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
+        }
+
+        val path = com.keepit.controllers.mobile.routes.MobileUserController.currentUser().toString
+        path === "/m/1/user/me"
+
+        val controller = inject[MobileUserController]
+        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+            {
+              "id":"${user.externalId}",
+              "firstName":"Shanee",
+              "lastName":"Smith",
+              "pictureName":"0.jpg",
+              "description":"",
+              "emails":[],
+              "experiments":["admin"]}
+          """)
+
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "return connected users from the database" in {
       running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
         val route = com.keepit.controllers.mobile.routes.MobileUserController.getFriends().toString
         route === "/m/1/user/friends"
 
-        val (user1965,friends) = setupSomeUsers()
+        val (user1965, friends) = setupSomeUsers()
         inject[FakeActionAuthenticator].setUser(user1965)
         val mobileController = inject[MobileUserController]
         val result = mobileController.getFriends()(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         val expected = Json.parse("""[
+            {"id":"742fa97c-c12a-4dcf-bff5-0f33280ef35a","firstName":"Noah, Kifi Help","lastName":"","pictureName":"Vjy5S.jpg"},
+            {"id":"aa345838-70fe-45f2-914c-f27c865bdb91","firstName":"Tamila, Kifi Help","lastName":"","pictureName":"tmilz.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg"}
           ]""")
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        Json.parse(contentAsString(result)).as[JsArray].value.toSet must equalTo(expected.as[JsArray].value.toSet)
       }
     }
 

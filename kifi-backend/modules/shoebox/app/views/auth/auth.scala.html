@@ -1,4 +1,4 @@
-@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "")
+@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "", inviteVideo: Boolean = false)
 
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 
@@ -12,20 +12,20 @@
 @curtains = {
 <div class="curtain-l">
   <div class="curtain-logo-l"></div>
-  <a class="curtain-action curtain-signup" href="javascript:">
-    <div class="curtain-a-title">Sign up</div>
-    Let me in
-  </a>
-  <p class="curtain-note">
-    Note: Kifi is currently in stealth mode and open to beta testers by invitation only.
-  </p>
+  <div class="curtain-panel">
+    <p class="curtain-question">New to Kifi?</p>
+    <a class="curtain-action curtain-signup" href="javascript:">Sign up</a>
+    <p class="curtain-note">
+      We are manually approving new<br>signups during our private beta.
+    </p>
+  </div>
 </div>
 <div class="curtain-r">
   <div class="curtain-logo-r"></div>
-  <a class="curtain-action curtain-login" href="javascript:">
-    <div class="curtain-a-title">Log in</div>
-    I have an account
-  </a>
+  <div class="curtain-panel">
+    <p class="curtain-question">Already on Kifi?</p>
+    <a class="curtain-action curtain-login" href="javascript:">Log in</a>
+  </div>
 </div>
 <h2 class="curtain-welcome">
   <span class="curtain-welcome-l">Welcome to our</span>
@@ -39,6 +39,12 @@
 
 @content = {
 <h1 class="main-logo">kifi</h1>
+
+@if(inviteVideo) {
+<h3 class="intro-header">Watch a quick introduction to Kifi</h3>
+<a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still video-frame"></a>
+<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js" async></script>
+}
 
 <div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
   <form class="signup-1" data-title="Sign up" action="@routes.userPasswordSignup()" novalidate>
@@ -65,7 +71,7 @@
     </div>
   </form>
   <p class="terms">
-    By signing up, you agree to Kifi’s <a target="_blank" href="@com.keepit.controllers.website.routes.OnboardingController.tos">Terms of Service</a>.
+    By signing up, you agree to Kifi’s <a target="_blank" href="@com.keepit.controllers.website.routes.HomeController.termsOfService">Terms of Service</a>.
   </p>
 
   <form class="signup-2 signup-2-email" data-title="Finalize your account" action="@routes.userPassFinalizeAccountAction()" novalidate@if(view == "signup2Email") { style="display:block"}>
@@ -173,6 +179,12 @@
 <script src="/assets/js/jquery-ui-position.min.js"></script>
 <script src="/assets/js/jquery-ui-slider.min.js"></script>
 <script src="/assets/js/auth.js"></script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
+<script src="//platform.linkedin.com/in.js">
+api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
+onLoad:onLoadLinkedInApi
+authorize:true
+</script>
 }
 
 @helper.page(

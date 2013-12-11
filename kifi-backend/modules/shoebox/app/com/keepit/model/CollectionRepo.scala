@@ -11,6 +11,7 @@ import com.keepit.eliza.ElizaServiceClient
 import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
+import com.keepit.heimdal.HeimdalServiceClient
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
@@ -26,10 +27,11 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 
 @Singleton
 class CollectionRepoImpl @Inject() (
-                                     val userCollectionsCache: UserCollectionsCache,
-                                     val elizaServiceClient: ElizaServiceClient,
-                                     val db: DataBaseComponent,
-                                     val clock: Clock)
+  val userCollectionsCache: UserCollectionsCache,
+  val elizaServiceClient: ElizaServiceClient,
+  val heimdal: HeimdalServiceClient,
+  val db: DataBaseComponent,
+  val clock: Clock)
   extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with Logging {
 
   import FortyTwoTypeMappers._

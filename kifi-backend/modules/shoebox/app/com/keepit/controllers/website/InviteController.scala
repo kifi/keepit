@@ -16,7 +16,7 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
 import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
-import com.keepit.heimdal.{HeimdalServiceClient, EventContextBuilderFactory, UserEvent, EventType}
+import com.keepit.heimdal._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,6 +29,7 @@ import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.social.SocialId
 import com.keepit.model.Invitation
+import scala.util.Success
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -44,7 +45,7 @@ class InviteController @Inject() (db: Database,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
-  eventContextBuilder: EventContextBuilderFactory,
+  eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice)
@@ -96,17 +97,17 @@ class InviteController @Inject() (db: Database,
         }
       }
 
-      def sendEmailInvitation(c: EContact, invite:Invitation) {
+      def sendEmailInvitation(c: EContact, invite:Invitation, invitingUser: User) {
         val path = routes.InviteController.acceptInvite(invite.externalId).url
         val messageWithUrl = s"${message getOrElse ""}\n$url$path"
         val electronicMail = ElectronicMail(
           senderUserId = None,
           from = EmailAddresses.INVITATION,
-          fromName = Some("Kifi Team"),
+          fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} via Kifi"),
           to = List(new EmailAddressHolder {
             override val address = c.email
           }),
-          subject = subject.getOrElse(""),
+          subject = subject.getOrElse("Join me on the Kifi.com Private Beta"),
           htmlBody = messageWithUrl,
           category = PostOffice.Categories.User.INVITATION)
         postOffice.sendMail(electronicMail)
@@ -117,19 +118,19 @@ class InviteController @Inject() (db: Database,
         CloseWindow()
       } else if (fullSocialId(0) == "email") {
         log.info(s"[inviteConnection-email] inviting: ${fullSocialId(1)}")
-        val econtactOptF = abookServiceClient.getEContactByEmail(request.userId, fullSocialId(1))
+        val econtactTrF = abookServiceClient.getOrCreateEContact(request.userId, fullSocialId(1), None, None, None)
         Async {
-          econtactOptF.map { econtactOpt =>
-            econtactOpt match {
-              case Some(c) => {
+          econtactTrF.map { econtactTr =>
+            econtactTr match {
+              case Success(c) => {
                 val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(request.userId, c.id.get)
                 log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
                 inviteOpt match {
                   case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
-                    sendEmailInvitation(c, alreadyInvited)
+                    sendEmailInvitation(c, alreadyInvited, request.user)
                   }
                   case inactiveOpt => {
-                    val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
+                    val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(20)
                     val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
                     if (currentInvitations.length < totalAllowedInvites) {
                       val invite = inactiveOpt map { _.copy(senderUserId = Some(request.user.id.get)) } getOrElse {
@@ -140,14 +141,14 @@ class InviteController @Inject() (db: Database,
                           state = InvitationStates.INACTIVE
                         )
                       }
-                      sendEmailInvitation(c, invite)
+                      sendEmailInvitation(c, invite, request.user)
                       invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
                     }
                   }
                 }
               }
-              case None => {
-                log.warn(s"[inviteConnection-email] cannot locate econtact entry for ${fullSocialId(1)}")
+              case _ => {
+                log.warn(s"[inviteConnection-email] cannot locate or create econtact entry for ${fullSocialId(1)}")
               }
             }
             CloseWindow()
@@ -163,7 +164,7 @@ class InviteController @Inject() (db: Database,
               CloseWindow()
             }
           case inactiveOpt =>
-            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
+            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(20)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
@@ -225,7 +226,8 @@ class InviteController @Inject() (db: Database,
                   Ok(views.html.auth.auth(
                     "signup",
                     titleText = s"${name}, join ${inviterUserOpt.get.firstName} on Kifi!",
-                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite."
+                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite.",
+                    inviteVideo = true
                   )).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>
                   log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
@@ -249,7 +251,7 @@ class InviteController @Inject() (db: Database,
             SafeFuture{
               val contextBuilder = eventContextBuilder()
               contextBuilder += ("invitee", invite.recipientSocialUserId.getOrElse(invite.recipientEContactId.get).id)
-              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, EventType("invite_sent")))
+              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, UserEventTypes.INVITE_SENT))
             }
           }
           CloseWindow()
@@ -257,9 +259,5 @@ class InviteController @Inject() (db: Database,
           Redirect(routes.HomeController.home)
       }
     }
-  }
-
-  def userCanInvite(experiments: Set[ExperimentType]) = {
-    Play.isDev || (experiments & Set(ExperimentType.ADMIN, ExperimentType.CAN_INVITE) nonEmpty)
   }
 }

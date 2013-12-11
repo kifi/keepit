@@ -27,6 +27,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.serializer.TypeCode
 import com.keepit.model.User
+import com.keepit.common.db.{ExternalId, Id}
 
 trait HeimdalServiceClient extends ServiceClient with Plugin {
   final val serviceType = ServiceType.HEIMDAL
@@ -43,7 +44,13 @@ trait HeimdalServiceClient extends ServiceClient with Plugin {
 
   def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int]
 
-  def engageUser(user: User): Unit
+  def deleteUser(userId: Id[User]): Unit
+
+  def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit
+
+  def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit
+
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
 }
 
 object FlushEventQueue
@@ -179,5 +186,18 @@ class HeimdalServiceClientImpl @Inject() (
       Json.parse(response.body).as[JsNumber].value.toInt
     }
 
-  def engageUser(user: User): Unit = call(Heimdal.internal.engageUser(), Json.toJson(user))
+  def deleteUser(userId: Id[User]): Unit = call(Heimdal.internal.deleteUser(userId))
+
+  def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit = {
+    val payload = JsObject(increments.map { case (key, amount) => key -> JsNumber(amount) })
+    call(Heimdal.internal.incrementUserProperties(userId), payload)
+  }
+
+  def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {
+    val payload = JsObject(properties.map { case (key, value) => key -> Json.toJson(value) })
+    call(Heimdal.internal.setUserProperties(userId), payload)
+  }
+
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
+    call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]))
 }

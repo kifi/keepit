@@ -26,8 +26,6 @@ import javax.imageio.ImageIO
 import com.keepit.common.net.URI
 import com.keepit.shoebox.ShoeboxServiceClient
 
-
-@ImplementedBy(classOf[S3ScreenshotStoreImpl])
 trait S3ScreenshotStore {
   def config: S3ImageConfig
   val blankImage: Array[Byte] = Array(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, -128, -1, 0, -1, -1, -1, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59).map(_.asInstanceOf[Byte])
@@ -39,8 +37,7 @@ trait S3ScreenshotStore {
 
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
-@Singleton
-class S3ScreenshotStoreImpl @Inject() (
+class S3ScreenshotStoreImpl(
     s3Client: AmazonS3,
     shoeboxServiceClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,

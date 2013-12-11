@@ -17,6 +17,7 @@ import scala.concurrent.Promise
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
+import com.keepit.model.KifiVersion
 import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
@@ -61,6 +62,17 @@ trait SearchServiceClient extends ServiceClient {
 
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
+
+  def search(
+    userId: Id[User],
+    noSearchExperiments: Boolean,
+    acceptLangs: Seq[String],
+    rawQuery: String): Future[String]
+
+  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
+  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
+  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
 }
 
 class SearchServiceClientImpl(
@@ -212,6 +224,39 @@ class SearchServiceClientImpl(
     call(Search.internal.getSearchDefaultConfig).map{ r =>
       val param = Json.fromJson[Map[String, String]](r.json).get
       new SearchConfig(param)
+    }
+  }
+
+  def search(
+    userId: Id[User],
+    noSearchExperiments: Boolean,
+    acceptLangs: Seq[String],
+    rawQuery: String): Future[String] = {
+      tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,rawQuery)).map(_.body)
+  }
+
+  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
+    call(Search.internal.leaveOneOut(queryText, stem, useSketch)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
+     call(Search.internal.allSubsets(queryText, stem, useSketch)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = {
+    call(Search.internal.semanticSimilarity(query1, query2, stem)).map{ r =>
+      Json.fromJson[Float](r.json).get
+    }
+  }
+
+  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = {
+    val payload = Json.toJson(queries)
+    call(Search.internal.visualizeSemanticVector(), payload).map{ r =>
+      Json.fromJson[Seq[String]](r.json).get
     }
   }
 }

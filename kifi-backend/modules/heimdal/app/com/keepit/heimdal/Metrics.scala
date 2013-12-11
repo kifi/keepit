@@ -5,8 +5,8 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime, BSONLong}
-import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Project, Sort, Descending, AddToSet}
-
+import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Sort, Descending, AddToSet}
+import com.keepit.heimdal.CustomBSONHandlers.BSONContextDataHandler
 
 sealed trait ComparisonOperator {
   def toBSONMatchFragment: BSONValue
@@ -29,18 +29,12 @@ case class GreaterThanOrEqualTo(value: ContextDoubleData) extends ComparisonOper
 }
 
 case class EqualTo(value: ContextData) extends ComparisonOperator {
-  def toBSONMatchFragment: BSONValue = value match {
-    case ContextDoubleData(x) => BSONDouble(x)
-    case ContextStringData(s) => BSONString(s)
-  }
+  def toBSONMatchFragment: BSONValue = BSONContextDataHandler.write(value)
 }
 
 case class NotEqualTo(value: ContextData) extends ComparisonOperator {
   def toBSONMatchFragment: BSONValue = {
-    val bsonValue : BSONValue = value match {
-      case ContextDoubleData(x) => BSONDouble(x)
-      case ContextStringData(s) => BSONString(s)
-    }
+    val bsonValue : BSONValue = BSONContextDataHandler.write(value)
     BSONDocument("$ne" -> bsonValue)
   }
 }
@@ -71,10 +65,36 @@ case object NoContextRestriction extends ContextRestriction {
   def toBSONMatchDocument: BSONDocument = BSONDocument()
 }
 
-sealed trait EventSet
+case class ConditionalContextRestriction(restriction: ContextRestriction, events: EventType*) extends ContextRestriction {
+  def toBSONMatchDocument: BSONDocument = BSONDocument("$or" -> BSONArray(
+    ComplementEventSet(events.toSet).toBSONMatchDocument,
+    BSONDocument("$and" -> BSONArray(SpecificEventSet(events.toSet).toBSONMatchDocument, restriction.toBSONMatchDocument))
+  ))
+}
 
-case class SpecificEventSet(events: Set[EventType]) extends EventSet
-case object AllEvents extends EventSet
+sealed trait EventSet {
+  def toBSONMatchDocument: BSONDocument
+}
+
+case class SpecificEventSet(events: Set[EventType]) extends EventSet {
+  def toBSONMatchDocument = BSONDocument(
+    "eventType" -> BSONDocument(
+      "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+    )
+  )
+}
+
+case class ComplementEventSet(events: Set[EventType]) extends EventSet {
+  def toBSONMatchDocument = BSONDocument(
+    "eventType" -> BSONDocument(
+      "$nin" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
+    )
+  )
+}
+
+case object AllEvents extends EventSet {
+  def toBSONMatchDocument = BSONDocument()
+}
 
 
 sealed trait EventGrouping {
@@ -118,7 +138,7 @@ sealed trait MetricDefinition {
 sealed trait SimpleMetricDefinition extends MetricDefinition {
   val fakeUsers: Seq[Long] = Seq[Long](6,32,60,90,93,125,127,128,217,249,259,262,265,279,286,342,346,395,396,421,422,424,428,429,435,436,475,478,494,495,545,550)
   def preFilter: PipelineOperator = Match(BSONDocument(
-    "user_id" -> BSONDocument(
+    "userId" -> BSONDocument(
       "$nin" -> BSONArray(fakeUsers.map(BSONLong(_)))
     )
   ))
@@ -132,15 +152,7 @@ class GroupedEventCountMetricDefinition(eventsToConsider: EventSet, contextRestr
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents =>Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)("count" -> SumValue(1))
@@ -173,18 +185,10 @@ class GroupedUserCountMetricDefinition(eventsToConsider: EventSet, contextRestri
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents => Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
-    val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$user_id"))
+    val grouping = GroupField(groupField.fieldName)("users" -> AddToSet("$userId"))
 
     var pipeline: Seq[PipelineOperator] = Seq(timeWindowSelector, preFilter, eventSelector, contextSelector)
 
@@ -210,15 +214,7 @@ class GroupedUniqueFieldCountMetricDefinition(eventsToConsider: EventSet, contex
         "$lt"  -> BSONDateTime(startTime.getMillis + timeWindowSize.toMillis)
       )
     ))
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        Match(BSONDocument(
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        ))
-      case AllEvents =>Match(BSONDocument())
-    }
+    val eventSelector = Match(eventsToConsider.toBSONMatchDocument)
     val contextSelector = Match(contextRestriction.toBSONMatchDocument)
 
     val grouping = GroupField(groupField.fieldName)(sanitizedFieldName -> AddToSet("$" + fieldToCount))

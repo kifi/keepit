@@ -101,7 +101,7 @@ class MainQueryParser(
             phTerms.foreach{ t => hpQ.add(new Term("home_page", t.text)) }
             hpQ
           }
-          new ExistenceBoostQuery(query, homePageQuery, 0.2f)
+          new ExistenceBoostQuery(query, homePageQuery, homePageBoost)
         } else {
           query
         }
@@ -128,7 +128,7 @@ class MainQueryParser(
     }
   }
 
-  private[this] def svTerms: Seq[Term] = {
+  def svTerms: Seq[Term] = {
     textQueries.flatMap{ _.stems.map{ t => new Term("sv", t.text) } }
   }
 

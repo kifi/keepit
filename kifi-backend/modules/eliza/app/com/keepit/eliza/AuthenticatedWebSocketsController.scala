@@ -39,7 +39,16 @@ import com.keepit.social.SocialId
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[ExperimentType], extVersion: Option[String])
+case class SocketInfo(
+  id: Long,
+  channel: Concurrent.Channel[JsArray],
+  connectedAt: DateTime,
+  userId: Id[User],
+  experiments: Set[ExperimentType],
+  extVersion: Option[String],
+  userAgent: String,
+  var ip: Option[String]
+)
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -51,7 +60,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val clock: Clock
   protected val airbrake: AirbrakeNotifier
   protected val heimdal: HeimdalServiceClient
-  protected val userEventContextBuilder: EventContextBuilderFactory
+  protected val heimdalContextBuilder: HeimdalContextBuilderFactory
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -157,12 +166,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt)
-        val handlers = websocketHandlers(socketInfo)
-        val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
+
         val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
           crypt.decrypt(ipkey, eip).toOption
         }
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
+        val handlers = websocketHandlers(socketInfo)
+
 
         onConnect(socketInfo)
 
@@ -172,48 +182,25 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         }
         //Analytics
         SafeFuture {
-          val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-          streamSession.experiments.foreach{ experiment =>
-            contextBuilder += ("experiment", experiment.toString)
-          }
-          versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
-          heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_connect"), tStart))
+          val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
+          heimdal.trackEvent(UserEvent(socketInfo.userId.id, context, UserEventTypes.WS_CONNECT, tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
           val tStart = currentDateTime
-          atomic { implicit txn =>
-            socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
-          }
           log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
           channel.push(Json.arr("goodbye", reason))
           channel.eofAndEnd()
           onDisconnect(socketInfo)
           //Analytics
           SafeFuture {
-            val contextBuilder = userEventContextBuilder(Some(request), ipOpt)
-            streamSession.experiments.foreach{ experiment =>
-              contextBuilder += ("experiment", experiment.toString)
-            }
-            versionOpt.foreach{ version => contextBuilder += ("extVersion", version) }
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, contextBuilder.build, EventType("ws_disconnect"), tStart))
+            val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
+            heimdal.trackEvent(UserEvent(streamSession.userId.id, context, UserEventTypes.WS_DISCONNECT, tStart))
           }
         }
 
         val iteratee = asyncIteratee(streamSession, versionOpt) { jsArr =>
           Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-            atomic { implicit txn =>
-              socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
-              socketAliveCancellable.single.swap {
-                import scala.concurrent.duration._
-                val c = actorSystem.scheduler.scheduleOnce(65.seconds) { //TODO: Move this out of the atomic (don't side effect in atomics!)
-                  log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
-                }
-                Some(c)
-              }
-            }
-
-
             log.info("WS request for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
             Statsd.time(s"websocket.handler.${jsArr.value(0)}") {
@@ -235,4 +222,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }
   }
 
+  protected def authenticatedWebSocketsContextBuilder(socketInfo: SocketInfo, request: Option[RequestHeader] = None) = {
+    val contextBuilder = heimdalContextBuilder()
+    contextBuilder.addExperiments(socketInfo.experiments)
+    contextBuilder.addUserAgent(socketInfo.userAgent)
+    request.foreach(contextBuilder.addRequestInfo)
+    socketInfo.ip.foreach(contextBuilder.addRemoteAddress)
+    socketInfo.extVersion.foreach{ version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder
+  }
 }

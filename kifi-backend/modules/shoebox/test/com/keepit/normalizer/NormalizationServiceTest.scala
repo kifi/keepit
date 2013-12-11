@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{BasicArticle, FakeScraperModule}
+import com.keepit.scraper.{BasicArticle, FakeScrapeSchedulerModule}
 import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Await
@@ -15,13 +15,13 @@ import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.google.inject.Injector
-import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.TestElizaServiceClientModule
 
 class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
-  val fakeArticles: PartialFunction[(String, Option[Extractor]), BasicArticle] = {
+  val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
     case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
     case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679")
     case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
@@ -36,9 +36,14 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
     id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }
 
-  val modules = Seq(TestFortyTwoModule(), FakeDiscoveryModule(), FakeScraperModule(Some(fakeArticles)),
-                    FakeAirbrakeModule(), StandaloneTestActorSystemModule(), TestElizaServiceClientModule(),
-                    new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
+  val modules = Seq(
+    TestFortyTwoModule(),
+    FakeDiscoveryModule(),
+    FakeScrapeSchedulerModule(Some(fakeArticles)),
+    FakeAirbrakeModule(),
+    StandaloneTestActorSystemModule(),
+    TestElizaServiceClientModule(),
+    new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
 
   "NormalizationService" should {
 

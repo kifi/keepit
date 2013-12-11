@@ -9,8 +9,14 @@ POST    /eliza/messages/:parentId         @com.keepit.eliza.ExtMessagingControll
 POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
 
 GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingController.websocket(version: Option[String], eip: Option[String])
-POST    /eliza/ext/chatter                @com.keepit.eliza.ExtMessagingController.getChatter()
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.ExtDevicesController.registerDevice(deviceType:String)
+
+
+##########################################
+# Mobile V1
+##########################################
+
+GET     /eliza/m/1/notifications          @com.keepit.eliza.controllers.MobileMessagingController.getNotifications(n: Int)
 
 ##########################################
 #INTERNAL ROUTES/Eliza
@@ -24,8 +30,6 @@ POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.MessagingContr
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.MessagingController.verifyAllNotifications
-
-POST /internal/eliza/importThread               @com.keepit.eliza.MessagingController.importThread()
 
 
 

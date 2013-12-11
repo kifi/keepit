@@ -30,11 +30,10 @@ kifi.form = (function () {
   'use strict';
   var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   return {
-    showError: function ($in, msg, opts) {
+    showError: function ($in, msg) {
       var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
         .position({my: 'left top', at: 'left bottom+10', of: $in, collision: 'fit none'})
-        .css('visibility', '')
-        .delay(opts && opts.ms || 1000).fadeOut(300, removeError);
+        .css('visibility', '');
       $in.blur();  // closes browser autocomplete suggestion list
       $in.focus().select().on('input blur', removeError);
       return $err;
@@ -56,9 +55,9 @@ kifi.form = (function () {
     validateNewPassword: function ($in) {
       var s = $in.val();
       if (!s) {
-        kifi.form.showError($in, 'Please choose a password<br>for your account', {ms: 1500});
+        kifi.form.showError($in, 'Please choose a password<br>for your account');
       } else if (s.length < 7) {
-        kifi.form.showError($in, 'Password must be at least 7 characters', {ms: 1500});
+        kifi.form.showError($in, 'Password must be at least 7 characters');
       } else {
         return s;
       }
@@ -68,7 +67,7 @@ kifi.form = (function () {
       if (!s) {
         kifi.form.showError($in, 'Please enter your password');
       } else if (s.length < 7) {
-        kifi.form.showError($in, 'Password too short', {ms: 1500});
+        kifi.form.showError($in, 'Password too short');
       } else {
         return s;
       }
@@ -78,8 +77,7 @@ kifi.form = (function () {
       if (!s) {
         kifi.form.showError($in,
           '<div class=form-error-title>Name is required</div>' +
-          '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>',
-          {ms: 3000});
+          '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>');
       } else {
         return s;
       }
@@ -89,8 +87,8 @@ kifi.form = (function () {
 
 (function () {
   'use strict';
-  var $logoL = $('.curtain-logo-l');
-  var $logoR = $('.curtain-logo-r');
+
+  $('body').removeClass('still');
 
   $('.curtain-action').on('mousedown click', function (e) {
     if (e.which !== 1 || $('body').hasClass('curtains-drawn')) return;
@@ -226,8 +224,7 @@ kifi.form = (function () {
           $form.data('email', email);
           kifi.form.showError(
             $email,
-            'A Kifi account already uses<br>this email address. <a href=javascript: class=social-claim-account>Claim it</a>',
-            {ms: 10000})
+            'A Kifi account already uses<br>this email address. <a href=javascript: class=social-claim-account>Claim it</a>')
           .on('mousedown', onClaimAccountClick.bind(null, email));
         }
       }));
@@ -269,9 +266,11 @@ kifi.form = (function () {
         if (xhr.status === 403) {
           var o = xhr.responseJSON;
           if (o.error === 'no_such_user') {
-            kifi.form.showError($email, 'No account with this email address', {ms: 1500});
+            kifi.form.showError($email, 'No account with this email address');
           } else {
-            kifi.form.showError($password, '<b>Account exists but password is incorrect</b><br>If you want to reset your password,<br>or never had one, click “I forgot”.', {ms: 3500});
+            kifi.form.showError($password,
+              '<div class=form-error-title>Incorrect password</div>' +
+              '<div class=form-error-explanation>To choose a new password,<br>click “I forgot”.</div>');
           }
         } else {
           // TODO: offline? 500?
@@ -638,7 +637,7 @@ kifi.form = (function () {
         .fail(function (xhr) {
           var o = xhr.responseJSON;
           if (o && o.error === 'no_account') {
-            kifi.form.showError($email, 'Sorry, we don’t recognize this email address.', {ms: 2000});
+            kifi.form.showError($email, 'Sorry, we don’t recognize this email address.');
           }
         })
         .always(function () {
@@ -743,3 +742,23 @@ kifi.form = (function () {
     };
   };
 }());
+
+function fbAsyncInit() {
+  FB.Event.subscribe('auth.authResponseChange', function (o) {
+    var id = o && o.authResponse && o.authResponse.userID;
+    if (id) {
+      var url = 'https://graph.facebook.com/' + id + '/picture?return_ssl_resources=1&width=50&height=50'
+      $('.form-network.facebook>.form-network-icon').html('<img src="' + url + '" class="form-network-pic">');
+    }
+  });
+  FB.init({appId: $('#facebook-jssdk').data('appId')});
+}
+
+function onLoadLinkedInApi() {
+  IN.User.isAuthorized() && IN.API.Profile('me').fields('picture-url;secure=true').result(function (o) {
+    var url = o && o.values && o.values[0] && o.values[0].pictureUrl;
+    if (url) {
+      $('.form-network.linkedin>.form-network-icon').html('<img src="' + url + '" class="form-network-pic">');
+    }
+  });
+}

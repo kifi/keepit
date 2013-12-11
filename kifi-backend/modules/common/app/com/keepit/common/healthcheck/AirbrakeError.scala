@@ -28,8 +28,7 @@ case class AirbrakeError(
     method: Option[String] = None,
     headers: Map[String, Seq[String]] = Map(),
     id: ExternalId[AirbrakeError] = ExternalId(),
-    createdAt: DateTime = currentDateTime,
-    details: Option[String] = None) {
+    createdAt: DateTime = currentDateTime) {
 
   lazy val cleanError: AirbrakeError = {
     if (exception.getCause == null) {
@@ -45,7 +44,7 @@ case class AirbrakeError(
 
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
-    s"${super.toString()}\n${rootException.getStackTrace mkString "\nat \t"}"
+    s"${rootException.toString()}\nat \t${rootException.getStackTrace mkString "\nat \t"}"
   }
 
   private val maxCauseDepth = 5

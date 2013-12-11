@@ -27,6 +27,7 @@ object Access {
 
 object AccessLogTimer {
   val NoIntValue: Int = -1
+  val NoLongValue: Long = -1L
 }
 
 case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
@@ -44,6 +45,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Int = NoIntValue,
+          parsingTime: Option[Int] = None,
           statusCode: Int = NoIntValue,
           result: String = null,
           error: String = null,
@@ -57,11 +59,13 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           body: String = null,
           key: String = null,
           space: String = null,
-          url: String = null) = {
+          url: String = null,
+          dataSize: Int = NoIntValue) = {
     val now = clock.now()
     AccessLogEvent(
       time = now,
       duration = (now.getMillis - startTime.getMillis).toInt,
+      parsingTime = parsingTime,
       eventType = eventType,
       remoteTime = intOption(remoteTime),
       statusCode = intOption(statusCode),
@@ -76,13 +80,15 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       body = Option(body),
       key = Option(key),
       space = Option(space),
-      url = Option(url))
+      url = Option(url),
+      dataSize = intOption(dataSize))
   }
 }
 
 case class AccessLogEvent(
   time: DateTime,
   duration: Int,
+  parsingTime: Option[Int],
   eventType: AccessLogEventType,
   remoteTime: Option[Int],
   statusCode: Option[Int],
@@ -97,9 +103,10 @@ case class AccessLogEvent(
   body: Option[String],
   key: Option[String],
   space: Option[String],
-  url: Option[String]) {
+  url: Option[String],
+  dataSize: Option[Int]) {
 
-  def waitTime: Option[Int] = remoteTime.map(t => duration - t)
+  def waitTime: Option[Int] = remoteTime.map(t => duration - t - parsingTime.getOrElse(0))
 
 }
 
@@ -128,6 +135,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.key.map("key:" + _) ::
       e.space.map("space:" + _) ::
       e.remoteTime.map("remoteTime:" + _) ::
+      e.parsingTime.map("parsingTime:" + _) ::
       e.remoteTime.map(t => "waitTime:" + (e.duration - t)) ::
       e.statusCode.map("statusCode:" + _) ::
       e.result.map("result:" + _) ::
@@ -137,6 +145,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::
       e.body.map("body:" + _) ::
+      e.dataSize.map("dataSize:" + _) ::
       e.error.map("error:" + _) ::
       Nil
     line.flatten.mkString("\t")

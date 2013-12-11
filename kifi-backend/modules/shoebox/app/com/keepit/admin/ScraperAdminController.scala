@@ -1,15 +1,12 @@
 package com.keepit.controllers.admin
 
-import scala.Option.option2Iterable
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.search.ArticleStore
 
 import views.html
@@ -17,7 +14,7 @@ import views.html
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  scraper: ScraperPlugin,
+  scraper: ScrapeSchedulerPlugin,
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
@@ -27,14 +24,6 @@ class ScraperAdminController @Inject() (
   bookmarkRepo: BookmarkRepo,
   httpProxyRepo: HttpProxyRepo)
     extends AdminController(actionAuthenticator) {
-
-  def scrape = AdminHtmlAction { implicit request =>
-    Async {
-      scraper.scrapePending() map { articles =>
-        Ok(html.admin.scrape(articles))
-      }
-    }
-  }
 
   def searchScraper = AdminHtmlAction {implicit request =>
     Ok(html.admin.searchScraper())

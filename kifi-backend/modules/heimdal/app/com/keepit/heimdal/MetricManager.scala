@@ -19,7 +19,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import com.google.inject.Inject
 
 
-case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filter: String, lastUpdate: DateTime, uniqueField: String)
+case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filters: Seq[String], lastUpdate: DateTime, uniqueField: String)
 
 object MetricDescriptor {
   implicit val format = Json.format[MetricDescriptor]
@@ -36,19 +36,19 @@ class MetricManager @Inject() (
 
   val definedRestrictions = Map[String, ContextRestriction](
     "none" -> NoContextRestriction,
-    "noadmins" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("admin"))),
+    "noadmins" -> AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("admin"))),
     "withkifiresults" -> AnyContextRestriction("context.kifiResults", GreaterThan(ContextDoubleData(0))),
-    "kifiresultclicked" -> AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))),
-    "nofakes" -> AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))), //Is this correct?
+    "clickedkifiresult" -> ConditionalContextRestriction(AnyContextRestriction("context.resultSource", EqualTo(ContextStringData("Kifi"))), UserEventTypes.CLICKED_SEARCH_RESULT),
+    "nofakes" -> AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))), //Is this correct?
     "publickeepsonly_nofakes" -> AndContextRestriction(
-      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
-      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(0)))
+      AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextBoolean(false)))
     ),
     "privatekeepsonly_nofakes" -> AndContextRestriction(
-      AnyContextRestriction("context.experiment", NotEqualTo(ContextStringData("fake"))),
-      AnyContextRestriction("context.isPrivate", EqualTo(ContextDoubleData(1)))
+      AnyContextRestriction("context.experiments", NotEqualTo(ContextStringData("fake"))),
+      AnyContextRestriction("context.isPrivate", EqualTo(ContextBoolean(true)))
     ),
-    "newinstallsonly" -> AnyContextRestriction("context.firstTime", EqualTo(ContextDoubleData(1)))
+    "newinstallsonly" -> AnyContextRestriction("context.firstTime", EqualTo(ContextBoolean(true)))
   )
 
   def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
@@ -69,7 +69,7 @@ class MetricManager @Inject() (
     val tStart = desc.lastUpdate.minusHours(desc.window).plusHours(desc.step)
     val tEnd = desc.lastUpdate.plusHours(desc.step)
     val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => EventType(s)) )
-    val contextRestriction = definedRestrictions(desc.filter)
+    val contextRestriction = AndContextRestriction(desc.filters.map(definedRestrictions): _*)
 
     val definition = desc.mode match {
       case "users" => new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false)
@@ -124,7 +124,7 @@ class MetricManager @Inject() (
   }
 
   def getMetric(name: String): Future[Seq[MetricData]] = {
-    metricRepoFactory(name).all.map{ dataPoints =>
+    metricRepoFactory(name).allLean.map{ dataPoints =>
       dataPoints.sortBy( md => md.dt.getMillis )
     }
   }

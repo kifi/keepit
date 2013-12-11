@@ -24,10 +24,6 @@ if (searchUrlRe.test(document.URL)) !function() {
   'use strict';
   log("[google_inject]")();
 
-  function logEvent() {  // parameters defined in main.js
-    api.port.emit("log_event", Array.prototype.slice.call(arguments));
-  }
-
   var $res = $(render("html/search/google", {images: api.url("images")}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $status = $res.find(".kifi-res-status");
   attachKifiRes();
@@ -35,9 +31,10 @@ if (searchUrlRe.test(document.URL)) !function() {
   var filter;             // current search filter (null or {[who: "m"|"f"|dot-delimited user ids]?, [when: "t"|"y"|"w"|"m"]?})
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
+  var refinements = -1;   // how many times the user has refined the search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
-  var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown, reportTimingTimer;  // for timing stats
+  var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
   $(function() {
@@ -90,11 +87,8 @@ if (searchUrlRe.test(document.URL)) !function() {
     $status.removeAttr("data-n").removeClass("kifi-promote").parent().addClass("kifi-loading");
     $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
 
-    clearTimeout(reportTimingTimer);
-    if (newFilter == null) {
-      reportTimingTimer = setTimeout(reportTiming, 1200);
-    }
     var t1 = tQuery = Date.now();
+    refinements++;
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
       if (q != query || !areSameFilter(f, filter)) {
         log("[results] ignoring for query:", q, "filter:", f)();
@@ -147,11 +141,6 @@ if (searchUrlRe.test(document.URL)) !function() {
         $status.attr("data-n", resp.hits.length).addClass(resp.show && resp.hits.length ? "kifi-promote" : "").layout();
       }
       $status.parent().removeClass("kifi-loading");
-
-      logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
-      if (resp.hits.length) {
-        logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
-      }
     });
   }
 
@@ -166,47 +155,26 @@ if (searchUrlRe.test(document.URL)) !function() {
     return m && decodeURIComponent(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
   }
 
-  function reportTiming() {
-    var kR = tKifiResultsReceived - tQuery;
-    var kS = tKifiResultsShown - tQuery;
-    var gS = tGoogleResultsShown - tQuery;
-    logEvent("search", "dustSettled", {
-      "query": query,
-      "experimentId": response.experimentId,
-      "kifiHadResults": response.hits && response.hits.length > 0,
-      "kifiReceivedAt": kR >= 0 ? kR : null,
-      "kifiShownAt": kR >= 0 && kS >= 0 ? kS : null,
-      "googleShownAt": gS >= 0 ? gS : null});
-  }
-
   $(window).on("hashchange", function() {
     log("[hashchange]")();
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
   }).on("beforeunload", function(e) {
-    if (response.query === query && Date.now() - tKifiResultsShown > 2000) {
-      logEvent("search", "searchUnload", {
-        "query": response.query,
-        "queryUUID": response.uuid,
-        "experimentId": response.experimentId,
-        "kifiResultsClicked": clicks.kifi.length,
-        "googleResultsClicked": clicks.google.length,
-        "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
-        "kifiClickedURIs": clicks.kifi,
-        "googleClickedURIs": clicks.google}
-      );
+    if (response.query === query) {
       api.port.emit("log_search_event", [
         "searchEnded",
         {
           "origin": window.location.origin,
           "uuid": response.uuid,
           "experimentId": response.experimentId,
-          "kifiResults": response.hits.length, 
+          "kifiResults": response.hits.length,
           "kifiCollapsed": !response.expanded,
-          "kifiTime": tKifiResultsShown - tQuery,
-          "referenceTime": tGoogleResultsShown - tQuery,
+          "kifiTime": tKifiResultsReceived - tQuery,
+          "kifiShownTime": tKifiResultsShown - tQuery,
+          "thirdPartyShownTime": tGoogleResultsShown - tQuery,
           "kifiResultsClicked": clicks.kifi.length,
-          "searchResultsClicked": clicks.google.length
+          "searchResultsClicked": clicks.google.length,
+          "refinements": refinements
         }
       ]);
     }
@@ -274,23 +242,23 @@ if (searchUrlRe.test(document.URL)) !function() {
     clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
-      logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
-        {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
       api.port.emit("log_search_event", [
         "resultClicked",
         {
           "origin": window.location.origin,
           "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
           "experimentId": response.experimentId,
-          "kifiResults": response.hits.length, 
+          "kifiResults": response.hits.length,
           "kifiCollapsed": !response.expanded,
-          "kifiTime": tKifiResultsShown - tQuery,
-          "referenceTime": tGoogleResultsShown - tQuery,
+          "kifiTime": tKifiResultsReceived - tQuery,
+          "kifiShownTime": tKifiResultsShown - tQuery,
+          "thirdPartyShownTime": tGoogleResultsShown - tQuery,
           "resultPosition": resIdx,
-          "resultSource": isKifi ? "Kifi" : "Google", 
+          "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
           "query": response.query,
-          "hit": isKifi ? response.hits[resIdx] : null
+          "hit": isKifi ? response.hits[resIdx] : null,
+          "refinements": refinements
         }
       ]);
     }
@@ -302,7 +270,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     observer.disconnect();
     $q.off("input");
     $qf.off("submit");
-    clearTimeout(reportTimingTimer);
     $res.remove();
     $res.length = 0;
   });
@@ -601,7 +568,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   function boldSearchTerms(text, matches) {
     return (matches || []).reduceRight(function (text, match) {
       var start = match[0], len = match[1];
-      return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
+      return start < 0 ? text : text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
     }, text || "");
   }
 

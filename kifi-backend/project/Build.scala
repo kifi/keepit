@@ -51,7 +51,7 @@ object ApplicationBuild extends Build {
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "com.typesafe.slick" %% "slick" % "1.0.1",
-      "net.sf.uadetector" % "uadetector-resources" % "2013.02",
+      "net.sf.uadetector" % "uadetector-resources" % "2013.11",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
       "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -159,9 +159,13 @@ object ApplicationBuild extends Build {
       Keys.fork := false
     )
 
-    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+    lazy val macros = play.Project("macros", appVersion, commonDependencies, path = file("modules/macros")).settings(
       commonSettings: _*
     )
+
+    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+      commonSettings: _*
+    ).dependsOn(macros)
 
     lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
       commonSettings: _*

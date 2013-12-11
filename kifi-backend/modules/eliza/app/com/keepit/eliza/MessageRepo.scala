@@ -18,6 +18,7 @@ import play.api.libs.json._
 import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 import scala.slick.lifted.Query
+import scala.slick.jdbc.StaticQuery
 
 case class Message(
     id: Option[Id[Message]] = None,
@@ -104,7 +105,7 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getMaxId()(implicit session: RSession): Id[Message]
 
-  def getActiveThreadsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[MessageThread]]
+  def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
 
 }
 
@@ -193,20 +194,13 @@ class MessageRepoImpl @Inject() (
     Query(table.map(_.id).max).first.getOrElse(Id[Message](0))
   }
 
-  def getActiveThreadsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[MessageThread]] = { //Freaking slick doesn't support 'distinct' if you can believe it
-    val query = s"SELECT DISTINCT(thread_id) as tid FROM message WHERE sender_id='${userId.id}'"
-    val rs = session.getPreparedStatement(query).executeQuery()
-    val results = new scala.collection.mutable.ArrayBuffer[Id[MessageThread]]
-    while (rs.next()) {
-      results += Id[MessageThread](rs.getLong("tid"))
+  def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
+    afterOpt.map{ after =>
+      StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
+    } getOrElse {
+      val n = Query(table.filter(row => row.thread === threadId).length).first
+      (n, n)
     }
-    results
   }
 
-
-
 }
-
-
-
-

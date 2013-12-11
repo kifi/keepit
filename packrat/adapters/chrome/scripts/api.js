@@ -115,7 +115,7 @@ var api = api || function() {  // idempotent for Chrome
     url: chrome.runtime.getURL};
 }();
 
-var log = log || function() {
+var log = log || function() {  // idempotent for Chrome
   'use strict';
   var d = new Date, ds = d.toString();
   arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];

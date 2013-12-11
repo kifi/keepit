@@ -86,8 +86,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'isPrivate': kept === 'private',
       'noticesCount': Math.max(0, counts.n - counts.m),
       'messageCount': counts.m,
-      'inboxCount': counts.n,
-      'showInbox': ~session.experiments.indexOf('inbox'),
       'atNotices': '/notices' === locator,
       'atMessages': /^\/messages/.test(locator),
       'isTagged': tags.length
@@ -292,7 +290,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     createSlider();
     $slider.prependTo(tile);
 
-    logEvent('slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)}));
+    api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)})]);
     api.port.emit('keeper_shown');
   }
 
@@ -343,7 +341,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         $slider.remove(), $slider = null;
       }
     });
-    logEvent('slider', 'sliderClosed', {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 
   function startDrag(data) {
@@ -391,14 +388,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
     log('[keepPage]', how)();
     updateKeptDom(how);
     api.port.emit('keep', withUrls({title: document.title, how: how}));
-    logEvent('slider', 'keep', {isPrivate: how == 'private'});
   }
 
   function unkeepPage() {
     log('[unkeepPage]', document.URL)();
     updateKeptDom('');
     api.port.emit('unkeep', withUrls({}));
-    logEvent('slider', 'unkeep');
   }
 
   function toggleKeep(how) {
@@ -484,8 +479,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     counts: function (o) {
       if (!$slider) return;
       var $btns = $slider.find('.kifi-dock-btn');
-      [['.kifi-dock-inbox', o.n],
-       ['.kifi-dock-notices', Math.max(0, o.n - o.m)],
+      [['.kifi-dock-notices', Math.max(0, o.n - o.m)],
        ['.kifi-dock-messages', o.m]].forEach(function (a) {
         $btns.filter(a[0]).find('.kifi-count')
           .text(a[1] || '')

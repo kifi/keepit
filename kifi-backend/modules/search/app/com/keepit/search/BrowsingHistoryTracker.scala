@@ -24,7 +24,7 @@ class BrowsingHistoryTrackerImpl @Inject() (val store: BrowsingHistoryStore, val
 
 trait BrowsingHistoryStore extends ObjectStore[Id[User], MultiHashFilter[BrowsedURI]]
 
-class S3BrowsingHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val cache: BrowsingHistoryUserIdCache, val format: BrowsingHistoryBuilder)
+class S3BrowsingHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val cache: BrowsingHistoryUserIdCache, val format: BrowsingHistoryBuilder)
   extends S3BlobStore[Id[User], MultiHashFilter[BrowsedURI]] with BlobFormat[MultiHashFilter[BrowsedURI]] with BrowsingHistoryStore {
 
   protected def idToKey(userId: Id[User]) : String = "browsing_history_by_userid_" + userId

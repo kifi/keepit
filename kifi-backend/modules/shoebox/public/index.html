@@ -15,8 +15,13 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 	<title>kifi.com</title>
 	<meta name="viewport" content="width=device-width">
-	<script>if (/^Mac/.test(navigator.platform)) document.documentElement.className = 'mac';</script>
 	<base href="/">
+	<script>
+		if (/^Mac/.test(navigator.platform)) document.documentElement.className = 'mac';
+		var kifiViewTracker = [];
+		(function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
+		mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
+	</script>
 	<link rel="stylesheet" href="assets/css/jquery-ui.min.css">
 	<link rel="stylesheet" href="assets/js/fancybox/jquery.fancybox.css">
 	<link rel="stylesheet" href="assets/css/main.css">
@@ -32,483 +37,499 @@
 
 	<div class="page-cols">
 
-	<aside class="left-col">
-	<div class="page-col-inner">
-		<div class="header-left">
-			<a class="header-logo" href=""></a>
-		</div>
-		<div class="my-identity">
-			<a class="my-pic" href="profile"></a>
-			<div class="my-name">&nbsp;</div>
-			<div class="my-description">&nbsp;</div>
-		</div>
-		<h2>You</h2>
-		<h3 class="my-keeps">
-			<a href="">
-				<div class="nav-count"></div>
-				<div class="view-name">Your Keeps</div>
-			</a>
-		</h3>
-		<h3 class="my-friends">
-			<a href="friends">
-				<div class="nav-count"></div>
-				<div class="view-name">Your Friends</div>
-			</a>
-		</h3>
-		<div id="collections">
-			<h2>Tags</h2>
-      <h3 class="collection-new" data-before-template>
-        <label>
-          <input placeholder="Find or add a tag...">
-          <a class="tag-input-clear" tabindex="-1">&times;</a>
-        </label>
-      </h3>
-			<div id="collections-list">
-				<div class="antiscroll-inner">
-          <h3 class="collection" data-template data-id="{{id}}" data-name="{{name}}" style="display:none">
-						<a href="tag/{{id}}">
-              <span class="tag-icon"></span>
-							<span class="view-name">{{name}}</span>
-							<span class="tag-count">{{keeps}}</span>
-						</a>
-						<div class="coll-tri"></div>
+		<aside class="left-col">
+			<div class="page-col-inner">
+				<div class="header-left">
+					<a class="header-logo" href=""></a>
+				</div>
+				<div class="my-identity">
+					<a class="my-pic" href="profile"></a>
+					<div class="my-name">&nbsp;</div>
+					<div class="my-description">&nbsp;</div>
+				</div>
+				<h2>You</h2>
+				<h3 class="my-keeps">
+					<a href="">
+						<div class="nav-count"></div>
+						<div class="view-name">Your Keeps</div>
+					</a>
+				</h3>
+				<h3 class="my-friends">
+					<a href="friends">
+						<div class="nav-count"></div>
+						<div class="view-name">Your Friends</div>
+					</a>
+				</h3>
+				<div id="collections">
+					<h2>Tags</h2>
+					<h3 class="collection-new" data-before-template>
+						<label>
+							<input placeholder="Find or add a tag...">
+							<a class="tag-input-clear" tabindex="-1">&times;</a>
+						</label>
 					</h3>
+					<div id="collections-list">
+						<div class="antiscroll-inner">
+							<h3 class="collection" data-template data-id="{{id}}" data-name="{{name}}" style="display:none">
+								<a href="tag/{{id}}">
+									<span class="tag-icon"></span>
+									<span class="view-name">{{name}}</span>
+									<span class="tag-count">{{keeps}}</span>
+								</a>
+								<div class="coll-tri"></div>
+							</h3>
+						</div>
+					</div>
+					<div id="tag-new-template" style="display:none">
+						<h3 class="collection tag-new" data-name="{{name}}">
+							<a href="javascript:void(0)">
+								<span class="tag-create"></span>
+								<div class="caption">Add a new tag:</div>
+								<span class="view-name">{{name}}</span>
+							</a>
+						</h3>
+					</div>
+					<menu id="coll-menu">
+						<li><a class="coll-rename" href="javascript:">Rename</a></li>
+						<li><a class="coll-remove" href="javascript:">Remove</a></li>
+					</menu>
 				</div>
 			</div>
-      <div id="tag-new-template" style="display:none">
-        <h3 class="collection tag-new" data-name="{{name}}">
-          <a href="javascript:void(0)">
-            <span class="tag-create"></span>
-            <div class="caption">Add a new tag:</div>
-            <span class="view-name">{{name}}</span>
-          </a>
-        </h3>
-      </div>
-			<menu id="coll-menu">
-				<li><a class="coll-rename" href="javascript:">Rename</a></li>
-				<li><a class="coll-remove" href="javascript:">Remove</a></li>
-			</menu>
-		</div>
-	</div>
-	</aside>
+		</aside>
 
-	<section class="main" data-view="mine">
-	<div class="page-col-inner">
-		<div class="query-wrap empty">
-			<input class="query" type="text" placeholder="Find anything...">
-			<span class="query-icon"><b class="query-mag"></b><a class="query-x" href="javascript:" tabindex="-1"></a></span>
-			<div class="undo"><span class="undo-box"><span class="undo-message"></span> <a class="undo-link" href="javascript:">Undo</a><span></div>
-		</div>
-		<div class="main-head">
-			<h1></h1>
-			<div class="subtitle">
-				<span class="check-all"></span>
-				<span class="subtitle-text" data-template data-has="query" data-n="{{numShown}}" style="display:none">
-					{% if numShown == 0 %}
-						Sorry, no results match
-					{% endif %}{% if numShown == 1 %}
-						Showing the only result for
-					{% endif %}{% if numShown > 1 %}
-						Showing top {{numShown}} results for
-					{% endif %}
-				 <span class="result-query">{{query}}</span>
-				</span>
-				<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
-					{% if numShown == 0 %}
-						No Keeps in this tag
-					{% endif %}{% if numShown == 1 %}
-						Showing the only Keep in this tag
-					{% endif %}{% if numShown == 2 %}
-						Showing both Keeps in this tag
-					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing the {{numShown}} latest Keeps in this tag
-					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} Keeps in this tag
-					{% endif %}
-				</span>
-				<span class="subtitle-text" data-template data-has="numShown" data-n="{{numShown}}" style="display:none">
-					{% if numShown == 0 %}
-						You have no Keeps
-					{% endif %}{% if numShown == 1 %}
-						Showing your only Keep
-					{% endif %}{% if numShown == 2 %}
-						Showing both of your Keeps
-					{% endif %}{% if numShown > 2 && numShown < numTotal %}
-						Showing your {{numShown}} latest Keeps
-					{% endif %}{% if numShown > 2 && numShown == numTotal %}
-						Showing all {{numShown}} of your Keeps
-					{% endif %}
-				</span>
-				<span class="subtitle-text" data-template data-has="searching" style="display:none">Searching...</span>
-				<span class="subtitle-text" data-template>Loading...</span>
-			</div>
-		</div>
-		<div class="main-keeps">
-			<div class="antiscroll-inner">
-				<ol id="search-results"></ol>
-				<ol id="my-keeps">
-					<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" style="display:none">
-						{% if typeof createdAt !== "undefined" %}
-							<time datetime="{{createdAt}}">{{createdAt}}</time>
-						{% endif %}
-						<div class="handle">
-							<div class="keep-checkbox"></div>
-						</div>
-						<div class="keep-title long-text">
-							<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
-						</div>
-						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
-						<div class="keep-colls">
-							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
-								<a class="keep-coll-a" href="tag/{{id}}">{{name}}</a>
-							</span>
-						</div>
-						<div class="keep-who">
-							<a class="pic me" title="You! You look great!"
-								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
-							<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
-								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
-							{% if !keepers.length && others %}
-								<span class="others"></span>
+		<section class="main" data-view="mine">
+			<div class="page-col-inner">
+				<div class="query-wrap empty">
+					<input class="query" type="text" placeholder="Find anything...">
+					<span class="query-icon"><b class="query-mag"></b><a class="query-x" href="javascript:" tabindex="-1"></a></span>
+					<div class="undo"><span class="undo-box"><span class="undo-message"></span> <a class="undo-link" href="javascript:">Undo</a><span></div>
+				</div>
+				<div class="main-head">
+					<h1></h1>
+					<div class="subtitle">
+						<span class="check-all"></span>
+						<span class="subtitle-text" data-template data-has="query" data-n="{{numShown}}" style="display:none">
+							{% if numShown == 0 %}
+							Sorry, no results match
+							{% endif %}{% if numShown == 1 %}
+							Showing the only result for
+							{% endif %}{% if numShown > 1 %}
+							Showing top {{numShown}} results for
 							{% endif %}
-							<span class="keep-who-text" data-after-template>
-								<span class="keep-you">
-									You
-									{% if (keepers.length || others) && isPrivate %}
+							<span class="result-query">{{query}}</span>
+						</span>
+						<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
+							{% if numShown == 0 %}
+							No Keeps in this tag
+							{% endif %}{% if numShown == 1 %}
+							Showing the only Keep in this tag
+							{% endif %}{% if numShown == 2 %}
+							Showing both Keeps in this tag
+							{% endif %}{% if numShown > 2 && numShown < numTotal %}
+							Showing the {{numShown}} latest Keeps in this tag
+							{% endif %}{% if numShown > 2 && numShown == numTotal %}
+							Showing all {{numShown}} Keeps in this tag
+							{% endif %}
+						</span>
+						<span class="subtitle-text" data-template data-has="numShown" data-n="{{numShown}}" style="display:none">
+							{% if numShown == 0 %}
+							You have no Keeps
+							{% endif %}{% if numShown == 1 %}
+							Showing your only Keep
+							{% endif %}{% if numShown == 2 %}
+							Showing both of your Keeps
+							{% endif %}{% if numShown > 2 && numShown < numTotal %}
+							Showing your {{numShown}} latest Keeps
+							{% endif %}{% if numShown > 2 && numShown == numTotal %}
+							Showing all {{numShown}} of your Keeps
+							{% endif %}
+						</span>
+						<span class="subtitle-text" data-template data-has="searching" style="display:none">Searching...</span>
+						<span class="subtitle-text" data-template>Loading...</span>
+					</div>
+				</div>
+				<div class="main-keeps">
+					<div class="antiscroll-inner">
+						<ol id="search-results"></ol>
+						<ol id="my-keeps">
+							<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" style="display:none">
+							{% if typeof createdAt !== "undefined" %}
+							<time datetime="{{createdAt}}">{{createdAt}}</time>
+							{% endif %}
+							<div class="handle">
+								<div class="keep-checkbox"></div>
+							</div>
+							<div class="keep-title long-text">
+								<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
+							</div>
+							<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
+							<div class="keep-colls">
+								<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
+									<a class="keep-coll-a" href="tag/{{id}}">{{name}}</a>
+								</span>
+							</div>
+							<div class="keep-who">
+								<a class="pic me" title="You! You look great!"
+									data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
+								<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
+									data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
+								{% if !keepers.length && others %}
+								<span class="others"></span>
+								{% endif %}
+								<span class="keep-who-text" data-after-template>
+									<span class="keep-you">
+										You
+										{% if (keepers.length || others) && isPrivate %}
 										<span class="keep-private on">Private</span>
-									{% endif %}{% if (keepers.length || others) && !isPrivate %}
+										{% endif %}{% if (keepers.length || others) && !isPrivate %}
 										<span class="keep-private">Private</span>
+										{% endif %}
+									</span>
+									{% if keepers.length > 1 %}
+									<span class="keep-friends">{{keepers.length}} friends</span>
+									{% endif %}{% if keepers.length == 1 %}
+									<span class="keep-friends">1 friend</span>
+									{% endif %}
+									{% if others > 1 %}
+									<span class="keep-others">{{others}} others</span>
+									{% endif %}{% if others == 1 %}
+									<span class="keep-others">1 other</span>
+									{% endif %}
+									<span class="keep-kept-this">kept this</span>
+									{% if !keepers.length && !others && isPrivate %}
+									<span class="keep-private on">Private</span>
+									{% endif %}{% if !keepers.length && !others && !isPrivate %}
+									<span class="keep-private">Private</span>
 									{% endif %}
 								</span>
-								{% if keepers.length > 1 %}
-									<span class="keep-friends">{{keepers.length}} friends</span>
-								{% endif %}{% if keepers.length == 1 %}
-									<span class="keep-friends">1 friend</span>
-								{% endif %}
-								{% if others > 1 %}
-									<span class="keep-others">{{others}} others</span>
-								{% endif %}{% if others == 1 %}
-									<span class="keep-others">1 other</span>
-								{% endif %}
-								<span class="keep-kept-this">kept this</span>
-								{% if !keepers.length && !others && isPrivate %}
-									<span class="keep-private on">Private</span>
-								{% endif %}{% if !keepers.length && !others && !isPrivate %}
-									<span class="keep-private">Private</span>
-								{% endif %}
-							</span>
-						</div>
-						<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
-            <div class="keep-hover-button-wrapper">
-              <div class="keep-hover-button-table">
-                <div class="keep-hover-button-cell">
-                  <div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
-                </div>
-              </div>
-            </div>
-					</li>
-				</ol>
-				<div class="keep-group-title-fixed"></div>
-				<img class="keeps-loading" src="assets/img/wait.gif">
-				<a class="keeps-load-more hidden" href="javascript:">Show more</a>
-			</div>
-		</div>
-		<div id="profile-template">
-			<div class="profile" data-template>
-				<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
-				<div class="profile-details">
-					<div class="profile-name"><!-- TODO: edit-container -->
-						<span data-prop="firstName" data-placeholder="First Name" class="profile-firstname editable">{{firstName}}</span>
-						<span data-prop="lastName" data-placeholder="Last Name" class="profile-lastName editable">{{lastName}}</span>
-						<span class="edit">Edit</span>
-						<span class="save">Save</span>
-					</div>
-					<div class="profile-description edit-container">
-						<span data-prop="description" data-placeholder="Add a short description" data-maxlength="50" class="editable">{{description}}</span>
-						<span class="edit">Edit</span>
-						<span class="save">Save</span>
-					</div>
-				</div>
-				<h2>Contact email</h2>
-				<div class="edit-container contact-email">
-					<span data-prop="email" class="editable">{{emails[0]}}</span>
-					<span class="edit">Edit</span>
-					<span class="save">Save</span>
-				</div>
-				<h2>Social networks connected to your Kifi&nbsp;account</h2>
-				<div class="networks">
-					<div class="kifi-k"></div>
-					<ul>
-						<li data-network="facebook"><a class="profile-nw nw-facebook">Facebook</a></li>
-						<li data-network="linkedin"><a class="profile-nw nw-linkedin">LinkedIn</a></li>
-						<li><a class="profile-nw nw-twitter not-connected">Twitter</a></li>
-						<li><a class="profile-nw nw-google not-connected">Google</a></li>
-					</ul>
-				</div>
-			</div>
-		</div>
-
-		<div class="friends">
-			<h1>Friends</h1>
-      <div class="friends-tabs-border">
-        <nav class="friends-tabs">
-          <a data-href="friends">Kifi Friends</a>
-          <a data-href="friends/invite">Add Friends</a>
-          <a data-href="friends/requests">Requests <span class="friend-req-count"><span></a>
-        </nav>
-      </div>
-			<div class="friends-page" data-href="friends">
-				<div class="above-friends-list">
-					<input class="friends-filter" type="text" placeholder="Type a name of a Kifi friend">
-				</div>
-        <img class="image-preload" src="assets/img/friend-actions.png">
-        <img class="image-preload" src="assets/img/friend-actions.2x.png">
-				<div id="friends-list">
-					<ul class="antiscroll-inner">
-						<li class="friend {{state}}" data-template>
-							<div class="friend-pic">
-								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
-                <a class="friend-nw friend-nw-kifi"></a>
 							</div>
-							<div class="friend-info">
-								<div class="friend-name">{{firstName}} {{lastName}}</div>
-                <div class="friend-label">{{friendCount}} friend{% if friendCount !== 1 %}s{% endif %} on Kifi</div>
-							</div>
-							<div class="friend-actions {{state}}">
-								<div style="position:relative">
-									<a class="friend-mute{% if searchFriend === false %} muted{% endif %}" href="javascript:"></a>
-									<a class="friend-status" href="javascript:"></a>
-									<div class="friend-action-desc"></div>
+							<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
+							<div class="keep-hover-button-wrapper">
+								<div class="keep-hover-button-table">
+									<div class="keep-hover-button-cell">
+										<div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
+									</div>
 								</div>
 							</div>
-						</li>
-					</ul>
-					<img class="friends-loading" src="assets/img/wait.gif">
-				</div>
-			</div>
-			<div class="friends-page" data-href="friends/invite">
-        <nav class="add-friends-tabs">
-          <a data-href="friends/invite">Invite your friends & contacts</a>
-          <a data-href="friends/find">Connect to other Kifi users</a>
-        </nav>
-        <div class="add-friends-page" data-href="friends/invite">
-          <div class="above-invite-friends">
-            <input class="invite-filter" type="text" placeholder="Type a name or email">
-          </div>
-          <div class="invite-filter-wrapper">
-            <nav class="invite-filters">
-              <a data-href="friends/invite">All</a>
-              <a data-href="friends/invite/facebook" data-nw="facebook"></a>
-              <a data-href="friends/invite/linkedin" data-nw="linkedin"></a>
-              <a data-href="friends/invite/email" data-nw="email"></a>
-              <a data-nw="twitter"></a>
-            </nav>
-            <div class="invites-left">Invites Left <span class="num-invites"></span></div>
-          </div>
-          <div class="dialog no-invites-dialog" style="display:none">
-            <div class="dialog-content">
-              <h2>You have no invites left</h2>
-              <p>We are limiting the number of users we accept to Kifi.</p>
-              <p>Need more invites? Tell us.</p>
-              <button class="more-invites">I need more invites</button>
-            </div>
-          </div>
-          <div class="dialog invite-message-dialog" style="display:none">
-            <form method="POST" action="/invite" class="dialog-content" data-template>
-              <div class="invite-message-header">Your Kifi invite to {{label}}</div>
-              <a href="javascript:" class="invite-cancel">×</a>
-              <input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
-              <input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
-              <textarea class="invite-message" name="message">Hi {{label | replace ' .*', '' }},
-
-  I would like to invite you to the private beta of kifi.com. Click this link to accept the invitation:
-  </textarea>
-              <p>A link for the invite will be attached to your message.</p>
-              <button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
-            </form>
-          </div>
-          <div class="invite-friends" data-href="friends/invite">
-            <div class="antiscroll-inner">
-              <ul>
-				  <li class="invite-friend {{status}}" data-template data-value="{{value}}" data-status="{{status}}">
-                  <img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">
-				  <div class="invite-name">{{label}}{% if email %} <{{email}}>{% endif %}</div>
-				  <div class="invite-status">{{description}}</div>
-				  <a class="invite-button" href="javascript:">Invite</a>
-                </li>
-              </ul>
-              <img class="invite-friends-loading" src="assets/img/wait.gif">
-              <div class="no-results"></div>
-            </div>
-          </div>
-		  <div class="invite-friends-help-container"></div>
-		  <div class="invite-friends-importing"></div>
-        </div>
-        <div class="add-friends-page" data-href="friends/find">
-          <div class="above-found-user-list">
-            <input class="user-filter" type="text" placeholder="Type a name or email">
-          </div>
-		  <div class="search-users-help">
-			  <img class="search-users-arrow" src="assets/img/carrot-top-left.2x.png">
-			  <img class="search-users-icon" src="assets/img/search-kifi-friends.2x.png">
-			  <span>Quickly find Kifi users you may know by typing their name or email</span>
-		  </div>
-          <div class="found-user-list">
-            <div class="antiscroll-inner">
-              <ul>
-				  <li class="found-user {{status}}" data-template data-id="{{user.id}}" data-value="{{value}}" data-status="{{status}}">
-                  <img class="user-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
-				  <a class="friend-nw friend-nw-kifi"></a>
-				  <div class="user-name">{{user.firstName}} {{user.lastName}}</div>
-                  <div class="user-connected">Connected</div>
-                  <div class="user-requested">Friend Request Sent</div>
-				  <a class="connect-button" href="javascript:">Connect</a>
-                </li>
-              </ul>
-              <img class="found-user-list-loading" src="assets/img/wait.gif">
-              <div class="no-results" style="display:none">
-				  <h2>We couldn’t find any users matching ‘<span class="no-result-filter"></span>’</h2>
-			  </div>
-		  </div>
-	  </div>
-        </div>
-			</div>
-			<div class="friends-page" data-href="friends/requests">
-				<div class="friend-reqs-status"></div>
-				<div class="friend-reqs">
-					<ul class="antiscroll-inner">
-						<li class="friend-req" data-template data-id="{{id}}">
-							<img class="friend-req-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
-							<div class="friend-req-name">{{firstName}} {{lastName}}</div>
-							<div class="friend-req-q">Accept as your Kifi friend?</div>
-							<div class="friend-req-act">
-								<a class="friend-req-y" href="javascript:">Yes</a>
-								<a class="friend-req-n" href="javascript:">Ignore</a>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<img class="friend-reqs-loading" src="assets/img/wait.gif">
-			</div>
-		</div>
-
-		<div class="blog-outer">
-			<div class="antiscroll-inner">
-				<div class="blog" data-template>
-					<header>
-						<h1>{{title}}</h1>
-						<h2>{{description | replace '(for|Beta) ', '$1&nbsp;'}}</h2>
-					</header>
-					<article data-template-for="entries">
-						<h3>{{title}}</h3>
-						<time title="{{publishedDate}}">{{shortPublishedDate}}</time>
-						{{content}}
-					</article>
-				</div>
-				<img class="blog-loading" src="assets/img/wait.gif">
-			</div>
-		</div>
-	</div>
-	</section>
-
-	<aside class="right-col">
-	<div class="page-col-inner">
-		<nav class="top-right-nav">
-			<a href="javascript:" class="send-feedback" data-tip-html="Your feedback makes Kifi better!" data-tip-class="tip tip-below">Send us your feedback</a>
-			<a href="/logout">Log out</a>
-		</nav>
-
-	<div class="splash">
-	<div class="antiscroll-inner">
-		<h2>Kifi Beta - News & Tools</h2>
-		<ul class="about-kifi">
-			<li><a href="blog" class="updates-features">Kifi Updates</a>
-			<li><a href="/install">Install Kifi on this computer</a>
-			<li><a href="friends/invite" id="invite-friends-link" style="display:none">Invite your friends</a>
-			<li><a href="https://fast.wistia.net/embed/iframe/b7qisfubnv?popover=true" class="wistia-popover[height=394,playerColor=7b796a,width=700]">How to use Kifi</a><script charset="ISO-8859-1" src="https://fast.wistia.com/static/popover-v1.js"></script>
-			<li><a href="javascript:" class="send-feedback">Send feedback</a>
-		</ul>
-		<h2>Get to Know Us</h2>
-		<ul class="about-us">
-			<li><a href="http://www.42go.com/team.html">The Team</a>
-			<li><a href="http://eng.42go.com">Engineering Blog</a>
-			<li><a href="mailto:towel@42go.com">Contact Us</a>
-			<li><a href="http://www.42go.com/join_us.html">Jobs</a>
-		</ul>
-	</div>
-	</div>
-
-	<div class="detail"><div data-template data-kept="{{howKept}}">
-		<a class="page-x" href="javascript:"></a>
-		<div class="page-meta" data-n="{{numKeeps}}">
-			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
-			{% if numKeeps == 1 %}
-			<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
-			<div class="page-pic-wrap">
-				<a class="page-pic" href="{{url}}" target="_blank">
-					<div class="page-pic-1">
-						<div class="page-pic-2">
-							<div class="page-pic-3">
-								<div class="page-pic-soon">Preview of this page<br>not yet available</div>
-								<span class="page-pic-tip">Visit page</span>
-							</div>
-						</div>
+							</li>
+						</ol>
+						<div class="keep-group-title-fixed"></div>
+						<img class="keeps-loading" src="assets/img/wait.gif">
+						<a class="keeps-load-more hidden" href="javascript:">Show more</a>
 					</div>
-				</a>
-				<div class="page-how {{howKept}}">
-					<div class="page-how-0">
-						<div class="page-how-pub">
-							<div class="page-how-1">
-								<div class="page-how-2">
-									<div class="page-how-3">Public</div>
-								</div>
+				</div>
+				<div id="profile-template">
+					<div class="profile" data-template>
+						<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
+						<div class="profile-details">
+							<div class="profile-name"><!-- TODO: edit-container -->
+								<span data-prop="firstName" data-placeholder="First Name" class="profile-firstname editable">{{firstName}}</span>
+								<span data-prop="lastName" data-placeholder="Last Name" class="profile-lastName editable">{{lastName}}</span>
+								<span class="edit">Edit</span>
+								<span class="save">Save</span>
+							</div>
+							<div class="profile-description edit-container">
+								<span data-prop="description" data-placeholder="Add a short description" data-maxlength="50" class="editable">{{description}}</span>
+								<span class="edit">Edit</span>
+								<span class="save">Save</span>
 							</div>
 						</div>
-						<div class="page-how-pri">
-							<div class="page-how-1">
-								<div class="page-how-2">
-									<div class="page-how-3">Private</div>
-								</div>
-							</div>
+						<h2>Contact email</h2>
+						<div class="edit-container contact-email">
+							<span data-prop="email" class="editable">{{emails[0]}}</span>
+							<span class="edit">Edit</span>
+							<span class="save">Save</span>
+						</div>
+						<h2>Social networks connected to your Kifi&nbsp;account</h2>
+						<div class="networks">
+							<div class="kifi-k"></div>
+							<ul>
+								<li data-network="facebook"><a class="profile-nw nw-facebook">Facebook</a></li>
+								<li data-network="linkedin"><a class="profile-nw nw-linkedin">LinkedIn</a></li>
+								<li><a class="profile-nw nw-twitter not-connected">Twitter</a></li>
+								<li><a class="profile-nw nw-google not-connected">Google</a></li>
+							</ul>
 						</div>
 					</div>
 				</div>
-			</div>
-			{% endif %}
-			<a class="page-keep" href="javascript:"></a>
-			<a class="page-priv" href="javascript:"></a>
-		</div>
-		{% if numKeeps == 1 %}
-		<div class="page-who">
-			<h2>Who kept this:</h2>
-			<div class="page-who-pics"></div>
-			<div class="page-who-text"></div>
-		</div>
-		<div class="page-chatter">
-			<h2>Talking about this Keep:</h2>
-			<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
-		</div>
-		{% endif %}
-		<div class="page-colls{% if collections.length %} some{% endif %}">
-			<h2>Tags:</h2>
-			<ul class="page-coll-list">
-				<li class="page-coll" data-template data-id="{{id}}">
-					<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
-				</li>
-				<li class="page-coll-new" data-after-template>
-					<a class="page-coll-add" href="javascript:"></a>
-					<span class="page-coll-sizer" style="display:none"></span>
-					<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
-					<ul class="page-coll-opts" style="display:none">
-						<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
-					</ul>
-				</li>
-			</ul>
-		</div>
-	</div></div>
 
-	</div>
-	</aside>
+				<div class="friends">
+					<h1>Friends</h1>
+					<div class="friends-tabs-border">
+						<nav class="friends-tabs">
+							<a data-href="friends">Kifi Friends</a>
+							<a data-href="friends/invite" class="add-friends">Add Friends</a>
+							<a data-href="friends/requests">Requests <span class="friend-req-count"><span></a>
+						</nav>
+					</div>
+					<div class="friends-page" data-href="friends">
+						<div class="above-friends-list">
+							<input class="friends-filter" type="text" placeholder="Type a name of a Kifi friend">
+						</div>
+						<img class="image-preload" src="assets/img/friend-actions.png">
+						<img class="image-preload" src="assets/img/friend-actions.2x.png">
+						<div id="friends-list">
+							<ul class="antiscroll-inner">
+								<li class="friend {{state}}" data-template>
+								<div class="friend-pic">
+									<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+									<a class="friend-nw friend-nw-kifi"></a>
+								</div>
+								<div class="friend-info">
+									<div class="friend-name">{{firstName}} {{lastName}}</div>
+									<div class="friend-label">{{friendCount}} friend{% if friendCount !== 1 %}s{% endif %} on Kifi</div>
+								</div>
+								<div class="friend-actions {{state}}">
+									<div style="position:relative">
+										<a class="friend-mute{% if searchFriend === false %} muted{% endif %}" href="javascript:"></a>
+										<a class="friend-status" href="javascript:"></a>
+										<div class="friend-action-desc"></div>
+									</div>
+								</div>
+								</li>
+							</ul>
+							<img class="friends-loading" src="assets/img/wait.gif">
+						</div>
+					</div>
+					<div class="friends-page" data-href="friends/invite">
+						<nav class="add-friends-tabs">
+							<a data-href="friends/invite">Invite your friends & contacts</a>
+							<a data-href="friends/find">Connect to other Kifi users</a>
+						</nav>
+						<div class="add-friends-page" data-href="friends/invite">
+							<div class="above-invite-friends">
+								<input class="invite-filter" type="text" placeholder="Type a name or email">
+							</div>
+							<div class="invite-filter-wrapper">
+								<nav class="invite-filters">
+									<a data-href="friends/invite">All</a>
+									<a data-href="friends/invite/facebook" data-nw="facebook"></a>
+									<a data-href="friends/invite/linkedin" data-nw="linkedin"></a>
+									<a data-href="friends/invite/email" data-nw="email"></a>
+									<a data-nw="twitter"></a>
+								</nav>
+								<div class="invites-left">Invites Left <span class="num-invites"></span></div>
+							</div>
+							<div class="dialog no-invites-dialog" style="display:none">
+								<div class="dialog-content">
+									<h2>You have no invites left</h2>
+									<p>We are limiting the number of users we accept to Kifi.</p>
+									<p>Need more invites? Tell us.</p>
+									<button class="more-invites">I need more invites</button>
+								</div>
+							</div>
+							<div class="dialog invite-message-dialog" style="display:none">
+								<form method="POST" action="/invite" class="dialog-content" data-template>
+									<div class="invite-message-header">Your Kifi invite to {{label}}</div>
+									<a href="javascript:" class="invite-cancel">×</a>
+									<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
+									<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
+									<textarea class="invite-message" name="message">Hi{% if label %} {{label | replace ' .*', '' }}{% endif %},
+
+I would like to invite you to the private beta of Kifi.com.</textarea>
+									<p>An invitation link will be attached to this message.</p>
+									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
+								</form>
+							</div>
+							<div class="invite-friends" data-href="friends/invite">
+								<div class="antiscroll-inner">
+									<ul>
+										<li class="invite-friend {{status}}" data-template data-value="{{value}}" data-status="{{status}}">
+										<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">
+										<div class="invite-name">{{label}}{% if email %} <{{email}}>{% endif %}</div>
+										<div class="invite-status">{{description}}</div>
+										<a class="invite-button" href="javascript:">Invite</a>
+										</li>
+									</ul>
+									<img class="invite-friends-loading" src="assets/img/wait.gif">
+									<div class="no-results"></div>
+								</div>
+							</div>
+							<div class="invite-friends-help-container"></div>
+							<div class="invite-friends-importing"></div>
+						</div>
+						<div class="add-friends-page" data-href="friends/find">
+							<div class="above-found-user-list">
+								<input class="user-filter" type="text" placeholder="Type a name or email">
+							</div>
+							<div class="search-users-help">
+								<img class="search-users-arrow" src="assets/img/carrot-top-left.2x.png">
+								<img class="search-users-icon" src="assets/img/search-kifi-friends.2x.png">
+								<span>Quickly find Kifi users you may know by typing their name or email</span>
+							</div>
+							<div class="found-user-list">
+								<div class="antiscroll-inner">
+									<ul>
+										<li class="found-user {{status}}" data-template data-id="{{user.id}}" data-value="{{value}}" data-status="{{status}}">
+										<img class="user-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image && /^linkedin/.test(value) %}assets/img/ghost-linkedin.100.png{% endif %}">
+										<a class="friend-nw friend-nw-kifi"></a>
+										<div class="user-name">{{user.firstName}} {{user.lastName}}</div>
+										<div class="user-connected">Connected</div>
+										<div class="user-requested">Friend Request Sent</div>
+										<a class="connect-button" href="javascript:">Connect</a>
+										</li>
+									</ul>
+									<img class="found-user-list-loading" src="assets/img/wait.gif">
+									<div class="no-results" style="display:none">
+										<h2>We couldn’t find any users matching ‘<span class="no-result-filter"></span>’</h2>
+									</div>
+								</div>
+							</div>
+							<div class="dialog unfriend-dialog" style="display:none">
+								<form method="POST" action="{{url}}" class="dialog-content" data-template>
+									<div class="unfriend-dialog-header">Unfriend {{name}}?</div>
+									<a href="javascript:" class="unfriend-cancel">×</a>
+									<div class="unfriend-dialog-content">
+										<p>Are you sure you want to unfriend this user?</p>
+										<ul>
+											<li>You will not see each other's results</li>
+											<li>You will not be able to send messages to each other</li>
+										</ul>
+										<div class="unfriend-dialog-buttons">
+											<button class="unfriend-send" type="submit">Unfriend</button>
+											<button class="unfriend-cancel">Cancel</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+					<div class="friends-page" data-href="friends/requests">
+						<div class="friend-reqs-status"></div>
+						<div class="friend-reqs">
+							<ul class="antiscroll-inner">
+								<li class="friend-req" data-template data-id="{{id}}">
+								<img class="friend-req-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+								<div class="friend-req-name">{{firstName}} {{lastName}}</div>
+								<div class="friend-req-q">Accept as your Kifi friend?</div>
+								<div class="friend-req-act">
+									<a class="friend-req-y" href="javascript:">Yes</a>
+									<a class="friend-req-n" href="javascript:">Ignore</a>
+								</div>
+								</li>
+							</ul>
+						</div>
+						<img class="friend-reqs-loading" src="assets/img/wait.gif">
+					</div>
+				</div>
+
+				<div class="blog-outer">
+					<div class="antiscroll-inner">
+						<div class="blog" data-template>
+							<header>
+								<h1>{{title}}</h1>
+								<h2>{{description | replace '(for|Beta) ', '$1&nbsp;'}}</h2>
+							</header>
+							<article data-template-for="entries">
+								<h3>{{title}}</h3>
+								<time title="{{publishedDate}}">{{shortPublishedDate}}</time>
+								{{content}}
+							</article>
+						</div>
+						<img class="blog-loading" src="assets/img/wait.gif">
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<aside class="right-col">
+			<div class="page-col-inner">
+				<nav class="top-right-nav">
+					<a href="javascript:" class="send-feedback" data-tip-html="Your feedback makes Kifi better!" data-tip-class="tip tip-below">Send us your feedback</a>
+					<a href="/logout">Log out</a>
+				</nav>
+
+				<div class="splash">
+					<div class="antiscroll-inner">
+						<h2>Kifi Beta - News & Tools</h2>
+						<ul class="about-kifi">
+							<li><a href="blog" class="updates-features">Kifi Updates</a>
+							<li class="install-kifi"><a href="/install">Install Kifi on this computer</a>
+							<li><a href="friends/invite" id="invite-friends-link" style="display:none">Invite your friends</a>
+							<li><a href="https://fast.wistia.net/embed/iframe/b7qisfubnv?popover=true" class="wistia-popover[height=394,playerColor=7b796a,width=700]">How to use Kifi</a><script charset="ISO-8859-1" src="https://fast.wistia.com/static/popover-v1.js"></script>
+							<li><a href="javascript:" class="send-feedback">Send feedback</a>
+						</ul>
+						<h2>Get to Know Us</h2>
+						<ul class="about-us">
+							<li><a href="http://www.42go.com/team.html" class="view-team">The Team</a>
+							<li><a href="http://eng.42go.com" class="view-eng-blog">Engineering Blog</a>
+							<li><a href="mailto:towel@42go.com" class="contact-us">Contact Us</a>
+							<li><a href="http://www.42go.com/join_us.html" class="join-us">Jobs</a>
+						</ul>
+					</div>
+				</div>
+
+				<div class="detail"><div data-template data-kept="{{howKept}}">
+						<a class="page-x" href="javascript:"></a>
+						<div class="page-meta" data-n="{{numKeeps}}">
+							<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
+							{% if numKeeps == 1 %}
+							<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
+							<div class="page-pic-wrap">
+								<a class="page-pic" href="{{url}}" target="_blank">
+									<div class="page-pic-1">
+										<div class="page-pic-2">
+											<div class="page-pic-3">
+												<div class="page-pic-soon">Preview of this page<br>not yet available</div>
+												<span class="page-pic-tip">Visit page</span>
+											</div>
+										</div>
+									</div>
+								</a>
+								<div class="page-how {{howKept}}">
+									<div class="page-how-0">
+										<div class="page-how-pub">
+											<div class="page-how-1">
+												<div class="page-how-2">
+													<div class="page-how-3">Public</div>
+												</div>
+											</div>
+										</div>
+										<div class="page-how-pri">
+											<div class="page-how-1">
+												<div class="page-how-2">
+													<div class="page-how-3">Private</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							{% endif %}
+							<a class="page-keep" href="javascript:"></a>
+							<a class="page-priv" href="javascript:"></a>
+						</div>
+						{% if numKeeps == 1 %}
+						<div class="page-who">
+							<h2>Who kept this:</h2>
+							<div class="page-who-pics"></div>
+							<div class="page-who-text"></div>
+						</div>
+						<div class="page-chatter">
+							<h2>Talking about this Keep:</h2>
+							<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
+						</div>
+						{% endif %}
+						<div class="page-colls{% if collections.length %} some{% endif %}">
+							<h2>Tags:</h2>
+							<ul class="page-coll-list">
+								<li class="page-coll" data-template data-id="{{id}}">
+								<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+								</li>
+								<li class="page-coll-new" data-after-template>
+								<a class="page-coll-add" href="javascript:"></a>
+								<span class="page-coll-sizer" style="display:none"></span>
+								<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
+								<ul class="page-coll-opts" style="display:none">
+									<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
+								</ul>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+		</aside>
 	</div>
 
 	<div id="fr-card-template">
@@ -561,8 +582,9 @@
 
 	<script type="text/x-handlebars" id="invite-friends-help">
 	  <div class="invite-friends-help {{network_class}}">
-		  <div>To invite your {{network}} {{friends}} to Kifi,</div>
-		  <div>please connect to {{network}}</div>
+		  <div class="no-error">To invite your {{network}} {{friends}} to Kifi,</div>
+		  <div class="no-error">please connect to {{network}}</div>
+		  <div class="error-message">Import failed. Try again.</div>
 		  <a class="invite-friends-help-connect" href="javascript:void(0)" data-network="{{network_class}}">
 			  <span class="invite-friends-help-logo"></span>
 			  <span>Connect {{network}}</span>
@@ -595,6 +617,7 @@
 	<script src="assets/js/util.js"></script>
 	<script src="assets/js/scorefilter.js"></script>
 	<script src="assets/js/main.js"></script>
+	<script src="assets/js/track.js" async defer></script>
 	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>
 		var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];

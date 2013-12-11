@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.model.User
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -15,11 +15,12 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
+import com.google.inject.util.Providers
 import com.keepit.serializer.TypeCode
 
 
 class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   var eventsRecorded : Int = 0
@@ -40,5 +41,11 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int] = Future.successful(0)
 
-  def engageUser(user: User): Unit = {}
+  def deleteUser(userId: Id[User]): Unit = {}
+
+  def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit = {}
+
+  def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {}
+
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 }

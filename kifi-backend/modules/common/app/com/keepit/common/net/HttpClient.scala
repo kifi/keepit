@@ -1,7 +1,6 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
-
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -13,6 +12,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
+import com.keepit.common._
 import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
@@ -23,17 +23,18 @@ import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
-import play.modules.statsd.api.Statsd
-
-import play.api.Logger
+import com.ning.http.util.AsyncHttpProviderUtils
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] Bad Http Status on ${url.summary} body:[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30)}]"){
   override def toString(): String = getMessage
 }
 
-case class LongWaitException(url: HttpUri, response: Response, waitTime: Int)
-    extends Exception(s"[${url.service}] Long Wait Error on ${url.summary} status:${response.status} wait-time:${waitTime}ms"){
+case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int)
+    extends Exception(
+      s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
+      s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms remote-time:${remoteTime}ms " +
+      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
   override def toString(): String = getMessage
 }
 
@@ -84,9 +85,10 @@ trait HttpClient {
 }
 
 case class HttpClientImpl(
-    timeout: Int = 5000,
+    timeout: Int = 10000,
     headers: List[(String, String)] = List(),
     airbrake: Provider[AirbrakeNotifier],
+    fastJsonParser: FastJsonParser,
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
     silentFail: Boolean = false) extends HttpClient with Logging {
@@ -156,7 +158,7 @@ case class HttpClientImpl(
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser)
     if (response.status / 100 != validResponseClass) {
       val exception = new NonOKResponseException(request.httpUri, clientResponse, requestBody)
       if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
@@ -167,8 +169,8 @@ case class HttpClientImpl(
 
   def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
 
-  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler):
-      Future[ClientResponse] = reqRes match { case (request, responseFuture) =>
+  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
+    val (request, responseFuture) = reqRes
     responseFuture.map(r => res(request, r))(immediate) tap { f =>
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
       f.onSuccess {
@@ -184,6 +186,7 @@ case class HttpClientImpl(
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
+        parsingTime = res.parsingTime.map(_.toInt),
         remoteLeader = remoteLeader,
         result = "success",
         query = request.queryString,
@@ -191,11 +194,12 @@ case class HttpClientImpl(
         remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
         url = request.url,
         trackingId = request.trackingId,
-        statusCode = res.res.status))
+        statusCode = res.res.status,
+        dataSize = res.bytes.length))
 
-    e.waitTime map {waitTime =>
+    e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
-        val exception = request.tracer.withCause(LongWaitException(request.httpUri, res.res, waitTime))
+        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -243,39 +247,3 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
   def delete() =            {record(); wsRequest.delete()}
 }
 
-trait ClientResponse {
-  def res: Response
-  def body: String
-  def json: JsValue
-  def xml: NodeSeq
-  def status: Int
-}
-
-class ClientResponseImpl(val request: Request, val res: Response) extends ClientResponse {
-
-  override def toString: String = s"ClientResponse with [status: $status, body: $body]"
-
-  def status: Int = res.status
-
-  def body: String = res.body
-
-  def json: JsValue = {
-    try {
-      res.json
-    } catch {
-      case e: Throwable =>
-        println("bad res: %s".format(res.body.toString()))
-        throw e
-    }
-  }
-
-  def xml: NodeSeq = {
-    try {
-      res.xml
-    } catch {
-      case e: Throwable =>
-        println("bad res: %s".format(res.body.toString()))
-        throw e
-    }
-  }
-}

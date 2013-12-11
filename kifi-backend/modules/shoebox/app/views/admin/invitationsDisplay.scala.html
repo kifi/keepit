@@ -40,7 +40,7 @@
 
 @stateDisplay(state: State[Invitation]) = {
   @{state match {
-    case InvitationStates.INACTIVE => "inactive"
+    case InvitationStates.INACTIVE => "inviter canceled invitation"
     case InvitationStates.ACTIVE => "pending user acceptance"
     case InvitationStates.ACCEPTED => "pending admin approval"
     case InvitationStates.ADMIN_ACCEPTED => "admin accepted"

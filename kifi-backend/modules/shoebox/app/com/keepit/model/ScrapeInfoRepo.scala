@@ -15,7 +15,7 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
   def getPendingCount()(implicit session: RSession):Int
   def getPendingList()(implicit session: RSession):Seq[ScrapeInfo]
-  def getOverduePendingList()(implicit session: RSession):Seq[ScrapeInfo]
+  def getOverduePendingList(due: DateTime = currentDateTime)(implicit session: RSession):Seq[ScrapeInfo]
   def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int)(implicit session: RSession): Int
 }
 
@@ -64,8 +64,8 @@ class ScrapeInfoRepoImpl @Inject() (
     (for(f <- table if f.state === ScrapeInfoStates.PENDING) yield f).list
   }
 
-  def getOverduePendingList()(implicit session: RSession):Seq[ScrapeInfo] = {
-    (for(f <- table if f.state === ScrapeInfoStates.PENDING && f.nextScrape < (currentDateTime.minusMinutes(10))) yield f).sortBy(_.nextScrape).list  // TODO: add schedule time or updatedAt
+  def getOverduePendingList(due: DateTime = currentDateTime)(implicit session: RSession):Seq[ScrapeInfo] = {
+    (for(f <- table if f.state === ScrapeInfoStates.PENDING && f.nextScrape <= due) yield f).sortBy(_.nextScrape).list  // TODO: add schedule time or updatedAt
   }
 
   def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int)(implicit session: RSession): Int = {

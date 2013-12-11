@@ -19,8 +19,8 @@ class EventTrackingTest extends Specification with TestInjector {
   def setup()(implicit injector: Injector) = {
     val eventTrackingController = inject[EventTrackingController]
 
-    val testContext = EventContext(Map(
-      "testField" -> Seq(ContextStringData("Yay!"))
+    val testContext = HeimdalContext(Map(
+      "testField" -> ContextStringData("Yay!")
     ))
     val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
     val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[TestSystemEventLoggingRepo]
@@ -37,13 +37,13 @@ class EventTrackingTest extends Specification with TestInjector {
         userEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(userEvent))
         userEventRepo.eventCount() === 1
-        userEventRepo.lastEvent.context.data("testField")(0).asInstanceOf[ContextStringData].value === "Yay!"
+        userEventRepo.lastEvent.context.data("testField").asInstanceOf[ContextStringData].value === "Yay!"
 
         val systemEvent: HeimdalEvent = SystemEvent(testContext, EventType("system_test_event"))
         systemEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(systemEvent))
         systemEventRepo.eventCount() === 1
-        systemEventRepo.lastEvent.context.data("testField")(0).asInstanceOf[ContextStringData].value === "Yay!"
+        systemEventRepo.lastEvent.context.data("testField").asInstanceOf[ContextStringData].value === "Yay!"
       }
     }
 

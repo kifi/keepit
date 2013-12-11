@@ -2,10 +2,6 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
-function logEvent() {  // parameters defined in main.js
-  api.port.emit("log_event", Array.prototype.slice.call(arguments));
-}
-
 var session, tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
@@ -112,12 +108,6 @@ var tile = tile || function() {  // idempotent for Chrome
         loadAndDo('pane', 'toggle', 'key', '/notices');
         e.preventDefault();
         break;
-      case 83: // s
-        if (session && ~session.experiments.indexOf('inbox')) {
-          loadAndDo('pane', 'compose', 'key');
-          e.preventDefault();
-        }
-        break;
       }
     }
   }
@@ -134,8 +124,10 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function toggleLoginDialog() {
-    api.require("scripts/dialog.js", function() {
-      kifiDialog.toggleLoginDialog();
+    api.require('scripts/iframe_dialog.js', function() {
+      api.port.emit('web_base_uri', function (uri) {
+        iframeDialog.origin(uri).toggle('login');
+      });
     });
   }
 
@@ -245,7 +237,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   setTimeout(function checkIfUseful() {
     if (document.hasFocus() && document.body.scrollTop > 300) {
-      logEvent("slider", "usefulPage", {url: document.URL});
+      api.port.emit('useful_page');
     } else {
       setTimeout(checkIfUseful, 5000);
     }

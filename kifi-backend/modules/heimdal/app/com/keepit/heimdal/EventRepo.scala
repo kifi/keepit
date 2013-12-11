@@ -8,6 +8,7 @@ import play.api.libs.json.{Json, JsArray}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.core.commands.PipelineOperator
 import com.keepit.common.time._
+import com.keepit.heimdal.CustomBSONHandlers.{BSONDateTimeHandler, BSONEventTypeHandler, BSONEventContextHandler}
 
 trait EventRepo[E <: HeimdalEvent] {
   def persist(event: E) : Unit
@@ -30,16 +31,7 @@ abstract class MongoEventRepo[E <: HeimdalEvent: TypeCode] extends BufferedMongo
   }
 
   def getLatestRawEvents(eventsToConsider: EventSet, number: Int, window: Int) : Future[JsArray] = {
-    val eventSelector = eventsToConsider match {
-      case SpecificEventSet(events) =>
-        BSONDocument(
-          "time" -> BSONDocument("$gt" -> BSONDateTime(currentDateTime.minusHours(window).getMillis)),
-          "event_type" -> BSONDocument(
-            "$in" -> BSONArray(events.toSeq.map(eventType => BSONString(eventType.name)))
-          )
-        )
-      case AllEvents => BSONDocument()
-    }
+    val eventSelector = eventsToConsider.toBSONMatchDocument ++ ("time" -> BSONDocument("$gt" -> BSONDateTime(currentDateTime.minusHours(window).getMillis)))
     val sortOrder = BSONDocument("time" -> BSONDouble(-1.0))
     collection.find(eventSelector).sort(sortOrder).cursor.collect[Seq](number).map { events =>
       JsArray(events.map(JsValueReader.read))
@@ -60,26 +52,11 @@ abstract class DevEventRepo[E <: HeimdalEvent: TypeCode] extends EventRepo[E] {
 }
 
 object EventRepo {
-
-  private def contextToBSON(context: EventContext): BSONDocument = {
-    BSONDocument(
-      context.data.mapValues{ seq =>
-        BSONArray(
-          seq.map{ _ match {
-            case ContextStringData(s)  => BSONString(s)
-            case ContextDoubleData(x) => BSONDouble(x)
-          }}
-        )
-      }
-    )
-  }
-
-  def eventToBSONFields(event: HeimdalEvent): Seq[(String, BSONValue)] = Seq(
-    "context" -> contextToBSON(event.context),
-    "event_type" -> BSONString(event.eventType.name),
-    "time" -> BSONDateTime(event.time.getMillis)
-  )
-
   def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(code: String): Option[EventRepo[_ <: HeimdalEvent]] = availableRepos.find(_.getEventTypeCode == HeimdalEvent.getTypeCode(code))
+  def eventToBSONFields(event: HeimdalEvent): Seq[(String, BSONValue)] = Seq(
+    "context" -> BSONEventContextHandler.write(event.context),
+    "eventType" -> BSONEventTypeHandler.write(event.eventType),
+    "time" -> BSONDateTimeHandler.write(event.time)
+  )
 }
 

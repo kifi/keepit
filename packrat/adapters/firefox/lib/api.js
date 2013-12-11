@@ -95,9 +95,11 @@ exports.log.error = function(exception, context) {
   console.error(exception.stack);
 };
 
-exports.noop = function() {};
+// TODO: actually toggle content script logging
+exports.toggleLogging = exports.noop = function () {};
 
 exports.on = {
+  beforeSearch: new Listeners,
   search: new Listeners,
   install: new Listeners,
   update: new Listeners,
@@ -157,12 +159,27 @@ exports.popup = {
     // FAILS! win.getXULWindow()
   }};
 
-var portHandlers;
+var portHandlers, portMessageTypes;
 exports.port = {
   on: function(handlers) {
     if (portHandlers) throw Error("api.port.on already called");
     portHandlers = handlers;
+    portMessageTypes = Object.keys(handlers);
+    for each (let page in pages) {
+      for (let worker of workerNs(page).workers) {
+        bindPortHandlers(worker, page);
+      }
+    }
   }};
+function bindPortHandlers(worker, page) {
+  portMessageTypes.forEach(function(type) {
+    worker.port.on(type, onPortMessage.bind(worker, page, type));
+  });
+}
+function onPortMessage(page, type, data, callbackId) {
+  log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
+  portHandlers[type](data, this.port.emit.bind(this.port, 'api:respond', callbackId), page);
+}
 
 const {prefs} = require("sdk/simple-prefs");
 exports.prefs = {
@@ -209,6 +226,26 @@ exports.request = function(method, url, data, done, fail) {
     options.content = JSON.stringify(data);
   }
   require("sdk/request").Request(options)[method.toLowerCase()]();
+};
+
+exports.postRawAsForm = function(url, data) {
+  var options = {
+    url: url,
+    contentType: "application/x-www-form-urlencoded",
+    content: data
+  }
+  require("sdk/request").Request(options).post();
+};
+
+exports.util = {
+  btoa: function(str) {
+    return require('sdk/base64').encode(str);
+  }
+};
+
+exports.browser = {
+  name: 'Firefox',
+  userAgent: Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).userAgent
 };
 
 exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupported");
@@ -489,6 +526,10 @@ for each (let win in windows) {
   }
 }
 
+// before search
+
+require('./location').onFocus(dispatch.bind(exports.on.beforeSearch));
+
 // navigation handling
 
 const stripHashRe = /^[^#]*/;
@@ -540,7 +581,6 @@ function onPageHide(tabId) {
 }
 
 // attaching content scripts
-timers.setTimeout(function() {  // async to allow main.js to complete (so portHandlers can be defined)
   const {PageMod} = require("sdk/page-mod");
   require("./meta").contentScripts.forEach(function(arr) {
     const path = arr[0], urlRe = arr[1], o = deps(path);
@@ -550,7 +590,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentStyleFile: o.styles.map(url),
       contentScriptFile: o.scripts.map(url),
       contentScriptWhen: arr[2] ? "start" : "ready",
-      contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
+      contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development", version: self.version},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
         const tab = worker.tab, page = pages[tab.id];
@@ -574,14 +614,9 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
           log("[pagehide] tab:", tab.id);
           onPageHide(tab.id);
         });
-        Object.keys(portHandlers).forEach(function(type) {
-          worker.port.on(type, function(data, callbackId) {
-            log("[worker.port.on] message:", type, "data:", data, "callbackId:", callbackId);
-            portHandlers[type](data, function(response) {
-                worker.port.emit("api:respond", callbackId, response);
-              }, page);
-          });
-        });
+        if (portHandlers) {
+          bindPortHandlers(worker, page);
+        }
         worker.handling = {};
         worker.port.on("api:handling", function(types) {
           log("[api:handling]", types);
@@ -599,7 +634,6 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         });
       }});
   });
-}, 0);
 
 function emitQueuedMessages(page, worker) {
   if (page.toEmit) {

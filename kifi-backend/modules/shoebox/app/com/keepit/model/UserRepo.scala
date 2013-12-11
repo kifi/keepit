@@ -8,9 +8,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.{HeimdalContextBuilder, HeimdalServiceClient}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.KestrelCombinator
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -52,7 +51,7 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = sequence.incrementAndGet())
-    super.save(toSave) tap { saved => SafeFuture { heimdal.engageUser(saved) }}
+    super.save(toSave)
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
@@ -75,8 +74,26 @@ class UserRepoImpl @Inject() (
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
     }
+
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
+    invalidateMixpanel(user)
     user
+  }
+
+  private def invalidateMixpanel(user: User) = SafeFuture {
+    if (user.state == UserStates.INACTIVE)
+      heimdal.deleteUser(user.id.get)
+    else {
+      heimdal.setUserAlias(user.id.get, user.externalId)
+      val properties = new HeimdalContextBuilder
+      properties += ("$first_name", user.firstName)
+      properties += ("$last_name", user.lastName)
+      properties += ("$created", user.createdAt)
+      properties += ("state", user.state.value)
+      properties += ("userId", user.id.get.id)
+      properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
+      heimdal.setUserProperties(user.id.get, properties.data.toSeq: _*)
+    }
   }
 
   override def get(id: Id[User])(implicit session: RSession): User = {

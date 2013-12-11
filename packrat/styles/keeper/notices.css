@@ -9,9 +9,6 @@
   color: #fff !important;
   display: none;
 }
-.kifi-pane-v2 .kifi-pane-mark-notices-read {
-  display: none !important;
-}
 a.kifi-pane-mark-notices-read:hover {
   text-decoration: none;
   background-color: #67829c;
@@ -48,11 +45,8 @@ div.kifi-notices-none:only-child {
 .kifi-notice-visited:hover {
   background: #f8fafd;
 }
-.kifi-notice-new,
-.kifi-notice-new:hover {
-  background: #f7f0d0;
-}
-.kifi-notice time {
+
+.kifi-notice-when {
   margin: 4px 0 0 0;
   font-size: 11px;
   color: #ccc;

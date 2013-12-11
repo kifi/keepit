@@ -1,7 +1,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/underscore.js
 // @require scripts/lib/antiscroll.min.js
-// @require scripts/lib/p.min.js
+// @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/kifi_util.js
@@ -27,7 +27,7 @@ this.tagbox = (function ($, win) {
 
 	var util = win.util,
 		kifiUtil = win.kifiUtil,
-		P = win.P,
+		Q = win.Q,
 		_ = win._;
 
 	function log(name) {
@@ -197,9 +197,7 @@ this.tagbox = (function ($, win) {
 			this.initTags();
 			this.initScroll();
 
-			this.logEvent('init', {
-				trigger: trigger
-			});
+			log('init', trigger);
 		},
 
 		/**
@@ -217,7 +215,7 @@ this.tagbox = (function ($, win) {
           e.stopPropagation();
           e.stopImmediatePropagation();
           */
-					this.hide(this.getClickInfo('outside'));
+					this.hide('outside');
 				}
 			}
 
@@ -339,9 +337,7 @@ this.tagbox = (function ($, win) {
 		 * Add a close event listener to close button.
 		 */
 		initCloseIcon: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-close', function () {
-				this.hide(this.getClickInfo('X'));
-			}.bind(this));
+			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this, 'X'));
 		},
 
 		/**
@@ -376,10 +372,8 @@ this.tagbox = (function ($, win) {
 			this.$tagList = $tagList;
 
 			this.$tagbox.on('click', '.kifi-tagbox-tag-name', function () {
-				this.logEvent('navigate', {
-					trigger: this.getClickInfo('tag')
-				});
-			}.bind(this));
+				log('navigate');
+			});
 
 			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
 
@@ -392,9 +386,7 @@ this.tagbox = (function ($, win) {
 		 * Add a clear event listener to clear button.
 		 */
 		initClearAll: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-clear', function () {
-				this.clearTags(this.getClickInfo('clear'));
-			}.bind(this));
+			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
 		},
 
 		/**
@@ -492,9 +484,7 @@ this.tagbox = (function ($, win) {
 				this.tagsBeingCreated = {};
 				this.busyTags = {};
 
-				this.logEvent('destroy', {
-					trigger: trigger
-				});
+				log('destroy', trigger);
 			}
 		},
 
@@ -746,7 +736,7 @@ this.tagbox = (function ($, win) {
 
 			$tile.css('transform', 'translate(0,' + dy + 'px)');
 
-			var deferred = P.defer();
+			var deferred = Q.defer();
 
 			$tile.on('transitionend', function onTransitionend(e) {
 				if (e.target === this) {
@@ -883,10 +873,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, name));
 
-			this.logEvent('createTag', {
-				trigger: trigger,
-				name: name
-			});
+			log('createTag', trigger, name);
 
 			return deferred;
 		},
@@ -923,7 +910,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 
-			this.logEvent('addTag', {
+			log('addTag', {
 				trigger: trigger,
 				name: this.getTagNameById(tagId),
 				input: this.getInputValue()
@@ -960,10 +947,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 
-			this.logEvent('removeTag', {
-				trigger: trigger,
-				id: tagId
-			});
+			log('removeTag', trigger, tagId);
 
 			return deferred;
 		},
@@ -1532,7 +1516,8 @@ this.tagbox = (function ($, win) {
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion'),
 				tagId = this.getData($suggestion, 'id');
-			this.addTagById(tagId, $suggestion, this.getClickInfo('autocomplete'));
+			this.setInputValue();
+			this.addTagById(tagId, $suggestion, 'autocomplete');
 		},
 
 		/**
@@ -1543,7 +1528,8 @@ this.tagbox = (function ($, win) {
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new'),
 				tagName = this.getData($suggestion, 'name');
-			this.createTag(tagName, this.getClickInfo('new'));
+			this.setInputValue();
+			this.createTag(tagName, 'new');
 		},
 
 		/**
@@ -1576,7 +1562,7 @@ this.tagbox = (function ($, win) {
 		onClickRemoveTag: function (e) {
 			var $tag = $(e.target).closest('.kifi-tagbox-tag'),
 				tagId = this.getData($tag, 'id');
-			this.removeTagById(tagId, this.getClickInfo('X'));
+			this.removeTagById(tagId, 'X');
 		},
 
 		/**
@@ -1591,9 +1577,7 @@ this.tagbox = (function ($, win) {
 				.then(this.onClearTagsResponse.bind(this))
 				.fail(this.logError.bind(this));
 
-			this.logEvent('clearTags', {
-				trigger: trigger
-			});
+			log('clearTags', trigger);
 
 			return deferred;
 		},
@@ -1672,45 +1656,12 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Logs a tagbox user event to the server.
-		 *
-		 * @param {string} name - A event type name
-		 * @param {Object} obj - A event data
-		 * @param {boolean} withUrls - Whether to include url
-		 */
-		logEvent: function (name, obj, withUrls) {
-			if (obj) {
-				if (!withUrls) {
-					obj = win.withUrls(obj);
-				}
-			}
-			log(name, obj);
-			win.logEvent('slider', 'tagbox.' + name, obj || null);
-		},
-
-		/**
 		 * Logs error.
 		 *
 		 * @param {Error} err - An error object
 		 */
 		logError: function (err) {
 			log('Error', err, err.message, err.stack);
-		},
-
-		/**
-		 * Returns a trigger string for event logging.
-		 *
-		 * @param {string} name - What is being clicked
-		 * @param {string} target - What element is being clicked
-		 *
-		 * @return {string} A trigger string
-		 */
-		getClickInfo: function (name, target) {
-			var res = 'click:' + name;
-			if (target) {
-				res += '@' + target;
-			}
-			return res;
 		}
 
 	};

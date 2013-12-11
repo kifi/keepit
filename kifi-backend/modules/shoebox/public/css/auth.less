@@ -43,6 +43,7 @@ input[type=password] {
   margin-bottom: 16px;
   height: 40px;
   border: 2px solid #e5e5e5;
+  border-radius: 5px;
   padding: 0 @input-hor-padding;
   font-size: 16px;
   line-height: 130%;
@@ -58,6 +59,18 @@ input[type=password] {
 
 @kifi-green: #9fc062;
 @kifi-blue: #85a4ea;
+
+body.still>.curtain-l,
+body.still>.curtain-r,
+body.still .curtain-logo-l,
+body.still .curtain-logo-r,
+body.still .curtain-welcome-l,
+body.still .curtain-welcome-r,
+body.still .curtain-panel,
+body.still>.curtain-back,
+body.still .pate-title {
+  .transition(none);
+}
 
 // curtains
 @curtain-time: .42s;
@@ -110,7 +123,7 @@ input[type=password] {
 }
 .curtain-welcome {
   position: absolute;
-  top: 224px;
+  top: 222px;
   left: 0;
   width: 100%;
   z-index: 10;
@@ -118,13 +131,14 @@ input[type=password] {
   table-layout: fixed;
   border-collapse: collapse;
   overflow: hidden;
+  margin: 0;
 }
 .curtain-welcome-l,
 .curtain-welcome-r {
   display: table-cell;
   width: 50%;
-  font-size: 32px;
-  line-height: 32px;
+  font-size: 24px;
+  line-height: 28px;
   color: #fff;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
@@ -152,22 +166,38 @@ input[type=password] {
 .curtains-drawn .curtain-welcome-r {
   .translate(180%);
 }
-.curtain-action {
+.curtain-panel {
   position: absolute;
   top: 20%;
   margin-top: 220px;
-  padding: 32px 0 38px;
-  width: 284px;
-  text-align: center;
-  -webkit-font-smoothing: antialiased;
   color: #fff;
-  font-size: 18px;
+  width: 300px;
 }
-.curtain-signup {
+.curtain-l>.curtain-panel {
   right: 8%;
 }
-.curtain-login {
+.curtain-r>.curtain-panel {
   left: 8%;
+}
+.curtain-question {
+  margin: 0 0 16px;
+  line-height: 36px;
+  font-size: 30px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.curtain-action {
+  display: block;
+  margin: 0 auto;
+  padding: 12px 0;
+  width: 130px;
+  border-radius: 3px;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  font-size: 18px;
+  color: #fff;
 }
 .curtain-action:hover {
   background-color: rgba(0, 0, 0, .16);
@@ -177,31 +207,29 @@ input[type=password] {
 .curtains-drawn .curtain-action:hover {
   background-color: rgba(0, 0, 0, .08);
 }
-.curtain-a-title {
-  font-size: 32px;
-  line-height: 42px;
-  font-weight: 300;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
 .curtain-note {
-  position: absolute;
-  top: 20%;
-  margin-top: 372px;
-  width: 284px;
-  right: 8%;
-  color: #fff;
-  font-size: 14px;
+  display: inline-block;
+  margin-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 6px 2px 0;
   line-height: 17px;
+  font-size: 14px;
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
-  text-align: center;
+  color: #fff;
+  text-align: left;
+  white-space: nowrap;
 }
-.curtain-action,
-.curtain-note {
+.curtain-note:before {
+  content: 'PLEASE NOTE:';
+  display: block;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.curtain-panel {
   .transition(opacity @curtain-time, visibility @curtain-time);
 }
-.curtains-drawn .curtain-action,
-.curtains-drawn .curtain-note {
+.curtains-drawn .curtain-panel {
   .transition(opacity @curtain-time, visibility 0s @curtain-time);
   opacity: 0;
   visibility: hidden;
@@ -266,9 +294,9 @@ input[type=password] {
 // right-side footer
 footer {
   position: absolute;
-  top: 56px;
-  right: -65px;
-  margin-right: 8.25%;
+  top: 30px;
+  right: -40px;
+  margin-right: 6%;
   z-index: 10;
   text-align: right;
   font-size: 14px;
@@ -297,10 +325,15 @@ footer {
 }
 .copyright {
   line-height: 30px;
+  font-size: 13px;
+  font-weight: 300;
+  padding-left: 6px;
   border-bottom: 1px solid rgba(255, 255, 255, .5);
-  margin-bottom: 5px;
+  margin-bottom: 12px;
 }
 .contact-us {
+  font-size: 16px;
+  font-weight: 300;
   color: inherit;
 }
 .contact-us:hover {
@@ -344,6 +377,7 @@ footer {
   white-space: nowrap;
   color: #fff;
   background: @bg-color;
+  border-radius: 3px;
   &:hover,
   &:focus {
     background: tint(@bg-color, 10%);
@@ -361,6 +395,7 @@ footer {
   white-space: nowrap;
   color: #fff;
   background: @bg-color;
+  border-radius: 3px;
   &:hover,
   &:focus {
     background: tint(@bg-color, 10%);
@@ -378,6 +413,7 @@ footer {
   white-space: nowrap;
   color: #888;
   background: @bg-color;
+  border-radius: 3px;
   &:hover,
   &:focus {
     background: tint(@bg-color, 20%);
@@ -385,6 +421,56 @@ footer {
   &:active {
     background: shade(@bg-color, 10%);
   }
+}
+
+.intro-header {
+  margin: 0 0 24px;
+  text-align: center;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 24px;
+  color: #5a5a5a;
+}
+a.video-frame {
+  border: 8px solid #aaa;
+  border-radius: 10px;
+}
+.video-still {
+  display: block;
+  width: 325px;
+  height: 182px;
+  font-size: 0;
+  line-height: 0;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.1) url(/assets/img/video-still.jpg);
+  background-size: cover;
+  position: relative;
+}
+.video-still:before {
+  content: ' ';
+  position: absolute;
+  top: 59px;
+  left: 125px;
+  height: 68px;
+  width: 68px;
+  background-color: #6fa6ef;
+  border-radius: 4px;
+}
+.video-still:hover:before,
+.video-still:focus:before {
+  background: #7daff1;
+}
+.video-still:active:before {
+  background: #699ee3;
+}
+.video-still:after {
+  content: ' ';
+  position: absolute;
+  top: 76px;
+  left: 145px;
+  border-style: solid;
+  border-color: transparent #fff;
+  border-width: 17px 0 17px 34px;
 }
 
 // form errors
@@ -463,6 +549,7 @@ footer {
   display: table;
   width: 100%;
   margin-top: 16px;
+  border-radius: 3px;
 }
 @facebook-color: #597ab1;
 @linkedin-color: #2786c5;
@@ -486,13 +573,15 @@ footer {
 }
 .form-network-icon {
   display: table-cell;
+  height: 68px;
+  width: 72px;
+  padding: 0;
   vertical-align: middle;
-  text-align: right;
-  .box-sizing(border-box);
-  width: 30%;
-  padding: 0 8%;
+  text-align: center;
+  background-color: rgba(0,0,0,.1);
+  line-height: 0;
 }
-.form-network-icon:before {
+.form-network-icon:empty:before {
   content: ' ';
   display: inline-block;
   font-size: 0;
@@ -500,17 +589,23 @@ footer {
   width: 32px;
   background-image: url(../img/auth.png);
 }
-.facebook>.form-network-icon:before {
+.facebook>.form-network-icon:empty:before {
   background-position: -187px -294px;
 }
-.linkedin>.form-network-icon:before {
+.linkedin>.form-network-icon:empty:before {
   background-position: -221px -294px;
+}
+.form-network-pic {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
 }
 .form-network-text {
   display: table-cell;
   height: 68px;
+  padding: 0 5px;
   vertical-align: middle;
-  text-align: left;
+  text-align: center;
   color: #fff;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
@@ -633,6 +728,7 @@ footer {
 .form-photo-box {
   padding: 8px 10px;
   background: @signup-box-color;
+  border-radius: 3px;
   position: relative;
   .clearfix;
 }
@@ -679,6 +775,7 @@ footer {
   width: 48px;
   position: relative;
   margin-right: 6px;
+  border-radius: 2px;
 }
 .form-photo-a.facebook {
   background-color: @facebook-color;
@@ -1063,11 +1160,11 @@ footer {
 }
 .reset-password .dialog-box:before {
   left: 0;
-  .background-image(linear-gradient(to right, #fff, transparent));
+  .background-image(linear-gradient(to right, #fff, rgba(255,255,255,0)));
 }
 .reset-password .dialog-box:after {
   right: 0;
-  .background-image(linear-gradient(to left, #fff, transparent));
+  .background-image(linear-gradient(to left, #fff, rgba(255,255,255,0)));
 }
 .reset-password-email {
   width: 300px;
@@ -1098,12 +1195,12 @@ footer {
   .reset-password-form {
     .translate(-80%);
     visibility: hidden;
-    .transition(visibility 0 .2s, transform .2s ease-in-out);
+    .transition(visibility 0s .2s, transform .2s ease-in-out);
   }
   .reset-password-success {
     .transform(none);
     visibility: visible;
-    .transition(visibility 0, transform .2s ease-in-out);
+    .transition(visibility 0s, transform .2s ease-in-out);
   }
 }
 .reset-password-addresses {
@@ -1258,7 +1355,7 @@ input.social-email {
   .curtain-back:before,
   .us-on,
   .main-logo,
-  .form-network-icon:before,
+  .form-network-icon:empty:before,
   .password-label:after,
   .form-photo-a:before {
     background-image: url(../img/auth.2x.png);

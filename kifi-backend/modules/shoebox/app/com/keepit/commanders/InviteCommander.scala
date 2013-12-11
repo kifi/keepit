@@ -75,6 +75,12 @@ class InviteCommander @Inject() (
       Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(in.state)
     }
     db.readWrite { implicit s =>
+      anyPendingInvites.find(_._2.senderUserId.isDefined).map { case (_, invite) =>
+        val user = userRepo.get(userId)
+        if (user.state == UserStates.PENDING) {
+          userRepo.save(user.withState(UserStates.ACTIVE))
+        }
+      }
       for ((su, invite) <- anyPendingInvites) {
         // Swallow exceptions currently because we have a constraint that we user can only be invited once
         // However, this can get violated if the user signs up with a different social network than we were expecting
@@ -83,11 +89,12 @@ class InviteCommander @Inject() (
           connectInvitedUsers(userId, invite)
           if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-            notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+            if (invite.senderUserId.isEmpty) {
+              notifyAdminsAboutNewSignupRequest(userId, su.fullName)
+            }
           }
         }
       }
-      socialConnectionRepo
     }
   }
 

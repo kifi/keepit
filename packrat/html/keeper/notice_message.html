@@ -1,4 +1,4 @@
-<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
   <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{author.id}}/pics/200/{{author.pictureName}}">
   <div class="kifi-notice-name">
     {{#oneParticipant}}
@@ -19,11 +19,11 @@
     {{/moreParticipants}}
   </div>
   <div class="kifi-notice-action">
-  	 Message
+    Message
   </div>
   <div class="kifi-notice-page">
-  	<a href="{{url}}" class="kifi-link" target="_blank">{{title}}</a>
+    <a href="{{url}}" class="kifi-link" target="_blank">{{title}}</a>
   </div>
   <div class="kifi-notice-text">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
-  <time datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+  <time class="kifi-notice-when" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
 </div>

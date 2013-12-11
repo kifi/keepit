@@ -21,8 +21,6 @@ import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
-import com.keepit.search.query.LuceneExplanationExtractor
-import com.keepit.search.query.LuceneScoreNames
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
@@ -84,21 +82,19 @@ class MainSearcher(
   private[this] val recencyBoost = config.asFloat("recencyBoost")
   private[this] val newContentBoost = config.asFloat("newContentBoost")
   private[this] val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
-  private[this] val proximityBoost = config.asFloat("proximityBoost")
-  private[this] val semanticBoost = config.asFloat("semanticBoost")
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   private[this] val svWeightClickHistory = config.asInt("svWeightClickHistory")
   private[this] val similarity = Similarity(config.asString("similarity"))
-  private[this] val phraseBoost = config.asFloat("phraseBoost")
-  private[this] val siteBoost = config.asFloat("siteBoost")
-  private[this] val concatBoost = config.asFloat("concatBoost")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val homePageBoost = config.asFloat("homePageBoost")
+  private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
+  private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
+
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
@@ -122,11 +118,17 @@ class MainSearcher(
     users.foldLeft(sharingUsers.size.toFloat){ (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  def getPersonalizedSearcher(query: Query) = {
+  private def getNonPersonalizedQueryContextVector(queryParser: MainQueryParser): SemanticVector = {
+    val newSearcher = articleSearcher.withSemanticContext
+    queryParser.svTerms.foreach{ t => newSearcher.addContextTerm(t)}
+    newSearcher.getContextVector
+  }
+
+  def getPersonalizedSearcher(query: Query, nonPersonalizedContextVector: Option[Future[SemanticVector]]) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
   private def warpOrSearchText(maxTextHitsPerCategory: Int): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
@@ -170,11 +172,12 @@ class MainSearcher(
     lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost, homePageBoost)
+    parser = parserFactory(lang, config)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
     parsedQuery = parser.parse(queryString, Some(collectionSearcher))
+    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
     timeLogs.phraseDetection = parser.phraseDetectionTime
@@ -189,7 +192,7 @@ class MainSearcher(
       if (promise.isCompleted) return
 
       val tPersonalSearcher = currentDateTime.getMillis()
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
@@ -298,7 +301,7 @@ class MainSearcher(
 
         if (score > (threshold * (1.0f - recencyScoreVal))) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+          h.scoring = new Scoring(h.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost)
           hits.insert(h)
           true
@@ -333,14 +336,14 @@ class MainSearcher(
         val score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+          h.scoring = new Scoring(h.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
           h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
           queue.insert(h)
           true
         } else {
           if (recencyScoreVal > newContentScore) {
             h.users = sharingUsers.destIdSet
-            h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+            h.scoring = new Scoring(h.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
             h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
             newContent = Some(h)
             newContentScore = recencyScoreVal
@@ -351,40 +354,36 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      val othersThreshold = othersHighScore * tailCutting
-      val queue = createQueue(numHitsToReturn - hits.size)
+    var onlyContainsOthersHits = false
 
-      othersHits.toRankedIterator.forall{ case (h, rank) =>
-        val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-        if (score > othersThreshold) {
-          h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
-          if (h.bookmarkCount > 0) {
-            h.scoring = new Scoring(score, score / highScore, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-            h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
-            queue.insert(h)
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
+      if ( !forbidEmptyFriendlyHits || (forbidEmptyFriendlyHits && hits.size == 0) || !filter.isDefault || !isInitialSearch){
+        val othersThreshold = othersHighScore * tailCutting
+        val othersNorm = max(highScore, othersHighScore)
+        val queue = createQueue(numHitsToReturn - hits.size)
+        if (hits.size == 0) onlyContainsOthersHits = true
+        othersHits.toRankedIterator.forall{ case (h, rank) =>
+          val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+          if (score > othersThreshold) {
+            h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
+            if (h.bookmarkCount > 0) {
+              h.scoring = new Scoring(h.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+              h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
+              queue.insert(h)
+            }
+            true
+          } else {
+            false
           }
-          true
-        } else {
-          false
         }
+        queue.foreach{ h => hits.insert(h) }
       }
-      // if others have really high score, clear hits from mine and friends (this decision must be made after filtering out orphan URIs)
-      if (queue.size > 0 && highScore < queue.highScore * tailCutting * tailCutting) hits.clear()
-      queue.foreach{ h => hits.insert(h) }
     }
 
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
-    val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
-
-    // simple classifier
-    val show = (parsedQuery, personalizedSearcher) match {
-      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get, svVar)
-      case _ => true
-    }
+    val (show, svVar) =  if (filter.isDefault && isInitialSearch && (forbidEmptyFriendlyHits && onlyContainsOthersHits)) (false, -1f) else classify(hitList, personalizedSearcher)
 
     // insert a new content if any (after show/no-show classification)
     newContent.foreach { h =>
@@ -405,7 +404,6 @@ class MainSearcher(
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
-        timeLogs = Some(timeLogs.toSearchTimeLogs),
         collections = parser.collectionIds,
         lang = lang)
   }
@@ -422,14 +420,27 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher, svVar: Float) = {
-    def classify(hit: MutableArticleHit) = {
-      (hit.clickBoost) > 1.1f ||
-      hit.scoring.recencyScore > 0.25f ||
-      hit.scoring.textScore > 0.7f ||
-      (hit.scoring.textScore >= 0.02f && svVar < 0.18f)
+  private[this] def classify(hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]) = {
+    def classify(hit: MutableArticleHit, minScore: Float): Boolean = {
+      hit.clickBoost > 1.1f ||
+      (if (hit.isMyBookmark) hit.scoring.recencyScore/5.0f else 0.0f) + hit.scoring.textScore > minScore
     }
-    hitList.take(3).exists(classify(_))
+
+    if (filter.isDefault && isInitialSearch) {
+      val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
+      val svVar = SemanticVariance.svVariance(textQueries, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
+      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
+
+      // simple classifier
+      val show = (parsedQuery, personalizedSearcher) match {
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => hitList.take(5).exists(classify(_, minScore))
+        case _ => true
+      }
+      (show, svVar)
+    } else {
+      (true, -1f)
+    }
   }
 
   @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
@@ -450,12 +461,14 @@ class MainSearcher(
     // TODO: use user profile info as a bias
     lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost, concatBoost)
+    parser = parserFactory(lang, config)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
+    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
+
     parser.parse(queryString, Some(collectionSearcher)).map{ query =>
-      var personalizedSearcher = getPersonalizedSearcher(query)
+      var personalizedSearcher = getPersonalizedSearcher(query, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       hotDocs.set(browsingFilter, clickBoosts)
@@ -472,7 +485,7 @@ class MainSearcher(
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
-  def timing() {
+  def timing(): SearchTimeLogs = {
     Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
     Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
     Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
@@ -488,6 +501,8 @@ class MainSearcher(
           warmer.addTerms(QueryUtil.getTerms(query))
       }
     }
+
+    timeLogs.toSearchTimeLogs
   }
 }
 
