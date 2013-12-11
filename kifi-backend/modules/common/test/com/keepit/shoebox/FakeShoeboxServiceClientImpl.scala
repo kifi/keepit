@@ -424,6 +424,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveNormalizedURI(uri: NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = ???
 
+  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
+
+  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
+
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
