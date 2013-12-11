@@ -52,7 +52,6 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  airbrake: AirbrakeNotifier,
   bookmarksCommander: BookmarksCommander,
   userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier)
