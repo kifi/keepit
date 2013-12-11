@@ -7,20 +7,39 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
+import scala.util.Try
+import scala.Some
+import com.keepit.commanders.BasicUserInfo
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
 
 case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
-  implicit val format = Json.format[EmailInfo]
+  implicit val format = new Format[EmailInfo] {
+    def reads(json: JsValue): JsResult[EmailInfo] = {
+      Try(new EmailInfo(
+        (json \ "address").as[String],
+        (json \ "isPrimary").asOpt[Boolean].getOrElse(false),
+        (json \ "isVerified").asOpt[Boolean].getOrElse(false),
+        (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false)
+      )).toOption match {
+        case Some(ei) => JsSuccess(ei)
+        case None => JsError()
+      }
+    }
+
+    def writes(ei: EmailInfo): JsValue = {
+      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary)
+    }
+  }
 }
 case class UpdatableUserInfo(
     description: Option[String], emails: Option[Seq[EmailInfo]],
