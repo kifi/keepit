@@ -18,10 +18,8 @@ var tile = tile || function() {  // idempotent for Chrome
     window.postMessage({'bookmarks':bookmarks}, '*');
   }
   function postBookmarksMessageHandler(event) {
-    log('1')();
     if(!/www\.kifi\.com|dev\.ezkeep\.com/.test(event.origin)) return;
     else if (event.data == 'get_bookmarks') {
-      log('2')();
       api.port.emit('get_bookmarks', postBookmarks);
     }
   }

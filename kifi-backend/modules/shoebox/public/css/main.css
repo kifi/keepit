@@ -716,6 +716,15 @@ span.long-text, a.long-text {display: inline-block}
 .welcome-dialog>.dialog-content>button:hover {background-color: #7faeef}
 .welcome-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}
 
+/* bookmark import dialog */
+.import-dialog>.dialog-content {height: 525px; margin-top: -262px; width: 675px; margin-left: -337px; padding: 40px 55px; color: #66829b; line-height: 1.5; }
+.import-dialog>.dialog-content>ul {list-style: disc; margin: 12px 0 0 30px; color: #6fa6ef}
+.import-dialog>.dialog-content>ul>li>span {color: #333}
+.import-dialog>.dialog-content>button {width: 165px; height: 58px; line-height: 58px; padding: 0; background-color: #6fa5ef; color: #fff; border: none; border-radius: 6px; margin: 24px 0 0 70px; font-size: 18px; font-weight: 300; -webkit-font-smoothing: antialiased; cursor: pointer; -webkit-transition: background-color .1s; transition: background-color .1s}
+.import-dialog>.dialog-content>button:hover {background-color: #7faeef}
+.import-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}
+
+
 /* tips */
 .tip {
   position: absolute; width: auto; height: auto; border-radius: 6px; padding: 8px 12px; background-color: rgba(53,60,67,.9); color: #fff; font-size: 12px; line-height: 14px; opacity: 0;
