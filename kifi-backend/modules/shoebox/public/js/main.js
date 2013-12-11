@@ -534,7 +534,8 @@ $(function () {
 	// profile picture upload
 
 	var URL = window.URL || window.webkitURL;
-	var PHOTO_UPLOAD_URL = '/auth/upload-binary-image';
+	var PHOTO_BINARY_UPLOAD_URL = xhrBase + '/user/upload-pic';
+	var PHOTO_CROP_UPLOAD_URL = xhrBase + '/user/pic';
 	var PHOTO_UPLOAD_FORM_URL = '/auth/upload-multipart-image';
 
 	function initProfilePhotoUpload() {
@@ -583,7 +584,7 @@ $(function () {
 					deferred.reject();
 				}
 			});
-			xhr.open('POST', PHOTO_UPLOAD_URL, true);
+			xhr.open('POST', PHOTO_BINARY_UPLOAD_URL, true);
 			xhr.send(file);
 			return {file: file, promise: deferred.promise()};
 		}
@@ -640,24 +641,45 @@ $(function () {
 			URL.revokeObjectURL(localPhotoUrl);
 		}
 		localPhotoUrl = URL.createObjectURL(upload.file);
+
 		photoDialog
 		.show(localPhotoUrl)
 		.done(function (details) {
 			var $photo = $('.profile-image');
 			var scale = $photo.innerWidth() / details.size;
+
 			var $myPic = $('.my-pic');
 			var myScale = $myPic.innerWidth() / details.size;
+
 			$('.my-pic').css({
 				'background-image': 'url(' + localPhotoUrl + ')',
 				'background-size': myScale * details.width + 'px auto',
 				'background-position': -(myScale * details.x) + 'px ' + -(myScale * details.y) + 'px'
 			});
+
 			$photo.css({
 				'background-image': 'url(' + localPhotoUrl + ')',
 				'background-size': scale * details.width + 'px auto',
 				'background-position': -(scale * details.x) + 'px ' + -(scale * details.y) + 'px'
-			}).removeClass('unset')
-			.removeData().data(details).data('uploadPromise', upload.promise);
+			})
+			.removeClass('unset')
+			.removeData()
+			.data(details)
+			.data('uploadPromise', upload.promise);
+
+			upload.promise.always(function() {
+				console.log('here', this, arguments);
+			});
+
+			$.postJson(PHOTO_CROP_UPLOAD_URL, {
+				picToken: details && details.token,
+				picWidth: details.width,
+				picHeight: details.height,
+				cropX: details.x,
+				cropY: details.y,
+				cropSize: details.size
+			})
+			.done(navigate)
 		})
 		.always(function () {
 			$('.profile-image-file').val(null);
