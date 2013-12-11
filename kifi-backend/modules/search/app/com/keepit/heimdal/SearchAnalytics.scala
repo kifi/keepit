@@ -36,27 +36,27 @@ case class BasicSearchContext(
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
   thirdPartyShownTime: Option[Int],
-  kifiResultsClicked: Int,
-  thirdPartyResultsClicked: Int
+  kifiResultsClicked: Option[Int],
+  thirdPartyResultsClicked: Option[Int]
 )
 
 object BasicSearchContext {
   implicit val reads: Reads[BasicSearchContext] = (
     (__ \ 'origin).read[String] and
-    (__ \ 'pageSession).read[String] and
+    (__ \ 'pageSession).readNullable[String].fmap(_.getOrElse("")) and
     (__ \ 'refinements).readNullable[Int] and
-    (__ \ 'uuid).read(ExternalId.format[ArticleSearchResult]) and
+    ((__ \ 'uuid).read(ExternalId.format[ArticleSearchResult]) orElse (__ \ 'queryUUID).read(ExternalId.format[ArticleSearchResult])) and
     (__ \ 'experimentId).readNullable(Id.format[SearchConfigExperiment]) and
     (__ \ 'query).read[String] and
-    (__ \ 'filter \ 'who).readNullable[String].fmap(filterByPeople) and
-    (__ \ 'filter \ 'when).readNullable[String].fmap(filterByTime) and
+    (__ \\ 'who).readNullable[String].fmap(filterByPeople) and
+    (__ \\ 'when).readNullable[String].fmap(filterByTime) and
     (__ \ 'kifiResults).read[Int] and
-    (__ \ 'kifiExpanded).read[Boolean] and
+    ((__ \ 'kifiExpanded).read[Boolean] orElse (__ \ 'kifiCollapsed).read[Boolean].fmap(!_)) and
     (__ \ 'kifiTime).readNullable[Int] and
     (__ \ 'kifiShownTime).readNullable[Int] and
     (__ \ 'thirdPartyShownTime).readNullable[Int] and
-    (__ \ 'kifiResultsClicked).read[Int] and
-    (__ \ 'thirdPartyResultsClicked).read[Int]
+    (__ \ 'kifiResultsClicked).readNullable[Int] and
+    (__ \ 'thirdPartyResultsClicked).readNullable[Int]
   )(BasicSearchContext.apply _)
 
   private def filterByPeople(who: Option[String]) = who collect {
@@ -103,7 +103,6 @@ class SearchAnalytics @Inject() (
   ) = {
 
     processBasicSearchContext(userId, basicSearchContext, contextBuilder)
-    val queryTermsCount = contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt }.get
 
     // Click Information
 
@@ -121,6 +120,8 @@ class SearchAnalytics @Inject() (
 
       contextBuilder += ("titleMatches", result.hit.titleMatches.length)
       contextBuilder += ("urlMatches", result.hit.urlMatches.length)
+
+      val queryTermsCount = contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt }.get
       contextBuilder += ("titleMatchQueryRatio", result.hit.titleMatches.length.toDouble / queryTermsCount)
       contextBuilder += ("urlMatchQueryRatio", result.hit.urlMatches.length.toDouble / queryTermsCount)
     }
@@ -132,7 +133,6 @@ class SearchAnalytics @Inject() (
     val latestSearchResult = articleSearchResultStore.get(searchContext.uuid).get
     val initialSearchId = articleSearchResultStore.getInitialSearchId(latestSearchResult)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
-    val queryTermsCount = initialSearchResult.query.split("""\b""").length
 
     // Search Context
     contextBuilder += ("origin", searchContext.origin)
@@ -142,7 +142,7 @@ class SearchAnalytics @Inject() (
 
     // Search Parameters
     searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    ("queryTerms", queryTermsCount)
+    contextBuilder += ("queryTerms", initialSearchResult.query.split("""\b""").length)
     contextBuilder += ("lang", initialSearchResult.lang.lang)
     searchContext.filterByPeople.foreach { filter => contextBuilder += ("filterByPeople", filter) }
     searchContext.filterByTime.foreach { filter => contextBuilder += ("filterByTime", filter) }
@@ -158,8 +158,8 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("kifiResultPages", latestSearchResult.pageNumber)
     contextBuilder += ("mayHaveMoreHits", latestSearchResult.mayHaveMoreHits)
 
-    contextBuilder += ("kifiResultsClicked", searchContext.kifiResultsClicked)
-    contextBuilder += ("thirdPartyResultsClicked", searchContext.thirdPartyResultsClicked)
+    searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
+    searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
 
     // Kifi Performance
 
