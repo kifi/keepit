@@ -20,6 +20,7 @@ class SearchEventController @Inject() (
   searchAnalytics: SearchAnalytics) extends SearchServiceController {
 
   def logResultClicked = Action(parse.json) { request =>
+    // Deprecated
     SafeFuture{
       val resultClicked = Json.fromJson[ResultClicked](request.body).get
       resultClicked.keptUri match {
@@ -29,21 +30,12 @@ class SearchEventController @Inject() (
         case None =>
           resultClickedTracker.moderate(resultClicked.userId, resultClicked.query)
       }
-      val (userId, queryUUID, searchExperiment, resultPosition, kifiResults, time) =
-        (resultClicked.userId, resultClicked.queryUUID, resultClicked.searchExperiment, resultClicked.resultPosition, resultClicked.kifiResults, resultClicked.time)
-      SearchEngine.get(resultClicked.resultSource) match {
-        case SearchEngine.Kifi => searchAnalytics.kifiResultClicked(userId, queryUUID, searchExperiment, resultPosition, None, None, resultClicked.isUserKeep, None, kifiResults, None, time)
-        case theOtherGuys => searchAnalytics.searchResultClicked(userId, queryUUID, searchExperiment, theOtherGuys, resultPosition, kifiResults, None, time)
-      }
     }
     Ok
   }
 
   def logSearchEnded = Action(parse.json) { request =>
-    SafeFuture{
-      val searchEnded = Json.fromJson[SearchEnded](request.body).get
-      searchAnalytics.searchEnded(searchEnded.userId, searchEnded.queryUUID, searchEnded.searchExperiment, searchEnded.kifiResults, searchEnded.kifiResultsClicked, SearchEngine.Google.toString, searchEnded.googleResultsClicked, None, searchEnded.time)
-    }
+    // Deprecated
     Ok
   }
 

@@ -2,7 +2,7 @@ package com.keepit.common.healthcheck
 
 import org.specs2.mutable.Specification
 
-import com.keepit.common.mail.{FakeMailModule, FakeOutbox}
+import com.keepit.common.mail._
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
@@ -11,25 +11,35 @@ import com.keepit.common.actor.TestActorSystemModule
 
 class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
+  class FakeMailSender extends MailSender(null, null) {
+    var mailQueue: List[ElectronicMail] = Nil
+    override def sendMail(email: ElectronicMail) = {
+      mailQueue = email :: mailQueue
+    }
+  }
+
+  val fakeMailSender = new FakeMailSender
+
   val prodHealthCheckModuleWithLocalSender = new ProdHealthCheckModule {
-    override def configure() { bind[HealthcheckMailSender].to[LocalHealthcheckMailSender] }
+    override def configure() {
+      fakeMailSender.mailQueue = Nil
+      bind[MailSender].toInstance(fakeMailSender)
+    }
   }
 
   "HealthcheckModule" should {
     "load" in {
       running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, TestActorSystemModule(Some(system)))) {
+        val healthcheck = inject[HealthcheckPlugin]
 
-        val mail1 = inject[HealthcheckPlugin].reportStart()
+        val mail1 = healthcheck.reportStart()
 
-        val outbox1 = inject[FakeOutbox]
-        outbox1.size === 1
-        outbox1(0).htmlBody === mail1.htmlBody
+        val outbox = fakeMailSender.mailQueue
+        outbox.size === 1
+        outbox(0).htmlBody === mail1.htmlBody
         mail1.subject.endsWith("started") === true
 
-        val mail2 = inject[HealthcheckPlugin].reportStop()
-        val outbox2 = inject[FakeOutbox]
-        outbox2.size === 2
-        outbox2(1).htmlBody === mail2.htmlBody
+        val mail2 = healthcheck.reportStop()
         mail2.subject.endsWith("stopped") === true
       }
     }

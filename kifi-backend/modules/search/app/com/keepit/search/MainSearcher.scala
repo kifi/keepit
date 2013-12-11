@@ -93,6 +93,7 @@ class MainSearcher(
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val homePageBoost = config.asFloat("homePageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
+  private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
 
   // tailCutting is set to low when a non-default filter is in use
@@ -117,11 +118,17 @@ class MainSearcher(
     users.foldLeft(sharingUsers.size.toFloat){ (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  def getPersonalizedSearcher(query: Query) = {
+  private def getNonPersonalizedQueryContextVector(queryParser: MainQueryParser): SemanticVector = {
+    val newSearcher = articleSearcher.withSemanticContext
+    queryParser.svTerms.foreach{ t => newSearcher.addContextTerm(t)}
+    newSearcher.getContextVector
+  }
+
+  def getPersonalizedSearcher(query: Query, nonPersonalizedContextVector: Option[Future[SemanticVector]]) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
   private def warpOrSearchText(maxTextHitsPerCategory: Int): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
@@ -170,6 +177,7 @@ class MainSearcher(
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
     parsedQuery = parser.parse(queryString, Some(collectionSearcher))
+    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
 
     timeLogs.queryParsing = currentDateTime.getMillis() - tParse
     timeLogs.phraseDetection = parser.phraseDetectionTime
@@ -184,7 +192,7 @@ class MainSearcher(
       if (promise.isCompleted) return
 
       val tPersonalSearcher = currentDateTime.getMillis()
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
@@ -457,8 +465,10 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
+    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
+
     parser.parse(queryString, Some(collectionSearcher)).map{ query =>
-      var personalizedSearcher = getPersonalizedSearcher(query)
+      var personalizedSearcher = getPersonalizedSearcher(query, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       hotDocs.set(browsingFilter, clickBoosts)

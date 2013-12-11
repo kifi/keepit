@@ -193,7 +193,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
           bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
         }
         bookmarks.size === 1
-        bookmarks(0) === bookmark1
+        bookmarks(0).id.get === bookmark1.id.get
       }
     }
 
