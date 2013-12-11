@@ -81,6 +81,35 @@ trait QueryExpansion extends QueryParser {
     }
   }
 
+  override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
+    val clauses = ArrayBuffer.empty[BooleanClause]
+    val queries = ArrayBuffer.empty[(QuerySpec, TextQuery)]
+
+    querySpecList.foreach{ spec =>
+      val query = getFieldQuery(spec.field, spec.term, spec.quoted)
+      query match {
+        case Some(query) =>
+          clauses += new BooleanClause(query, spec.occur)
+          query match {
+            case textQuery: TextQuery => queries += ((spec, textQuery))
+            case _ => queries += ((spec, null))
+          }
+        case _ =>
+          queries += ((spec, null))
+      }
+    }
+
+    if (concatBoost > 0.0f && clauses.size <= 42) { // if we have too many terms, don't concat terms
+      val adder = new ConcatQueryAdder(concatBoost)
+      adder.addConcatQueries(queries)
+    }
+
+    getBooleanQuery(clauses)
+  }
+}
+
+class ConcatQueryAdder(concatBoost: Float){
+
   private def addConcatQuery(textQuery: TextQuery, concat: (String, String)): Unit = {
     val (t1, t2) = concat
 
@@ -122,28 +151,14 @@ trait QueryExpansion extends QueryParser {
     (t1, t2)
   }
 
-  override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
+  // side effect
+  def addConcatQueries(queries: ArrayBuffer[(QuerySpec, TextQuery)]) {
+
     val emptyQuery = new TextQuery
-    val clauses = ArrayBuffer.empty[BooleanClause]
-    val queries = ArrayBuffer.empty[(QuerySpec, TextQuery)]
-
-    querySpecList.foreach{ spec =>
-      val query = getFieldQuery(spec.field, spec.term, spec.quoted)
-      query match {
-        case Some(query) =>
-          clauses += new BooleanClause(query, spec.occur)
-          query match {
-            case textQuery: TextQuery => queries += ((spec, textQuery))
-            case _ => queries += ((spec, null))
-          }
-        case _ =>
-          queries += ((spec, null))
-      }
-    }
-
-    if (concatBoost > 0.0f && clauses.size <= 42) { // if we have too many terms, don't concat terms
-      var prevTextQuery: TextQuery = null
-      queries.foreach{ case (spec, currTextQuery) =>
+    // if we have too many terms, don't concat terms
+    var prevTextQuery: TextQuery = null
+    queries.foreach {
+      case (spec, currTextQuery) =>
         if (currTextQuery != null && !spec.quoted && spec.occur == SHOULD) {
           // concat phrase in the current query
           if (currTextQuery.terms.length > 1) {
@@ -160,9 +175,7 @@ trait QueryExpansion extends QueryParser {
         } else {
           prevTextQuery = null
         }
-      }
     }
-
-    getBooleanQuery(clauses)
   }
+
 }
