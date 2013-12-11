@@ -103,7 +103,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (response) {
       try {
         sendSearchedEvent("refinement");
-      }
+      } catch(e) {}
     }
     if (!q) {
       log("[search] empty query")();
