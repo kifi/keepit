@@ -62,9 +62,7 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
 
   override def getContextVector: SemanticVector = {
     if (useNonPersonalizedContextVector){
-      val personalizedContextVectorFuture = Future{super.getContextVector}
-      val vec = Future.firstCompletedOf(Seq(nonPersonalizedContextVectorFuture.get, personalizedContextVectorFuture))
-      Await.result(vec, 1 second)
+      Await.result(nonPersonalizedContextVectorFuture.get, 1 second)
     } else super.getContextVector
   }
 
