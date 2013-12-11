@@ -231,7 +231,10 @@
 						<div class="profile-container">
 							<div class="profile-image-wrapper">
 								<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
-								<a class="profile-image-change" href="javascript:void(0)">Change photo</a>
+								<label class="profile-image-label">
+									<a class="profile-image-change" href="javascript:void(0)">Change photo</a>
+									<input class="profile-image-file" type="file" name="photo">
+								</label>
 							</div>
 							<div class="profile-input-wrapper" data-name="name">
 								<div class="profile-input-title">Name</div>
@@ -289,6 +292,23 @@
 									</div>
 								</div>
 							</div>
+							<div class="dialog email-delete-dialog" style="display:none">
+								<form method="POST" action="{{url}}" class="dialog-content" data-template>
+									<div class="dialog-header">Delete {{email}}?</div>
+									<a href="javascript:" class="dialog-cancel">×</a>
+									<div class="dialog-content-body">
+										<p>Are you sure you want to delete this email address?</p>
+										<ul>
+											<li>You will not be able to login with this email address</li>
+											<li>Your friends will not be able to find you by this email address</li>
+										</ul>
+										<div class="dialog-buttons">
+											<button class="dialog-submit" type="submit">Delete</button>
+											<button class="dialog-cancel">Cancel</button>
+										</div>
+									</div>
+								</form>
+							</div>
 						</div>
 						<div class="profile-section">
 							<h3>Connect your social networks to Kifi</h3>
@@ -316,23 +336,13 @@
 						<div class="profile-section">
 							<h3>Import your email contacts to Kifi</h3>
 							<h5>Message your email contact directly from Kifi</h5>
-							<a class="profile-nw nw-email" href="javascript:void(0)">Import another Gmail account</a>
+							<a class="profile-nw nw-email import-gmail" href="javascript:void(0)">Import another Gmail account</a>
 							<div class="profile-email-accounts-title">
 								<span>Your imported accounts: </span>
-								<a class="profile-email-accounts-refresh" href="javascript:void(0)">Refresh all</a>
+								<!-- <a class="profile-email-accounts-refresh" href="javascript:void(0)">Refresh all</a> -->
 							</div>
 							<table class="profile-email-accounts">
 								<tbody>
-									<tr class="profile-email-account" data-template>
-										<td class="profile-email-status"></td>
-										<td class="profile-email-address">joonho1101@gmail.com{{email}}</td>
-										<td class="profile-email-separator">|</td>
-										<td class="profile-email-contact-count">2,333 out of 12,000{{contactCount}} contacts imported</td>
-										<td class="profile-email-separator">|</td>
-										<td class="profile-email-remove">
-											<a href="javascript:void(0)">Remove</a>
-										</td>
-									</tr>
 								</tbody>
 							</table>
 						</div>
@@ -723,6 +733,79 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 		</li>
 	</script>
 
+	<script type="text/x-handlebars" id="email-delete-dialog">
+		<div class="dialog email-delete-dialog">
+			<form method="POST" action="{{url}}" class="dialog-content" data-template>
+				<div class="dialog-header">Delete {{email}}?</div>
+				<a href="javascript:" class="dialog-cancel">×</a>
+				<div class="dialog-content-body">
+					<p>Are you sure you want to delete this email address?</p>
+					<ul>
+						<li>You will not be able to login with this email address</li>
+						<li>Your friends will not be able to find you by this email address</li>
+					</ul>
+					<div class="dialog-buttons">
+						<button class="dialog-submit" type="submit">Delete</button>
+						<button class="dialog-cancel">Cancel</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</script>
+
+	<script type="text/x-handlebars" id="primary-email-change-dialog">
+		<div class="dialog primary-email-change-dialog">
+			<form method="POST" action="{{url}}" class="dialog-content" data-template>
+				<div class="dialog-header">You are about to change your primary email</div>
+				<a href="javascript:" class="dialog-cancel">×</a>
+				<div class="dialog-content-body">
+					<p>You are about to change your primary email to <span class="email-address">{{email}}</span>.</p>
+					<p>We will send a verification email to this email address to prove that you own it.</p>
+					<p>To verify, please click on the verification link on the email.</p>
+					<div class="dialog-buttons">
+						<button class="dialog-submit" type="submit">Ok</button>
+						<button class="dialog-cancel">Cancel</button>
+						<div class="clear"></div>
+					</div>
+				</div>
+			</form>
+		</div>
+	</script>
+
+	<script type="text/x-handlebars" id="gmail-account">
+		<tr class="profile-email-account {{status}}" data-id="{{id}}">
+			<td class="profile-email-status"></td>
+			<td class="profile-email-address">{{email}}</td>
+			<td class="profile-email-separator">|</td>
+			<td class="profile-email-contact-count">{{importedCount}} out of {{totalCount}} contacts imported</td>
+			<!--
+			<td class="profile-email-separator">|</td>
+			<td class="profile-email-remove">
+				<a href="javascript:void(0)">Remove</a>
+			</td>
+			-->
+		</tr>
+	</script>
+
+	<div class="dialog photo-dialog" style="display:none">
+	  <div class="photo-dialog-cell">
+		<div class="photo-dialog-box">
+		  <div class="photo-dialog-title">
+			Position and size your photo
+			<a class="photo-dialog-x" href="javascript:">&times;</a>
+		  </div>
+		  <div class="photo-dialog-canvas">
+			<div class="photo-dialog-mask"></div>
+		  </div>
+		  <div class="photo-dialog-slider"></div>
+		  <div class="photo-dialog-buttons">
+			<a class="photo-dialog-cancel cancel-button" href="javascript:">Cancel</a>
+			<a class="photo-dialog-submit primary-button" href="javascript:">Apply</a>
+		  </div>
+		</div>
+	  </div>
+	</div>
+
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 	<script>window.$||document.write('<script src=assets/js/jquery.min.js><\/script>');if(location.port&&location.port!=9000)window.History={options:{html4Mode:true}};</script>
 	<script src="assets/js/handlebars.min.js"></script>
@@ -735,6 +818,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	<script src="assets/js/util.js"></script>
 	<script src="assets/js/scorefilter.js"></script>
 	<script src="assets/js/form.js"></script>
+	<script src="assets/js/jquery-ui-slider.min.js"></script>
 	<script src="assets/js/main.js"></script>
 	<script src="assets/js/track.js" async defer></script>
 	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
