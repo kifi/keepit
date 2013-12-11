@@ -145,7 +145,7 @@ panes.notices = function () {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
-      notice.title = notice.title || notice.url.replace(/^http:\/\//, '');
+      notice.title = notice.title || notice.url.replace(/^https?:\/\//, '');
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
@@ -154,7 +154,7 @@ panes.notices = function () {
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
-      var nPicsMax = notice.isSent ? 4 : 3;
+      var nPicsMax = 4;
       notice.picturedParticipants = nParticipants <= nPicsMax ?
         notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
         participants.slice(0, nPicsMax);
@@ -181,6 +181,9 @@ panes.notices = function () {
           notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
           notice.otherParticipants = participants.slice(nNamesMax - 1);
           notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+        }
+        if (notice.namedParticipants) {
+          notice.namedParticipants.push(notice.namedParticipants.shift());
         }
       }
       if (notice.namedParticipants) {
