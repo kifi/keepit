@@ -337,7 +337,7 @@ $(function () {
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
-		return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
+		return (DEV ? '//d1scct5mnc9d9m.cloudfront.net' : '//djty7jcqog9qu.cloudfront.net') + '/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
 
 	function escapeHTMLContent(text) {
@@ -534,7 +534,7 @@ $(function () {
 	// profile picture upload
 
 	var URL = window.URL || window.webkitURL;
-	var PHOTO_BINARY_UPLOAD_URL = xhrBase + '/user/upload-pic';
+	var PHOTO_BINARY_UPLOAD_URL = xhrBase + '/user/pic/upload';
 	var PHOTO_CROP_UPLOAD_URL = xhrBase + '/user/pic';
 	var PHOTO_UPLOAD_FORM_URL = '/auth/upload-multipart-image';
 
@@ -667,19 +667,17 @@ $(function () {
 			.data(details)
 			.data('uploadPromise', upload.promise);
 
-			upload.promise.always(function() {
-				console.log('here', this, arguments);
+			upload.promise.always(function (image) {
+				$.postJson(PHOTO_CROP_UPLOAD_URL, {
+					picToken: image && image.token,
+					picWidth: details.width,
+					picHeight: details.height,
+					cropX: details.x,
+					cropY: details.y,
+					cropSize: details.size
+				});
 			});
 
-			$.postJson(PHOTO_CROP_UPLOAD_URL, {
-				picToken: details && details.token,
-				picWidth: details.width,
-				picHeight: details.height,
-				cropX: details.x,
-				cropY: details.y,
-				cropSize: details.size
-			})
-			.done(navigate)
 		})
 		.always(function () {
 			$('.profile-image-file').val(null);
@@ -3581,6 +3579,7 @@ $(function () {
 		me = data;
 		mixpanel.alias(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
+		$('.profile-image').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
 

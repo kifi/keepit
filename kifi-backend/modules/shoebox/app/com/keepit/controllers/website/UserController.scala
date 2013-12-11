@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -16,6 +16,7 @@ import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{Promise => PlayPromise}
 import play.api.libs.Comet
@@ -77,15 +78,10 @@ class UserController @Inject() (
   userCommander: UserCommander,
   elizaServiceClient: ElizaServiceClient,
   clock: Clock,
-<<<<<<< HEAD
-  emailAddressRepo: EmailAddressRepo,
-  abookServiceClient: ABookServiceClient
-=======
   s3ImageStore: S3ImageStore,
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
   emailAddressRepo: EmailAddressRepo
->>>>>>> ccdb8fa7cff9efacddb858236f87e7db9fb051e9
 ) extends WebsiteController(actionAuthenticator) {
 
   def friends() = AuthenticatedJsonAction { request =>
