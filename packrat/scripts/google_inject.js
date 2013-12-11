@@ -75,6 +75,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "origin": window.location.origin,
         "uuid": response.uuid,
         "experimentId": response.experimentId,
+        "query": response.query,
         "filter": filter,
         "kifiResults": response.hits.length,
         "kifiExpanded": response.expanded,
@@ -119,7 +120,6 @@ if (searchUrlRe.test(document.URL)) !function() {
 
     tKifiResultsReceived = null;
     tKifiResultsShown = null;
-    timesPaginated = 0;
     var t1 = tQuery = Date.now();
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
@@ -548,7 +548,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (!response.mayHaveMore) {
       $list.find(".kifi-res-more").hide(200);
     }
-    timesPaginated++;
   }
 
   function processHit(hit) {
