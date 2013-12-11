@@ -875,7 +875,7 @@ function syncNumUnreadUnmutedThreads() {
 }
 
 function requestMissedNotifications() {
-  var timeStr = threadslists.all.ids.length ? threadsById[threadslists.all.ids[0]].time : new Date(0).toISOString();
+  var timeStr = threadLists.all.ids.length ? threadsById[threadLists.all.ids[0]].time : new Date(0).toISOString();
   socket.send(['get_threads_since', timeStr], function gotThreadsSince(arr, serverTimeStr) {
     log('[gotThreadsSince]', arr, serverTimeStr)();
     var serverTime = new Date(serverTimeStr);
