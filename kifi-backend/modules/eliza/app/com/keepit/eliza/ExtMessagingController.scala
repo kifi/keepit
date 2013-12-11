@@ -318,15 +318,17 @@ class ExtMessagingController @Inject() (
 
     "set_message_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
-      implicit val context = authenticatedWebSocketsContextBuilder(socket)
-      context += ("global", false)
+      val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
+      contextBuilder += ("global", false)
+      implicit val context = contextBuilder.build
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
-      implicit val context = authenticatedWebSocketsContextBuilder(socket)
-      context += ("global", true)
+      val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
+      contextBuilder += ("global", true)
+      implicit val context = contextBuilder.build
       messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
       messagingController.setLastSeen(socket.userId, msgExtId)
     },

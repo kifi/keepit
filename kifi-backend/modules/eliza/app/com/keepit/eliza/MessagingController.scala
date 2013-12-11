@@ -28,7 +28,6 @@ import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
 import com.keepit.realtime.UrbanAirship
 import com.keepit.eliza.model.NonUserParticipant
-import com.keepit.common.KestrelCombinator
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.json.JsString
 import scala.Some
@@ -38,7 +37,7 @@ import com.keepit.eliza.model.NonUserEmailParticipant
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
-import com.keepit.heimdal._
+import com.keepit.heimdal.HeimdalContext
 
 
 //For migration only
@@ -73,8 +72,7 @@ class MessagingController @Inject() (
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
     urbanAirship: UrbanAirship,
-    heimdal: HeimdalServiceClient,
-    heimdalContextBuilder: HeimdalContextBuilderFactory)
+    messagingAnalytics: MessagingAnalytics)
   extends ElizaServiceController with MessagingIndexHelper with Logging {
 
   //for indexing data requests
@@ -336,19 +334,7 @@ class MessagingController @Inject() (
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
       }
 
-      val sentAt = currentDateTime
-      SafeFuture {
-        val context = heimdalContextBuilder()
-        context += ("action", "sent")
-        context += ("global", false)
-        context += ("muted", muted)
-        context += ("messageExternalId", message.externalId.id)
-        context += ("threadId", thread.id.get.id)
-        context += ("channel", "kifi")
-        context += ("url", thread.nUrl.getOrElse(""))
-        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, sentAt))
-      }
-
+      messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
       shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator(locator))
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
@@ -986,7 +972,7 @@ class MessagingController @Inject() (
 
   def connectedSockets: Int = notificationRouter.connectedSockets
 
-  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContextBuilder): Unit = {
+  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
@@ -995,16 +981,7 @@ class MessagingController @Inject() (
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
 
-      val clearedAt = currentDateTime
-      SafeFuture {
-        context += ("action", "cleared")
-        context += ("messageExternalId", message.externalId.id)
-        context += ("threadId", thread.id.get.id)
-        context += ("channel", "kifi")
-        context += ("url", thread.nUrl.getOrElse(""))
-        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
-      }
-
+      messagingAnalytics.clearedNotificationForMessage(userId, message, thread, context)
       notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
     }
