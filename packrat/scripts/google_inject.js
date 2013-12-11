@@ -70,11 +70,12 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function sendSearchedEvent(endedWith) {
     api.port.emit("log_search_event", [
-      "searchEnded",
+      "searched",
       {
         "origin": window.location.origin,
         "uuid": response.uuid,
         "experimentId": response.experimentId,
+        "filter": filter,
         "kifiResults": response.hits.length,
         "kifiExpanded": response.expanded,
         "kifiTime": tKifiResultsReceived - tQuery,
@@ -98,22 +99,24 @@ if (searchUrlRe.test(document.URL)) !function() {
       log("[search] nothing new, query:", q, "filter:", f)();
       return;
     }
-    query = q;
-    filter = f;
-    if (!q) {
-      log("[search] empty query")();
-      return;
-    }
-    log("[search] query:", q, "filter:", f)();
-
-    $status.removeAttr("data-n").removeClass("kifi-promote").parent().addClass("kifi-loading");
-    $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
-
     if (response) {
       try {
         sendSearchedEvent("refinement");
       }
     }
+    if (!q) {
+      log("[search] empty query")();
+      return;
+    }
+    query = q;
+    filter = f;
+
+    log("[search] query:", q, "filter:", f)();
+
+    $status.removeAttr("data-n").removeClass("kifi-promote").parent().addClass("kifi-loading");
+    $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2).slideUp(200);
+
+
     tKifiResultsReceived = null;
     tKifiResultsShown = null;
     var t1 = tQuery = Date.now();
@@ -261,12 +264,15 @@ if (searchUrlRe.test(document.URL)) !function() {
         {
           "origin": window.location.origin,
           "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
+          "filter": filter,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length,
           "kifiExpanded": response.expanded,
           "kifiTime": tKifiResultsReceived - tQuery,
           "kifiShownTime": tKifiResultsShown - tQuery,
           "thirdPartyShownTime": tGoogleResultsShown - tQuery,
+          "kifiResultsClicked": clicks.kifi.length,
+          "thirdPartyResultsClicked": clicks.google.length,
           "resultPosition": resIdx,
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
