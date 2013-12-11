@@ -149,7 +149,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
         <hostname>{
           serviceDiscovery.thisInstance map { instance =>
             val info = instance.remoteService.amazonInstanceInfo
-            s"local:${info.localHostname},public:${info.publicHostname},ami:${info.amiId}"
+            s"https://console.aws.amazon.com/ec2/v2/home?region=us-west-1#Instances:instancesFilter=all-instances;instanceTypeFilter=all-instance-types;search=${info.instanceId}"
           } getOrElse "NA"
         }</hostname>
       </server-environment>
