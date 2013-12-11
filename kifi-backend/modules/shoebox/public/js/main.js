@@ -478,7 +478,6 @@ $(function () {
 
 		if (!valid) {
 			return false;
-			//return cancelProfileInput($target, e);
 		}
 
 		$input
@@ -2104,25 +2103,9 @@ $(function () {
 		friendsShowing.length = 0;
 	}
 
-	function startsWith(str, prefix) {
-		return str.lastIndexOf(prefix, 0) === 0
-	}
-
-	var FB_PREFIX = 'http://graph.facebook.com';
-	var FBS_PREFIX = 'https://graph.facebook.com';
-	var LI_PREFIX = 'http://m.c.lnkd.licdn.com';
-	var LIS_PREFIX = 'https://www.linkedin.com';
-
 	function normalizeFriend(obj) {
 		obj.label = obj.label || '';
-		var image = obj.image || '';
-		if (startsWith(image, FB_PREFIX)) {
-			image = FBS_PREFIX + image.substring(FB_PREFIX.length);
-		}
-		else if (startsWith(image, LI_PREFIX)) {
-			image = LIS_PREFIX + image.substring(LI_PREFIX.length);
-		}
-		obj.image = image;
+		obj.image = obj.image || '';
 		obj.status = obj.status || '';
 
 		var val = obj.value;
@@ -2196,8 +2179,8 @@ $(function () {
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {
 			window.open('about:blank', fullSocialId, 'height=640,width=1060,left=200,top=200', false);
-			$('<form method="POST" action="/invite" target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
-			.append('<input type="hidden" name="fullSocialId" value="' + fullSocialId + '">')
+			$('<form method=POST action=/invite target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
+			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
 		} else if (/^linkedin|email/.test(fullSocialId)) {
 			var name = $friend.find('.invite-name').text();
