@@ -78,7 +78,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "query": response.query,
         "filter": filter,
         "kifiResults": response.hits.length,
-        "kifiExpanded": response.expanded,
+        "kifiExpanded": response.expanded || false,
         "kifiTime": tKifiResultsReceived - tQuery,
         "kifiShownTime": tKifiResultsShown - tQuery,
         "thirdPartyShownTime": tGoogleResultsShown - tQuery,
@@ -86,7 +86,8 @@ if (searchUrlRe.test(document.URL)) !function() {
         "thirdPartyResultsClicked": clicks.google.length,
         "refinements": refinements,
         "pageSession": pageSession,
-        "endedWith": endedWith
+        "endedWith": endedWith,
+        "stuff": "thing"
       }
     ]);
   }
@@ -268,7 +269,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "filter": filter,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length,
-          "kifiExpanded": response.expanded,
+          "kifiExpanded": response.expanded || false,
           "kifiTime": tKifiResultsReceived - tQuery,
           "kifiShownTime": tKifiResultsShown - tQuery,
           "thirdPartyShownTime": tGoogleResultsShown - tQuery,
