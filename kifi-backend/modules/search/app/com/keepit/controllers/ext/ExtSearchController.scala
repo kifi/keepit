@@ -26,7 +26,6 @@ import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import scala.concurrent.Promise
 import play.api.mvc.AnyContent
-import com.keepit.heimdal.SearchAnalytics
 import play.api.mvc.Request
 
 class ExtSearchController @Inject() (
@@ -36,7 +35,6 @@ class ExtSearchController @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient,
-  searchAnalytics: SearchAnalytics,
   monitoredAwait: MonitoredAwait)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -118,9 +116,9 @@ class ExtSearchController @Inject() (
       val timeLogs = searcher.timing()
 
       try {
-        reportSearch(userId, request, kifiVersion, maxHits, searchFilter, searchExperimentId, searchRes)
+        articleSearchResultStore += (searchRes.uuid -> searchRes)
       } catch {
-        case e: Throwable => log.error("Could not report search %s".format(res), e)
+        case e: Throwable => airbrake.notify(AirbrakeError(e, Some("Could not store article search result.")))
       }
 
       Statsd.timing("extSearch.factory", timing.getFactoryTime)
@@ -256,19 +254,6 @@ class ExtSearchController @Inject() (
     SafeFuture{
       futures = mainSearcherFactory.warmUp(userId)
     }
-  }
-
-  private def reportSearch(
-    userId: Id[User],
-    request: Request[AnyContent],
-    kifiVersion: Option[KifiVersion],
-    maxHits: Int,
-    searchFilter: SearchFilter,
-    searchExperiment: Option[Id[SearchConfigExperiment]],
-    res: ArticleSearchResult) {
-
-    articleSearchResultStore += (res.uuid -> res)
-    searchAnalytics.performedSearch(userId, request, kifiVersion, maxHits, searchFilter, searchExperiment, res)
   }
 
   class SearchTiming{
