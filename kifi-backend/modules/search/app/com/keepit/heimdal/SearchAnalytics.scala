@@ -36,6 +36,7 @@ case class BasicSearchContext(
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
   thirdPartyShownTime: Option[Int],
+  moreResultsClicked: Option[Int],
   kifiResultsClicked: Option[Int],
   thirdPartyResultsClicked: Option[Int]
 )
@@ -55,6 +56,7 @@ object BasicSearchContext {
     (__ \ 'kifiTime).readNullable[Int] and
     (__ \ 'kifiShownTime).readNullable[Int] and
     (__ \ 'thirdPartyShownTime).readNullable[Int] and
+    (__ \ 'timesPaginated).readNullable[Int] and
     (__ \ 'kifiResultsClicked).readNullable[Int] and
     (__ \ 'thirdPartyResultsClicked).readNullable[Int]
   )(BasicSearchContext.apply _)
@@ -143,6 +145,7 @@ class SearchAnalytics @Inject() (
     // Search Parameters
     searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("queryTerms", initialSearchResult.query.split("""\b""").length)
+    contextBuilder += ("queryCharacters", initialSearchResult.query.length)
     contextBuilder += ("lang", initialSearchResult.lang.lang)
     searchContext.filterByPeople.foreach { filter => contextBuilder += ("filterByPeople", filter) }
     searchContext.filterByTime.foreach { filter => contextBuilder += ("filterByTime", filter) }
@@ -155,9 +158,7 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("initialOthersResults", initialSearchResult.othersTotal)
 
     contextBuilder += ("kifiResults", searchContext.kifiResults)
-    contextBuilder += ("kifiResultPages", latestSearchResult.pageNumber)
-    contextBuilder += ("mayHaveMoreHits", latestSearchResult.mayHaveMoreHits)
-
+    searchContext.moreResultsClicked.foreach { count => contextBuilder += ("moreResultsClicked", count) }
     searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
     searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
 
@@ -175,8 +176,11 @@ class SearchAnalytics @Inject() (
 
 
     // Data Consistency Checks
-    if (searchContext.kifiResults != (latestSearchResult.previousHits + latestSearchResult.hits.length))
-      airbrake.notify(AirbrakeError(new Exception(s"Inconsistent number of Kifi Results: received ${searchContext.kifiResults} but expected ${latestSearchResult.hits.length}")))
+
+    searchContext.moreResultsClicked.foreach { count =>
+      if (count != latestSearchResult.pageNumber)
+        airbrake.notify(AirbrakeError(new Exception(s"Inconsistent number of Kifi Result Pages: received ${count} but expected ${latestSearchResult.pageNumber}")))
+    }
   }
 
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {
