@@ -99,6 +99,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
+  def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
+  def scrapeFailed(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
@@ -598,8 +600,39 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int): Future[Boolean] = {
-    call(Shoebox.internal.isUnscrapableP, JsArray(Seq(Json.toJson(url), Json.toJson(destinationUrl))), timeout = timeout).map { r =>
+    val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
+      log.info(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
+      None
+    } else destinationUrl map { dUrl =>
+      log.info(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
+      dUrl
+    }
+    val payload = JsArray(destUrl match {
+      case Some(dUrl) => Seq(Json.toJson(url), Json.toJson(dUrl))
+      case None => Seq(Json.toJson(url))
+    })
+    call(Shoebox.internal.isUnscrapableP, payload, timeout = timeout).map { r =>
       r.json.as[Boolean]
+    }
+  }
+
+  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = {
+    val payload = Json.obj(
+      "uri" -> Json.toJson(uri),
+      "info" -> Json.toJson(info)
+    )
+    call(Shoebox.internal.scraped, payload).map { r =>
+      r.json.asOpt[NormalizedURI]
+    }
+  }
+
+  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = {
+    val payload = Json.obj(
+      "uri" -> Json.toJson(uri),
+      "info" -> Json.toJson(info)
+    )
+    call(Shoebox.internal.scrapeFailed, payload).map { r =>
+      r.json.asOpt[NormalizedURI]
     }
   }
 

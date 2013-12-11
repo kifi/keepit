@@ -26,7 +26,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
-import com.keepit.scraper.HttpRedirect
+import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.UserCommander
 import com.keepit.common.db.slick.Database.Slave
@@ -63,8 +63,8 @@ class ShoeboxController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo
 )
   (implicit private val clock: Clock,
-    private val fortyTwoServices: FortyTwoServices
-)
+   implicit private val scraperConfig: ScraperConfig,
+   private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 
   def getUserOpt(id: ExternalId[User]) = Action { request =>
@@ -133,6 +133,65 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
+  def scraped() = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
+    val json = request.body
+    val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
+    val infoOpt = (json \ "info").asOpt[ScrapeInfo]
+    val updateBookmark = (json \ "updateBookmark").asOpt[JsBoolean].getOrElse(JsBoolean(false)).value
+    log.info(s"[scraped] uri=$uriOpt info=$infoOpt updateBookmark=$updateBookmark")
+    if (!(uriOpt.isDefined && infoOpt.isDefined)) BadRequest(s"Illegal arguments: arguments($uriOpt, $infoOpt) cannot be null")
+    else {
+      val uri = uriOpt.get
+      val info = infoOpt.get
+      val savedUri = db.readWrite(attempts = 2) { implicit request =>
+        val savedUri  = normUriRepo.save(uri)
+        val savedInfo = scrapeInfoRepo.save(info)
+        if (updateBookmark) {
+          bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
+            bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+          }
+        }
+        log.info(s"[scraped($savedUri,$savedInfo)] time-lapsed=${System.currentTimeMillis - ts}")
+        savedUri
+      }
+      Ok(Json.toJson(savedUri))
+    }
+  }
+
+  def scrapeFailed() = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
+    val json = request.body
+    val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
+    val infoOpt = (json \ "info").asOpt[ScrapeInfo]
+    log.info(s"[scrapeFailed] uri=$uriOpt info=$infoOpt")
+    if (!(uriOpt.isDefined && infoOpt.isDefined)) BadRequest(s"Illegal arguments: arguments($uriOpt, $infoOpt) cannot be null")
+    else {
+      val (savedUri, savedInfo) = {
+        val uri = uriOpt.get
+        val info = infoOpt.get
+        db.readWrite(attempts = 2) { implicit request =>
+          val uri2 = uri.id match {
+            case Some(id) => Some(normUriRepo.get(id))
+            case None => normUriRepo.getByUri(uri.url)
+          }
+          val savedUri = uri2 match {
+            case None => uri
+            case Some(uri2) => {
+              if (uri2.state == NormalizedURIStates.INACTIVE) uri2
+              else normUriRepo.save(uri2.withState(NormalizedURIStates.SCRAPE_FAILED))
+            }
+          }
+          val savedInfo = scrapeInfoRepo.save(info.withFailure)
+          log.info(s"[scrapeFailed(uri(${uri.id}).url=${uri.url},info(${info.id}).state=${info.state})] time-lapsed:${System.currentTimeMillis - ts} updated: savedUri(${savedUri.id}).state=${savedUri.state}; savedInfo(${savedInfo.id}).state=${savedInfo.state}")
+          (savedUri, savedInfo)
+        }
+      }
+      Ok(Json.obj("uri" -> savedUri, "info" -> savedInfo))
+    }
+  }
+
+  // todo: revisit
   def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
@@ -193,7 +252,7 @@ class ShoeboxController @Inject() (
     val res = db.readOnly { implicit s => //using cache
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=$destinationUrl result=$res")
+    log.info(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
     Ok(JsBoolean(res))
   }
 
