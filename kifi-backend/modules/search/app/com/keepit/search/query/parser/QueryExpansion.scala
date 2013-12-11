@@ -155,7 +155,6 @@ class ConcatQueryAdder(concatBoost: Float){
   def addConcatQueries(queries: ArrayBuffer[(QuerySpec, TextQuery)]) {
 
     val emptyQuery = new TextQuery
-    // if we have too many terms, don't concat terms
     var prevTextQuery: TextQuery = null
     queries.foreach {
       case (spec, currTextQuery) =>
