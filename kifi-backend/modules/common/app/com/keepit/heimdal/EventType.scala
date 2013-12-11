@@ -22,7 +22,7 @@ object UserEventTypes {
   val WS_DISCONNECT = EventType("ws_disconnect")
 
   // Keeping
-  val KEEP = EventType("keep")
+  val KEPT = EventType("kept")
 
   // Messaging
   val NEW_MESSAGE = EventType("new_message")
@@ -32,9 +32,8 @@ object UserEventTypes {
   val WAS_NOTIFIED = EventType("was_notified")
 
   // Search
-  val PERFORMED_SEARCH = EventType("performed_search")
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
-  val ENDED_SEARCH = EventType("ended_search")
+  val SEARCHED = EventType("searched")
 
   // Maintenance
   val EXT_ERROR = EventType("ext_error")

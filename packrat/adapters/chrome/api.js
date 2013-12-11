@@ -540,15 +540,11 @@ var api = function() {
       xhr.send(data);
     },
     util: {
-      btoa: function (str) {
-        return btoa(str);
-      },
-      getBrowser: function() {
-        return "Chrome";
-      },
-      getBrowserDetailsOrUserAgent: function() {
-        return navigator.appVersion;
-      }
+      btoa: window.btoa.bind(window)
+    },
+    browser: {
+      name: 'Chrome',
+      userAgent: navigator.userAgent
     },
     requestUpdateCheck: function() {
       if (updateVersion) {

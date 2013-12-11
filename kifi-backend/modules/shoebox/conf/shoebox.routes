@@ -163,8 +163,7 @@ POST    /site/collections/create    @com.keepit.controllers.website.BookmarksCon
 POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
-POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
+POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -315,9 +314,10 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/search/semanticVector                   @com.keepit.controllers.admin.AdminSemanticVectorController.index
-POST     /admin/search/semanticVector/analysis          @com.keepit.controllers.admin.AdminSemanticVectorController.analysis
+GET     /admin/search/semanticVector                      @com.keepit.controllers.admin.AdminSemanticVectorController.index
+POST     /admin/search/semanticVector/analysis            @com.keepit.controllers.admin.AdminSemanticVectorController.analysis
 POST     /admin/search/semanticVector/similarity          @com.keepit.controllers.admin.AdminSemanticVectorController.similarity
+POST     /admin/search/semanticVector/visualize           @com.keepit.controllers.admin.AdminSemanticVectorController.visualize
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
@@ -448,6 +448,8 @@ GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.sh
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.shoebox.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapableP
+POST     /internal/shoebox/database/scraped           @com.keepit.controllers.shoebox.ShoeboxController.scraped
+POST     /internal/shoebox/database/scrapeFailed      @com.keepit.controllers.shoebox.ShoeboxController.scrapeFailed
 GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.shoebox.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.getUserValue(userId: Id[User], key: String)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.setUserValue(userId: Id[User], key: String)

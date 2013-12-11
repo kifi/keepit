@@ -40,6 +40,14 @@ class AdminSemanticVectorController @Inject()(
     Ok(s"similarity: ${score}")
   }
 
+  def visualize() = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val (q1, q2) = (body.get("query1").get, body.get("query2").get)
+    val rv = Await.result(searchClient.visualizeSemanticVector(Seq(q1, q2)), 5 seconds)
+    val msg = rv.mkString("\n<br>")
+    Ok(msg)
+  }
+
   def index() = AdminHtmlAction { implicit request =>
     Ok(html.admin.SemanticVector())
   }

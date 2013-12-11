@@ -41,6 +41,10 @@ class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], v
 
   override def hashCode = allUsers.hashCode + allNonUsers.hashCode
 
+  override def toString() = {
+    s"MessageThreadPartitipant[users=${allUsers.mkString(",")}; nonusers=${allNonUsers.mkString(", ")}}]"
+  }
+
 }
 
 object MessageThreadParticipants {

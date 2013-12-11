@@ -7,6 +7,7 @@ import scala.concurrent._
 import scala.util.Try
 
 import play.api.Logger
+import com.keepit.common.time._
 
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
@@ -21,6 +22,7 @@ object DBSession {
       startTime = System.currentTimeMillis
       s
     }
+    lazy val clock = new SystemClock
 
     private def transactionFuture: Future[Unit] = {
       require(inTransaction, "Not in a transaction.")
@@ -39,7 +41,7 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      accessLog.info(s"""[DB] [$name] [$masterSlave] took [${time}ms]""")
+      accessLog.info(s"t:${clock.now}\ttype:DB\tduration:${time}\tname:$name\ttype:$masterSlave")
     }
 
     def rollback() { doRollback = true }

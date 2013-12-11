@@ -23,6 +23,7 @@ import javax.mail.internet.{InternetAddress, MimeMultipart}
 import javax.mail.search._
 import play.api.libs.json.Json
 import play.api.Plugin
+import com.keepit.heimdal.HeimdalContext
 
 private case object FetchNewKeeps
 
@@ -100,6 +101,7 @@ class MailToKeepActor @Inject() (
                 )
               case (Some(user), uris) =>
                 for (uri <- uris) {
+                  implicit val context = HeimdalContext.empty
                   val bookmark = bookmarkInterner.internBookmarks(Json.obj(
                     "url" -> uri.toString,
                     "isPrivate" -> (keepType == KeepType.Private)
