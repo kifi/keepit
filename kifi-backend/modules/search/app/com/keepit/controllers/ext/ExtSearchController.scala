@@ -144,7 +144,7 @@ class ExtSearchController @Inject() (
       }
     }
 
-    Json.toJson(res)
+    res
 
   }
 
@@ -220,7 +220,7 @@ class ExtSearchController @Inject() (
     config: SearchConfig,
     isDefaultFilter: Boolean,
     searchExperimentId: Option[Id[SearchConfigExperiment]],
-    expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
+    expertsFuture: Future[Seq[Id[User]]]): JsValue = {
 
     val decoratedResult = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
@@ -234,7 +234,7 @@ class ExtSearchController @Inject() (
     }
     log.info("experts recommended: " + expertNames.mkString(" ; "))
 
-    PersonalSearchResultPacket(res.uuid, res.query, decoratedResult.hits,
+    KifiSearchResult.json(res.uuid, res.query, decoratedResult.hits,
       res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, decoratedResult.collections, expertNames)
   }
 

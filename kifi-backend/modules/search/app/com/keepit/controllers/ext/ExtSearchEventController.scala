@@ -65,14 +65,14 @@ class ExtSearchEventController @Inject() (
     SearchEngine.get(resultSource) match {
 
       case SearchEngine.Kifi => {
-        val personalSearchResult = (json \ "hit").as[PersonalSearchResult]
-        shoeboxClient.getNormalizedURIByURL(personalSearchResult.hit.url).onSuccess { case Some(uri) =>
+        val hit = KifiSearchHit(json \ "hit")
+        shoeboxClient.getNormalizedURIByURL(hit.url).onSuccess { case Some(uri) =>
           val uriId = uri.id.get
           clickHistoryTracker.add(userId, ClickedURI(uriId))
-          resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
-          if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
+          resultClickedTracker.add(userId, query, uriId, resultPosition, hit.isMyBookmark, isDemo)
+          if (hit.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, hit.users.map(_.externalId): _*)
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
+        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, SearchEngine.Kifi, resultPosition, Some(hit))
       }
 
       case theOtherGuys => {

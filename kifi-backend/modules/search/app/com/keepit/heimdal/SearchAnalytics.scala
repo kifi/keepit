@@ -188,7 +188,7 @@ class SearchAnalytics @Inject() (
     thirdPartyShownTime: Option[Int],
     resultSource: SearchEngine,
     resultPosition: Int,
-    result: Option[PersonalSearchResult]) = {
+    result: Option[KifiSearchHit]) = {
 
     val contextBuilder = searchContextBuilder(request, userId, origin, uuid, searchExperiment, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime)
 
@@ -197,18 +197,19 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("resultSource", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
     result.map { result =>
+      val hit = result.bookmark
       contextBuilder += ("bookmarkCount", result.count)
       contextBuilder += ("usersShown", result.users.length)
       contextBuilder += ("isUserKeep", result.isMyBookmark)
       contextBuilder += ("isPrivate", result.isPrivate)
-      contextBuilder += ("collectionCount", result.hit.collections.map(_.length).getOrElse(0))
-      contextBuilder += ("hasTitle", result.hit.title.isDefined)
+      contextBuilder += ("collectionCount", hit.collections.map(_.length).getOrElse(0))
+      contextBuilder += ("hasTitle", hit.title.isDefined)
 
       val queryTerms = query.split("""\b""").length
-      contextBuilder += ("titleMatches", result.hit.titleMatches.length)
-      contextBuilder += ("urlMatches", result.hit.urlMatches.length)
-      contextBuilder += ("titleMatchQueryRatio", result.hit.titleMatches.length.toDouble / queryTerms)
-      contextBuilder += ("urlMatchQueryRatio", result.hit.urlMatches.length.toDouble / queryTerms)
+      contextBuilder += ("titleMatches", hit.titleMatches.length)
+      contextBuilder += ("urlMatches", hit.urlMatches.length)
+      contextBuilder += ("titleMatchQueryRatio", hit.titleMatches.length.toDouble / queryTerms)
+      contextBuilder += ("urlMatchQueryRatio", hit.urlMatches.length.toDouble / queryTerms)
     }
 
     heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, time))
