@@ -464,7 +464,7 @@ $(function () {
 			if ($input.prop('disabled')) {
 				return;
 			}
-			if (!val && $this.data('required')) {
+			if (!val && $this.is('[required]')) {
 				showError($this, 'This field is required');
 				valid = false;
 			}
@@ -999,7 +999,6 @@ $(function () {
 		});
 
 		delete props.email;
-		//props.emails = me.emails.slice();
 
 		$.postJson(xhrBase + '/user/me', props)
 			.success(updateMe)
@@ -1115,18 +1114,18 @@ $(function () {
 
 				if (networkInfo) {
 					$this.removeClass('not-connected');
-
-					$a
-						.attr('href', networkInfo.profileUrl)
-						.attr('target', '_blank')
-						.attr('title', 'View profile');
+					$a.attr({
+						href: networkInfo.profileUrl,
+						target: '_blank',
+						title: 'View profile'
+					});
 				}
 				else {
 					$this.addClass('not-connected');
-
-					$a
-						.attr('href', wwwDomain + '/link/' + network)
-						.attr('title', 'Click to connect');
+					$a.attr({
+						href: wwwDomain + '/link/' + network,
+						title: 'Click to connect'
+					});
 				}
 			});
 		});
@@ -1270,7 +1269,6 @@ $(function () {
 
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
-		return null;
 	}
 
 	function makePrimary(email) {
@@ -1286,14 +1284,12 @@ $(function () {
 
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
-		return null;
 	}
 
 	function cancelPendingPrimary(email) {
 		if (email) {
 			return deleteEmailAccount(email);
 		}
-		return null;
 	}
 
 	function deleteEmailAccount(email) {
@@ -1304,7 +1300,6 @@ $(function () {
 
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
-		return null;
 	}
 
 	var emailDeleteTmpl = Handlebars.compile($('#email-delete-dialog').html());
@@ -2718,7 +2713,6 @@ $(function () {
 			scrolledIntoViewLazy($el[0]);
 			return $el.addClass('highlight');
 		}
-		return null;
 	}
 
 	function scrolledIntoViewLazy(el, padding) {
