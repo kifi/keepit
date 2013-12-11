@@ -21,20 +21,7 @@ case class BasicSocialUser(network: String, profileUrl: Option[String], pictureU
 
 case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
-  implicit val format = new Format[EmailInfo] {
-    def reads(json: JsValue): JsResult[EmailInfo] = {
-      val arr = json.as[JsArray]
-      JsSuccess(EmailInfo(
-        address = arr(0).as[String],
-        isPrimary = arr(1).as[Boolean],
-        isVerified = arr(2).asOpt[Boolean].getOrElse(false),
-        isPendingPrimary = arr(3).asOpt[Boolean].getOrElse(false)
-      ))
-    }
-    def writes(ei: EmailInfo): JsValue = {
-      Json.arr(JsString(ei.address), JsBoolean(ei.isPrimary), JsBoolean(ei.isVerified), JsBoolean(ei.isPendingPrimary))
-    }
-  }
+  implicit val format = Json.format[EmailInfo]
 }
 case class UpdatableUserInfo(
     description: Option[String], emails: Option[Seq[EmailInfo]],
@@ -116,14 +103,7 @@ class UserCommander @Inject() (
     }
 
     val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
-    val emailInfos = emails.sortWith { case (a, b) =>
-      if (a.id.get.id == primary) true
-      else if (b.id.get.id == primary) false
-      else if (a.verified && b.verified) a.id.get.id < b.id.get.id
-      else if (a.verified) true
-      else if (b.verified) false
-      else  a.id.get.id < b.id.get.id
-    }.map { email =>
+    val emailInfos = emails.sortBy(e => (e.id.get.id != primary, !e.verified, e.id.get.id)).map { email =>
       EmailInfo(
         address = email.address,
         isVerified = email.verified,
