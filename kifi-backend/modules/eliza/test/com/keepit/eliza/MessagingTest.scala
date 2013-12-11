@@ -2,27 +2,22 @@ package com.keepit.eliza
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
-import com.keepit.inject._
-import com.keepit.test.{DbTestInjector}
+import com.keepit.test.DbTestInjector
 import com.google.inject.Injector
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
-import com.keepit.common.cache.{ElizaCacheModule}
+import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.db.{Model, Id, ExternalId}
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.common.db.Id
+import com.keepit.model.User
 import com.keepit.social.BasicUser
 
-import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
-import com.keepit.heimdal.{TestHeimdalServiceClientModule, HeimdalContextBuilderFactory, FakeHeimdalServiceClientImpl}
-import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
+import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
-import com.keepit.eliza.model.NonUserParticipant
-
 
 class MessagingTest extends Specification with DbTestInjector {
 
