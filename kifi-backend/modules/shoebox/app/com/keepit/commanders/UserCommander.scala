@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 
-import play.api.libs.json._
 import play.api.libs.json.{Json, JsValue}
 import com.google.inject.Inject
 import com.keepit.common.social.BasicUserRepo
