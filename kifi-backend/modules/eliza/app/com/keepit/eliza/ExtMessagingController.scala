@@ -46,7 +46,8 @@ class ExtMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val heimdalContextBuilder: HeimdalContextBuilderFactory
+    protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
+    protected val messagingAnalytics: MessagingAnalytics
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -58,10 +59,14 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val (title, text, version) = (
+
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
+
+    val (title, text) = (
       (o \ "title").asOpt[String],
-      (o \ "text").as[String].trim,
-      (o \ "extVersion").asOpt[String])
+      (o \ "text").as[String].trim
+    )
     val (userExtRecipients, nonUserRecipients) = recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
 
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
@@ -71,37 +76,13 @@ class ExtMessagingController @Inject() (
       nonUserRecipients <- messagingController.constructNonUserRecipients(request.userId, nonUserRecipients)
     } yield {
 
-      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)
+      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)(contextBuilder.build)
       val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
         messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
       }.flatten
 
       messageThreadFut.map { case (_, messages) =>
-        //Analytics
-        SafeFuture {
-          val contextBuilder = heimdalContextBuilder()
-          contextBuilder.addRequestInfo(request)
-          contextBuilder += ("recipients", userRecipients.map(_.id).toSeq) // todo: Anything with nonusers?
-          contextBuilder += ("threadId", thread.id.get.id)
-          contextBuilder += ("url", thread.url.getOrElse(""))
-          contextBuilder += ("isActuallyNew", messages.length<=1)
-          contextBuilder += ("extensionVersion", version.getOrElse(""))
-
-          thread.uriId.map{ uriId =>
-            shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
-              case Success(bookmarkOpt) => {
-                contextBuilder += ("isKeep", bookmarkOpt.isDefined)
-                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.NEW_MESSAGE, tStart))
-              }
-              case Failure(ex) => {
-                log.warn("Failed to check if url is a keep.")
-                heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.NEW_MESSAGE, tStart))
-              }
-            }
-          }
-        }
-
         val tDiff = currentDateTime.getMillis - tStart.getMillis
         Statsd.timing(s"messaging.newMessage", tDiff)
         Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages.reverse))
@@ -138,34 +119,9 @@ class ExtMessagingController @Inject() (
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim
-    val version = (o \ "extVersion").asOpt[String]
-    val (thread, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)
-
-    //Analytics
-    SafeFuture {
-      val contextBuilder = heimdalContextBuilder()
-      contextBuilder.addRequestInfo(request)
-      contextBuilder += ("threadId", message.thread.id)
-      contextBuilder += ("url", message.sentOnUrl.getOrElse(""))
-      contextBuilder += ("extensionVersion", version.getOrElse(""))
-      thread.participants.foreach { participants =>
-        contextBuilder += ("recipients", participants.allUsersExcept(request.userId).map(_.id).toSeq)
-      }
-
-      thread.uriId.map{ uriId =>
-        shoebox.getBookmarkByUriAndUser(uriId, request.userId).onComplete{
-          case Success(bookmarkOpt) => {
-            contextBuilder += ("isKeep", bookmarkOpt.isDefined)
-            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.REPLY_MESSAGE, tStart))
-          }
-          case Failure(ex) => {
-            log.warn("Failed to check if url is a keep.")
-            heimdal.trackEvent(UserEvent(request.userId.id, contextBuilder.build, UserEventTypes.REPLY_MESSAGE, tStart))
-          }
-        }
-      }
-    }
-
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
+    val (_, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
@@ -215,6 +171,7 @@ class ExtMessagingController @Inject() (
       val users = extUserIds.map { case s =>
         ExternalId[User](s.asInstanceOf[JsString].value)
       }
+      implicit val context = authenticatedWebSocketsContextBuilder(socket).build
       messagingController.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
     },
     "get_unread_notifications_count" -> { _ =>

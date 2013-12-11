@@ -15,11 +15,13 @@ import com.keepit.social.BasicUser
 
 import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
 
 class MessagingTest extends Specification with DbTestInjector {
+
+  implicit val context = HeimdalContext.empty
 
   def setup()(implicit injector: Injector) = {
     val threadRepo = inject[MessageThreadRepo]

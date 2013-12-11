@@ -25,8 +25,7 @@ object UserEventTypes {
   val KEPT = EventType("kept")
 
   // Messaging
-  val NEW_MESSAGE = EventType("new_message")
-  val REPLY_MESSAGE = EventType("reply_message")
+  val MESSAGED = EventType("messaged")
 
   // Notifications
   val WAS_NOTIFIED = EventType("was_notified")
