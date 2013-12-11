@@ -281,10 +281,6 @@ var socketHandlers = {
     standardizeNotification(n);
     if (insertNewNotification(n)) {
       handleRealTimeNotification(n);
-      var tl = threadLists[n.url];
-      if (tl) {
-        // TODO: update tabs at n.url and /messages
-      }
       tellVisibleTabsNoticeCountIfChanged();
     }
   },
@@ -827,19 +823,11 @@ function standardizeNotification(n) {
 }
 
 function handleRealTimeNotification(n) {
-  var tabsTold = {};
-  api.tabs.eachSelected(tellTab);
-  forEachTabAtLocator('/messages', tellTab);
-
+  api.tabs.eachSelected(function (tab) {
+    api.tabs.emit(tab, 'show_notification', n, {queue: true});
+  });
   if (n.unread && !n.muted) {
     api.play('media/notification.mp3');
-  }
-
-  function tellTab(tab) {
-    if (!tabsTold[tab.id]) {
-      tabsTold[tab.id] = true;
-      api.tabs.emit(tab, 'new_notification', n, {queue: true});
-    }
   }
 }
 
@@ -853,19 +841,23 @@ function insertNewNotification(n) {
       n.unread = false;
       n.unreadAuthors = n.unreadMessages = 0;
     }
-    var keys = ['all', n.url];
+    var keys = {all: null, page: n.url};
     if (n.unread) {
-      keys.push('unread');
+      keys.unread = null;
     }
     if (n.firstAuthor && n.participants[n.firstAuthor].id === session.user.id) {
-      keys.push('sent');
+      keys.sent = null;
     }
-    keys.forEach(function (key) {
-      var list = threadLists[key];
+    for (var kind in keys) {
+      var list = threadLists[keys[kind] || kind];
       if (list) {
         list.insert(n);
+        var locator = kind !== 'page' ? '/messages:' + kind : '/messages';
+        forEachTabAtLocator(locator, function (tab) {
+          api.tabs.emit(tab, 'new_thread', {kind: kind, thread: n}, {queue: true});
+        });
       }
-    });
+    }
     return true;
   }
 }
@@ -890,25 +882,16 @@ function requestMissedNotifications() {
     for (var i = arr.length; i--;) {
       var n = arr[i];
       standardizeNotification(n);
-
       if (insertNewNotification(n)) {
         if (serverTime - new Date(n.time) < 60000) {
           handleRealTimeNotification(n);
-          arr.splice(i, 1);
         }
         var md = messageData[n.thread];
         if (md && !threadCallbacks[n.thread]) {
           socket.send(['get_thread', n.thread]);  // TODO: "get_thread_since" (don't need messages already loaded)
           threadCallbacks[n.thread] = [];  // TODO: add callback that updates tabs at /messages/threadId
         }
-      } else {
-        arr.splice(i, 1);
       }
-    }
-    if (arr.length) {
-      forEachTabAtLocator('/messages', function(tab) {
-        api.tabs.emit(tab, 'missed_notifications', arr);
-      });
     }
     tellVisibleTabsNoticeCountIfChanged();
   });

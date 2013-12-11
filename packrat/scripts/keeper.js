@@ -253,8 +253,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }).hoverfu('.kifi-dock-btn', function(configureHover) {
         var $a = $(this);
         var tip = {
-          n: ['Notifications (' + CO_KEY + '+Shift+O)', 'View all of your notifications.<br>Any new ones are highlighted.'],
-          m: ['Private Messages (' + CO_KEY + '+Shift+M)', 'Send this page to friends<br>and start a discussion.'],
           i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br>New ones are highlighted.'],
           c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br>and start a discussion.']
         }[this.dataset.tip];

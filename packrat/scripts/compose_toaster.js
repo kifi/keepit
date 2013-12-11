@@ -15,12 +15,12 @@ var toaster = (function () {
   var $toaster;
 
   return {
-    toggleIn: function ($parent) {
+    toggle: function ($parent) {
       if ($toaster) {
         if ($toaster.data('compose').isBlank()) {
           hide();
         } else {
-          log('[toaster:toggleIn] no-op')();
+          log('[toaster:toggle] no-op')();
         }
         var d = Q.defer();
         d.resolve();
@@ -28,6 +28,16 @@ var toaster = (function () {
       } else {
         return show($parent);
       }
+    },
+    hide: function () {
+      if ($toaster) {
+        hide();
+      } else {
+        log('[toaster:hide] no-op')();
+      }
+    },
+    showing: function () {
+      return !!$toaster;
     }
   };
 

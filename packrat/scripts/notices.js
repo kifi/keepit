@@ -25,29 +25,27 @@ panes.notices = function () {
   'use strict';
 
   var handlers = {
-    new_notification: function (n) {
-      log('[new_notification]', n)();
-      showNew([n]);
-      if (n.unread) {
-        $markAll.show();
-      }
-    },
-    missed_notifications: function (arr) {
-      log('[missed_notifications]', arr)();
-      showNew(arr);
-      if (arr.some(function (n) {return n.unread})) {
-        $markAll.show();
+    new_thread: function (o) {
+      var listKind = $list && $list.data('kind');
+      if (o.kind === listKind) {
+        log('[new_thread]', o.thread)();
+        showNew(o.thread);
+        if (o.thread.unread) {
+          //$markAll.show();
+        }
+      } else {
+        log('[new_thread] kind mismatch', listKind, o.kind, o.thread.thread)();
       }
     },
     notifications_visited: function (o) {
       log('[notifications_visited]', o)();
       markVisited(o.category, o.time, o.threadId, o.id);
-      $markAll.toggle(o.anyUnread);
+      //$markAll.toggle(o.anyUnread);
     },
     all_notifications_visited: function (o) {
       log('[all_notifications_visited]', o)();
       markAllVisited(o.id, o.time);
-      $markAll.toggle(o.anyUnread);
+      //$markAll.toggle(o.anyUnread);
     }
   };
 
@@ -105,7 +103,7 @@ panes.notices = function () {
     .scroll(onScroll)
     .hoverfu('.kifi-notice-n-others', onHoverfuOthers);
 
-    // $markAllRead.toggle(o.anyUnread);
+    // $markAll.toggle(o.anyUnread);
   }
 
   function onSubTabClick(e) {
@@ -200,12 +198,9 @@ panes.notices = function () {
     }
   }
 
-  function showNew(threads) {
-    threads.forEach(function (n) {
-      $list.find('.kifi-notice[data-id="' + n.id + '"]').remove();
-      $list.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
-    });
-    $(threads.map(renderOne).join(''))
+  function showNew(th) {
+    $list.find('.kifi-notice[data-id="' + th.id + '"],.kifi-notice[data-thread="' + th.thread + '"]').remove();
+    $(renderOne(th))
       .find('time').timeago().end()
       .prependTo($list);
   }
