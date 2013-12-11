@@ -6,7 +6,6 @@ import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test.{DbTestInjector}
-import com.google.inject.Injector
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
 import com.keepit.common.cache.{ElizaCacheModule}
 import com.keepit.common.time._
@@ -14,14 +13,20 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import com.keepit.social.BasicUser
-
-import play.api.test.Helpers._
-import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
 import com.keepit.heimdal.{HeimdalContextBuilderFactory, FakeHeimdalServiceClientImpl}
 import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
 import com.keepit.eliza.model.NonUserParticipant
+
+import com.google.inject.Injector
+
+import play.api.test.Helpers._
+import play.api.libs.json.{Json, JsObject}
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -58,7 +63,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
-        messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20).length === 0
+        Await.result(messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20), Duration(4, "seconds")).length === 0
 
         val (thread2, msg2) = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
 
@@ -104,7 +109,7 @@ class MessagingTest extends Specification with DbTestInjector {
         messagingController.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
         messagingController.getUnreadUnmutedThreadCount(user3) === 1
 
-        val notifications : Seq[JsObject] = messagingController.getLatestUnreadSendableNotifications(user3, 20)
+        val notifications : Seq[JsObject] = Await.result(messagingController.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))
         notifications.length === 1
         val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
         println(participants)
