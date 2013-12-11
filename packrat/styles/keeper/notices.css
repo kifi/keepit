@@ -153,11 +153,6 @@
   left: 26px;
   height: 26px;
   width: 26px;
-  /* for 2x2 layout
-  top: 32px;
-  left: 31px;
-  height: 33px;
-  width: 33px; */
   border: 2px solid #fff;
   border-radius: 50%;
   z-index: 1;
@@ -168,7 +163,8 @@
   width: 26px;
   height: 53px;
 }
-:not(.kifi-notice-sent)>.kifi-notice-mosaic-3>.kifi-notice-pic-1 {
+:not(.kifi-notice-sent)>.kifi-notice-mosaic-3>.kifi-notice-pic-1,
+.kifi-notice-mosaic-4>.kifi-notice-pic-1 {
   height: 26px;
 }
 .kifi-notice-sent>.kifi-notice-mosaic-2>.kifi-notice-pic-1 {
@@ -183,6 +179,12 @@
 .kifi-notice-sent>.kifi-notice-mosaic-3>.kifi-notice-pic-2 {
   top: 0;
   left: 27px;
+}
+.kifi-notice-pic-3 {
+  top: 0;
+  left: 27px;
+  height: 26px;
+  width: 26px;
 }
 
 .kifi-notice-kicker {
