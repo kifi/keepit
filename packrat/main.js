@@ -187,6 +187,56 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
+var mixpanel = {
+  enabled: true,
+  queue: [],
+  batch: [],
+  sendBatch: function(){
+    if (this.batch.length > 0) {
+      var json = JSON.stringify(this.batch);
+      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
+      this.batch.length = 0;
+    }
+  },
+  augmentAndBatch: function(data) {
+    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    data.properties.distinct_id = session.user.id;
+    data.properties.browser = api.browser.name;
+    data.properties.browserDetails = api.browser.userAgent;
+    this.batch.push(data);
+    if (this.batch.length > 10) {
+      this.sendBatch();
+    }
+  },
+  track: function(eventName, properties) {
+    if (this.enabled) {
+      if (!this.sendTimer) {
+        this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
+      }
+      log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
+      properties.time = Date.now();
+      var data = {
+        'event': eventName,
+        'properties': properties
+      };
+      if (session) {
+        this.augmentAndBatch(data);
+      } else {
+        this.queue.push(data);
+      }
+    }
+  },
+  catchUp: function() {
+    var that = this;
+    this.queue.forEach(function (data) {
+      that.augmentAndBatch(data);
+    });
+    this.queue = [];
+  }
+};
+
+
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
@@ -265,6 +315,7 @@ var socketHandlers = {
   experiments: function(exp) {
     log("[socket:experiments]", exp)();
     session.experiments = exp;
+    api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
   new_friends: function(fr) {
     log("[socket:new_friends]", fr)();
@@ -767,6 +818,8 @@ api.port.on({
       }
     }
     if (o.new) {
+      var fragments = o.new.split("/");
+      mixpanel.track("user_viewed_pane", {'type': fragments.length>1 ? fragments[1] : o.new});
       var arr = tabsByLocator[o.new];
       if (arr) {
         arr = arr.filter(idIsNot(tab.id));
@@ -935,11 +988,9 @@ function removeNotificationPopups(associatedId) {
 function standardizeNotification(n) {
   n.category = (n.category || "message").toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
-  if (!session || session.experiments.indexOf('inbox') < 0) {
-    for (var i = n.participants ? n.participants.length : 0; i--;) {
-      if (n.participants[i].id == session.user.id) {
-        n.participants.splice(i, 1);
-      }
+  for (var i = n.participants ? n.participants.length : 0; i--;) {
+    if (n.participants[i].id == session.user.id) {
+      n.participants.splice(i, 1);
     }
   }
 }
@@ -1167,6 +1218,28 @@ function tellTabsUnreadThreadCountIfChanged(td) { // (td, url[, url]...)
   forEachTabAt.apply(null, args);
 }
 
+
+var DEFAULT_RES = 5;
+var MAX_RES_FOR_NEW = 2;
+var TWO_WEEKS = 1000 * 60 * 60 * 24 * 7 * 2;
+function getSearchMaxResults(request) {
+  if (request.lastUUID) {
+    return DEFAULT_RES;
+  }
+
+  var pref = api.prefs.get("maxResults");
+  if (pref !== DEFAULT_RES) {
+    return pref;
+  }
+
+  var joined = session.joined;
+  if (joined && (Date.now() - joined) < TWO_WEEKS) {
+    return MAX_RES_FOR_NEW;
+  }
+
+  return DEFAULT_RES;
+}
+
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
@@ -1185,7 +1258,7 @@ function searchOnServer(request, respond) {
   var when, params = {
       q: request.query,
       f: request.filter && request.filter.who,
-      maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
+      maxHits: getSearchMaxResults(request),
       lastUUID: request.lastUUID,
       context: request.context,
       kifiVersion: api.version};
@@ -1760,6 +1833,8 @@ function startSession(callback, retryMs) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     unstore('logout');
 
+    api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
+    data.joined = data.joined ? new Date(data.joined) : null;
     session = data;
     session.prefs = {}; // to come via socket
     socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&eip=" + (session.eip || ""), socketHandlers, function onConnect() {
@@ -1779,6 +1854,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    mixpanel.catchUp();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);

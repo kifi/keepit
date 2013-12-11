@@ -16,7 +16,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS
 
 object LinkedInSocialGraph {
-  val ProfileFields = Seq("id","firstName","lastName","pictureUrl","publicProfileUrl")
+  val ProfileFields = Seq("id","firstName","lastName","picture-urls::(original);secure=true","publicProfileUrl")
   val ProfileFieldSelector = ProfileFields.mkString("(",",",")")
   val ConnectionsPageSize = 500
 }
@@ -119,7 +119,7 @@ class LinkedInSocialGraph @Inject() (
       assert(sui.socialId.id == id, s"Social id in profile $id should be equal to the existing id ${sui.socialId}")
       sui.copy(
         fullName = ((json \ "firstName").asOpt[String] ++ (json \ "lastName").asOpt[String]).mkString(" "),
-        pictureUrl = (json \ "pictureUrl").asOpt[String] orElse sui.pictureUrl,
+        pictureUrl = (json \ "pictureUrls" \ "values").asOpt[JsArray].map(_(0).asOpt[String]).flatten orElse sui.pictureUrl,
         profileUrl = (json \ "publicProfileUrl").asOpt[String] orElse sui.profileUrl
       )
     } getOrElse sui
@@ -140,7 +140,7 @@ class LinkedInSocialGraph @Inject() (
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(
       fullName = ((friend \ "firstName").asOpt[String] ++ (friend \ "lastName").asOpt[String]).mkString(" "),
-      pictureUrl = (friend \ "pictureUrl").asOpt[String],
+      pictureUrl = (friend \ "pictureUrls" \ "values").asOpt[JsArray].map(_(0).asOpt[String]).flatten,
       profileUrl = (friend \ "publicProfileUrl").asOpt[String],
       socialId = SocialId((friend \ "id").as[String]),
       networkType = SocialNetworks.LINKEDIN,

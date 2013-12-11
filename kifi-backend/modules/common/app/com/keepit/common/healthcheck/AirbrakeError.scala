@@ -28,8 +28,7 @@ case class AirbrakeError(
     method: Option[String] = None,
     headers: Map[String, Seq[String]] = Map(),
     id: ExternalId[AirbrakeError] = ExternalId(),
-    createdAt: DateTime = currentDateTime,
-    details: Option[String] = None) {
+    createdAt: DateTime = currentDateTime) {
 
   lazy val cleanError: AirbrakeError = {
     if (exception.getCause == null) {

@@ -20,24 +20,24 @@ form.kifi-compose {
   cursor: text; /* ff */
 }
 .kifi-compose.kifi-empty .kifi-compose-draft:focus {
-  -webkit-animation: paddingLeft10 .16s ease-out;
-  animation: paddingLeft10 .16s ease-out;
+  -webkit-animation: paddingLeft7 .16s ease-out;
+  animation: paddingLeft7 .16s ease-out;
 }
-@-webkit-keyframes paddingLeft10 {
-  50% {padding-left: 10px}
+@-webkit-keyframes paddingLeft7 {
+  50% {padding-left: 7px}
 }
-@keyframes paddingLeft10 {
-  50% {padding-left: 10px}
+@keyframes paddingLeft7 {
+  50% {padding-left: 7px}
 }
 .kifi-ti-token-input:only-child>#token-input-kifi-compose-to:focus {
-  -webkit-animation: paddingLeft5 .16s ease-out;
-  animation: paddingLeft5 .16s ease-out;
+  -webkit-animation: paddingLeft2 .14s ease-out;
+  animation: paddingLeft2 .14s ease-out;
 }
-@-webkit-keyframes paddingLeft5 {
-  50% {padding-left: 5px}
+@-webkit-keyframes paddingLeft2 {
+  50% {padding-left: 2px}
 }
-@keyframes paddingLeft5 {
-  50% {padding-left: 5px}
+@keyframes paddingLeft2 {
+  50% {padding-left: 2px}
 }
 .kifi-compose-draft:first-child {
   border-radius: 3px 3px 0 0;

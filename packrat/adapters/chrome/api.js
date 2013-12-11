@@ -322,6 +322,7 @@ var api = function() {
     this.handling && this.postMessage(["api:respond", callbackId, response]);
   }
 
+  var doLogging = false;
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
@@ -332,7 +333,7 @@ var api = function() {
 
     var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
 
-    var js = api.prefs.get('suppressLog') ? 'function log() {return log}' : '', injected;
+    var js = doLogging ? '' : 'function log() {return log}', injected;
     chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
       injected = arr[0] || {};
       done(0);
@@ -532,6 +533,19 @@ var api = function() {
       }
       xhr.send(data);
     },
+    postRawAsForm: function(uri, data) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", uri, true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+    },
+    util: {
+      btoa: window.btoa.bind(window)
+    },
+    browser: {
+      name: 'Chrome',
+      userAgent: navigator.userAgent
+    },
     requestUpdateCheck: function() {
       if (updateVersion) {
         chrome.runtime.reload();
@@ -673,6 +687,11 @@ var api = function() {
         blur: new Listeners,
         loading: new Listeners,
         unload: new Listeners}},
+    toggleLogging: function (bool) {
+      doLogging = bool;
+    },
     timers: window,
     version: chrome.app.getDetails().version};
 }();
+
+delete localStorage[':suppressLog'];  // TODO: remove in Jan 2014

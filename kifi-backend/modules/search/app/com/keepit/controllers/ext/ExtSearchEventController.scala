@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.heimdal.{SearchEngine, SearchAnalytics}
+import com.keepit.heimdal.{HeimdalContextBuilderFactory, BasicSearchContext, SearchEngine, SearchAnalytics}
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -37,7 +37,8 @@ class ExtSearchEventController @Inject() (
   resultClickedTracker: ResultClickTracker,
   articleSearchResultStore: ArticleSearchResultStore,
   searchAnalytics: SearchAnalytics,
-  healthCheckMailer: HealthcheckMailSender)
+  healthCheckMailer: HealthcheckMailSender,
+  heimdalContextBuilder: HeimdalContextBuilderFactory)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
@@ -47,21 +48,15 @@ class ExtSearchEventController @Inject() (
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
-    val query = (json \ "query").as[String]
-    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
-    val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-    val origin = (json \ "origin").as[String]
-    val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
-    val kifiTime = (json \ "kifiTime").asOpt[Int]
-    val kifiShownTime = (json \ "kifiShownTime").asOpt[Int]
-    val thirdPartyShownTime = (json \ "thirdPartyShownTime").asOpt[Int] orElse (json \ "referenceTime").asOpt[Int]
+    val basicSearchContext = json.as[BasicSearchContext]
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
-    val kifiResults = (json \ "kifiResults").as[Int]
-    val queryRefinements = (json \ "refinements").asOpt[Int]
     val isDemo = request.experiments.contains(ExperimentType.DEMO)
+    val query = basicSearchContext.query
 
-    checkForMissingDeliveryTimes(kifiTime, kifiShownTime, thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
+    checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
     SearchEngine.get(resultSource) match {
 
       case SearchEngine.Kifi => {
@@ -72,7 +67,7 @@ class ExtSearchEventController @Inject() (
           resultClickedTracker.add(userId, query, uriId, resultPosition, personalSearchResult.isMyBookmark, isDemo)
           if (personalSearchResult.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, personalSearchResult.users.map(_.externalId): _*)
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, SearchEngine.Kifi, resultPosition, Some(personalSearchResult))
+        searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(personalSearchResult), contextBuilder)
       }
 
       case theOtherGuys => {
@@ -88,29 +83,26 @@ class ExtSearchEventController @Inject() (
               resultClickedTracker.moderate(userId, query)
           }
         }
-        searchAnalytics.clickedSearchResult(request, userId, time, origin, uuid, searchExperiment, query, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, theOtherGuys, resultPosition, None)
+        searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, theOtherGuys, resultPosition, None, contextBuilder)
       }
     }
     Ok
   }
 
   def endedSearch = AuthenticatedJsonToJsonAction { request =>
+    // Deprecated
+    Ok
+  }
+
+  def searched = AuthenticatedJsonToJsonAction { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
-    val uuid = ExternalId[ArticleSearchResult]((json \ "uuid").asOpt[String].getOrElse((json \ "queryUUID").as[String]))
-    val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-    val kifiResults = (json \ "kifiResults").as[Int]
-    val kifiCollapsed = (json \ "kifiCollapsed").as[Boolean]
-    val kifiResultsClicked = (json \ "kifiResultsClicked").as[Int]
-    val otherResultsClicked = (json \ "searchResultsClicked").as[Int]
-    val kifiTime = (json \ "kifiTime").asOpt[Int]
-    val kifiShownTime = (json \ "kifiShownTime").asOpt[Int]
-    val thirdPartyShownTime = (json \ "thirdPartyShownTime").asOpt[Int] orElse (json \ "referenceTime").asOpt[Int]
-    val origin = (json \ "origin").as[String]
-    val queryRefinements = (json \ "refinements").asOpt[Int]
-    checkForMissingDeliveryTimes(kifiTime, kifiShownTime, thirdPartyShownTime, request, "ExtSearchEventController.endedSearch")
-    searchAnalytics.endedSearch(request, userId, time, origin, uuid, searchExperiment, queryRefinements, kifiResults, kifiCollapsed, kifiTime, kifiShownTime, thirdPartyShownTime, otherResultsClicked, kifiResultsClicked)
+    val basicSearchContext = json.as[BasicSearchContext]
+    val endedWith = (json \ "endedWith").as[String]
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.searched")
+    searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
     Ok
   }
 

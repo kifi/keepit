@@ -1,38 +1,44 @@
 package com.keepit.eliza
 
-import com.keepit.model.{UserNotification, User, DeepLocator, NormalizedURI}
+import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.{Database}
-import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.common.db.slick.Database
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{Promise, future, Await, Future}
+import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.http.Status.ACCEPTED
 
 import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsString, JsArray, Json}
+import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.{PushNotification, UrbanAirship}
+import com.keepit.realtime.UrbanAirship
+import com.keepit.eliza.model.NonUserParticipant
+import com.keepit.common.KestrelCombinator
+import com.keepit.abook.ABookServiceClient
+import play.api.libs.json.JsString
+import scala.Some
+import com.keepit.eliza.model.NonUserThread
 import play.api.libs.json.JsArray
+import com.keepit.eliza.model.NonUserEmailParticipant
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
-import scala.util.Try
+import com.keepit.heimdal._
 
 
 //For migration only
@@ -63,9 +69,12 @@ class MessagingController @Inject() (
     protected val shoebox: ShoeboxServiceClient,
     protected val db: Database,
     notificationRouter: NotificationRouter,
+    abookServiceClient: ABookServiceClient,
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
-    urbanAirship: UrbanAirship)
+    urbanAirship: UrbanAirship,
+    heimdal: HeimdalServiceClient,
+    heimdalContextBuilder: HeimdalContextBuilderFactory)
   extends ElizaServiceController with MessagingIndexHelper with Logging {
 
   //for indexing data requests
@@ -75,32 +84,31 @@ class MessagingController @Inject() (
     })
   }
 
-  //migration code
-  private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message], id2BasicUser: Map[Id[User], BasicUser])(implicit session: RWSession) : Unit = {
-    messages.collectFirst { case m if m.from.isDefined && m.from.get != userId => m }.map { lastMsgFromOther =>
-      val locator = "/messages/" + thread.externalId
-
-      val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-      val messageWithBasicUser = MessageWithBasicUser(
-        lastMsgFromOther.externalId,
-        lastMsgFromOther.createdAt,
-        lastMsgFromOther.messageText,
-        None,
-        lastMsgFromOther.sentOnUrl.getOrElse(""),
-        thread.nUrl.getOrElse(""),
-        lastMsgFromOther.from.map(id2BasicUser(_)),
-        participantSet.toSeq.map(id2BasicUser(_))
-      )
-
-      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0, 0, false)
-
-      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
-      userThreadRepo.markRead(userId)
-      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime)
-      userThreadRepo.setNotificationLastSeen(userId, currentDateTime)
-    }
-  }
-
+  // dead code that Stephen plans to repurpose in the future
+  //
+  // private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message], id2BasicUser: Map[Id[User], BasicUser])(implicit session: RWSession) : Unit = {
+  //   messages.collectFirst { case m if m.from.isDefined && m.from.get != userId => m }.map { lastMsgFromOther =>
+  //     val locator = "/messages/" + thread.externalId
+  //
+  //     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+  //     val messageWithBasicUser = MessageWithBasicUser(
+  //       lastMsgFromOther.externalId,
+  //       lastMsgFromOther.createdAt,
+  //       lastMsgFromOther.messageText,
+  //       None,
+  //       lastMsgFromOther.sentOnUrl.getOrElse(""),
+  //       thread.nUrl.getOrElse(""),
+  //       lastMsgFromOther.from.map(id2BasicUser(_)),
+  //       participantSet.toSeq.map(id2BasicUser(_))
+  //     )
+  //
+  //     val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator, false, 0, 0, 0, 0, 0, false)
+  //
+  //     userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther, notifJson, false)
+  //     userThreadRepo.markRead(userId)
+  //     userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime)
+  //   }
+  // }
 
   def sendGlobalNotification() = Action(parse.json) { request =>
     SafeFuture {
@@ -214,7 +222,7 @@ class MessagingController @Inject() (
 
   private[eliza] def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
-    val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
+    val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.allUsers).getOrElse(Set())}
     //get all basic users
     val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
     //get all messages
@@ -233,9 +241,11 @@ class MessagingController @Inject() (
         (message.externalId, message.createdAt)
       }.toMap
 
+      val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set()).map(NonUserParticipant.toBasicNonUser)
+
       ElizaThreadInfo(
         externalId = thread.externalId,
-        participants = thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
+        participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
         digest = lastMessage.messageText,
         lastAuthor = userId2BasicUser(lastMessage.from.get).externalId,
         messageCount = messagesByThread(thread.id.get).length,
@@ -326,14 +336,27 @@ class MessagingController @Inject() (
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
       }
 
+      val sentAt = currentDateTime
+      SafeFuture {
+        val context = heimdalContextBuilder()
+        context += ("action", "sent")
+        context += ("global", false)
+        context += ("muted", muted)
+        context += ("messageExternalId", message.externalId.id)
+        context += ("threadId", thread.id.get.id)
+        context += ("channel", "kifi")
+        context += ("url", thread.nUrl.getOrElse(""))
+        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+      }
+
       shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator(locator))
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
-      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadThreadCount(userId)))
+      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
 
       if (!muted) {
         val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
-        sendPushNotification(userId, thread.externalId, getUnreadThreadCount(userId), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
+        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
       }
     }
 
@@ -364,38 +387,65 @@ class MessagingController @Inject() (
   )
   val family = engineers ++ product ++ Seq(
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb", // two-meals
-    "6f21b520-87e7-4053-9676-85762e96970a"  // jenny
+    "7a0f844e-a1b2-4dab-b94b-0a9b7932e141" // noam
   )
 
-  def constructRecipientSeq(userExtIds: Seq[ExternalId[User]]) : Future[Seq[Id[User]]] = {
-    val loadedUser = userExtIds.map { userExtId =>
-      userExtId match {
-        case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
-          engineers.map(ExternalId[User])
-        case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
-          family.map(ExternalId[User])
-        case ExternalId("42424242-4242-4242-4242-424242424203") => // FortyTwo Product
-          product.map(ExternalId[User])
-        case notAGroup => Seq(notAGroup)
-      }
+  def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    val loadedUser = userExtIds.map {
+      case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
+        engineers.map(ExternalId[User])
+      case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
+        family.map(ExternalId[User])
+      case ExternalId("42424242-4242-4242-4242-424242424203") => // FortyTwo Product
+        product.map(ExternalId[User])
+      case notAGroup => Seq(notAGroup)
     }
     shoebox.getUserIdsByExternalIds(loadedUser.flatten)
   }
 
+  def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
+    val pimpedParticipants = nonUsers.map {
+      case email: NonUserEmailParticipant =>
+        abookServiceClient.getEContactByEmail(userId, email.address.address).map {
+          case Some(eContact) => email.copy(econtactId = eContact.id)
+          case None => email // todo: Wire it up to create contact!
+        }
+    }
+    Future.sequence(pimpedParticipants)
+  }
 
-  def sendNewMessage(from: Id[User], recipients: Seq[Id[User]], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
-    val participants = (from +: recipients).distinct
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
+    val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
     Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session =>
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
+      val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
-        log.info(s"This is a new thread. Creating User Threads.")
-        participants.foreach{ userId =>
-          userThreadRepo.create(userId, thread.id.get, uriIdOpt, userId==from)
+        nonUserRecipients.par.foreach { nonUser =>
+          NonUserThread(
+            participant = nonUser,
+            threadId = thread.id.get,
+            uriId = uriIdOpt,
+            notifiedCount = 0,
+            lastNotifiedAt = None,
+            threadUpdatedAt = Some(thread.createdAt),
+            muted = false
+          )
+        }
+        userParticipants.par.foreach { userId =>
+          userThreadRepo.save(UserThread(
+            user = userId,
+            thread = thread.id.get,
+            uriId = uriIdOpt,
+            lastSeen = None,
+            lastMsgFromOther = None,
+            lastNotification = JsNull,
+            unread = false,
+            started = userId == from
+          ))
         }
       }
       else{
@@ -441,7 +491,7 @@ class MessagingController @Inject() (
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
-    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
 
     val messageWithBasicUser = MessageWithBasicUser(
@@ -455,7 +505,7 @@ class MessagingController @Inject() (
       participantSet.toSeq.map(id2BasicUser(_))
     )
 
-    thread.participants.map(_.all.par.foreach { user =>
+    thread.participants.map(_.allUsers.par.foreach { user =>
       notificationRouter.sendToUser(
         user,
         Json.arr("message", message.threadExtId.id, messageWithBasicUser)
@@ -474,9 +524,10 @@ class MessagingController @Inject() (
     }
 
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
-    val numAuthors = threadActivity.filter(_.lastActive.isDefined).length
+    val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants=threadActivity.map{ ta => id2BasicUser(ta.userId)})
+    val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers)
 
     thread.allParticipantsExcept(from).foreach { userId =>
       sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
@@ -552,16 +603,17 @@ class MessagingController @Inject() (
   }
 
   def participantsToBasicUsers(participants: MessageThreadParticipants): Future[Map[Id[User], BasicUser]] =
-    shoebox.getBasicUsers(participants.participants.keySet.toSeq)
+    shoebox.getBasicUsers(participants.allUsers.toSeq)
 
 
   def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $participantSet")
-    shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
+    val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
+    shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
       (thread, messages.map { message =>
+        val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
         MessageWithBasicUser(
           id           = message.externalId,
           createdAt    = message.createdAt,
@@ -570,7 +622,7 @@ class MessagingController @Inject() (
           url          = message.sentOnUrl.getOrElse(""),
           nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
           user         = message.from.map(id2BasicUser(_)),
-          participants = participantSet.toSeq.map(id2BasicUser(_))
+          participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
         )
       })
     }
@@ -595,6 +647,7 @@ class MessagingController @Inject() (
     }
   }
 
+  // todo: Add adding non-users by kind/identifier
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipants: Seq[ExternalId[User]]) = {
     shoebox.getUserIdsByExternalIds(newParticipants) map { newParticipantsUserIds =>
 
@@ -605,7 +658,7 @@ class MessagingController @Inject() (
         if (!oldThread.participants.exists(_.contains(adderUserId)) || actuallyNewParticipantUserIds.isEmpty) {
           None
         } else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds: _*))
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds))
 
           val message = messageRepo.save(Message(
             from = None,
@@ -622,12 +675,13 @@ class MessagingController @Inject() (
       }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
-        shoebox.getBasicUsers(thread.participants.get.participants.keys.toSeq) map { basicUsers =>
+        shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
           val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
 
           val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
           val theTitle: String = thread.pageTitle.getOrElse("New conversation")
+          val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
           val notificationJson = Json.obj(
             "id"           -> message.externalId.id,
             "time"         -> message.createdAt,
@@ -636,12 +690,13 @@ class MessagingController @Inject() (
             "url"          -> thread.nUrl,
             "title"        -> theTitle,
             "author"       -> basicUsers(adderUserId),
-            "participants" -> basicUsers.values.toSeq,
+            "participants" -> participants,
             "locator"      -> ("/messages/" + thread.externalId),
             "unread"       -> true,
             "category"     -> "message"
           )
           db.readWrite { implicit session =>
+            // todo: Add adding non-users
             newParticipants.map { pUserId =>
               userThreadRepo.save(UserThread(
                 id = None,
@@ -662,10 +717,9 @@ class MessagingController @Inject() (
             }
           }
 
-          val participants = basicUsers.values.toSeq
           val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
           modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
-            thread.participants.map(_.all.par.foreach { userId =>
+            thread.participants.map(_.allUsers.par.foreach { userId =>
               notificationRouter.sendToUser(
                 userId,
                 Json.arr("message", thread.externalId.id, augmentedMessage)
@@ -691,7 +745,6 @@ class MessagingController @Inject() (
             case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ =>
               val addedUsers = jsAddedUsers.map(id => Id[User](id.as[Long]))
               val adderUserId = Id[User](jsAdderUserId.toLong)
-              val basicUsers = m.participants
               shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
                 val adderUser = basicUsers(adderUserId)
                 val addedBasicUsers = addedUsers.map(u => basicUsers(u))
@@ -721,93 +774,141 @@ class MessagingController @Inject() (
 
 
   def setNotificationRead(userId: Id[User], threadId: Id[MessageThread]): Unit = {
-    db.readWrite(attempts=2){implicit session => userThreadRepo.markRead(userId, Some(threadId))}
+    db.readWrite(attempts=2) {implicit session => userThreadRepo.markRead(userId, Some(threadId))}
   }
 
 
   def setAllNotificationsRead(userId: Id[User]): Unit = {
     log.info(s"Setting all Notifications as read for user $userId.")
-    db.readWrite(attempts=2){implicit session => userThreadRepo.markRead(userId)}
+    db.readWrite(attempts=2) {implicit session => userThreadRepo.markRead(userId)}
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
-    val lastTime = db.readWrite(attempts=2){ implicit session =>
+    val lastTime = db.readWrite(attempts=2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
       message.createdAt
     }
-    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getUnreadThreadCount(user)))
+    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(user)))
     lastTime
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {
-    db.readWrite{ implicit session =>
+    db.readWrite { implicit session =>
       userThreadRepo.setLastSeen(userId, threadId, timestampOpt.getOrElse(clock.now))
     }
   }
 
   def setLastSeen(userId: Id[User], messageExtId: ExternalId[Message]) : Unit = {
-    val message = db.readOnly{ implicit session => messageRepo.get(messageExtId) }
+    val message = db.readOnly { implicit session => messageRepo.get(messageExtId) }
     setLastSeen(userId, message.thread, Some(message.createdAt))
   }
 
   def getUnreadThreadNotifications(userId: Id[User]) : Seq[Notification] = {
-    db.readOnly{ implicit session =>
+    db.readOnly { implicit session =>
       userThreadRepo.getUnreadThreadNotifications(userId)
     }
   }
 
-  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime) : Unit = {
-    db.readWrite(attempts=2){ implicit session =>
-      userThreadRepo.setNotificationLastSeen(userId, timestamp)
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getLatestSendableNotificationsNotJustFromMe(userId, howMany)
     }
   }
 
-  def getNotificationLastSeen(userId: Id[User]): Option[DateTime] = {
-    db.readOnly{ implicit session =>
-      userThreadRepo.getNotificationLastSeen(userId)
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsNotJustFromMeBefore(userId, time, howMany)
+    }
+  }
+
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsNotJustFromMeSince(userId, time)
     }
   }
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
-    db.readOnly{ implicit session =>
+    db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotifications(userId, howMany)
     }
   }
 
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsBefore(userId, time, howMany)
+    }
+  }
+
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsSince(userId, time)
+    }
+  }
+
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
-    db.readOnly{ implicit session =>
+    db.readOnly { implicit session =>
       userThreadRepo.getLatestUnreadSendableNotifications(userId, howMany)
     }
   }
 
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getUnreadSendableNotificationsBefore(userId, time, howMany)
+    }
+  }
+
   def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
-    db.readOnly{ implicit session =>
+    db.readOnly { implicit session =>
       userThreadRepo.getLatestMutedSendableNotifications(userId, howMany)
     }
   }
 
-  def getLatestSentNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
-    db.readOnly{ implicit session =>
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getMutedSendableNotificationsBefore(userId, time, howMany)
+    }
+  }
+
+  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotificationsForStartedThreads(userId, howMany)
     }
   }
 
-  def getUnreadThreadCount(userId: Id[User]): Int = {
-    db.readOnly{ implicit session =>
-      userThreadRepo.getUnreadThreadCount(userId)
+  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getSendableNotificationsForStartedThreadsBefore(userId, time, howMany)
     }
   }
 
-  def getSendableNotificationsAfter(userId: Id[User], after: DateTime): Seq[JsObject] = {
-    db.readOnly{ implicit session =>
-      userThreadRepo.getSendableNotificationsAfter(userId, after)
+  def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getUnreadUnmutedThreadCount(userId)
     }
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], after: DateTime, howMany: Int): Seq[JsObject] = {
-    db.readOnly{ implicit session =>
-      userThreadRepo.getSendableNotificationsBefore(userId, after, howMany)
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject])] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      if (nUriOrPrenorm.isLeft) {
+        val nUri = nUriOrPrenorm.left.get
+        val notices = db.readOnly { implicit session => userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany) }
+        (nUri.url, notices)
+      } else {
+        (nUriOrPrenorm.right.get, Seq[JsObject]())
+      }
+    }
+  }
+
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[(String, Seq[JsObject])] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      if (nUriOrPrenorm.isLeft) {
+        val nUri = nUriOrPrenorm.left.get
+        val notices = db.readOnly { implicit session => userThreadRepo.getSendableNotificationsForUriBefore(userId, nUri.id.get, time, howMany) }
+        (nUri.url, notices)
+      } else {
+        (nUriOrPrenorm.right.get, Seq[JsObject]())
+      }
     }
   }
 
@@ -826,6 +927,7 @@ class MessagingController @Inject() (
           val threadIds = userThreadRepo.getThreads(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
+
         (nUri.url, buildThreadInfos(userId, threads, Some(url)))
       } else {
         (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
@@ -870,7 +972,7 @@ class MessagingController @Inject() (
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
     implicit val timeout = Duration(3, "seconds")
-    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(u -> _)))).recover {
+    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
     }.map { res =>
       val urlMsgCount = db.readOnly { implicit session =>
@@ -882,9 +984,9 @@ class MessagingController @Inject() (
     }
   }
 
-  def connectedSockets: Int  = notificationRouter.connectedSockets
+  def connectedSockets: Int = notificationRouter.connectedSockets
 
-  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
+  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContextBuilder): Unit = {
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
@@ -892,9 +994,20 @@ class MessagingController @Inject() (
       db.readWrite(attempts=2) { implicit session =>
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
+
+      val clearedAt = currentDateTime
+      SafeFuture {
+        context += ("action", "cleared")
+        context += ("messageExternalId", message.externalId.id)
+        context += ("threadId", thread.id.get.id)
+        context += ("channel", "kifi")
+        context += ("url", thread.nUrl.getOrElse(""))
+        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
+      }
+
+      notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
+      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
     }
-    notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
-    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadThreadCount(userId)))
   }
 
   def setNotificationUnread(userId: Id[User], threadExtId: ExternalId[MessageThread]) : Unit = {
@@ -905,22 +1018,8 @@ class MessagingController @Inject() (
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
-    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadThreadCount(userId)))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
   }
-
-
-  def getSendableNotificationsForUrl(userId: Id[User], url: String) : Future[(String, Seq[JsObject])] = {
-    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
-      if (nUriOrPrenorm.isLeft){
-        val nUri = nUriOrPrenorm.left.get
-        val notices = db.readOnly { implicit session => userThreadRepo.getSendableNotificationsForUri(userId, nUri.id.get) }
-        (nUri.url, notices)
-      } else {
-        (nUriOrPrenorm.right.get, Seq[JsObject]())
-      }
-    }
-  }
-
 
 }
 

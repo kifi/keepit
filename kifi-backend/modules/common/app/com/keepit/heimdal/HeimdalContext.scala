@@ -5,8 +5,10 @@ import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.model.ExperimentType
+import com.keepit.model.{BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.net.UserAgent
+import com.keepit.common.time.DateTimeJsonFormat
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -29,7 +31,7 @@ object SimpleContextData {
       case ContextStringData(value) => JsString(value)
       case ContextDoubleData(value) => JsNumber(value)
       case ContextBoolean(value) => JsBoolean(value)
-      case ContextDate(value) => Json.toJson(value)
+      case ContextDate(value) => DateTimeJsonFormat.writes(value)
     }
   }
 
@@ -41,7 +43,7 @@ object SimpleContextData {
   implicit def fromContextStringData(simpleContextData: SimpleContextData): Option[String] = Some(simpleContextData) collect { case ContextStringData(value) => value }
   implicit def fromContextDoubleData(simpleContextData: SimpleContextData): Option[Double] = Some(simpleContextData) collect { case ContextDoubleData(value) => value }
   implicit def fromContextBoolean(simpleContextData: SimpleContextData): Option[Boolean] = Some(simpleContextData) collect { case ContextBoolean(value) => value }
-  implicit def fromContextDate(simpleContextData: SimpleContextData) = Some(simpleContextData) collect { case ContextDate(value) => value }
+  implicit def fromContextDate(simpleContextData: SimpleContextData): Option[DateTime] = Some(simpleContextData) collect { case ContextDate(value) => value }
 }
 
 object ContextData {
@@ -84,16 +86,18 @@ object HeimdalContext {
 
     def writes(context: HeimdalContext) : JsValue = Json.toJson(context.data)
   }
+
+  val empty = HeimdalContext(Map.empty)
 }
 
-class EventContextBuilder {
+class HeimdalContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
   def +=[T ](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = value
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build : HeimdalContext = HeimdalContext(data.toMap)
 
-  def addService(serviceDiscovery: ServiceDiscovery): Unit = {
+  def addServiceInfo(serviceDiscovery: ServiceDiscovery): Unit = {
     this += ("serviceVersion", serviceDiscovery.myVersion.value)
     serviceDiscovery.thisInstance.map { instance =>
       this += ("serviceInstance", instance.instanceInfo.instanceId.id)
@@ -101,9 +105,9 @@ class EventContextBuilder {
     }
   }
 
-  def addRequest(request: RequestHeader, remoteAddress: Option[String]): Unit = {
-    this += ("remoteAddress", remoteAddress orElse request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
+  def addRequestInfo(request: RequestHeader): Unit = {
     this += ("doNotTrack", request.headers.get("do-not-track").exists(_ == "1"))
+    addRemoteAddress(request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
 
     request match {
@@ -114,6 +118,8 @@ class EventContextBuilder {
     }
   }
 
+  def addRemoteAddress(remoteAddress: String) = this += ("remoteAddress", remoteAddress)
+
   def addExperiments(experiments: Set[ExperimentType]): Unit = {
     this += ("experiments", experiments.map(_.value).toSeq)
     this += ("userStatus", ExperimentType.getUserStatus(experiments))
@@ -121,20 +127,39 @@ class EventContextBuilder {
 
   def addUserAgent(userAgent: String): Unit = {
     this += ("userAgent", userAgent)
+    userAgent match {
+      case UserAgent.iPhonePattern(appVersion, buildSuffix, device, os) =>
+        this += ("appVersion", appVersion)
+        this += ("appBuild", appVersion + buildSuffix)
+        this += ("device", device)
+        this += ("os", os)
+      case _ =>
+        val agent = UserAgent.parser.parse(userAgent)
+        this += ("device", agent.getDeviceCategory.getName)
+        this += ("os", agent.getOperatingSystem.getName)
+        this += ("browser", agent.getName + " " + agent.getVersionNumber.toVersionString)
+        this += ("browserType", agent.getType.getName)
+    }
   }
 }
 
 @Singleton
-class EventContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
-  def apply(): EventContextBuilder = {
-    val contextBuilder = new EventContextBuilder()
-    contextBuilder.addService(serviceDiscovery)
+class HeimdalContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
+  def apply(): HeimdalContextBuilder = {
+    val contextBuilder = new HeimdalContextBuilder()
+    contextBuilder.addServiceInfo(serviceDiscovery)
     contextBuilder
   }
 
-  def apply(request: RequestHeader, remoteAddress: Option[String] = None): EventContextBuilder = {
+  def withRequestInfo(request: RequestHeader): HeimdalContextBuilder = {
     val contextBuilder = apply()
-    contextBuilder.addRequest(request, remoteAddress)
+    contextBuilder.addRequestInfo(request)
+    contextBuilder
+  }
+
+  def withRequestInfoAndSource(request: RequestHeader, source: BookmarkSource) = {
+    val contextBuilder = withRequestInfo(request)
+    contextBuilder += ("source", source.value)
     contextBuilder
   }
 }

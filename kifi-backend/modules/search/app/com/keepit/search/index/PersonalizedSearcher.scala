@@ -11,6 +11,9 @@ import scala.concurrent.duration._
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
+import scala.concurrent.Await
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 object PersonalizedSearcher {
   private val scale = 100
@@ -22,7 +25,9 @@ object PersonalizedSearcher {
             svWeightMyBookMarks: Int,
             svWeightClickHistory: Int,
             shoeboxServiceClient: ShoeboxServiceClient,
-            monitoredAwait: MonitoredAwait) = {
+            monitoredAwait: MonitoredAwait,
+            nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
+            useNonPersonalizedContextVector: Boolean = false) = {
 
     new PersonalizedSearcher(
       indexReader,
@@ -30,7 +35,9 @@ object PersonalizedSearcher {
       collectionSearcher,
       monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI]),
       svWeightMyBookMarks * scale,
-      svWeightClickHistory * scale)
+      svWeightClickHistory * scale,
+      nonPersonalizedContextVectorFuture,
+      useNonPersonalizedContextVector)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {
@@ -44,12 +51,20 @@ class PersonalizedSearcher(
   val collectionSearcher: CollectionSearcherWithUser,
   clickFilterFunc: => MultiHashFilter[ClickedURI],
   scaledWeightMyBookMarks: Int,
-  scaledWeightClickHistory: Int
+  scaledWeightClickHistory: Int,
+  nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
+  useNonPersonalizedContextVector: Boolean = false
 )
-extends Searcher(indexReader) with Logging {
+extends Searcher(indexReader) with SearchSemanticContext with Logging {
   import PersonalizedSearcher._
 
   lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
+
+  override def getContextVector: SemanticVector = {
+    if (useNonPersonalizedContextVector){
+      Await.result(nonPersonalizedContextVectorFuture.get, 1 second)
+    } else super.getContextVector
+  }
 
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders

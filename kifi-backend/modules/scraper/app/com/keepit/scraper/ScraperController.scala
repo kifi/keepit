@@ -6,22 +6,19 @@ import com.keepit.model._
 import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import com.keepit.scraper.extractor.ExtractorFactory
+import com.keepit.scraper.extractor.ExtractorProviderTypes
 import com.keepit.common.logging.Logging
-import com.keepit.search.ArticleStore
 import com.keepit.model.ScrapeInfo
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.store.S3ScreenshotStore
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
-  scrapeProcessor: ScrapeProcessorPlugin
+  scrapeProcessor: ScrapeProcessor
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
 
   def getBasicArticle(url:String) = Action { request =>
-    val resF = scrapeProcessor.fetchBasicArticle(url, None)
+    val resF = scrapeProcessor.fetchBasicArticle(url, None, None)
     Async {
       resF.map { res =>
         val json = Json.toJson(res)
@@ -36,7 +33,23 @@ class ScraperController @Inject() (
     val json = request.body
     val url = (json \ "url").as[String]
     val proxyOpt = (json \ "proxy").asOpt[HttpProxy]
-    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt)
+    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt, None)
+    Async {
+      resF.map { res =>
+        val json = Json.toJson(res)
+        log.info(s"[getBasicArticleP($url)] result: ${json}")
+        Ok(json)
+      }
+    }
+  }
+
+  def getBasicArticleWithExtractor() = Action(parse.json) { request =>
+    log.info(s"getBasicArticleP body=${request.body}")
+    val json = request.body
+    val url = (json \ "url").as[String]
+    val proxyOpt = (json \ "proxy").asOpt[HttpProxy]
+    val extractorProviderTypeOpt = (json \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
+    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
     Async {
       resF.map { res =>
         val json = Json.toJson(res)

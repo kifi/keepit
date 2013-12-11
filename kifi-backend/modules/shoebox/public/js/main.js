@@ -38,7 +38,6 @@ $.extend($.timeago.settings.strings, {
 	$.fn.layout = function () {
 		return this.each(forceLayout);
 	};
-
 	function forceLayout() {
 		this.clientHeight;
 	}
@@ -425,475 +424,101 @@ $(function () {
 		}
 	});
 	var profileTmpl = Tempo.prepare('profile-template');
-
-	function editProfileInput($target, e) {
-		if (e) {
-			e.preventDefault();
-		}
-
-		var $box = $target.closest('.profile-input-box'),
-			$input = $box.find('.profile-input-input');
-
-		$box.closest('.profile-container').find('.profile-input-box.edit').each(function () {
-			cancelProfileInput($(this));
-		});
-
-		$box.addClass('edit');
-
-		$input
-			.each(function () {
-				var $this = $(this);
-				$this.data('value', $this.val());
-			})
-			.prop('disabled', false)
-			.first().focus();
-	}
-
-	function saveProfileInput($target, e) {
-		if (e) {
-			e.preventDefault();
-		}
-
-		var $box = $target.closest('.profile-input-box'),
-			$input = $box.find('.profile-input-input'),
-			valid = true;
-
-		$input.each(function () {
-			var $this = $(this),
-				val = trimInputValue($this.val());
-			if ($input.prop('disabled')) {
-				return;
-			}
-			if (!val && $this.data('required')) {
-				showError($this, 'This field is required');
-				valid = false;
-			}
-			else if ($this.attr('name') === 'email' && !validateEmailInput($this)) {
-				valid = false;
-			}
-			else {
-				showError($this, false);
-			}
-		});
-
-		if (!valid) {
-			return false;
-			//return cancelProfileInput($target, e);
-		}
-
-		$input
-			.each(function () {
-				var $this = $(this),
-					val = trimInputValue($this.val());
-				$this
-					.val(val)
-					.data('value', val);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
-
-		if ($input.attr('name') === 'email') {
-			saveNewPrimaryEmail($input.val());
-		}
-		else {
-			saveProfileInfo();
-		}
-	}
-
-	function cancelProfileInput($target, e) {
-		if (e) {
-			e.preventDefault();
-		}
-
-		var $box = $target.closest('.profile-input-box'),
-			$input = $box.find('.profile-input-input');
-
-		$input
-			.each(function () {
-				var $this = $(this);
-				$this.val(trimInputValue($this.data('value')));
-				showError($this, false);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
-	}
-
-	function trimInputValue(val) {
-		return val ? $.trim(val).replace(/\s+/g, ' ') : '';
-	}
-
-	var PRIMARY_INDEX = 0,
-		ADDRESS = 0,
-		PRIMARY = 1,
-		VERIFIED = 2,
-		PENDING_PRIMARY = 3;
-
-	function getPrimaryEmail(emails) {
-		return (emails || me.emails)[PRIMARY_INDEX] || null;
-	}
-
-	function getPendingPrimaryEmail(emails) {
-		return findEmail(emails || me.emails, function (info) {
-			return info[PENDING_PRIMARY];
-		})[0] || null;
-	}
-
-	function getPrimaryEmailAddress(emails) {
-		var addr = getPrimaryEmail(emails);
-		return addr && addr[ADDRESS] || null;
-	}
-
-	function getProfileCopy() {
-		var props = {};
-		for (var i in me) {
-			if (me.hasOwnProperty(i)) {
-				props[i] = me[i];
-			}
-		}
-		props.emails = props.emails && props.emails.slice();
-		return props;
-	}
-
-	function findEmail(emails, callback, that) {
-		var list = [];
-		emails = emails || me.emails;
-		for (var i = 0, l = emails.length; i < l; i++) {
-			if (callback.call(that, emails[i], i, emails)) {
-				list.push(emails[i]);
-			}
-		}
-		return list;
-	}
-
-	function removeEmailInfo(emails, addr) {
-		emails = emails || me.emails;
-		for (var i = emails.length - 1; i >= 0; i--) {
-			if (emails[i][ADDRESS] === addr) {
-				emails.splice(i, 1);
-			}
-		}
-	}
-
-	function unsetPrimary(emails) {
-		var primary = getPrimaryEmail(emails);
-		if (primary) {
-			primary[PRIMARY] = false;
-		}
-	}
-
-	function saveNewPrimaryEmail(email) {
-		if (getPrimaryEmailAddress() === email) {
-			// already primary
-			return false;
-		}
-
-		var props = getProfileCopy();
-		var emails = props.emails;
-		removeEmailInfo(emails, email);
-		unsetPrimary(emails);
-		emails.unshift([email, true]);
-
-		return $.postJson(xhrBase + '/user/me', props).success(updateMe);
-	}
-
-	function saveProfileInfo() {
-		var props = {},
-			$container = $('.profile-container');
-
-		$container.find('.profile-input-input').each(function () {
-			var $this = $(this);
-			props[$this.attr('name')] = trimInputValue($this.val());
-		});
-
-		delete props.email;
-		//props.emails = me.emails.slice();
-
-		$.postJson(xhrBase + '/user/me', props)
-		.success(updateMe)
-		.error(function () {
-			showMessage('Uh oh! A bad thing happened!');
-		});
-	}
-
-	var $disconnectDialog = $('.disconnect-dialog')
-		.detach()
-		.show()
-		.on('click', '.dialog-cancel', function (e) {
-			e.preventDefault();
-			$disconnectDialog.dialog('hide');
-		});
-
-	var disconnectDialogTmpl = Tempo.prepare($disconnectDialog);
-
-	function showDisconnectDialog(network) {
-		disconnectDialogTmpl.render({
-			url: wwwDomain + '/disconnect/' + network,
-			network: ucfirst(network)
-		});
-		$disconnectDialog.dialog('show');
-	}
-
-	function ucfirst(str) {
-		return str ? str.charAt(0).toUpperCase() + str.substring(1) : '';
-	}
-
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
-			updateMe(me);
-
-			setTimeout(function () {
-				$('.profile-first-name')
-					.outerWidth($('.profile-placeholder-first-name').outerWidth());
-				$('.profile-last-name')
-					.outerWidth($('.profile-placeholder-last-name').outerWidth());
-			});
-
 			$('body').attr('data-view', 'profile');
-
 			$('.left-col .active').removeClass('active');
-
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
 			});
-
-			$('.profile-input-input').keyup(function (e) {
-				switch (e.which) {
-				case 13: // enter
-					saveProfileInput($(this), e);
-					break;
-				case 27: // esc
-					cancelProfileInput($(this), e);
-					break;
+			$('.profile .edit').click(function () {
+				var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
+					var $this = $(this);
+					var value = $this.text();
+					var maxlen = $this.data('maxlength');
+					$('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+						if (maxlen) {
+							$(this).closest('.editable').attr('data-chars-left', maxlen - $(this).val().length);
+						}
+						if (e.keyCode === 13) {
+							$(this).closest('.edit-container').find('.save').click();
+						} else if (e.which === 27) {
+							$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
+								var $this = $(this);
+								var prop = $this.data('prop');
+								if (prop === 'email') {
+									$this.text(me.emails[0]);
+								} else {
+									$this.text(me[prop]);
+								}
+							});
+						}
+					}).appendTo($this.empty()).keyup();
+				}).find('input');
+				$inputs[0].focus();
+				$inputs.on('keypress paste change', function () {
+					var minChars = 3, scale = 1.25;
+					var $this = $(this);
+					var size = Math.max(Math.ceil($this.val().length * scale), minChars);
+					$this.css('width', 'auto').attr('size', size);
+				}).keypress();
+			});
+			$('.profile .save').click(function () {
+				var props = {};
+				var $editContainer = $(this).closest('.edit-container');
+				$editContainer.find('.editable').each(function () {
+					var $this = $(this);
+					var value = $this.find('input').val();
+					$this.text(value);
+					props[$this.data('prop')] = value;
+				});
+				if (props.email) {
+					props.emails = [props.email];
+					delete props.email;
 				}
-			});
-
-			$('.profile-input-edit').click(function (e) {
-				editProfileInput($(this), e);
-			});
-
-			$('.profile-input-box-name .profile-input-edit').click(function (e) {
-				setTimeout(function () {
-					$('.profile-first-name,.profile-last-name').css('width', '48%');
+				var $save = $editContainer.find('.save');
+				var saveText = $save.text();
+				$save.text('Saving...');
+				$.postJson(xhrBase + '/user/me', props, function (data) {
+					$editContainer.removeClass('editing');
+					$save.text(saveText);
+					updateMe(data);
+				}).error(function () {
+					showMessage('Uh oh! A bad thing happened!');
+					$save.text(saveText);
 				});
 			});
-
-			$('.profile-input-save').click(function (e) {
-				saveProfileInput($(this), e);
-			});
-
-			$('.profile-disconnect').click(function (e) {
-				e.preventDefault();
-				showDisconnectDialog($(this).closest('li').data('network'));
-			});
-
-			$('.profile .profile-networks li').each(function () {
+			$('.profile .networks li').each(function () {
 				var $this = $(this);
-				var network = $this.data('network');
-
-				if (!network) { return; }
-
+				var name = $this.data('network');
+				if (!name) { return; }
 				var $a = $this.find('a.profile-nw');
 				var networkInfo = myNetworks.filter(function (nw) {
-					return nw.network === network;
+					return nw.network === name;
 				})[0];
-
+				var postLink = function (e) {
+					e.preventDefault();
+					submitForm(wwwDomain + $(this).data('action'), 'post');
+				};
 				if (networkInfo) {
-					$this.removeClass('not-connected');
-
-					$a
-						.attr('href', networkInfo.profileUrl)
-						.attr('target', '_blank')
-						.attr('title', 'View profile');
-				}
-				else {
-					$this.addClass('not-connected');
-
-					$a
-						.attr('href', wwwDomain + '/link/' + network)
-						.attr('title', 'Click to connect');
+					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					if (myNetworks.length > 1) {
+						$('<a>').addClass('disconnect').text('Unlink')
+							.attr('href', 'javascript:')
+							.data('action', '/disconnect/' + name)
+							.click(postLink)
+							.appendTo($this);
+					}
+				} else {
+					$a.addClass('not-connected').attr('title', 'Click to connect')
+						.attr('href', wwwDomain + '/link/' + name);
+					$('<a class=connect title="Click to connect">Connect</a>')
+						.attr('href', wwwDomain + '/link/' + name)
+						.appendTo($this);
 				}
 			});
 		});
-	}
-
-	// profile email accounts section
-	$(document).on('click', '.profile-email-addresses-title-wrapper', function (e) {
-		e.preventDefault();
-		var $list = $(this).closest('.profile-email-addresses');
-		$list.toggleClass('opened');
-		$list.find('.profile-email-address-manage')
-			.removeClass('add')
-			.find('input').val('');
-	});
-
-	// profile email account dropdown actions
-	var $openedArrow = null;
-
-	$(document).on('click', '.profile-email-pending-cancel', function (e) {
-		e.preventDefault();
-		cancelPendingPrimary($(this).closest('.profile-email-address-pending').find('.profile-email-address-pending-email').text());
-	});
-
-	$(document).on('click', '.profile-email-address-item-make-primary', function (e) {
-		e.preventDefault();
-		makePrimary($(this).closest('.profile-email-address-item').data('email'));
-	});
-
-	$(document).on('click', '.profile-email-address-item-delete', function (e) {
-		e.preventDefault();
-		deleteEmailAccount($(this).closest('.profile-email-address-item').data('email'));
-	});
-
-	$(document).on('click', '.profile-email-address-item-arrow', function (e) {
-		e.preventDefault();
-		var isOpen = $(this).hasClass('opened');
-		$('.profile-email-address-item-arrow').removeClass('opened');
-		if (!isOpen) {
-			$(this).addClass('opened');
-		}
-	});
-
-	$(document).on('click', function (e) {
-		if (!$(e.target).closest('.profile-email-address-item-arrow').length) {
-			$('.profile-email-address-item-arrow').removeClass('opened');
-		}
-	});
-
-	var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-	$(document).on('click', '.profile-email-address-add', function (e) {
-		e.preventDefault();
-		var $manage = $(this).closest('.profile-email-address-manage');
-		var $input = $manage.find('input');
-		$input.val('');
-		$manage.addClass('add');
-		$input.focus();
-		$input.keydown(function (e) {
-			switch (e.which) {
-			case 13: // enter
-				submitAddEmail.call(this, e);
-				break;
-			case 27: // esc
-				cancelAddEmail.call(this, e);
-				break;
-			}
-		});
-	});
-
-	function validateEmailInput($input) {
-		var input = $input.val();
-		if (emailAddrRe.test(input)) {
-			showError($input, false);
-			return true;
-		}
-		showError($input, 'Invalid email address', 'Please enter a valid email address');
-		return false;
-	}
-
-	function showError($input, header, body) {
-		var $parent = $input.parent(),
-			$next = $input.next(),
-			hasError = $next.hasClass('input-error');
-		if (header || body) {
-			$input.addClass('error');
-			if (hasError) {
-				$next.find('.error-header').text(header || '');
-				$next.find('.error-body').text(body || '');
-			}
-			else {
-				var $error = $('<div class="input-error"><div class="error-header">' + (header || '') + '</div><div class="error-body">' + (body || '') + '</div></div>').insertAfter($input);
-				$error.offset({
-					top: $input.offset().top + $input.outerHeight() + 5,
-					left: $input.offset().left
-				});
-			}
-		}
-		else {
-			$input.removeClass('error');
-			if (hasError) {
-				$next.remove();
-			}
-		}
-	}
-
-	function cancelAddEmail(e) {
-		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
-		$input.val('');
-		$input.off('keydown');
-		showError($input, false);
-		$manage.removeClass('add');
-	}
-
-	function submitAddEmail(e) {
-		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
-		if (validateEmailInput($input)) {
-			if (addEmailAccount($input.val())) {
-				$input.val('');
-				$input.off('keydown');
-				showError($input, false);
-				$manage.removeClass('add');
-			}
-		}
-	}
-
-	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
-
-	function addEmailAccount(email) {
-		if (email) {
-			var props = getProfileCopy();
-			var emails = props.emails;
-			emails.push([email, false]);
-
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
-		}
-		return null;
-	}
-
-	function makePrimary(email) {
-		if (email) {
-			var props = getProfileCopy();
-			var emails = props.emails;
-			unsetPrimary(emails);
-			findEmail(emails, function (info) {
-				if (info[ADDRESS] === email) {
-					info[PRIMARY] = true;
-				}
-			});
-
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
-		}
-		return null;
-	}
-
-	function cancelPendingPrimary(email) {
-		if (email) {
-			return deleteEmailAccount(email);
-		}
-		return null;
-	}
-
-	function deleteEmailAccount(email) {
-		if (email) {
-			var props = getProfileCopy();
-			var emails = props.emails;
-			removeEmailInfo(emails, email)
-
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
-		}
-		return null;
 	}
 
 	// Friends Tabs/Pages
@@ -1015,6 +640,7 @@ $(function () {
 				$this.attr('href', $this.data('href'));
 			}
 		});
+		updateGmailTab();
 
 		$nwFriends.find('ul').empty();
 	}
@@ -1758,8 +1384,8 @@ $(function () {
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {
 			window.open('about:blank', fullSocialId, 'height=640,width=1060,left=200,top=200', false);
-			$('<form method="POST" action="/invite" target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
-			.append('<input type="hidden" name="fullSocialId" value="' + fullSocialId + '">')
+			$('<form method=POST action=/invite target="' + fullSocialId + '" style="position:fixed;height:0;width:0;left:-99px">')
+			.append('<input type=hidden name=fullSocialId value="' + fullSocialId + '">')
 			.appendTo('body').submit().remove();
 		} else if (/^linkedin|email/.test(fullSocialId)) {
 			var name = $friend.find('.invite-name').text();
@@ -1777,7 +1403,7 @@ $(function () {
 	var $unfriendDialog = $('.unfriend-dialog')
 	.detach()
 	.show()
-	.on('click', '.dialog-cancel', function (e) {
+	.on('click', '.unfriend-cancel', function (e) {
 		e.preventDefault();
 		$unfriendDialog.dialog('hide');
 	});
@@ -3129,52 +2755,26 @@ $(function () {
 	}
 
 	var $sendFeedback = $('.send-feedback').click(sendFeedback).filter('.top-right-nav>*');
-	var emailTmpl = Handlebars.compile($('#email-address').html());
 
 	function updateMe(data) {
-		console.log('[updateMe]', data);
 		me = data;
-		mixpanel.identify(me.id);
-
+		mixpanel.alias(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
+		$friendsTabs.filter('[data-href="friends/invite"]').toggle(true);
+		updateGmailTab();
+		updateConnectTab();
+	}
 
-		var $firstNamePlace = $('.profile-placeholder-first-name').text(data.firstName);
-		var $lastNamePlace = $('.profile-placeholder-last-name').text(data.lastName);
+	function updateGmailTab() {
+		var $button = $('a[data-nw="email"]');
+		$button.attr('href', 'friends/invite/email');
+		$button.attr('data-href', 'friends/invite/email');
+	}
 
-		$('.profile-first-name')
-			.val(data.firstName)
-			.outerWidth($firstNamePlace.outerWidth());
-
-		$('.profile-last-name')
-			.val(data.lastName)
-			.outerWidth($lastNamePlace.outerWidth());
-
-		var primary = getPrimaryEmail();
-		var pendingPrimary = getPendingPrimaryEmail();
-
-		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!pendingPrimary && !primary[VERIFIED]);
-
-		$('.profile-email input').val(primary[ADDRESS] || '');
-
-		var $emails = $('.profile-email-address-list').empty();
-		(me.emails || []).forEach(function (info) {
-			$emails.append(emailTmpl({
-				email: info[ADDRESS],
-				primary: !!info[PRIMARY],
-				verified: !!info[VERIFIED],
-				pendingPrimary: !!info[PENDING_PRIMARY]
-			}));
-		});
-
-		var $pending = $('.profile-email-address-pending');
-		if (pendingPrimary) {
-			$('.profile-email-address-pending-email').text(pendingPrimary[ADDRESS]);
-		}
-		$pending.toggle(!!pendingPrimary);
-
+	function updateConnectTab() {
+		$('a[data-href="friends/find"]').toggle(true);
 	}
 
 	function updateFriendRequests(n) {
@@ -3199,6 +2799,11 @@ $(function () {
 			}
 		}).promise()
 	};
+	$.when(promise.me).done(function () {
+		$('#invite-friends-link').toggle(true);
+		updateGmailTab();
+		updateConnectTab();
+	});
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function (data) {
 		updateFriendRequests(data.requests);
@@ -3228,12 +2833,14 @@ $(function () {
 	// render initial view
 	$(window).trigger('statechange');
 
+	/*
 	// auto-update my keeps
 	setTimeout(function refresh() {
 		updateCollections();
 		addNewKeeps();
 		setTimeout(refresh, 25000 + 5000 * Math.random());
 	}, 30000);
+	*/
 
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {

@@ -12,7 +12,6 @@ trait ScraperServiceClientModule extends ScalaModule
 
 case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
   def configure() {
-//    bind[HttpClient].to[HttpClientImpl]
   }
 
   @Singleton

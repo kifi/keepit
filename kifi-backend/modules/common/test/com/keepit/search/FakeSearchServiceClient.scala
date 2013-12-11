@@ -47,7 +47,10 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] =
     Future.successful(SharingUserInfo(sharingUserIds = Set(Id[User](1)), keepersEdgeSetSize = 1))
 
-  override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = ???
+  var sharingUserInfoDataFix: Seq[SharingUserInfo] = Seq(SharingUserInfo(Set(Id[User](99)), 1))
+  def sharingUserInfoData(data: Seq[SharingUserInfo]): Unit = sharingUserInfoDataFix = data
+
+  override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = Future.successful(sharingUserInfoDataFix)
 
   override def articleIndexerSequenceNumber(): Future[Int] = ???
 
@@ -82,4 +85,12 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def resetUserConfig(id: Id[User]): Unit = {}
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
+
+  override def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
+
+  override def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
+
+  override def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = ???
+
+  override def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = ???
 }

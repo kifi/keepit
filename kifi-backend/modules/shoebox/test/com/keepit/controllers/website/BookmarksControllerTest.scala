@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
 
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.FakeScraperModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders._
@@ -14,6 +14,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
 import com.keepit.common.controller._
 import com.keepit.search._
+import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.{FakeHttpClient, HttpClient}
@@ -21,6 +22,8 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks}
 import com.keepit.test.ShoeboxApplication
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import play.api.libs.json.{JsObject, Json, JsArray, JsString}
 import play.api.mvc.Result
@@ -29,6 +32,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
+import org.joda.time.DateTime
 
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -44,7 +48,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScraperModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),
@@ -76,7 +80,165 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
   }
 
   "BookmarksController" should {
-    "allCollections" in  {
+    "allKeeps" in {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        val userRepo = inject[UserRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        val urlRepo = inject[URLRepo]
+        val bookmarkRepo = inject[BookmarkRepo]
+        val hover = BookmarkSource("HOVER_KEEP")
+        val initLoad = BookmarkSource("INIT_LOAD")
+        val db = inject[Database]
+
+        val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
+
+          uriRepo.count === 0
+          val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+
+          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+            uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
+
+          (user1, user2, bookmark1, bookmark2, bookmark3)
+        }
+
+        val keeps = db.readWrite {implicit s =>
+          bookmarkRepo.getByUser(user1.id.get, None, None, None, 100)
+        }
+        keeps.size === 2
+
+        val path = com.keepit.controllers.website.routes.BookmarksController.allKeeps(before = None, after = None, collection = None).toString
+        path === "/site/keeps/all"
+        inject[FakeSearchServiceClient] == inject[FakeSearchServiceClient]
+        val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
+        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+
+        val controller = inject[BookmarksController]
+        inject[FakeActionAuthenticator].setUser(user1)
+        controller.searchClient eq inject[FakeSearchServiceClient]
+
+        import play.api.Play.current
+        println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
+
+        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
+        Await.result(controller.searchClient.sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+          {"collection":null,
+           "before":null,
+           "after":null,
+           "keeps":[
+            {
+              "id":"${bookmark2.externalId.toString}",
+              "title":"A1",
+              "url":"http://www.amazon.com/",
+              "isPrivate":false,
+              "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
+              "others":1,
+              "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
+              "collections":[]},
+            {
+              "id":"${bookmark1.externalId.toString}",
+              "title":"G1",
+              "url":"http://www.google.com/",
+              "isPrivate":false,
+              "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
+              "others":-1,
+              "keepers":[],
+              "collections":[]}
+          ]}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "allKeeps with after" in {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        val userRepo = inject[UserRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        val urlRepo = inject[URLRepo]
+        val bookmarkRepo = inject[BookmarkRepo]
+        val hover = BookmarkSource("HOVER_KEEP")
+        val initLoad = BookmarkSource("INIT_LOAD")
+        val db = inject[Database]
+
+        val (user, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
+
+          uriRepo.count === 0
+          val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+
+          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+            uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
+
+          (user1, bookmark1, bookmark2, bookmark3)
+        }
+
+        val keeps = db.readWrite {implicit s =>
+          bookmarkRepo.getByUser(user.id.get, None, None, None, 100)
+        }
+        keeps.size === 2
+
+        val sharingUserInfo = Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0))
+        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+
+        val request = FakeRequest("GET", s"/site/keeps/all?after=${bookmark1.externalId.toString}")
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+          {
+            "collection":null,
+            "before":null,
+            "after":"${bookmark1.externalId.toString}",
+            "keeps":[
+              {
+                "id":"${bookmark2.externalId.toString}",
+                "title":"A1",
+                "url":"http://www.amazon.com/",
+                "isPrivate":false,
+                "createdAt":"2013-02-16T23:59:00.000Z",
+                "others":-1,
+                "keepers":[],
+                "collections":[]
+              }
+            ]
+          }
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "allCollections" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val (user, collections) = inject[Database].readWrite { implicit session =>
           val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
