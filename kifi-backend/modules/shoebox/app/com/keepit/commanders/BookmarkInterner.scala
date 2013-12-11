@@ -105,7 +105,7 @@ class BookmarkInterner @Inject() (
     val startTime = System.currentTimeMillis
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(false)
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
 
