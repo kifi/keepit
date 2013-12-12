@@ -183,7 +183,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         //Analytics
         SafeFuture {
           val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
-          heimdal.trackEvent(UserEvent(socketInfo.userId.id, context, UserEventTypes.WS_CONNECT, tStart))
+          heimdal.trackEvent(UserEvent(socketInfo.userId.id, context, UserEventTypes.CONNECTED, tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
@@ -192,11 +192,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           channel.push(Json.arr("goodbye", reason))
           channel.eofAndEnd()
           onDisconnect(socketInfo)
-          //Analytics
-          SafeFuture {
-            val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
-            heimdal.trackEvent(UserEvent(streamSession.userId.id, context, UserEventTypes.WS_DISCONNECT, tStart))
-          }
         }
 
         val iteratee = asyncIteratee(streamSession, versionOpt) { jsArr =>

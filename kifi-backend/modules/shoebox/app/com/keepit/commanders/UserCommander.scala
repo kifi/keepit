@@ -1,30 +1,48 @@
 package com.keepit.commanders
 
-import com.keepit.classify.{Domain, DomainRepo, DomainStates}
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
-import com.keepit.common.time._
 import com.keepit.abook.ABookServiceClient
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsObject, Json, JsValue}
-import com.google.inject.{Singleton, Inject, ImplementedBy}
-import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
+
+import play.api.libs.json._
+import com.google.inject.Inject
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
-import play.api.libs.concurrent.Akka
 import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
+import scala.util.Try
+import scala.Some
+import com.keepit.commanders.BasicUserInfo
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 
+
+case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
+object EmailInfo {
+  implicit val format = new Format[EmailInfo] {
+    def reads(json: JsValue): JsResult[EmailInfo] = {
+      Try(new EmailInfo(
+        (json \ "address").as[String],
+        (json \ "isPrimary").asOpt[Boolean].getOrElse(false),
+        (json \ "isVerified").asOpt[Boolean].getOrElse(false),
+        (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false)
+      )).toOption match {
+        case Some(ei) => JsSuccess(ei)
+        case None => JsError()
+      }
+    }
+
+    def writes(ei: EmailInfo): JsValue = {
+      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary)
+    }
+  }
+}
 case class UpdatableUserInfo(
-    description: Option[String], emails: Option[Seq[String]],
+    description: Option[String], emails: Option[Seq[EmailInfo]],
     firstName: Option[String] = None, lastName: Option[String] = None)
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
@@ -86,21 +104,32 @@ class UserCommander @Inject() (
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
-    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser from _)
+    socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
     abook.uploadContacts(userId, origin, payload)
   }
 
-  def getUserInfo(userId: Id[User]): Future[BasicUserInfo] = {
-    for {
-      basicUser <- db.readOnlyAsync { implicit s => basicUserRepo.load(userId) }
-      description <- db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "user_description").getOrElse("") }
-      emails <- db.readOnlyAsync { implicit s => emailRepo.getAllByUser(userId).map(_.address) }
-    } yield {
-      BasicUserInfo(basicUser, UpdatableUserInfo(Some(description), Some(emails)))
+  def getUserInfo(user: User): BasicUserInfo = {
+    val (basicUser, description, emails, pendingPrimary) = db.readOnly { implicit session =>
+      val basicUser = basicUserRepo.load(user.id.get)
+      val description =  userValueRepo.getValue(user.id.get, "user_description")
+      val emails = emailRepo.getAllByUser(user.id.get)
+      val pendingPrimary = userValueRepo.getValue(user.id.get, "pending_primary_email")
+      (basicUser, description, emails, pendingPrimary)
     }
+
+    val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
+    val emailInfos = emails.sortBy(e => (e.id.get.id != primary, !e.verified, e.id.get.id)).map { email =>
+      EmailInfo(
+        address = email.address,
+        isVerified = email.verified,
+        isPrimary = user.primaryEmailId.isDefined && user.primaryEmailId.get.id == email.id.get.id,
+        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == email.address
+      )
+    }
+    BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)))
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {

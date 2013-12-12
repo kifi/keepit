@@ -26,6 +26,7 @@ object PostOffice {
       val MESSAGE = ElectronicMailCategory("MESSAGE")
       val EMAIL_KEEP = ElectronicMailCategory("EMAIL_KEEP")
       val INVITATION = ElectronicMailCategory("INVITATION")
+      val all = Set(MESSAGE, EMAIL_KEEP, INVITATION)
     }
 
     object System {
@@ -33,6 +34,7 @@ object PostOffice {
       val ASANA_HEALTHCHECK = ElectronicMailCategory("ASANA_HEALTHCHECK")
       val ADMIN = ElectronicMailCategory("ADMIN")
       val PLAY = ElectronicMailCategory("PLAY")
+      val all = Set(HEALTHCHECK, ASANA_HEALTHCHECK, ADMIN, PLAY)
     }
   }
 

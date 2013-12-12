@@ -22,8 +22,20 @@ import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration._
 
 import MessagingTypeMappers._
+import com.keepit.common.mail.{PostOffice, ElectronicMailCategory}
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
+case class NotificationCategory(category: String)
+object NotificationCategory {
+  implicit def fromElectronicMailCategory(emailCategory: ElectronicMailCategory): NotificationCategory = NotificationCategory(emailCategory.category)
+  object Global {
+    val ANNOUNCEMENT = NotificationCategory("ANNOUNCEMENT")
+  }
+
+  object Personal {
+    val MESSAGE = fromElectronicMailCategory(PostOffice.Categories.User.MESSAGE)
+  }
+}
 
 case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
@@ -100,6 +112,8 @@ trait UserThreadRepo extends Repo[UserThread] {
   def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
 
   def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+
+  def getUnreadUnmutedThreadCountForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Int
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
@@ -438,6 +452,10 @@ class UserThreadRepoImpl @Inject() (
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
     updateSendableNotifications(rawNotifications)
+  }
+
+  def getUnreadUnmutedThreadCountForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
+    Query((for (row <- table if row.user === userId && row.uriId === uriId && row.unread && !row.muted) yield row).length).first
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {
