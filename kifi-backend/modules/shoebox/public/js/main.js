@@ -953,7 +953,7 @@ $(function () {
 	}
 
 	var emailChangeTmpl = Handlebars.compile($('#primary-email-change-dialog').html());
-	function showEmailChangeDialog(email, success, cancel) {
+	function showEmailChangeDialog(email, submit, cancel) {
 		var $dialog = $(emailChangeTmpl({
 				email: email
 			}))
@@ -970,8 +970,8 @@ $(function () {
 				e.preventDefault();
 				$dialog.remove();
 
-				if (success) {
-					success(true);
+				if (submit) {
+					submit(true);
 				}
 			})
 			.dialog('show');
