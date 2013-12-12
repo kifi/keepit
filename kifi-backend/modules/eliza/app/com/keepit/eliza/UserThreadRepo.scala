@@ -12,8 +12,15 @@ import com.keepit.model.{User, NormalizedURI}
 import play.api.libs.json.{Json, JsValue, JsNull, JsObject}
 import scala.slick.lifted.Query
 import MessagingTypeMappers._
+import com.keepit.common.mail.{PostOffice, ElectronicMailCategory}
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
+case class NotificationCategory(category: String)
+object NotificationCategory {
+  implicit def fromElectronicMailCategory(emailCategory: ElectronicMailCategory): NotificationCategory = NotificationCategory(emailCategory.category)
+  val GLOBAL = NotificationCategory("GLOBAL") // should be more specific in the future
+  val MESSAGE = fromElectronicMailCategory(PostOffice.Categories.User.MESSAGE)
+}
 
 case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
