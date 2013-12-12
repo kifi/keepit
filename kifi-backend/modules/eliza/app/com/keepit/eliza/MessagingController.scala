@@ -892,7 +892,14 @@ class MessagingController @Inject() (
         val nUri = nUriOrPrenorm.left.get
         db.readOnly { implicit session =>
           val notices = userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
-          val numUnreadUnmuted = userThreadRepo.getUnreadUnmutedThreadCountForUri(userId, nUri.id.get)
+          val numUnreadUnmuted = if (notices.length < howMany) {
+            notices.count { n =>
+              (n \ "unread").asOpt[Boolean].getOrElse(false) &&
+              !(n \ "muted").asOpt[Boolean].getOrElse(false)
+            }
+          } else {
+            userThreadRepo.getUnreadUnmutedThreadCountForUri(userId, nUri.id.get)
+          }
           (nUri.url, notices, numUnreadUnmuted)
         }
       } else {
