@@ -434,7 +434,7 @@ class UserController @Inject() (
     }
   }
 
-  def uploadBinaryUserPicture() = AuthenticatedJsonAction(allowPending = false, bodyParser = parse.maxLength(1024 * 1024 * 10, parse.temporaryFile)) { implicit request =>
+  def uploadBinaryUserPicture() = AuthenticatedAction(parser = parse.maxLength(1024 * 1024 * 10, parse.temporaryFile)) { implicit request =>
     request.body match {
       case Left(err) => BadRequest("0")
       case Right(tempFile) =>
