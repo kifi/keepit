@@ -706,8 +706,13 @@ input.page-coll-input {width: 20ex}
 span.long-text, a.long-text {display: inline-block}
 .dialog {z-index: 100; opacity: 0; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background: rgba(227, 224, 226, 0.8); -webkit-transition: opacity .3s linear; transition: opacity .3s linear}
 .dialog.showing {opacity: 1}
+.dialog-title {color: #515051;
+background: url(http://i.imgur.com/BMEflze.png) 30px 50% / 50px no-repeat;
+font-size: 0;
+background-color: #eff2f7;
+line-height: 60px;
+margin-bottom: 30px;}
 .dialog-content {position: fixed; left: 50%; top: 50%; background: #faf8f7; border: 1px solid #f2eeed; border-radius: 5px; box-shadow: 6px 12px 1px #d1d7df; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
-.dialog>.dialog-content>h1 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 .dialog>.dialog-content>h2 {margin: 0 0 16px; font-size: 22px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #0089d5}
 
 /* welcome dialog */
@@ -718,12 +723,17 @@ span.long-text, a.long-text {display: inline-block}
 .welcome-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}
 
 /* bookmark import dialog */
-.import-dialog>.dialog-content {height: 525px; margin-top: -262px; width: 675px; margin-left: -337px; padding: 40px 55px; color: #66829b; line-height: 1.5; }
-.import-dialog>.dialog-content>ul {list-style: disc; margin: 12px 0 0 30px; color: #6fa6ef}
-.import-dialog>.dialog-content>ul>li>span {color: #333}
+.import-dialog>.dialog-content {height: 525px; margin-top: -262px; width: 675px; margin-left: -337px}
+.import-dialog>.dialog-content>.dialog-body {width: 475px;
+margin: 0 auto;}
+.import-dialog>.dialog-content>.dialog-body>h1 {font-size: 28px; font-weight: 300; -webkit-font-smoothing: antialiased; color: #333; text-align: center}
+.import-dialog>.dialog-content>.dialog-body>ul {list-style: disc; margin: 12px 0 0 30px; color: #6fa6ef; line-height: 33px}
+.import-dialog>.dialog-content>.dialog-body>ul>li {font-size: 20px}
+.import-dialog>.dialog-content>.dialog-body>ul>li>span {color: #333; font-size: 18px}
 .import-dialog>.dialog-content>button {width: 165px; height: 58px; line-height: 58px; padding: 0; background-color: #6fa5ef; color: #fff; border: none; border-radius: 6px; margin: 24px 0 0 70px; font-size: 18px; font-weight: 300; -webkit-font-smoothing: antialiased; cursor: pointer; -webkit-transition: background-color .1s; transition: background-color .1s}
 .import-dialog>.dialog-content>button:hover {background-color: #7faeef}
 .import-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}
+.import-dialog .import-star-to-kifi {width:253px; height: 74px; margin: 0 auto;}
 
 
 /* tips */
