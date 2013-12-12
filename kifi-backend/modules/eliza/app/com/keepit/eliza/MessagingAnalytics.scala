@@ -121,7 +121,7 @@ class MessagingAnalytics @Inject() (
   }
 
   def changedMute(userId: Id[User], threadExternalId: ExternalId[MessageThread], mute: Boolean, existingContext: HeimdalContext): Unit = {
-    val addedAt = currentDateTime
+    val changedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++ existingContext.data
@@ -130,7 +130,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("threadExternalId", threadExternalId.id)
       val thread = db.readOnly { implicit session => threadRepo.get(threadExternalId) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, addedAt))
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }
   }
 
