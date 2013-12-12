@@ -18,8 +18,7 @@ object UserEventTypes {
   val INVITE_SENT = EventType("invite_sent")
 
   // Activity
-  val WS_CONNECT = EventType("ws_connect")
-  val WS_DISCONNECT = EventType("ws_disconnect")
+  val CONNECTED = EventType("connected")
 
   // Keeping
   val KEPT = EventType("kept")
