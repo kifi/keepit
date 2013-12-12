@@ -25,7 +25,7 @@ object SearchEngine {
 case class BasicSearchContext(
   origin: String,
   sessionId: String,
-  refinements: Option[Int],
+  refinement: Option[Int],
   uuid: ExternalId[ArticleSearchResult],
   searchExperiment: Option[Id[SearchConfigExperiment]],
   query: String,
@@ -138,7 +138,7 @@ class SearchAnalytics @Inject() (
     // Search Context
     contextBuilder += ("origin", searchContext.origin)
     contextBuilder += ("sessionId", searchContext.sessionId)
-    searchContext.refinements.foreach { refinements => contextBuilder += ("refinements", refinements) }
+    searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
 
     // Search Parameters

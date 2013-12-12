@@ -301,7 +301,9 @@ class MessagingController @Inject() (
   }
 
   def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
-    urbanAirship.notifyUser(userId, PushNotification(extId, pendingNotificationCount, msg))
+    val notification = PushNotification(extId, pendingNotificationCount, msg)
+    urbanAirship.notifyUser(userId, notification)
+    messagingAnalytics.sentPushNotificationForThread(userId, notification)
   }
 
   private def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]) : Unit = {
@@ -938,20 +940,12 @@ class MessagingController @Inject() (
     }
   }
 
-  def muteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {
-    setUserThreadMuteState(userId, threadId, true) tap { stateChanged =>
-      if(stateChanged) { notifyUserAboutMuteChange(userId, threadId, true) }
-    }
-  }
+  def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, true)
 
-  def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {
-    setUserThreadMuteState(userId, threadId, false) tap { stateChanged =>
-      if(stateChanged) { notifyUserAboutMuteChange(userId, threadId, false) }
-    }
-  }
+  def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, false)
 
-  private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean) = {
-    db.readWrite { implicit session =>
+  private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
+    val stateChanged = db.readWrite { implicit session =>
       val thread = threadRepo.get(threadId)
       thread.id.exists { threadId =>
         val userThread = userThreadRepo.getUserThread(userId, threadId)
@@ -963,6 +957,11 @@ class MessagingController @Inject() (
         }
       }
     }
+    if (stateChanged) {
+      notifyUserAboutMuteChange(userId, threadId, mute)
+      messagingAnalytics.changedMute(userId, threadId, mute, context)
+    }
+    stateChanged
   }
 
   private def notifyUserAboutMuteChange(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean) = {

@@ -31,6 +31,8 @@ import com.keepit.common.mail.TestMailModule
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
+  args(skipAll = true)
+  
   private val creds = SocialUser(IdentityId("asdf", "facebook"),
     "Eishay", "Smith", "Eishay Smith", None, None, AuthenticationMethod.OAuth2, None, None)
 
