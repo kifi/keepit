@@ -845,7 +845,7 @@ function insertNewNotification(n) {
     if (n.unread) {
       keys.unread = null;
     }
-    if (n.firstAuthor && n.participants[n.firstAuthor].id === session.user.id) {
+    if (isSent(n)) {
       keys.sent = null;
     }
     for (var kind in keys) {
@@ -907,17 +907,27 @@ function markRead(category, threadId, messageId, timeStr) {
   if (th && th.unread && (th.id === messageId || new Date(th.time) <= time)) {
     th.unread = false;
     th.unreadAuthors = th.unreadMessages = 0;
-    if (!th.muted && threadLists.all) {
-      threadLists.all.decNumUnreadUnmuted();
+    threadLists.unread.remove(th.thread);
+    if (!th.muted) {
+      var tlKeys = ['all', 'unread', th.url];
+      if (isSent(th)) {
+        tlKeys.push('sent');
+      }
+      tlKeys.forEach(function (key) {
+        var tl = threadLists[key];
+        if (tl) {
+          tl.decNumUnreadUnmuted();
+        }
+      });
     }
 
-    forEachTabAtLocator('/messages', function(tab) {
-      api.tabs.emit(tab, 'notifications_visited', {
+    forEachTabAtThreadList(function(tab, tl) {
+      api.tabs.emit(tab, 'thread_read', {
         category: category,
         time: timeStr,
         threadId: threadId,
         id: messageId,
-        anyUnread: threadLists.all.anyUnread()});
+        anyUnread: tl.anyUnread()});
     });
 
     tellVisibleTabsNoticeCountIfChanged();
@@ -938,11 +948,11 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   });
   // TODO: update numUnreadUnmuted for each ThreadList in threadLists?
 
-  forEachTabAtLocator('/messages', function(tab) {  // TODO: or /messages:*
-    api.tabs.emit(tab, 'all_notifications_visited', {
+  forEachTabAtThreadList(function(tab, tl) {
+    api.tabs.emit(tab, 'all_threads_read', {
       id: id,
       time: timeStr,
-      anyUnread: threadLists.all.anyUnread()});
+      anyUnread: tl.anyUnread()});
   });
 
   tellVisibleTabsNoticeCountIfChanged();
@@ -992,6 +1002,19 @@ function forEachTabAtLocator(loc, f) {
   var tabs = tabsByLocator[loc];
   if (tabs) {
     tabs.forEach(f);
+  }
+}
+
+var threadListLocatorRe = /^\/messages(:[a-z]+)?$/;
+function forEachTabAtThreadList(f) {
+  for (var loc in tabsByLocator) {
+    var m = loc.match(threadListLocatorRe);
+    if (m) {
+      var kind = (m[1] || ':page').substr(1);
+      tabsByLocator[loc].forEach(function (tab) {
+        f(tab, threadLists[kind === 'page' ? tab.nUri : kind], kind);
+      });
+    }
   }
 }
 
@@ -1239,7 +1262,7 @@ function gotPageDetailsFor(url, tab, resp) {
   }
 }
 
-function gotPageThreads(uri, nUri, threads) {
+function gotPageThreads(uri, nUri, threads, numUnreadUnmuted) {
   log('[gotPageThreads] n:', threads.length, uri, nUri !== uri ? nUri : '')();
 
   // incorporating new threads into our cache and noting any changes
@@ -1252,6 +1275,9 @@ function gotPageThreads(uri, nUri, threads) {
       if (th.unread && threadReadAt[th.thread] >= new Date(th.time)) {
         th.unread = false;
         th.unreadAuthors = th.unreadMessages = 0;
+        if (!th.muted) {
+          numUnreadUnmuted--;
+        }
       }
       if (oldTh) {
         updatedThreads.push(oldTh);
@@ -1266,7 +1292,7 @@ function gotPageThreads(uri, nUri, threads) {
   if (pt) {
     pt.insertAll(threads);
   } else {
-    pt = new ThreadList(threadsById, threads.map(getThreadId));
+    pt = new ThreadList(threadsById, threads.map(getThreadId), numUnreadUnmuted);
   }
 
   // invoking callbacks
@@ -1279,10 +1305,11 @@ function gotPageThreads(uri, nUri, threads) {
   // sending new page threads (or just the count) to tabs at '/messages' on this page
   if (numNewThreads) {
     forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
-      // should send all threads if at /messages:page; otherwise, just the count
-      api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler
-      api.tabs.emit(tab, 'page_thread_count', pt.ids.length);  // TODO: write handler
+      api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler in notices.js
     });
+    // forEachTabAtUriAndLocator(uri, nUri, /^\/messages:.*/, function(tab) {
+    //   api.tabs.emit(tab, 'page_thread_count', pt.ids.length);  // TODO: write handler in notices.js
+    // });
   }
 
   // updating tabs currently displaying any updated threads
@@ -1326,6 +1353,10 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
       });
     }
   }
+}
+
+function isSent(th) {
+  return th.firstAuthor && th.participants[th.firstAuthor].id === session.user.id;
 }
 
 function setIcon(tab, kept) {
