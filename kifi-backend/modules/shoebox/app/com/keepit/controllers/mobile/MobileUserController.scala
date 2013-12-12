@@ -43,17 +43,14 @@ class MobileUserController @Inject() (
   }
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
-    Async {
-      getUserInfo(request)
-    }
+    getUserInfo(request)
   }
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    userCommander.getUserInfo(request.userId) map { user =>
-      Ok(toJson(user.basicUser).as[JsObject] ++
-         toJson(user.info).as[JsObject] ++
-         Json.obj("experiments" -> request.experiments.map(_.value)))
-    }
+    val user = userCommander.getUserInfo(request.user)
+    Ok(toJson(user.basicUser).as[JsObject] ++
+       toJson(user.info).as[JsObject] ++
+       Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
 }

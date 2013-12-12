@@ -11,7 +11,7 @@ import scala.Some
 trait UserValueRepo extends Repo[UserValue] {
   def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String]
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String
-  // def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Unit // TODO
+  def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -56,10 +56,14 @@ class UserValueRepoImpl @Inject() (
 
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String = {
     (for (v <- table if v.userId === userId && v.name === name) yield v).firstOption.map { v =>
-      save(v.copy(value = value))
+      save(v.copy(value = value, state = UserValueStates.ACTIVE))
     }.getOrElse {
       save(UserValue(userId = userId, name = name, value = value))
     }.value
+  }
+
+  def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean = {
+    (for (v <- table if v.userId === userId && v.name === name) yield v.state).update(UserValueStates.INACTIVE) > 0
   }
 
 }
