@@ -734,7 +734,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 
 	<script type="text/x-handlebars" id="email-delete-dialog">
 		<div class="dialog email-delete-dialog">
-			<form method="POST" action="{{url}}" class="dialog-content" data-template>
+			<form method="POST" action="{{url}}" class="dialog-content">
 				<div class="dialog-header">Delete {{email}}?</div>
 				<a href="javascript:" class="dialog-cancel">×</a>
 				<div class="dialog-content-body">
@@ -754,7 +754,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 
 	<script type="text/x-handlebars" id="primary-email-change-dialog">
 		<div class="dialog primary-email-change-dialog">
-			<form method="POST" action="{{url}}" class="dialog-content" data-template>
+			<form method="POST" action="{{url}}" class="dialog-content">
 				<div class="dialog-header">You are about to change your primary email</div>
 				<a href="javascript:" class="dialog-cancel">×</a>
 				<div class="dialog-content-body">
@@ -788,13 +788,15 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 
 	<script type="text/x-handlebars" id="verification-alert">
 		<div class="dialog verification-alert">
-			<div class="dialog-header">Verification email sent to {{email}}</div>
-			<a href="javascript:" class="dialog-cancel">×</a>
-			<div class="dialog-content-body">
-				<p>You will shortly receive a verification email from us.</p>
-				<p>To verify, please click on a verification link on the email.</p>
-				<div class="dialog-buttons">
-					<button class="dialog-cancel">Ok</button>
+			<div class="dialog-content">
+				<div class="dialog-header">Verification email sent to {{email}}</div>
+				<a href="javascript:" class="dialog-cancel">×</a>
+				<div class="dialog-content-body">
+					<p>You will shortly receive a verification email from us.</p>
+					<p>To verify, please click on a verification link on the email.</p>
+					<div class="dialog-buttons">
+						<button class="dialog-cancel">Ok</button>
+					</div>
 				</div>
 			</div>
 		</div>

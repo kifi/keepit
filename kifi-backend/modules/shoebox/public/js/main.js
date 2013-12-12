@@ -1252,7 +1252,7 @@ $(function () {
 
 	function resendVerificationEmail(email) {
 		console.log(email);
-		$.postJson(xhrBase + '/user/resend-verification?email=' + email);
+		$.post(xhrBase + '/user/resend-verification?email=' + email);
 		showVerificationAlert(email);
 	}
 
