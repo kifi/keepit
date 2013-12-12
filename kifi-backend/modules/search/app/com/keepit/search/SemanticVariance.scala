@@ -45,10 +45,9 @@ object SemanticVariance {
   def svVariance(textQueries: Seq[TextQuery], ids: Set[Long], personalizedSearcher: Option[PersonalizedSearcher]): Float = {
     val uriIdFilter = new IdSetFilter(ids)
     val hitSize = uriIdFilter.ids.size
-    var composer: Option[SemanticVectorComposer] = None
+    var composers = Map.empty[Term, SemanticVectorComposer]
 
     personalizedSearcher.foreach{ searcher =>
-      composer = Some(new SemanticVectorComposer)
       textQueries.foreach{ q =>
         val extractorQuery = q.getSemanticVectorExtractorQuery()
         searcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
@@ -58,7 +57,11 @@ object SemanticVariance {
               val doc = iterator.docID()
               if (extractor.docID < doc) extractor.advance(doc)
               if (extractor.docID == doc) extractor.processSemanticVector{ (term: Term, bytes: Array[Byte], offset: Int, length: Int) =>
-                composer.get.add(bytes, offset, length, 1)
+                composers.getOrElse(term, {
+                  val composer = new SemanticVectorComposer
+                  composers += (term -> composer)
+                  composer
+                }).add(bytes, offset, length, 1)
               }
             }
           }
@@ -66,10 +69,13 @@ object SemanticVariance {
       }
     }
 
-    composer match {
-      case Some(composer) => avgBitVariance(composer, hitSize)
-      case None => -1.0f
+    val sum = composers.valuesIterator.foldLeft(0.0f){ (sum, composer) =>
+      // semantic vector v of terms will be concatenated from semantic vector v_i from each term
+      // avg bit variance of v is the avg of avgBitVariance of each v_i
+      sum + avgBitVariance(composer, hitSize)
     }
+    val cnt = composers.size
+    if (cnt > 0) (sum / cnt.toFloat) else -1.0f
   }
 }
 
