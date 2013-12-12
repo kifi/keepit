@@ -35,7 +35,7 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 
-POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
+POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
@@ -109,6 +109,8 @@ GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.Mobil
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
 
+POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
+
 ##########################################
 # Website
 ##########################################
@@ -167,6 +169,7 @@ POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.Bookmarks
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: String)
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
@@ -187,6 +190,9 @@ GET     /site/user/socialConnections  @com.keepit.controllers.website.UserContro
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
+POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
+POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
+POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: String)
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
@@ -223,7 +229,6 @@ GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
-
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)

@@ -25,7 +25,7 @@ object SearchEngine {
 case class BasicSearchContext(
   origin: String,
   sessionId: String,
-  refinements: Option[Int],
+  refinement: Option[Int],
   uuid: ExternalId[ArticleSearchResult],
   searchExperiment: Option[Id[SearchConfigExperiment]],
   query: String,
@@ -82,23 +82,23 @@ class SearchAnalytics @Inject() (
 
   def searched(
     userId: Id[User],
-    time: DateTime,
+    searchedAt: DateTime,
     basicSearchContext: BasicSearchContext,
     endedWith: String,
     contextBuilder: HeimdalContextBuilder
   ) = {
     processBasicSearchContext(userId, basicSearchContext, contextBuilder)
     contextBuilder += ("endedWith", endedWith)
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.SEARCHED, time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.SEARCHED, searchedAt))
   }
 
   def clickedSearchResult(
     userId: Id[User],
-    time: DateTime,
+    clickedAt: DateTime,
     basicSearchContext: BasicSearchContext,
     resultSource: SearchEngine,
     resultPosition: Int,
-    result: Option[PersonalSearchResult],
+    result: Option[KifiSearchHit],
     contextBuilder: HeimdalContextBuilder
   ) = {
 
@@ -109,24 +109,30 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("resultSource", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
     result.map { result =>
+      val hit = result.bookmark
       contextBuilder += ("keepCount", result.count)
       contextBuilder += ("usersShown", result.users.length)
       contextBuilder += ("isOwn", result.isMyBookmark)
       contextBuilder += ("isFriends", !result.isMyBookmark && result.users.length > 0)
       contextBuilder += ("isOthers", result.users.length == 0)
       contextBuilder += ("isPrivate", result.isPrivate)
-      contextBuilder += ("tags", result.hit.collections.map(_.length).getOrElse(0))
-      contextBuilder += ("hasTitle", result.hit.title.isDefined)
+      contextBuilder += ("tags", hit.collections.map(_.length).getOrElse(0))
+      contextBuilder += ("hasTitle", hit.title.isDefined)
 
-      contextBuilder += ("titleMatches", result.hit.titleMatches.length)
-      contextBuilder += ("urlMatches", result.hit.urlMatches.length)
+      contextBuilder += ("titleMatches", hit.titleMatches.length)
+      contextBuilder += ("urlMatches", hit.urlMatches.length)
 
       val queryTermsCount = contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt }.get
-      contextBuilder += ("titleMatchQueryRatio", result.hit.titleMatches.length.toDouble / queryTermsCount)
-      contextBuilder += ("urlMatchQueryRatio", result.hit.urlMatches.length.toDouble / queryTermsCount)
+      contextBuilder += ("titleMatchQueryRatio", hit.titleMatches.length.toDouble / queryTermsCount)
+      contextBuilder += ("urlMatchQueryRatio", hit.urlMatches.length.toDouble / queryTermsCount)
     }
 
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, clickedAt))
+    if (resultSource == SearchEngine.Kifi) {
+      contextBuilder += ("action", "clickedKifiResult")
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.USED_KIFI, clickedAt))
+      heimdal.setUserProperties(userId, "lastClickedKifiResult" -> ContextDate(clickedAt))
+    }
   }
 
   private def processBasicSearchContext(userId: Id[User], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {
@@ -137,7 +143,7 @@ class SearchAnalytics @Inject() (
     // Search Context
     contextBuilder += ("origin", searchContext.origin)
     contextBuilder += ("sessionId", searchContext.sessionId)
-    searchContext.refinements.foreach { refinements => contextBuilder += ("refinements", refinements) }
+    searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
 
     // Search Parameters

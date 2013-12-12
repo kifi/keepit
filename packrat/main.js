@@ -1606,7 +1606,7 @@ api.on.beforeSearch.add(throttle(function () {
   if (session && ~session.experiments.indexOf('tsearch')) {
     ajax('GET', '/204');
   } else {
-    ajax('search', 'GET', '/up');
+    ajax('search', 'GET', '/search/warmUp');
   }
 }, 50000));
 

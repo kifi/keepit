@@ -238,62 +238,62 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = {
-    def getImage(token: String) = Try {
-      val obj = s3Client.getObject(config.bucketName, tempPath(token))
-      ImageIO.read(obj.getObjectContent)
-    }
-    def uploadUserImage(filename: String, imageSizeName: String, is: ByteArrayInputStream, contentLength: Int) = Try {
-      val key = keyByExternalId(imageSizeName, userExtId, filename)
-      uploadToS3(key, is, contentLength, "uploaded pic to user location")
-      key
-    }
-    def cropImageOrFallback(newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
-      cropAttributes.map { attr =>
-        Try { ImageUtils.cropSquareImage(bufferedImage, attr.x, attr.y, attr.s) } match {
-          case Success(cropped) => Some(cropped)
-          case Failure(ex) =>
-            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to crop picture $newFilename")))
-            None
-        }
-      }.flatten.getOrElse(bufferedImage)
-    }
-    def cropResizeAndUpload(newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
-
-      val image = cropImageOrFallback(newFilename, bufferedImage, cropAttributes)
-      S3UserPictureConfig.sizes.map { size =>
-        Try(ImageUtils.resizeImageMakeSquare(image, size)).map { case (contentLength, is) =>
-          uploadUserImage(newFilename, size.width.toString, is, contentLength)
-        }.flatten match {
-          case Success(res) => Some(res)
-          case Failure(ex) =>
-            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to resize/upload ${size.width} picture $newFilename to S3")))
-            None
-        }
-      }
-    }
-
     val newFilename = UserPicture.generateNewFilename
-    val uploadOriginalResult = getImage(token) match {
+    getImage(token) match {
       case Success(bufferedImage) =>
-        val (origContentLength, origInputStream) = ImageUtils.bufferedImageToInputStream(bufferedImage)
-        uploadUserImage(newFilename, "original", origInputStream, origContentLength) match {
-          case Success(res) =>
-            val resizedImageResults = cropResizeAndUpload(newFilename, bufferedImage, cropAttributes)
-            resizedImageResults.find(_.isDefined).map { hadASuccess =>
-              updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true, cropAttributes)
-              hadASuccess
-            }.flatten
-          case Failure(ex) =>
-            airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to upload original picture $newFilename ($origContentLength) from S3")))
-            None
-        }
+        uploadAllUserImages(userId, userExtId, newFilename, bufferedImage, cropAttributes)
       case Failure(ex) =>
         airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to fetch picture $newFilename from S3")))
         None
     }
+  }
 
-    uploadOriginalResult.map { success =>
-      avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
+  private def uploadAllUserImages(userId: Id[User], userExtId: ExternalId[User], newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
+    val (origContentLength, origInputStream) = ImageUtils.bufferedImageToInputStream(bufferedImage)
+    uploadUserImage(userExtId, newFilename, "original", origInputStream, origContentLength) match {
+      case Success(res) =>
+        val resizedImageResults = cropResizeAndUpload(userExtId, newFilename, bufferedImage, cropAttributes)
+        resizedImageResults.find(_.isDefined).map { hadASuccess =>
+          updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true, cropAttributes)
+          hadASuccess
+        }.flatten.map { success =>
+          avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
+        }
+      case Failure(ex) =>
+        airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to upload original picture $newFilename ($origContentLength) from S3")))
+        None
+    }
+  }
+  private def getImage(token: String) = Try {
+    val obj = s3Client.getObject(config.bucketName, tempPath(token))
+    ImageIO.read(obj.getObjectContent)
+  }
+  private def uploadUserImage(userExtId: ExternalId[User], filename: String, imageSizeName: String, is: ByteArrayInputStream, contentLength: Int) = Try {
+    val key = keyByExternalId(imageSizeName, userExtId, filename)
+    uploadToS3(key, is, contentLength, "uploaded pic to user location")
+    key
+  }
+  private def cropImageOrFallback(newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
+    cropAttributes.map { attr =>
+      Try { ImageUtils.cropSquareImage(bufferedImage, attr.x, attr.y, attr.s) } match {
+        case Success(cropped) => Some(cropped)
+        case Failure(ex) =>
+          airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to crop picture $newFilename")))
+          None
+      }
+    }.flatten.getOrElse(bufferedImage)
+  }
+  private def cropResizeAndUpload(userExtId: ExternalId[User], newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
+    val image = cropImageOrFallback(newFilename, bufferedImage, cropAttributes)
+    S3UserPictureConfig.sizes.map { size =>
+      Try(ImageUtils.resizeImageMakeSquare(image, size)).map { case (contentLength, is) =>
+        uploadUserImage(userExtId, newFilename, size.width.toString, is, contentLength)
+      }.flatten match {
+        case Success(res) => Some(res)
+        case Failure(ex) =>
+          airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to resize/upload ${size.width} picture $newFilename to S3")))
+          None
+      }
     }
   }
 }

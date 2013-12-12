@@ -171,7 +171,7 @@ private[classify] class DomainTagImportActor @Inject() (
 
   private def persistEvent(eventName: String, contextBuilder: HeimdalContextBuilder) = {
     contextBuilder += ("eventName", eventName)
-    heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.DOMAIN_TAG_IMPORT, currentDateTime))
+    heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.IMPORTED_DOMAIN_TAGS, currentDateTime))
   }
 
   private def failWithException(eventName: String, e: Exception) {
