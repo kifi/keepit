@@ -49,6 +49,7 @@ object NonUserParticipant {
   }
 
   def toBasicNonUser(nonUser: NonUserParticipant) = {
+    // todo: Add other data, like econtact data
     BasicNonUser(kind = nonUser.kind, id = nonUser.identifier, firstName = Some(nonUser.identifier), lastName = None)
   }
 }
