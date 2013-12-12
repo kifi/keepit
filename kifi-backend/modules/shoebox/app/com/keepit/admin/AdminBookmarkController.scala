@@ -51,6 +51,23 @@ class AdminBookmarksController @Inject() (
     }
   }
 
+
+  // Temporary!
+  def fixBug() = AdminHtmlAction { request =>
+    0 to 10 foreach { i =>
+      db.readWrite { implicit session =>
+        bookmarkRepo.page(i, 1000, includePrivate = false, excludeStates = Set(BookmarkStates.INACTIVE)).map { bm =>
+          if(bm.source == BookmarkSource.initLoad && !bm.isPrivate) {
+            bookmarkRepo.save(bm.withPrivate(isPrivate = true))
+          }
+        }
+
+      }
+    }
+
+    Ok
+  }
+
   def rescrape = AdminJsonAction { request =>
     val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
     db.readWrite { implicit session =>
