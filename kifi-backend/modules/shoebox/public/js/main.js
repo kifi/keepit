@@ -567,6 +567,7 @@ $(function () {
 			var xhr = new XMLHttpRequest();
 			photoXhr2 = xhr;
 			var deferred = createPhotoUploadDeferred();
+			xhr.withCredentials = true;
 			xhr.upload.addEventListener('progress', function (e) {
 				if (e.lengthComputable) {
 					deferred.notify(e.loaded / e.total);
