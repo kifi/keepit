@@ -212,7 +212,7 @@ a.my-settings-wrapper {
   background: #ABB8C8;
   border-radius: 50%;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   transform: scale(0, 0);
   -webkit-transform: scale(0, 0);
 }
