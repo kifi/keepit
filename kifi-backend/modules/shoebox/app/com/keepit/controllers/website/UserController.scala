@@ -44,6 +44,7 @@ import play.api.libs.json.JsObject
 class UserController @Inject() (
   db: Database,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -227,7 +228,7 @@ class UserController @Inject() (
   }
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
-    getUserInfo(request)
+    getUserInfo(request.userId)
   }
 
   def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>
@@ -297,7 +298,8 @@ class UserController @Inject() (
                   if (emailRecord.verified) {
                     if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
                       userValueRepo.clearValue(request.userId, "pending_primary_email")
-                      userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                      val currentUser = userRepo.get(request.userId)
+                      userRepo.save(currentUser.copy(primaryEmailId = Some(emailRecord.id.get)))
                     }
                   } else {
                     userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
@@ -323,18 +325,21 @@ class UserController @Inject() (
 //            userRepo.save(updatedUser)
 //          }
         }
-        getUserInfo(request)
+        getUserInfo(request.userId)
       }
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
-  private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    val user = userCommander.getUserInfo(request.user)
-    Ok(toJson(user.basicUser).as[JsObject] ++
-       toJson(user.info).as[JsObject] ++
-       Json.obj("experiments" -> request.experiments.map(_.value)))
+  private def getUserInfo[T](userId: Id[User]) = {
+    val (user, experiments) = db.readOnly { implicit session =>
+      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
+    }
+    val pimpedUser = userCommander.getUserInfo(user)
+    Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
+       toJson(pimpedUser.info).as[JsObject] ++
+       Json.obj("experiments" -> experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
