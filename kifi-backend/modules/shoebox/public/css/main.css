@@ -4656,6 +4656,18 @@ a.friend-nw-google[href] {
   td.profile-email-status {
     background-image: url(../img/check-green.2x.png);
   }
+
+  .profile-email-addresses-arrow {
+    background-image: url(../img/arrow-gray-right.2x.png);
+  }
+
+  .profile-email-address-item-arrow {
+    background-image: url(../img/arrow-gray-down.2x.png);
+  }
+
+  .profile-email-addresses.opened .profile-email-addresses-arrow {
+    background-image: url(../img/arrow-gray-down.2x.png);
+  }
 }
 
 .fancybox-inner {
