@@ -69,7 +69,7 @@ object ArticleSearchResult extends Logging {
 }
 
 
-class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
+class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) {
   val nonTextBoostFactor = (1.0d - (1.0d/(1.0d + (pow(4.0d * textScore, 4.0d))))).toFloat // don't boost too much by bookmark/recency if textScore is too low.
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
@@ -85,23 +85,6 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 
   override def toString() = {
     s"Scoring($textScore, $normalizedTextScore, $bookmarkScore, $recencyScore, $usefulPage, $boostedTextScore, $boostedBookmarkScore, $boostedRecencyScore, nonTextBoostFactor)"
-  }
-
-  def canEqual(other: Any) = {
-    other.isInstanceOf[com.keepit.search.Scoring]
-  }
-
-  override def equals(other: Any) = {
-    other match {
-      case that: com.keepit.search.Scoring =>
-        that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore &&
-        recencyScore == that.recencyScore && usefulPage == that.usefulPage
-      case _ => false
-    }
-  }
-
-  override def hashCode() = {
-    (textScore.hashCode ^ normalizedTextScore.hashCode ^ bookmarkScore.hashCode ^ recencyScore.hashCode ^ usefulPage.hashCode)
   }
 }
 
