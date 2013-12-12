@@ -38,5 +38,5 @@ object UserEventTypes {
 }
 
 object SystemEventTypes {
-  val DOMAIN_TAG_IMPORT = EventType("domain_tag_import")
+  val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
 }
