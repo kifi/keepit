@@ -879,11 +879,7 @@ $(function () {
 
 	// profile email management
 	//
-	var PRIMARY_INDEX = 0,
-		ADDRESS = 0,
-		PRIMARY = 1,
-		VERIFIED = 2,
-		PENDING_PRIMARY = 3;
+	var PRIMARY_INDEX = 0;
 
 	function getPrimaryEmail(emails) {
 		return (emails || me.emails)[PRIMARY_INDEX] || null;
@@ -891,13 +887,13 @@ $(function () {
 
 	function getPendingPrimaryEmail(emails) {
 		return findEmail(emails || me.emails, function (info) {
-			return info[PENDING_PRIMARY];
+			return info.isPendingPrimary;
 		})[0] || null;
 	}
 
 	function getPrimaryEmailAddress(emails) {
 		var addr = getPrimaryEmail(emails);
-		return addr && addr[ADDRESS] || null;
+		return addr && addr.address || null;
 	}
 
 	function getProfileCopy() {
@@ -914,7 +910,10 @@ $(function () {
 	function copyEmails(emails) {
 		if (emails) {
 			return emails.map(function (info) {
-				return info.slice(0, 2);
+				return {
+					address: info.address,
+					isPrimary: info.isPrimary
+				};
 			});
 		}
 		return emails;
@@ -934,7 +933,7 @@ $(function () {
 	function removeEmailInfo(emails, addr) {
 		emails = emails || me.emails;
 		for (var i = emails.length - 1; i >= 0; i--) {
-			if (emails[i][ADDRESS] === addr) {
+			if (emails[i].address === addr) {
 				emails.splice(i, 1);
 			}
 		}
@@ -943,7 +942,7 @@ $(function () {
 	function unsetPrimary(emails) {
 		var primary = getPrimaryEmail(emails);
 		if (primary) {
-			primary[PRIMARY] = false;
+			primary.isPrimary = false;
 		}
 	}
 
@@ -982,7 +981,10 @@ $(function () {
 			var emails = props.emails;
 			removeEmailInfo(emails, email);
 			unsetPrimary(emails);
-			emails.unshift([email, true]);
+			emails.unshift({
+				address: email,
+				isPrimary: true
+			});
 
 			$.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}, cancel);
@@ -1230,6 +1232,30 @@ $(function () {
 		}
 	}
 
+	$(document).on('click', '.profile-email-address-unverified .profile-email-pending-resend', function (e) {
+		e.preventDefault();
+		var email = $('.profile-email .profile-input-input').val();
+		resendVerificationEmail(email);
+	});
+
+	$(document).on('click', '.profile-email-address-pending .profile-email-pending-resend', function (e) {
+		e.preventDefault();
+		var email = $(this).closest('.profile-email-address-pending').find('.profile-email-address-pending-email').text();
+		resendVerificationEmail(email);
+	});
+
+	$(document).on('click', '.profile-email-address-item .profile-email-pending-resend', function (e) {
+		e.preventDefault();
+		var email = $(this).closest('.profile-email-address-item').data('email');
+		resendVerificationEmail(email);
+	});
+
+	function resendVerificationEmail(email) {
+		console.log(email);
+		$.postJson(xhrBase + '/user/resend-verification?email=' + email);
+		showVerificationAlert(email);
+	}
+
 	function cancelAddEmail(e) {
 		e.preventDefault();
 		var $this = $(this),
@@ -1264,7 +1290,10 @@ $(function () {
 		if (email) {
 			var props = getProfileCopy();
 			var emails = props.emails;
-			emails.push([email, false]);
+			emails.push({
+				address: email,
+				isPrimary: false
+			});
 
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
@@ -1276,8 +1305,8 @@ $(function () {
 			var emails = props.emails;
 			unsetPrimary(emails);
 			findEmail(emails, function (info) {
-				if (info[ADDRESS] === email) {
-					info[PRIMARY] = true;
+				if (info.address === email) {
+					info.isPrimary = true;
 				}
 			});
 
@@ -1299,6 +1328,19 @@ $(function () {
 
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
+	}
+
+	var verificationAlertTmpl = Handlebars.compile($('#verification-alert').html());
+	function showVerificationAlert(email) {
+		var $dialog = $(verificationAlertTmpl({
+				email: email
+			}))
+			.appendTo(document.body)
+			.on('click', '.dialog-cancel', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+			})
+			.dialog('show');
 	}
 
 	var emailDeleteTmpl = Handlebars.compile($('#email-delete-dialog').html());
@@ -3575,23 +3617,23 @@ $(function () {
 		var pendingPrimary = getPendingPrimaryEmail();
 
 		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!pendingPrimary && !primary[VERIFIED]);
+		$unverified.toggle(!pendingPrimary && !primary.isVerified);
 
-		$('.profile-email input').val(primary[ADDRESS] || '');
+		$('.profile-email input').val(primary.address || '');
 
 		var $emails = $('.profile-email-address-list').empty();
 		(me.emails || []).forEach(function (info, i, list) {
 			$emails.append(emailTmpl({
-				email: info[ADDRESS],
-				primary: i === 0 || list.length <= 1 || !!info[PRIMARY],
-				verified: !!info[VERIFIED],
-				pendingPrimary: !!info[PENDING_PRIMARY]
+				email: info.address,
+				primary: i === 0 || list.length <= 1 || !!info.isPrimary,
+				verified: !!info.isVerified,
+				pendingPrimary: !!info.isPendingPrimary
 			}));
 		});
 
 		var $pending = $('.profile-email-address-pending');
 		if (pendingPrimary) {
-			$('.profile-email-address-pending-email').text(pendingPrimary[ADDRESS]);
+			$('.profile-email-address-pending-email').text(pendingPrimary.address);
 		}
 		$pending.toggle(!!pendingPrimary);
 

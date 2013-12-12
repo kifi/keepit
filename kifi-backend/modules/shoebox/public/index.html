@@ -718,7 +718,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 			<span class="profile-email-address-item-email">{{email}}</span>
 			<span class="profile-email-address-item-primary">(primary)</span>
 			<span class="profile-email-address-item-pending-primary">(pending primary)</span>
-			<span class="profile-email-address-item-unverified">(<a href="javascript:">unverified</a>)</span>
+			<span class="profile-email-address-item-unverified">(<a class="profile-email-pending-resend" href="javascript:">unverified</a>)</span>
 			<div class="profile-email-address-item-arrow" href="javascript:">
 				<ul class="profile-email-address-item-dropdown">
 					<li>
@@ -760,7 +760,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 				<div class="dialog-content-body">
 					<p>You are about to change your primary email to <span class="email-address">{{email}}</span>.</p>
 					<p>We will send a verification email to this email address to prove that you own it.</p>
-					<p>To verify, please click on the verification link on the email.</p>
+					<p>To verify, please click on a verification link on the email.</p>
 					<div class="dialog-buttons">
 						<button class="dialog-submit" type="submit">Ok</button>
 						<button class="dialog-cancel">Cancel</button>
@@ -784,6 +784,20 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 			</td>
 			-->
 		</tr>
+	</script>
+
+	<script type="text/x-handlebars" id="verification-alert">
+		<div class="dialog verification-alert">
+			<div class="dialog-header">Verification email sent to {{email}}</div>
+			<a href="javascript:" class="dialog-cancel">×</a>
+			<div class="dialog-content-body">
+				<p>You will shortly receive a verification email from us.</p>
+				<p>To verify, please click on a verification link on the email.</p>
+				<div class="dialog-buttons">
+					<button class="dialog-cancel">Ok</button>
+				</div>
+			</div>
+		</div>
 	</script>
 
 	<div class="dialog photo-dialog" style="display:none">
