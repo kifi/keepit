@@ -959,7 +959,7 @@ class MessagingController @Inject() (
     }
     if (stateChanged) {
       notifyUserAboutMuteChange(userId, threadId, mute)
-      messagingAnalytics.changedMute(userId, threadId, mute)
+      messagingAnalytics.changedMute(userId, threadId, mute, context)
     }
     stateChanged
   }

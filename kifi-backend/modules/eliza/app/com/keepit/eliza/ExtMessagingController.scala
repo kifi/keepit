@@ -290,9 +290,11 @@ class ExtMessagingController @Inject() (
       messagingController.setLastSeen(socket.userId, msgExtId)
     },
     "mute_thread" -> { case JsString(jsThreadId) +: _ =>
+      implicit val context = authenticatedWebSocketsContextBuilder(socket).build
       messagingController.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
     },
     "unmute_thread" -> { case JsString(jsThreadId) +: _ =>
+      implicit val context = authenticatedWebSocketsContextBuilder(socket).build
       messagingController.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
