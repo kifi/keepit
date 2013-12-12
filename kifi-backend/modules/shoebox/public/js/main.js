@@ -496,7 +496,7 @@ $(function () {
 			.removeClass('edit');
 
 		if ($input.attr('name') === 'email') {
-			saveNewPrimaryEmail($input.val(), function () {
+			saveNewPrimaryEmail($input, function () {
 				var prev = $input.data('prevValue');
 				$input.val(prev).data('value', prev);
 			});
@@ -977,12 +977,37 @@ $(function () {
 			.dialog('show');
 	}
 
-	function saveNewPrimaryEmail(email, cancel) {
+	function refreshMe(data) {
+		var url = xhrBase + '/user/me';
+		if (data) {
+			return $.postJson(url, data, updateMe);
+		}
+		return $.getJSON(url, updateMe);
+	}
+
+	function saveNewPrimaryEmail($input, cancel) {
+		var email = $input.val();
 		if (getPrimaryEmailAddress() === email) {
 			// already primary
 			return false;
 		}
-		showEmailChangeDialog(email, function () {
+		getEmailInfo(email)
+			.done(function (emailInfo) {
+				if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+					refreshMe();
+					return;
+				}
+				if (emailInfo.isVerified) {
+					setNewPrimaryEmail(email);
+					return;
+				}
+				showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+			})
+			.fail(getAddEmailErrorCallback(email, $input));
+	}
+
+	function setNewPrimaryEmail(email) {
+		return function () {
 			var props = getProfileCopy();
 			var emails = props.emails;
 			removeEmailInfo(emails, email);
@@ -991,9 +1016,8 @@ $(function () {
 				address: email,
 				isPrimary: true
 			});
-
-			$.postJson(xhrBase + '/user/me', props).done(updateMe);
-		}, cancel);
+			refreshMe(props);
+		};
 	}
 
 	function saveProfileInfo() {
@@ -1007,10 +1031,9 @@ $(function () {
 
 		delete props.email;
 
-		$.postJson(xhrBase + '/user/me', props)
-			.done(updateMe)
+		refreshMe(props)
 			.fail(function () {
-				showMessage('Uh oh! A bad thing happened!');
+				showMessage('Uh oh! Something went wrong!');
 			});
 	}
 
@@ -1310,8 +1333,8 @@ $(function () {
 	}
 
 	function getAddEmailErrorCallback(email, $input) {
-		return function (jqXHR) {
-			switch (jqXHR.status) {
+		return function (jqXhr) {
+			switch (jqXhr.status) {
 			case 400:
 				// bad format
 				showError(
@@ -3695,7 +3718,7 @@ $(function () {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
+		me: refreshMe().promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
