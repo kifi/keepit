@@ -184,25 +184,29 @@ class UserThreadRepoImpl @Inject() (
 
   private def updateSenderAndParticipants(data: JsObject): Future[JsObject] = {
     val author: Option[BasicUser] = (data \ "author").asOpt[BasicUser]
-    val participants: Seq[BasicUserLikeEntity] = (data \ "participants").as[Seq[BasicUserLikeEntity]]
-    val updatedAuthorFuture : Future[Option[BasicUser]] =
-      author.map(updateBasicUser).map(fut=>fut.map(Some(_))).getOrElse(Promise.successful(None.asInstanceOf[Option[BasicUser]]).future)
-    val updatedParticipantsFuture : Future[Seq[BasicUserLikeEntity]]= Future.sequence(participants.map{ participant =>
-      val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
-        case p : BasicUser => updateBasicUser(p)
-        case _ => Promise.successful(participant).future
-      }
-      updatedParticipant
-    })
+    val participantsOpt: Option[Seq[BasicUserLikeEntity]] = (data \ "participants").asOpt[Seq[BasicUserLikeEntity]]
+    participantsOpt.map { participants =>
+      val updatedAuthorFuture : Future[Option[BasicUser]] =
+        author.map(updateBasicUser).map(fut=>fut.map(Some(_))).getOrElse(Promise.successful(None.asInstanceOf[Option[BasicUser]]).future)
+      val updatedParticipantsFuture : Future[Seq[BasicUserLikeEntity]]= Future.sequence(participants.map{ participant =>
+        val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
+          case p : BasicUser => updateBasicUser(p)
+          case _ => Promise.successful(participant).future
+        }
+        updatedParticipant
+      })
 
-    updatedParticipantsFuture.flatMap{ updatedParticipants =>
-      updatedAuthorFuture.map{ updatedAuthor =>
-        data.deepMerge(Json.obj(
-          "author" -> updatedAuthor,
-          "participants" -> updatedParticipants
-        ))
+      updatedParticipantsFuture.flatMap{ updatedParticipants =>
+        updatedAuthorFuture.map{ updatedAuthor =>
+          data.deepMerge(Json.obj(
+            "author" -> updatedAuthor,
+            "participants" -> updatedParticipants
+          ))
+        }
       }
-    }
+      } getOrElse {
+        Promise.successful(data).future
+      }
   }
 
   private def updateSendableNotification(data: JsValue, unread: Boolean): Option[Future[JsObject]] = {
