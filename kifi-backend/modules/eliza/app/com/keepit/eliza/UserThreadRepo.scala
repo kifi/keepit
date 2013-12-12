@@ -204,9 +204,9 @@ class UserThreadRepoImpl @Inject() (
           ))
         }
       }
-      } getOrElse {
-        Promise.successful(data).future
-      }
+    } getOrElse {
+      Promise.successful(data).future
+    }
   }
 
   private def updateSendableNotification(data: JsValue, unread: Boolean): Option[Future[JsObject]] = {
