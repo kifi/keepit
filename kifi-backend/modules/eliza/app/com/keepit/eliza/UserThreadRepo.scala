@@ -18,8 +18,13 @@ case class Notification(thread: Id[MessageThread], message: Id[Message])
 case class NotificationCategory(category: String)
 object NotificationCategory {
   implicit def fromElectronicMailCategory(emailCategory: ElectronicMailCategory): NotificationCategory = NotificationCategory(emailCategory.category)
-  val GLOBAL = NotificationCategory("GLOBAL") // should be more specific in the future
-  val MESSAGE = fromElectronicMailCategory(PostOffice.Categories.User.MESSAGE)
+  object Global {
+    val ANNOUNCEMENT = NotificationCategory("ANNOUNCEMENT")
+  }
+
+  object Personal {
+    val MESSAGE = fromElectronicMailCategory(PostOffice.Categories.User.MESSAGE)
+  }
 }
 
 case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])

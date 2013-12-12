@@ -23,22 +23,23 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", "kifi")
-      contextBuilder += ("category", NotificationCategory.MESSAGE)
+      contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageExternalId", message.externalId.id)
+      message.from.foreach { senderId => contextBuilder += ("messageSenderId", senderId.id) }
       contextBuilder += ("threadId", thread.id.get.id)
       heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread, category: NotificationCategory = NotificationCategory.Global.ANNOUNCEMENT): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", "kifi")
-      contextBuilder += ("category", NotificationCategory.GLOBAL)
+      contextBuilder += ("category", category.category)
       contextBuilder += ("global", true)
       contextBuilder += ("messageExternalId", message.externalId.id)
       contextBuilder += ("threadId", thread.id.get.id)
