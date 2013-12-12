@@ -486,7 +486,7 @@ class UserController @Inject() (
   }
 
   private val url = current.configuration.getString("application.baseUrl").get
-  def resendVerificationEmail(email: String) = AuthenticatedJsonAction { implicit request =>
+  def resendVerificationEmail(email: String) = AuthenticatedHtmlAction { implicit request =>
     db.readWrite { implicit s =>
       emailAddressRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
