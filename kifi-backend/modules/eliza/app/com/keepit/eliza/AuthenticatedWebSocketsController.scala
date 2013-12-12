@@ -184,6 +184,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         SafeFuture {
           val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
           heimdal.trackEvent(UserEvent(socketInfo.userId.id, context, UserEventTypes.CONNECTED, tStart))
+          heimdal.setUserProperties(socketInfo.userId, "lastConnected" -> ContextDate(tStart))
         }
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
