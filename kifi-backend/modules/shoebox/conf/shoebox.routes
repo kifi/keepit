@@ -169,6 +169,7 @@ POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.Bookmarks
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: String)
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)

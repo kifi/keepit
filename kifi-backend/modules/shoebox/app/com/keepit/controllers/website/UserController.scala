@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -16,7 +16,6 @@ import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{Promise => PlayPromise}
 import play.api.libs.Comet
@@ -25,14 +24,11 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
-import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.common.akka.SafeFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{MaxSizeExceeded, Result, Request}
-import scala.util.{Failure, Success}
+import play.api.mvc.{MaxSizeExceeded, Request}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
@@ -40,22 +36,7 @@ import play.api.data.Forms._
 import com.keepit.model.SocialConnection
 import scala.util.Failure
 import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import scala.util.Success
-import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.json.JsObject
-import com.keepit.model.SocialConnection
-import scala.util.Failure
-import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
+import play.api.libs.json._
 import scala.util.Success
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.json.JsObject
@@ -247,6 +228,27 @@ class UserController @Inject() (
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
     getUserInfo(request)
+  }
+
+  def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>
+    db.readOnly { implicit session =>
+      emailRepo.getByAddressOpt(email) match {
+        case Some(emailRecord) =>
+          val pendingPrimary = userValueRepo.getValue(request.user.id.get, "pending_primary_email")
+          if (emailRecord.userId == request.userId) {
+            Ok(Json.toJson(EmailInfo(
+              address = emailRecord.address,
+              isVerified = emailRecord.verified,
+              isPrimary = request.user.primaryEmailId.isDefined && request.user.primaryEmailId.get.id == emailRecord.id.get.id,
+              isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == emailRecord.address
+            )))
+          } else {
+            Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
+          }
+        case None =>
+          Ok(Json.obj("status" -> "available"))
+      }
+    }
   }
 
   private val siteUrl = current.configuration.getString("application.baseUrl").get
