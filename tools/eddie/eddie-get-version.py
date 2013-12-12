@@ -43,7 +43,7 @@ def maybeInt(x):
     return None
 
 def versionToKey(version, versions):
-  if version=="newest":
+  if version=="latest":
     return versions[0].key
   versionInt = maybeInt(version)
   if versionInt and versionInt<0:
@@ -55,7 +55,7 @@ def versionToKey(version, versions):
 
 
 if __name__=="__main__":
-  conn = S3Connection()
+  conn = S3Connection("AKIAIQRAUTVX6IWOKVGA", "bjy22K4d4WeL1hfp+tahWh6yo4tvgpjdadgCzsGF")
   bucket = conn.get_bucket("fortytwo-builds")
   allAssets = getAllAssetsByKind(bucket)
   if len(argv)<3:
@@ -64,7 +64,7 @@ if __name__=="__main__":
     for kind, versions in allAssets.items():
       print "-------------------" + kind.upper()+ "-------------------"
       for i, version in enumerate(versions):
-        axx = "newest" if i==0 else str(-1*i)
+        axx = "latest" if i==0 else str(-1*i)
         print version, "<" + axx + ">"
   else:
     serviceType = argv[1]

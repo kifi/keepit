@@ -82,19 +82,19 @@ class SearchAnalytics @Inject() (
 
   def searched(
     userId: Id[User],
-    time: DateTime,
+    searchedAt: DateTime,
     basicSearchContext: BasicSearchContext,
     endedWith: String,
     contextBuilder: HeimdalContextBuilder
   ) = {
     processBasicSearchContext(userId, basicSearchContext, contextBuilder)
     contextBuilder += ("endedWith", endedWith)
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.SEARCHED, time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.SEARCHED, searchedAt))
   }
 
   def clickedSearchResult(
     userId: Id[User],
-    time: DateTime,
+    clickedAt: DateTime,
     basicSearchContext: BasicSearchContext,
     resultSource: SearchEngine,
     resultPosition: Int,
@@ -127,7 +127,12 @@ class SearchAnalytics @Inject() (
       contextBuilder += ("urlMatchQueryRatio", hit.urlMatches.length.toDouble / queryTermsCount)
     }
 
-    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, time))
+    heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, clickedAt))
+    if (resultSource == SearchEngine.Kifi) {
+      contextBuilder += ("action", "clickedKifiResult")
+      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.USED_KIFI, clickedAt))
+      heimdal.setUserProperties(userId, "lastClickedKifiResult" -> ContextDate(clickedAt))
+    }
   }
 
   private def processBasicSearchContext(userId: Id[User], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {

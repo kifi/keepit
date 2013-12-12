@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.model.{KeepToCollection, Bookmark, Collection, User}
+import com.keepit.model._
 import com.keepit.heimdal._
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
@@ -47,24 +47,27 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
-  def keptPages(userId: Id[User], keeps: Seq[Bookmark], context: HeimdalContext): Unit = {
+  def keptPages(userId: Id[User], keeps: Seq[Bookmark], existingContext: HeimdalContext): Unit = {
     val keptAt = currentDateTime
 
     SafeFuture {
       keeps.foreach { bookmark =>
         val contextBuilder = new HeimdalContextBuilder
-        contextBuilder.data ++ context.data
+        contextBuilder.data ++ existingContext.data
         contextBuilder += ("action", "keptPage")
         contextBuilder += ("source", bookmark.source.value)
         contextBuilder += ("isPrivate", bookmark.isPrivate)
         contextBuilder += ("url", bookmark.url)
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.KEPT, keptAt))
+        val context = contextBuilder.build
+        heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.KEPT, keptAt))
+        if (bookmark.source.value != BookmarkSource.initLoad) heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.USED_KIFI, keptAt))
       }
       val kept = keeps.length
       val keptPrivate = keeps.count(_.isPrivate)
       val keptPublic = kept - keptPrivate
       heimdal.incrementUserProperties(userId, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
+      heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
     }
   }
 

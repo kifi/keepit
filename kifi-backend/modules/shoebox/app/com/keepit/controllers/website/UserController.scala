@@ -31,7 +31,7 @@ import com.keepit.common.akka.SafeFuture
 import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{Result, Request}
+import play.api.mvc.{MaxSizeExceeded, Result, Request}
 import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
@@ -434,17 +434,21 @@ class UserController @Inject() (
     }
   }
 
-  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = { implicit request =>
-    s3ImageStore.uploadTemporaryPicture(request.body.file) match {
-      case Success((token, pictureUrl)) =>
-        Ok(Json.obj("token" -> token, "url" -> pictureUrl))
-      case Failure(ex) =>
-        airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
-        BadRequest(JsNumber(0))
+  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024*1024*15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
+  def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded,play.api.libs.Files.TemporaryFile]]) = {
+    request.body match {
+      case Right(tempFile) =>
+        s3ImageStore.uploadTemporaryPicture(tempFile.file) match {
+          case Success((token, pictureUrl)) =>
+            Ok(Json.obj("token" -> token, "url" -> pictureUrl))
+          case Failure(ex) =>
+            airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
+            BadRequest(JsNumber(0))
+        }
+      case Left(err) =>
+        BadRequest(s"""{"error": "file_too_large", "size": ${err.length}}""")
     }
-  }, unauthenticatedAction = { request =>
-    Forbidden("1")
-  })
+  }
 
   private case class UserPicInfo(
     picToken: Option[String],

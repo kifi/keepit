@@ -115,7 +115,10 @@ class MessagingAnalytics @Inject() (
       thread.participants.foreach(addRecipientsInfo(contextBuilder, userId, _))
       shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
         contextBuilder += ("isKeep", bookmarkOption.isDefined)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.MESSAGED, sentAt))
+        val context = contextBuilder.build
+        heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.MESSAGED, sentAt))
+        heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.USED_KIFI, sentAt))
+        heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
       }
     }
   }
