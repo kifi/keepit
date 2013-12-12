@@ -29,6 +29,9 @@ object UserEventTypes {
   // Notifications
   val WAS_NOTIFIED = EventType("was_notified")
 
+  // Settings (= mute/unmute conversation before more)
+  val CHANGED_SETTINGS = EventType("changed_settings")
+
   // Search
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
   val SEARCHED = EventType("searched")
