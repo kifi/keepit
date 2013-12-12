@@ -434,7 +434,8 @@ class UserController @Inject() (
     }
   }
 
-  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = { implicit request =>
+  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
+  def doUploadBinaryUserPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]) = {
     s3ImageStore.uploadTemporaryPicture(request.body.file) match {
       case Success((token, pictureUrl)) =>
         Ok(Json.obj("token" -> token, "url" -> pictureUrl))
@@ -442,9 +443,7 @@ class UserController @Inject() (
         airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
         BadRequest(JsNumber(0))
     }
-  }, unauthenticatedAction = { request =>
-    Forbidden("1")
-  })
+  }
 
   private case class UserPicInfo(
     picToken: Option[String],
