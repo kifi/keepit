@@ -301,7 +301,9 @@ class MessagingController @Inject() (
   }
 
   def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
-    urbanAirship.notifyUser(userId, PushNotification(extId, pendingNotificationCount, msg))
+    val notification = PushNotification(extId, pendingNotificationCount, msg)
+    urbanAirship.notifyUser(userId, notification)
+    messagingAnalytics.sentPushNotificationForThread(userId, notification)
   }
 
   private def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]) : Unit = {
