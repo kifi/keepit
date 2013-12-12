@@ -23,7 +23,7 @@
       var i = this.ids.indexOf(n.thread);
       var nOld = i >= 0 ? this.ids.splice(i, 1)[0] : null;
       if (nOld && nOld.unread && !nOld.muted) {
-        this.numUnreadUnmuted--;
+        this.decNumUnreadUnmuted();
       }
 
       // add in chronological order
@@ -40,6 +40,14 @@
     },
     insertOlder: function(olderThreadIds) {
       Array.prototype.push.apply(this.ids, olderThreadIds);
+    },
+    remove: function(threadId) {
+      var nRemoved = 0, i;
+      while (~(i = this.ids.indexOf(threadId))) {
+        this.ids.splice(i, 1);
+        nRemoved++;
+      }
+      return nRemoved;
     },
     anyUnread: function() {
       return this.numUnreadUnmuted > 0 || this.ids.some(function (id) {

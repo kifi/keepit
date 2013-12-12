@@ -37,14 +37,14 @@ panes.notices = function () {
         log('[new_thread] kind mismatch', listKind, o.kind, o.thread.thread)();
       }
     },
-    notifications_visited: function (o) {
+    thread_read: function (o) {
       log('[notifications_visited]', o)();
-      markVisited(o.category, o.time, o.threadId, o.id);
+      markRead(o.category, o.time, o.threadId, o.id);
       //$markAll.toggle(o.anyUnread);
     },
-    all_notifications_visited: function (o) {
-      log('[all_notifications_visited]', o)();
-      markAllVisited(o.id, o.time);
+    all_threads_read: function (o) {
+      log('[all_threads_read]', o)();
+      markAllRead(o.id, o.time);
       //$markAll.toggle(o.anyUnread);
     }
   };
@@ -205,15 +205,19 @@ panes.notices = function () {
       .prependTo($list);
   }
 
-  function markVisited(category, timeStr, threadId, id) {
+  function markRead(category, timeStr, threadId, id) {
     $list.find('.kifi-notice-' + category + '[data-thread="' + threadId + '"]:not(.kifi-notice-visited)').each(function () {
       if (id === this.dataset.id || new Date(timeStr) >= new Date(this.dataset.createdAt)) {
-        this.classList.add('kifi-notice-visited');
+        if ($list.data('kind') === 'unread') {
+          $(this).remove();
+        } else {
+          this.classList.add('kifi-notice-visited');
+        }
       }
     });
   }
 
-  function markAllVisited(id, timeStr) {
+  function markAllRead(id, timeStr) {
     var time = new Date(timeStr);
     $list.find('.kifi-notice:not(.kifi-notice-visited)').each(function () {
       if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
@@ -234,7 +238,7 @@ panes.notices = function () {
       }
       break;
     case 'global':
-      markVisited('global', this.dataset.createdAt, this.dataset.thread, this.dataset.id);
+      markRead('global', this.dataset.createdAt, this.dataset.thread, this.dataset.id);
       api.port.emit('set_global_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});
       if (uri && uri !== document.URL) {
         if (inThisTab) {
