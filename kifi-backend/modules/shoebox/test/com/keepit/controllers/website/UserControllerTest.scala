@@ -131,7 +131,6 @@ class UserControllerTest extends Specification with ApplicationInjector {
               "firstName":"Shanee",
               "lastName":"Smith",
               "pictureName":"0.jpg",
-              "description":"",
               "emails":[],
               "experiments":["admin"]}
           """)
