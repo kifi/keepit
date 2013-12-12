@@ -18,23 +18,20 @@ object UserEventTypes {
   val INVITE_SENT = EventType("invite_sent")
 
   // Activity
-  val WS_CONNECT = EventType("ws_connect")
-  val WS_DISCONNECT = EventType("ws_disconnect")
+  val CONNECTED = EventType("connected")
 
   // Keeping
-  val KEEP = EventType("keep")
+  val KEPT = EventType("kept")
 
   // Messaging
-  val NEW_MESSAGE = EventType("new_message")
-  val REPLY_MESSAGE = EventType("reply_message")
+  val MESSAGED = EventType("messaged")
 
   // Notifications
   val WAS_NOTIFIED = EventType("was_notified")
 
   // Search
-  val PERFORMED_SEARCH = EventType("performed_search")
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
-  val ENDED_SEARCH = EventType("ended_search")
+  val SEARCHED = EventType("searched")
 
   // Maintenance
   val EXT_ERROR = EventType("ext_error")

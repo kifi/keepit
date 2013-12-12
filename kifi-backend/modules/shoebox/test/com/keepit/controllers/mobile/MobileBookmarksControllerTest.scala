@@ -170,9 +170,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
         val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-          uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE, isPrivate = false))
         val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-          uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE, isPrivate = false))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -213,8 +213,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val bookmarks = db.readOnly { implicit s =>
         bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
       }
+
       bookmarks.size === 1
-      bookmarks(0) === bookmark1
+      bookmarks(0).id.get === bookmark1.id.get
     }
   }
 

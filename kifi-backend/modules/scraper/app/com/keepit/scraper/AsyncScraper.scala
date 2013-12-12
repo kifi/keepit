@@ -7,7 +7,6 @@ import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import java.io.File
 import org.joda.time.Days
 import com.keepit.common.time._
 import com.keepit.common.net.URI
@@ -153,26 +152,10 @@ class AsyncScraper @Inject() (
     try {
       asyncProcessURI(uri, info, proxyOpt)
     } catch {
-      case t: Throwable => { // todo: revisit
-        log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+      case t: Throwable => {
+        log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; StackTrace: ${t.getStackTraceString}")
         airbrake.notify(t)
-        helper.getNormalizedUri(uri) flatMap { latestUriOpt =>
-          // update the uri state to SCRAPE_FAILED
-          val savedUriF = latestUriOpt match {
-            case None => future { uri }
-            case Some(latestUri) =>
-              if (latestUri.state == NormalizedURIStates.INACTIVE) future { latestUri } else {
-                helper.saveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-              }
-          }
-
-          val res:Future[(NormalizedURI, Option[Article])] = savedUriF map { savedUri =>
-            // then update the scrape schedule
-            helper.saveScrapeInfo(info.withFailure()) // todo: revisit
-            (savedUri, None)
-          }
-          res
-        }
+        helper.scrapeFailed(uri, info) map { savedUri => (savedUri.getOrElse(uri), None) }
       }
     }
   }
@@ -201,7 +184,6 @@ class AsyncScraper @Inject() (
     }
   }
 
-  def processErrorURI(latestUri: NormalizedURI, msg: String, info: ScrapeInfo, httpStatus: Int): (NormalizedURI, Option[Article]) = Await.result(asyncProcessErrorURI(latestUri, msg, info, httpStatus), 5 seconds)
   def asyncProcessErrorURI(latestUri: NormalizedURI, msg: String, info: ScrapeInfo, httpStatus: Int): Future[(NormalizedURI, Option[Article])] = {
     // store a fallback article in a store map
     val article = Article(
@@ -219,11 +201,9 @@ class AsyncScraper @Inject() (
       titleLang = None,
       contentLang = None,
       destinationUrl = None)
-    for {
-      updatedStore <- addToArticleStore(latestUri, article)
-      savedInfo <- helper.saveScrapeInfo(info.withFailure())
-      savedURI <- helper.saveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: revisit
-    } yield (savedURI, None)
+
+    addToArticleStore(latestUri, article)
+    helper.scrapeFailed(latestUri, info) map { savedOpt => (savedOpt.getOrElse(latestUri), None) }
   }
 
   def asyncProcessNoChangeURI(info: ScrapeInfo, uri: NormalizedURI, latestUri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
@@ -250,7 +230,7 @@ class AsyncScraper @Inject() (
       } getOrElse true
     }
 
-    asyncProcessRedirects(latestUri, redirects) flatMap { updatedUri =>
+    asyncProcessRedirects(latestUri, redirects) map { updatedUri =>
       // check if document is not changed or does not need to be reindexed
       if (latestUri.title == Option(article.title) && // title change should always invoke indexing
         latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
@@ -261,37 +241,24 @@ class AsyncScraper @Inject() (
         // the article does not need to be reindexed update the scrape schedule, uri is not changed
         helper.saveScrapeInfo(info.withDocumentUnchanged()) // todo: revisit
         log.info(s"[asyncProcessURI] (${uri.url}) no change detected")
-        future { (latestUri, None) }
+        (latestUri, None)
       } else {
-
         // the article needs to be reindexed
         addToArticleStore(latestUri, article)
-
-        // first update the uri state to SCRAPED
-        helper.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED)) map { scrapedURI =>
-          // then update the scrape schedule
-          helper.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)) // todo: revisit
-          helper.getBookmarksByUriWithoutTitle(scrapedURI.id.get) map { bookmarks =>
-            bookmarks.foreach { bookmark =>
-              helper.saveBookmark(bookmark.copy(title = scrapedURI.title)) // todo: revisit
+        val scrapedUri = updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
+        val scrapedInfo = info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)
+        helper.scraped(scrapedUri, scrapedInfo)
+        if (shouldUpdateScreenshot(scrapedUri)) {
+          s3ScreenshotStore.updatePicture(scrapedUri) onComplete { tr =>
+            tr match {
+              case Success(res) => log.info(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] added image to screenshot store. Result: $res")
+              case Failure(e) => log.error(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] failed to add image to screenshot store. Exception: $e; StackTrace: ${e.getStackTraceString}") // anything else?
             }
           }
-          log.info(s"[asyncProcessURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
-
-          if (shouldUpdateScreenshot(scrapedURI)) {
-            s3ScreenshotStore.updatePicture(scrapedURI) onComplete { tr =>
-              tr match {
-                case Success(res) => log.info(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] added image to screenshot store. Result: $res")
-                case Failure(e) => log.error(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] failed to add image to screenshot store. Exception: $e; StackTrace: ${e.getStackTraceString}") // anything else?
-              }
-            }
-          }
-
-          log.info(s"[asyncProcessURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
-          (scrapedURI, Some(article))
         }
+        log.info(s"[asyncProcessURI] (${uri.url}) needs re-indexing; scrapedUri=(${scrapedUri.id}, ${scrapedUri.state}, ${scrapedUri.url})")
+        (scrapedUri, Some(article))
       }
-
     }
   }
 

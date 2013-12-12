@@ -7,8 +7,11 @@ import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
 import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.heimdal.HeimdalContext
 
 class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector {
+
+  implicit val context = HeimdalContext.empty
 
   "BookmarkInterner" should {
     "persist bookmark" in {

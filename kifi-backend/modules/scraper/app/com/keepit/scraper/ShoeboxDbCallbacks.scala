@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.{Future, Await, Awaitable}
 import com.keepit.model.{ScrapeInfoStates, Bookmark, ScrapeInfo, NormalizedURI}
-import com.keepit.common.db.Id
+import com.keepit.common.db.{State, Id}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
@@ -36,6 +36,8 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
   def isUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
 
+  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = shoeboxServiceClient.scraped(uri, info)
+  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo) = shoeboxServiceClient.scrapeFailed(uri, info)
 }
 
 trait SyncShoeboxDbCallbacks {
@@ -58,4 +60,8 @@ trait ShoeboxDbCallbacks {
   def saveBookmark(bookmark:Bookmark): Future[Bookmark]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
+
+  def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
+  def scrapeFailed(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
+  // def updateScrapeInfo(idOpt:Option[Id[ScrapeInfo]], uriId:Id[NormalizedURI], state:State[ScrapeInfo]):Future[ScrapeInfo]
 }

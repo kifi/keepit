@@ -81,7 +81,10 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
   "firstName": "Gregory",
   "id": "rFOBMp35vZ",
   "lastName": "Methvin",
-  "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_VqIaHTv7Z7Iiji26sv2AHik8NuM30Qp64z0lHiBYwoSAhGIQn-RGQ_iKsTJOyTjoRcdrFkWGuL1A"
+  "pictureUrls": {
+    "_total": 1,
+    "values": ["http://m3.licdn.com/mpr/mprx/0_VqIaHTv7Z7Iiji26sv2AHik8NuM30Qp64z0lHiBYwoSAhGIQn-RGQ_iKsTJOyTjoRcdrFkWGuL1A"]
+  }
 }
 """
 
@@ -96,56 +99,80 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
       "firstName": "Dan",
       "id": "PikD5Mqjb0",
       "lastName": "Blumenfeld",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_R7Vm6CddBow0oFjzvHRl6hfqcSOfECjzMDaA6heqHeo0v6ovBWoCe8pVJiYrd5pJVu4KdbnsYgzj",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/danblumenfeld"
     },
     {
       "firstName": "Effi",
       "id": "fmTmo2dxFE",
       "lastName": "Fuks Leichtag",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_IP83M2Gj1XuwK92_Wn_OMm5p15MdKvS_dtNYM7ka2iSJ7AsibvKDcfrhjeJ91tu7oKC0nH9cxOmI",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/effifuks"
     },
     {
       "firstName": "Léo",
       "id": "-XI0AGcm7x",
       "lastName": "Grimaldi",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_9G8uJ82Ox8f-craGZFl0Ji2PP_VjzvOGqQN1JiSauLaDoAdCsXK8B_JhgmsGnt0ac3Ct9k15U0Ix",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/leogrimaldi"
     },
     {
       "firstName": "Jared",
       "id": "Aor3grqQ9s",
       "lastName": "Jacobs",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_JcF2qhBjP5D3t9arMz9PqCvhPi0hY9xrU91PqCvju6IrTteKvAchsG31gSx0jAYp4qL-RLbZxJnf",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/jaredjacobs"
     },
     {
       "firstName": "Yasuhiro",
       "id": "AN0i5eHLth",
       "lastName": "Matsuda",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_5R4EHmBnX7yBaa7QIyRvHDGE6uZBaSOQFM2zHDrnJWubAdd6djHQQSkZHG4eSE0Ek4VNFEa26T7w",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/ymatsuda"
     },
     {
       "firstName": "Yingjie",
       "id": "7fohLXwKJU",
       "lastName": "Miao",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_H1YHLfkAkfab1fgNEASULuLyk2jelupNoBEBLSF8UEdZmHIqkzmXwDPmE3gB-wjZdry9oovfH8zk",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/pub/yingjie-miao/1b/656/1ba"
     },
     {
       "firstName": "Ketan",
       "id": "xwzHI1G35O",
       "lastName": "Patel",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_HOKl9HzR0Cj53vR0EMPm9wvz0GmeiPE0oJka9wbXh3sZpcgxk48gZI1oAEaB8Nw1djt7J2v4WUit",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/ketanpatel3"
     },
     {
       "firstName": "Eishay",
       "id": "94y_yO5fYU",
       "lastName": "Smith",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/in/eishay"
     },
     {
@@ -153,7 +180,10 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
       "id": "kLoN_aF4zS",
       "industry": "Internet",
       "lastName": "Stavinsky",
-      "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_lwfCFPmsNw5tbQjc1m2gFAfBNel-5LDc0fRjFrpWwa5GsTVBjS0mWKebs5AD6G2RKeDyHBaq8eq4",
+      "pictureUrls": {
+        "_total": 1,
+        "values": ["https://media.licdn.com/mpr/mprx/0_GZpK4xSqB5XZXGDhTsOYgYmnzczZL_Th84CjOYPVRGNRGC1mGegyyZnFrMC"]
+      },
       "publicProfileUrl": "http://www.linkedin.com/pub/tamila-stavinsky/53/524/788"
     },
     {

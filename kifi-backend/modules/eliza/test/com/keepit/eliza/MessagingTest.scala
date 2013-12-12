@@ -2,29 +2,26 @@ package com.keepit.eliza
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
-import com.keepit.inject._
-import com.keepit.test.{DbTestInjector}
+import com.keepit.test.DbTestInjector
 import com.google.inject.Injector
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
-import com.keepit.common.cache.{ElizaCacheModule}
+import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.db.{Model, Id, ExternalId}
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.common.db.Id
+import com.keepit.model.User
 import com.keepit.social.BasicUser
 
-import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
-import com.keepit.heimdal.{HeimdalContextBuilderFactory, FakeHeimdalServiceClientImpl}
-import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
+import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
+import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
-import com.keepit.eliza.model.NonUserParticipant
-
 
 class MessagingTest extends Specification with DbTestInjector {
+
+  implicit val context = HeimdalContext.empty
 
   def setup()(implicit injector: Injector) = {
     val threadRepo = inject[MessageThreadRepo]
@@ -36,10 +33,9 @@ class MessagingTest extends Specification with DbTestInjector {
     val clock = inject[Clock]
     val uriNormalizationUpdater: UriNormalizationUpdater = null
     val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
-    val heimdal = new FakeHeimdalServiceClientImpl(inject[AirbrakeNotifier])
-    val heimdalContextBuilder = inject[HeimdalContextBuilderFactory]
+    val messagingAnalytics = inject[MessagingAnalytics]
     val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier(clock))
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, abookServiceClient, clock, uriNormalizationUpdater, urbanAirship, heimdal, heimdalContextBuilder)
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, abookServiceClient, clock, uriNormalizationUpdater, urbanAirship, messagingAnalytics)
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)
@@ -52,7 +48,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestHeimdalServiceClientModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
@@ -76,7 +72,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestHeimdalServiceClientModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Seq, notificationRouter) = setup()
 

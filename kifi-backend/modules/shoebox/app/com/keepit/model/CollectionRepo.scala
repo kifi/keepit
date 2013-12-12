@@ -76,10 +76,8 @@ class CollectionRepoImpl @Inject() (
     Try {
       if (model.state == CollectionStates.INACTIVE) {
         elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", SendableTag.from(model)))
-        heimdal.incrementUserProperties(model.userId, "tags" -> -1)
       } else if (model.id == None) {
         elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", SendableTag.from(model)))
-        heimdal.incrementUserProperties(model.userId, "tags" -> 1)
       } else {
         elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", SendableTag.from(model)))
       }

@@ -44,7 +44,9 @@ object SearchConfig {
       "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
-      "showExperts" -> "false"
+      "showExperts" -> "false",
+      "forbidEmptyFriendlyHits" -> "false",
+      "useNonPersonalizedContextVector" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -75,7 +77,9 @@ object SearchConfig {
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
       "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
-      "showExperts" -> "suggest experts when search returns hits"
+      "showExperts" -> "suggest experts when search returns hits",
+      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
+      "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
@@ -139,9 +143,14 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   }
 
   def getConfigByUserSegment(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
-    val segFuture = shoeboxClient.getUserSegment(userId)
-    val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
-    if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else assignConfig(userId, queryText, seg.value)
+    userConfig.get(userId.id) match {
+      case Some(config) => (config, None)
+      case None => if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else {
+        val segFuture = shoeboxClient.getUserSegment(userId)
+        val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
+        assignConfig(userId, queryText, seg.value)
+      }
+    }
   }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
