@@ -882,7 +882,12 @@ $(function () {
 	var PRIMARY_INDEX = 0;
 
 	function getPrimaryEmail(emails) {
-		return (emails || me.emails)[PRIMARY_INDEX] || null;
+		if (!emails) {
+			emails = me.emails;
+		}
+		return findEmail(emails, function (info) {
+			return info.isPrimary;
+		})[0] || emails[PRIMARY_INDEX] || null;
 	}
 
 	function getPendingPrimaryEmail(emails) {
@@ -1309,7 +1314,6 @@ $(function () {
 					info.isPrimary = true;
 				}
 			});
-
 			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
 		}
 	}
