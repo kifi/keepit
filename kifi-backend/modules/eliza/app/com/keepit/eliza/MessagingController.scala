@@ -886,14 +886,17 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject])] = {
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject], Int)] = {
     shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
       if (nUriOrPrenorm.isLeft) {
         val nUri = nUriOrPrenorm.left.get
-        val notices = db.readOnly { implicit session => userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany) }
-        (nUri.url, notices)
+        db.readOnly { implicit session =>
+          val notices = userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
+          val numUnreadUnmuted = userThreadRepo.getUnreadUnmutedThreadCountForUri(userId, nUri.id.get)
+          (nUri.url, notices, numUnreadUnmuted)
+        }
       } else {
-        (nUriOrPrenorm.right.get, Seq[JsObject]())
+        (nUriOrPrenorm.right.get, Seq.empty, 0)
       }
     }
   }

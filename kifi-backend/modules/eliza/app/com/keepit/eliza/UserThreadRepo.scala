@@ -91,6 +91,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject]
 
+  def getUnreadUnmutedThreadCountForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Int
+
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
@@ -396,6 +398,10 @@ class UserThreadRepoImpl @Inject() (
       .take(howMany).map(row => row.lastNotification ~ row.unread)
       .list
     updateSendableNotifications(rawNotifications)
+  }
+
+  def getUnreadUnmutedThreadCountForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
+    Query((for (row <- table if row.user === userId && row.uriId === uriId && row.unread && !row.muted) yield row).length).first
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {
