@@ -1267,19 +1267,23 @@ $(function () {
 
 	function cancelAddEmail(e) {
 		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
+		closeAddEmailInput(getAddEmailInput(this));
+	}
+
+	function getAddEmailInput(that) {
+		return $(that).closest('.profile-email-address-add-box').find('.profile-email-address-add-input');
+	}
+
+	function closeAddEmailInput($input) {
 		$input.val('');
 		$input.off('keydown');
 		showError($input, false);
-		$manage.removeClass('add');
+		$input.closest('.profile-email-address-manage').removeClass('add');
 	}
 
 	function submitAddEmail(e) {
 		e.preventDefault();
-		var $input = $(this).closest('.profile-email-address-add-box').find('.profile-email-address-add-input');
+		var $input = getAddEmailInput(this);
 		if (validateEmailInput($input)) {
 			var email = $input.val();
 			getEmailInfo(email)
@@ -1292,10 +1296,7 @@ $(function () {
 		return function (emailInfo) {
 			if (emailInfo.status === 'available') {
 				addEmailAccount(email);
-				$input.val('');
-				$input.off('keydown');
-				showError($input, false);
-				$input.closest('.profile-email-address-manage').removeClass('add');
+				closeAddEmailInput($input);
 				showVerificationAlert(email);
 			}
 			else {
@@ -1316,7 +1317,7 @@ $(function () {
 				showError(
 					$input,
 					'Invalid email address',
-					'This is not a valid email address.<br>Please enter a valid email address.'
+					'Please enter a valid email address.'
 				);
 				break;
 			case 403:
