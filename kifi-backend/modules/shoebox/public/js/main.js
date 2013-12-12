@@ -1278,42 +1278,69 @@ $(function () {
 
 	function submitAddEmail(e) {
 		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
+		var $input = $(this).closest('.profile-email-address-add-box').find('.profile-email-address-add-input');
 		if (validateEmailInput($input)) {
 			var email = $input.val();
 			getEmailInfo(email)
-				.done(function () {
-					console.log('[getEmailInfo.done]', this, arguments);
-				})
-				.fail(function () {
-					console.log('[getEmailInfo.fail]', this, arguments);
-				});
-			if (addEmailAccount(email)) {
+				.done(getAddEmailSuccessCallback(email, $input))
+				.fail(getAddEmailErrorCallback(email, $input));
+		}
+	}
+
+	function getAddEmailSuccessCallback(email, $input) {
+		return function (emailInfo) {
+			if (emailInfo.status === 'available') {
+				addEmailAccount(email);
 				$input.val('');
 				$input.off('keydown');
 				showError($input, false);
-				$manage.removeClass('add');
+				$input.closest('.profile-email-address-manage').removeClass('add');
 				showVerificationAlert(email);
 			}
-		}
+			else {
+				showError(
+					$input,
+					'This email address is already added',
+					'Please use another email address.'
+				);
+			}
+		};
+	}
+
+	function getAddEmailErrorCallback(email, $input) {
+		return function (jqXHR) {
+			switch (jqXHR.status) {
+			case 400:
+				// bad format
+				showError(
+					$input,
+					'Invalid email address',
+					'This is not a valid email address.<br>Please enter a valid email address.'
+				);
+				break;
+			case 403:
+				// belongs to another user
+				showError(
+					$input,
+					'This email address is already taken',
+					'This email address belongs to another user.<br>Please enter another email address.'
+				);
+				break;
+			}
+		};
 	}
 
 	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
 
 	function addEmailAccount(email) {
-		if (email) {
-			var props = getProfileCopy();
-			var emails = props.emails;
-			emails.push({
-				address: email,
-				isPrimary: false
-			});
+		var props = getProfileCopy();
+		var emails = props.emails;
+		emails.push({
+			address: email,
+			isPrimary: false
+		});
 
-			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
-		}
+		return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 	}
 
 	function makePrimary(email) {
@@ -3633,9 +3660,9 @@ $(function () {
 		var pendingPrimary = getPendingPrimaryEmail();
 
 		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!pendingPrimary && !primary.isVerified);
+		$unverified.toggle(!pendingPrimary && primary && !primary.isVerified);
 
-		$('.profile-email input').val(primary.address || '');
+		$('.profile-email input').val(primary && primary.address || '');
 
 		var $emails = $('.profile-email-address-list').empty();
 		(me.emails || []).forEach(function (info, i, list) {
