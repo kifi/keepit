@@ -38,6 +38,7 @@ import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
 import com.keepit.heimdal.HeimdalContext
+import scala.util.{Failure, Success, Try}
 
 
 //For migration only
@@ -120,7 +121,7 @@ class MessagingController @Inject() (
       val imageUrl : String        =  (data \ "imageUrl").as[String]
       val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
 
-      createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
+      createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
 
     }
     Status(ACCEPTED)
@@ -146,7 +147,7 @@ class MessagingController @Inject() (
     Status(ACCEPTED)
   }
 
-  def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -171,10 +172,8 @@ class MessagingController @Inject() (
       (message, thread)
     }
 
-    var errors : Set[Throwable] = Set[Throwable]()
-
-    userIds.foreach{ userId =>
-      try{
+    val notificationAttempts = userIds.map { userId =>
+      Try {
         val (notifJson, userThread) = db.readWrite{ implicit session =>
           val notifJson = Json.obj(
             "id"       -> message.externalId.id,
@@ -210,11 +209,14 @@ class MessagingController @Inject() (
           userId,
           Json.arr("notification", notifJson)
         )
-      } catch {
-        case e: Throwable => errors = errors + e
+        userId
       }
     }
 
+    val notified = notificationAttempts collect { case Success(userId) => userId }
+    messagingAnalytics.sentGlobalNotification(notified, message, thread)
+
+    val errors = notificationAttempts collect { case Failure(ex) => ex }
     if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
   }
 
@@ -982,7 +984,7 @@ class MessagingController @Inject() (
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
 
-      messagingAnalytics.clearedNotificationForMessage(userId, message, thread, context)
+      messagingAnalytics.clearedNotification(userId, message, thread, context)
       notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
     }
