@@ -1255,8 +1255,11 @@ $(function () {
 		resendVerificationEmail(email);
 	});
 
+	function getEmailInfo(email) {
+		return $.getJSON(xhrBase + '/user/email?email=' + email);
+	}
+
 	function resendVerificationEmail(email) {
-		console.log(email);
 		$.post(xhrBase + '/user/resend-verification?email=' + email);
 		showVerificationAlert(email);
 	}
@@ -1280,11 +1283,13 @@ $(function () {
 			$manage = $box.closest('.profile-email-address-manage'),
 			$input = $box.find('.profile-email-address-add-input');
 		if (validateEmailInput($input)) {
-			if (addEmailAccount($input.val())) {
+			var email = $input.val();
+			if (addEmailAccount(email)) {
 				$input.val('');
 				$input.off('keydown');
 				showError($input, false);
 				$manage.removeClass('add');
+				showVerificationAlert(email);
 			}
 		}
 	}
