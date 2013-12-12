@@ -228,6 +228,7 @@ GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
+POST    /admin/bookmarks/fixBug     @com.keepit.controllers.admin.AdminBookmarksController.fixBug()
 
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
