@@ -390,7 +390,7 @@ $(function () {
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
-				}).error(function () {
+				}).fail(function () {
 					$pic.find('.page-pic-soon').addClass('showing');
 				});
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
@@ -883,7 +883,12 @@ $(function () {
 	var PRIMARY_INDEX = 0;
 
 	function getPrimaryEmail(emails) {
-		return (emails || me.emails)[PRIMARY_INDEX] || null;
+		if (!emails) {
+			emails = me.emails;
+		}
+		return findEmail(emails, function (info) {
+			return info.isPrimary;
+		})[0] || emails[PRIMARY_INDEX] || null;
 	}
 
 	function getPendingPrimaryEmail(emails) {
@@ -948,7 +953,7 @@ $(function () {
 	}
 
 	var emailChangeTmpl = Handlebars.compile($('#primary-email-change-dialog').html());
-	function showEmailChangeDialog(email, success, cancel) {
+	function showEmailChangeDialog(email, submit, cancel) {
 		var $dialog = $(emailChangeTmpl({
 				email: email
 			}))
@@ -965,8 +970,8 @@ $(function () {
 				e.preventDefault();
 				$dialog.remove();
 
-				if (success) {
-					success(true);
+				if (submit) {
+					submit(true);
 				}
 			})
 			.dialog('show');
@@ -987,7 +992,7 @@ $(function () {
 				isPrimary: true
 			});
 
-			$.postJson(xhrBase + '/user/me', props).success(updateMe);
+			$.postJson(xhrBase + '/user/me', props).done(updateMe);
 		}, cancel);
 	}
 
@@ -1003,8 +1008,8 @@ $(function () {
 		delete props.email;
 
 		$.postJson(xhrBase + '/user/me', props)
-			.success(updateMe)
-			.error(function () {
+			.done(updateMe)
+			.fail(function () {
 				showMessage('Uh oh! A bad thing happened!');
 			});
 	}
@@ -1251,53 +1256,93 @@ $(function () {
 		resendVerificationEmail(email);
 	});
 
+	function getEmailInfo(email) {
+		return $.getJSON(xhrBase + '/user/email?email=' + email);
+	}
+
 	function resendVerificationEmail(email) {
-		console.log(email);
 		$.post(xhrBase + '/user/resend-verification?email=' + email);
 		showVerificationAlert(email);
 	}
 
 	function cancelAddEmail(e) {
 		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
+		closeAddEmailInput(getAddEmailInput(this));
+	}
+
+	function getAddEmailInput(that) {
+		return $(that).closest('.profile-email-address-add-box').find('.profile-email-address-add-input');
+	}
+
+	function closeAddEmailInput($input) {
 		$input.val('');
 		$input.off('keydown');
 		showError($input, false);
-		$manage.removeClass('add');
+		$input.closest('.profile-email-address-manage').removeClass('add');
 	}
 
 	function submitAddEmail(e) {
 		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
+		var $input = getAddEmailInput(this);
 		if (validateEmailInput($input)) {
-			if (addEmailAccount($input.val())) {
-				$input.val('');
-				$input.off('keydown');
-				showError($input, false);
-				$manage.removeClass('add');
-			}
+			var email = $input.val();
+			getEmailInfo(email)
+				.done(getAddEmailSuccessCallback(email, $input))
+				.fail(getAddEmailErrorCallback(email, $input));
 		}
+	}
+
+	function getAddEmailSuccessCallback(email, $input) {
+		return function (emailInfo) {
+			if (emailInfo.status === 'available') {
+				addEmailAccount(email);
+				closeAddEmailInput($input);
+				showVerificationAlert(email);
+			}
+			else {
+				showError(
+					$input,
+					'This email address is already added',
+					'Please use another email address.'
+				);
+			}
+		};
+	}
+
+	function getAddEmailErrorCallback(email, $input) {
+		return function (jqXHR) {
+			switch (jqXHR.status) {
+			case 400:
+				// bad format
+				showError(
+					$input,
+					'Invalid email address',
+					'Please enter a valid email address.'
+				);
+				break;
+			case 403:
+				// belongs to another user
+				showError(
+					$input,
+					'This email address is already taken',
+					'This email address belongs to another user.<br>Please enter another email address.'
+				);
+				break;
+			}
+		};
 	}
 
 	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
 
 	function addEmailAccount(email) {
-		if (email) {
-			var props = getProfileCopy();
-			var emails = props.emails;
-			emails.push({
-				address: email,
-				isPrimary: false
-			});
+		var props = getProfileCopy();
+		var emails = props.emails;
+		emails.push({
+			address: email,
+			isPrimary: false
+		});
 
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
-		}
+		return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 	}
 
 	function makePrimary(email) {
@@ -1310,8 +1355,7 @@ $(function () {
 					info.isPrimary = true;
 				}
 			});
-
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 		}
 	}
 
@@ -1327,7 +1371,7 @@ $(function () {
 			var emails = props.emails;
 			removeEmailInfo(emails, email);
 
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 		}
 	}
 
@@ -1902,7 +1946,7 @@ $(function () {
 		case 'requested':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function (data) {
 				o.state = 'unfriended';
-			}).error(function () {
+			}).fail(function () {
 				if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
 					o.state = 'friend';
 				}
@@ -2306,7 +2350,7 @@ $(function () {
 		case 'requested':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function (data) {
 				o.status = '';
-			}).error(function () {
+			}).fail(function () {
 				if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
 					o.status = 'friend';
 				}
@@ -2404,7 +2448,7 @@ $(function () {
 			$a.closest('.friend-req').find('.friend-req-q').text(
 				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
 			updateFriendRequests(-1);
-		}).error(function () {
+		}).fail(function () {
 			$a.siblings('a').addBack().attr('href', 'javascript:');
 		});
 		$a.siblings('a').addBack().removeAttr('href');
@@ -2869,7 +2913,7 @@ $(function () {
 			var $pageColl = $detail.find('.page-coll[data-id=' + collId + ']');
 			if ($pageColl.length) { $pageColl.css('width', $pageColl[0].offsetWidth); }
 			$keepColl.add($pageColl).layout().on('transitionend', removeIfThis).addClass('removed');
-		}).error(showMessage.bind(null, 'Could not delete tag, please try again later'));
+		}).fail(showMessage.bind(null, 'Could not delete tag, please try again later'));
 	}).on('mouseup mousedown', '.coll-rename', function (e) {
 		if (e.which > 1 || !$collMenu.hasClass('showing')) { return; }
 		hideCollMenu();
@@ -2897,7 +2941,7 @@ $(function () {
 						if ($myKeeps.data('collId') === collId) {
 							$main.find('h1').text(newName);
 						}
-					}).error(function () {
+					}).fail(function () {
 						showMessage('Could not rename tag, please try again later');
 						$name.text(oldName);
 					});
@@ -3143,7 +3187,7 @@ $(function () {
 			// update the collection order
 			$.postJson(xhrBase + '/collections/ordering', $(this).find('.collection').map(getDataId).get(), function (data) {
 				console.log(data);
-			}).error(function () {
+			}).fail(function () {
 				showMessage('Could not reorder the tags, please try again later');
 				// TODO: revert the re-order in the DOM
 			});
@@ -3224,7 +3268,7 @@ $(function () {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
 			$collList.find('.antiscroll-inner')[0].scrollTop = 0;
 			callback(data.id);
-		}).error(function () {
+		}).fail(function () {
 			showMessage('Could not create tag, please try again later');
 			callback();
 		});
@@ -3251,7 +3295,7 @@ $(function () {
 						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
 					}
 				}
-			}).error(function () {
+			}).fail(function () {
 				showMessage('Could not add to tag, please try again later');
 				if (onError) { onError(); }
 			});
@@ -3273,7 +3317,7 @@ $(function () {
 				$pageColl.css('width', $pageColl[0].offsetWidth).layout().on('transitionend', removeIfThis).addClass('removed');
 			}
 			$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps -= data.removed);
-		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
+		}).fail(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
 	}
 
 	function undoRemoveFromCollection(collId, $keeps, $titles) {
@@ -3324,7 +3368,7 @@ $(function () {
 				}, function (data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass('mine').find('.keep-private').toggleClass('on', howKept === 'pri');
-				}).error(showMessage.bind(null, 'Could not add Keeps, please try again later'));
+				}).fail(showMessage.bind(null, 'Could not add Keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
 			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function () {return {url: this.querySelector('.keep-title>a').href}; }).get(), function (data) {
 				// TODO: update number in "Showing top 30 results" tagline? load more instantly if number gets too small?
@@ -3351,7 +3395,7 @@ $(function () {
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
 					undoUnkeep.bind(null, $keeps, $titles),
 					$.fn.remove.bind($keepsGoing));
-			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
+			}).fail(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept === 'pub' ? 'pri' : 'pub';
 			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
@@ -3363,7 +3407,7 @@ $(function () {
 					{keeps: [{title: keepLink.title, url: keepLink.href, isPrivate: howKept === 'pri'}]},
 					function () {
 						$keep.find('.keep-private').toggleClass('on', howKept === 'pri');
-					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
+					}).fail(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
 	}).on('click', '.page-coll-x', function (e) {
@@ -3618,9 +3662,9 @@ $(function () {
 		var pendingPrimary = getPendingPrimaryEmail();
 
 		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!pendingPrimary && !primary.isVerified);
+		$unverified.toggle(!pendingPrimary && primary && !primary.isVerified);
 
-		$('.profile-email input').val(primary.address || '');
+		$('.profile-email input').val(primary && primary.address || '');
 
 		var $emails = $('.profile-email-address-list').empty();
 		(me.emails || []).forEach(function (info, i, list) {

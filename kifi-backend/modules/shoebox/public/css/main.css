@@ -1187,6 +1187,7 @@ a.profile-email-pending-cancel {
   background-image: url(../img/arrow-gray-right.png);
   background-repeat: no-repeat;
   background-position: 4px 4px;
+  background-size: 6px 10px;
   float: left;
   width: 10px;
   height: 10px;
@@ -1197,6 +1198,7 @@ a.profile-email-pending-cancel {
 
 .profile-email-addresses.opened .profile-email-addresses-arrow {
   background-image: url(../img/arrow-gray-down.png);
+  background-size: 10px 6px;
   background-position: 0 7px;
 }
 
@@ -1316,6 +1318,7 @@ a.profile-email-address-add {
   background-image: url(../img/arrow-gray-down.png);
   background-repeat: no-repeat;
   background-position: 3px 6px;
+  background-size: 10px 6px;
   width: 10px;
   height: 10px;
   padding: 3px;
@@ -4655,6 +4658,18 @@ a.friend-nw-google[href] {
 
   td.profile-email-status {
     background-image: url(../img/check-green.2x.png);
+  }
+
+  .profile-email-addresses-arrow {
+    background-image: url(../img/arrow-gray-right.2x.png);
+  }
+
+  .profile-email-address-item-arrow {
+    background-image: url(../img/arrow-gray-down.2x.png);
+  }
+
+  .profile-email-addresses.opened .profile-email-addresses-arrow {
+    background-image: url(../img/arrow-gray-down.2x.png);
   }
 }
 
