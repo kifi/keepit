@@ -37,7 +37,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("messageExternalId", message.externalId.id)
       contextBuilder += ("threadExternalId", thread.externalId.id)
       message.from.foreach { senderId => contextBuilder += ("messageSenderId", senderId.id) }
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
   }
 
@@ -51,7 +51,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("global", false)
       contextBuilder += ("threadExternalId", notification.id.id)
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
   }
 
@@ -66,7 +66,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("messageExternalId", message.externalId.id)
       contextBuilder += ("threadExternalId", thread.externalId.id)
       val context = contextBuilder.build
-      userIds.foreach { id => heimdal.trackEvent(UserEvent(id.id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
+      userIds.foreach { id => heimdal.trackEvent(UserEvent(id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
   }
 
@@ -79,7 +79,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("channel", kifi)
       contextBuilder += ("messageExternalId", message.externalId.id)
       contextBuilder += ("threadExternalId", thread.externalId.id)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
     }
   }
 
@@ -93,7 +93,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("newParticipants", newParticipants.map(_.id))
       contextBuilder += ("participantsAdded", newParticipants.length)
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
     }
   }
 
@@ -116,8 +116,8 @@ class MessagingAnalytics @Inject() (
       shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
         contextBuilder += ("isKeep", bookmarkOption.isDefined)
         val context = contextBuilder.build
-        heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.MESSAGED, sentAt))
-        heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.USED_KIFI, sentAt))
+        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
+        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
         heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
       }
     }
@@ -133,7 +133,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("threadExternalId", threadExternalId.id)
       val thread = db.readOnly { implicit session => threadRepo.get(threadExternalId) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }
   }
 

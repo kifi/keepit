@@ -16,10 +16,8 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
   def track[E <: HeimdalEvent: TypeCode](event: E) = {
     val eventCode = implicitly[TypeCode[E]]
     val eventName = s"${eventCode}_${event.eventType.name}"
-    val userId = Some(event) collect { case userEvent: UserEvent => Id[User](userEvent.userId) }
-
+    val userId = Some(event) collect { case userEvent: UserEvent => userEvent.userId }
     val distinctId = userId.map(getDistinctId) getOrElse eventCode.toString
-    val superPropertiesFuture = userId.map(getSuperProperties) getOrElse Future.successful(Seq.empty)
 
     val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
@@ -28,18 +26,10 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     if (!properties.data.contains("token")) { properties += ("token", projectToken) }
     properties += ("distinct_id", distinctId)
     properties += ("time", event.time.getMillis)
-
-    for (superProperties <- superPropertiesFuture recover { case _ : Throwable => Seq.empty } ) yield {
-      properties.data ++= superProperties
-      val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
-      sendData("http://api.mixpanel.com/track", data)
-    }
+    val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
+    sendData("http://api.mixpanel.com/track", data)
   }
 
-  private def getSuperProperties(userId: Id[User]): Future[Seq[(String, ContextData)]] =
-    shoebox.getUserValue(userId, Gender.key).map(_.map { gender =>
-      Seq(Gender.key -> ContextStringData(Gender(gender).toString))
-    } getOrElse(Seq.empty))
 
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]) = {
     val data = Json.obj(

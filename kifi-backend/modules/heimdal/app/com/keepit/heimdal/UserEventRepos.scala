@@ -35,10 +35,10 @@ class ProdUserEventLoggingRepo(
   private val augmentors = Seq(new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new GenderAugmentor(shoeboxClient))
 
   def toBSON(event: UserEvent) : BSONDocument = {
-    val userBatch: Long = event.userId / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
+    val userBatch: Long = event.userId.id / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
     val fields = EventRepo.eventToBSONFields(event) ++ Seq(
         "userBatch" -> BSONLong(userBatch),
-        "userId" -> BSONLong(event.userId)
+        "userId" -> BSONLong(event.userId.id)
       )
     BSONDocument(fields)
   }
@@ -72,7 +72,7 @@ class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends Eve
 class GenderAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
   def isDefinedAt(userEvent: UserEvent) = true
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
-    shoeboxClient.getUserValue(Id[User](userEvent.userId), Gender.key).map(Seq(_).flatten.map { gender =>
+    shoeboxClient.getUserValue(userEvent.userId, Gender.key).map(Seq(_).flatten.map { gender =>
       Gender.key -> ContextStringData(Gender(gender).toString)
     })
   }
@@ -81,7 +81,7 @@ class GenderAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmento
 class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
   def isDefinedAt(userEvent: UserEvent) = true
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
-    val uid = Id[User](userEvent.userId)
+    val uid = userEvent.userId
     shoeboxClient.getUserSegment(uid).map{ seg =>
       Seq(("userSegment" -> ContextStringData(seg.description)))
     }

@@ -19,7 +19,7 @@ trait EventRepo[E <: HeimdalEvent] {
   def descriptors: EventDescriptorRepo[E]
 }
 
-trait EventAugmentor[+E <: HeimdalEvent] extends PartialFunction[E, Future[Seq[(String, ContextData)]]]
+trait EventAugmentor[E <: HeimdalEvent] extends PartialFunction[E, Future[Seq[(String, ContextData)]]]
 
 object EventAugmentor extends Logging {
   def safelyAugmentContext[E <: HeimdalEvent](event: E, augmentors: EventAugmentor[E]*): Future[HeimdalContext] = {
