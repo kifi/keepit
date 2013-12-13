@@ -57,7 +57,6 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
         contextBuilder += ("action", "keptPage")
         contextBuilder += ("source", bookmark.source.value)
         contextBuilder += ("isPrivate", bookmark.isPrivate)
-        contextBuilder += ("url", bookmark.url)
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
@@ -80,7 +79,6 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
         contextBuilder.data ++ context.data
         contextBuilder += ("action", "unkeptPage")
         contextBuilder += ("isPrivate", keep.isPrivate)
-        contextBuilder += ("url", keep.url)
         contextBuilder += ("hasTitle", keep.title.isDefined)
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, unkeptAt))
       }
@@ -95,7 +93,6 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++ context.data
     contextBuilder += ("action", "updatedKeep")
-    contextBuilder += ("url", updatedKeep.url)
     if (oldKeep.isPrivate != updatedKeep.isPrivate) {
       if (updatedKeep.isPrivate) {
         contextBuilder += ("updatedPrivacy", "private")
@@ -125,7 +122,6 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     contextBuilder += ("action", action)
     contextBuilder += ("tag", tag.name)
     contextBuilder += ("isPrivate", keep.isPrivate)
-    contextBuilder += ("url", keep.url)
     contextBuilder += ("hasTitle", keep.title.isDefined)
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
   }
