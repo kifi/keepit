@@ -27,13 +27,23 @@ import play.api.libs.json.{Json, JsObject}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
-
+import akka.actor.ActorSystem
 
 
 class MessagingTest extends Specification with DbTestInjector {
 
   implicit val context = HeimdalContext.empty
+
+  def modules = {
+    implicit val system = ActorSystem("test")
+    Seq(
+      ElizaCacheModule(),
+      FakeShoeboxServiceModule(),
+      TestHeimdalServiceClientModule(),
+      TestElizaServiceClientModule(),
+      StandaloneTestActorSystemModule()
+    )
+  }
 
   def setup()(implicit injector: Injector) = {
     val threadRepo = inject[MessageThreadRepo]
@@ -60,7 +70,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestHeimdalServiceClientModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withDb(modules:_*) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
@@ -84,7 +94,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestHeimdalServiceClientModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withDb(modules:_*) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Seq, notificationRouter) = setup()
 
