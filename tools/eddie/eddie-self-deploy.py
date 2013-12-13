@@ -1,46 +1,7 @@
-#usage python deployyourself.py <version> [force]
-
-#Todo
-#on system startup deployyourself latest
-#need way of checking if a deploy in in progress, ELB registration
-#feature to lock deploy
-#init scripts heaps size + wait time
-#nginx clean
-#aws keys
-#get version from tag
-#instant rollback
-
-
-
-#Flow::
-
-#write deply in progress file
-
-#first, figure out what service I am
-
-#prepare for new version:
-#verify version exists
-#clear out ~/repo
-#download new version
-
-#remove from ELB if neccessary
-
-#shutdown and clean:
-#stop current service if it's running
-#delete symlink
-#move to ~/old
-#at this point ~/run is empty
-
-#start up new service:
-#unpack single file in ~/repo to ~/run
-#make symlink
-#call init script
-#wait certain amount of time until I'm up, or else abort
-
-#add to ELB if neccessary
-
-#delete deploy in progress file
-#end execution
+#Usage: python eddie-self-deploy.py <version> ['force']
+#version can be 'latest', a negative number (e.g. '-4') for how many versions back from latest, or a commit hash
+#if version is ommited it falls back to a 'Version' tag on the instance and then 'latest'
+#'force' does not check if there is a deploy in progress already
 
 import boto.ec2
 import requests
@@ -52,6 +13,8 @@ import subprocess
 import random
 import string
 import time
+import portalocker
+import traceback
 from collections import defaultdict
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -89,6 +52,24 @@ def checkUp():
   except:
     return False
 
+#file based locking
+
+lockFile = None
+
+def aquireLock(): #return truthy when lock aquired
+  global lockFile
+  if lockFile is None:
+    lockFile = open("/home/fortytwo/deploy.lock", "w")
+  try:
+    portalocker.lock(lockFile, portalocker.LOCK_EX | portalocker.LOCK_NB)
+    return True
+  except:
+    return False
+
+
+def releaseLock(): #silently fails if there is no lock
+  if lockFile is not None:
+    lockFile.close()
 
 
 #######################
@@ -209,32 +190,40 @@ def startService(serviceType):
   return not os.system("/etc/init.d/" + serviceType + " start")
 
 
-
-#proper aborting, file lock with 'force' mode
-
-
 if __name__=="__main__":
   try:
     me = whoAmI()
-    serviceType = "shoebox" #me['Service']
-    version = sys.argv[1] if len(sys.argv)>1 else 'latest'
+    serviceType = me['Service']
+    version = sys.argv[1] if (len(sys.argv)>1 and sys.argv[1]!='force') else me.get('Version','latest')
+    force = 'force' in sys.argv
     name = me['Name']
     deployId = ''.join(random.choice(string.hexdigits) for i in range(3)).lower()
     logHead = "[%s:%s:%s]" % (name, serviceType, deployId)
+    if not force and not aquireLock():
+      log(logHead + " Deploy in progress. Aborting this one.")
+      sys.exit(1)
     try:
       log(logHead + " Starting self deploy. Target Version: " + version)
 
-      if not stopService(serviceType): sys.exit(1)
+      if not stopService(serviceType):
+        log(logHead + " Failed to stop service. Aborting.")
+        sys.exit(1)
       log(logHead + " Running service has been stopped.")
 
       versionFileName = getNewVersion(serviceType, version)
-      if not versionFileName: sys.exit(1)
+      if not versionFileName:
+        log(logHead + " Failed to retrieve version. Aborting.")
+        sys.exit(1)
       log(logHead + " Retrieved Version: " + versionFileName)
 
-      if not setUpCode(serviceType): sys.exit(1)
+      if not setUpCode(serviceType):
+        log(logHead + " Failed to install code. Aborting.")
+        sys.exit(1)
       log(logHead + " Service has been installed.")
 
-      if not startService(serviceType): sys.exit(1)
+      if not startService(serviceType):
+        log(logHead + " Failed to start service. Aborting.")
+        sys.exit(1)
       log(logHead + " Service has been started. Waiting for it to come up.")
 
       waitStart = time.time()
@@ -255,7 +244,11 @@ if __name__=="__main__":
       else:
         log(logHead + " Service failed to come up. Deployment Failed!")
     except Exception as e:
+      traceback.print_exc()
       log(logHead + " Fatal Error during deploy! Machine may need cleanup. (%s)" %str(e))
   except Exception as e:
     log("Fatal Error starting deploy! Could not find machine info. (%s)" % str(e))
+    traceback.print_exc()
+  finally:
+    releaseLock()
 
