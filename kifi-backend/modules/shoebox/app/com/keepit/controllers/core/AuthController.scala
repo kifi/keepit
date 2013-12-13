@@ -528,6 +528,7 @@ class AuthController @Inject() (
         if (verification._2) { // code is being used for the first time
           if (user.primaryEmailId.isEmpty) {
             userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            userValueRepo.clearValue(user.id.get, "pending_primary_email")
           } else {
             val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
             if (pendingEmail.isDefined && address.address == pendingEmail.get) {
