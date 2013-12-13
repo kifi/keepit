@@ -71,6 +71,7 @@ $.extend($.timeago.settings.strings, {
 			});
 		},
 		hide: function () {
+			$(this).trigger('dialog.hide');
 			$(document).off('keydown.dialog');
 			$(this).on('transitionend', function end(e) {
 				if (e.target === this) {
@@ -438,8 +439,10 @@ $(function () {
 			cancelProfileInput($(this));
 		});
 
-		$box.addClass('edit');
+		activateInput($input);
+	}
 
+	function activateInput($input) {
 		$input
 			.each(function () {
 				var $this = $(this);
@@ -447,6 +450,51 @@ $(function () {
 			})
 			.prop('disabled', false)
 			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function commitInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.val());
+				$this.data('prevValue', $this.data('value'));
+				$this.val(val).data('value', val);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function cancelInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.data('value'));
+				$this.val(val);
+				showError($this, false);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function revertAndActivateInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this);
+				$this.data('value', $this.data('prevValue'));
+			})
+			.prop('disabled', false)
+			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function revertInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					prev = $this.data('prevValue');
+				$this.val(prev).data('value', prev);
+			});
 	}
 
 	function saveProfileInput($target, e) {
@@ -480,25 +528,11 @@ $(function () {
 			return false;
 		}
 
-		$input
-			.each(function () {
-				var $this = $(this),
-					val = trimInputValue($this.val());
-				$this
-					.data('prevValue', $this.data('value'));
-				$this
-					.val(val)
-					.data('value', val);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
+		commitInput($input);
 
 		if ($input.attr('name') === 'email') {
 			saveNewPrimaryEmail($input, function () {
-				var prev = $input.data('prevValue');
-				$input.val(prev).data('value', prev);
+				revertInput($input);
 			});
 		}
 		else {
@@ -514,16 +548,7 @@ $(function () {
 		var $box = $target.closest('.profile-input-box'),
 			$input = $box.find('.profile-input-input');
 
-		$input
-			.each(function () {
-				var $this = $(this);
-				$this.val(trimInputValue($this.data('value')));
-				showError($this, false);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
+		cancelInput($input);
 	}
 
 	function trimInputValue(val) {
@@ -958,6 +983,11 @@ $(function () {
 				email: email
 			}))
 			.appendTo(document.body)
+			.on('dialog.hide', function () {
+				if (cancel) {
+					cancel(false);
+				}
+			})
 			.on('click', '.dialog-cancel', function (e) {
 				e.preventDefault();
 				$dialog.remove();
@@ -998,10 +1028,14 @@ $(function () {
 					return;
 				}
 				if (emailInfo.isVerified) {
-					setNewPrimaryEmail(email);
+					setNewPrimaryEmail(email)();
 					return;
 				}
+				// email is available || (not primary && not pending primary && not verified)
 				showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+			})
+			.fail(function () {
+				revertAndActivateInput($input);
 			})
 			.fail(getAddEmailErrorCallback(email, $input));
 	}
