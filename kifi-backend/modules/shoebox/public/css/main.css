@@ -4995,6 +4995,22 @@ a.photo-dialog-submit:focus {
   outline-color: #888;
 }
 
+.photo-dialog.busy .photo-dialog-content {
+	display: none;
+}
+
+.photo-dialog .photo-dialog-uploading {
+	display: none;
+	font-size: 24px;
+	text-align: center;
+	padding: 2em 0;
+	color: #9FB1C3;
+	font-weight: 200;
+}
+.photo-dialog.busy .photo-dialog-uploading {
+	display: block;
+}
+
 .primary-email-change-dialog .dialog-content {
   width: 450px;
 }
