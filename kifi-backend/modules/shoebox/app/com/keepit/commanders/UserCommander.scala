@@ -16,10 +16,13 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import scala.util.Try
 import scala.Some
-import com.keepit.commanders.BasicUserInfo
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
-
+object BasicSocialUser {
+  implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
+  def from(sui: SocialUserInfo): BasicSocialUser =
+    BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
+}
 
 case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
@@ -41,21 +44,16 @@ object EmailInfo {
     }
   }
 }
+
 case class UpdatableUserInfo(
     description: Option[String], emails: Option[Seq[EmailInfo]],
     firstName: Option[String] = None, lastName: Option[String] = None)
-
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
-
-object BasicSocialUser {
-  implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
-  def from(sui: SocialUserInfo): BasicSocialUser =
-    BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
-}
-
 object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
+
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
+
 
 class UserCommander @Inject() (
   db: Database,
