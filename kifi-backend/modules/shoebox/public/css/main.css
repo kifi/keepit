@@ -70,6 +70,7 @@ body {
   margin: 0 auto;
   padding: 0;
   background: #fafafa;
+  font-size: 0;
   text-align: left;
   position: relative;
 }
@@ -5000,7 +5001,7 @@ a.photo-dialog-submit:focus {
 
 .photo-dialog .photo-dialog-uploading {
 	display: none;
-	font-size: 2em;
+	font-size: 24px;
 	text-align: center;
 	padding: 2em 0;
 	color: #9FB1C3;
