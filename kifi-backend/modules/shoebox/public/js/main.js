@@ -1021,7 +1021,7 @@ $(function () {
 	// profile email contacts
 	$(document).on('click', '.import-gmail', function (e) {
 		e.preventDefault();
-		submitForm(origin + '/importContacts');
+		window.location = origin + '/importContacts';
 	});
 
 	function ucfirst(str) {
@@ -1501,8 +1501,8 @@ $(function () {
 					',scrollbars=' + scrollbars + ',status=' + status);
 	}
 
-	function submitForm(url, method) {
-		$('<form method="' + (method || 'get') + '" action="' + url + '">')
+	function submitForm(path) {
+		$('<form method=POST action="' + origin + path + '">')
 		.appendTo('body')
 		.submit()
 		.remove();
@@ -1565,12 +1565,7 @@ $(function () {
 		toggleInviteHelp(network, false);
 		toggleImporting(network, true);
 
-		if (network === 'email') {
-			submitForm(origin + '/importContacts');
-		}
-		else {
-			submitForm(origin + '/link/' + network);
-		}
+		window.location = origin + (network === 'email' ? '/importContacts' : '/link/' + network);
 	}
 
 	var ABOOK_ID_TO_CALLBACK = {};
@@ -2170,7 +2165,7 @@ $(function () {
 	function showNoSearchInviteResults($noResults, search, network) {
 		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 		$noResults.find('.refresh-friends').click(function () {
-			submitForm(origin + '/friends/invite/refresh', 'post');
+			submitForm('/friends/invite/refresh');
 		});
 		$noResults.find('.tell-us').click(sendFeedback);
 	}
