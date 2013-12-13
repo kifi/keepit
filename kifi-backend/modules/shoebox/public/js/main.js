@@ -691,7 +691,7 @@ $(function () {
 					cropX: details.x,
 					cropY: details.y,
 					cropSize: details.size
-				});
+				}).always(photoDialog.hide.bind(photoDialog));
 			});
 
 		})
@@ -706,8 +706,9 @@ $(function () {
 		var SHADE_SIZE = 40;
 		var OUTER_SIZE = INNER_SIZE + 2 * SHADE_SIZE;
 		var SLIDER_MAX = 180;
+		var dialog;
 
-		return {
+		return dialog = {
 			show: function (photoUrl) {
 				var img = new Image();
 				img.onload = onPhotoLoad;
@@ -722,6 +723,19 @@ $(function () {
 				deferred = $.Deferred();
 
 				return deferred;
+			},
+			setBusy: function (isBusy) {
+				$dialog.toggleClass('busy', !!isBusy);
+			},
+			hide: function hide() {
+				offEsc(hide);
+				dialog.setBusy(false);
+				$dialog.removeClass('photo-dialog-showing');
+				hideTimer = setTimeout(function () {
+					$dialog.remove();
+					$image.remove();
+					$mask = $image = $slider = deferred = hideTimer = null;
+				}, 500);
 			}
 		};
 
@@ -753,7 +767,7 @@ $(function () {
 				slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)
 			});
 			$dialog.appendTo('body').layout().addClass('photo-dialog-showing').find('.ui-slider-handle').focus();
-			onEsc(hide);
+			onEsc(dialog.hide);
 		}
 
 		function onEsc(handler) {
@@ -771,15 +785,6 @@ $(function () {
 			$(document).off('keydown', handler);
 		}
 
-		function hide() {
-			offEsc(hide);
-			$dialog.removeClass('photo-dialog-showing');
-			hideTimer = setTimeout(function () {
-				$dialog.remove();
-				$image.remove();
-				$mask = $image = $slider = deferred = hideTimer = null;
-			}, 500);
-		}
 
 		function percentToPx(pxMin, pxMax) {
 			var factor = (pxMax - pxMin) / SLIDER_MAX;
@@ -877,6 +882,7 @@ $(function () {
 				var o = $image.data();
 				if (submitted) {
 					var scale = o.naturalWidth / o.width;
+					dialog.setBusy(true);
 					deferred.resolve({
 						width: o.naturalWidth,
 						height: o.naturalHeight,
@@ -884,10 +890,11 @@ $(function () {
 						y: Math.round(scale * (SHADE_SIZE - o.top)),
 						size: Math.round(scale * INNER_SIZE)
 					});
-				} else {
+				}
+				else {
+					dialog.hide();
 					deferred.reject();
 				}
-				hide();
 			}
 		}
 	}());
