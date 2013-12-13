@@ -72,12 +72,15 @@
   padding: 10px 12px 10px 71px;
   min-height: 53px;
   cursor: pointer;
-  background: #f0f2f6;
-}
-.kifi-notice-visited {
-  background: #fff;
+  background: #e5ebf1;
 }
 .kifi-notice:hover {
+  background: #dfe7ef;
+}
+.kifi-notice-visited {
+  background: #fefefe;
+}
+.kifi-notice-visited:hover {
   background: #f8fafd;
 }
 
