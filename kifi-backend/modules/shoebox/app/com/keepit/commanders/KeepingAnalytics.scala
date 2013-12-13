@@ -15,7 +15,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     val renamedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ context.data
+      contextBuilder.data ++= context.data
       contextBuilder += ("action", "renamedTag")
       contextBuilder += ("oldName", oldTag.name)
       contextBuilder += ("newName", newTag.name)
@@ -27,7 +27,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     val createdAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ context.data
+      contextBuilder.data ++= context.data
       contextBuilder += ("action", "createdTag")
       contextBuilder += ("name", newTag.name)
       heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, createdAt))
@@ -39,7 +39,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     val deletedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ context.data
+      contextBuilder.data ++= context.data
       contextBuilder += ("action", "deletedTag")
       contextBuilder += ("name", oldTag.name)
       heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, deletedAt))
@@ -53,7 +53,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     SafeFuture {
       keeps.foreach { bookmark =>
         val contextBuilder = new HeimdalContextBuilder
-        contextBuilder.data ++ existingContext.data
+        contextBuilder.data ++= existingContext.data
         contextBuilder += ("action", "keptPage")
         contextBuilder += ("source", bookmark.source.value)
         contextBuilder += ("isPrivate", bookmark.isPrivate)
@@ -76,7 +76,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     SafeFuture {
       keeps.foreach { keep =>
         val contextBuilder = new HeimdalContextBuilder
-        contextBuilder.data ++ context.data
+        contextBuilder.data ++= context.data
         contextBuilder += ("action", "unkeptPage")
         contextBuilder += ("isPrivate", keep.isPrivate)
         contextBuilder += ("hasTitle", keep.title.isDefined)
@@ -91,7 +91,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   def updatedKeep(oldKeep: Bookmark, updatedKeep: Bookmark, context: HeimdalContext): Unit = SafeFuture {
     val contextBuilder = new HeimdalContextBuilder
-    contextBuilder.data ++ context.data
+    contextBuilder.data ++= context.data
     contextBuilder += ("action", "updatedKeep")
     if (oldKeep.isPrivate != updatedKeep.isPrivate) {
       if (updatedKeep.isPrivate) {
@@ -118,7 +118,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   private def changedTag(tag: Collection, keep: Bookmark, action: String, context: HeimdalContext, changedAt: DateTime): Unit = SafeFuture {
     val contextBuilder = new HeimdalContextBuilder
-    contextBuilder.data ++ context.data
+    contextBuilder.data ++= context.data
     contextBuilder += ("action", action)
     contextBuilder += ("tag", tag.name)
     contextBuilder += ("isPrivate", keep.isPrivate)

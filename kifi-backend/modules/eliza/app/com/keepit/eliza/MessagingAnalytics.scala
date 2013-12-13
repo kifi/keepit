@@ -74,7 +74,7 @@ class MessagingAnalytics @Inject() (
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "cleared")
       contextBuilder += ("channel", kifi)
       contextBuilder += ("messageExternalId", message.externalId.id)
@@ -87,7 +87,7 @@ class MessagingAnalytics @Inject() (
     val addedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "addedParticipants")
       contextBuilder += ("threadExternalId", thread.externalId.id)
       contextBuilder += ("newParticipants", newParticipants.map(_.id))
@@ -101,7 +101,7 @@ class MessagingAnalytics @Inject() (
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       isActuallyNew match {
         case Some(isNew) => {
           contextBuilder += ("action", "startedConversation")
@@ -127,7 +127,7 @@ class MessagingAnalytics @Inject() (
     val changedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       val action = if (mute) "mutedConversation" else "unmutedConversation"
       contextBuilder += ("action", action)
       contextBuilder += ("threadExternalId", threadExternalId.id)
