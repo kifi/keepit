@@ -112,7 +112,7 @@ class MessagingAnalytics @Inject() (
 
       contextBuilder += ("threadExternalId", thread.externalId.id)
       contextBuilder += ("messageExternalId", message.externalId.id)
-      thread.participants.foreach(addRecipientsInfo(contextBuilder, userId, _))
+      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
         contextBuilder += ("isKeep", bookmarkOption.isDefined)
         val context = contextBuilder.build
@@ -143,19 +143,8 @@ class MessagingAnalytics @Inject() (
     contextBuilder += ("participantsTotal", userParticipants.size + externalParticipants.size)
     contextBuilder += ("userParticipants", userParticipants.map(_.id))
     contextBuilder += ("userParticipantsTotal", userParticipants.size)
-    contextBuilder += ("externalParticipants", externalParticipants.map(_.identifier))
-    contextBuilder += ("externalParticipantsTotal", externalParticipants.size)
-    contextBuilder += ("externalParticipantsKinds", externalParticipants.map(_.kind.name))
-  }
-
-  private def addRecipientsInfo(contextBuilder: HeimdalContextBuilder, senderId: Id[User], participants: MessageThreadParticipants): Unit = {
-    val userRecipients = participants.allUsersExcept(senderId).toSeq
-    val externalRecipients = participants.allNonUsers.toSeq
-    contextBuilder += ("recipientsTotal", userRecipients.size + participants.allNonUsers.size)
-    contextBuilder += ("userRecipients", userRecipients.map(_.id))
-    contextBuilder += ("userRecipientsTotal", userRecipients.size)
-    contextBuilder += ("externalRecipients", externalRecipients.map(_.identifier))
-    contextBuilder += ("externalRecipientsTotal", externalRecipients.size)
-    contextBuilder += ("externalRecipientsKinds", externalRecipients.map(_.kind.name))
+    contextBuilder += ("otherParticipants", externalParticipants.map(_.identifier))
+    contextBuilder += ("otherParticipantsTotal", externalParticipants.size)
+    contextBuilder += ("otherParticipantsKinds", externalParticipants.map(_.kind.name))
   }
 }
