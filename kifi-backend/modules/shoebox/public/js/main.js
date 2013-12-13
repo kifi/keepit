@@ -62,6 +62,7 @@ $.extend($.timeago.settings.strings, {
 			});
 		},
 		hide: function () {
+			$(this).trigger('dialog.hide');
 			$(document).off('keydown.dialog');
 			$(this).on('transitionend', function end(e) {
 				if (e.target === this) {
@@ -429,8 +430,10 @@ $(function () {
 			cancelProfileInput($(this));
 		});
 
-		$box.addClass('edit');
+		activateInput($input);
+	}
 
+	function activateInput($input) {
 		$input
 			.each(function () {
 				var $this = $(this);
@@ -438,6 +441,51 @@ $(function () {
 			})
 			.prop('disabled', false)
 			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function commitInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.val());
+				$this.data('prevValue', $this.data('value'));
+				$this.val(val).data('value', val);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function cancelInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.data('value'));
+				$this.val(val);
+				showError($this, false);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function revertAndActivateInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this);
+				$this.data('value', $this.data('prevValue'));
+			})
+			.prop('disabled', false)
+			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function revertInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					prev = $this.data('prevValue');
+				$this.val(prev).data('value', prev);
+			});
 	}
 
 	function saveProfileInput($target, e) {
@@ -471,25 +519,11 @@ $(function () {
 			return false;
 		}
 
-		$input
-			.each(function () {
-				var $this = $(this),
-					val = trimInputValue($this.val());
-				$this
-					.data('prevValue', $this.data('value'));
-				$this
-					.val(val)
-					.data('value', val);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
+		commitInput($input);
 
 		if ($input.attr('name') === 'email') {
-			saveNewPrimaryEmail($input.val(), function () {
-				var prev = $input.data('prevValue');
-				$input.val(prev).data('value', prev);
+			saveNewPrimaryEmail($input, function () {
+				revertInput($input);
 			});
 		}
 		else {
@@ -505,16 +539,7 @@ $(function () {
 		var $box = $target.closest('.profile-input-box'),
 			$input = $box.find('.profile-input-input');
 
-		$input
-			.each(function () {
-				var $this = $(this);
-				$this.val(trimInputValue($this.data('value')));
-				showError($this, false);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
+		cancelInput($input);
 	}
 
 	function trimInputValue(val) {
@@ -949,6 +974,11 @@ $(function () {
 				email: email
 			}))
 			.appendTo(document.body)
+			.on('dialog.hide', function () {
+				if (cancel) {
+					cancel(false);
+				}
+			})
 			.on('click', '.dialog-cancel', function (e) {
 				e.preventDefault();
 				$dialog.remove();
@@ -968,12 +998,41 @@ $(function () {
 			.dialog('show');
 	}
 
-	function saveNewPrimaryEmail(email, cancel) {
+	function refreshMe(data) {
+		var url = xhrBase + '/user/me';
+		if (data) {
+			return $.postJson(url, data, updateMe);
+		}
+		return $.getJSON(url, updateMe);
+	}
+
+	function saveNewPrimaryEmail($input, cancel) {
+		var email = $input.val();
 		if (getPrimaryEmailAddress() === email) {
 			// already primary
 			return false;
 		}
-		showEmailChangeDialog(email, function () {
+		getEmailInfo(email)
+			.done(function (emailInfo) {
+				if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+					refreshMe();
+					return;
+				}
+				if (emailInfo.isVerified) {
+					setNewPrimaryEmail(email)();
+					return;
+				}
+				// email is available || (not primary && not pending primary && not verified)
+				showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+			})
+			.fail(function () {
+				revertAndActivateInput($input);
+			})
+			.fail(getAddEmailErrorCallback(email, $input));
+	}
+
+	function setNewPrimaryEmail(email) {
+		return function () {
 			var props = getProfileCopy();
 			var emails = props.emails;
 			removeEmailInfo(emails, email);
@@ -982,9 +1041,8 @@ $(function () {
 				address: email,
 				isPrimary: true
 			});
-
-			$.postJson(xhrBase + '/user/me', props).done(updateMe);
-		}, cancel);
+			refreshMe(props);
+		};
 	}
 
 	function saveProfileInfo() {
@@ -998,10 +1056,9 @@ $(function () {
 
 		delete props.email;
 
-		$.postJson(xhrBase + '/user/me', props)
-			.done(updateMe)
+		refreshMe(props)
 			.fail(function () {
-				showMessage('Uh oh! A bad thing happened!');
+				showMessage('Uh oh! Something went wrong!');
 			});
 	}
 
@@ -1301,8 +1358,8 @@ $(function () {
 	}
 
 	function getAddEmailErrorCallback(email, $input) {
-		return function (jqXHR) {
-			switch (jqXHR.status) {
+		return function (jqXhr) {
+			switch (jqXhr.status) {
 			case 400:
 				// bad format
 				showError(
@@ -3681,7 +3738,7 @@ $(function () {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
+		me: refreshMe().promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
