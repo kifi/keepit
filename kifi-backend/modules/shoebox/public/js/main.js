@@ -3770,7 +3770,7 @@ $(function () {
 				.append($('<span>').addClass('notification-box').text(msg))
 				.appendTo('.query-wrap')
 				.show()
-				.delay(2000)
+				.delay(5000)
 				.fadeOut('slow');
 		}
 	}
