@@ -142,9 +142,12 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def updatePrivacy() = AuthenticatedJsonToJsonAction { request =>
+  def updateKeepInfo() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
-    val (url, priv) = ((json \ "url").as[String], (json \ "private").as[Boolean])
+    val url = (json \ "url").as[String]
+    val priv =  (json \ "private").asOpt[Boolean]
+    val title = (json \ "title").asOpt[String]
+
     val bookmarkOpt = db.readOnly { implicit s =>
       uriRepo.getByUri(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
@@ -154,7 +157,7 @@ class ExtBookmarksController @Inject() (
       bookmark <- bookmarkOpt
       updatedBookmark <- {
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
-        bookmarksCommander.updateKeep(bookmark, Some(priv), None)
+        bookmarksCommander.updateKeep(bookmark, priv, title)
       }
     } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
 

@@ -39,7 +39,7 @@ import scala.concurrent.future
 class MainSearcher(
     userId: Id[User],
     queryString: String,
-    langProbabilities: Map[Lang, Double],
+    lang: Lang,
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
@@ -64,7 +64,6 @@ class MainSearcher(
   private[this] var parsedQuery: Option[Query] = None
   def getParsedQuery: Option[Query] = parsedQuery
 
-  private[this] var lang: Lang = Lang("en")
   def getLang: Lang = lang
 
   private[this] val currentTime = currentDateTime.getMillis()
@@ -167,9 +166,6 @@ class MainSearcher(
     val othersHits = createQueue(maxTextHitsPerCategory)
 
     var tParse = currentDateTime.getMillis()
-
-    // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val hotDocs = new HotDocSetFilter()
     parser = parserFactory(lang, config)
@@ -458,8 +454,6 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
     parser = parserFactory(lang, config)
     parser.setPercentMatch(percentMatch)

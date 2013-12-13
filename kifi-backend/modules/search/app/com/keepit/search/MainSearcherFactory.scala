@@ -46,7 +46,7 @@ class MainSearcherFactory @Inject() (
   def apply(
     userId: Id[User],
     queryString: String,
-    langProbabilities: Map[Lang, Double],
+    lang: Lang,
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
@@ -62,7 +62,7 @@ class MainSearcherFactory @Inject() (
     new MainSearcher(
         userId,
         queryString,
-        langProbabilities,
+        lang,
         numHitsToReturn,
         filter,
         config,
