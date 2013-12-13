@@ -19,14 +19,12 @@ trait EventRepo[E <: HeimdalEvent] {
   def descriptors: EventDescriptorRepo[E]
 }
 
-trait EventAugmentor[E <: HeimdalEvent] {
-  def augment(event: E): Future[Seq[(String, ContextData)]]
-}
+trait EventAugmentor[+E <: HeimdalEvent] extends PartialFunction[E, Future[Seq[(String, ContextData)]]]
 
 object EventAugmentor extends Logging {
   def safelyAugmentContext[E <: HeimdalEvent](event: E, augmentors: EventAugmentor[E]*): Future[HeimdalContext] = {
-    val safeAugmentations = augmentors.map { augmentor =>
-      augmentor.augment(event) recover { case ex =>
+    val safeAugmentations = augmentors.collect { case augmentor if augmentor.isDefinedAt(event) =>
+      augmentor(event) recover { case ex =>
         log.error(s"An augmentor failed on event: ${event.eventType}", ex)
         Seq.empty
       }
