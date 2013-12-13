@@ -576,9 +576,6 @@ class UserController @Inject() (
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
-  private val domainName = if (Play.isDev) "dev.ezkeep.com" else "kifi.com"
-  private val domain = Html(s"<script>document.domain='$domainName';</script>")
-
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
     val startTime = clock.now
@@ -615,11 +612,11 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>
-        val firstResponse = Enumerator.enumerate(domain +: check().map(script).toSeq)
+        val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(domain += script(JsString("network_not_connected")))
+        Ok(script(JsString("network_not_connected")))
     }
   }
 
@@ -651,12 +648,11 @@ class UserController @Inject() (
         } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
       }
     }
-    val firstResponse = Enumerator(domain.body)
     val returnEnumerator = Enumerator.generateM {
       Future.sequence(Seq(timeoutF, reqF)).map { res =>
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(firstResponse andThen returnEnumerator.andThen(Enumerator.eof))
+    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
   }
 }
