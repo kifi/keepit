@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging

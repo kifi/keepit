@@ -46,7 +46,7 @@ class MessagingTest extends Specification with DbTestInjector {
     val uriNormalizationUpdater: UriNormalizationUpdater = null
     val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
     val messagingAnalytics = inject[MessagingAnalytics]
-    val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier(clock))
+    val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier())
     val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, abookServiceClient, clock, uriNormalizationUpdater, urbanAirship, messagingAnalytics)
 
     val user1 = Id[User](42)
