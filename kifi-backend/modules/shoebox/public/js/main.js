@@ -3734,8 +3734,7 @@ $(function () {
 
 	var $bookmarkImportDialog = $('.import-dialog').remove().show();
 	function recieveBookmarks(event) {
-		if (event.data && event.data.bookmarks) {
-			console.log("got 'em", event.data.bookmarks)
+		if (event.data && event.data.bookmarks && event.data.bookmarks.length > 0) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarks.length);
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
 				$bookmarkImportDialog.dialog('hide');
@@ -3750,13 +3749,26 @@ $(function () {
 				$bookmarkImportDialog.on('click', 'button', function () {
 					$bookmarkImportDialog.dialog('hide');
 					$bookmarkImportDialog = null;
+					welcomeUser();
 				});
-
 				window.postMessage('import_bookmarks', '*');
 			}).find('button').focus();
 		}
 	}
 	window.addEventListener('message', recieveBookmarks);
+
+	function welcomeUser() {
+		if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
+			$welcomeDialog.dialog('show').on('click', 'button', function () {
+				$welcomeDialog.dialog('hide');
+				$welcomeDialog = null;
+				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
+			}).find('button').focus();
+			$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+				console.log('[prefs]', data);
+			});
+		}
+	}
 
 	// render initial view
 	$(window).trigger('statechange');
@@ -3776,15 +3788,8 @@ $(function () {
 			setTimeout(function() {
 				window.postMessage('get_bookmarks', '*');
 			}, 200);
-		} else if (!myPrefs.site_welcomed) {
-			$welcomeDialog.dialog('show').on('click', 'button', function () {
-				$welcomeDialog.dialog('hide');
-				$welcomeDialog = null;
-				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
-			}).find('button').focus();
-			$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				console.log('[prefs]', data);
-			});
+		} else if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
+			welcomeUser();
 		} else {
 			$welcomeDialog = null;
 		}

@@ -4325,7 +4325,7 @@ span.long-text, a.long-text {
 }
 .import-dialog>.dialog-content>.dialog-title {
   color: #515051;
-  background: url(http://i.imgur.com/BMEflze.png) 30px 50% / 32px no-repeat;
+  background: url(../img/kifi-logo-color.png) 30px 50% / 32px no-repeat;
   font-size: 0;
   background-color: #eff2f7;
   line-height: 50px;
@@ -4408,7 +4408,7 @@ span.long-text, a.long-text {
 }
 .import-dialog>.dialog-content>button.do-import {
   padding-left: 18px;
-  background: url(http://i.imgur.com/xv5fmim.png) 12px 50% / 16px 20px no-repeat;
+  background: url(../img/bookmark-lock.2x.png) 12px 50% / 16px 20px no-repeat;
   background-color: #6fa5ef;
 }
 .import-dialog>.dialog-content>button:hover {background-color: #7faeef}

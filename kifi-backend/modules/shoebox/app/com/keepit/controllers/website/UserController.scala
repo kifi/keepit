@@ -354,7 +354,8 @@ class UserController @Inject() (
        Json.obj("experiments" -> experiments.map(_.value)))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "do_not_import")
+  private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
+  private val DynamicSitePrefNames = Set("do_not_import")
 
   def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(db.readOnly { implicit s =>
@@ -373,12 +374,13 @@ class UserController @Inject() (
 
   def savePrefs() = AuthenticatedJsonToJsonAction { request =>
     val o = request.request.body.as[JsObject]
-    if (o.keys.subsetOf(SitePrefNames)) {
+    if (o.keys.subsetOf(SitePrefNames ++ DynamicSitePrefNames)) {
       db.readWrite { implicit s =>
         o.fields.foreach { case (name, value) =>
           if (value == JsNull || value == JsUndefined) {
             userValueRepo.clearValue(request.userId, name)
           } else if (name == "do_not_import" && request.kifiInstallationId.isDefined) {
+            // User selected not to import Léo
             userValueRepo.setValue(request.userId, "has_imported_from_" + request.kifiInstallationId.get, "opt_out")
           } else {
             userValueRepo.setValue(request.userId, name, value.as[String])

@@ -93,8 +93,8 @@ class BookmarkInterner @Inject() (
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis
     bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
-      case Some(bookmark) if bookmark.isActive => (false, bookmarkRepo.save(bookmark.withPrivate(isPrivate = isPrivate)))
-      case Some(bookmark) => (false, bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse(uri.title)).withUrl(url)))
+      case Some(bookmark) if bookmark.isActive => (false, bookmarkRepo.save(bookmark.withPrivate(isPrivate = isPrivate).withTitle(title)))
+      case Some(bookmark) => (false, bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse(uri.title)).withUrl(url).withTitle(title)))
       case None =>
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         (true, bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))

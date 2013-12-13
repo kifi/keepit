@@ -957,8 +957,8 @@ api.port.on({
   get_bookmarks: function(_, respond, tab) {
     api.bookmarks.getAll(respond);
   },
-  get_bookmarks: function(_, respond, tab) {
-    api.bookmarks.getAll(respond);
+  import_bookmarks: function(_, respond, tab) {
+    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
