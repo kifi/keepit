@@ -3736,14 +3736,32 @@ $(function () {
 	function recieveBookmarks(event) {
 		if (event.data && event.data.bookmarks) {
 			console.log("got 'em", event.data.bookmarks)
-			$bookmarkImportDialog.dialog('show')//.on('click', 'button', function () {
-			// 	$bookmarkImportDialog.dialog('hide');
-			// 	$bookmarkImportDialog = null;
-			// 	setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
-			// }).find('button').focus();
-			// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-			// 	console.log('[prefs]', data);
-			// });
+			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
+				$bookmarkImportDialog.dialog('hide');
+				$bookmarkImportDialog = null;
+				// don't open again!
+				// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+				// 	console.log('[prefs]', data);
+				// });
+			}).on('click', 'button.do-import', function () {
+
+				$bookmarkImportDialog.find('.import-step-1').hide();
+				$bookmarkImportDialog.find('.import-step-2').show();
+
+				$bookmarkImportDialog.on('click', 'button', function () {
+					$bookmarkImportDialog.dialog('hide');
+					$bookmarkImportDialog = null;
+				});
+				// don't open again!
+				// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+				// 	console.log('[prefs]', data);
+				// });
+				// do the import!
+				// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+				// 	console.log('[prefs]', data);
+				// });
+				// show next screen
+			}).find('button').focus();
 		}
 	}
 	window.addEventListener('message', recieveBookmarks);

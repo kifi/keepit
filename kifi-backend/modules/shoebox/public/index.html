@@ -677,17 +677,29 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	</div>
 
 	<div class="dialog import-dialog" style="display:none">
-		<div class="dialog-content">
-			<div class="dialog-title">kifi</div>
+		<div class="dialog-content import-step-1">
+			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
 			<div class="dialog-body">
 				<h1>Privately add your bookmarks to Kifi?</h1>
 				<img src="http://i.imgur.com/mbeEonP.png" class="import-star-to-kifi">
 				<ul>
 					<li><span>Your bookmarks will be securely kept as private keeps and will never appear in your friends’ search results.</span>
-					<li><span>You can find them anytime with Kifi, and organize them at Kifi.com</span>
+					<li><span>You can find them anytime with Kifi, and organize them at Kifi.com.</span>
 				</ul>
 			</div>
-			<button><strong>Yes</strong> - Import</button>
+			<a href="javascript:" class="cancel-import">Cancel</a>
+			<button class="do-import"><strong>Yes</strong> - Import</button>
+		</div>
+		<div class="dialog-content import-step-2" style="display:none">
+			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
+			<div class="dialog-body">
+				<h1>Importing your bookmarks to Kifi</h1>
+				<img src="http://i.imgur.com/IjXLpLO.png" class="import-check">
+				<div class="importing-explaination">
+					This might take a few minutes (especially if you have a lot of bookmarks). Feel free to browse around the site as we load them
+				</div>
+			</div>
+			<button>Done</button>
 		</div>
 	</div>
 
