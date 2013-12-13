@@ -1,18 +1,9 @@
-var domain = 'kifi.com';
-var xhrDomain = 'https://api.kifi.com';
-var wwwDomain = 'https://www.kifi.com';
-//TODO dev
-var DEV = !(/kifi.com/.test(location.hostname));
-if (DEV) {
-	domain = 'dev.ezkeep.com';
-	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
-}
-// iframe tunnel CROSS ORIGIN issue fix
-document.domain = domain;
-var xhrBase = xhrDomain + '/site';
-var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
-var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
-
+var LOCAL = location.port === '9000';
+var origin = LOCAL ? location.protocol + '//' + location.host : 'https://www.kifi.com';
+var xhrBase = origin + '/site';
+var xhrBaseEliza = origin.replace('www', 'eliza') + '/eliza/site';
+var xhrBaseSearch = origin.replace('www', 'search') + '/search';
+var picBase = (LOCAL ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net';
 
 var compareSearch = {usage: 'search', sensitivity: 'base'};
 var compareSort = {numeric: true};
@@ -337,7 +328,7 @@ $(function () {
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
-		return (DEV ? '//d1scct5mnc9d9m.cloudfront.net' : '//djty7jcqog9qu.cloudfront.net') + '/users/' + userId + '/pics/' + size + '/' + pictureName;
+		return picBase + '/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
 
 	function escapeHTMLContent(text) {
@@ -1026,7 +1017,7 @@ $(function () {
 
 	function showDisconnectDialog(network) {
 		disconnectDialogTmpl.render({
-			url: wwwDomain + '/disconnect/' + network,
+			url: origin + '/disconnect/' + network,
 			network: ucfirst(network)
 		});
 		$disconnectDialog.dialog('show');
@@ -1035,7 +1026,7 @@ $(function () {
 	// profile email contacts
 	$(document).on('click', '.import-gmail', function (e) {
 		e.preventDefault();
-		submitForm(wwwDomain + '/importContacts');
+		submitForm(origin + '/importContacts');
 	});
 
 	function ucfirst(str) {
@@ -1130,7 +1121,7 @@ $(function () {
 				else {
 					$this.addClass('not-connected');
 					$a.attr({
-						href: wwwDomain + '/link/' + network,
+						href: origin + '/link/' + network,
 						title: 'Click to connect'
 					});
 				}
@@ -1619,10 +1610,10 @@ $(function () {
 		toggleImporting(network, true);
 
 		if (network === 'email') {
-			submitForm(wwwDomain + '/importContacts');
+			submitForm(origin + '/importContacts');
 		}
 		else {
-			submitForm(wwwDomain + '/link/' + network);
+			submitForm(origin + '/link/' + network);
 		}
 	}
 
@@ -1661,7 +1652,7 @@ $(function () {
 
 	/*
 	// these are needed for testing
-	if (DEV) {
+	if (LOCAL) {
 		ABOOK_ID_TO_CALLBACK[id] = null;
 		'notAvail,pending,processing,error,active'.split(',').forEach(function (data, i) {
 			setTimeout(function () {
@@ -1714,7 +1705,7 @@ $(function () {
 
 		/*
 		// these are needed for testing
-		if (DEV) {
+		if (LOCAL) {
 			window[IMPORT_CHECK] = null;
 			'fetching,import_connections,error,finished,end'.split(',').forEach(function (data, i) {
 				setTimeout(function () {
@@ -1796,7 +1787,7 @@ $(function () {
 				var hasAbook = Boolean(abooks && abooks.length);
 				var id, email, error;
 				var importing = hasAbook && abooks.some(function (abook) {
-					if (DEV) {
+					if (LOCAL) {
 						id = abook.id;
 						email = abook.ownerEmail;
 					}
@@ -1806,7 +1797,7 @@ $(function () {
 						email = abook.ownerEmail;
 						return true;
 					}
-				}) || !!(id && DEV);
+				}) || !!(id && LOCAL);
 
 				toggleInviteHelp(network, !(hasAbook || importing), error);
 				toggleImporting(network, importing, null, email);
@@ -2223,7 +2214,7 @@ $(function () {
 	function showNoSearchInviteResults($noResults, search, network) {
 		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 		$noResults.find('.refresh-friends').click(function () {
-			submitForm(wwwDomain + '/friends/invite/refresh', 'post');
+			submitForm(origin + '/friends/invite/refresh', 'post');
 		});
 		$noResults.find('.tell-us').click(sendFeedback);
 	}
