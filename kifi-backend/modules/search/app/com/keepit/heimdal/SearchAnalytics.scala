@@ -110,12 +110,11 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("resultPosition", resultPosition)
     result.map { result =>
       val hit = result.bookmark
+      contextBuilder += ("keep", keep(result))
+      contextBuilder += ("keepersShown", result.users.length)
       contextBuilder += ("keepCount", result.count)
-      contextBuilder += ("usersShown", result.users.length)
-      contextBuilder += ("isOwn", result.isMyBookmark)
-      contextBuilder += ("isFriends", !result.isMyBookmark && result.users.length > 0)
-      contextBuilder += ("isOthers", result.users.length == 0)
       contextBuilder += ("isPrivate", result.isPrivate)
+
       contextBuilder += ("tags", hit.collections.map(_.length).getOrElse(0))
       contextBuilder += ("hasTitle", hit.title.isDefined)
 
@@ -156,8 +155,15 @@ class SearchAnalytics @Inject() (
 
     // Kifi Results
 
-    contextBuilder += ("kifiResults", searchContext.kifiResults)
+    val initialKeeps = initialSearchResult.hits.map(keep)
+    contextBuilder += ("initialKifiResults", initialSearchResult.hits.length)
+    contextBuilder += ("initialKeeps", initialKeeps)
+    contextBuilder += ("initialOwnKeeps", initialKeeps.count(_ == own))
+    contextBuilder += ("initialFriendsKeeps", initialKeeps.count(_ == friends))
+    contextBuilder += ("initialOthersKeeps", initialKeeps.count(_ == others))
     contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
+
+    contextBuilder += ("kifiResults", searchContext.kifiResults)
     searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
     searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
 
@@ -181,4 +187,20 @@ class SearchAnalytics @Inject() (
     mac.init(key)
     Base64.encodeBase64String(mac.doFinal(userId.toString.getBytes()))
   }
+
+  private def keep(result: KifiSearchHit): String = {
+    if (result.isMyBookmark) own
+    else if (result.users.length > 0) friends
+    else others
+  }
+
+  private def keep(hit: ArticleHit): String = {
+    if (hit.isMyBookmark) own
+    else if (hit.users.length > 0) friends
+    else others
+  }
+
+  private val own = "own"
+  private val friends = "friends"
+  private val others = "others"
 }
