@@ -83,31 +83,48 @@ class ExtSearchController @Inject() (
 
     val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
 
-    val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
     timing.factory
 
-    val probabilities = getLangsPriorProbabilities(acceptLangs)
-    val searcher = mainSearcherFactory(userId, query, probabilities, maxHits, searchFilter, config, lastUUID)
+    // TODO: use user profile info as a bias
+    val lang = LangDetector.detectShortText(query, getLangsPriorProbabilities(acceptLangs))
+
+    val searcher = mainSearcherFactory(userId, query, lang, maxHits, searchFilter, config)
 
     timing.search
+
+    val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
+    val searchUUID = ExternalId[ArticleSearchResult]()
 
     val searchRes = if (maxHits > 0) {
       searcher.search()
     } else {
       log.warn("maxHits is zero")
-      val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, 0)
+      ShardSearchResult.empty
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
-      suggestExperts(searchRes)
+      suggestExperts(searchRes.hits)
     } else { Promise.successful(List.empty[Id[User]]).future }
 
     timing.decoration
 
-    val decorator = ResultDecorator(searcher, shoeboxClient, config, monitoredAwait)
-    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
+    val newIdFilter = searchFilter.idFilter ++ searchRes.hits.map(_.uriId.id)
+    val numPreviousHits = searchFilter.idFilter.size
+    val mayHaveMoreHits = if (numPreviousHits <= 0) searchRes.hits.nonEmpty else searchRes.hits.length == maxHits
+    val decorator = ResultDecorator(query, lang, shoeboxClient, config, monitoredAwait)
+    val res = toKifiSearchResult(
+      searchUUID,
+      query,
+      decorator.decorate(searchRes.hits),
+      userId,
+      newIdFilter,
+      config,
+      mayHaveMoreHits,
+      (!searchFilter.isDefault || searchRes.show),
+      searchExperimentId,
+      experts
+    )
 
     timing.end
 
@@ -115,8 +132,27 @@ class ExtSearchController @Inject() (
       // stash timing information
       val timeLogs = searcher.timing()
 
+      val articleSearchResult = ResultUtil.toArticleSearchResult(
+        searchUUID,
+        lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
+        query,
+        searchRes.myTotal,
+        searchRes.friendsTotal,
+        searchRes.othersTotal,
+        mayHaveMoreHits,
+        newIdFilter,
+        timing.getTotalTime.toInt,
+        numPreviousHits/maxHits,
+        numPreviousHits,
+        currentDateTime,
+        searchRes.svVariance, // svVar
+        searchRes.show,
+        lang,
+        searchRes.hits
+      )
+
       try {
-        articleSearchResultStore += (searchRes.uuid -> searchRes)
+        articleSearchResultStore += (searchUUID -> articleSearchResult)
       } catch {
         case e: Throwable => airbrake.notify(AirbrakeError(e, Some("Could not store article search result.")))
       }
@@ -135,15 +171,14 @@ class ExtSearchController @Inject() (
       val timeLimit = 1000
       // search is a little slow after service restart. allow some grace period
       if (timing.getTotalTime > timeLimit && timing.timestamp - fortyTwoServices.started.getMillis() > 1000*60*8) {
-        val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
-        val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, ${timing.toString}." +
+        val link = "https://admin.kifi.com/admin/search/results/" + searchUUID.id
+        val msg = s"search time exceeds limit! searchUUID = ${searchUUID.id}, Limit time = $timeLimit, ${timing.toString}." +
             s" More details at: $link $searchDetails"
         airbrake.notify(msg)
       }
     }
 
     res
-
   }
 
   def internalSearch(
@@ -211,35 +246,43 @@ class ExtSearchController @Inject() (
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
-  private[ext] def toPersonalSearchResultPacket(
-    decorator: ResultDecorator,
+  private[ext] def toKifiSearchResult(
+    uuid: ExternalId[ArticleSearchResult],
+    query: String,
+    decoratedResult: DecoratedResult,
     userId: Id[User],
-    res: ArticleSearchResult,
+    idFilter: Set[Long],
     config: SearchConfig,
-    isDefaultFilter: Boolean,
+    mayHaveMoreHits: Boolean,
+    show: Boolean,
     searchExperimentId: Option[Id[SearchConfigExperiment]],
     expertsFuture: Future[Seq[Id[User]]]): JsValue = {
 
-    val decoratedResult = decorator.decorate(res)
-    val filter = IdFilterCompressor.fromSetToBase64(res.filter)
+    val filter = IdFilterCompressor.fromSetToBase64(idFilter)
+    val kifiHits = ResultUtil.toKifiSearchHits(decoratedResult.hits)
     val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val expertNames = {
       if (experts.size == 0) List.empty[String]
       else {
-        val idMap = decoratedResult.users
-        experts.flatMap{ expert => idMap.get(expert).map{x => x.firstName + " " + x.lastName} }
+        experts.flatMap{ expert => decoratedResult.users.get(expert).map{x => x.firstName + " " + x.lastName} }
       }
     }
     log.info("experts recommended: " + expertNames.mkString(" ; "))
 
-    KifiSearchResult.json(res.uuid, res.query, decoratedResult.hits,
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, decoratedResult.collections, expertNames)
+    KifiSearchResult(
+      uuid,
+      query,
+      kifiHits,
+      mayHaveMoreHits,
+      show,
+      searchExperimentId,
+      filter,
+      Nil,
+      expertNames).json
   }
 
-  private[ext] def suggestExperts(searchRes: ArticleSearchResult) = {
-    val urisAndUsers = searchRes.hits.map{ hit =>
-      (hit.uriId, hit.users)
-    }
+  private[ext] def suggestExperts(hits: Seq[DetailedSearchHit]) = {
+    val urisAndUsers = hits.map{ hit => (hit.uriId, hit.users) }
     if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
       Promise.successful(List.empty[Id[User]]).future
     } else{

@@ -7,8 +7,11 @@ import play.api.libs.json._
 import com.keepit.common.logging.Logging
 import com.keepit.serializer.TraversableFormat
 
+class KifiSearchResult(val json: JsObject) extends AnyVal {
+}
+
 object KifiSearchResult extends Logging {
-  def json(
+  def apply(
     uuid: ExternalId[ArticleSearchResult],
     query: String,
     hits: Seq[KifiSearchHit],
@@ -18,9 +21,9 @@ object KifiSearchResult extends Logging {
     context: String,
     collections: Seq[ExternalId[Collection]] = Nil,
     expertNames: Seq[String] = Nil
-  ): JsValue = {
+  ): KifiSearchResult = {
     try {
-      JsObject(List(
+      new KifiSearchResult(JsObject(List(
         "uuid" -> JsString(uuid.toString),
         "query" -> JsString(query),
         "hits" -> JsArray(hits.map(_.json)),
@@ -29,7 +32,7 @@ object KifiSearchResult extends Logging {
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
         "context" -> JsString(context),
         "expertNames" -> JsString(expertNames.mkString("\t"))
-      ))
+      )))
     } catch {
       case e: Throwable =>
         log.error(s"can't serialize KifiSearchResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context][expertNames=$expertNames]", e)
@@ -38,22 +41,19 @@ object KifiSearchResult extends Logging {
   }
 }
 
-class KifiSearchHit(val json: JsValue) extends AnyVal {
-  //note: users.size != count if some users has the bookmark marked as private
-  def title: Option[String] = new PersonalSearchHit(json \ "bookmark").title
-  def url: String = new PersonalSearchHit(json \ "bookmark").url
+class KifiSearchHit(val json: JsObject) extends AnyVal {
   def isMyBookmark: Boolean = (json \ "isMyBookmark").as[Boolean]
   def isPrivate: Boolean = (json \ "isPrivate").as[Boolean]
   def count: Int = (json \ "count").as[Int]
   def users: Seq[BasicUser] = TraversableFormat.seq[BasicUser].reads(json \ "users").get
   def score: Float = (json \ "score").as[Float]
-  def bookmark: PersonalSearchHit = new PersonalSearchHit(json \ "bookmark")
+  def bookmark: SimpleSearchHit = new SimpleSearchHit((json \ "bookmark").as[JsObject])
 }
 
 object KifiSearchHit extends Logging {
-  def apply(json: JsValue) = new KifiSearchHit(json)
+  def apply(json: JsObject): KifiSearchHit = new KifiSearchHit(json)
   def apply(
-    hit: PersonalSearchHit,
+    hit: SimpleSearchHit,
     count: Int,
     isMyBookmark: Boolean,
     isPrivate: Boolean,
@@ -78,46 +78,142 @@ object KifiSearchHit extends Logging {
 }
 
 class ShardSearchResult(val json: JsValue) extends AnyVal {
-//  def friendStats: FriendStats =
+  def hits: Seq[DetailedSearchHit] = (json \ "hits").as[JsArray] match {
+    case JsArray(hits) => hits.map{ json => new DetailedSearchHit(json.as[JsObject]) }
+    case _ => Seq.empty
+  }
+  def myTotal: Int = (json \ "myTotal").as[Int]
+  def friendsTotal: Int = (json \ "friendsTotal").as[Int]
+  def othersTotal: Int = (json \ "othersTotal").as[Int]
+  def collections: Seq[ExternalId[Collection]] = (json \ "collections").as[JsArray].value.map(id => ExternalId[Collection](id.as[String]))
+  def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
+  def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
 
-class ShardSearchHit(val json: JsValue) extends AnyVal
-
-object ShardSearchHit extends Logging {
-  def apply(json: JsValue) = new ShardSearchHit(json)
+object ShardSearchResult extends Logging {
   def apply(
-    hit: PersonalSearchHit,
-    count: Int,
-    isMyBookmark: Boolean,
-    isPrivate: Boolean,
-    users: Seq[Id[User]],
-    scoring: Scoring,
+    hits: Seq[DetailedSearchHit],
+    myTotal: Int,
+    friendsTotal: Int,
+    othersTotal: Int,
+    collections: Seq[ExternalId[Collection]],
+    svVariance: Float, // TODO: remove
+    show: Boolean, // TODO: remove
     friendStats: FriendStats
-  ): ShardSearchHit = {
+  ): ShardSearchResult = {
     try {
-      new ShardSearchHit(JsObject(List(
-        "count" -> JsNumber(count),
+      new ShardSearchResult(JsObject(List(
+        "hits" -> JsArray(hits.map(_.json)),
+        "myTotal" -> JsNumber(myTotal),
+        "friendsTotal" -> JsNumber(friendsTotal),
+        "othersTotal" -> JsNumber(othersTotal),
+        "collections" -> JsArray(collections.map{ id => JsString(id.id) }),
+        "svVariance" -> JsNumber(svVariance), // TODO: remove
+        "show" -> JsBoolean(show) // TODO: remove
+      )))
+    } catch {
+      case e: Throwable =>
+        log.error(s"can't serialize ShardSearchResult [hits=$hits][myTotal=$myTotal][friendsTotal=$friendsTotal][othersTotal=$othersTotal]", e)
+        throw e
+    }
+  }
+  lazy val empty = {
+    new ShardSearchResult(JsObject(List(
+      "hits" -> JsArray(),
+      "mayHaveMore" -> JsBoolean(false)
+    )))
+  }
+}
+
+class DetailedSearchHit(val json: JsObject) {
+  def uriId: Id[NormalizedURI] = Id[NormalizedURI]((json \ "uriId").as[Long])
+  def isMyBookmark: Boolean = (json \ "isMyBookmark").as[Boolean]
+  def isFriendsBookmark: Boolean = (json \ "isFriendsBookmark").as[Boolean]
+  def isPrivate: Boolean = (json \ "isPrivate").as[Boolean]
+  def bookmarkCount: Int = (json \ "bookmarkCount").as[Int]
+  def users: Seq[Id[User]] = {
+    (json \ "users").asOpt[JsArray] match {
+      case Some(JsArray(users)) => users.collect{ case JsNumber(id) => Id[User](id.toLong) }
+      case _ => Seq.empty
+    }
+  }
+  def score: Float = (json \ "score").as[Float]
+  def scoring: Scoring = (json \ "scoring").as[Scoring]
+  def bookmark: SimpleSearchHit = new SimpleSearchHit((json \ "bookmark").as[JsObject])
+
+  def set(key: String, value: JsValue): DetailedSearchHit = {
+    new DetailedSearchHit(JsObject(json.fields.map{ field =>
+        field match {
+          case (fkey, fvalue) if (fkey == key) => (key, value)
+          case f => f
+        }
+      }
+    ))
+  }
+}
+
+object DetailedSearchHit extends Logging {
+  def apply(
+    uriId: Long,
+    bookmarkCount: Int,
+    hit: SimpleSearchHit,
+    isMyBookmark: Boolean,
+    isFriendsBookmark: Boolean,
+    isPrivate: Boolean,
+    users: Set[Id[User]],
+    score: Float,
+    scoring: Scoring
+  ): DetailedSearchHit = {
+    try {
+      new DetailedSearchHit(JsObject(List(
+        "uriId" -> JsNumber(uriId),
+        "bookmarkCount" -> JsNumber(bookmarkCount),
         "bookmark" -> hit.json,
-        "users" -> JsArray(users.map(id => JsNumber(id.id))),
+        "users" -> JsArray(users.map(id => JsNumber(id.id)).toSeq),
+        "score" -> JsNumber(score),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
+        "isFriendsBookmark" -> JsBoolean(isMyBookmark),
         "isPrivate" -> JsBoolean(isPrivate)
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize ShardSearchHit [hit=$hit][count=$count][users=$users][scoring=$scoring][isMybookmark=$isMyBookmark][isPrivate=$isPrivate]", e)
+        log.error(s"can't serialize DetailedSearchHit [hit=$hit][bookmarkCount=$bookmarkCount][users=$users][scoring=$scoring][isMybookmark=$isMyBookmark][isFriendsBookmark=$isFriendsBookmark][isPrivate=$isPrivate]", e)
         throw e
     }
   }
 }
 
-class PersonalSearchHit(val json: JsValue) extends AnyVal {
+class SimpleSearchHit(val json: JsObject) extends AnyVal {
   def title: Option[String] = (json \ "title").asOpt[String].filter(_.nonEmpty)
   def url: String = (json \ "url").as[String]
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
   def collections: Option[Seq[ExternalId[Collection]]] = (json \ "collections").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
   def bookmarkId: Option[ExternalId[Bookmark]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Bookmark])
+
+  def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): SimpleSearchHit = {
+    var matchesJson = Json.obj()
+
+    def add(name: String, matches: Option[Seq[(Int, Int)]]) = {
+      matches match {
+        case Some(matches) =>
+          if (matches.nonEmpty) {
+            matchesJson = matchesJson + (name -> JsArray(matches.map(h => Json.arr(h._1, (h._2 - h._1)))))
+          }
+        case _ =>
+      }
+    }
+
+    add("title", titleMatches)
+    add("url", urlMatches)
+
+    if (matchesJson.keys.size == 0) this else new SimpleSearchHit(json + ("matches" -> matchesJson))
+  }
+
+  def addCollections(collections: Seq[ExternalId[Collection]]): SimpleSearchHit = {
+    if (collections.isEmpty) this else new SimpleSearchHit(json + ("collections" -> Json.toJson(collections.map(_.id))))
+  }
 
   private def readMatches(matches: JsValue): Seq[(Int, Int)] = {
     matches.asOpt[JsArray] map {
@@ -126,52 +222,26 @@ class PersonalSearchHit(val json: JsValue) extends AnyVal {
   }
 }
 
-object PersonalSearchHit extends Logging {
-  def apply(json: JsValue) = new PersonalSearchHit(json)
+object SimpleSearchHit extends Logging {
   def apply(
     title: Option[String],
     url: String,
-    titleMatches: Seq[(Int, Int)],
-    urlMatches: Seq[(Int, Int)],
-    collections: Option[Seq[ExternalId[Collection]]],
-    bookmarkId: Option[ExternalId[Bookmark]]
-  ): PersonalSearchHit = {
+    collections: Option[Seq[ExternalId[Collection]]] = None,
+    bookmarkId: Option[ExternalId[Bookmark]] = None,
+    titleMatches: Option[Seq[(Int, Int)]] = None,
+    urlMatches: Option[Seq[(Int, Int)]] = None
+  ): SimpleSearchHit = {
     try {
       var json = Json.obj(
         "title" -> title,
         "url" -> url
       )
-
-      def addMatches(json: JsObject): JsObject = {
-        var matchesJson = Json.obj()
-
-        def add(name: String, matches: Seq[(Int, Int)]): JsObject = {
-          if (matches.nonEmpty) {
-            matchesJson + (name -> JsArray(matches.map(h => Json.arr(h._1, (h._2 - h._1)))))
-          } else matchesJson
-        }
-
-        matchesJson = add("title", titleMatches)
-        matchesJson = add("url", urlMatches)
-
-        if (matchesJson.keys.size == 0) json else json + ("matches" -> matchesJson)
-      }
-
-
-      def addCollections(json: JsObject): JsObject = {
-        collections match {
-          case Some(collections) =>
-            json + ("collections" -> Json.toJson(collections.map(_.id)))
-          case None => json
-        }
-      }
-
-      json = addMatches(json)
-      json = addCollections(json)
-
       bookmarkId.foreach{ id => json = json + ("id" -> JsString(id.id)) }
 
-      new PersonalSearchHit(json)
+      var h = new SimpleSearchHit(json)
+      h = h.addMatches(titleMatches, urlMatches)
+      collections.foreach{ c => h = h.addCollections(c) }
+      h
     } catch {
       case e: Throwable =>
         log.error(s"can't serialize a hit [title=title][url=$url][titleMatches=$titleMatches][urlMatches=$urlMatches][collections=$collections][bookmarkId=$bookmarkId]", e)
@@ -179,3 +249,4 @@ object PersonalSearchHit extends Logging {
     }
   }
 }
+

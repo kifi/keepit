@@ -39,11 +39,10 @@ import scala.concurrent.future
 class MainSearcher(
     userId: Id[User],
     queryString: String,
-    langProbabilities: Map[Lang, Double],
+    lang: Lang,
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    lastUUID: Option[ExternalId[ArticleSearchResult]],
     articleSearcher: Searcher,
     parserFactory: MainQueryParserFactory,
     socialGraphInfoFuture: Future[SocialGraphInfo],
@@ -64,7 +63,6 @@ class MainSearcher(
   private[this] var parsedQuery: Option[Query] = None
   def getParsedQuery: Option[Query] = parsedQuery
 
-  private[this] var lang: Lang = Lang("en")
   def getLang: Lang = lang
 
   private[this] val currentTime = currentDateTime.getMillis()
@@ -168,9 +166,6 @@ class MainSearcher(
 
     var tParse = currentDateTime.getMillis()
 
-    // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, langProbabilities)
-
     val hotDocs = new HotDocSetFilter()
     parser = parserFactory(lang, config)
     parser.setPercentMatch(percentMatch)
@@ -243,7 +238,7 @@ class MainSearcher(
     Await.result(promise.future, 10 seconds)
   }
 
-  def search(): ArticleSearchResult = {
+  def search(): ShardSearchResult = {
     val now = currentDateTime
     val (myHits, friendsHits, othersHits, personalizedSearcher) =
       if (enableWarp && isInitialSearch && filter.isDefault) {
@@ -391,25 +386,19 @@ class MainSearcher(
       hitList = (hitList.take(numHitsToReturn - 1) :+ h)
     }
 
+    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
+    val shardHits = toDetailedSearchHits(hitList)
+    val collections = parser.collectionIds.map(getCollectionExternalId)
+
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
 
-    val searchResultUuid = ExternalId[ArticleSearchResult]()
-    val mayHaveMoreHits = if (isInitialSearch) hitList.nonEmpty else hitList.length == numHitsToReturn
-    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-
-    checkScoreValues(hitList)
-
-    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
-        myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
-        (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
-        collections = parser.collectionIds,
-        lang = lang)
+    ShardSearchResult(toDetailedSearchHits(hitList), myTotal, friendsTotal, othersTotal, collections.toSeq, svVar, show, friendStats)
   }
 
-  private[this] def checkScoreValues(hitList: List[MutableArticleHit]): Unit = {
-    hitList.foreach{ h =>
+  private[this] def toDetailedSearchHits(hitList: List[MutableArticleHit]): List[DetailedSearchHit] = {
+    hitList.map{ h =>
       if (h.score.isInfinity) {
         log.error(s"the score value is infinity textScore=${h.luceneScore} clickBoost=${h.clickBoost} scoring=${h.scoring}")
         h.score = Float.MaxValue
@@ -417,6 +406,45 @@ class MainSearcher(
         log.error(s"the score value is NaN textScore=${h.luceneScore} clickBoost=${h.clickBoost} scoring=${h.scoring}")
         h.score = -1.0f
       }
+
+      DetailedSearchHit(
+        h.id,
+        h.bookmarkCount,
+        toSimpleSearchHit(h),
+        h.isMyBookmark,
+        h.users.nonEmpty, // isFriendsBookmark
+        h.isPrivate,
+        h.users,
+        h.score,
+        h.scoring
+      )
+    }
+  }
+
+  private[this] var collectionIdCache: Map[Long, ExternalId[Collection]] = Map()
+
+  private def getCollectionExternalId(id: Long): ExternalId[Collection] = {
+    collectionIdCache.getOrElse(id, {
+      val extId = collectionSearcher.getExternalId(id)
+      collectionIdCache += (id -> extId)
+      extId
+    })
+  }
+
+  private[this] def toSimpleSearchHit(h: MutableArticleHit): SimpleSearchHit = {
+    val uriId = Id[NormalizedURI](h.id)
+    if (h.isMyBookmark) {
+      val r = getBookmarkRecord(uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${uriId}"))
+
+      val collections = {
+        val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
+        if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
+      }
+
+      SimpleSearchHit(Some(r.title), r.url, collections, r.externalId)
+    } else {
+      val r = getArticleRecord(uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${uriId}"))
+      SimpleSearchHit(Some(r.title), r.url)
     }
   }
 
@@ -458,8 +486,6 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
     parser = parserFactory(lang, config)
     parser.setPercentMatch(percentMatch)
