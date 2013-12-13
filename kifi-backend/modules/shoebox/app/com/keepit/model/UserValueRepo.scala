@@ -63,7 +63,11 @@ class UserValueRepoImpl @Inject() (
   }
 
   def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean = {
-    (for (v <- table if v.userId === userId && v.name === name) yield v.state).update(UserValueStates.INACTIVE) > 0
+    val res = (for (v <- table if v.userId === userId && v.name === name) yield v.state).update(UserValueStates.INACTIVE) > 0
+    if (res) {
+      valueCache.remove(UserValueKey(userId, name))
+    }
+    res
   }
 
 }
