@@ -957,6 +957,9 @@ api.port.on({
   get_bookmarks: function(_, respond, tab) {
     api.bookmarks.getAll(respond);
   },
+  get_bookmarks: function(_, respond, tab) {
+    api.bookmarks.getAll(respond);
+  },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);

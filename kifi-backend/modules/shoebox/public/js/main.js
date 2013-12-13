@@ -3736,13 +3736,12 @@ $(function () {
 	function recieveBookmarks(event) {
 		if (event.data && event.data.bookmarks) {
 			console.log("got 'em", event.data.bookmarks)
+			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarks.length);
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
 				$bookmarkImportDialog.dialog('hide');
 				$bookmarkImportDialog = null;
 				// don't open again!
-				// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				// 	console.log('[prefs]', data);
-				// });
+				$.postJson(xhrBase + '/user/prefs', {'do_not_import': 'true'});
 			}).on('click', 'button.do-import', function () {
 
 				$bookmarkImportDialog.find('.import-step-1').hide();
@@ -3752,15 +3751,8 @@ $(function () {
 					$bookmarkImportDialog.dialog('hide');
 					$bookmarkImportDialog = null;
 				});
-				// don't open again!
-				// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				// 	console.log('[prefs]', data);
-				// });
-				// do the import!
-				// $.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				// 	console.log('[prefs]', data);
-				// });
-				// show next screen
+
+				window.postMessage('import_bookmarks', '*');
 			}).find('button').focus();
 		}
 	}
@@ -3784,8 +3776,7 @@ $(function () {
 			setTimeout(function() {
 				window.postMessage('get_bookmarks', '*');
 			}, 200);
-		}
-		if (!myPrefs.site_welcomed) {
+		} else if (!myPrefs.site_welcomed) {
 			$welcomeDialog.dialog('show').on('click', 'button', function () {
 				$welcomeDialog.dialog('hide');
 				$welcomeDialog = null;

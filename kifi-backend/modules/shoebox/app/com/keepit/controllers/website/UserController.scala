@@ -39,6 +39,18 @@ import com.keepit.model.EmailAddress
 import play.api.libs.json._
 import scala.util.Success
 import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.model.SocialConnection
+import scala.util.Failure
+import com.keepit.model.EmailAddress
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import com.keepit.common.mail.ElectronicMailCategory
+import play.api.libs.json.JsArray
+import play.api.mvc.MaxSizeExceeded
+import play.api.libs.json.JsNumber
+import scala.util.Success
+import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 
 class UserController @Inject() (
@@ -342,7 +354,7 @@ class UserController @Inject() (
        Json.obj("experiments" -> experiments.map(_.value)))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
+  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "do_not_import")
 
   def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(db.readOnly { implicit s =>
@@ -364,7 +376,13 @@ class UserController @Inject() (
     if (o.keys.subsetOf(SitePrefNames)) {
       db.readWrite { implicit s =>
         o.fields.foreach { case (name, value) =>
-          userValueRepo.setValue(request.userId, name, value.as[String])  // TODO: deactivate pref if JsNull
+          if (value == JsNull || value == JsUndefined) {
+            userValueRepo.clearValue(request.userId, name)
+          } else if (name == "do_not_import" && request.kifiInstallationId.isDefined) {
+            userValueRepo.setValue(request.userId, "has_imported_from_" + request.kifiInstallationId.get, "opt_out")
+          } else {
+            userValueRepo.setValue(request.userId, name, value.as[String])
+          }
         }
       }
       Ok(o)

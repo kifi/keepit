@@ -179,10 +179,14 @@ class ExtBookmarksController @Inject() (
       case _ =>
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
+          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.initLoad) {
+            db.readWrite { implicit session =>
+              userValueRepo.setValue(request.userId, "has_imported_from_" + request.kifiInstallationId.get, "true")
+            }
+          }
           val experiments = request.experiments
-          val user = db.readOnly { implicit s => userRepo.get(userId) }
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
+          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", request.user, experiments, bookmarkSource, installationId)
           //the bookmarks list may be very large!
           bookmarks.grouped(50) foreach { chunk =>
             searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)

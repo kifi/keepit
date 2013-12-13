@@ -4340,7 +4340,7 @@ span.long-text, a.long-text {
   padding: 0px 8px;
 }
 .import-dialog>.dialog-content>.dialog-body {
-  width: 475px;
+  width: 500px;
   margin: 20px auto;
 }
 .import-dialog>.dialog-content>.dialog-body>h1 {
@@ -4371,7 +4371,7 @@ span.long-text, a.long-text {
 .import-dialog>.dialog-content>.dialog-body>ul>li>span {color: #333; font-size: 18px; }
 
 .import-dialog>.dialog-content>.dialog-body>.importing-explaination {
-  margin-top: 35px;
+  margin-top: 30px;
   color: #333;
   font-size: 18px;
 }
@@ -4391,12 +4391,10 @@ span.long-text, a.long-text {
   position: absolute;
   bottom: 15px;
   right: 5px;
-  background: url(http://i.imgur.com/xv5fmim.png) 12px 50% / 16px 20px no-repeat;
   width: 165px;
   height: 58px;
   line-height: 58px;
   padding: 0;
-  padding-left: 18px;
   background-color: #6fa5ef;
   color: #fff;
   border: none;
@@ -4407,6 +4405,11 @@ span.long-text, a.long-text {
   cursor: pointer;
   -webkit-transition: background-color .1s;
   transition: background-color .1s;
+}
+.import-dialog>.dialog-content>button.do-import {
+  padding-left: 18px;
+  background: url(http://i.imgur.com/xv5fmim.png) 12px 50% / 16px 20px no-repeat;
+  background-color: #6fa5ef;
 }
 .import-dialog>.dialog-content>button:hover {background-color: #7faeef}
 .import-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}

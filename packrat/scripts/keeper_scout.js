@@ -21,6 +21,10 @@ var tile = tile || function() {  // idempotent for Chrome
     if(!/www\.kifi\.com|dev\.ezkeep\.com/.test(event.origin)) return;
     else if (event.data == 'get_bookmarks') {
       api.port.emit('get_bookmarks', postBookmarks);
+    } else if (event.data == 'import_bookmarks') {
+      api.port.emit('import_bookmarks', function(o) {
+        log('imported!', o)();
+      });
     }
   }
   window.addEventListener('message', postBookmarksMessageHandler, false);
