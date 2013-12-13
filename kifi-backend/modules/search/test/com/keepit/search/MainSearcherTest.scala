@@ -36,7 +36,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
 
-  val english = Map(Lang("en") -> 0.9999)
+  implicit val english = Lang("en")
 
   def initData(numUsers: Int, numUris: Int) = {
     val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
@@ -101,8 +101,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
       httpOriginalContentCharset = Option("UTF-8"),
       state = SCRAPED,
       message = None,
-      titleLang = Some(Lang("en")),
-      contentLang = Some(Lang("en")))
+      titleLang = Some(english),
+      contentLang = Some(english))
   }
 
   def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
@@ -133,8 +133,6 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
     "percentMatch" -> "0", "tailCutting" -> "0", "dampingByRank" -> "false")
   val allHitsConfig = defaultConfig("tailCutting" -> "0")
-
-  implicit val lang = Lang("en")
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
