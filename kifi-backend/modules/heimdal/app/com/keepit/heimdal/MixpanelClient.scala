@@ -16,20 +16,21 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
   def track[E <: HeimdalEvent: TypeCode](event: E) = {
     val eventCode = implicitly[TypeCode[E]]
     val eventName = s"${eventCode}_${event.eventType.name}"
-    val userId = Some(event) collect { case userEvent: UserEvent => userEvent.userId }
-    val distinctId = userId.map(getDistinctId) getOrElse eventCode.toString
-
     val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
     properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
-    userId.foreach(id => properties += ("userId", id.id))
-    if (!properties.data.contains("token")) { properties += ("token", projectToken) }
-    properties += ("distinct_id", distinctId)
+    properties += ("distinct_id", getDistinctId(event))
     properties += ("time", event.time.getMillis)
+    if (!properties.data.contains("token")) { properties += ("token", projectToken) }
     val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
     sendData("http://api.mixpanel.com/track", data)
   }
 
+  private def getDistinctId(id: Id[User]): String = s"${UserEvent.typeCode}_${id.toString}"
+  private def getDistinctId[E <: HeimdalEvent: TypeCode](event: E): String = event match {
+    case userEvent: UserEvent => getDistinctId(userEvent.userId)
+    case _ => implicitly[TypeCode[E]].code
+  }
 
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]) = {
     val data = Json.obj(
@@ -83,7 +84,4 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
       }
     )
   }
-
-  private def getDistinctId(id: Id[User]) = s"${UserEvent.typeCode}_${id.toString}"
-
 }

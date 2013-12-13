@@ -32,7 +32,7 @@ class ProdUserEventLoggingRepo(
 
   val warnBufferSize = 500
   val maxBufferSize = 10000
-  private val augmentors = Seq(new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new GenderAugmentor(shoeboxClient))
+  private val augmentors = Seq(UserIdAugmentor, new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new UserValuesAugmentor(shoeboxClient))
 
   def toBSON(event: UserEvent) : BSONDocument = {
     val userBatch: Long = event.userId.id / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
@@ -69,7 +69,7 @@ class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends Eve
   }
 }
 
-class GenderAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+class UserValuesAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
   def isDefinedAt(userEvent: UserEvent) = true
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     shoeboxClient.getUserValue(userEvent.userId, Gender.key).map(Seq(_).flatten.map { gender =>
@@ -86,6 +86,11 @@ class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAug
       Seq(("userSegment" -> ContextStringData(seg.description)))
     }
   }
+}
+
+object UserIdAugmentor extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = true
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq("userId" -> ContextDoubleData(userEvent.userId.id)))
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
