@@ -1012,7 +1012,15 @@ function forEachTabAtThreadList(f) {
     if (m) {
       var kind = (m[1] || ':page').substr(1);
       tabsByLocator[loc].forEach(function (tab) {
-        f(tab, threadLists[kind === 'page' ? tab.nUri : kind], kind);
+        var key = kind === 'page' ? tab.nUri : kind;
+        var tl = threadLists[key];
+        if (tl) {
+          f(tab, tl, kind);
+        } else if (threadListCallbacks[key]) {
+          threadListCallbacks[key].push(function (tl) {
+            f(tab, tl, kind);
+          });
+        }
       });
     }
   }
