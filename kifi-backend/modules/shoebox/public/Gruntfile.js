@@ -16,7 +16,6 @@ module.exports = function (grunt) {
             npm install grunt-contrib-uglify --save-dev
             npm install grunt-contrib-requirejs --save-dev
             npm install grunt-contrib-imagemin --save-dev
-            npm install grunt-contrib-htmlmin --save-dev
             npm install load-grunt-tasks --save-dev
             npm install time-grunt --save-dev
 
@@ -142,23 +141,6 @@ module.exports = function (grunt) {
 			}
 		},
 
-		htmlmin: {
-			dist: {
-				options: {
-					removeComments: true,
-					collapseWhitespace: true,
-					removeEmptyAttributes: true,
-					removeCommentsFromCDATA: true,
-					removeRedundantAttributes: true,
-					collapseBooleanAttributes: true
-				},
-				files: {
-					// Destination : Source
-					'./index-min.html': './index.html'
-				}
-			}
-		},
-
 		// Run: `grunt watch` from command line for this section to take effect
 		watch: {
 			files: ['<%= jshint.files %>'],
@@ -171,7 +153,7 @@ module.exports = function (grunt) {
 	grunt.registerTask('default', ['jshint']);
 
 	// Release Task
-	grunt.registerTask('release', ['jshint', 'test', 'requirejs', 'imagemin', 'htmlmin']);
+	grunt.registerTask('release', ['jshint', 'requirejs', 'imagemin']);
 
 	/*
         Notes:
