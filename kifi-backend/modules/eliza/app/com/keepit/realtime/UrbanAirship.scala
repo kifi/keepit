@@ -190,8 +190,15 @@ class UrbanAirshipImpl @Inject()(
           postIOS(device, notification)
         } catch {
           case e: TimeoutException =>
-            log.error("error posting to urbanairship, doing one more retry", e)
-            postIOS(device, notification)
+            log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
+            try {
+              postIOS(device, notification)
+            } catch {
+              case t: Throwable =>
+                log.error(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", t)
+            }
+          case t: Throwable =>
+            throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
         }
       case DeviceType.Android =>
         ???
