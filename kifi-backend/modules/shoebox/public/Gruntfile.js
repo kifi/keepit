@@ -13,6 +13,7 @@ module.exports = function (grunt) {
             npm install grunt --save-dev
             npm install grunt-contrib-watch --save-dev
             npm install grunt-contrib-jshint --save-dev
+            npm install grunt-contrib-less --save-dev
             npm install grunt-contrib-uglify --save-dev
             npm install grunt-contrib-requirejs --save-dev
             npm install grunt-contrib-imagemin --save-dev
@@ -40,17 +41,23 @@ module.exports = function (grunt) {
 		// Store your Package file so you can reference its specific data whenever necessary
 		pkg: grunt.file.readJSON('package.json'),
 
-		/*
-        uglify: {
-            options: {
-              banner: '/*! <%= pkg.name %> | <%= pkg.version %> | <%= grunt.template.today("yyyy-mm-dd") %> /\n'
-            },
-            dist: {
-                src: './<%= pkg.name %>.js',
-                dest: './<%= pkg.name %>.min.js'
-            }
-        },
-        */
+		src: {
+			kifi: [
+				'js/**/*.js',
+				'!js/**/*.min.js',
+				'!js/**/jquery*',
+				'!js/handlebars*',
+				'!js/tempo*',
+				'!js/antiscroll*'
+			],
+			minify: [
+				'js/util.js',
+				'js/scorefilter.js',
+				'js/kifi.js',
+				'js/main.js',
+				'js/track.js'
+			]
+		},
 
 		jshint: {
 			/*
@@ -58,7 +65,7 @@ module.exports = function (grunt) {
                 In case there is a /release/ directory found, we don't want to lint that
                 so we use the ! (bang) operator to ignore the specified directory
             */
-			files: ['Gruntfile.js', 'app/**/*.js', '!app/release/**', 'modules/**/*.js'],
+			files: ['Gruntfile.js', '<%= src.kifi %>'],
 			options: {
 				curly: true,
 				eqeqeq: true,
@@ -89,6 +96,43 @@ module.exports = function (grunt) {
 			}
 		},
 
+		uglify: {
+			options: {
+				// mangle:
+				// compress:
+				// beautify:
+				// report:
+				// sourceMap:
+				// sourceMapRoot:
+				// sourceMapIn:
+				// sourceMappingURL:
+				// sourceMapPrefix:
+				// wrap:
+				// exportAll:
+				// preserveComments:
+				// banner:
+				// footer:
+				banner: '/*! <%= pkg.name %> | <%= pkg.version %> | <%= grunt.template.today("yyyy-mm-dd") %> /\n'
+			},
+			dist: {
+				src: '<%= src.minify %>',
+				dest: 'dist/<%= pkg.name %>.min.js'
+			}
+		},
+
+		less: {
+			dist: {
+				options: {
+					paths: ['css'],
+					compress: true,
+					cleancss: true
+				}//,
+				//files: {
+				//	'css/kifi.css': 'css/**/*.less'
+				//}
+			}
+		},
+
 		requirejs: {
 			compile: {
 				options: {
@@ -108,7 +152,6 @@ module.exports = function (grunt) {
 			}
 		},
 
-
 		// `optimizationLevel` is only applied to PNG files (not JPG)
 		imagemin: {
 			png: {
@@ -118,9 +161,9 @@ module.exports = function (grunt) {
 				files: [
 					{
 						expand: true,
-						cwd: './app/images/',
+						cwd: './img/',
 						src: ['**/*.png'],
-						dest: './app/images/compressed/',
+						dest: './img/compressed/',
 						ext: '.png'
                     }
 				]
@@ -132,9 +175,9 @@ module.exports = function (grunt) {
 				files: [
 					{
 						expand: true,
-						cwd: './app/images/',
+						cwd: './img/',
 						src: ['**/*.jpg'],
-						dest: './app/images/compressed/',
+						dest: './img/compressed/',
 						ext: '.jpg'
                     }
 				]
@@ -151,6 +194,9 @@ module.exports = function (grunt) {
 
 	// Default Task
 	grunt.registerTask('default', ['jshint']);
+
+	// Release Task
+	grunt.registerTask('build', ['jshint', 'uglify', 'imagemin']);
 
 	// Release Task
 	grunt.registerTask('release', ['jshint', 'requirejs', 'imagemin']);
