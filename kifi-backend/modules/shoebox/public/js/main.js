@@ -3733,9 +3733,9 @@ $(function () {
 	}
 
 	var $bookmarkImportDialog = $('.import-dialog').remove().show();
-	function recieveBookmarks(event) {
-		if (event.data && event.data.bookmarks && event.data.bookmarks.length > 0) {
-			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarks.length);
+	function receiveBookmarkCount(event) {
+		if (event.data && event.data.bookmarkCount && event.data.bookmarkCount > 0) {
+			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
 				$bookmarkImportDialog.dialog('hide');
 				$bookmarkImportDialog = null;
@@ -3755,7 +3755,7 @@ $(function () {
 			}).find('button').focus();
 		}
 	}
-	window.addEventListener('message', recieveBookmarks);
+	window.addEventListener('message', receiveBookmarkCount);
 
 	function welcomeUser() {
 		if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
@@ -3785,9 +3785,7 @@ $(function () {
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {
 		if (myPrefs.prompt_for_import) {
-			setTimeout(function() {
-				window.postMessage('get_bookmarks', '*');
-			}, 200);
+			window.postMessage('get_bookmark_count', '*');
 		} else if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
 			welcomeUser();
 		} else {

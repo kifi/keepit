@@ -954,8 +954,10 @@ api.port.on({
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
   },
-  get_bookmarks: function(_, respond, tab) {
-    api.bookmarks.getAll(respond);
+  get_bookmark_count: function(_, respond, tab) {
+    api.bookmarks.getAll(function(bms) {
+      respond(bms.length);
+    });
   },
   import_bookmarks: function(_, respond, tab) {
     postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
