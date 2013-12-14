@@ -15,7 +15,6 @@ module.exports = function (grunt) {
             npm install grunt-contrib-jshint --save-dev
             npm install grunt-contrib-uglify --save-dev
             npm install grunt-contrib-requirejs --save-dev
-            npm install grunt-contrib-sass --save-dev
             npm install grunt-contrib-imagemin --save-dev
             npm install grunt-contrib-htmlmin --save-dev
             npm install load-grunt-tasks --save-dev
@@ -110,32 +109,6 @@ module.exports = function (grunt) {
 			}
 		},
 
-		sass: {
-			dist: {
-				options: {
-					style: 'compressed',
-					require: ['./app/styles/sass/helpers/url64.rb']
-				},
-				expand: true,
-				cwd: './app/styles/sass/',
-				src: ['*.scss'],
-				dest: './app/styles/',
-				ext: '.css'
-			},
-			dev: {
-				options: {
-					style: 'expanded',
-					debugInfo: true,
-					lineNumbers: true,
-					require: ['./app/styles/sass/helpers/url64.rb']
-				},
-				expand: true,
-				cwd: './app/styles/sass/',
-				src: ['*.scss'],
-				dest: './app/styles/',
-				ext: '.css'
-			}
-		},
 
 		// `optimizationLevel` is only applied to PNG files (not JPG)
 		imagemin: {
@@ -188,30 +161,23 @@ module.exports = function (grunt) {
 
 		// Run: `grunt watch` from command line for this section to take effect
 		watch: {
-			files: ['<%= jshint.files %>', '<%= sass.dev.src %>'],
+			files: ['<%= jshint.files %>'],
 			tasks: 'default'
 		}
 
 	});
 
 	// Default Task
-	grunt.registerTask('default', ['jshint', 'connect', 'sass:dev']);
+	grunt.registerTask('default', ['jshint']);
 
 	// Release Task
-	grunt.registerTask('release', ['jshint', 'test', 'requirejs', 'sass:dist', 'imagemin', 'htmlmin']);
+	grunt.registerTask('release', ['jshint', 'test', 'requirejs', 'imagemin', 'htmlmin']);
 
 	/*
         Notes:
 
         When registering a new Task we can also pass in any other registered Tasks.
         e.g. grunt.registerTask('release', 'default requirejs'); // when running this task we also run the 'default' Task
-
-        We don't do this above as we would end up running `sass:dev` when we only want to run `sass:dist`
-        We could do it and `sass:dist` would run afterwards, but that means we're compiling sass twice which (although in our example quick) is extra compiling time.
-
-        To run specific sub tasks then use a colon, like so...
-        grunt sass:dev
-        grunt sass:dist
     */
 
 };
