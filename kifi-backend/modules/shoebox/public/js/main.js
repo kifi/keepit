@@ -1,18 +1,9 @@
-var domain = 'kifi.com';
-var xhrDomain = 'https://api.kifi.com';
-var wwwDomain = 'https://www.kifi.com';
-//TODO dev
-var DEV = !(/kifi.com/.test(location.hostname));
-if (DEV) {
-	domain = 'dev.ezkeep.com';
-	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
-}
-// iframe tunnel CROSS ORIGIN issue fix
-document.domain = domain;
-var xhrBase = xhrDomain + '/site';
-var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
-var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
-
+var LOCAL = location.port === '9000';
+var origin = LOCAL ? location.protocol + '//' + location.host : 'https://www.kifi.com';
+var xhrBase = origin + '/site';
+var xhrBaseEliza = origin.replace('www', 'eliza') + '/eliza/site';
+var xhrBaseSearch = origin.replace('www', 'search') + '/search';
+var picBase = (LOCAL ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net';
 
 var compareSearch = {usage: 'search', sensitivity: 'base'};
 var compareSort = {numeric: true};
@@ -38,6 +29,7 @@ $.extend($.timeago.settings.strings, {
 	$.fn.layout = function () {
 		return this.each(forceLayout);
 	};
+
 	function forceLayout() {
 		this.clientHeight;
 	}
@@ -70,6 +62,7 @@ $.extend($.timeago.settings.strings, {
 			});
 		},
 		hide: function () {
+			$(this).trigger('dialog.hide');
 			$(document).off('keydown.dialog');
 			$(this).on('transitionend', function end(e) {
 				if (e.target === this) {
@@ -336,7 +329,7 @@ $(function () {
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
-		return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
+		return picBase + '/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
 
 	function escapeHTMLContent(text) {
@@ -389,7 +382,7 @@ $(function () {
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
-				}).error(function () {
+				}).fail(function () {
 					$pic.find('.page-pic-soon').addClass('showing');
 				});
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
@@ -424,102 +417,1043 @@ $(function () {
 		}
 	});
 	var profileTmpl = Tempo.prepare('profile-template');
+
+	function editProfileInput($target, e) {
+		if (e) {
+			e.preventDefault();
+		}
+
+		var $box = $target.closest('.profile-input-box'),
+			$input = $box.find('.profile-input-input');
+
+		$box.closest('.profile-container').find('.profile-input-box.edit').each(function () {
+			cancelProfileInput($(this));
+		});
+
+		activateInput($input);
+	}
+
+	function activateInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this);
+				$this.data('value', $this.val());
+			})
+			.prop('disabled', false)
+			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function commitInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.val());
+				$this.data('prevValue', $this.data('value'));
+				$this.val(val).data('value', val);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function cancelInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.data('value'));
+				$this.val(val);
+				showError($this, false);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function revertAndActivateInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this);
+				$this.data('value', $this.data('prevValue'));
+			})
+			.prop('disabled', false)
+			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function revertInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					prev = $this.data('prevValue');
+				$this.val(prev).data('value', prev);
+			});
+	}
+
+	function saveProfileInput($target, e) {
+		if (e) {
+			e.preventDefault();
+		}
+
+		var $box = $target.closest('.profile-input-box'),
+			$input = $box.find('.profile-input-input'),
+			valid = true;
+
+		$input.each(function () {
+			var $this = $(this),
+				val = trimInputValue($this.val());
+			if ($input.prop('disabled')) {
+				return;
+			}
+			if (!val && $this.is('[required]')) {
+				showError($this, 'This field is required');
+				valid = false;
+			}
+			else if ($this.attr('name') === 'email' && !validateEmailInput($this)) {
+				valid = false;
+			}
+			else {
+				showError($this, false);
+			}
+		});
+
+		if (!valid) {
+			return false;
+		}
+
+		commitInput($input);
+
+		if ($input.attr('name') === 'email') {
+			saveNewPrimaryEmail($input, function () {
+				revertInput($input);
+			});
+		}
+		else {
+			saveProfileInfo();
+		}
+	}
+
+	function cancelProfileInput($target, e) {
+		if (e) {
+			e.preventDefault();
+		}
+
+		var $box = $target.closest('.profile-input-box'),
+			$input = $box.find('.profile-input-input');
+
+		cancelInput($input);
+	}
+
+	function trimInputValue(val) {
+		return val ? $.trim(val).replace(/\s+/g, ' ') : '';
+	}
+
+	// profile picture upload
+
+	var URL = window.URL || window.webkitURL;
+	var PHOTO_BINARY_UPLOAD_URL = xhrBase + '/user/pic/upload';
+	var PHOTO_CROP_UPLOAD_URL = xhrBase + '/user/pic';
+	var PHOTO_UPLOAD_FORM_URL = '/auth/upload-multipart-image';
+
+	function initProfilePhotoUpload() {
+		$('.profile-image-file').change(function () {
+			console.log('photo selected', this.files, URL, this, arguments);
+			if (this.files && URL) {
+				var upload = uploadPhotoXhr2(this.files);
+				if (upload) {
+					// wait for file dialog to go away before starting dialog transition
+					setTimeout(showLocalPhotoDialog.bind(null, upload), 200);
+				}
+			} else {
+				uploadPhotoIframe(this.form);
+			}
+		});
+		$('.profile-image, .profile-image-change').click(function (e) {
+			if (e.which === 1) {
+				$('.profile-image-file').click();
+			}
+		});
+	}
+
+	var photoXhr2;
+	function uploadPhotoXhr2(files) {
+		var file = Array.prototype.filter.call(files, isImage)[0];
+		if (file) {
+			if (photoXhr2) {
+				photoXhr2.abort();
+			}
+			var xhr = new XMLHttpRequest();
+			photoXhr2 = xhr;
+			var deferred = createPhotoUploadDeferred();
+			xhr.withCredentials = true;
+			xhr.upload.addEventListener('progress', function (e) {
+				if (e.lengthComputable) {
+					deferred.notify(e.loaded / e.total);
+				}
+			});
+			xhr.addEventListener('load', function () {
+				deferred.resolve(JSON.parse(xhr.responseText));
+			});
+			xhr.addEventListener('loadend', function () {
+				if (photoXhr2 === xhr) {
+					photoXhr2 = null;
+				}
+				if (deferred.state() === 'pending') {
+					deferred.reject();
+				}
+			});
+			xhr.open('POST', PHOTO_BINARY_UPLOAD_URL, true);
+			xhr.send(file);
+			return {file: file, promise: deferred.promise()};
+		}
+	}
+	function isImage(file) {
+		return file.type.search(/^image\/(?:bmp|jpg|jpeg|png|gif)$/) === 0;
+	}
+
+	var iframeDeferred;
+	function uploadPhotoIframe(form) {
+		var $photo = $('.profile-image');
+		$photo.css('background-image', 'none').addClass('unset');
+
+		if (iframeDeferred) {
+			iframeDeferred.reject();  // clean up previous in-progress upload
+		}
+		var deferred = iframeDeferred = createPhotoUploadDeferred()
+		.always(function () {
+			clearTimeout(fakeProgressTimer);
+			iframeDeferred = null;
+			$iframe.remove();
+		});
+		var $iframe = $('<iframe name=upload>').hide().appendTo('body').load(function () {
+			deferred.resolve();
+			var o;
+			try {
+				o = JSON.parse($iframe.contents().find('body').text());
+			} catch (err) {
+			}
+			$photo.css('background-image', o ? 'url(' + o.url + ')' : '').removeClass('unset');
+			$('.my-pic').css('background-image', o ? 'url(' + o.url + ')' : '');
+			$(form).removeAttr('method target action');
+		});
+		form.method = 'POST';
+		form.target = 'upload';
+		form.action = PHOTO_UPLOAD_FORM_URL;
+		form.submit();
+
+		var fakeProgressTimer;
+		fakeProgress(0, 100);
+		function fakeProgress(frac, ms) {
+			deferred.notify(frac);
+			fakeProgressTimer = setTimeout(fakeProgress.bind(null, 1 - (1 - frac) * 0.9, ms * 1.1), ms);
+		}
+	}
+
+	function createPhotoUploadDeferred() {
+		return $.Deferred();
+	}
+
+	var localPhotoUrl;
+	function showLocalPhotoDialog(upload) {
+		if (localPhotoUrl) {
+			URL.revokeObjectURL(localPhotoUrl);
+		}
+		localPhotoUrl = URL.createObjectURL(upload.file);
+
+		photoDialog
+		.show(localPhotoUrl)
+		.done(function (details) {
+			var $photo = $('.profile-image');
+			var scale = $photo.innerWidth() / details.size;
+
+			var $myPic = $('.my-pic');
+			var myScale = $myPic.innerWidth() / details.size;
+
+			$('.my-pic').css({
+				'background-image': 'url(' + localPhotoUrl + ')',
+				'background-size': myScale * details.width + 'px auto',
+				'background-position': -(myScale * details.x) + 'px ' + -(myScale * details.y) + 'px'
+			});
+
+			$photo.css({
+				'background-image': 'url(' + localPhotoUrl + ')',
+				'background-size': scale * details.width + 'px auto',
+				'background-position': -(scale * details.x) + 'px ' + -(scale * details.y) + 'px'
+			})
+			.removeClass('unset')
+			.removeData()
+			.data(details)
+			.data('uploadPromise', upload.promise);
+
+			upload.promise.always(function (image) {
+				$.postJson(PHOTO_CROP_UPLOAD_URL, {
+					picToken: image && image.token,
+					picWidth: details.width,
+					picHeight: details.height,
+					cropX: details.x,
+					cropY: details.y,
+					cropSize: details.size
+				});
+			});
+
+		})
+		.always(function () {
+			$('.profile-image-file').val(null);
+		});
+	}
+
+	var photoDialog = (function () {
+		var $dialog, $mask, $image, $slider, deferred, hideTimer;
+		var INNER_SIZE = 200;
+		var SHADE_SIZE = 40;
+		var OUTER_SIZE = INNER_SIZE + 2 * SHADE_SIZE;
+		var SLIDER_MAX = 180;
+
+		return {
+			show: function (photoUrl) {
+				var img = new Image();
+				img.onload = onPhotoLoad;
+				img.src = photoUrl;
+
+				$dialog = ($dialog || $('.photo-dialog').remove().css('display', '')).click(onDialogClick);
+				$mask = $('.photo-dialog-mask', $dialog).mousedown(onMaskMouseDown);
+				$image = $(img).addClass('photo-dialog-img').insertBefore($mask);
+				$slider = $('.photo-dialog-slider', $dialog);
+				clearTimeout(hideTimer);
+				hideTimer = null;
+				deferred = $.Deferred();
+
+				return deferred;
+			}
+		};
+
+		function onPhotoLoad() {
+			var nw = this.width;
+			var nh = this.height;
+			var dMin = INNER_SIZE;
+			var dMax = Math.max(OUTER_SIZE, Math.min(1000, nw, nh));
+			var d0 = Math.max(INNER_SIZE, Math.min(OUTER_SIZE, nw, nh));
+			var wScale = Math.max(1, nw / nh);
+			var hScale = Math.max(1, nh / nw);
+			var w = d0 * wScale;
+			var h = d0 * hScale;
+			var top = 0.5 * (OUTER_SIZE - h);
+			var left = 0.5 * (OUTER_SIZE - w);
+			$image
+			.css({width: w, height: h, top: top, left: left})
+			.data({
+				naturalWidth: nw,
+				naturalHeight: nh,
+				width: w,
+				height: h,
+				top: top,
+				left: left
+			});
+			$slider.slider({
+				max: SLIDER_MAX,
+				value: Math.round(SLIDER_MAX * (d0 - dMin) / (dMax - dMin)),
+				slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)
+			});
+			$dialog.appendTo('body').layout().addClass('photo-dialog-showing').find('.ui-slider-handle').focus();
+			onEsc(hide);
+		}
+
+		function onEsc(handler) {
+			onKeyDown.guid = handler.guid = handler.guid || $.guid++;
+			$(document).keydown(onKeyDown);
+			function onKeyDown(e) {
+				if (e.which === 27) {
+					handler(e);
+					e.preventDefault();
+				}
+			}
+		}
+
+		function offEsc(handler) {
+			$(document).off('keydown', handler);
+		}
+
+		function hide() {
+			offEsc(hide);
+			$dialog.removeClass('photo-dialog-showing');
+			hideTimer = setTimeout(function () {
+				$dialog.remove();
+				$image.remove();
+				$mask = $image = $slider = deferred = hideTimer = null;
+			}, 500);
+		}
+
+		function percentToPx(pxMin, pxMax) {
+			var factor = (pxMax - pxMin) / SLIDER_MAX;
+			return function (pct) {
+				return pxMin + pct * factor;
+			};
+		}
+
+		function onSliderSlide(data, pctToPx, wScale, hScale, e, ui) {
+			var d = pctToPx(ui.value);
+			var w = d * wScale;
+			var h = d * hScale;
+			var top = Math.min(SHADE_SIZE, Math.max(SHADE_SIZE + INNER_SIZE - h, data.top - 0.5 * (h - data.height)));
+			var left = Math.min(SHADE_SIZE, Math.max(SHADE_SIZE + INNER_SIZE - w, data.left - 0.5 * (w - data.width)));
+			this.style.top = top + 'px';
+			this.style.left = left + 'px';
+			this.style.width = w + 'px';
+			this.style.height = h + 'px';
+			data.width = w;
+			data.height = h;
+			data.top = top;
+			data.left = left;
+		}
+
+		function onMaskMouseDown(e) {
+			e.preventDefault();
+			var x0 = e.screenX;
+			var y0 = e.screenY;
+			var data = $image.data();
+			var leftMin = INNER_SIZE + SHADE_SIZE - data.width;
+			var topMin = INNER_SIZE + SHADE_SIZE - data.height;
+			var move = throttle(onMaskMouseMove.bind($image[0], x0, y0, data.left, data.top, leftMin, topMin, data), 10);
+			document.addEventListener('mousemove', move, true);
+			document.addEventListener('mouseup', onMaskMouseUp, true);
+			document.addEventListener('mouseout', onMaskMouseOut, true);
+			$mask.data('move', move);
+			$dialog.addClass('dragging');
+		}
+
+		// from underscore.js 1.5.2 underscorejs.org
+		function throttle(func, wait, options) {
+			var context, args, result;
+			var timeout = null;
+			var previous = 0;
+			options || (options = {});
+			var later = function () {
+				previous = options.leading === false ? 0 : Date.now();
+				timeout = null;
+				result = func.apply(context, args);
+			};
+			return function () {
+				var now = Date.now();
+				if (!previous && options.leading === false) { previous = now; }
+				var remaining = wait - (now - previous);
+				context = this;
+				args = arguments;
+				if (remaining <= 0) {
+					clearTimeout(timeout);
+					timeout = null;
+					previous = now;
+					result = func.apply(context, args);
+				} else if (!timeout && options.trailing !== false) {
+					timeout = setTimeout(later, remaining);
+				}
+				return result;
+			};
+		}
+
+		function onMaskMouseMove(x0, y0, left0, top0, leftMin, topMin, data, e) {
+			var left = data.left = Math.min(SHADE_SIZE, Math.max(leftMin, left0 + e.screenX - x0));
+			var top = data.top = Math.min(SHADE_SIZE, Math.max(topMin, top0 + e.screenY - y0));
+			this.style.left = left + 'px';
+			this.style.top = top + 'px';
+		}
+
+		function onMaskMouseUp() {
+			document.removeEventListener('mousemove', $mask.data('move'), true);
+			document.removeEventListener('mouseup', onMaskMouseUp, true);
+			document.removeEventListener('mouseout', onMaskMouseOut, true);
+			$mask.removeData('move');
+			$dialog.removeClass('dragging');
+		}
+
+		function onMaskMouseOut(e) {
+			if (!e.relatedTarget) {
+				onMaskMouseUp();
+			}
+		}
+
+		function onDialogClick(e) {
+			if (e.which !== 1) { return; }
+			var $el = $(e.target);
+			var submitted = $el.hasClass('photo-dialog-submit');
+			if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.photo-dialog-cell')) {
+				var o = $image.data();
+				if (submitted) {
+					var scale = o.naturalWidth / o.width;
+					deferred.resolve({
+						width: o.naturalWidth,
+						height: o.naturalHeight,
+						x: Math.round(scale * (SHADE_SIZE - o.left)),
+						y: Math.round(scale * (SHADE_SIZE - o.top)),
+						size: Math.round(scale * INNER_SIZE)
+					});
+				} else {
+					deferred.reject();
+				}
+				hide();
+			}
+		}
+	}());
+
+	// end of profile photo upload
+
+	// profile email management
+	//
+	var PRIMARY_INDEX = 0;
+
+	function getPrimaryEmail(emails) {
+		if (!emails) {
+			emails = me.emails;
+		}
+		return findEmail(emails, function (info) {
+			return info.isPrimary;
+		})[0] || emails[PRIMARY_INDEX] || null;
+	}
+
+	function getPendingPrimaryEmail(emails) {
+		return findEmail(emails || me.emails, function (info) {
+			return info.isPendingPrimary;
+		})[0] || null;
+	}
+
+	function getPrimaryEmailAddress(emails) {
+		var addr = getPrimaryEmail(emails);
+		return addr && addr.address || null;
+	}
+
+	function getProfileCopy() {
+		var props = {};
+		for (var i in me) {
+			if (me.hasOwnProperty(i)) {
+				props[i] = me[i];
+			}
+		}
+		props.emails = copyEmails(me.emails);
+		return props;
+	}
+
+	function copyEmails(emails) {
+		if (emails) {
+			return emails.map(function (info) {
+				return {
+					address: info.address,
+					isPrimary: info.isPrimary
+				};
+			});
+		}
+		return emails;
+	}
+
+	function findEmail(emails, callback, that) {
+		var list = [];
+		emails = emails || me.emails;
+		for (var i = 0, l = emails.length; i < l; i++) {
+			if (callback.call(that, emails[i], i, emails)) {
+				list.push(emails[i]);
+			}
+		}
+		return list;
+	}
+
+	function removeEmailInfo(emails, addr) {
+		emails = emails || me.emails;
+		for (var i = emails.length - 1; i >= 0; i--) {
+			if (emails[i].address === addr) {
+				emails.splice(i, 1);
+			}
+		}
+	}
+
+	function unsetPrimary(emails) {
+		var primary = getPrimaryEmail(emails);
+		if (primary) {
+			primary.isPrimary = false;
+		}
+	}
+
+	var emailChangeTmpl = Handlebars.compile($('#primary-email-change-dialog').html());
+	function showEmailChangeDialog(email, submit, cancel) {
+		var $dialog = $(emailChangeTmpl({
+				email: email
+			}))
+			.appendTo(document.body)
+			.on('dialog.hide', function () {
+				if (cancel) {
+					cancel(false);
+				}
+			})
+			.on('click', '.dialog-cancel', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+
+				if (cancel) {
+					cancel(false);
+				}
+			})
+			.on('submit', 'form', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+
+				if (submit) {
+					submit(true);
+				}
+			})
+			.dialog('show');
+	}
+
+	function refreshMe(data) {
+		var url = xhrBase + '/user/me';
+		if (data) {
+			return $.postJson(url, data, updateMe);
+		}
+		return $.getJSON(url, updateMe);
+	}
+
+	function saveNewPrimaryEmail($input, cancel) {
+		var email = $input.val();
+		if (getPrimaryEmailAddress() === email) {
+			// already primary
+			return false;
+		}
+		getEmailInfo(email)
+			.done(function (emailInfo) {
+				if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+					refreshMe();
+					return;
+				}
+				if (emailInfo.isVerified) {
+					setNewPrimaryEmail(email)();
+					return;
+				}
+				// email is available || (not primary && not pending primary && not verified)
+				showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+			})
+			.fail(function () {
+				revertAndActivateInput($input);
+			})
+			.fail(getAddEmailErrorCallback(email, $input));
+	}
+
+	function setNewPrimaryEmail(email) {
+		return function () {
+			var props = getProfileCopy();
+			var emails = props.emails;
+			removeEmailInfo(emails, email);
+			unsetPrimary(emails);
+			emails.unshift({
+				address: email,
+				isPrimary: true
+			});
+			refreshMe(props);
+		};
+	}
+
+	function saveProfileInfo() {
+		var props = {},
+			$container = $('.profile-container');
+
+		$container.find('.profile-input-input').each(function () {
+			var $this = $(this);
+			props[$this.attr('name')] = trimInputValue($this.val());
+		});
+
+		delete props.email;
+
+		refreshMe(props)
+			.fail(function () {
+				showMessage('Uh oh! Something went wrong!');
+			});
+	}
+
+	var $disconnectDialog = $('.disconnect-dialog')
+		.detach()
+		.show()
+		.on('click', '.dialog-cancel', function (e) {
+			e.preventDefault();
+			$disconnectDialog.dialog('hide');
+		});
+
+	var disconnectDialogTmpl = Tempo.prepare($disconnectDialog);
+
+	function showDisconnectDialog(network) {
+		disconnectDialogTmpl.render({
+			url: origin + '/disconnect/' + network,
+			network: ucfirst(network)
+		});
+		$disconnectDialog.dialog('show');
+	}
+
+	// profile email contacts
+	$(document).on('click', '.import-gmail', function (e) {
+		e.preventDefault();
+		window.location = origin + '/importContacts';
+	});
+
+	function ucfirst(str) {
+		return str ? str.charAt(0).toUpperCase() + str.substring(1) : '';
+	}
+
+	var gmailAccountTmpl = Handlebars.compile($('#gmail-account').html());
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
+			updateMe(me);
+
+			var $emails = $('.profile-email-accounts tbody').empty();
+			$.getJSON(xhrBase + '/user/abooks').done(function (abooks) {
+				(abooks || []).forEach(function (abook) {
+					$emails.append(gmailAccountTmpl({
+						id: abook.id,
+						status: abook.state,
+						email: abook.ownerEmail,
+						importedCount: abook.numProcessed,
+						totalCount: abook.numContacts
+					}));
+				});
+			});
+
+			setTimeout(function () {
+				$('.profile-first-name')
+					.outerWidth($('.profile-placeholder-first-name').outerWidth());
+				$('.profile-last-name')
+					.outerWidth($('.profile-placeholder-last-name').outerWidth());
+			});
+
 			$('body').attr('data-view', 'profile');
+
 			$('.left-col .active').removeClass('active');
+
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
 			});
-			$('.profile .edit').click(function () {
-				var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
-					var $this = $(this);
-					var value = $this.text();
-					var maxlen = $this.data('maxlength');
-					$('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
-						if (maxlen) {
-							$(this).closest('.editable').attr('data-chars-left', maxlen - $(this).val().length);
-						}
-						if (e.keyCode === 13) {
-							$(this).closest('.edit-container').find('.save').click();
-						} else if (e.which === 27) {
-							$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
-								var $this = $(this);
-								var prop = $this.data('prop');
-								if (prop === 'email') {
-									$this.text(me.emails[0]);
-								} else {
-									$this.text(me[prop]);
-								}
-							});
-						}
-					}).appendTo($this.empty()).keyup();
-				}).find('input');
-				$inputs[0].focus();
-				$inputs.on('keypress paste change', function () {
-					var minChars = 3, scale = 1.25;
-					var $this = $(this);
-					var size = Math.max(Math.ceil($this.val().length * scale), minChars);
-					$this.css('width', 'auto').attr('size', size);
-				}).keypress();
-			});
-			$('.profile .save').click(function () {
-				var props = {};
-				var $editContainer = $(this).closest('.edit-container');
-				$editContainer.find('.editable').each(function () {
-					var $this = $(this);
-					var value = $this.find('input').val();
-					$this.text(value);
-					props[$this.data('prop')] = value;
-				});
-				if (props.email) {
-					props.emails = [props.email];
-					delete props.email;
+
+			initProfilePhotoUpload();
+
+			$('.profile-input-input').keyup(function (e) {
+				switch (e.which) {
+				case 13: // enter
+					saveProfileInput($(this), e);
+					break;
+				case 27: // esc
+					cancelProfileInput($(this), e);
+					break;
 				}
-				var $save = $editContainer.find('.save');
-				var saveText = $save.text();
-				$save.text('Saving...');
-				$.postJson(xhrBase + '/user/me', props, function (data) {
-					$editContainer.removeClass('editing');
-					$save.text(saveText);
-					updateMe(data);
-				}).error(function () {
-					showMessage('Uh oh! A bad thing happened!');
-					$save.text(saveText);
+			});
+
+			$('.profile-input-edit').click(function (e) {
+				editProfileInput($(this), e);
+			});
+
+			$('.profile-input-box-name .profile-input-edit').click(function (e) {
+				setTimeout(function () {
+					$('.profile-first-name,.profile-last-name').css('width', '48%');
 				});
 			});
-			$('.profile .networks li').each(function () {
+
+			$('.profile-input-save').click(function (e) {
+				saveProfileInput($(this), e);
+			});
+
+			$('.profile-disconnect').click(function (e) {
+				e.preventDefault();
+				showDisconnectDialog($(this).closest('li').data('network'));
+			});
+
+			$('.profile .profile-networks li').each(function () {
 				var $this = $(this);
-				var name = $this.data('network');
-				if (!name) { return; }
+				var network = $this.data('network');
+
+				if (!network) { return; }
+
 				var $a = $this.find('a.profile-nw');
 				var networkInfo = myNetworks.filter(function (nw) {
-					return nw.network === name;
+					return nw.network === network;
 				})[0];
-				var postLink = function (e) {
-					e.preventDefault();
-					submitForm(wwwDomain + $(this).data('action'), 'post');
-				};
+
 				if (networkInfo) {
-					$a.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
-					if (myNetworks.length > 1) {
-						$('<a>').addClass('disconnect').text('Unlink')
-							.attr('href', 'javascript:')
-							.data('action', '/disconnect/' + name)
-							.click(postLink)
-							.appendTo($this);
-					}
-				} else {
-					$a.addClass('not-connected').attr('title', 'Click to connect')
-						.attr('href', wwwDomain + '/link/' + name);
-					$('<a class=connect title="Click to connect">Connect</a>')
-						.attr('href', wwwDomain + '/link/' + name)
-						.appendTo($this);
+					$this.removeClass('not-connected');
+					$a.attr({
+						href: networkInfo.profileUrl,
+						target: '_blank',
+						title: 'View profile'
+					});
+				}
+				else {
+					$this.addClass('not-connected');
+					$a.attr({
+						href: origin + '/link/' + network,
+						title: 'Click to connect'
+					});
 				}
 			});
 		});
 	}
+
+	// profile email accounts section
+	$(document).on('click', '.profile-email-addresses-title-wrapper', function (e) {
+		e.preventDefault();
+		var $list = $(this).closest('.profile-email-addresses');
+		$list.toggleClass('opened');
+		$list.find('.profile-email-address-manage')
+			.removeClass('add')
+			.find('input').val('');
+	});
+
+	// profile email account dropdown actions
+	var $openedArrow = null;
+
+	$(document).on('click', '.profile-email-pending-cancel', function (e) {
+		e.preventDefault();
+		cancelPendingPrimary($(this).closest('.profile-email-address-pending').find('.profile-email-address-pending-email').text());
+	});
+
+	$(document).on('click', '.profile-email-address-item-make-primary', function (e) {
+		e.preventDefault();
+		makePrimary($(this).closest('.profile-email-address-item').data('email'));
+	});
+
+	$(document).on('click', '.profile-email-address-item-delete', function (e) {
+		e.preventDefault();
+		showEmailDeleteDialog($(this).closest('.profile-email-address-item').data('email'));
+	});
+
+	$(document).on('click', '.profile-email-address-item-arrow', function (e) {
+		e.preventDefault();
+		var isOpen = $(this).hasClass('opened');
+		$('.profile-email-address-item-arrow').removeClass('opened');
+		if (!isOpen) {
+			$(this).addClass('opened');
+		}
+	});
+
+	$(document).on('click', function (e) {
+		if (!$(e.target).closest('.profile-email-address-item-arrow').length) {
+			$('.profile-email-address-item-arrow').removeClass('opened');
+		}
+	});
+
+	var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+	$(document).on('click', '.profile-email-address-add', function (e) {
+		e.preventDefault();
+		var $manage = $(this).closest('.profile-email-address-manage');
+		var $input = $manage.find('input');
+		$input.val('');
+		$manage.addClass('add');
+		$input.focus();
+		$input.keydown(function (e) {
+			switch (e.which) {
+			case 13: // enter
+				submitAddEmail.call(this, e);
+				break;
+			case 27: // esc
+				cancelAddEmail.call(this, e);
+				break;
+			}
+		});
+	});
+
+	function validateEmailInput($input) {
+		var input = $input.val();
+		if (emailAddrRe.test(input)) {
+			showError($input, false);
+			return true;
+		}
+		showError($input, 'Invalid email address', 'Please enter a valid email address');
+		return false;
+	}
+
+	function showError($input, header, body) {
+		var $parent = $input.parent(),
+			$next = $input.next(),
+			hasError = $next.hasClass('input-error');
+		if (header || body) {
+			$input.addClass('error');
+			if (hasError) {
+				$next.find('.error-header').text(header || '');
+				$next.find('.error-body').text(body || '');
+			}
+			else {
+				var $error = $('<div class="input-error"><div class="error-header">' + (header || '') + '</div><div class="error-body">' + (body || '') + '</div></div>').insertAfter($input);
+				$error.offset({
+					top: $input.offset().top + $input.outerHeight() + 5,
+					left: $input.offset().left
+				});
+			}
+		}
+		else {
+			$input.removeClass('error');
+			if (hasError) {
+				$next.remove();
+			}
+		}
+	}
+
+	$(document).on('click', '.profile-email-address-unverified .profile-email-pending-resend', function (e) {
+		e.preventDefault();
+		var email = $('.profile-email .profile-input-input').val();
+		resendVerificationEmail(email);
+	});
+
+	$(document).on('click', '.profile-email-address-pending .profile-email-pending-resend', function (e) {
+		e.preventDefault();
+		var email = $(this).closest('.profile-email-address-pending').find('.profile-email-address-pending-email').text();
+		resendVerificationEmail(email);
+	});
+
+	$(document).on('click', '.profile-email-address-item .profile-email-pending-resend', function (e) {
+		e.preventDefault();
+		var email = $(this).closest('.profile-email-address-item').data('email');
+		resendVerificationEmail(email);
+	});
+
+	function getEmailInfo(email) {
+		return $.getJSON(xhrBase + '/user/email?email=' + email);
+	}
+
+	function resendVerificationEmail(email) {
+		$.post(xhrBase + '/user/resend-verification?email=' + email);
+		showVerificationAlert(email);
+	}
+
+	function cancelAddEmail(e) {
+		e.preventDefault();
+		closeAddEmailInput(getAddEmailInput(this));
+	}
+
+	function getAddEmailInput(that) {
+		return $(that).closest('.profile-email-address-add-box').find('.profile-email-address-add-input');
+	}
+
+	function closeAddEmailInput($input) {
+		$input.val('');
+		$input.off('keydown');
+		showError($input, false);
+		$input.closest('.profile-email-address-manage').removeClass('add');
+	}
+
+	function submitAddEmail(e) {
+		e.preventDefault();
+		var $input = getAddEmailInput(this);
+		if (validateEmailInput($input)) {
+			var email = $input.val();
+			getEmailInfo(email)
+				.done(getAddEmailSuccessCallback(email, $input))
+				.fail(getAddEmailErrorCallback(email, $input));
+		}
+	}
+
+	function getAddEmailSuccessCallback(email, $input) {
+		return function (emailInfo) {
+			if (emailInfo.status === 'available') {
+				addEmailAccount(email);
+				closeAddEmailInput($input);
+				showVerificationAlert(email);
+			}
+			else {
+				showError(
+					$input,
+					'This email address is already added',
+					'Please use another email address.'
+				);
+			}
+		};
+	}
+
+	function getAddEmailErrorCallback(email, $input) {
+		return function (jqXhr) {
+			switch (jqXhr.status) {
+			case 400:
+				// bad format
+				showError(
+					$input,
+					'Invalid email address',
+					'Please enter a valid email address.'
+				);
+				break;
+			case 403:
+				// belongs to another user
+				showError(
+					$input,
+					'This email address is already taken',
+					'This email address belongs to another user.<br>Please enter another email address.'
+				);
+				break;
+			}
+		};
+	}
+
+	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
+
+	function addEmailAccount(email) {
+		var props = getProfileCopy();
+		var emails = props.emails;
+		emails.push({
+			address: email,
+			isPrimary: false
+		});
+
+		return $.postJson(xhrBase + '/user/me', props).done(updateMe);
+	}
+
+	function makePrimary(email) {
+		if (email) {
+			var props = getProfileCopy();
+			var emails = props.emails;
+			unsetPrimary(emails);
+			findEmail(emails, function (info) {
+				if (info.address === email) {
+					info.isPrimary = true;
+				}
+			});
+			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
+		}
+	}
+
+	function cancelPendingPrimary(email) {
+		if (email) {
+			return deleteEmailAccount(email);
+		}
+	}
+
+	function deleteEmailAccount(email) {
+		if (email) {
+			var props = getProfileCopy();
+			var emails = props.emails;
+			removeEmailInfo(emails, email);
+
+			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
+		}
+	}
+
+	var verificationAlertTmpl = Handlebars.compile($('#verification-alert').html());
+	function showVerificationAlert(email) {
+		var $dialog = $(verificationAlertTmpl({
+				email: email
+			}))
+			.appendTo(document.body)
+			.on('click', '.dialog-cancel', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+			})
+			.dialog('show');
+	}
+
+	var emailDeleteTmpl = Handlebars.compile($('#email-delete-dialog').html());
+	function showEmailDeleteDialog(email) {
+		var $dialog = $(emailDeleteTmpl({
+				email: email
+			}))
+			.appendTo(document.body)
+			.on('click', '.dialog-cancel', function (e) {
+				e.preventDefault();
+				$dialog.remove();
+			})
+			.on('submit', 'form', function (e) {
+				e.preventDefault();
+				deleteEmailAccount(email);
+				$dialog.remove();
+			})
+			.dialog('show');
+	}
+
 
 	// Friends Tabs/Pages
 
@@ -640,7 +1574,6 @@ $(function () {
 				$this.attr('href', $this.data('href'));
 			}
 		});
-		updateGmailTab();
 
 		$nwFriends.find('ul').empty();
 	}
@@ -669,8 +1602,8 @@ $(function () {
 					',scrollbars=' + scrollbars + ',status=' + status);
 	}
 
-	function submitForm(url, method) {
-		$('<form method="' + (method || 'get') + '" action="' + url + '">')
+	function submitForm(path) {
+		$('<form method=POST action="' + origin + path + '">')
 		.appendTo('body')
 		.submit()
 		.remove();
@@ -733,12 +1666,7 @@ $(function () {
 		toggleInviteHelp(network, false);
 		toggleImporting(network, true);
 
-		if (network === 'email') {
-			submitForm(wwwDomain + '/importContacts');
-		}
-		else {
-			submitForm(wwwDomain + '/link/' + network);
-		}
+		window.location = origin + (network === 'email' ? '/importContacts' : '/link/' + network);
 	}
 
 	var ABOOK_ID_TO_CALLBACK = {};
@@ -776,7 +1704,7 @@ $(function () {
 
 	/*
 	// these are needed for testing
-	if (DEV) {
+	if (LOCAL) {
 		ABOOK_ID_TO_CALLBACK[id] = null;
 		'notAvail,pending,processing,error,active'.split(',').forEach(function (data, i) {
 			setTimeout(function () {
@@ -829,7 +1757,7 @@ $(function () {
 
 		/*
 		// these are needed for testing
-		if (DEV) {
+		if (LOCAL) {
 			window[IMPORT_CHECK] = null;
 			'fetching,import_connections,error,finished,end'.split(',').forEach(function (data, i) {
 				setTimeout(function () {
@@ -861,7 +1789,6 @@ $(function () {
 
 	function isConnected(networks, network) {
 		return networks.some(function (netw) {
-			console.log(netw);
 			return netw.network === network;
 		});
 	}
@@ -909,22 +1836,20 @@ $(function () {
 			$.getJSON(xhrBase + '/user/abooks').done(function (abooks) {
 				$nwFriendsLoading.hide();
 
-				console.log(this, arguments);
 				var hasAbook = Boolean(abooks && abooks.length);
 				var id, email, error;
 				var importing = hasAbook && abooks.some(function (abook) {
-					if (DEV) {
+					if (LOCAL) {
 						id = abook.id;
 						email = abook.ownerEmail;
 					}
 					error = isAbookFailed(abook.state);
 					if (!error && abook.state !== 'active') {
-						console.log('not active abook', abook, JSON.stringify(abook, null, '\t'));
 						id = abook.id;
 						email = abook.ownerEmail;
 						return true;
 					}
-				}) || !!(id && DEV);
+				}) || !!(id && LOCAL);
 
 				toggleInviteHelp(network, !(hasAbook || importing), error);
 				toggleImporting(network, importing, null, email);
@@ -1064,7 +1989,7 @@ $(function () {
 		case 'requested':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function (data) {
 				o.state = 'unfriended';
-			}).error(function () {
+			}).fail(function () {
 				if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
 					o.state = 'friend';
 				}
@@ -1341,7 +2266,7 @@ $(function () {
 	function showNoSearchInviteResults($noResults, search, network) {
 		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 		$noResults.find('.refresh-friends').click(function () {
-			submitForm(wwwDomain + '/friends/invite/refresh', 'post');
+			submitForm('/friends/invite/refresh');
 		});
 		$noResults.find('.tell-us').click(sendFeedback);
 	}
@@ -1403,7 +2328,7 @@ $(function () {
 	var $unfriendDialog = $('.unfriend-dialog')
 	.detach()
 	.show()
-	.on('click', '.unfriend-cancel', function (e) {
+	.on('click', '.dialog-cancel', function (e) {
 		e.preventDefault();
 		$unfriendDialog.dialog('hide');
 	});
@@ -1468,7 +2393,7 @@ $(function () {
 		case 'requested':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function (data) {
 				o.status = '';
-			}).error(function () {
+			}).fail(function () {
 				if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
 					o.status = 'friend';
 				}
@@ -1566,7 +2491,7 @@ $(function () {
 			$a.closest('.friend-req').find('.friend-req-q').text(
 				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
 			updateFriendRequests(-1);
-		}).error(function () {
+		}).fail(function () {
 			$a.siblings('a').addBack().attr('href', 'javascript:');
 		});
 		$a.siblings('a').addBack().removeAttr('href');
@@ -1901,7 +2826,6 @@ $(function () {
 			scrolledIntoViewLazy($el[0]);
 			return $el.addClass('highlight');
 		}
-		return null;
 	}
 
 	function scrolledIntoViewLazy(el, padding) {
@@ -2032,7 +2956,7 @@ $(function () {
 			var $pageColl = $detail.find('.page-coll[data-id=' + collId + ']');
 			if ($pageColl.length) { $pageColl.css('width', $pageColl[0].offsetWidth); }
 			$keepColl.add($pageColl).layout().on('transitionend', removeIfThis).addClass('removed');
-		}).error(showMessage.bind(null, 'Could not delete tag, please try again later'));
+		}).fail(showMessage.bind(null, 'Could not delete tag, please try again later'));
 	}).on('mouseup mousedown', '.coll-rename', function (e) {
 		if (e.which > 1 || !$collMenu.hasClass('showing')) { return; }
 		hideCollMenu();
@@ -2060,7 +2984,7 @@ $(function () {
 						if ($myKeeps.data('collId') === collId) {
 							$main.find('h1').text(newName);
 						}
-					}).error(function () {
+					}).fail(function () {
 						showMessage('Could not rename tag, please try again later');
 						$name.text(oldName);
 					});
@@ -2306,7 +3230,7 @@ $(function () {
 			// update the collection order
 			$.postJson(xhrBase + '/collections/ordering', $(this).find('.collection').map(getDataId).get(), function (data) {
 				console.log(data);
-			}).error(function () {
+			}).fail(function () {
 				showMessage('Could not reorder the tags, please try again later');
 				// TODO: revert the re-order in the DOM
 			});
@@ -2387,7 +3311,7 @@ $(function () {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
 			$collList.find('.antiscroll-inner')[0].scrollTop = 0;
 			callback(data.id);
-		}).error(function () {
+		}).fail(function () {
 			showMessage('Could not create tag, please try again later');
 			callback();
 		});
@@ -2414,7 +3338,7 @@ $(function () {
 						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
 					}
 				}
-			}).error(function () {
+			}).fail(function () {
 				showMessage('Could not add to tag, please try again later');
 				if (onError) { onError(); }
 			});
@@ -2436,7 +3360,7 @@ $(function () {
 				$pageColl.css('width', $pageColl[0].offsetWidth).layout().on('transitionend', removeIfThis).addClass('removed');
 			}
 			$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps -= data.removed);
-		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
+		}).fail(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
 	}
 
 	function undoRemoveFromCollection(collId, $keeps, $titles) {
@@ -2487,7 +3411,7 @@ $(function () {
 				}, function (data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass('mine').find('.keep-private').toggleClass('on', howKept === 'pri');
-				}).error(showMessage.bind(null, 'Could not add Keeps, please try again later'));
+				}).fail(showMessage.bind(null, 'Could not add Keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
 			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function () {return {url: this.querySelector('.keep-title>a').href}; }).get(), function (data) {
 				// TODO: update number in "Showing top 30 results" tagline? load more instantly if number gets too small?
@@ -2514,7 +3438,7 @@ $(function () {
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
 					undoUnkeep.bind(null, $keeps, $titles),
 					$.fn.remove.bind($keepsGoing));
-			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
+			}).fail(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept === 'pub' ? 'pri' : 'pub';
 			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
@@ -2526,7 +3450,7 @@ $(function () {
 					{keeps: [{title: keepLink.title, url: keepLink.href, isPrivate: howKept === 'pri'}]},
 					function () {
 						$keep.find('.keep-private').toggleClass('on', howKept === 'pri');
-					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
+					}).fail(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
 	}).on('click', '.page-coll-x', function (e) {
@@ -2755,26 +3679,52 @@ $(function () {
 	}
 
 	var $sendFeedback = $('.send-feedback').click(sendFeedback).filter('.top-right-nav>*');
+	var emailTmpl = Handlebars.compile($('#email-address').html());
 
 	function updateMe(data) {
+		console.log('[updateMe]', data);
 		me = data;
 		mixpanel.alias(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
+		$('.profile-image').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);
 		$('.my-description').text(data.description || '\u00A0'); // nbsp
-		$friendsTabs.filter('[data-href="friends/invite"]').toggle(true);
-		updateGmailTab();
-		updateConnectTab();
-	}
 
-	function updateGmailTab() {
-		var $button = $('a[data-nw="email"]');
-		$button.attr('href', 'friends/invite/email');
-		$button.attr('data-href', 'friends/invite/email');
-	}
+		var $firstNamePlace = $('.profile-placeholder-first-name').text(data.firstName);
+		var $lastNamePlace = $('.profile-placeholder-last-name').text(data.lastName);
 
-	function updateConnectTab() {
-		$('a[data-href="friends/find"]').toggle(true);
+		$('.profile-first-name')
+			.val(data.firstName)
+			.outerWidth($firstNamePlace.outerWidth());
+
+		$('.profile-last-name')
+			.val(data.lastName)
+			.outerWidth($lastNamePlace.outerWidth());
+
+		var primary = getPrimaryEmail();
+		var pendingPrimary = getPendingPrimaryEmail();
+
+		var $unverified = $('.profile-email-address-unverified');
+		$unverified.toggle(!pendingPrimary && primary && !primary.isVerified);
+
+		$('.profile-email input').val(primary && primary.address || '');
+
+		var $emails = $('.profile-email-address-list').empty();
+		(me.emails || []).forEach(function (info, i, list) {
+			$emails.append(emailTmpl({
+				email: info.address,
+				primary: i === 0 || list.length <= 1 || !!info.isPrimary,
+				verified: !!info.isVerified,
+				pendingPrimary: !!info.isPendingPrimary
+			}));
+		});
+
+		var $pending = $('.profile-email-address-pending');
+		if (pendingPrimary) {
+			$('.profile-email-address-pending-email').text(pendingPrimary.address);
+		}
+		$pending.toggle(!!pendingPrimary);
+
 	}
 
 	function updateFriendRequests(n) {
@@ -2788,7 +3738,7 @@ $(function () {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
+		me: refreshMe().promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
@@ -2799,11 +3749,6 @@ $(function () {
 			}
 		}).promise()
 	};
-	$.when(promise.me).done(function () {
-		$('#invite-friends-link').toggle(true);
-		updateGmailTab();
-		updateConnectTab();
-	});
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function (data) {
 		updateFriendRequests(data.requests);
@@ -2825,7 +3770,7 @@ $(function () {
 				.append($('<span>').addClass('notification-box').text(msg))
 				.appendTo('.query-wrap')
 				.show()
-				.delay(2000)
+				.delay(5000)
 				.fadeOut('slow');
 		}
 	}

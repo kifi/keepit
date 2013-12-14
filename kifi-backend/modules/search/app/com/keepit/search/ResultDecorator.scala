@@ -128,7 +128,7 @@ class ResultDecoratorImpl(query: String, lang: Lang, shoeboxClient: ShoeboxServi
   }
 
   private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
-    hits.map{ h => h.set("bookmark", highlight(h.bookmark).json) }
+    hits.map{ h => h.add("bookmark", highlight(h.bookmark).json) }
   }
 
   private def highlight(h: SimpleSearchHit): SimpleSearchHit = {
@@ -140,11 +140,7 @@ class ResultDecoratorImpl(query: String, lang: Lang, shoeboxClient: ShoeboxServi
   private def addBasicUsers(hits: Seq[DetailedSearchHit], basicUserMap: Map[Id[User], BasicUser]): Seq[DetailedSearchHit] = {
     hits.map{ h =>
       val basicUsers = h.users.flatMap(basicUserMap.get(_))
-      if (basicUsers.isEmpty) {
-        h
-      }else {
-        h.set("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
-      }
+      h.add("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
     }
   }
 }

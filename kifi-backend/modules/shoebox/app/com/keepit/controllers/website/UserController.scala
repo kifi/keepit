@@ -3,11 +3,11 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
-import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
@@ -16,7 +16,6 @@ import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{Promise => PlayPromise}
 import play.api.libs.Comet
@@ -25,16 +24,27 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
-import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.common.akka.SafeFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
+import play.api.mvc.{MaxSizeExceeded, Request}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
+import play.api.data.Form
+import play.api.data.Forms._
+import com.keepit.model.SocialConnection
+import scala.util.Failure
+import com.keepit.model.EmailAddress
+import play.api.libs.json._
+import scala.util.Success
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.json.JsObject
 
 class UserController @Inject() (
   db: Database,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -50,7 +60,10 @@ class UserController @Inject() (
   userCommander: UserCommander,
   elizaServiceClient: ElizaServiceClient,
   clock: Clock,
-  abookServiceClient: ABookServiceClient
+  s3ImageStore: S3ImageStore,
+  abookServiceClient: ABookServiceClient,
+  airbrakeNotifier: AirbrakeNotifier,
+  emailAddressRepo: EmailAddressRepo
 ) extends WebsiteController(actionAuthenticator) {
 
   def friends() = AuthenticatedJsonAction { request =>
@@ -215,46 +228,135 @@ class UserController @Inject() (
   }
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
-    Async {
-      getUserInfo(request)
+    getUserInfo(request.userId)
+  }
+
+  def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>
+    db.readOnly { implicit session =>
+      emailRepo.getByAddressOpt(email) match {
+        case Some(emailRecord) =>
+          val pendingPrimary = userValueRepo.getValue(request.user.id.get, "pending_primary_email")
+          if (emailRecord.userId == request.userId) {
+            Ok(Json.toJson(EmailInfo(
+              address = emailRecord.address,
+              isVerified = emailRecord.verified,
+              isPrimary = request.user.primaryEmailId.isDefined && request.user.primaryEmailId.get.id == emailRecord.id.get.id,
+              isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == emailRecord.address
+            )))
+          } else {
+            Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
+          }
+        case None =>
+          Ok(Json.obj("status" -> "available"))
+      }
     }
   }
 
+  private val siteUrl = current.configuration.getString("application.baseUrl").get
+  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
-      db.readWrite { implicit session =>
-        userData.description foreach { userValueRepo.setValue(request.userId, "user_description", _) }
-        if (userData.firstName.isDefined || userData.lastName.isDefined) {
-          val user = userRepo.get(request.userId)
-          val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
-          val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
-          val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
-          userRepo.save(updatedUser)
-        }
-        for (emails <- userData.emails) {
-          val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(emails contains _.address)
-          for (email <- toRemove) {
-            emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
-          }
-          for (address <- emails.toSet -- existing.map(_.address)) {
-            emailRepo.save(EmailAddress(userId = request.userId, address = address))
-          }
-        }
+      val hasInvalidEmails = userData.emails.exists { addresses =>
+        addresses.map(em => emailRegex.findFirstIn(em.address).isEmpty).contains(true)
       }
-      Async {
-        getUserInfo(request)
+      if (hasInvalidEmails) {
+        BadRequest(Json.obj("error" -> "bad email addresses"))
+      } else {
+        db.readWrite { implicit session =>
+          val pendingPrimary = userValueRepo.getValue(request.userId, "pending_primary_email")
+          for (emails <- userData.emails.map(_.toSet)) {
+            val emailStrings = emails.map(_.address)
+            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emailStrings contains em.address)
+            // Remove missing emails
+            for (email <- toRemove) {
+              val isPrimary = request.user.primaryEmailId.isDefined && (request.user.primaryEmailId.get == email.id.get)
+              val isLast = existing.isEmpty
+              val isLastVerified = !existing.exists(em => em != email && em.verified)
+              if (!isPrimary && !isLast && !isLastVerified) {
+                if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
+                  userValueRepo.clearValue(request.userId, "pending_primary_email")
+                }
+                emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+              }
+            }
+            // Add new emails
+            for (address <- emailStrings -- existing.map(_.address)) {
+              if (emailRepo.getByAddressOpt(address).isEmpty) {
+                val emailAddr = emailAddressRepo.save(EmailAddress(userId = request.userId, address = address).withVerificationCode(clock.now))
+                val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+
+                postOffice.sendMail(ElectronicMail(
+                  from = EmailAddresses.NOTIFICATIONS,
+                  to = Seq(GenericEmailAddress(address)),
+                  subject = "Kifi.com | Please confirm your email address",
+                  htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
+                  category = ElectronicMailCategory("email_confirmation")
+                ))
+              }
+            }
+            // Set the correct email as primary
+            for (emailInfo <- emails) {
+              if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+                val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
+                emailRecordOpt.collect { case emailRecord if emailRecord.userId == request.user.id.get =>
+                  if (emailRecord.verified) {
+                    if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
+                      updateUserPrimaryEmail(request.userId, emailRecord.id.get)
+                    }
+                  } else {
+                    userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
+                  }
+                }
+              }
+            }
+          }
+          userValueRepo.getValue(request.userId, "pending_primary_email").map { pp =>
+            emailRepo.getByAddressOpt(pp) match {
+              case Some(em) =>
+                if (em.verified && em.address == pp) {
+                  updateUserPrimaryEmail(request.userId, em.id.get)
+                }
+              case None => userValueRepo.clearValue(request.userId, "pending_primary_email")
+            }
+          }
+          userData.description foreach { description =>
+            val trimmed = description.trim
+            if (trimmed != "") {
+              userValueRepo.setValue(request.userId, "user_description", trimmed)
+            } else {
+              userValueRepo.clearValue(request.userId, "user_description")
+            }
+          }
+          // Users cannot change their name for now. When we're ready, use the code below:
+//          if ((userData.firstName.isDefined && userData.firstName.get.trim != "") || (userData.lastName.isDefined && userData.lastName.get.trim != "")) {
+//            val user = userRepo.get(request.userId)
+//            val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
+//            val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
+//            val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
+//            userRepo.save(updatedUser)
+//          }
+        }
+        getUserInfo(request.userId)
       }
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
-  private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    userCommander.getUserInfo(request.userId) map { user =>
-      Ok(toJson(user.basicUser).as[JsObject] ++
-         toJson(user.info).as[JsObject] ++
-         Json.obj("experiments" -> request.experiments.map(_.value)))
+  private def updateUserPrimaryEmail(userId: Id[User], emailId: Id[EmailAddress])(implicit session: RWSession) = {
+    userValueRepo.clearValue(userId, "pending_primary_email")
+    val currentUser = userRepo.get(userId)
+    userRepo.save(currentUser.copy(primaryEmailId = Some(emailId)))
+  }
+
+  private def getUserInfo[T](userId: Id[User]) = {
+    val (user, experiments) = db.readOnly { implicit session =>
+      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
     }
+    val pimpedUser = userCommander.getUserInfo(user)
+    Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
+       toJson(pimpedUser.info).as[JsObject] ++
+       Json.obj("experiments" -> experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
@@ -356,6 +458,80 @@ class UserController @Inject() (
     }
   }
 
+  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024*1024*15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
+  def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded,play.api.libs.Files.TemporaryFile]]) = {
+    request.body match {
+      case Right(tempFile) =>
+        s3ImageStore.uploadTemporaryPicture(tempFile.file) match {
+          case Success((token, pictureUrl)) =>
+            Ok(Json.obj("token" -> token, "url" -> pictureUrl))
+          case Failure(ex) =>
+            airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
+            BadRequest(JsNumber(0))
+        }
+      case Left(err) =>
+        BadRequest(s"""{"error": "file_too_large", "size": ${err.length}}""")
+    }
+  }
+
+  private case class UserPicInfo(
+    picToken: Option[String],
+    picHeight: Option[Int], picWidth: Option[Int],
+    cropX: Option[Int], cropY: Option[Int],
+    cropSize: Option[Int])
+  private val userPicForm = Form[UserPicInfo](
+    mapping(
+      "picToken" -> optional(text),
+      "picHeight" -> optional(number),
+      "picWidth" -> optional(number),
+      "cropX" -> optional(number),
+      "cropY" -> optional(number),
+      "cropSize" -> optional(number)
+    )(UserPicInfo.apply)(UserPicInfo.unapply)
+  )
+  def setUserPicture() = AuthenticatedJsonAction(allowPending = false) { implicit request =>
+    userPicForm.bindFromRequest.fold(
+    formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
+    { case UserPicInfo(picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
+        val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize)
+        picToken.map { token =>
+          s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
+        }
+        Ok("0")
+    })
+  }
+  private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
+    for {
+      h <- picHeight
+      w <- picWidth
+      x <- cropX
+      y <- cropY
+      s <- cropSize
+    } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
+  }
+
+  private val url = current.configuration.getString("application.baseUrl").get
+  def resendVerificationEmail(email: String) = AuthenticatedHtmlAction { implicit request =>
+    db.readWrite { implicit s =>
+      emailAddressRepo.getByAddressOpt(email) match {
+        case Some(emailAddr) if emailAddr.userId == request.userId =>
+          val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
+          val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(GenericEmailAddress(email)),
+            subject = "Kifi.com | Please confirm your email address",
+            htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
+            category = ElectronicMailCategory("email_confirmation")
+          ))
+          Ok("0")
+        case _ =>
+          Forbidden("0")
+      }
+    }
+    Ok
+  }
+
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(request.userId, search, after, limit)
@@ -417,9 +593,6 @@ class UserController @Inject() (
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
-  private val domainName = if (Play.isDev) "dev.ezkeep.com" else "kifi.com"
-  private val domain = Html(s"<script>document.domain='$domainName';</script>")
-
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
     val startTime = clock.now
@@ -456,11 +629,11 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>
-        val firstResponse = Enumerator.enumerate(domain +: check().map(script).toSeq)
+        val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(domain += script(JsString("network_not_connected")))
+        Ok(script(JsString("network_not_connected")))
     }
   }
 
@@ -492,12 +665,11 @@ class UserController @Inject() (
         } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
       }
     }
-    val firstResponse = Enumerator(domain.body)
     val returnEnumerator = Enumerator.generateM {
       Future.sequence(Seq(timeoutF, reqF)).map { res =>
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(firstResponse andThen returnEnumerator.andThen(Enumerator.eof))
+    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
   }
 }

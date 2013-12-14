@@ -54,7 +54,7 @@ object KifiSearchHit extends Logging {
   def apply(json: JsObject): KifiSearchHit = new KifiSearchHit(json)
   def apply(
     hit: SimpleSearchHit,
-    count: Int,
+    count: Int, // public bookmark count
     isMyBookmark: Boolean,
     isPrivate: Boolean,
     users: Seq[BasicUser],
@@ -120,7 +120,13 @@ object ShardSearchResult extends Logging {
   lazy val empty = {
     new ShardSearchResult(JsObject(List(
       "hits" -> JsArray(),
-      "mayHaveMore" -> JsBoolean(false)
+      "mayHaveMore" -> JsBoolean(false),
+      "myTotal" -> JsNumber(0),
+      "friendsTotal" -> JsNumber(0),
+      "othersTotal" -> JsNumber(0),
+      "collections" -> JsArray(),
+      "svVariance" -> JsNumber(-1.0f), // TODO: remove
+      "show" -> JsBoolean(false) // TODO: remove
     )))
   }
 }
@@ -141,21 +147,13 @@ class DetailedSearchHit(val json: JsObject) {
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: SimpleSearchHit = new SimpleSearchHit((json \ "bookmark").as[JsObject])
 
-  def set(key: String, value: JsValue): DetailedSearchHit = {
-    new DetailedSearchHit(JsObject(json.fields.map{ field =>
-        field match {
-          case (fkey, fvalue) if (fkey == key) => (key, value)
-          case f => f
-        }
-      }
-    ))
-  }
+  def add(key: String, value: JsValue): DetailedSearchHit = new DetailedSearchHit(json + (key ->value))
 }
 
 object DetailedSearchHit extends Logging {
   def apply(
     uriId: Long,
-    bookmarkCount: Int,
+    bookmarkCount: Int, // public bookmark count
     hit: SimpleSearchHit,
     isMyBookmark: Boolean,
     isFriendsBookmark: Boolean,

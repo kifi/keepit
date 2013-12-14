@@ -22,6 +22,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 import play.api.libs.json._
+import com.keepit.search.LangDetector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer

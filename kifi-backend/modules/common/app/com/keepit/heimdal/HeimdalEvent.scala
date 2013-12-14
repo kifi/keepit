@@ -5,6 +5,8 @@ import org.joda.time.DateTime
 import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.model.User
+import com.keepit.common.db.Id
 
 sealed trait HeimdalEvent {
   val context: HeimdalContext
@@ -27,7 +29,7 @@ object HeimdalEvent {
 }
 
 case class UserEvent(
-  userId: Long,
+  userId: Id[User],
   context: HeimdalContext,
   eventType: EventType,
   time: DateTime = currentDateTime
@@ -36,6 +38,7 @@ case class UserEvent(
 }
 
 object UserEvent extends Companion[UserEvent] {
+  private implicit val idFormat = Id.format[User]
   implicit val format = Json.format[UserEvent]
   implicit val typeCode = TypeCode("user")
 }

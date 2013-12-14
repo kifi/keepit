@@ -20,6 +20,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.search.LangDetector
 import play.api.libs.json.{Json, JsValue}
 import com.keepit.common.db.{ExternalId, Id}
 import com.newrelic.api.agent.Trace

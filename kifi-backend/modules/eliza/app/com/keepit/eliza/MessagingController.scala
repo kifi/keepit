@@ -28,7 +28,6 @@ import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
 import com.keepit.realtime.UrbanAirship
 import com.keepit.eliza.model.NonUserParticipant
-import com.keepit.common.KestrelCombinator
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.json.JsString
 import scala.Some
@@ -38,7 +37,8 @@ import com.keepit.eliza.model.NonUserEmailParticipant
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
-import com.keepit.heimdal._
+import com.keepit.heimdal.HeimdalContext
+import scala.util.{Failure, Success, Try}
 
 
 //For migration only
@@ -73,8 +73,7 @@ class MessagingController @Inject() (
     clock: Clock,
     uriNormalizationUpdater: UriNormalizationUpdater,
     urbanAirship: UrbanAirship,
-    heimdal: HeimdalServiceClient,
-    heimdalContextBuilder: HeimdalContextBuilderFactory)
+    messagingAnalytics: MessagingAnalytics)
   extends ElizaServiceController with MessagingIndexHelper with Logging {
 
   //for indexing data requests
@@ -122,7 +121,7 @@ class MessagingController @Inject() (
       val imageUrl : String        =  (data \ "imageUrl").as[String]
       val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
 
-      createGlobalNotificaiton(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
+      createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
 
     }
     Status(ACCEPTED)
@@ -148,7 +147,7 @@ class MessagingController @Inject() (
     Status(ACCEPTED)
   }
 
-  def createGlobalNotificaiton(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -173,10 +172,8 @@ class MessagingController @Inject() (
       (message, thread)
     }
 
-    var errors : Set[Throwable] = Set[Throwable]()
-
-    userIds.foreach{ userId =>
-      try{
+    val notificationAttempts = userIds.map { userId =>
+      Try {
         val (notifJson, userThread) = db.readWrite{ implicit session =>
           val notifJson = Json.obj(
             "id"       -> message.externalId.id,
@@ -212,11 +209,14 @@ class MessagingController @Inject() (
           userId,
           Json.arr("notification", notifJson)
         )
-      } catch {
-        case e: Throwable => errors = errors + e
+        userId
       }
     }
 
+    val notified = notificationAttempts collect { case Success(userId) => userId }
+    messagingAnalytics.sentGlobalNotification(notified, message, thread)
+
+    val errors = notificationAttempts collect { case Failure(ex) => ex }
     if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
   }
 
@@ -301,7 +301,9 @@ class MessagingController @Inject() (
   }
 
   def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
-    urbanAirship.notifyUser(userId, PushNotification(extId, pendingNotificationCount, msg))
+    val notification = PushNotification(extId, pendingNotificationCount, msg)
+    urbanAirship.notifyUser(userId, notification)
+    messagingAnalytics.sentPushNotificationForThread(userId, notification)
   }
 
   private def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]) : Unit = {
@@ -336,19 +338,7 @@ class MessagingController @Inject() (
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
       }
 
-      val sentAt = currentDateTime
-      SafeFuture {
-        val context = heimdalContextBuilder()
-        context += ("action", "sent")
-        context += ("global", false)
-        context += ("muted", muted)
-        context += ("messageExternalId", message.externalId.id)
-        context += ("threadId", thread.id.get.id)
-        context += ("channel", "kifi")
-        context += ("url", thread.nUrl.getOrElse(""))
-        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, sentAt))
-      }
-
+      messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
       shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator(locator))
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
@@ -414,18 +404,18 @@ class MessagingController @Inject() (
     Future.sequence(pimpedParticipants)
   }
 
-  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String) : (MessageThread, Message) = {
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String)(implicit context: HeimdalContext) : (MessageThread, Message) = {
     val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
     Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
-    val thread = db.readWrite{ implicit session =>
+    val (thread, isNew) = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
         nonUserRecipients.par.foreach { nonUser =>
-          NonUserThread(
+          NonUserThread(                              // will have to be persisted when extension is ready
             participant = nonUser,
             threadId = thread.id.get,
             uriId = uriIdOpt,
@@ -451,21 +441,20 @@ class MessagingController @Inject() (
       else{
         log.info(s"Not actually a new thread. Merging.")
       }
-      thread
+      (thread, isNew)
     }
-    sendMessage(from, thread, messageText, urlOpt, nUriOpt)
-
+    sendMessage(from, thread, messageText, urlOpt, nUriOpt, Some(isNew))
   }
 
 
-  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String]): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(from, thread, messageText, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, urlOpt: Option[String]): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
@@ -473,7 +462,7 @@ class MessagingController @Inject() (
   }
 
 
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None) : (MessageThread, Message) = {
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
@@ -572,6 +561,7 @@ class MessagingController @Inject() (
         }
       }
     }
+    messagingAnalytics.sentMessage(from, message, thread, isNew, context)
     (thread, message)
   }
 
@@ -648,8 +638,8 @@ class MessagingController @Inject() (
   }
 
   // todo: Add adding non-users by kind/identifier
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipants: Seq[ExternalId[User]]) = {
-    shoebox.getUserIdsByExternalIds(newParticipants) map { newParticipantsUserIds =>
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext) = {
+    shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
 
       val messageThreadOpt = db.readWrite { implicit session =>
         val oldThread = threadRepo.get(threadExtId)
@@ -731,6 +721,7 @@ class MessagingController @Inject() (
             })
           }
         }
+        messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
         true
       }
     }
@@ -810,73 +801,73 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Seq[JsObject] = {
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotificationsNotJustFromMe(userId, howMany)
     }
   }
 
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsNotJustFromMeBefore(userId, time, howMany)
     }
   }
 
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Seq[JsObject] = {
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsNotJustFromMeSince(userId, time)
     }
   }
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotifications(userId, howMany)
     }
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsBefore(userId, time, howMany)
     }
   }
 
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime): Seq[JsObject] = {
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsSince(userId, time)
     }
   }
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getLatestUnreadSendableNotifications(userId, howMany)
     }
   }
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getUnreadSendableNotificationsBefore(userId, time, howMany)
     }
   }
 
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getLatestMutedSendableNotifications(userId, howMany)
     }
   }
 
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getMutedSendableNotificationsBefore(userId, time, howMany)
     }
   }
 
-  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
+  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotificationsForStartedThreads(userId, howMany)
     }
   }
 
-  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Seq[JsObject] = {
+  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
     db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsForStartedThreadsBefore(userId, time, howMany)
     }
@@ -888,26 +879,38 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject])] = {
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Future[Seq[JsObject]], Future[Int])] = {
     shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
       if (nUriOrPrenorm.isLeft) {
         val nUri = nUriOrPrenorm.left.get
-        val notices = db.readOnly { implicit session => userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany) }
-        (nUri.url, notices)
+        db.readOnly { implicit session =>
+          val noticesFuture = userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
+          val numUnreadUnmuted = noticesFuture.map { notices =>
+            if (notices.length < howMany) {
+              notices.count { n =>
+                (n \ "unread").asOpt[Boolean].getOrElse(false) &&
+                !(n \ "muted").asOpt[Boolean].getOrElse(false)
+              }
+            } else {
+              userThreadRepo.getUnreadUnmutedThreadCountForUri(userId, nUri.id.get)
+            }
+          }
+          (nUri.url, noticesFuture, numUnreadUnmuted)
+        }
       } else {
-        (nUriOrPrenorm.right.get, Seq[JsObject]())
+        (nUriOrPrenorm.right.get, Promise.successful(Seq[JsObject]()).future, Promise.successful(0).future)
       }
     }
   }
 
-  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[(String, Seq[JsObject])] = {
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[(String, Future[Seq[JsObject]])] = {
     shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
       if (nUriOrPrenorm.isLeft) {
         val nUri = nUriOrPrenorm.left.get
         val notices = db.readOnly { implicit session => userThreadRepo.getSendableNotificationsForUriBefore(userId, nUri.id.get, time, howMany) }
         (nUri.url, notices)
       } else {
-        (nUriOrPrenorm.right.get, Seq[JsObject]())
+        (nUriOrPrenorm.right.get, Promise.successful(Seq[JsObject]()).future)
       }
     }
   }
@@ -939,20 +942,12 @@ class MessagingController @Inject() (
     }
   }
 
-  def muteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {
-    setUserThreadMuteState(userId, threadId, true) tap { stateChanged =>
-      if(stateChanged) { notifyUserAboutMuteChange(userId, threadId, true) }
-    }
-  }
+  def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, true)
 
-  def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread]): Boolean = {
-    setUserThreadMuteState(userId, threadId, false) tap { stateChanged =>
-      if(stateChanged) { notifyUserAboutMuteChange(userId, threadId, false) }
-    }
-  }
+  def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, false)
 
-  private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean) = {
-    db.readWrite { implicit session =>
+  private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
+    val stateChanged = db.readWrite { implicit session =>
       val thread = threadRepo.get(threadId)
       thread.id.exists { threadId =>
         val userThread = userThreadRepo.getUserThread(userId, threadId)
@@ -964,6 +959,11 @@ class MessagingController @Inject() (
         }
       }
     }
+    if (stateChanged) {
+      notifyUserAboutMuteChange(userId, threadId, mute)
+      messagingAnalytics.changedMute(userId, threadId, mute, context)
+    }
+    stateChanged
   }
 
   private def notifyUserAboutMuteChange(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean) = {
@@ -986,7 +986,7 @@ class MessagingController @Inject() (
 
   def connectedSockets: Int = notificationRouter.connectedSockets
 
-  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContextBuilder): Unit = {
+  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
     val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
     val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
     val nUrl: String = thread.nUrl.getOrElse("")
@@ -995,16 +995,7 @@ class MessagingController @Inject() (
         userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
       }
 
-      val clearedAt = currentDateTime
-      SafeFuture {
-        context += ("action", "cleared")
-        context += ("messageExternalId", message.externalId.id)
-        context += ("threadId", thread.id.get.id)
-        context += ("channel", "kifi")
-        context += ("url", thread.nUrl.getOrElse(""))
-        heimdal.trackEvent(UserEvent(userId.id, context.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
-      }
-
+      messagingAnalytics.clearedNotification(userId, message, thread, context)
       notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
     }

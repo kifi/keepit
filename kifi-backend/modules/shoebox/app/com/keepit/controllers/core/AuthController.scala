@@ -357,7 +357,7 @@ class AuthController @Inject() (
         None
       }
 
-      finishSignup(user, newIdentity, emailConfirmedAlready = false)
+      finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
     })
   }
 
@@ -412,23 +412,24 @@ class AuthController @Inject() (
 
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 
-        finishSignup(user, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+        finishSignup(user, emailAddress, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
       })
   }
 
-  private def finishSignup(user: User, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
+  private def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       // todo: Move to user controller/commander
       db.readWrite { implicit s =>
-        val emailAddrStr = newIdentity.email.get
+        val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
         val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
         val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+        userValueRepo.setValue(user.id.get, "pending_primary_email", emailAddr.address)
 
         if (user.state != UserStates.ACTIVE) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Kifi.com |  Please confirm your email address",
+            subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
             category = ElectronicMailCategory("email_confirmation")
           ))
@@ -441,6 +442,13 @@ class AuthController @Inject() (
             category = ElectronicMailCategory("email_confirmation")
           ))
         }
+      }
+    } else {
+      db.readWrite { implicit session =>
+        emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
+          userRepo.save(user.copy(primaryEmailId = Some(emailAddr.id.get)))
+        }
+        userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
     }
 
@@ -515,7 +523,22 @@ class AuthController @Inject() (
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         val user = userRepo.get(address.userId)
-        emailAddressRepo.verify(address.userId, code) match {
+        val verification = emailAddressRepo.verify(address.userId, code)
+
+        if (verification._2) { // code is being used for the first time
+          if (user.primaryEmailId.isEmpty) {
+            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            userValueRepo.clearValue(user.id.get, "pending_primary_email")
+          } else {
+            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
+            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
+              userValueRepo.clearValue(user.id.get, "pending_primary_email")
+              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            }
+          }
+        }
+
+        verification match {
           case (true, _) if user.state == UserStates.PENDING =>
             Redirect("/?m=1")
           case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
