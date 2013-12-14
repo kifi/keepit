@@ -26,7 +26,7 @@ import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.Play
 import com.keepit.common.store.{S3UserPictureConfig, ImageCropAttributes, S3ImageStore}
 import scala.util.{Failure, Success}
@@ -43,6 +43,7 @@ object AuthController {
 class AuthController @Inject() (
     db: Database,
     clock: Clock,
+    authCommander: AuthCommander,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -66,13 +67,9 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
-        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-        val newSession = if (link != "") {
-          // TODO: why is OriginalUrlKey being removed? should we keep it?
-          resSession - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link)
-        } else resSession
-        Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*).withSession(newSession)
+        authCommander.handleAuthResult(link, request, res) { (cookies:Seq[Cookie], sess:Session) =>
+          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
+        }
       case res => res
     }
   }

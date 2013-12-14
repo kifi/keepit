@@ -110,6 +110,7 @@ POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.Mobil
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
 
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
+POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 
 ##########################################
 # Website
