@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging
@@ -94,6 +94,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allCommentRecipients = MutableMap[Id[Comment], Set[CommentRecipient]]()
   val allEmails = MutableMap[Id[EmailAddress], EmailAddress]()
   val allUserEmails = MutableMap[Id[User], Seq[EmailAddress]]()
+  val allUserValues = MutableMap[(Id[User], String), String]()
 
   // Fake data initialization methods
 
@@ -440,11 +441,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = ???
 
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(None)
+  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(allUserValues.get((userId, key)))
 
-  def setUserValue(userId: Id[User], key: String, value: String): Unit = {}
+  def setUserValue(userId: Id[User], key: String, value: String): Unit = allUserValues((userId, key)) = value
 
   def getUserSegment(userId: Id[User]): Future[UserSegment] = ???
 
-  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("")
+  def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("dummy")
 }

@@ -29,10 +29,11 @@ object EventAugmentor extends Logging {
         Seq.empty
       }
     }
+
     Future.sequence(safeAugmentations).map { augmentations =>
       val contextBuilder = new HeimdalContextBuilder()
-      contextBuilder.data ++ event.context.data
-      augmentations.foreach(contextBuilder.data ++ _)
+      contextBuilder.data ++= event.context.data
+      augmentations.foreach(contextBuilder.data ++= _)
       contextBuilder.build
     }
   }
