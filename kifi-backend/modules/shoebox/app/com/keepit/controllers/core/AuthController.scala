@@ -428,7 +428,7 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(emailAddrStr)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
         } else {
           postOffice.sendMail(ElectronicMail(
@@ -436,7 +436,7 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(emailAddrStr)),
             subject = "Welcome to Kifi! Please confirm your email address",
             htmlBody = views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
         }
       }
@@ -592,7 +592,7 @@ class AuthController @Inject() (
                   to = Seq(resetEmailAddress),
                   subject = "Kifi.com | Password reset requested",
                   htmlBody = views.html.email.resetPassword(resetUrl).body,
-                  category = ElectronicMailCategory("reset_password")
+                  category = PostOffice.Categories.User.RESET_PASSWORD
                 ))
               }
             }
