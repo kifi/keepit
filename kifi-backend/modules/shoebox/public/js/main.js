@@ -1,9 +1,9 @@
-var LOCAL = location.port === '9000';
-var origin = LOCAL ? location.protocol + '//' + location.host : 'https://www.kifi.com';
-var xhrBase = origin + '/site';
-var xhrBaseEliza = origin.replace('www', 'eliza') + '/eliza/site';
-var xhrBaseSearch = origin.replace('www', 'search') + '/search';
-var picBase = (LOCAL ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net';
+var LOCAL = KF.local;
+var origin = KF.origin;
+var xhrBase = KF.xhrBase;
+var xhrBaseEliza = KF.xhrBaseEliza;
+var xhrBaseSearch = KF.xhrBaseSearch;
+var picBase = KF.picBase;
 
 var compareSearch = {usage: 'search', sensitivity: 'base'};
 var compareSort = {numeric: true};
