@@ -6,14 +6,12 @@
   document.documentElement.dataset.kifiExt = v;
   document.dispatchEvent(new CustomEvent('kifi:installed', {version: v}));
 
-  function postBookmarkCount(count) {
-    log('Got the bookmarks', count)();
-    event.source.postMessage({'bookmarkCount':count}, '*');
-  }
   function onMessage(event) {
     if(!/www\.kifi\.com|dev\.ezkeep\.com/.test(event.origin)) return;
     else if (event.data == 'get_bookmark_count') {
-      api.port.emit('get_bookmark_count', postBookmarkCount);
+      api.port.emit('get_bookmark_count', function (count) {
+        event.source.postMessage({'bookmarkCount': count}, '*');
+      });
     } else if (event.data == 'import_bookmarks') {
       api.port.emit('import_bookmarks', function(o) {
         log('imported!', o)();
