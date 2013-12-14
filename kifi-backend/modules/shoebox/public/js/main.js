@@ -1,9 +1,4 @@
-var LOCAL = KF.local;
-var origin = KF.origin;
 var xhrBase = KF.xhrBase;
-var xhrBaseEliza = KF.xhrBaseEliza;
-var xhrBaseSearch = KF.xhrBaseSearch;
-var picBase = KF.picBase;
 
 var compareSearch = {usage: 'search', sensitivity: 'base'};
 var compareSort = {numeric: true};
@@ -329,7 +324,7 @@ $(function () {
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
-		return picBase + '/users/' + userId + '/pics/' + size + '/' + pictureName;
+		return KF.picBase + '/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
 
 	function escapeHTMLContent(text) {
@@ -386,7 +381,7 @@ $(function () {
 					$pic.find('.page-pic-soon').addClass('showing');
 				});
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
-				$.postJson(xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
+				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
 					$chatter.attr({
 						'data-n': data.threads || 0,
 						'data-locator': '/messages' + (data.threadId ? '/' + data.threadId : '')
@@ -1081,7 +1076,7 @@ $(function () {
 
 	function showDisconnectDialog(network) {
 		disconnectDialogTmpl.render({
-			url: origin + '/disconnect/' + network,
+			url: KF.origin + '/disconnect/' + network,
 			network: ucfirst(network)
 		});
 		$disconnectDialog.dialog('show');
@@ -1090,7 +1085,7 @@ $(function () {
 	// profile email contacts
 	$(document).on('click', '.import-gmail', function (e) {
 		e.preventDefault();
-		window.location = origin + '/importContacts';
+		window.location = KF.origin + '/importContacts';
 	});
 
 	function ucfirst(str) {
@@ -1185,7 +1180,7 @@ $(function () {
 				else {
 					$this.addClass('not-connected');
 					$a.attr({
-						href: origin + '/link/' + network,
+						href: KF.origin + '/link/' + network,
 						title: 'Click to connect'
 					});
 				}
@@ -1610,7 +1605,7 @@ $(function () {
 	}
 
 	function submitForm(path) {
-		$('<form method=POST action="' + origin + path + '">')
+		$('<form method=POST action="' + KF.origin + path + '">')
 		.appendTo('body')
 		.submit()
 		.remove();
@@ -1673,7 +1668,7 @@ $(function () {
 		toggleInviteHelp(network, false);
 		toggleImporting(network, true);
 
-		window.location = origin + (network === 'email' ? '/importContacts' : '/link/' + network);
+		window.location = KF.origin + (network === 'email' ? '/importContacts' : '/link/' + network);
 	}
 
 	var ABOOK_ID_TO_CALLBACK = {};
@@ -1711,7 +1706,7 @@ $(function () {
 
 	/*
 	// these are needed for testing
-	if (LOCAL) {
+	if (KF.local) {
 		ABOOK_ID_TO_CALLBACK[id] = null;
 		'notAvail,pending,processing,error,active'.split(',').forEach(function (data, i) {
 			setTimeout(function () {
@@ -1764,7 +1759,7 @@ $(function () {
 
 		/*
 		// these are needed for testing
-		if (LOCAL) {
+		if (KF.local) {
 			window[IMPORT_CHECK] = null;
 			'fetching,import_connections,error,finished,end'.split(',').forEach(function (data, i) {
 				setTimeout(function () {
@@ -1846,7 +1841,7 @@ $(function () {
 				var hasAbook = Boolean(abooks && abooks.length);
 				var id, email, error;
 				var importing = hasAbook && abooks.some(function (abook) {
-					if (LOCAL) {
+					if (KF.local) {
 						id = abook.id;
 						email = abook.ownerEmail;
 					}
@@ -1856,7 +1851,7 @@ $(function () {
 						email = abook.ownerEmail;
 						return true;
 					}
-				}) || !!(id && LOCAL);
+				}) || !!(id && KF.local);
 
 				toggleInviteHelp(network, !(hasAbook || importing), error);
 				toggleImporting(network, importing, null, email);
@@ -2457,7 +2452,7 @@ $(function () {
 		};
 		userPageIndex = pageNum;
 		//$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
-		$.getJSON(xhrBaseSearch + '/users/page', opts, function (friends) {
+		$.getJSON(KF.xhrBaseSearch + '/users/page', opts, function (friends) {
 			if (search !== getUserFilterInput()) {
 				return;
 			}
@@ -2579,7 +2574,7 @@ $(function () {
 		$query.attr('data-q', q);
 		if (!$query.val()) { $query.val(q).focus().closest($queryWrap).removeClass('empty'); }
 		var context = searchResponse && searchResponse.context;
-		$.getJSON(xhrBaseSearch, {q: q, f: 'a', maxHits: 30, context: context}, function (data) {
+		$.getJSON(KF.xhrBaseSearch, {q: q, f: 'a', maxHits: 30, context: context}, function (data) {
 			updateCollectionsIfAnyUnknown(data.hits);
 			$.when(promise.me, promise.collections).done(function () {
 				searchResponse = data;
