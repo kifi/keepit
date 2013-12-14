@@ -59,7 +59,7 @@ module.exports = function (grunt) {
                 In case there is a /release/ directory found, we don't want to lint that
                 so we use the ! (bang) operator to ignore the specified directory
             */
-			files: ['Gruntfile.js', 'app/**/*.js', '!app/release/**', 'modules/**/*.js', 'specs/**/*Spec.js'],
+			files: ['Gruntfile.js', 'app/**/*.js', '!app/release/**', 'modules/**/*.js'],
 			options: {
 				curly: true,
 				eqeqeq: true,
