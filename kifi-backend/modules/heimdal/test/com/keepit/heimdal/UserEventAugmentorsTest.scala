@@ -6,11 +6,11 @@ import scala.concurrent.{Await, Future}
 import com.keepit.model.{KifiInstallation, Gender}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.akka.TestKitScope
+import com.keepit.akka.FutureTestScope
 import scala.concurrent.duration._
 import akka.actor.ActorSystem
 
-class UserEventAugmentorsTest extends TestKitScope(ActorSystem("test-actor-system")) with Specification {
+class UserEventAugmentorsTest extends Specification with FutureTestScope {
   val airbrake = new FakeAirbrakeNotifier()
   val shoeboxClient = new FakeShoeboxServiceClientImpl(airbrake)
 
