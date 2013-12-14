@@ -82,7 +82,7 @@ class ExtAuthController @Inject() (
         contextBuilder.addRequestInfo(request)
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
       }
     }
 

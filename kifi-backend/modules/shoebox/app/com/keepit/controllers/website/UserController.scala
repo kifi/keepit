@@ -5,7 +5,7 @@ import java.text.Normalizer
 import com.google.inject.Inject
 import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
@@ -275,6 +275,7 @@ class UserController @Inject() (
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
         db.readWrite { implicit session =>
+          val pendingPrimary = userValueRepo.getValue(request.userId, "pending_primary_email")
           for (emails <- userData.emails.map(_.toSet)) {
             val emailStrings = emails.map(_.address)
             val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emailStrings contains em.address)
@@ -284,6 +285,9 @@ class UserController @Inject() (
               val isLast = existing.isEmpty
               val isLastVerified = !existing.exists(em => em != email && em.verified)
               if (!isPrimary && !isLast && !isLastVerified) {
+                if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
+                  userValueRepo.clearValue(request.userId, "pending_primary_email")
+                }
                 emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
               }
             }
@@ -309,15 +313,22 @@ class UserController @Inject() (
                 emailRecordOpt.collect { case emailRecord if emailRecord.userId == request.user.id.get =>
                   if (emailRecord.verified) {
                     if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
-                      userValueRepo.clearValue(request.userId, "pending_primary_email")
-                      val currentUser = userRepo.get(request.userId)
-                      userRepo.save(currentUser.copy(primaryEmailId = Some(emailRecord.id.get)))
+                      updateUserPrimaryEmail(request.userId, emailRecord.id.get)
                     }
                   } else {
                     userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
                   }
                 }
               }
+            }
+          }
+          userValueRepo.getValue(request.userId, "pending_primary_email").map { pp =>
+            emailRepo.getByAddressOpt(pp) match {
+              case Some(em) =>
+                if (em.verified && em.address == pp) {
+                  updateUserPrimaryEmail(request.userId, em.id.get)
+                }
+              case None => userValueRepo.clearValue(request.userId, "pending_primary_email")
             }
           }
           userData.description foreach { description =>
@@ -342,6 +353,12 @@ class UserController @Inject() (
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
+  }
+
+  private def updateUserPrimaryEmail(userId: Id[User], emailId: Id[EmailAddress])(implicit session: RWSession) = {
+    userValueRepo.clearValue(userId, "pending_primary_email")
+    val currentUser = userRepo.get(userId)
+    userRepo.save(currentUser.copy(primaryEmailId = Some(emailId)))
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
@@ -603,9 +620,6 @@ class UserController @Inject() (
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
-  private val domainName = if (Play.isDev) "dev.ezkeep.com" else "kifi.com"
-  private val domain = Html(s"<script>document.domain='$domainName';</script>")
-
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
     val startTime = clock.now
@@ -642,11 +656,11 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>
-        val firstResponse = Enumerator.enumerate(domain +: check().map(script).toSeq)
+        val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(domain += script(JsString("network_not_connected")))
+        Ok(script(JsString("network_not_connected")))
     }
   }
 
@@ -678,12 +692,11 @@ class UserController @Inject() (
         } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
       }
     }
-    val firstResponse = Enumerator(domain.body)
     val returnEnumerator = Enumerator.generateM {
       Future.sequence(Seq(timeoutF, reqF)).map { res =>
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(firstResponse andThen returnEnumerator.andThen(Enumerator.eof))
+    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
   }
 }

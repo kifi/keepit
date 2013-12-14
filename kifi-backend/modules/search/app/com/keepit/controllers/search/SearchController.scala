@@ -22,6 +22,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 import play.api.libs.json._
+import com.keepit.search.LangDetector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer
@@ -76,7 +77,7 @@ class SearchController @Inject()(
     val excludeFromExperiments = Await.result(shoeboxClient.getUserExperiments(userId), 5 seconds).contains(NO_SEARCH_EXPERIMENTS)
     val (config, _) = searchConfigManager.getConfigByUserSegment(userId, query, excludeFromExperiments)
 
-    val searcher = searcherFactory(userId, query, Map(Lang(lang.getOrElse("en")) -> 0.999), 0, SearchFilter.default(), config, None)
+    val searcher = searcherFactory(userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config, None)
     val explanation = searcher.explain(uriId)
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }

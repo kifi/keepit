@@ -834,18 +834,21 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	<div class="dialog photo-dialog" style="display:none">
 		<div class="photo-dialog-cell">
 			<div class="photo-dialog-box">
-				<div class="photo-dialog-title">
-					Position and size your photo
-					<a class="photo-dialog-x" href="javascript:">&times;</a>
+				<div class="photo-dialog-content">
+					<div class="photo-dialog-title">
+						Position and size your photo
+						<a class="photo-dialog-x" href="javascript:">&times;</a>
+					</div>
+					<div class="photo-dialog-canvas">
+						<div class="photo-dialog-mask"></div>
+					</div>
+					<div class="photo-dialog-slider"></div>
+					<div class="photo-dialog-buttons">
+						<a class="photo-dialog-cancel cancel-button" href="javascript:">Cancel</a>
+						<a class="photo-dialog-submit primary-button" href="javascript:">Apply</a>
+					</div>
 				</div>
-				<div class="photo-dialog-canvas">
-					<div class="photo-dialog-mask"></div>
-				</div>
-				<div class="photo-dialog-slider"></div>
-				<div class="photo-dialog-buttons">
-					<a class="photo-dialog-cancel cancel-button" href="javascript:">Cancel</a>
-					<a class="photo-dialog-submit primary-button" href="javascript:">Apply</a>
-				</div>
+				<div class="photo-dialog-uploading">Uploading...</div>
 			</div>
 		</div>
 	</div>
@@ -862,6 +865,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	<script src="assets/js/util.js"></script>
 	<script src="assets/js/scorefilter.js"></script>
 	<script src="assets/js/jquery-ui-slider.min.js"></script>
+	<script src="assets/js/kifi.js"></script>
 	<script src="assets/js/main.js"></script>
 	<script src="assets/js/track.js" async defer></script>
 	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>

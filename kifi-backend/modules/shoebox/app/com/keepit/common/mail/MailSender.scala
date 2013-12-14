@@ -146,7 +146,7 @@ private[mail] class MailSenderActor @Inject() (
       contextBuilder += ("toUsers", toUsers.map(_.id))
       contextBuilder += ("ccUsers", ccUsers.map(_.id))
       val context = contextBuilder.build
-      (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId.id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
+      (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
   }
 }

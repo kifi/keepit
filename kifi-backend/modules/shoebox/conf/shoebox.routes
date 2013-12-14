@@ -55,7 +55,7 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
