@@ -56,6 +56,9 @@ module.exports = function (grunt) {
 				'js/kifi.js',
 				'js/main.js',
 				'js/track.js'
+			],
+			less: [
+				'css/landing.less'
 			]
 		},
 
@@ -126,7 +129,7 @@ module.exports = function (grunt) {
 					paths: ['css'],
 					compress: true,
 					cleancss: true
-				}//,
+				} //,
 				//files: {
 				//	'css/kifi.css': 'css/**/*.less'
 				//}
