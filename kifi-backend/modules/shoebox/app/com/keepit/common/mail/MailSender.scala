@@ -124,8 +124,6 @@ private[mail] class MailSenderActor @Inject() (
       contextBuilder += ("subject", email.subject)
       contextBuilder += ("from", email.from.address)
       contextBuilder += ("fromName", email.fromName.getOrElse(""))
-      contextBuilder += ("to", email.to.map(_.address))
-      contextBuilder += ("cc", email.cc.map(_.address))
       email.inReplyTo.foreach { previousEmailId => contextBuilder += ("inReplyTo", previousEmailId.id) }
       email.senderUserId.foreach { id => contextBuilder += ("senderUserId", id.id) }
 
