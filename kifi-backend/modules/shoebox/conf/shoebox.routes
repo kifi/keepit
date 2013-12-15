@@ -55,7 +55,8 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo() // DEPRECATED - use /bookmarks/update instead
+# /boomarks/private is deprecated, use /bookmarks/update instead
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 POST    /bookmarks/update          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
