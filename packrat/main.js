@@ -598,7 +598,8 @@ api.port.on({
     var list = threadLists[o.kind === 'page' ? tab.nUri : o.kind];
     var n = list.ids.length;
     for (var i = n - 1; ~i && new Date(threadsById[list.ids[i]].time) < time; i--);
-    if (i < n - 1) {
+    if (++i < n) {
+      // TODO: change response format to explicitly indicate whether there might be more.
       respond(list.ids.slice(i, i + THREAD_BATCH_SIZE).map(idToThread));
     } else if (list.includesOldest) {
       respond([]);
