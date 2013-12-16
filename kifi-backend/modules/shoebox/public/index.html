@@ -280,8 +280,8 @@
 								</a>
 								<div class="profile-email-address-manage">
 									<div class="profile-email-address-manage-description">
-										These are email addresses associated with your account.
-										You may login with them and be searched by them by your friends.
+										These are the email addresses associated with your Kifi account.
+										You may log in with them and Kifi members can find you using these email addresses via search.
 									</div>
 									<ul class="profile-email-address-list">
 									</ul>
@@ -554,7 +554,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 						<ul class="about-kifi">
 							<li><a href="blog" class="updates-features">Kifi Updates</a>
 							<li class="install-kifi"><a href="/install">Install Kifi on this computer</a>
-							<li><a href="friends/invite" id="invite-friends-link" style="display:none">Invite your friends</a>
+							<li><a href="friends/invite">Invite your friends</a>
 							<li><script charset="ISO-8859-1" src="https://fast.wistia.com/static/popover-v1.js"></script><a href="javascript:" class="send-feedback">Send feedback</a>
 						</ul>
 						<h2>Get to Know Us</h2>
@@ -675,6 +675,35 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 			<button>Let’s go</button>
 		</div>
 	</div>
+
+	<div class="dialog import-dialog" style="display:none">
+		<div class="dialog-content import-step-1">
+			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
+			<div class="dialog-body">
+				<h1>Privately add your bookmarks to Kifi?</h1>
+				<img src="/assets/img/bookmark-to-kifi.2x.png" class="import-star-to-kifi">
+				<ul>
+					<li><span>Your <span class="import-bookmark-count"></span> bookmarks will be securely kept as private keeps and will never appear in your friends’ search results.</span>
+					<li><span>You can find them anytime with Kifi, and organize them at Kifi.com.</span>
+				</ul>
+			</div>
+			<a href="javascript:" class="cancel-import">Cancel</a>
+			<button class="do-import"><strong>Yes</strong> - Import</button>
+		</div>
+		<div class="dialog-content import-step-2" style="display:none">
+			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
+			<div class="dialog-body">
+				<h1>Importing your bookmarks to Kifi</h1>
+				<img src="/assets/img/bookmark-check.2x.png" class="import-check">
+				<div class="importing-explanation">
+					This might take a few minutes (especially if you have a lot of bookmarks). Feel free to browse around — we’re syncing in the background.
+				</div>
+			</div>
+			<button>Done</button>
+		</div>
+	</div>
+
+
 
 	<script type="text/x-handlebars" id="no-results-template">
 		<h2>We couldn’t find any friends matching ‘{{filter}}’</h2>
@@ -805,18 +834,21 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	<div class="dialog photo-dialog" style="display:none">
 		<div class="photo-dialog-cell">
 			<div class="photo-dialog-box">
-				<div class="photo-dialog-title">
-					Position and size your photo
-					<a class="photo-dialog-x" href="javascript:">&times;</a>
+				<div class="photo-dialog-content">
+					<div class="photo-dialog-title">
+						Position and size your photo
+						<a class="photo-dialog-x" href="javascript:">&times;</a>
+					</div>
+					<div class="photo-dialog-canvas">
+						<div class="photo-dialog-mask"></div>
+					</div>
+					<div class="photo-dialog-slider"></div>
+					<div class="photo-dialog-buttons">
+						<a class="photo-dialog-cancel cancel-button" href="javascript:">Cancel</a>
+						<a class="photo-dialog-submit primary-button" href="javascript:">Apply</a>
+					</div>
 				</div>
-				<div class="photo-dialog-canvas">
-					<div class="photo-dialog-mask"></div>
-				</div>
-				<div class="photo-dialog-slider"></div>
-				<div class="photo-dialog-buttons">
-					<a class="photo-dialog-cancel cancel-button" href="javascript:">Cancel</a>
-					<a class="photo-dialog-submit primary-button" href="javascript:">Apply</a>
-				</div>
+				<div class="photo-dialog-uploading">Uploading...</div>
 			</div>
 		</div>
 	</div>
@@ -833,6 +865,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 	<script src="assets/js/util.js"></script>
 	<script src="assets/js/scorefilter.js"></script>
 	<script src="assets/js/jquery-ui-slider.min.js"></script>
+	<script src="assets/js/kifi.js"></script>
 	<script src="assets/js/main.js"></script>
 	<script src="assets/js/track.js" async defer></script>
 	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>

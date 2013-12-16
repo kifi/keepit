@@ -128,17 +128,21 @@ class HeimdalContextBuilder {
   def addUserAgent(userAgent: String): Unit = {
     this += ("userAgent", userAgent)
     userAgent match {
-      case UserAgent.iPhonePattern(appVersion, buildSuffix, device, os) =>
-        this += ("appVersion", appVersion)
-        this += ("appBuild", appVersion + buildSuffix)
+      case UserAgent.iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
         this += ("device", device)
         this += ("os", os)
+        this += ("osVersion", osVersion)
+        this += ("client", "Kifi App")
+        this += ("clientVersion", appVersion)
+        this += ("clientBuild", appVersion + buildSuffix)
       case _ =>
         val agent = UserAgent.parser.parse(userAgent)
         this += ("device", agent.getDeviceCategory.getName)
-        this += ("os", agent.getOperatingSystem.getName)
-        this += ("browser", agent.getName + " " + agent.getVersionNumber.toVersionString)
-        this += ("browserType", agent.getType.getName)
+        this += ("os", agent.getOperatingSystem.getFamilyName)
+        this += ("osVersion", agent.getOperatingSystem.getName)
+        this += ("client", agent.getName)
+        this += ("clientVersion", agent.getVersionNumber.getMajor)
+        this += ("clientBuild", agent.getVersionNumber.toVersionString)
     }
   }
 }

@@ -3,9 +3,9 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
@@ -16,7 +16,6 @@ import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{Promise => PlayPromise}
 import play.api.libs.Comet
@@ -25,18 +24,15 @@ import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
-import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.common.akka.SafeFuture
-import play.api.Play
+import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{Result, Request}
-import scala.util.{Failure, Success}
+import play.api.mvc.Request
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.libs.json._
 import com.keepit.model.SocialConnection
 import scala.util.Failure
 import com.keepit.model.EmailAddress
@@ -44,25 +40,16 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
 import play.api.libs.json.JsArray
+import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
 import scala.util.Success
-import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.json.JsObject
-import com.keepit.model.SocialConnection
-import scala.util.Failure
-import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import scala.util.Success
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 
 class UserController @Inject() (
   db: Database,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -246,7 +233,28 @@ class UserController @Inject() (
   }
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
-    getUserInfo(request)
+    getUserInfo(request.userId)
+  }
+
+  def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>
+    db.readOnly { implicit session =>
+      emailRepo.getByAddressOpt(email) match {
+        case Some(emailRecord) =>
+          val pendingPrimary = userValueRepo.getValue(request.user.id.get, "pending_primary_email")
+          if (emailRecord.userId == request.userId) {
+            Ok(Json.toJson(EmailInfo(
+              address = emailRecord.address,
+              isVerified = emailRecord.verified,
+              isPrimary = request.user.primaryEmailId.isDefined && request.user.primaryEmailId.get.id == emailRecord.id.get.id,
+              isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == emailRecord.address
+            )))
+          } else {
+            Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
+          }
+        case None =>
+          Ok(Json.obj("status" -> "available"))
+      }
+    }
   }
 
   private val siteUrl = current.configuration.getString("application.baseUrl").get
@@ -260,6 +268,7 @@ class UserController @Inject() (
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
         db.readWrite { implicit session =>
+          val pendingPrimary = userValueRepo.getValue(request.userId, "pending_primary_email")
           for (emails <- userData.emails.map(_.toSet)) {
             val emailStrings = emails.map(_.address)
             val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emailStrings contains em.address)
@@ -269,6 +278,9 @@ class UserController @Inject() (
               val isLast = existing.isEmpty
               val isLastVerified = !existing.exists(em => em != email && em.verified)
               if (!isPrimary && !isLast && !isLastVerified) {
+                if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
+                  userValueRepo.clearValue(request.userId, "pending_primary_email")
+                }
                 emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
               }
             }
@@ -283,7 +295,7 @@ class UserController @Inject() (
                   to = Seq(GenericEmailAddress(address)),
                   subject = "Kifi.com | Please confirm your email address",
                   htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-                  category = ElectronicMailCategory("email_confirmation")
+                  category = PostOffice.Categories.User.EMAIL_CONFIRMATION
                 ))
               }
             }
@@ -294,14 +306,22 @@ class UserController @Inject() (
                 emailRecordOpt.collect { case emailRecord if emailRecord.userId == request.user.id.get =>
                   if (emailRecord.verified) {
                     if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
-                      userValueRepo.clearValue(request.userId, "pending_primary_email")
-                      userRepo.save(request.user.copy(primaryEmailId = Some(emailRecord.id.get)))
+                      updateUserPrimaryEmail(request.userId, emailRecord.id.get)
                     }
                   } else {
                     userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
                   }
                 }
               }
+            }
+          }
+          userValueRepo.getValue(request.userId, "pending_primary_email").map { pp =>
+            emailRepo.getByAddressOpt(pp) match {
+              case Some(em) =>
+                if (em.verified && em.address == pp) {
+                  updateUserPrimaryEmail(request.userId, em.id.get)
+                }
+              case None => userValueRepo.clearValue(request.userId, "pending_primary_email")
             }
           }
           userData.description foreach { description =>
@@ -321,18 +341,27 @@ class UserController @Inject() (
 //            userRepo.save(updatedUser)
 //          }
         }
-        getUserInfo(request)
+        getUserInfo(request.userId)
       }
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
-  private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    val user = userCommander.getUserInfo(request.user)
-    Ok(toJson(user.basicUser).as[JsObject] ++
-       toJson(user.info).as[JsObject] ++
-       Json.obj("experiments" -> request.experiments.map(_.value)))
+  private def updateUserPrimaryEmail(userId: Id[User], emailId: Id[EmailAddress])(implicit session: RWSession) = {
+    userValueRepo.clearValue(userId, "pending_primary_email")
+    val currentUser = userRepo.get(userId)
+    userRepo.save(currentUser.copy(primaryEmailId = Some(emailId)))
+  }
+
+  private def getUserInfo[T](userId: Id[User]) = {
+    val (user, experiments) = db.readOnly { implicit session =>
+      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
+    }
+    val pimpedUser = userCommander.getUserInfo(user)
+    Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
+       toJson(pimpedUser.info).as[JsObject] ++
+       Json.obj("experiments" -> experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
@@ -350,7 +379,11 @@ class UserController @Inject() (
     if (o.keys.subsetOf(SitePrefNames)) {
       db.readWrite { implicit s =>
         o.fields.foreach { case (name, value) =>
-          userValueRepo.setValue(request.userId, name, value.as[String])  // TODO: deactivate pref if JsNull
+          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
+            userValueRepo.clearValue(request.userId, name)
+          } else {
+            userValueRepo.setValue(request.userId, name, value.as[String])
+          }
         }
       }
       Ok(o)
@@ -434,9 +467,9 @@ class UserController @Inject() (
     }
   }
 
-  def uploadBinaryUserPicture() = AuthenticatedJsonAction(allowPending = false, bodyParser = parse.maxLength(1024 * 1024 * 10, parse.temporaryFile)) { implicit request =>
+  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024*1024*15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
+  def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded,play.api.libs.Files.TemporaryFile]]) = {
     request.body match {
-      case Left(err) => BadRequest("0")
       case Right(tempFile) =>
         s3ImageStore.uploadTemporaryPicture(tempFile.file) match {
           case Success((token, pictureUrl)) =>
@@ -445,8 +478,9 @@ class UserController @Inject() (
             airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
             BadRequest(JsNumber(0))
         }
+      case Left(err) =>
+        BadRequest(s"""{"error": "file_too_large", "size": ${err.length}}""")
     }
-
   }
 
   private case class UserPicInfo(
@@ -497,7 +531,7 @@ class UserController @Inject() (
             to = Seq(GenericEmailAddress(email)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
           Ok("0")
         case _ =>
@@ -568,9 +602,6 @@ class UserController @Inject() (
     Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
-  private val domainName = if (Play.isDev) "dev.ezkeep.com" else "kifi.com"
-  private val domain = Html(s"<script>document.domain='$domainName';</script>")
-
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
     val startTime = clock.now
@@ -607,11 +638,11 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>
-        val firstResponse = Enumerator.enumerate(domain +: check().map(script).toSeq)
+        val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
         Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
-        Ok(domain += script(JsString("network_not_connected")))
+        Ok(script(JsString("network_not_connected")))
     }
   }
 
@@ -643,12 +674,11 @@ class UserController @Inject() (
         } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
       }
     }
-    val firstResponse = Enumerator(domain.body)
     val returnEnumerator = Enumerator.generateM {
       Future.sequence(Seq(timeoutF, reqF)).map { res =>
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(firstResponse andThen returnEnumerator.andThen(Enumerator.eof))
+    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
   }
 }

@@ -26,7 +26,7 @@ import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.Play
 import com.keepit.common.store.{S3UserPictureConfig, ImageCropAttributes, S3ImageStore}
 import scala.util.{Failure, Success}
@@ -43,6 +43,7 @@ object AuthController {
 class AuthController @Inject() (
     db: Database,
     clock: Clock,
+    authCommander: AuthCommander,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -66,13 +67,9 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
-        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-        val newSession = if (link != "") {
-          // TODO: why is OriginalUrlKey being removed? should we keep it?
-          resSession - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link)
-        } else resSession
-        Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*).withSession(newSession)
+        authCommander.handleAuthResult(link, request, res) { (cookies:Seq[Cookie], sess:Session) =>
+          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
+        }
       case res => res
     }
   }
@@ -431,7 +428,7 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(emailAddrStr)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
         } else {
           postOffice.sendMail(ElectronicMail(
@@ -439,7 +436,7 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(emailAddrStr)),
             subject = "Welcome to Kifi! Please confirm your email address",
             htmlBody = views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
         }
       }
@@ -528,6 +525,7 @@ class AuthController @Inject() (
         if (verification._2) { // code is being used for the first time
           if (user.primaryEmailId.isEmpty) {
             userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            userValueRepo.clearValue(user.id.get, "pending_primary_email")
           } else {
             val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
             if (pendingEmail.isDefined && address.address == pendingEmail.get) {
@@ -594,7 +592,7 @@ class AuthController @Inject() (
                   to = Seq(resetEmailAddress),
                   subject = "Kifi.com | Password reset requested",
                   htmlBody = views.html.email.resetPassword(resetUrl).body,
-                  category = ElectronicMailCategory("reset_password")
+                  category = PostOffice.Categories.User.RESET_PASSWORD
                 ))
               }
             }

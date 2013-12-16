@@ -39,11 +39,10 @@ import scala.concurrent.future
 class MainSearcher(
     userId: Id[User],
     queryString: String,
-    langProbabilities: Map[Lang, Double],
+    lang: Lang,
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    lastUUID: Option[ExternalId[ArticleSearchResult]],
     articleSearcher: Searcher,
     parserFactory: MainQueryParserFactory,
     socialGraphInfoFuture: Future[SocialGraphInfo],
@@ -64,7 +63,6 @@ class MainSearcher(
   private[this] var parsedQuery: Option[Query] = None
   def getParsedQuery: Option[Query] = parsedQuery
 
-  private[this] var lang: Lang = Lang("en")
   def getLang: Lang = lang
 
   private[this] val currentTime = currentDateTime.getMillis()
@@ -167,9 +165,6 @@ class MainSearcher(
     val othersHits = createQueue(maxTextHitsPerCategory)
 
     var tParse = currentDateTime.getMillis()
-
-    // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val hotDocs = new HotDocSetFilter()
     parser = parserFactory(lang, config)
@@ -401,7 +396,7 @@ class MainSearcher(
 
     checkScoreValues(hitList)
 
-    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
+    ArticleSearchResult(None, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         collections = parser.collectionIds,
@@ -458,8 +453,6 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, langProbabilities)
     val hotDocs = new HotDocSetFilter()
     parser = parserFactory(lang, config)
     parser.setPercentMatch(percentMatch)

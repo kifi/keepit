@@ -1,18 +1,5 @@
-var domain = 'kifi.com';
-var xhrDomain = 'https://api.kifi.com';
-var wwwDomain = 'https://www.kifi.com';
-//TODO dev
-var DEV = !(/kifi.com/.test(location.hostname));
-if (DEV) {
-	domain = 'dev.ezkeep.com';
-	xhrDomain = wwwDomain = 'http://dev.ezkeep.com:9000';
-}
-// iframe tunnel CROSS ORIGIN issue fix
-document.domain = domain;
-var xhrBase = xhrDomain + '/site';
-var xhrBaseEliza = xhrDomain.replace('api', 'eliza') + '/eliza/site';
-var xhrBaseSearch = xhrDomain.replace('api', 'search') + '/search';
-
+var log = KF.log;
+var xhrBase = KF.xhrBase;
 
 var compareSearch = {usage: 'search', sensitivity: 'base'};
 var compareSort = {numeric: true};
@@ -71,6 +58,7 @@ $.extend($.timeago.settings.strings, {
 			});
 		},
 		hide: function () {
+			$(this).trigger('dialog.hide');
 			$(document).off('keydown.dialog');
 			$(this).on('transitionend', function end(e) {
 				if (e.target === this) {
@@ -118,9 +106,9 @@ $(function () {
 		minWidth: 240, // should match CSS
 		maxWidth: 420,
 		stop: function (e, ui) {
-			console.log('[resizable:stop] saving');
+			log('[resizable:stop] saving');
 			$.postJson(xhrBase + '/user/prefs', {site_left_col_width: String($leftCol.outerWidth())}, function (data) {
-				console.log('[prefs]', data);
+				log('[prefs]', data);
 			});
 		},
 		zIndex: 1
@@ -182,7 +170,7 @@ $(function () {
 		});
 		$keep.find('time').timeago();
 	}).when(TempoEvent.Types.RENDER_COMPLETE, function (ev) {
-		console.log('[$myKeeps:RENDER_COMPLETE]', ev);
+		log('[$myKeeps:RENDER_COMPLETE]', ev);
 		$keepSpinner.hide();
 
 		var $titles = ev.element === $myKeeps[0] ? addGroupHeadings() : $();
@@ -244,7 +232,7 @@ $(function () {
 			var scrollEl = $collList.find('.antiscroll-inner')[0], scrollPx, lastPageX, lastPageY;
 			var scrollTimeout, scrollTimeoutMs = 100, scrollTopMax = scrollEl.scrollHeight - scrollEl.clientHeight;
 			function scroll() {
-				console.log('[scroll] px:', scrollPx);
+				log('[scroll] px:', scrollPx);
 				var top = scrollEl.scrollTop, newTop = Math.max(0, Math.min(scrollTopMax, top + scrollPx));
 				if (newTop !== top) {
 					scrollEl.scrollTop = newTop;
@@ -292,7 +280,7 @@ $(function () {
 				return false;
 			}
 		});
-		console.log('[addGroupHeadings] h:', h);
+		log('[addGroupHeadings] h:', h);
 		return $(h.filter(identity));
 	}
 
@@ -337,7 +325,7 @@ $(function () {
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
-		return (DEV ? '//d1scct5mnc9d9m.cloudfront.net' : '//djty7jcqog9qu.cloudfront.net') + '/users/' + userId + '/pics/' + size + '/' + pictureName;
+		return KF.picBase + '/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
 
 	function escapeHTMLContent(text) {
@@ -390,11 +378,11 @@ $(function () {
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
-				}).error(function () {
+				}).fail(function () {
 					$pic.find('.page-pic-soon').addClass('showing');
 				});
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
-				$.postJson(xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
+				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
 					$chatter.attr({
 						'data-n': data.threads || 0,
 						'data-locator': '/messages' + (data.threadId ? '/' + data.threadId : '')
@@ -438,8 +426,10 @@ $(function () {
 			cancelProfileInput($(this));
 		});
 
-		$box.addClass('edit');
+		activateInput($input);
+	}
 
+	function activateInput($input) {
 		$input
 			.each(function () {
 				var $this = $(this);
@@ -447,6 +437,51 @@ $(function () {
 			})
 			.prop('disabled', false)
 			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function commitInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.val());
+				$this.data('prevValue', $this.data('value'));
+				$this.val(val).data('value', val);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function cancelInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					val = trimInputValue($this.data('value'));
+				$this.val(val);
+				showError($this, false);
+			})
+			.prop('disabled', true);
+		$input.closest('.profile-input-box').removeClass('edit');
+	}
+
+	function revertAndActivateInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this);
+				$this.data('value', $this.data('prevValue'));
+			})
+			.prop('disabled', false)
+			.first().focus();
+		$input.closest('.profile-input-box').addClass('edit');
+	}
+
+	function revertInput($input) {
+		$input
+			.each(function () {
+				var $this = $(this),
+					prev = $this.data('prevValue');
+				$this.val(prev).data('value', prev);
+			});
 	}
 
 	function saveProfileInput($target, e) {
@@ -480,25 +515,11 @@ $(function () {
 			return false;
 		}
 
-		$input
-			.each(function () {
-				var $this = $(this),
-					val = trimInputValue($this.val());
-				$this
-					.data('prevValue', $this.data('value'));
-				$this
-					.val(val)
-					.data('value', val);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
+		commitInput($input);
 
 		if ($input.attr('name') === 'email') {
-			saveNewPrimaryEmail($input.val(), function () {
-				var prev = $input.data('prevValue');
-				$input.val(prev).data('value', prev);
+			saveNewPrimaryEmail($input, function () {
+				revertInput($input);
 			});
 		}
 		else {
@@ -514,16 +535,7 @@ $(function () {
 		var $box = $target.closest('.profile-input-box'),
 			$input = $box.find('.profile-input-input');
 
-		$input
-			.each(function () {
-				var $this = $(this);
-				$this.val(trimInputValue($this.data('value')));
-				showError($this, false);
-			})
-			.prop('disabled', true);
-
-		$box
-			.removeClass('edit');
+		cancelInput($input);
 	}
 
 	function trimInputValue(val) {
@@ -539,7 +551,7 @@ $(function () {
 
 	function initProfilePhotoUpload() {
 		$('.profile-image-file').change(function () {
-			console.log('photo selected', this.files, URL, this, arguments);
+			log('photo selected', this.files, URL, this, arguments);
 			if (this.files && URL) {
 				var upload = uploadPhotoXhr2(this.files);
 				if (upload) {
@@ -567,6 +579,7 @@ $(function () {
 			var xhr = new XMLHttpRequest();
 			photoXhr2 = xhr;
 			var deferred = createPhotoUploadDeferred();
+			xhr.withCredentials = true;
 			xhr.upload.addEventListener('progress', function (e) {
 				if (e.lengthComputable) {
 					deferred.notify(e.loaded / e.total);
@@ -674,7 +687,7 @@ $(function () {
 					cropX: details.x,
 					cropY: details.y,
 					cropSize: details.size
-				});
+				}).always(photoDialog.hide.bind(photoDialog));
 			});
 
 		})
@@ -689,8 +702,9 @@ $(function () {
 		var SHADE_SIZE = 40;
 		var OUTER_SIZE = INNER_SIZE + 2 * SHADE_SIZE;
 		var SLIDER_MAX = 180;
+		var dialog;
 
-		return {
+		return dialog = {
 			show: function (photoUrl) {
 				var img = new Image();
 				img.onload = onPhotoLoad;
@@ -705,6 +719,19 @@ $(function () {
 				deferred = $.Deferred();
 
 				return deferred;
+			},
+			setBusy: function (isBusy) {
+				$dialog.toggleClass('busy', !!isBusy);
+			},
+			hide: function hide() {
+				offEsc(hide);
+				dialog.setBusy(false);
+				$dialog.removeClass('photo-dialog-showing');
+				hideTimer = setTimeout(function () {
+					$dialog && $dialog.remove();
+					$image && $image.remove();
+					$mask = $image = $slider = deferred = hideTimer = null;
+				}, 500);
 			}
 		};
 
@@ -736,7 +763,7 @@ $(function () {
 				slide: onSliderSlide.bind($image[0], $image.data(), percentToPx(dMin, dMax), wScale, hScale)
 			});
 			$dialog.appendTo('body').layout().addClass('photo-dialog-showing').find('.ui-slider-handle').focus();
-			onEsc(hide);
+			onEsc(dialog.hide);
 		}
 
 		function onEsc(handler) {
@@ -754,15 +781,6 @@ $(function () {
 			$(document).off('keydown', handler);
 		}
 
-		function hide() {
-			offEsc(hide);
-			$dialog.removeClass('photo-dialog-showing');
-			hideTimer = setTimeout(function () {
-				$dialog.remove();
-				$image.remove();
-				$mask = $image = $slider = deferred = hideTimer = null;
-			}, 500);
-		}
 
 		function percentToPx(pxMin, pxMax) {
 			var factor = (pxMax - pxMin) / SLIDER_MAX;
@@ -860,6 +878,7 @@ $(function () {
 				var o = $image.data();
 				if (submitted) {
 					var scale = o.naturalWidth / o.width;
+					dialog.setBusy(true);
 					deferred.resolve({
 						width: o.naturalWidth,
 						height: o.naturalHeight,
@@ -867,10 +886,11 @@ $(function () {
 						y: Math.round(scale * (SHADE_SIZE - o.top)),
 						size: Math.round(scale * INNER_SIZE)
 					});
-				} else {
+				}
+				else {
+					dialog.hide();
 					deferred.reject();
 				}
-				hide();
 			}
 		}
 	}());
@@ -882,7 +902,12 @@ $(function () {
 	var PRIMARY_INDEX = 0;
 
 	function getPrimaryEmail(emails) {
-		return (emails || me.emails)[PRIMARY_INDEX] || null;
+		if (!emails) {
+			emails = me.emails;
+		}
+		return findEmail(emails, function (info) {
+			return info.isPrimary;
+		})[0] || emails[PRIMARY_INDEX] || null;
 	}
 
 	function getPendingPrimaryEmail(emails) {
@@ -947,11 +972,16 @@ $(function () {
 	}
 
 	var emailChangeTmpl = Handlebars.compile($('#primary-email-change-dialog').html());
-	function showEmailChangeDialog(email, success, cancel) {
+	function showEmailChangeDialog(email, submit, cancel) {
 		var $dialog = $(emailChangeTmpl({
 				email: email
 			}))
 			.appendTo(document.body)
+			.on('dialog.hide', function () {
+				if (cancel) {
+					cancel(false);
+				}
+			})
 			.on('click', '.dialog-cancel', function (e) {
 				e.preventDefault();
 				$dialog.remove();
@@ -964,19 +994,48 @@ $(function () {
 				e.preventDefault();
 				$dialog.remove();
 
-				if (success) {
-					success(true);
+				if (submit) {
+					submit(true);
 				}
 			})
 			.dialog('show');
 	}
 
-	function saveNewPrimaryEmail(email, cancel) {
+	function refreshMe(data) {
+		var url = xhrBase + '/user/me';
+		if (data) {
+			return $.postJson(url, data, updateMe);
+		}
+		return $.getJSON(url, updateMe);
+	}
+
+	function saveNewPrimaryEmail($input, cancel) {
+		var email = $input.val();
 		if (getPrimaryEmailAddress() === email) {
 			// already primary
 			return false;
 		}
-		showEmailChangeDialog(email, function () {
+		getEmailInfo(email)
+			.done(function (emailInfo) {
+				if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+					refreshMe();
+					return;
+				}
+				if (emailInfo.isVerified) {
+					setNewPrimaryEmail(email)();
+					return;
+				}
+				// email is available || (not primary && not pending primary && not verified)
+				showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+			})
+			.fail(function () {
+				revertAndActivateInput($input);
+			})
+			.fail(getAddEmailErrorCallback(email, $input));
+	}
+
+	function setNewPrimaryEmail(email) {
+		return function () {
 			var props = getProfileCopy();
 			var emails = props.emails;
 			removeEmailInfo(emails, email);
@@ -985,9 +1044,8 @@ $(function () {
 				address: email,
 				isPrimary: true
 			});
-
-			$.postJson(xhrBase + '/user/me', props).success(updateMe);
-		}, cancel);
+			refreshMe(props);
+		};
 	}
 
 	function saveProfileInfo() {
@@ -1001,10 +1059,9 @@ $(function () {
 
 		delete props.email;
 
-		$.postJson(xhrBase + '/user/me', props)
-			.success(updateMe)
-			.error(function () {
-				showMessage('Uh oh! A bad thing happened!');
+		refreshMe(props)
+			.fail(function () {
+				showMessage('Uh oh! Something went wrong!');
 			});
 	}
 
@@ -1020,7 +1077,7 @@ $(function () {
 
 	function showDisconnectDialog(network) {
 		disconnectDialogTmpl.render({
-			url: wwwDomain + '/disconnect/' + network,
+			url: KF.origin + '/disconnect/' + network,
 			network: ucfirst(network)
 		});
 		$disconnectDialog.dialog('show');
@@ -1029,7 +1086,7 @@ $(function () {
 	// profile email contacts
 	$(document).on('click', '.import-gmail', function (e) {
 		e.preventDefault();
-		submitForm(wwwDomain + '/importContacts');
+		window.location = KF.origin + '/importContacts';
 	});
 
 	function ucfirst(str) {
@@ -1124,7 +1181,7 @@ $(function () {
 				else {
 					$this.addClass('not-connected');
 					$a.attr({
-						href: wwwDomain + '/link/' + network,
+						href: KF.origin + '/link/' + network,
 						title: 'Click to connect'
 					});
 				}
@@ -1250,53 +1307,93 @@ $(function () {
 		resendVerificationEmail(email);
 	});
 
+	function getEmailInfo(email) {
+		return $.getJSON(xhrBase + '/user/email?email=' + email);
+	}
+
 	function resendVerificationEmail(email) {
-		console.log(email);
 		$.post(xhrBase + '/user/resend-verification?email=' + email);
 		showVerificationAlert(email);
 	}
 
 	function cancelAddEmail(e) {
 		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
+		closeAddEmailInput(getAddEmailInput(this));
+	}
+
+	function getAddEmailInput(that) {
+		return $(that).closest('.profile-email-address-add-box').find('.profile-email-address-add-input');
+	}
+
+	function closeAddEmailInput($input) {
 		$input.val('');
 		$input.off('keydown');
 		showError($input, false);
-		$manage.removeClass('add');
+		$input.closest('.profile-email-address-manage').removeClass('add');
 	}
 
 	function submitAddEmail(e) {
 		e.preventDefault();
-		var $this = $(this),
-			$box = $this.closest('.profile-email-address-add-box'),
-			$manage = $box.closest('.profile-email-address-manage'),
-			$input = $box.find('.profile-email-address-add-input');
+		var $input = getAddEmailInput(this);
 		if (validateEmailInput($input)) {
-			if (addEmailAccount($input.val())) {
-				$input.val('');
-				$input.off('keydown');
-				showError($input, false);
-				$manage.removeClass('add');
-			}
+			var email = $input.val();
+			getEmailInfo(email)
+				.done(getAddEmailSuccessCallback(email, $input))
+				.fail(getAddEmailErrorCallback(email, $input));
 		}
+	}
+
+	function getAddEmailSuccessCallback(email, $input) {
+		return function (emailInfo) {
+			if (emailInfo.status === 'available') {
+				addEmailAccount(email);
+				closeAddEmailInput($input);
+				showVerificationAlert(email);
+			}
+			else {
+				showError(
+					$input,
+					'This email address is already added',
+					'Please use another email address.'
+				);
+			}
+		};
+	}
+
+	function getAddEmailErrorCallback(email, $input) {
+		return function (jqXhr) {
+			switch (jqXhr.status) {
+			case 400:
+				// bad format
+				showError(
+					$input,
+					'Invalid email address',
+					'Please enter a valid email address.'
+				);
+				break;
+			case 403:
+				// belongs to another user
+				showError(
+					$input,
+					'This email address is already taken',
+					'This email address belongs to another user.<br>Please enter another email address.'
+				);
+				break;
+			}
+		};
 	}
 
 	$(document).on('click', '.profile-email-address-add-save', submitAddEmail);
 
 	function addEmailAccount(email) {
-		if (email) {
-			var props = getProfileCopy();
-			var emails = props.emails;
-			emails.push({
-				address: email,
-				isPrimary: false
-			});
+		var props = getProfileCopy();
+		var emails = props.emails;
+		emails.push({
+			address: email,
+			isPrimary: false
+		});
 
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
-		}
+		return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 	}
 
 	function makePrimary(email) {
@@ -1309,8 +1406,7 @@ $(function () {
 					info.isPrimary = true;
 				}
 			});
-
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 		}
 	}
 
@@ -1326,7 +1422,7 @@ $(function () {
 			var emails = props.emails;
 			removeEmailInfo(emails, email);
 
-			return $.postJson(xhrBase + '/user/me', props).success(updateMe);
+			return $.postJson(xhrBase + '/user/me', props).done(updateMe);
 		}
 	}
 
@@ -1403,7 +1499,7 @@ $(function () {
 	function selectFriendsTab(path) {
 		var pPath = FRIENDS_PARENT_PATHS[path] || path,
 		$tab = $friendsTabs.filter('[data-href="' + pPath + '"]');
-		console.log('[selectFriendsTab]', path, pPath, $tab);
+		log('[selectFriendsTab]', path, pPath, $tab);
 		if ($tab.length) {
 			$tab.removeAttr('href');
 			$friendsTabs.not($tab).filter(':not([href])').each(function () {
@@ -1432,7 +1528,7 @@ $(function () {
 			pPath = path;
 		}
 		var $tab = $addFriendsTabs.filter('[data-href="' + pPath + '"]');
-		console.log('[showAddFriends]', path, pPath, $tab);
+		log('[showAddFriends]', path, pPath, $tab);
 		$nwFriendsLoading.hide();
 		if ($tab.length) {
 			$tab.removeAttr('href');
@@ -1509,8 +1605,8 @@ $(function () {
 					',scrollbars=' + scrollbars + ',status=' + status);
 	}
 
-	function submitForm(url, method) {
-		$('<form method="' + (method || 'get') + '" action="' + url + '">')
+	function submitForm(path) {
+		$('<form method=POST action="' + KF.origin + path + '">')
 		.appendTo('body')
 		.submit()
 		.remove();
@@ -1569,16 +1665,11 @@ $(function () {
 	});
 
 	function connectSocial(network) {
-		console.log('[connectSocial]', network);
+		log('[connectSocial]', network);
 		toggleInviteHelp(network, false);
 		toggleImporting(network, true);
 
-		if (network === 'email') {
-			submitForm(wwwDomain + '/importContacts');
-		}
-		else {
-			submitForm(wwwDomain + '/link/' + network);
-		}
+		window.location = KF.origin + (network === 'email' ? '/importContacts' : '/link/' + network);
 	}
 
 	var ABOOK_ID_TO_CALLBACK = {};
@@ -1616,7 +1707,7 @@ $(function () {
 
 	/*
 	// these are needed for testing
-	if (DEV) {
+	if (KF.local) {
 		ABOOK_ID_TO_CALLBACK[id] = null;
 		'notAvail,pending,processing,error,active'.split(',').forEach(function (data, i) {
 			setTimeout(function () {
@@ -1656,7 +1747,7 @@ $(function () {
 	function getNetworkImportUpdates(network, callback) {
 		var deferred = $.Deferred();
 		window[IMPORT_CHECK] = function (data) {
-			console.log('[' + IMPORT_CHECK + ']', data);
+			log('[' + IMPORT_CHECK + ']', data);
 			window[IMPORT_CHECK] = function (data) {
 				callback(String(data));
 			};
@@ -1669,7 +1760,7 @@ $(function () {
 
 		/*
 		// these are needed for testing
-		if (DEV) {
+		if (KF.local) {
 			window[IMPORT_CHECK] = null;
 			'fetching,import_connections,error,finished,end'.split(',').forEach(function (data, i) {
 				setTimeout(function () {
@@ -1737,7 +1828,7 @@ $(function () {
 		$nwFriendsLoading.hide();
 		$nwFriends.find('.no-results').empty().hide();
 
-		console.log('[filterFriendsByNetwork]', network);
+		log('[filterFriendsByNetwork]', network);
 		chooseNetworkFilterDOM(network);
 		var isEmail = network === 'email',
 		isSocial = /^facebook|linkedin$/.test(network);
@@ -1751,7 +1842,7 @@ $(function () {
 				var hasAbook = Boolean(abooks && abooks.length);
 				var id, email, error;
 				var importing = hasAbook && abooks.some(function (abook) {
-					if (DEV) {
+					if (KF.local) {
 						id = abook.id;
 						email = abook.ownerEmail;
 					}
@@ -1761,16 +1852,16 @@ $(function () {
 						email = abook.ownerEmail;
 						return true;
 					}
-				}) || !!(id && DEV);
+				}) || !!(id && KF.local);
 
 				toggleInviteHelp(network, !(hasAbook || importing), error);
 				toggleImporting(network, importing, null, email);
 
-				console.log('[email import status] network=' + network + ', hasAbook=' + hasAbook + ', importing=' + importing);
+				log('[email import status] network=' + network + ', hasAbook=' + hasAbook + ', importing=' + importing);
 
 				if (importing) {
 					var importUpdate = getAbookProgressUpdates(id, function (id, status, total, progress) {
-						console.log('getAbookProgressUpdates', id, status, total, progress);
+						log('getAbookProgressUpdates', id, status, total, progress);
 						switch (status) {
 						case 'active':
 							toggleImporting(network, false, null, email);
@@ -1804,9 +1895,9 @@ $(function () {
 		}
 		else if (isSocial) {
 			var importUpdate = getNetworkImportUpdates(network, function (status) {
-				console.log('getNetworkImportUpdates', status);
+				log('getNetworkImportUpdates', status);
 				if (!isImporting(status)) {
-					console.log('getNetworkImportUpdates:end');
+					log('getNetworkImportUpdates:end');
 					toggleImporting(network, false);
 					endImportUpdate(importUpdate);
 					if (status === 'finished' || status === 'end') {
@@ -1824,17 +1915,17 @@ $(function () {
 			$nwFriendsLoading.show();
 
 			$.when($.getJSON(xhrBase + '/user/networks'), importUpdate.promise).done(function (networkResult, status) {
-				console.log('networks promise', networkResult, status);
+				log('networks promise', networkResult, status);
 
 				$nwFriendsLoading.hide();
 
-				console.log('[networks status]', networkResult, status);
+				log('[networks status]', networkResult, status);
 
 				var networks = networkResult[0];
 				var connected = isConnected(networks, network);
 				var importing = isImporting(status);
 
-				console.log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing, !(connected || importing), !importing && connected, status === 'error');
+				log('[network status] network=' + network + ', connected=' + connected + ', importing=' + importing, !(connected || importing), !importing && connected, status === 'error');
 
 				toggleInviteHelp(network, !(connected || importing), status === 'error');
 				toggleImporting(network, importing);
@@ -1901,7 +1992,7 @@ $(function () {
 		case 'requested':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function (data) {
 				o.state = 'unfriended';
-			}).error(function () {
+			}).fail(function () {
 				if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
 					o.state = 'friend';
 				}
@@ -1938,7 +2029,7 @@ $(function () {
 
 	function getAlwaysCallback($a, o) {
 		return function () {
-			console.log('getAlwaysCallback', $a, o.state);
+			log('getAlwaysCallback', $a, o.state);
 			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
 			$a.closest('.friend').removeClass('requested unfriended').addClass(o.state);
 			$a.nextAll('.friend-action-desc').text('');
@@ -1975,7 +2066,7 @@ $(function () {
 		.done(function (a0, a1) {
 			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function (o, u) {o[u.id] = true; return o; }, {});
-			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
+			log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
 			for (var f, i = 0; i < friends.length; i++) {
 				f = friends[i];
 				f.picUri = formatPicUrl(f.id, f.pictureName, 200);
@@ -2003,7 +2094,7 @@ $(function () {
 		// tweak these values as desired
 		var offset = sH / 3, toFetch = FETCH_SIZE;
 		if (!$nwFriendsLoading.is(':visible') && this.clientHeight + sT > sH - offset) {
-			console.log('loading more friends');
+			log('loading more friends');
 			prepInviteTab(toFetch);
 		}
 	});
@@ -2033,7 +2124,7 @@ $(function () {
 	var moreFriends = true;
 	var invitesLeft;
 	function prepInviteTab(moreToShow) {
-		console.log('[prepInviteTab]', moreToShow);
+		log('[prepInviteTab]', moreToShow);
 		if (moreToShow && !moreFriends) {
 			return;
 		}
@@ -2059,10 +2150,10 @@ $(function () {
 			updatedAt: invitesUpdatedAt
 		};
 
-		console.log('[prepInviteTab]', opts);
+		log('[prepInviteTab]', opts);
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
-			console.log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
+			log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
 			friends.forEach(normalizeFriend);
 
 			var nw = getNetworkFilterSelected();
@@ -2083,7 +2174,7 @@ $(function () {
 					opts.network = 'email';
 					opts.after = void 0;
 					$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
-						console.log('[prepInviteTab2] search: ' + search + ', network: ' + network + ', friends: ', friends);
+						log('[prepInviteTab2] search: ' + search + ', network: ' + network + ', friends: ', friends);
 						friends.forEach(normalizeFriend);
 
 						var nw = getNetworkFilterSelected();
@@ -2178,7 +2269,7 @@ $(function () {
 	function showNoSearchInviteResults($noResults, search, network) {
 		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 		$noResults.find('.refresh-friends').click(function () {
-			submitForm(wwwDomain + '/friends/invite/refresh', 'post');
+			submitForm('/friends/invite/refresh');
 		});
 		$noResults.find('.tell-us').click(sendFeedback);
 	}
@@ -2197,9 +2288,9 @@ $(function () {
 		e.preventDefault();
 		$.post(this.action, $(this).serialize()).complete(function (xhr) {
 			if (xhr.status >= 400) {
-				console.log('error sending invite:', xhr);
+				log('error sending invite:', xhr);
 			} else {
-				console.log('sent invite');
+				log('sent invite');
 				$inviteMessageDialog.dialog('hide');
 			}
 			updateInviteCache();
@@ -2266,7 +2357,7 @@ $(function () {
 		// tweak these values as desired
 		var offset = sH / 3, toFetch = FETCH_SIZE;
 		if (!$('.found-user-list-loading').is(':visible') && this.clientHeight + sT > sH - offset) {
-			console.log('loading more users');
+			log('loading more users');
 			prepFindTab(toFetch);
 		}
 	});
@@ -2305,7 +2396,7 @@ $(function () {
 		case 'requested':
 			xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function (data) {
 				o.status = '';
-			}).error(function () {
+			}).fail(function () {
 				if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
 					o.status = 'friend';
 				}
@@ -2339,7 +2430,7 @@ $(function () {
 	}
 
 	function prepFindTab(moreToShow) {
-		console.log('prepFindTab', moreToShow);
+		log('prepFindTab', moreToShow);
 		if (moreToShow && !moreUsers) { return; }
 		moreUsers = true;
 		var search = getUserFilterInput();
@@ -2362,12 +2453,12 @@ $(function () {
 		};
 		userPageIndex = pageNum;
 		//$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
-		$.getJSON(xhrBaseSearch + '/users/page', opts, function (friends) {
+		$.getJSON(KF.xhrBaseSearch + '/users/page', opts, function (friends) {
 			if (search !== getUserFilterInput()) {
 				return;
 			}
 			userPageIndex++;
-			console.log('[prepFindTab] friends:', friends && friends.length, friends);
+			log('[prepFindTab] friends:', friends && friends.length, friends);
 			friends.forEach(function (obj, i) {
 				obj.status = obj.status || '';
 				obj.image = formatPicUrl(obj.user.id, obj.user.pictureName, 200);
@@ -2403,7 +2494,7 @@ $(function () {
 			$a.closest('.friend-req').find('.friend-req-q').text(
 				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
 			updateFriendRequests(-1);
-		}).error(function () {
+		}).fail(function () {
 			$a.siblings('a').addBack().attr('href', 'javascript:');
 		});
 		$a.siblings('a').addBack().removeAttr('href');
@@ -2417,7 +2508,7 @@ $(function () {
 	var $friendReqsLoading = $('.friend-reqs-loading');
 	function prepRequestsTab() {
 		$.getJSON(xhrBase + '/user/incomingFriendRequests', function (reqs) {
-			console.log('[prepRequestsTab] req:', reqs.length);
+			log('[prepRequestsTab] req:', reqs.length);
 			for (var r, i = 0; i < reqs.length; i++) {
 				r = reqs[i];
 				r.picUri = formatPicUrl(r.id, r.pictureName, 200);
@@ -2450,7 +2541,7 @@ $(function () {
 			feed.setNumEntries(-1);
 			feed.setResultFormat(google.feeds.Feed.JSON_FORMAT);
 			feed.load(function renderFeed(o) {
-				console.log('[renderFeed]', o);
+				log('[renderFeed]', o);
 				if (o.feed) {
 					var suffixes = [,'st','nd','rd'];
 					o.feed.entries.forEach(function (a) {
@@ -2469,7 +2560,7 @@ $(function () {
 		} else {
 			q = searchResponse.query;
 		}
-		console.log('[doSearch] ' + (searchResponse ? 'more ' : '') + 'q:', q);
+		log('[doSearch] ' + (searchResponse ? 'more ' : '') + 'q:', q);
 		$('.left-col .active').removeClass('active');
 		$('body').attr('data-view', 'search');
 		if (!searchResponse) {
@@ -2484,7 +2575,7 @@ $(function () {
 		$query.attr('data-q', q);
 		if (!$query.val()) { $query.val(q).focus().closest($queryWrap).removeClass('empty'); }
 		var context = searchResponse && searchResponse.context;
-		$.getJSON(xhrBaseSearch, {q: q, f: 'a', maxHits: 30, context: context}, function (data) {
+		$.getJSON(KF.xhrBaseSearch, {q: q, f: 'a', maxHits: 30, context: context}, function (data) {
 			updateCollectionsIfAnyUnknown(data.hits);
 			$.when(promise.me, promise.collections).done(function () {
 				searchResponse = data;
@@ -2529,14 +2620,14 @@ $(function () {
 		if (keepId) {
 			params.after = keepId;
 		} else if (!promise.keeps || promise.keeps.state() === 'pending') {
-			console.log('[anyNewKeeps] keeps not loaded yet');
+			log('[anyNewKeeps] keeps not loaded yet');
 			return;
 		}
 
 		if ($('.left-col h3.active').is('.collection')) {
 			params.collection = $('.left-col h3.active').data('id');
 		}
-		console.log('[anyNewKeeps] fetching', params);
+		log('[anyNewKeeps] fetching', params);
 		$.getJSON(xhrBase + '/keeps/all', params, function (data) {
 			updateCollectionsIfAnyUnknown(data.keeps);
 			$.when(promise.collections).done(function () {
@@ -2621,7 +2712,7 @@ $(function () {
 			if (lastKeep) {
 				params.before = lastKeep;
 			}
-			console.log('Fetching %d keeps %s', params.count, lastKeep ? 'before ' + lastKeep : '');
+			log('Fetching %d keeps %s', params.count, lastKeep ? 'before ' + lastKeep : '');
 			promise.keeps = $.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
 				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function () {
@@ -2855,7 +2946,7 @@ $(function () {
 		hideCollMenu();
 		var $coll = $collMenu.closest('.collection');
 		var collId = $coll.data('id');
-		console.log('Removing tag', collId);
+		log('Removing tag', collId);
 		$.postJson(xhrBase + '/collections/' + collId + '/delete', {}, function (data) {
 			delete collections[collId];
 			$coll.slideUp(80, $.fn.remove.bind($coll));
@@ -2868,7 +2959,7 @@ $(function () {
 			var $pageColl = $detail.find('.page-coll[data-id=' + collId + ']');
 			if ($pageColl.length) { $pageColl.css('width', $pageColl[0].offsetWidth); }
 			$keepColl.add($pageColl).layout().on('transitionend', removeIfThis).addClass('removed');
-		}).error(showMessage.bind(null, 'Could not delete tag, please try again later'));
+		}).fail(showMessage.bind(null, 'Could not delete tag, please try again later'));
 	}).on('mouseup mousedown', '.coll-rename', function (e) {
 		if (e.which > 1 || !$collMenu.hasClass('showing')) { return; }
 		hideCollMenu();
@@ -2896,7 +2987,7 @@ $(function () {
 						if ($myKeeps.data('collId') === collId) {
 							$main.find('h1').text(newName);
 						}
-					}).error(function () {
+					}).fail(function () {
 						showMessage('Could not rename tag, please try again later');
 						$name.text(oldName);
 					});
@@ -2918,7 +3009,7 @@ $(function () {
 		}
 	});
 	function hideCollMenu() {
-		console.log('[hideCollMenu]');
+		log('[hideCollMenu]');
 		document.removeEventListener('mousedown', $collMenu.data('docMouseDown'), true);
 		$collMenu.removeData('docMouseDown').one('transitionend', function () {
 			$collMenu.detach().find('.hover').removeClass('hover');
@@ -2946,7 +3037,7 @@ $(function () {
 		var state = History.getState();
 		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
 		var parts = hash.split('/');
-		console.log('[' + e.type + ']', hash, state);
+		log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 		case '':
 			navigate('');
@@ -2992,7 +3083,7 @@ $(function () {
 			uri = uri.substr(baseUri.length);
 		}
 		var title, kind = uri.match(/[\w-]*/)[0];
-		console.log('[navigate]', uri, opts || '', kind);
+		log('[navigate]', uri, opts || '', kind);
 		var clearTags = true;
 		switch (kind) {
 		case '':
@@ -3100,13 +3191,13 @@ $(function () {
 	$queryWrap.focusin($.fn.addClass.bind($queryWrap, 'focus'));
 	$queryWrap.focusout($.fn.removeClass.bind($queryWrap, 'focus'));
 	var $query = $('input.query').on('keydown input', function (e) {
-		console.log('[clearTimeout]', e.type);
+		log('[clearTimeout]', e.type);
 		clearTagInput();
 		clearTimeout(searchTimeout);
 		var val = this.value, q = $.trim(val);
 		$queryWrap.toggleClass('empty', !val);
 		if (q === ($query.attr('data-q') || '')) {
-			console.log('[query:' + e.type + '] no change');
+			log('[query:' + e.type + '] no change');
 		} else if (!q) {
 			navigate('');
 		} else if (!e.which || e.which === 13) { // Enter
@@ -3141,8 +3232,8 @@ $(function () {
 		beforeStop: function (event, ui) {
 			// update the collection order
 			$.postJson(xhrBase + '/collections/ordering', $(this).find('.collection').map(getDataId).get(), function (data) {
-				console.log(data);
-			}).error(function () {
+				log(data);
+			}).fail(function () {
 				showMessage('Could not reorder the tags, please try again later');
 				// TODO: revert the re-order in the DOM
 			});
@@ -3223,7 +3314,7 @@ $(function () {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
 			$collList.find('.antiscroll-inner')[0].scrollTop = 0;
 			callback(data.id);
-		}).error(function () {
+		}).fail(function () {
 			showMessage('Could not create tag, please try again later');
 			callback();
 		});
@@ -3250,7 +3341,7 @@ $(function () {
 						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
 					}
 				}
-			}).error(function () {
+			}).fail(function () {
 				showMessage('Could not add to tag, please try again later');
 				if (onError) { onError(); }
 			});
@@ -3272,7 +3363,7 @@ $(function () {
 				$pageColl.css('width', $pageColl[0].offsetWidth).layout().on('transitionend', removeIfThis).addClass('removed');
 			}
 			$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps -= data.removed);
-		}).error(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
+		}).fail(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
 	}
 
 	function undoRemoveFromCollection(collId, $keeps, $titles) {
@@ -3323,7 +3414,7 @@ $(function () {
 				}, function (data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass('mine').find('.keep-private').toggleClass('on', howKept === 'pri');
-				}).error(showMessage.bind(null, 'Could not add Keeps, please try again later'));
+				}).fail(showMessage.bind(null, 'Could not add Keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
 			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function () {return {url: this.querySelector('.keep-title>a').href}; }).get(), function (data) {
 				// TODO: update number in "Showing top 30 results" tagline? load more instantly if number gets too small?
@@ -3350,7 +3441,7 @@ $(function () {
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
 					undoUnkeep.bind(null, $keeps, $titles),
 					$.fn.remove.bind($keepsGoing));
-			}).error(showMessage.bind(null, 'Could not delete keeps, please try again later'));
+			}).fail(showMessage.bind(null, 'Could not delete keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept === 'pub' ? 'pri' : 'pub';
 			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
@@ -3362,7 +3453,7 @@ $(function () {
 					{keeps: [{title: keepLink.title, url: keepLink.href, isPrivate: howKept === 'pri'}]},
 					function () {
 						$keep.find('.keep-private').toggleClass('on', howKept === 'pri');
-					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
+					}).fail(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
 	}).on('click', '.page-coll-x', function (e) {
@@ -3594,7 +3685,7 @@ $(function () {
 	var emailTmpl = Handlebars.compile($('#email-address').html());
 
 	function updateMe(data) {
-		console.log('[updateMe]', data);
+		log('[updateMe]', data);
 		me = data;
 		mixpanel.alias(me.id);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
@@ -3617,9 +3708,9 @@ $(function () {
 		var pendingPrimary = getPendingPrimaryEmail();
 
 		var $unverified = $('.profile-email-address-unverified');
-		$unverified.toggle(!pendingPrimary && !primary.isVerified);
+		$unverified.toggle(!pendingPrimary && primary && !primary.isVerified);
 
-		$('.profile-email input').val(primary.address || '');
+		$('.profile-email input').val(primary && primary.address || '');
 
 		var $emails = $('.profile-email-address-list').empty();
 		(me.emails || []).forEach(function (info, i, list) {
@@ -3650,7 +3741,7 @@ $(function () {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
+		me: refreshMe().promise(),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
@@ -3682,7 +3773,7 @@ $(function () {
 				.append($('<span>').addClass('notification-box').text(msg))
 				.appendTo('.query-wrap')
 				.show()
-				.delay(2000)
+				.delay(5000)
 				.fadeOut('slow');
 		}
 	}
@@ -3690,26 +3781,54 @@ $(function () {
 	// render initial view
 	$(window).trigger('statechange');
 
-	/*
-	// auto-update my keeps
-	setTimeout(function refresh() {
-		updateCollections();
-		addNewKeeps();
-		setTimeout(refresh, 25000 + 5000 * Math.random());
-	}, 30000);
-	*/
+	window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+	window.addEventListener('message', function (event) {
+		if (event.origin === location.origin && event.data && event.data.bookmarkCount > 0) {
+			$('.welcome-dialog').dialog('hide');
+			showBookmarkImportDialog(event);
+		}
+	});
 
-	var $welcomeDialog = $('.welcome-dialog').remove().show();
-	$.when(promise.myPrefs).done(function () {
-		if (!myPrefs.site_welcomed) {
+	var $bookmarkImportDialog = $('.import-dialog').remove().show();
+
+	function showBookmarkImportDialog(event) {
+		$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
+		$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
+			$bookmarkImportDialog.dialog('hide');
+			$bookmarkImportDialog = null;
+			// don't open again!
+			event.source.postMessage('import_bookmarks_declined', event.origin);
+			welcomeUser();
+		}).on('click', 'button.do-import', function () {
+			$bookmarkImportDialog.find('.import-step-1').hide();
+			$bookmarkImportDialog.find('.import-step-2').show();
+			$bookmarkImportDialog.on('click', 'button', function () {
+				$bookmarkImportDialog.dialog('hide');
+				$bookmarkImportDialog = null;
+				welcomeUser();
+			});
+			event.source.postMessage('import_bookmarks', event.origin);
+		}).find('button').focus();
+	}
+
+	function welcomeUser() {
+		if ($bookmarkImportDialog && $bookmarkImportDialog.is(":visible")) return;
+		if ((!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") && $welcomeDialog) {
 			$welcomeDialog.dialog('show').on('click', 'button', function () {
+				$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+					log('[prefs]', data);
+				});
 				$welcomeDialog.dialog('hide');
 				$welcomeDialog = null;
 				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
 			}).find('button').focus();
-			$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				console.log('[prefs]', data);
-			});
+		}
+	}
+
+	var $welcomeDialog = $('.welcome-dialog').remove().show();
+	$.when(promise.myPrefs).done(function () {
+		if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
+			welcomeUser();
 		} else {
 			$welcomeDialog = null;
 		}
@@ -3743,7 +3862,7 @@ $(function () {
 			});
 			$.getJSON(xhrBase + '/user/' + id + '/networks', function (networks) {
 				for (var nw in networks) {
-					console.log('[networks]', nw, networks[nw]);
+					log('[networks]', nw, networks[nw]);
 					$el.find('.friend-nw-' + nw)
 						.attr('href', networks[nw].connected || null);
 				}

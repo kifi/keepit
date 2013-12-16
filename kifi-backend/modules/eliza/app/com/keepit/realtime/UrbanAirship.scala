@@ -1,6 +1,7 @@
 package com.keepit.realtime
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import java.util.concurrent.TimeoutException
+
 import scala.concurrent.{Future, future, Promise}
 import scala.slick.driver.BasicProfile
 import scala.slick.lifted.BaseTypeMapper
@@ -14,11 +15,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.common.time._
 import com.keepit.model.User
-
-import play.api.http.Status.NOT_FOUND
-import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.{MessageThread, Message}
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.http.Status.NOT_FOUND
+import play.api.libs.json.Json
 
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
@@ -168,19 +170,36 @@ class UrbanAirshipImpl @Inject()(
     } else Future.successful(device)
   }
 
+  private def postIOS(device: Device, notification: PushNotification): Unit = authenticatedClient.postFuture(
+    DirectUrl(s"${config.baseUrl}/api/push"), Json.obj(
+      "device_tokens" -> Seq(device.token),
+      "aps" -> Json.obj(
+        "badge" -> notification.unvisitedCount,
+        "alert" -> notification.message,
+        "sound" -> UrbanAirship.NotificationSound
+      ),
+      "id" -> notification.id.id
+    )
+  )
+
   def sendNotification(device: Device, notification: PushNotification): Unit = {
     log.info(s"Sending notification to device: ${device.token}")
     device.deviceType match {
       case DeviceType.IOS =>
-        authenticatedClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), Json.obj(
-          "device_tokens" -> Seq(device.token),
-          "aps" -> Json.obj(
-            "badge" -> notification.unvisitedCount,
-            "alert" -> notification.message,
-            "sound" -> UrbanAirship.NotificationSound
-          ),
-          "id" -> notification.id.id
-        ))
+        try {
+          postIOS(device, notification)
+        } catch {
+          case e: TimeoutException =>
+            log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
+            try {
+              postIOS(device, notification)
+            } catch {
+              case t: Throwable =>
+                log.error(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", t)
+            }
+          case t: Throwable =>
+            throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
+        }
       case DeviceType.Android =>
         ???
     }

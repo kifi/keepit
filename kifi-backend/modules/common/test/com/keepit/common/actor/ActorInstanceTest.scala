@@ -3,9 +3,6 @@ package com.keepit.common.actor
 import com.keepit.test._
 import akka.actor._
 import org.specs2.mutable.Specification
-import com.google.inject.{Singleton, Provides}
-import play.api.Play.current
-import akka.testkit.TestKit
 
 class MyTestActorA extends Actor {
   def receive = {
@@ -20,6 +17,7 @@ class MyTestActorB extends Actor {
 }
 
 class ActorInstanceTest extends Specification with TestInjector {
+  implicit val system = ActorSystem("test")
 
   "ActorInstance" should {
     "provide singletons" in {

@@ -3,8 +3,9 @@ package com.keepit.eliza
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
-import com.keepit.test.DbTestInjector
-import com.google.inject.Injector
+
+import com.keepit.inject._
+import com.keepit.test.{DbTestInjector}
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
@@ -12,16 +13,37 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.social.BasicUser
-
-import play.api.libs.json.{Json, JsObject}
 import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
 import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
 
+import com.keepit.eliza.model.NonUserParticipant
+
+import com.google.inject.Injector
+
+import play.api.test.Helpers._
+import play.api.libs.json.{Json, JsObject}
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import akka.actor.ActorSystem
+
+
 class MessagingTest extends Specification with DbTestInjector {
 
   implicit val context = HeimdalContext.empty
+
+  def modules = {
+    implicit val system = ActorSystem("test")
+    Seq(
+      ElizaCacheModule(),
+      FakeShoeboxServiceModule(),
+      TestHeimdalServiceClientModule(),
+      TestElizaServiceClientModule(),
+      StandaloneTestActorSystemModule()
+    )
+  }
 
   def setup()(implicit injector: Injector) = {
     val threadRepo = inject[MessageThreadRepo]
@@ -34,7 +56,7 @@ class MessagingTest extends Specification with DbTestInjector {
     val uriNormalizationUpdater: UriNormalizationUpdater = null
     val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
     val messagingAnalytics = inject[MessagingAnalytics]
-    val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier(clock))
+    val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier())
     val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, abookServiceClient, clock, uriNormalizationUpdater, urbanAirship, messagingAnalytics)
 
     val user1 = Id[User](42)
@@ -48,13 +70,13 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestHeimdalServiceClientModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withDb(modules:_*) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
         val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
-        messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20).length === 0
+        Await.result(messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20), Duration(4, "seconds")).length === 0
 
         val (thread2, msg2) = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
 
@@ -72,7 +94,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestHeimdalServiceClientModule(), TestElizaServiceClientModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withDb(modules:_*) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Seq, notificationRouter) = setup()
 
@@ -100,7 +122,7 @@ class MessagingTest extends Specification with DbTestInjector {
         messagingController.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
         messagingController.getUnreadUnmutedThreadCount(user3) === 1
 
-        val notifications : Seq[JsObject] = messagingController.getLatestUnreadSendableNotifications(user3, 20)
+        val notifications : Seq[JsObject] = Await.result(messagingController.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))
         notifications.length === 1
         val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
         println(participants)

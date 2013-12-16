@@ -61,7 +61,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
           val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
           val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id,
-            uriId = uri.id.get, source = BookmarkSource.hover, createdAt = t1.plusMinutes(3)))
+            uriId = uri.id.get, source = BookmarkSource.keeper, createdAt = t1.plusMinutes(3)))
           val bookmark2 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url.url, urlId = url.id,
             uriId = uri.id.get, source = BookmarkSource.initLoad, createdAt = t2.plusDays(1)))
 
