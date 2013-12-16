@@ -8,7 +8,6 @@ import com.keepit.inject.TestFortyTwoModule
 import com.keepit.common.net._
 import com.keepit.common.actor._
 import org.specs2.mutable.Specification
-import akka.testkit.TestKit
 
 import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.Schema
@@ -16,9 +15,9 @@ import javax.xml.validation.SchemaFactory
 import javax.xml.validation.{Validator => JValidator}
 import org.xml.sax.SAXException
 import java.io.StringReader
-import play.api.Mode.Test
 
 import scala.xml._
+import akka.actor.ActorSystem
 
 class AirbrakeTest extends Specification with TestInjector {
 
@@ -80,6 +79,7 @@ class AirbrakeTest extends Specification with TestInjector {
     }
 
     "format with url and no params" in {
+      implicit val system = ActorSystem("test")
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(

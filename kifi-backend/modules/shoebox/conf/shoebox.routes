@@ -35,7 +35,7 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 
-POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
+POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
 
@@ -55,7 +55,9 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
+# /boomarks/private is deprecated, use /bookmarks/update instead
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
+POST    /bookmarks/update          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
@@ -106,6 +108,11 @@ POST    /m/1/collections/create             @com.keepit.controllers.mobile.Mobil
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileBookmarksController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
+POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
+
+POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
+POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 
 ##########################################
 # Website
@@ -161,11 +168,11 @@ POST    /site/collections/create    @com.keepit.controllers.website.BookmarksCon
 POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
-POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
+POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: String)
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
@@ -186,6 +193,9 @@ GET     /site/user/socialConnections  @com.keepit.controllers.website.UserContro
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
+POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
+POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
+POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: String)
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
@@ -222,7 +232,6 @@ GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
-
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
@@ -313,8 +322,10 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/search/semanticVector/leaveOneOut       @com.keepit.controllers.admin.AdminSemanticVectorController.leaveOneOut(queryText: String, stem: Boolean ?= true, useSketch: Boolean ?= false)
-GET     /admin/search/semanticVector/allSubsets       @com.keepit.controllers.admin.AdminSemanticVectorController.allSubsets(queryText: String, stem: Boolean ?= true, useSketch: Boolean ?= false)
+GET     /admin/search/semanticVector                      @com.keepit.controllers.admin.AdminSemanticVectorController.index
+POST     /admin/search/semanticVector/analysis            @com.keepit.controllers.admin.AdminSemanticVectorController.analysis
+POST     /admin/search/semanticVector/similarity          @com.keepit.controllers.admin.AdminSemanticVectorController.similarity
+POST     /admin/search/semanticVector/visualize           @com.keepit.controllers.admin.AdminSemanticVectorController.visualize
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
@@ -339,7 +350,7 @@ POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
 
 GET     /admin/spell/spellchecker   @com.keepit.controllers.admin.AdminSpellCorrectorController.spellChecker()
-POST     /admin/spell/correct        @com.keepit.controllers.admin.AdminSpellCorrectorController.correct()
+POST    /admin/spell/correct        @com.keepit.controllers.admin.AdminSpellCorrectorController.correct()
 
 GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
 POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
@@ -394,8 +405,8 @@ POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keep
 POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.shoebox.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
-POST     /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers()
-POST     /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailAddressesForUsers()
+POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers()
+POST    /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.shoebox.ShoeboxController.getEmailAddressesForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
@@ -445,6 +456,8 @@ GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.sh
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.shoebox.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.shoebox.ShoeboxController.isUnscrapableP
+POST     /internal/shoebox/database/scraped           @com.keepit.controllers.shoebox.ShoeboxController.scraped
+POST     /internal/shoebox/database/scrapeFailed      @com.keepit.controllers.shoebox.ShoeboxController.scrapeFailed
 GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.shoebox.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.getUserValue(userId: Id[User], key: String)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.shoebox.ShoeboxController.setUserValue(userId: Id[User], key: String)

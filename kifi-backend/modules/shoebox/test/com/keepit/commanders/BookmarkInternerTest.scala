@@ -7,8 +7,11 @@ import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
 import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.heimdal.HeimdalContext
 
 class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector {
+
+  implicit val context = HeimdalContext.empty
 
   "BookmarkInterner" should {
     "persist bookmark" in {
@@ -84,7 +87,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val initialBookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), BookmarkSource.hover)
+        )), user, Set(), BookmarkSource.keeper)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
           bookmarkRepo.save(bookmarkRepo.getByUser(user.id.get).head.withActive(false))
@@ -92,7 +95,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), BookmarkSource.hover)
+        )), user, Set(), BookmarkSource.keeper)
         db.readOnly { implicit s =>
           bookmarks.size === 1
           bookmarkRepo.all.size === 1

@@ -34,7 +34,7 @@ panes.thread = function () {
       api.port.emit('thread', {id: threadId, respond: true}, function (th) {
         renderThread($paneBox, $tall, $who, th.id, th.messages, session);
         api.port.emit('participants', th.id, function (participants) {
-          window.messageHeader.init($who, th.id, participants);
+          window.messageHeader.init($who.find('.kifi-message-header'), th.id, participants);
         });
         api.port.on(handlers);
       });

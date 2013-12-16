@@ -1,13 +1,12 @@
 package com.keepit.scraper
 
-import com.google.inject.Inject
+import com.google.inject.{Provider, Inject}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import java.io.File
 import org.joda.time.Days
 import com.keepit.common.time._
 import com.keepit.common.net.URI
@@ -18,21 +17,106 @@ import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Failure
 import scala.util.Success
+import com.keepit.common.akka.FortyTwoActor
+import play.api.Play
+import akka.routing.SmallestMailboxRouter
+import akka.util.Timeout
+import akka.actor._
+import akka.pattern.ask
+import play.api.Play.current
 
-class AsyncScrapeProcessor @Inject() (asyncScraper:AsyncScraper) extends ScrapeProcessor with Logging {
+trait AsyncScrapeProcessor extends ScrapeProcessor
 
-  def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    asyncScraper.asyncFetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
+class SimpleAsyncScrapeProcessor @Inject() (asyncScraper:AsyncScraper) extends AsyncScrapeProcessor with Logging {
+  def fetchBasicArticle(url:String, proxy:Option[HttpProxy], extractorType:Option[ExtractorProviderType]) = asyncScraper.asyncFetchBasicArticle(url, proxy, extractorType)
+  def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt: Option[HttpProxy]) = asyncScraper.asyncSafeProcessURI(uri, info, proxyOpt)
+  def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit = asyncScraper.asyncSafeProcessURI(uri, info, proxyOpt)
+}
+
+class AsyncScrapeActorProcessor @Inject() (
+  scraperConfig: ScraperConfig,
+  sysProvider:   Provider[ActorSystem],
+  procProvider:  Provider[AsyncScraperActor]
+) extends AsyncScrapeProcessor with Logging {
+
+  lazy val system = sysProvider.get
+  lazy val actor = {
+    val nrOfInstances = if (Play.maybeApplication.isDefined && (!Play.isTest)) Runtime.getRuntime.availableProcessors else 1
+    system.actorOf(Props(procProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
   }
 
-  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
-    asyncScraper.asyncProcessURI(uri, info, proxyOpt)
+  implicit val timeout = Timeout(scraperConfig.actorTimeout)
+
+  def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    (actor ? FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)).mapTo[Option[BasicArticle]]
   }
 
-  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit =  { // todo: consolidate
-    asyncScraper.asyncProcessURI(uri, info, proxyOpt)
+  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
+    (actor ? ScrapeArticle(uri, info, proxyOpt)).mapTo[(NormalizedURI, Option[Article])]
   }
 
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit = {
+    actor ! AsyncScrape(uri, info, proxyOpt)
+  }
+}
+
+
+class AsyncScraperActor @Inject() (
+  airbrake:AirbrakeNotifier,
+  config: ScraperConfig,
+  asyncScraper: AsyncScraper,
+  httpFetcher: HttpFetcher,
+  extractorFactory: ExtractorFactory,
+  articleStore: ArticleStore,
+  s3ScreenshotStore: S3ScreenshotStore,
+  helper: SyncShoeboxDbCallbacks
+) extends FortyTwoActor(airbrake) with Logging {
+
+  log.info(s"[AsyncScraperActor] created $this")
+
+  implicit val myConfig = config
+
+  def receive = {
+    case FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt) => { // note: same as sync; remove?
+      log.info(s"[async-FetchArticle] message received; url=$url")
+      val ts = System.currentTimeMillis
+      val extractor = extractorProviderTypeOpt match {
+        case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
+        case _ => extractorFactory(url)
+      }
+      val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
+      val res = fetchStatus.statusCode match {
+        case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(asyncScraper.basicArticle(url, extractor))
+        case _ => None
+      }
+      log.info(s"[async-FetchArticle] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$res")
+      sender ! res
+    }
+
+    case ScrapeArticle(uri, info, proxyOpt) => {
+      log.info(s"[async-ScrapeArticle] message received; url=${uri.url}")
+      val ts = System.currentTimeMillis
+      asyncScraper.asyncSafeProcessURI(uri, info, proxyOpt) onComplete {
+        case Success(res) =>
+          log.info(s"[async-ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
+          sender ! res
+        case Failure(t) =>
+          log.error(s"[async-ScrapeArticle] encountered exception: $t; cause: ${t.getCause}; stack: ${t.getStackTraceString}")
+          sender ! (uri, None)
+      }
+    }
+
+    case AsyncScrape(nuri, info, proxyOpt) => {
+      log.info(s"[async-AsyncScrape] message received; url=${nuri.url}")
+      val ts = System.currentTimeMillis
+      asyncScraper.asyncSafeProcessURI(nuri, info, proxyOpt) onComplete {
+        case Success((uri, _)) => log.info(s"[async-AsyncScrape] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=(${uri.id}, ${uri.state})")
+        case Failure(t) => {
+          log.error(s"[async-AsyncScrape(${nuri.url},${nuri.id},${nuri.state}})] encountered exception: $t; cause: ${t.getCause}; stack: ${t.getStackTraceString}")
+        }
+      }
+    }
+  }
 }
 
 // ported from original (local) sync version
@@ -68,26 +152,10 @@ class AsyncScraper @Inject() (
     try {
       asyncProcessURI(uri, info, proxyOpt)
     } catch {
-      case t: Throwable => { // todo: revisit
-        log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+      case t: Throwable => {
+        log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; StackTrace: ${t.getStackTraceString}")
         airbrake.notify(t)
-        helper.getNormalizedUri(uri) flatMap { latestUriOpt =>
-          // update the uri state to SCRAPE_FAILED
-          val savedUriF = latestUriOpt match {
-            case None => future { uri }
-            case Some(latestUri) =>
-              if (latestUri.state == NormalizedURIStates.INACTIVE) future { latestUri } else {
-                helper.saveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-              }
-          }
-
-          val res:Future[(NormalizedURI, Option[Article])] = savedUriF map { savedUri =>
-            // then update the scrape schedule
-            helper.saveScrapeInfo(info.withFailure()) // todo: revisit
-            (savedUri, None)
-          }
-          res
-        }
+        helper.scrapeFailed(uri, info) map { savedUri => (savedUri.getOrElse(uri), None) }
       }
     }
   }
@@ -116,7 +184,6 @@ class AsyncScraper @Inject() (
     }
   }
 
-  def processErrorURI(latestUri: NormalizedURI, msg: String, info: ScrapeInfo, httpStatus: Int): (NormalizedURI, Option[Article]) = Await.result(asyncProcessErrorURI(latestUri, msg, info, httpStatus), 5 seconds)
   def asyncProcessErrorURI(latestUri: NormalizedURI, msg: String, info: ScrapeInfo, httpStatus: Int): Future[(NormalizedURI, Option[Article])] = {
     // store a fallback article in a store map
     val article = Article(
@@ -134,11 +201,9 @@ class AsyncScraper @Inject() (
       titleLang = None,
       contentLang = None,
       destinationUrl = None)
-    for {
-      updatedStore <- addToArticleStore(latestUri, article)
-      savedInfo <- helper.saveScrapeInfo(info.withFailure())
-      savedURI <- helper.saveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: revisit
-    } yield (savedURI, None)
+
+    addToArticleStore(latestUri, article)
+    helper.scrapeFailed(latestUri, info) map { savedOpt => (savedOpt.getOrElse(latestUri), None) }
   }
 
   def asyncProcessNoChangeURI(info: ScrapeInfo, uri: NormalizedURI, latestUri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
@@ -165,7 +230,7 @@ class AsyncScraper @Inject() (
       } getOrElse true
     }
 
-    asyncProcessRedirects(latestUri, redirects) flatMap { updatedUri =>
+    asyncProcessRedirects(latestUri, redirects) map { updatedUri =>
       // check if document is not changed or does not need to be reindexed
       if (latestUri.title == Option(article.title) && // title change should always invoke indexing
         latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
@@ -176,37 +241,24 @@ class AsyncScraper @Inject() (
         // the article does not need to be reindexed update the scrape schedule, uri is not changed
         helper.saveScrapeInfo(info.withDocumentUnchanged()) // todo: revisit
         log.info(s"[asyncProcessURI] (${uri.url}) no change detected")
-        future { (latestUri, None) }
+        (latestUri, None)
       } else {
-
         // the article needs to be reindexed
         addToArticleStore(latestUri, article)
-
-        // first update the uri state to SCRAPED
-        helper.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED)) map { scrapedURI =>
-          // then update the scrape schedule
-          helper.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)) // todo: revisit
-          helper.getBookmarksByUriWithoutTitle(scrapedURI.id.get) map { bookmarks =>
-            bookmarks.foreach { bookmark =>
-              helper.saveBookmark(bookmark.copy(title = scrapedURI.title)) // todo: revisit
+        val scrapedUri = updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
+        val scrapedInfo = info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)
+        helper.scraped(scrapedUri, scrapedInfo)
+        if (shouldUpdateScreenshot(scrapedUri)) {
+          s3ScreenshotStore.updatePicture(scrapedUri) onComplete { tr =>
+            tr match {
+              case Success(res) => log.info(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] added image to screenshot store. Result: $res")
+              case Failure(e) => log.error(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] failed to add image to screenshot store. Exception: $e; StackTrace: ${e.getStackTraceString}") // anything else?
             }
           }
-          log.info(s"[asyncProcessURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
-
-          if (shouldUpdateScreenshot(scrapedURI)) {
-            s3ScreenshotStore.updatePicture(scrapedURI) onComplete { tr =>
-              tr match {
-                case Success(res) => log.info(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] added image to screenshot store. Result: $res")
-                case Failure(e) => log.error(s"[asyncProcessURI(${latestUri.id},${latestUri.url}})] failed to add image to screenshot store. Exception: $e; StackTrace: ${e.getStackTraceString}") // anything else?
-              }
-            }
-          }
-
-          log.info(s"[asyncProcessURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
-          (scrapedURI, Some(article))
         }
+        log.info(s"[asyncProcessURI] (${uri.url}) needs re-indexing; scrapedUri=(${scrapedUri.id}, ${scrapedUri.state}, ${scrapedUri.url})")
+        (scrapedUri, Some(article))
       }
-
     }
   }
 

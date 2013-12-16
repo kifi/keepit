@@ -13,8 +13,15 @@ import com.keepit.heimdal._
 
 import play.api.test.Helpers._
 import play.api.libs.json.{Json}
+import com.keepit.common.db.Id
+import akka.actor.ActorSystem
 
 class EventTrackingTest extends Specification with TestInjector {
+
+  def modules = {
+    implicit val system = ActorSystem("test")
+    Seq(TestMongoModule(), StandaloneTestActorSystemModule())
+  }
 
   def setup()(implicit injector: Injector) = {
     val eventTrackingController = inject[EventTrackingController]
@@ -31,9 +38,9 @@ class EventTrackingTest extends Specification with TestInjector {
   "Event Tracking Controller" should {
 
     "store correctly" in {
-      withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
         val (eventTrackingController, userEventRepo, systemEventRepo, testContext) = setup()
-        val userEvent: HeimdalEvent = UserEvent(1, testContext, EventType("user_test_event"))
+        val userEvent: HeimdalEvent = UserEvent(Id(1), testContext, EventType("user_test_event"))
         userEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(userEvent))
         userEventRepo.eventCount() === 1
@@ -48,22 +55,22 @@ class EventTrackingTest extends Specification with TestInjector {
     }
 
     "store array" in {
-      withInjector(TestMongoModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(modules :_*) { implicit injector =>
         val (eventTrackingController, userEventRepo, systemEventRepo, testContext) = setup()
-        val events: Array[HeimdalEvent] = Array( UserEvent(1, testContext, EventType("test_event")),
-                            UserEvent(2, testContext, EventType("user_test_event")),
-                            UserEvent(3, testContext, EventType("user_test_event")),
-                            UserEvent(4, testContext, EventType("user_test_event")),
+        val events: Array[HeimdalEvent] = Array( UserEvent(Id(1), testContext, EventType("test_event")),
+                            UserEvent(Id(2), testContext, EventType("user_test_event")),
+                            UserEvent(Id(3), testContext, EventType("user_test_event")),
+                            UserEvent(Id(4), testContext, EventType("user_test_event")),
                             SystemEvent(testContext, EventType("system_test_event")))
         userEventRepo.eventCount() === 0
         systemEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvents(Json.toJson(events))
 
         userEventRepo.eventCount() === 4
-        userEventRepo.events(0).userId === 1
-        userEventRepo.events(1).userId === 2
-        userEventRepo.events(2).userId === 3
-        userEventRepo.events(3).userId === 4
+        userEventRepo.events(0).userId === Id(1)
+        userEventRepo.events(1).userId === Id(2)
+        userEventRepo.events(2).userId === Id(3)
+        userEventRepo.events(3).userId === Id(4)
 
         systemEventRepo.eventCount() === 1
         systemEventRepo.events(0).eventType === EventType("system_test_event")

@@ -4,14 +4,18 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.Plugin
-import com.keepit.model.{EmailAddressRepo, UserNotifyPreferenceRepo, EmailOptOutRepo}
+import com.keepit.model.{User, EmailAddressRepo, UserNotifyPreferenceRepo, EmailOptOutRepo}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.common.time._
+import com.keepit.common.db.Id
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail)
@@ -44,7 +48,9 @@ private[mail] class MailSenderActor @Inject() (
     userNotifyPreferenceRepo: UserNotifyPreferenceRepo,
     emailAddressRepo: EmailAddressRepo,
     airbrake: AirbrakeNotifier,
-    mailProvider: MailProvider)
+    mailProvider: MailProvider,
+    heimdalContextBuiler: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient)
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -70,6 +76,7 @@ private[mail] class MailSenderActor @Inject() (
       if (newMail.state != ElectronicMailStates.OPT_OUT) {
         log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
         mailProvider.sendMail(newMail)
+        reportEmailNotificationSent(newMail)
       } else {
         log.info(s"Not sending email due to opt-out: ${newMail.id.getOrElse(newMail.externalId)}")
       }
@@ -103,6 +110,41 @@ private[mail] class MailSenderActor @Inject() (
         case Some(userId) =>
           !userNotifyPreferenceRepo.canNotify(userId, category)
       }
+    }
+  }
+
+  private def reportEmailNotificationSent(email: ElectronicMail): Unit = if (PostOffice.Categories.User.all.contains(email.category)) {
+    val sentAt = currentDateTime
+    SafeFuture {
+      val contextBuilder =  heimdalContextBuiler()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("channel", "email")
+      contextBuilder += ("category", email.category.category)
+      contextBuilder += ("emailId", email.id.map(_.id.toString).getOrElse(email.externalId.id))
+      contextBuilder += ("subject", email.subject)
+      contextBuilder += ("from", email.from.address)
+      contextBuilder += ("fromName", email.fromName.getOrElse(""))
+      email.inReplyTo.foreach { previousEmailId => contextBuilder += ("inReplyTo", previousEmailId.id) }
+      email.senderUserId.foreach { id => contextBuilder += ("senderUserId", id.id) }
+
+      val (toUsers, ccUsers) = db.readOnly { implicit session =>
+        val cc = for {
+          address <- email.cc
+          userId <- emailAddressRepo.getByAddress(address.address).map(_.userId)
+        } yield userId
+
+        val to = for {
+          address <- email.to
+          userId <- emailAddressRepo.getByAddress(address.address).map(_.userId)
+        } yield userId
+
+        (to, cc)
+      }
+
+      contextBuilder += ("to", toUsers.map(_.id))
+      if (ccUsers.nonEmpty) { contextBuilder += ("cc", ccUsers.map(_.id)) }
+      val context = contextBuilder.build
+      (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
   }
 }

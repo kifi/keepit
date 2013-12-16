@@ -5,6 +5,7 @@ trait EmailAddressHolder {
   val address: String
   override def equals(obj: Any) = obj.isInstanceOf[EmailAddressHolder] && obj.asInstanceOf[EmailAddressHolder].address == address
   override def hashCode = address.hashCode
+  override def toString() = address
 }
 
 case class GenericEmailAddress(address: String) extends EmailAddressHolder

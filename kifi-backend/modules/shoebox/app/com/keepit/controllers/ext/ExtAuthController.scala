@@ -25,6 +25,7 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
+  userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient)
@@ -44,9 +45,7 @@ class ExtAuthController @Inject() (
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
          val kiId = ExternalId.asOpt[KifiInstallation](id)
-         kiId match {
-           case Some(_) =>
-           case None =>
+         if (kiId.isEmpty) {
              // They sent an invalid id. Bug on client side?
              airbrake.notify(AirbrakeError(
                method = Some(request.method.toUpperCase()),
@@ -63,7 +62,8 @@ class ExtAuthController @Inject() (
         installationRepo.getOpt(userId, id)
       } match {
         case None =>
-          (installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version)), true, true)
+          val inst = installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
+          (inst, true, true)
         case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
           (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
         case Some(install) =>
@@ -74,15 +74,17 @@ class ExtAuthController @Inject() (
       (user, installation, sliderRuleGroup, urlPatterns, firstTime, isUpgrade)
     }
 
-    if (isUpgrade){
-      SafeFuture{
+    if (isUpgrade) {
+      SafeFuture {
         val contextBuilder = heimdalContextBuilder()
         contextBuilder.addRequestInfo(request)
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
       }
     }
+
+    maybeEnableOrDisableInboxExperiment(userId, version, request.experiments)
 
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
@@ -98,6 +100,31 @@ class ExtAuthController @Inject() (
       "patterns" -> urlPatterns,
       "eip" -> encryptedIp
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+  }
+
+  private def maybeEnableOrDisableInboxExperiment(userId: Id[User], version: KifiVersion, experiments: Set[ExperimentType]): Unit = {
+    import ExperimentType.INBOX
+    import UserExperimentStates.{ACTIVE, INACTIVE}
+    if (version >= KifiVersion(2, 7, 0)) {
+      if (!experiments.contains(INBOX)) {
+        SafeFuture {
+          db.readWrite { implicit session =>
+            (userExperimentRepo.get(userId, INBOX, Some(ACTIVE)) match {
+              case Some(ue) => Some(ue.withState(ACTIVE))
+              case _ => Some(UserExperiment(userId = userId, experimentType = INBOX))
+            }) map userExperimentRepo.save
+          }
+        }
+      }
+    } else if (experiments.contains(INBOX)) {
+      SafeFuture {
+        db.readWrite { implicit session =>
+          userExperimentRepo.get(userId, INBOX) map { ue =>
+            userExperimentRepo.save(ue.withState(INACTIVE))
+          }
+        }
+      }
+    }
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

@@ -10,7 +10,7 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ExternalId, State}
+import com.keepit.common.db.{Id, ExternalId, State}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
@@ -251,7 +251,7 @@ class InviteController @Inject() (db: Database,
             SafeFuture{
               val contextBuilder = eventContextBuilder()
               contextBuilder += ("invitee", invite.recipientSocialUserId.getOrElse(invite.recipientEContactId.get).id)
-              heimdal.trackEvent(UserEvent(invite.senderUserId.map(_.id).getOrElse(-1), contextBuilder.build, UserEventTypes.INVITE_SENT))
+              heimdal.trackEvent(UserEvent(invite.senderUserId.getOrElse(Id[User](-1)), contextBuilder.build, UserEventTypes.INVITE_SENT))
             }
           }
           CloseWindow()

@@ -17,6 +17,7 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import akka.actor.ActorSystem
 
 class ABookUploadTest extends Specification with DbTestInjector {
 
@@ -62,7 +63,9 @@ class ABookUploadTest extends Specification with DbTestInjector {
     )
 
   "ABook Controller" should {
+
     "handle imports from IOS and gmail" in {
+      implicit val system = ActorSystem("test")
       withDb(
         FakeABookRawInfoStoreModule(),
         TestSlickModule(TestDbInfo.dbInfo),
@@ -168,6 +171,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
     }
 
     "handle imports from multiple gmail accounts" in {
+      implicit val system = ActorSystem("test")
       withDb(
         FakeABookRawInfoStoreModule(),
         TestSlickModule(TestDbInfo.dbInfo),

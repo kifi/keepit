@@ -1,11 +1,10 @@
 package com.keepit.common.actor
 
 import akka.actor.{Cancellable, Scheduler, ActorSystem}
-import com.google.inject.{Singleton, Provides}
-import com.keepit.common.plugin.{SchedulingProperties, SchedulingEnabled}
+import com.google.inject.Provides
+import com.keepit.common.plugin.SchedulingEnabled
 import com.keepit.inject.AppScoped
 import play.api.Play.current
-import akka.testkit.TestKit
 import scala.concurrent.future
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
@@ -28,7 +27,7 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
   def actorPluginProvider: ActorPlugin = new ActorPlugin(system)
 }
 
-case class StandaloneTestActorSystemModule(system: ActorSystem = ActorSystem("test-actor-system")) extends ActorSystemModule {
+case class StandaloneTestActorSystemModule(implicit system: ActorSystem) extends ActorSystemModule {
 
   def configure() {
     bind[ActorBuilder].to[TestActorBuilderImpl]

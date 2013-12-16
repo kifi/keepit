@@ -26,7 +26,7 @@ import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.Play
 import com.keepit.common.store.{S3UserPictureConfig, ImageCropAttributes, S3ImageStore}
 import scala.util.{Failure, Success}
@@ -43,6 +43,7 @@ object AuthController {
 class AuthController @Inject() (
     db: Database,
     clock: Clock,
+    authCommander: AuthCommander,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -62,36 +63,13 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
-
-  def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
-    // format { "accessToken": "..." }
-    val oauth2Info = request.body.asOpt[OAuth2Info]
-    val provider = Registry.providers.get(providerName).get
-    val filledUser = provider.fillProfile(
-      SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = oauth2Info))
-    UserService.find(filledUser.identityId) map { user =>
-      val newSession = Events.fire(new LoginEvent(user)).getOrElse(session)
-      Authenticator.create(user).fold(
-        error => throw error,
-        authenticator => Ok(Json.obj("sessionId" -> authenticator.id))
-          .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-          .withCookies(authenticator.toCookie)
-      )
-    } getOrElse NotFound(Json.obj("error" -> "user not found"))
-  }
-
   def loginSocial(provider: String) = ProviderController.authenticate(provider)
   def logInWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
-        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-        val newSession = if (link != "") {
-          // TODO: why is OriginalUrlKey being removed? should we keep it?
-          resSession - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link)
-        } else resSession
-        Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(resCookies: _*).withSession(newSession)
+        authCommander.handleAuthResult(link, request, res) { (cookies:Seq[Cookie], sess:Session) =>
+          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
+        }
       case res => res
     }
   }
@@ -376,7 +354,7 @@ class AuthController @Inject() (
         None
       }
 
-      finishSignup(user, newIdentity, emailConfirmedAlready = false)
+      finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
     })
   }
 
@@ -431,25 +409,26 @@ class AuthController @Inject() (
 
         val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
 
-        finishSignup(user, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+        finishSignup(user, emailAddress, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
       })
   }
 
-  private def finishSignup(user: User, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
+  private def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       // todo: Move to user controller/commander
       db.readWrite { implicit s =>
-        val emailAddrStr = newIdentity.email.get
+        val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
         val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
         val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+        userValueRepo.setValue(user.id.get, "pending_primary_email", emailAddr.address)
 
         if (user.state != UserStates.ACTIVE) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Kifi.com |  Please confirm your email address",
+            subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
         } else {
           postOffice.sendMail(ElectronicMail(
@@ -457,9 +436,16 @@ class AuthController @Inject() (
             to = Seq(GenericEmailAddress(emailAddrStr)),
             subject = "Welcome to Kifi! Please confirm your email address",
             htmlBody = views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
         }
+      }
+    } else {
+      db.readWrite { implicit session =>
+        emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
+          userRepo.save(user.copy(primaryEmailId = Some(emailAddr.id.get)))
+        }
+        userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
     }
 
@@ -534,7 +520,22 @@ class AuthController @Inject() (
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         val user = userRepo.get(address.userId)
-        emailAddressRepo.verify(address.userId, code) match {
+        val verification = emailAddressRepo.verify(address.userId, code)
+
+        if (verification._2) { // code is being used for the first time
+          if (user.primaryEmailId.isEmpty) {
+            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            userValueRepo.clearValue(user.id.get, "pending_primary_email")
+          } else {
+            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
+            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
+              userValueRepo.clearValue(user.id.get, "pending_primary_email")
+              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            }
+          }
+        }
+
+        verification match {
           case (true, _) if user.state == UserStates.PENDING =>
             Redirect("/?m=1")
           case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
@@ -591,7 +592,7 @@ class AuthController @Inject() (
                   to = Seq(resetEmailAddress),
                   subject = "Kifi.com | Password reset requested",
                   htmlBody = views.html.email.resetPassword(resetUrl).body,
-                  category = ElectronicMailCategory("reset_password")
+                  category = PostOffice.Categories.User.RESET_PASSWORD
                 ))
               }
             }

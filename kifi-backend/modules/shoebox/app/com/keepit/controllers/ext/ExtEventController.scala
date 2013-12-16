@@ -70,7 +70,7 @@ class ExtEventController @Inject() (
         }
       }
       eventHelper.newEvent(event) // Forwards to listeners
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, EventType(s"old_${eventFamily}_${eventName}"))) // forwards to Heimdal
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, EventType(s"old_${eventFamily}_${eventName}"))) // forwards to Heimdal
     }
     Ok("")
   }

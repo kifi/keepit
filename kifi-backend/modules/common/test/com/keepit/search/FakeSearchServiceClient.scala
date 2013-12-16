@@ -89,4 +89,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
 
   override def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
+
+  override def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = ???
+
+  override def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = ???
 }

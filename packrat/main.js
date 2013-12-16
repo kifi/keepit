@@ -187,6 +187,56 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
 // ===== Event logging
 
+var mixpanel = {
+  enabled: true,
+  queue: [],
+  batch: [],
+  sendBatch: function(){
+    if (this.batch.length > 0) {
+      var json = JSON.stringify(this.batch);
+      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
+      this.batch.length = 0;
+    }
+  },
+  augmentAndBatch: function(data) {
+    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    data.properties.distinct_id = session.user.id;
+    data.properties.browser = api.browser.name;
+    data.properties.browserDetails = api.browser.userAgent;
+    this.batch.push(data);
+    if (this.batch.length > 10) {
+      this.sendBatch();
+    }
+  },
+  track: function(eventName, properties) {
+    if (this.enabled) {
+      if (!this.sendTimer) {
+        this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
+      }
+      log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
+      properties.time = Date.now();
+      var data = {
+        'event': eventName,
+        'properties': properties
+      };
+      if (session) {
+        this.augmentAndBatch(data);
+      } else {
+        this.queue.push(data);
+      }
+    }
+  },
+  catchUp: function() {
+    var that = this;
+    this.queue.forEach(function (data) {
+      that.augmentAndBatch(data);
+    });
+    this.queue = [];
+  }
+};
+
+
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
@@ -768,6 +818,8 @@ api.port.on({
       }
     }
     if (o.new) {
+      var fragments = o.new.split("/");
+      mixpanel.track("user_viewed_pane", {'type': fragments.length>1 ? fragments[1] : o.new});
       var arr = tabsByLocator[o.new];
       if (arr) {
         arr = arr.filter(idIsNot(tab.id));
@@ -901,6 +953,20 @@ api.port.on({
   },
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
+  },
+  get_bookmark_count_if_should_import: function(_, respond) {
+    if (getStored('prompt_to_import_bookmarks')) {
+      api.bookmarks.getAll(function(bms) {
+        respond(bms.length);
+      });
+    }
+  },
+  import_bookmarks: function() {
+    unstore('prompt_to_import_bookmarks');
+    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
+  },
+  import_bookmarks_declined: function() {
+    unstore('prompt_to_import_bookmarks')
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
@@ -1551,7 +1617,7 @@ api.on.beforeSearch.add(throttle(function () {
   if (session && ~session.experiments.indexOf('tsearch')) {
     ajax('GET', '/204');
   } else {
-    ajax('search', 'GET', '/up');
+    ajax('search', 'GET', '/search/warmUp');
   }
 }, 50000));
 
@@ -1802,6 +1868,7 @@ function startSession(callback, retryMs) {
       reportError("socket disconnect (" + why + ")");
     });
     logEvent.catchUp();
+    mixpanel.catchUp();
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
@@ -1831,7 +1898,7 @@ function startSession(callback, retryMs) {
       }
       api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
-        if (tab.url.replace(/\/#.*$/, "") === webBaseUri()) {
+        if (tab.url.replace(/\/(?:#.*)?$/, '') === webBaseUri()) {
           api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
           startSession(callback, retryMs);
         }
@@ -1906,7 +1973,7 @@ api.timers.setTimeout(function() {
 });
 
 authenticate(function() {
-  if (api.loadReason == "install") {
+  if (api.loadReason === 'install') {
     log("[main] fresh install")();
     var tab = api.tabs.anyAt(webBaseUri() + "/install");
     if (tab) {
@@ -1915,8 +1982,8 @@ authenticate(function() {
       api.tabs.open(webBaseUri() + "/getting-started");
     }
   }
-  if (api.loadReason == "install" || api.prefs.get("env") === "development") {
-    postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
+  if (api.loadReason === 'install' || api.prefs.get('env') === 'development') {
+    store('prompt_to_import_bookmarks', true);
   }
 }, 3000);
 

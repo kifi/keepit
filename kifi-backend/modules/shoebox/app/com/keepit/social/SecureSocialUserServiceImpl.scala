@@ -135,7 +135,7 @@ class SecureSocialUserPluginImpl @Inject() (
       ))
       SafeFuture{
         val contextBuilder = eventContextBuilder()
-        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventTypes.SIGNUP))
+        heimdal.trackEvent(UserEvent(userOpt.get.id.get, contextBuilder.build, UserEventTypes.SIGNUP))
       }
       userOpt
     } else None
