@@ -172,7 +172,7 @@ class ExtBookmarksController @Inject() (
     val installationId = request.kifiInstallationId
     val json = request.body
 
-    val bookmarkSource = (json \ "source").asOpt[String].map(_.toLowerCase).map(BookmarkSource(_)) getOrElse BookmarkSource.unknown
+    val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource.get) getOrElse BookmarkSource.unknown
     if (!BookmarkSource.valid.contains(bookmarkSource)) {
       airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(s"Invalid bookmark source: $bookmarkSource")))
     }
