@@ -290,7 +290,7 @@ class UserController @Inject() (
                   to = Seq(GenericEmailAddress(address)),
                   subject = "Kifi.com | Please confirm your email address",
                   htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-                  category = ElectronicMailCategory("email_confirmation")
+                  category = PostOffice.Categories.User.EMAIL_CONFIRMATION
                 ))
               }
             }
@@ -522,7 +522,7 @@ class UserController @Inject() (
             to = Seq(GenericEmailAddress(email)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-            category = ElectronicMailCategory("email_confirmation")
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
           Ok("0")
         case _ =>

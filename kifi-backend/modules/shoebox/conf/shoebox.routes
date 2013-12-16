@@ -55,7 +55,9 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
+# /boomarks/private is deprecated, use /bookmarks/update instead
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
+POST    /bookmarks/update          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
@@ -110,6 +112,7 @@ POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.Mobil
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
 
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
+POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 
 ##########################################
 # Website

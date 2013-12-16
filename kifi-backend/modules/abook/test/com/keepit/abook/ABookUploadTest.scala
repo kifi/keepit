@@ -63,9 +63,9 @@ class ABookUploadTest extends Specification with DbTestInjector {
     )
 
   "ABook Controller" should {
-    implicit val system = ActorSystem("test")
 
     "handle imports from IOS and gmail" in {
+      implicit val system = ActorSystem("test")
       withDb(
         FakeABookRawInfoStoreModule(),
         TestSlickModule(TestDbInfo.dbInfo),
@@ -171,6 +171,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
     }
 
     "handle imports from multiple gmail accounts" in {
+      implicit val system = ActorSystem("test")
       withDb(
         FakeABookRawInfoStoreModule(),
         TestSlickModule(TestDbInfo.dbInfo),
