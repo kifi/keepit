@@ -47,7 +47,7 @@ object SearchConfig {
       "showExperts" -> "false",
       "forbidEmptyFriendlyHits" -> "false",
       "useNonPersonalizedContextVector" -> "false",
-      "useSemanticBooleanQuery" -> "false"
+      "useSemanticMatch" -> "true"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -80,7 +80,8 @@ object SearchConfig {
       "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
       "showExperts" -> "suggest experts when search returns hits",
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
-      "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector"
+      "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector",
+      "useSemanticMatch" -> "use semantic boolean query"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)

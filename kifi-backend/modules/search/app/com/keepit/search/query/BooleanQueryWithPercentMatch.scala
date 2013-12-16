@@ -22,6 +22,19 @@ import scala.math._
 import java.util.{ArrayList, List => JList}
 import com.keepit.common.logging.Logging
 
+trait PercentMatchQuery extends Query {
+  protected var percentMatch: Float = 0f
+  protected var percentMatchForHotDocs: Float = 1f
+  protected var hotDocs: Option[Filter] = None
+  def getPercentMatch(): Float = percentMatch
+  def getPercentMatchForHotDocs(): Float = percentMatchForHotDocs
+  def setPercentMatch(pctMatch: Float) = { percentMatch = pctMatch }
+  def setPercentMatchForHotDocs(pctMatch: Float, hotDocFilter: Filter) = {
+    percentMatchForHotDocs = pctMatch
+    hotDocs = Some(hotDocFilter)
+  }
+}
+
 object BooleanQueryWithPercentMatch {
   def apply(clauses: JList[BooleanClause], percentMatch: Float, disableCoord: Boolean) = {
     val query = new BooleanQueryWithPercentMatch(disableCoord)
@@ -31,20 +44,7 @@ object BooleanQueryWithPercentMatch {
   }
 }
 
-class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) {
-
-  private[this] var percentMatch = 0.0f
-  private[this] var percentMatchForHotDocs = 1.0f
-  private[this] var hotDocs: Option[Filter] = None
-
-  def setPercentMatch(pctMatch: Float) { percentMatch = pctMatch }
-  def getPercentMatch() = percentMatch
-
-  def setPercentMatchForHotDocs(pctMatch: Float, hotDocFilter: Filter) {
-    percentMatchForHotDocs = pctMatch
-    hotDocs = Some(hotDocFilter)
-  }
-  def getPercentMatchForHotDocs() = percentMatchForHotDocs
+class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery{
 
   override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries

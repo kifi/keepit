@@ -14,6 +14,8 @@ import com.keepit.search.query.BooleanQueryWithSemanticLoss
 
 trait PercentMatch extends QueryParser {
 
+  val useSemanticMatch = false
+
   private[this] var percentMatch: Float = 0.0f
   private[this] var percentMatchForHotDocs: Float = 1.0f
   private[this] var hotDocFilter: Option[Filter] = None
@@ -31,10 +33,9 @@ trait PercentMatch extends QueryParser {
     if (clauses.isEmpty) {
       None // all clause words were filtered away by the analyzer.
     } else {
-      val query = new BooleanQueryWithSemanticLoss(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
-//      val query = new BooleanQueryWithPercentMatch(false)
-//      query.setPercentMatch(percentMatch)
-//      hotDocFilter.foreach{ f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
+      val query = if (useSemanticMatch) new BooleanQueryWithSemanticLoss(false) else new BooleanQueryWithPercentMatch(false)
+      query.setPercentMatch(percentMatch)
+      hotDocFilter.foreach{ f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
 
       val (specialClauses, otherClauses) = clauses.partition{ clause => (clause.getQuery.isInstanceOf[SiteQuery] || clause.getQuery.isInstanceOf[MediaQuery]) && !clause.isProhibited }
       otherClauses.foreach{ clause => query.add(clause) }

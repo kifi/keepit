@@ -21,7 +21,7 @@ import java.util.HashSet
 import org.apache.lucene.search.ComplexExplanation
 
 
-class BooleanQueryWithSemanticLoss(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) {
+class BooleanQueryWithSemanticLoss(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery {
 
   override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
@@ -115,8 +115,6 @@ class BooleanQueryWithSemanticLoss(val disableCoord: Boolean = false) extends Bo
       val maxCoord = requiredWeights.length + optionalWeights.length
       (0 to optionalWeights.length).map { i => if (disableCoord) 1.0f else similarity.coord(i + requiredWeights.length, maxCoord) }.toArray
     }
-
-    override def getValueForNormalization(): Float = 1f
 
     override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
       val sumExpl = new ComplexExplanation()
@@ -223,13 +221,10 @@ object ScorerFactory {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        println("==========construct boolean scorer")
         new BooleanScorer(weight, conjunction(), disjunction(), 1f, 0, 0)
       } else if (required.length > 0) {
-        println("==========construct conjunction scorer")
         conjunction()
       } else if (optional.length > 0) {
-        println("==========construct disjunction scorer")
         disjunction()
       } else QueryUtil.emptyScorer(weight)
 
@@ -306,6 +301,8 @@ class BooleanOrScorerWithSemanticLoss(weight: Weight, subScorers: Array[ScorerWi
     }
     val semanticLoss = totalLossFactor / lossFactor
 
+    println(s"semantic match for doc ${doc} is " + semanticLoss)
+
     docScore *= semanticLoss.toFloat
     println(s"semantic boolean scorer: setting docScore to ${docScore}")
     scoreCandidate
@@ -322,7 +319,7 @@ class BooleanOrScorerWithSemanticLoss(weight: Weight, subScorers: Array[ScorerWi
 
   override def docID(): Int = doc
 
-  override def score(): Float = { docScore }
+  override def score(): Float = { docScore * numMatches}
 
   override def freq(): Int = numMatches
 
