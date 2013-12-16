@@ -19,6 +19,7 @@ object UserEventTypes {
 
   // Activity
   val CONNECTED = EventType("connected")
+  val USED_KIFI = EventType("used_kifi")
 
   // Keeping
   val KEPT = EventType("kept")
@@ -29,6 +30,9 @@ object UserEventTypes {
   // Notifications
   val WAS_NOTIFIED = EventType("was_notified")
 
+  // Settings (= mute/unmute conversation before more)
+  val CHANGED_SETTINGS = EventType("changed_settings")
+
   // Search
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
   val SEARCHED = EventType("searched")
@@ -38,5 +42,5 @@ object UserEventTypes {
 }
 
 object SystemEventTypes {
-  val DOMAIN_TAG_IMPORT = EventType("domain_tag_import")
+  val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
 }

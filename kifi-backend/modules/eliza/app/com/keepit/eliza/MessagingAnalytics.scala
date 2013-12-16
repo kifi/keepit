@@ -6,42 +6,67 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.User
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.realtime.PushNotification
+import com.keepit.common.db.slick.Database
 
 @Singleton
 class MessagingAnalytics @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   shoebox: ShoeboxServiceClient,
-  airbrake: AirbrakeNotifier) {
+  threadRepo: MessageThreadRepo,
+  db: Database) {
+
+  private val kifi = "kifi"
+  private val push = "push"
+
+  // TODO: DRY up sent notification analytics
 
   def sentNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, muted: Boolean): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
-      contextBuilder += ("channel", "kifi")
+      contextBuilder += ("channel", kifi)
+      contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
-      contextBuilder += ("messageExternalId", message.externalId.id)
-      contextBuilder += ("threadId", thread.id.get.id)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+      contextBuilder += ("messageId", message.externalId.id)
+      contextBuilder += ("threadId", thread.externalId.id)
+      message.from.foreach { senderId => contextBuilder += ("senderId", senderId.id) }
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread): Unit = {
+  def sentPushNotificationForThread(userId: Id[User], notification: PushNotification): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
-      contextBuilder += ("channel", "kifi")
+      contextBuilder += ("channel", push)
+      contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
+      contextBuilder += ("global", false)
+      contextBuilder += ("threadId", notification.id.id)
+      contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+    }
+  }
+
+  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread, category: NotificationCategory = NotificationCategory.Global.ANNOUNCEMENT): Unit = {
+    val sentAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("channel", kifi)
+      contextBuilder += ("category", category.category)
       contextBuilder += ("global", true)
-      contextBuilder += ("messageExternalId", message.externalId.id)
-      contextBuilder += ("threadId", thread.id.get.id)
+      contextBuilder += ("messageId", message.externalId.id)
+      contextBuilder += ("threadId", thread.externalId.id)
       val context = contextBuilder.build
-      userIds.foreach { id => heimdal.trackEvent(UserEvent(id.id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
+      userIds.foreach { id => heimdal.trackEvent(UserEvent(id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
   }
 
@@ -49,12 +74,12 @@ class MessagingAnalytics @Inject() (
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "cleared")
-      contextBuilder += ("channel", "kifi")
-      contextBuilder += ("messageExternalId", message.externalId.id)
-      contextBuilder += ("threadId", thread.id.get.id)
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
+      contextBuilder += ("channel", kifi)
+      contextBuilder += ("messageId", message.externalId.id)
+      contextBuilder += ("threadId", thread.externalId.id)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
     }
   }
 
@@ -62,22 +87,13 @@ class MessagingAnalytics @Inject() (
     val addedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "addedParticipants")
-      contextBuilder += ("threadId", thread.id.get.id)
+      contextBuilder += ("threadId", thread.externalId.id)
       contextBuilder += ("newParticipants", newParticipants.map(_.id))
       contextBuilder += ("participantsAdded", newParticipants.length)
-      thread.participants.foreach { participants =>
-        val userParticipants = participants.allUsers.toSeq
-        val externalParticipants = participants.allNonUsers.toSeq
-        contextBuilder += ("participantsTotal", userParticipants.size + externalParticipants.size)
-        contextBuilder += ("userParticipants", userParticipants.map(_.id))
-        contextBuilder += ("userParticipantsTotal", userParticipants.size)
-        contextBuilder += ("externalParticipants", externalParticipants.map(_.identifier))
-        contextBuilder += ("externalParticipantsTotal", externalParticipants.size)
-        contextBuilder += ("externalParticipantsKinds", externalParticipants.map(_.kind.name))
-      }
-      heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
+      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
     }
   }
 
@@ -85,32 +101,51 @@ class MessagingAnalytics @Inject() (
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++ existingContext.data
+      contextBuilder.data ++= existingContext.data
       isActuallyNew match {
         case Some(isNew) => {
           contextBuilder += ("action", "startedConversation")
-          contextBuilder += ("isActuallyNew", isNew)
+          contextBuilder += ("isNewConversation", isNew)
         }
         case None => contextBuilder += ("action", "replied")
       }
 
-      contextBuilder += ("threadId", thread.id.get.id)
-      contextBuilder += ("messageExternalId", message.externalId.id)
-      thread.participants.foreach { participants =>
-        val userRecipients = participants.allUsersExcept(userId).toSeq
-        val externalRecipients = participants.allNonUsers.toSeq
-        contextBuilder += ("recipientsTotal", userRecipients.size + participants.allNonUsers.size)
-        contextBuilder += ("userRecipients", userRecipients.map(_.id))
-        contextBuilder += ("userRecipientsTotal", userRecipients.size)
-        contextBuilder += ("externalRecipients", externalRecipients.map(_.identifier))
-        contextBuilder += ("externalRecipientsTotal", externalRecipients.size)
-        contextBuilder += ("externalRecipientsKinds", externalRecipients.map(_.kind.name))
-      }
-
+      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("messageId", message.externalId.id)
+      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
         contextBuilder += ("isKeep", bookmarkOption.isDefined)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.MESSAGED, sentAt))
+        val context = contextBuilder.build
+        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
+        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
+        heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
       }
     }
+  }
+
+  def changedMute(userId: Id[User], threadExternalId: ExternalId[MessageThread], mute: Boolean, existingContext: HeimdalContext): Unit = {
+    val changedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= existingContext.data
+      val action = if (mute) "mutedConversation" else "unmutedConversation"
+      contextBuilder += ("action", action)
+      contextBuilder += ("threadId", threadExternalId.id)
+      val thread = db.readOnly { implicit session => threadRepo.get(threadExternalId) }
+      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
+    }
+  }
+
+  private def addParticipantsInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Unit = {
+    val userParticipants = participants.allUsers.toSeq
+    val externalParticipants = participants.allNonUsers.toSeq
+    contextBuilder += ("participantsTotal", userParticipants.size + externalParticipants.size)
+    contextBuilder += ("userParticipants", userParticipants.map(_.id))
+    contextBuilder += ("userParticipantsTotal", userParticipants.size)
+    // To be activated when external messaging is rolled out
+    // contextBuilder += ("otherParticipants", externalParticipants.map(_.identifier))
+    // contextBuilder += ("otherParticipantsTotal", externalParticipants.size)
+    // contextBuilder += ("otherParticipantsKinds", externalParticipants.map(_.kind.name))
   }
 }

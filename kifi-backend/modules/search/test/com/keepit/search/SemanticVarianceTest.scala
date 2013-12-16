@@ -85,8 +85,10 @@ class SemanticVarianceTest extends Specification {
 
       val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
       val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
+      val variance2 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(3L))))
 
-      (variance0 > variance1) === true
+      (variance0 == variance1) === true
+      (variance1 < variance2) === true
     }
 
     "compute the variance with multiple semanctic vector queries" in {
@@ -116,9 +118,9 @@ class SemanticVarianceTest extends Specification {
       val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
       val variance2 = SemanticVariance.svVariance(Seq(q3), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
 
-      variance0 === -1.0f
-      variance1 === -1.0f
-      variance2 === -1.0f
+      variance0 === 0.0f
+      variance1 === 0.0f
+      variance2 === 0.0f
     }
   }
 }

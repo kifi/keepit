@@ -42,8 +42,8 @@ class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Contro
     }
   }
 
-  def AuthenticatedAction[T](parser: BodyParser[T] = parse.anyContent)(action: AuthenticatedRequest[T] => Result): Action[T] =
-    actionAuthenticator.authenticatedAction(true, false, parser, action)
+  def AuthenticatedAction[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = true)(action: AuthenticatedRequest[T] => Result): Action[T] =
+    actionAuthenticator.authenticatedAction(apiClient, false, parser, action)
 
   def HtmlAction(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
     HtmlAction(false)(authenticatedAction, unauthenticatedAction)

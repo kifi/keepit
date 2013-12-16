@@ -51,6 +51,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
+
   def rescrape = AdminJsonAction { request =>
     val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
     db.readWrite { implicit session =>
