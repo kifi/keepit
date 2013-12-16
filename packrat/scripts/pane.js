@@ -244,6 +244,11 @@ var pane = pane || function () {  // idempotent for Chrome
         }, 150);
         return;
       })
+      .on("mouseup", ".kifi-pane-settings-link", function (e) {
+        e.preventDefault();
+        window.open('https://www.kifi.com/profile')
+        return;
+      })
       .on("keydown", ".kifi-pane-search", function (e) {
         var q;
         if (e.which == 13 && (q = this.value.trim())) {
