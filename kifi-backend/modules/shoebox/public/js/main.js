@@ -3778,6 +3778,52 @@ $(function () {
 		}
 	}
 
+	var $bookmarkImportDialog = $('.import-dialog').remove().show();
+	function receiveBookmarkCount(event) {
+		$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
+		$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
+			$bookmarkImportDialog.dialog('hide');
+			$bookmarkImportDialog = null;
+			// don't open again!
+			event.source.postMessage('do_not_import', '*');
+			welcomeUser();
+		}).on('click', 'button.do-import', function () {
+
+			$bookmarkImportDialog.find('.import-step-1').hide();
+			$bookmarkImportDialog.find('.import-step-2').show();
+
+			$bookmarkImportDialog.on('click', 'button', function () {
+				$bookmarkImportDialog.dialog('hide');
+				$bookmarkImportDialog = null;
+				welcomeUser();
+			});
+			event.source.postMessage('import_bookmarks', '*');
+		}).find('button').focus();
+	}
+	function onMessage(event) {
+		if (event.data) {
+			if (event.data.bookmarkCount > 0) {
+				$('.welcome-dialog').dialog('hide');
+				receiveBookmarkCount(event);
+			}
+		}
+	}
+	window.addEventListener('message', onMessage);
+
+	function welcomeUser() {
+		if ($bookmarkImportDialog && $bookmarkImportDialog.is(":visible")) return;
+		if ((!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") && $welcomeDialog) {
+			$welcomeDialog.dialog('show').on('click', 'button', function () {
+				$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+					log('[prefs]', data);
+				});
+				$welcomeDialog.dialog('hide');
+				$welcomeDialog = null;
+				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
+			}).find('button').focus();
+		}
+	}
+
 	// render initial view
 	$(window).trigger('statechange');
 
@@ -3790,17 +3836,12 @@ $(function () {
 	}, 30000);
 	*/
 
+	window.postMessage('get_bookmark_count_if_should_import', '*'); // message comes back to onMessage() with {hasImported: true/false}
+
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {
-		if (!myPrefs.site_welcomed) {
-			$welcomeDialog.dialog('show').on('click', 'button', function () {
-				$welcomeDialog.dialog('hide');
-				$welcomeDialog = null;
-				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
-			}).find('button').focus();
-			$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				log('[prefs]', data);
-			});
+		if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
+			welcomeUser();
 		} else {
 			$welcomeDialog = null;
 		}

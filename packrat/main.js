@@ -954,6 +954,20 @@ api.port.on({
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
   },
+  do_not_import: function(_, respond, tab) {
+    store('hasImported', 'opt out')
+  },
+  get_bookmark_count_if_should_import: function(_, respond, tab) {
+    if (!getStored('hasImported') || getStored('hasImported') === "false") {
+      api.bookmarks.getAll(function(bms) {
+        respond(bms.length);
+      });
+    }
+  },
+  import_bookmarks: function(_, respond, tab) {
+    store('hasImported', true);
+    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
+  },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);
@@ -1969,7 +1983,9 @@ authenticate(function() {
     }
   }
   if (api.loadReason == "install" || api.prefs.get("env") === "development") {
-    postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
+    store('hasImported', false);
+  } else {
+    store('hasImported', 'old client');
   }
 }, 3000);
 

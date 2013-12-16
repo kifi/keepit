@@ -25,20 +25,25 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
 import java.util.concurrent.atomic.AtomicBoolean
-import play.api.Play
 import com.keepit.social.SocialNetworks
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{MaxSizeExceeded, Request}
+import play.api.mvc.Request
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.libs.json._
 import com.keepit.model.SocialConnection
 import scala.util.Failure
 import com.keepit.model.EmailAddress
-import play.api.libs.json._
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import play.api.libs.json.JsArray
+import play.api.mvc.MaxSizeExceeded
+import play.api.libs.json.JsNumber
 import scala.util.Success
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 
 class UserController @Inject() (
@@ -374,7 +379,11 @@ class UserController @Inject() (
     if (o.keys.subsetOf(SitePrefNames)) {
       db.readWrite { implicit s =>
         o.fields.foreach { case (name, value) =>
-          userValueRepo.setValue(request.userId, name, value.as[String])  // TODO: deactivate pref if JsNull
+          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
+            userValueRepo.clearValue(request.userId, name)
+          } else {
+            userValueRepo.setValue(request.userId, name, value.as[String])
+          }
         }
       }
       Ok(o)
