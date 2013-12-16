@@ -1,4 +1,4 @@
-package com.keepit.eliza.controllers
+package com.keepit.eliza.controllers.mobile
 
 import com.keepit.eliza.MessagingController
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
