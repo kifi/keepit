@@ -954,19 +954,19 @@ api.port.on({
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
   },
-  do_not_import: function(_, respond, tab) {
-    store('hasImported', 'opt out')
-  },
-  get_bookmark_count_if_should_import: function(_, respond, tab) {
-    if (!getStored('hasImported') || getStored('hasImported') === "false") {
+  get_bookmark_count_if_should_import: function(_, respond) {
+    if (getStored('prompt_to_import_bookmarks')) {
       api.bookmarks.getAll(function(bms) {
         respond(bms.length);
       });
     }
   },
-  import_bookmarks: function(_, respond, tab) {
-    store('hasImported', true);
+  import_bookmarks: function() {
+    unstore('prompt_to_import_bookmarks');
     postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
+  },
+  import_bookmarks_declined: function() {
+    unstore('prompt_to_import_bookmarks')
   },
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
@@ -1898,7 +1898,7 @@ function startSession(callback, retryMs) {
       }
       api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
-        if (tab.url.replace(/\/#.*$/, "") === webBaseUri()) {
+        if (tab.url.replace(/\/(?:#.*)?$/, '') === webBaseUri()) {
           api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
           startSession(callback, retryMs);
         }
@@ -1973,7 +1973,7 @@ api.timers.setTimeout(function() {
 });
 
 authenticate(function() {
-  if (api.loadReason == "install") {
+  if (api.loadReason === 'install') {
     log("[main] fresh install")();
     var tab = api.tabs.anyAt(webBaseUri() + "/install");
     if (tab) {
@@ -1982,10 +1982,8 @@ authenticate(function() {
       api.tabs.open(webBaseUri() + "/getting-started");
     }
   }
-  if (api.loadReason == "install" || api.prefs.get("env") === "development") {
-    store('hasImported', false);
-  } else {
-    store('hasImported', 'old client');
+  if (api.loadReason === 'install' || api.prefs.get('env') === 'development') {
+    store('prompt_to_import_bookmarks', true);
   }
 }, 3000);
 

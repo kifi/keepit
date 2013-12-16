@@ -37,7 +37,7 @@ def abort(why):
   pass
 
 def whoAmI():
-  ec2 = boto.ec2.connect_to_region("us-west-1")
+  ec2 = boto.ec2.connect_to_region("us-west-1", aws_access_key_id="AKIAINZ2TABEYCFH7SMQ", aws_secret_access_key="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")
   myID = requests.get("http://169.254.169.254/latest/meta-data/instance-id", timeout=1.0).text
   return ec2.get_only_instances([myID])[0].tags
 
@@ -124,7 +124,7 @@ def versionToKey(version, versions):
         return v.key
 
 def getNewVersion(serviceType, version):
-  conn = S3Connection()
+  conn = S3Connection("AKIAINZ2TABEYCFH7SMQ", "s0asxMClN0loLUHDXe9ZdPyDxJTGdOiquN/SyDLi")
   bucket = conn.get_bucket("fortytwo-builds")
   allAssets = getAllAssetsByKind(bucket)
   def showAvailable():
@@ -205,16 +205,16 @@ if __name__=="__main__":
     try:
       log(logHead + " Starting self deploy. Target Version: " + version)
 
-      if not stopService(serviceType):
-        log(logHead + " Failed to stop service. Aborting.")
-        sys.exit(1)
-      log(logHead + " Running service has been stopped.")
-
       versionFileName = getNewVersion(serviceType, version)
       if not versionFileName:
         log(logHead + " Failed to retrieve version. Aborting.")
         sys.exit(1)
       log(logHead + " Retrieved Version: " + versionFileName)
+
+      if not stopService(serviceType):
+        log(logHead + " Failed to stop service. Aborting.")
+        sys.exit(1)
+      log(logHead + " Running service has been stopped.")
 
       if not setUpCode(serviceType):
         log(logHead + " Failed to install code. Aborting.")

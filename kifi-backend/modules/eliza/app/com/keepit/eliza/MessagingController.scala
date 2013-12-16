@@ -659,10 +659,10 @@ class MessagingController @Inject() (
             sentOnUrl = None,
             sentOnUriId = None
           ))
-          SafeFuture { db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) } }
           Some((actuallyNewParticipantUserIds, message, thread))
         }
       }
+      SafeFuture { db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) } }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
         shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>

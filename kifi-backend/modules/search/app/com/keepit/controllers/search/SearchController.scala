@@ -77,7 +77,7 @@ class SearchController @Inject()(
     val excludeFromExperiments = Await.result(shoeboxClient.getUserExperiments(userId), 5 seconds).contains(NO_SEARCH_EXPERIMENTS)
     val (config, _) = searchConfigManager.getConfigByUserSegment(userId, query, excludeFromExperiments)
 
-    val searcher = searcherFactory(userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config, None)
+    val searcher = searcherFactory(userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config)
     val explanation = searcher.explain(uriId)
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }

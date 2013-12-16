@@ -4670,7 +4670,7 @@ a.friend-nw-google[href] {
   }
 
   .import-dialog>.dialog-content>button.do-import {
-    background: url(../img/bookmark-lock.2x.png) 12px 50% / 16px 20px no-repeat;
+    background-image: url(../img/bookmark-lock.2x.png);
   }
 
   .query-mag::before,
