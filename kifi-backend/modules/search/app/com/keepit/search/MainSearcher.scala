@@ -43,7 +43,6 @@ class MainSearcher(
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    lastUUID: Option[ExternalId[ArticleSearchResult]],
     articleSearcher: Searcher,
     parserFactory: MainQueryParserFactory,
     socialGraphInfoFuture: Future[SocialGraphInfo],
@@ -397,7 +396,7 @@ class MainSearcher(
 
     checkScoreValues(hitList)
 
-    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
+    ArticleSearchResult(None, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
         (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
         collections = parser.collectionIds,
