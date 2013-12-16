@@ -1,33 +1,31 @@
 package com.keepit.controllers.ext
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{Json, JsValue}
 import play.api.mvc.Action
-
+import play.api.mvc.AnyContent
+import play.api.mvc.Request
+import play.modules.statsd.api.Statsd
 import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.Try
 import com.google.inject.Inject
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
-import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.search.LangDetector
-import play.api.libs.json.{Json, JsValue}
-import com.keepit.common.db.{ExternalId, Id}
-import com.newrelic.api.agent.Trace
-import play.modules.statsd.api.Statsd
-import scala.concurrent.Promise
-import play.api.mvc.AnyContent
-import play.api.mvc.Request
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -84,7 +82,6 @@ class ExtSearchController @Inject() (
 
     val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
 
-
     timing.factory
 
     // TODO: use user profile info as a bias
@@ -110,7 +107,7 @@ class ExtSearchController @Inject() (
     val searchUUID = ExternalId[ArticleSearchResult]()
     val newIdFilter = searchFilter.idFilter ++ searchRes.hits.map(_.uriId.id)
     val numPreviousHits = searchFilter.idFilter.size
-    val mayHaveMoreHits = if (numPreviousHits <= 0) searchRes.hits.nonEmpty else searchRes.hits.length == maxHits
+    val mayHaveMoreHits = if (numPreviousHits == 0) searchRes.hits.nonEmpty else searchRes.hits.size == maxHits
     val decorator = ResultDecorator(query, lang, searchRes.friendStats, shoeboxClient, config, monitoredAwait)
     val res = toKifiSearchResult(
       searchUUID,

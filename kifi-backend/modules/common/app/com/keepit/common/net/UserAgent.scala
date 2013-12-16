@@ -17,7 +17,7 @@ object UserAgent extends Logging {
 
   private val MAX_USER_AGENT_LENGTH = 512
   lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
-  lazy val iPhonePattern = """^iKeeFee/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS .+)\)$""".r("appVersion", "buildSuffix", "device", "os")
+  lazy val iPhonePattern = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
 
   def fromString(userAgent: String): UserAgent = {
     def normalize(str: String) = if (str == "unknown") "" else str

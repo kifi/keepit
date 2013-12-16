@@ -124,8 +124,6 @@ private[mail] class MailSenderActor @Inject() (
       contextBuilder += ("subject", email.subject)
       contextBuilder += ("from", email.from.address)
       contextBuilder += ("fromName", email.fromName.getOrElse(""))
-      contextBuilder += ("to", email.to.map(_.address))
-      contextBuilder += ("cc", email.cc.map(_.address))
       email.inReplyTo.foreach { previousEmailId => contextBuilder += ("inReplyTo", previousEmailId.id) }
       email.senderUserId.foreach { id => contextBuilder += ("senderUserId", id.id) }
 
@@ -143,8 +141,8 @@ private[mail] class MailSenderActor @Inject() (
         (to, cc)
       }
 
-      contextBuilder += ("toUsers", toUsers.map(_.id))
-      contextBuilder += ("ccUsers", ccUsers.map(_.id))
+      contextBuilder += ("to", toUsers.map(_.id))
+      if (ccUsers.nonEmpty) { contextBuilder += ("cc", ccUsers.map(_.id)) }
       val context = contextBuilder.build
       (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }

@@ -880,27 +880,29 @@ class MessagingController @Inject() (
   }
 
   def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Future[Seq[JsObject]], Future[Int])] = {
-    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
       if (nUriOrPrenorm.isLeft) {
         val nUri = nUriOrPrenorm.left.get
-        db.readOnly { implicit session =>
-          val noticesFuture = userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
-          val numUnreadUnmuted = noticesFuture.map { notices =>
-            if (notices.length < howMany) {
-              notices.count { n =>
-                (n \ "unread").asOpt[Boolean].getOrElse(false) &&
-                !(n \ "muted").asOpt[Boolean].getOrElse(false)
-              }
-            } else {
+        val noticesFuture = db.readOnly { implicit session =>
+          userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
+        }
+        val numUnreadUnmutedFuture = new SafeFuture(noticesFuture.map { notices =>
+          if (notices.length < howMany) {
+            notices.count { n =>
+              (n \ "unread").asOpt[Boolean].getOrElse(false) &&
+              !(n \ "muted").asOpt[Boolean].getOrElse(false)
+            }
+          } else {
+            db.readOnly { implicit session =>
               userThreadRepo.getUnreadUnmutedThreadCountForUri(userId, nUri.id.get)
             }
           }
-          (nUri.url, noticesFuture, numUnreadUnmuted)
-        }
+        })
+        (nUri.url, noticesFuture, numUnreadUnmutedFuture)
       } else {
         (nUriOrPrenorm.right.get, Promise.successful(Seq[JsObject]()).future, Promise.successful(0).future)
       }
-    }
+    })
   }
 
   def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[(String, Future[Seq[JsObject]])] = {
