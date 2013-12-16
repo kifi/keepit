@@ -57,7 +57,6 @@ class ExtSearchEventController @Inject() (
 
     Async(SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-      checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.clickedSearchResult")
       SearchEngine.get(resultSource) match {
 
         case SearchEngine.Kifi => {
@@ -104,7 +103,6 @@ class ExtSearchEventController @Inject() (
     val endedWith = (json \ "endedWith").as[String]
     Async(SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-      checkForMissingDeliveryTimes(basicSearchContext.kifiTime, basicSearchContext.kifiShownTime, basicSearchContext.thirdPartyShownTime, request, "ExtSearchEventController.searched")
       searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
       Ok
     })
@@ -132,28 +130,5 @@ class ExtSearchEventController @Inject() (
       case _ => None
     }
   } tap { urlOpt => if (urlOpt.isEmpty) log.error(s"failed to extract the destination URL from $searchEngine: $searchResultUrl") }
-
-  private def checkForMissingDeliveryTimes(kifiTime: Option[Int], kifiShownTime: Option[Int], thirdPartyShownTime: Option[Int], request: AuthenticatedRequest[JsValue], method: String) = {
-    kifiTime match {
-      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is missing."))
-      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi delivery time is negative."))
-    }
-
-    thirdPartyShownTime match {
-      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google shown time is missing."))
-      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Google shown time is negative."))
-    }
-
-    kifiShownTime match {
-      case None => reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi shown time is missing."))
-      case Some(time) => if (time < 0) reportToLéo(AirbrakeError.incoming(request, message = s"[$method: User ${request.userId}] Kifi shown time is negative."))
-    }
-  }
-
-  private def reportToLéo(error: AirbrakeError) = {
-    val body = views.html.email.healthcheckMail(AirbrakeErrorHistory(error.signature, 1, 0, error), fortyTwoServices.started.toString, fortyTwoServices.currentService.name).body
-    healthCheckMailer.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.LÉO),
-      subject = "Missing Delivery Time in Search Statistics", htmlBody = body, category = PostOffice.Categories.System.HEALTHCHECK))
-  }
 }
 

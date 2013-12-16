@@ -61,23 +61,23 @@ class ExtBookmarksController @Inject() (
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }
 
   def createTag() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
     Ok(Json.toJson(SendableTag from tag))
   }
 
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
-        bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.hover, request.kifiInstallationId)
+        bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.keeper, request.kifiInstallationId)
         Ok(Json.toJson(SendableTag from tag))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
@@ -87,9 +87,9 @@ class ExtBookmarksController @Inject() (
 
   def addToUrl() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.hover, request.kifiInstallationId)
+    bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.keeper, request.kifiInstallationId)
     Ok(Json.toJson(SendableTag from tag))
   }
 
@@ -135,7 +135,7 @@ class ExtBookmarksController @Inject() (
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
       val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
       Ok(Json.obj(
         "removedKeep" -> deactivatedKeepInfo
@@ -159,7 +159,7 @@ class ExtBookmarksController @Inject() (
     val maybeOk = for {
       bookmark <- bookmarkOpt
       updatedBookmark <- {
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
         bookmarksCommander.updateKeep(bookmark, priv, title)
       }
     } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
@@ -175,12 +175,12 @@ class ExtBookmarksController @Inject() (
     val installationId = request.kifiInstallationId
     val json = request.body
 
-    val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource(_)) getOrElse BookmarkSource.unknown
+    val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource.get) getOrElse BookmarkSource.unknown
     if (!BookmarkSource.valid.contains(bookmarkSource)) {
       airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(s"Invalid bookmark source: $bookmarkSource")))
     }
     bookmarkSource match {
-      case BookmarkSource("PLUGIN_START") => Forbidden
+      case BookmarkSource("plugin_start") => Forbidden
       case _ =>
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
