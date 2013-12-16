@@ -28,7 +28,6 @@ class ExtAuthController @Inject() (
   userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  userValueRepo: UserValueRepo,
   heimdal: HeimdalServiceClient)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -64,7 +63,6 @@ class ExtAuthController @Inject() (
       } match {
         case None =>
           val inst = installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
-          userValueRepo.setValue(request.userId, "has_imported_from_" + inst.externalId, "false")
           (inst, true, true)
         case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
           (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
