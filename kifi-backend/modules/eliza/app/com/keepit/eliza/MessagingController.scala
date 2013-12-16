@@ -638,7 +638,7 @@ class MessagingController @Inject() (
   }
 
   // todo: Add adding non-users by kind/identifier
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext) = {
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Boolean = {
     shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
 
       val messageThreadOpt = db.readWrite { implicit session =>
