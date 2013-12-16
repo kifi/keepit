@@ -103,14 +103,14 @@ case class BookmarkSource(value: String) {
 }
 
 object BookmarkSource {
-  val hover = BookmarkSource("HOVER_KEEP")
-  val initLoad = BookmarkSource("INIT_LOAD")
-  val site = BookmarkSource("SITE")
-  val mobile = BookmarkSource("MOBILE")
-  val email = BookmarkSource("EMAIL")
-  val unknown = BookmarkSource("UNKNOWN")
+  val keeper = BookmarkSource("keeper")
+  val initLoad = BookmarkSource("init_load")
+  val site = BookmarkSource("site")
+  val mobile = BookmarkSource("mobile")
+  val email = BookmarkSource("email")
+  val unknown = BookmarkSource("unknown")
 
-  val valid = Set(hover, initLoad, site, mobile, email)
+  val valid = Set(keeper, initLoad, site, mobile, email)
 }
 
 object BookmarkFactory {
