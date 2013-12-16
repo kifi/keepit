@@ -4408,7 +4408,7 @@ span.long-text, a.long-text {
 }
 .import-dialog>.dialog-content>button.do-import {
   padding-left: 18px;
-  background: url(../img/bookmark-lock.2x.png) 12px 50% / 16px 20px no-repeat;
+  background: url(../img/bookmark-lock.png) 12px 50% / 16px 20px no-repeat;
   background-color: #6fa5ef;
 }
 .import-dialog>.dialog-content>button:hover {background-color: #7faeef}
@@ -4667,6 +4667,10 @@ a.friend-nw-google[href] {
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header-logo {
     background-image: url(../img/kifi-logo.2x.png);
+  }
+
+  .import-dialog>.dialog-content>button.do-import {
+    background: url(../img/bookmark-lock.2x.png) 12px 50% / 16px 20px no-repeat;
   }
 
   .query-mag::before,

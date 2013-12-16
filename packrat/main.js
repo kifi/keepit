@@ -955,10 +955,10 @@ api.port.on({
     socket.send(['unmute_thread', threadId]);
   },
   has_imported: function(_, respond, tab) {
-    respond(api.prefs.get("hasImported"));
+    respond(api.prefs.get('hasImported') || false);
   },
   do_not_import: function(_, respond, tab) {
-    api.prefs.set("hasImported", 'opt out');
+    api.prefs.set('hasImported', 'opt out');
   },
   get_bookmark_count: function(_, respond, tab) {
     api.bookmarks.getAll(function(bms) {

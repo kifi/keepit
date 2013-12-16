@@ -3802,7 +3802,7 @@ $(function () {
 	}
 	function onMessage(event) {
 		if (event.data) {
-			if (event.data.bookmarkCount && event.data.bookmarkCount > 0) {
+			if (event.data.bookmarkCount > 0) {
 				receiveBookmarkCount(event);
 			} else if (event.data.hasImported === false || event.data.hasImported === null) {
 				$('.welcome-dialog').dialog('hide');
