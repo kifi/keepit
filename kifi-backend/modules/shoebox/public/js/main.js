@@ -3803,10 +3803,8 @@ $(function () {
 	function onMessage(event) {
 		if (event.data) {
 			if (event.data.bookmarkCount > 0) {
-				receiveBookmarkCount(event);
-			} else if (event.data.hasImported === false || event.data.hasImported === null) {
 				$('.welcome-dialog').dialog('hide');
-				window.postMessage('get_bookmark_count', '*'); // message comes back with bookmark count, handled above
+				receiveBookmarkCount(event);
 			}
 		}
 	}
@@ -3838,7 +3836,7 @@ $(function () {
 	}, 30000);
 	*/
 
-	window.postMessage('has_imported', '*'); // message comes back to onMessage() with {hasImported: true/false}
+	window.postMessage('get_bookmark_count_if_should_import', '*'); // message comes back to onMessage() with {hasImported: true/false}
 
 	var $welcomeDialog = $('.welcome-dialog').remove().show();
 	$.when(promise.myPrefs).done(function () {

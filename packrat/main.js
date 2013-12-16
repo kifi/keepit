@@ -954,16 +954,15 @@ api.port.on({
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
   },
-  has_imported: function(_, respond, tab) {
-    respond(getStored('hasImported') || false);
-  },
   do_not_import: function(_, respond, tab) {
     store('hasImported', 'opt out')
   },
-  get_bookmark_count: function(_, respond, tab) {
-    api.bookmarks.getAll(function(bms) {
-      respond(bms.length);
-    });
+  get_bookmark_count_if_should_import: function(_, respond, tab) {
+    if (!getStored('hasImported') || getStored('hasImported') === "false") {
+      api.bookmarks.getAll(function(bms) {
+        respond(bms.length);
+      });
+    }
   },
   import_bookmarks: function(_, respond, tab) {
     store('hasImported', true);
@@ -1982,6 +1981,11 @@ authenticate(function() {
     } else {
       api.tabs.open(webBaseUri() + "/getting-started");
     }
+  }
+  if (api.loadReason == "install" || api.prefs.get("env") === "development") {
+    store('hasImported', false);
+  } else {
+    store('hasImported', 'old client');
   }
 }, 3000);
 
