@@ -131,7 +131,7 @@ class ResultDecoratorImpl(query: String, lang: Lang, friendStats: FriendStats, s
     hits.map{ h => h.add("bookmark", highlight(h.bookmark).json) }
   }
 
-  private def highlight(h: SimpleSearchHit): SimpleSearchHit = {
+  private def highlight(h: BasicSearchHit): BasicSearchHit = {
     val titleMatches = h.title.map(t => ResultDecorator.highlight(t, analyzer, "", terms))
     val urlMatches = Some(ResultDecorator.highlightURL(h.url, analyzer, "", terms))
     h.addMatches(titleMatches, urlMatches)

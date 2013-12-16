@@ -410,7 +410,7 @@ class MainSearcher(
       DetailedSearchHit(
         h.id,
         h.bookmarkCount,
-        toSimpleSearchHit(h),
+        toBasicSearchHit(h),
         h.isMyBookmark,
         h.users.nonEmpty, // isFriendsBookmark
         h.isPrivate,
@@ -431,7 +431,7 @@ class MainSearcher(
     })
   }
 
-  private[this] def toSimpleSearchHit(h: MutableArticleHit): SimpleSearchHit = {
+  private[this] def toBasicSearchHit(h: MutableArticleHit): BasicSearchHit = {
     val uriId = Id[NormalizedURI](h.id)
     if (h.isMyBookmark) {
       val r = getBookmarkRecord(uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${uriId}"))
@@ -441,10 +441,10 @@ class MainSearcher(
         if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
       }
 
-      SimpleSearchHit(Some(r.title), r.url, collections, r.externalId)
+      BasicSearchHit(Some(r.title), r.url, collections, r.externalId)
     } else {
       val r = getArticleRecord(uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${uriId}"))
-      SimpleSearchHit(Some(r.title), r.url)
+      BasicSearchHit(Some(r.title), r.url)
     }
   }
 

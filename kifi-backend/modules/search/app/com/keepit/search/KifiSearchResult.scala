@@ -47,13 +47,13 @@ class KifiSearchHit(val json: JsObject) extends AnyVal {
   def count: Int = (json \ "count").as[Int]
   def users: Seq[BasicUser] = TraversableFormat.seq[BasicUser].reads(json \ "users").get
   def score: Float = (json \ "score").as[Float]
-  def bookmark: SimpleSearchHit = new SimpleSearchHit((json \ "bookmark").as[JsObject])
+  def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 }
 
 object KifiSearchHit extends Logging {
   def apply(json: JsObject): KifiSearchHit = new KifiSearchHit(json)
   def apply(
-    hit: SimpleSearchHit,
+    hit: BasicSearchHit,
     count: Int, // public bookmark count
     isMyBookmark: Boolean,
     isPrivate: Boolean,
@@ -143,7 +143,7 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def users: Seq[Id[User]] = (json \ "users").asOpt[Seq[Long]].map{ users => users.map{ id => Id[User](id.toLong) } }.getOrElse(Seq.empty)
   def score: Float = (json \ "score").as[Float]
   def scoring: Scoring = (json \ "scoring").as[Scoring]
-  def bookmark: SimpleSearchHit = new SimpleSearchHit((json \ "bookmark").as[JsObject])
+  def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
   def add(key: String, value: JsValue): DetailedSearchHit = new DetailedSearchHit(json + (key ->value))
 }
@@ -152,7 +152,7 @@ object DetailedSearchHit extends Logging {
   def apply(
     uriId: Long,
     bookmarkCount: Int, // public bookmark count
-    hit: SimpleSearchHit,
+    hit: BasicSearchHit,
     isMyBookmark: Boolean,
     isFriendsBookmark: Boolean,
     isPrivate: Boolean,
@@ -180,7 +180,7 @@ object DetailedSearchHit extends Logging {
   }
 }
 
-class SimpleSearchHit(val json: JsObject) extends AnyVal {
+class BasicSearchHit(val json: JsObject) extends AnyVal {
   def title: Option[String] = (json \ "title").asOpt[String].filter(_.nonEmpty)
   def url: String = (json \ "url").as[String]
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
@@ -188,7 +188,7 @@ class SimpleSearchHit(val json: JsObject) extends AnyVal {
   def collections: Option[Seq[ExternalId[Collection]]] = (json \ "collections").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
   def bookmarkId: Option[ExternalId[Bookmark]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Bookmark])
 
-  def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): SimpleSearchHit = {
+  def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {
     var matchesJson = Json.obj()
 
     def add(name: String, matches: Option[Seq[(Int, Int)]]) = {
@@ -204,11 +204,11 @@ class SimpleSearchHit(val json: JsObject) extends AnyVal {
     add("title", titleMatches)
     add("url", urlMatches)
 
-    if (matchesJson.keys.size == 0) this else new SimpleSearchHit(json + ("matches" -> matchesJson))
+    if (matchesJson.keys.size == 0) this else new BasicSearchHit(json + ("matches" -> matchesJson))
   }
 
-  def addCollections(collections: Seq[ExternalId[Collection]]): SimpleSearchHit = {
-    if (collections.isEmpty) this else new SimpleSearchHit(json + ("collections" -> Json.toJson(collections.map(_.id))))
+  def addCollections(collections: Seq[ExternalId[Collection]]): BasicSearchHit = {
+    if (collections.isEmpty) this else new BasicSearchHit(json + ("collections" -> Json.toJson(collections.map(_.id))))
   }
 
   private def readMatches(matches: JsValue): Seq[(Int, Int)] = {
@@ -218,7 +218,7 @@ class SimpleSearchHit(val json: JsObject) extends AnyVal {
   }
 }
 
-object SimpleSearchHit extends Logging {
+object BasicSearchHit extends Logging {
   def apply(
     title: Option[String],
     url: String,
@@ -226,7 +226,7 @@ object SimpleSearchHit extends Logging {
     bookmarkId: Option[ExternalId[Bookmark]] = None,
     titleMatches: Option[Seq[(Int, Int)]] = None,
     urlMatches: Option[Seq[(Int, Int)]] = None
-  ): SimpleSearchHit = {
+  ): BasicSearchHit = {
     try {
       var json = Json.obj(
         "title" -> title,
@@ -234,7 +234,7 @@ object SimpleSearchHit extends Logging {
       )
       bookmarkId.foreach{ id => json = json + ("id" -> JsString(id.id)) }
 
-      var h = new SimpleSearchHit(json)
+      var h = new BasicSearchHit(json)
       h = h.addMatches(titleMatches, urlMatches)
       collections.foreach{ c => h = h.addCollections(c) }
       h
