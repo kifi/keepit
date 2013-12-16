@@ -132,7 +132,7 @@ class HeimdalContextBuilder {
         this += ("device", device)
         this += ("os", os)
         this += ("osVersion", osVersion)
-        this += ("client", appName)
+        this += ("client", "Kifi App")
         this += ("clientVersion", appVersion)
         this += ("clientBuild", appVersion + buildSuffix)
       case _ =>
