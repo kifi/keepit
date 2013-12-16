@@ -662,9 +662,14 @@ class MessagingController @Inject() (
           Some((actuallyNewParticipantUserIds, message, thread))
         }
       }
-      SafeFuture { db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) } }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
+        SafeFuture {
+          db.readOnly { implicit session =>
+            messageRepo.refreshCache(thread.id.get)
+          }
+        }
+
         shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
           val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
