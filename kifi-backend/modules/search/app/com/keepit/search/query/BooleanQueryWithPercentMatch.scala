@@ -262,7 +262,7 @@ object BooleanScorer {
       new BooleanAndScorer(weight, coordFactorForRequired, required, requiredValue)
     }
     def disjunction() = {
-      new BooleanOrScorer(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
+      new BooleanOrScorerImpl(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
     }
     def prohibit(source: Scorer) = {
       new BooleanNotScorer(weight, source, prohibited)
@@ -368,9 +368,11 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
   override def freq(): Int = 1
 }
 
-class BooleanOrScorer(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float],
+trait BooleanOrScorer extends Scorer
+
+class BooleanOrScorerImpl(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float],
                       threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
-extends Scorer(weight) with Logging {
+extends Scorer(weight) with BooleanOrScorer with Logging {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1

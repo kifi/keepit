@@ -46,7 +46,8 @@ object SearchConfig {
       "useS3FlowerFilter" -> "true",
       "showExperts" -> "false",
       "forbidEmptyFriendlyHits" -> "false",
-      "useNonPersonalizedContextVector" -> "false"
+      "useNonPersonalizedContextVector" -> "false",
+      "useSemanticBooleanQuery" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](

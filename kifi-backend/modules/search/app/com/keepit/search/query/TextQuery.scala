@@ -30,6 +30,8 @@ class TextQuery extends Query with Logging {
   private var regularQuery: Query = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
   private var semanticVectorQuery: Query = new DisjunctionMaxQuery(0.0f)
 
+  def getSemanticVectorQuery = semanticVectorQuery
+
   var terms: Array[Term] = Array()
   var stems: Array[Term] = Array()
 
