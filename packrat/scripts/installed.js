@@ -7,19 +7,19 @@
   document.dispatchEvent(new CustomEvent('kifi:installed', {version: v}));
 
   function onMessage(event) {
-    if(!/www\.kifi\.com|dev\.ezkeep\.com/.test(event.origin)) return;
-    else if (event.data == 'do_not_import') {
-      api.port.emit('do_not_import', function() {
-        log("will not prompt for import")();
-      });
-    } else if (event.data == 'get_bookmark_count_if_should_import') {
+    if (event.origin !== location.origin) {
+      return;
+    }
+    log('[onMessage]', event.data)();
+
+    if (event.data === 'get_bookmark_count_if_should_import') {
       api.port.emit('get_bookmark_count_if_should_import', function (count) {
-        window.postMessage({'bookmarkCount': count}, '*');
+        event.source.postMessage({bookmarkCount: count}, event.origin);
       });
-    } else if (event.data == 'import_bookmarks') {
-      api.port.emit('import_bookmarks', function(o) {
-        log('imported!', o)();
-      });
+    } else if (event.data === 'import_bookmarks_declined') {
+      api.port.emit('import_bookmarks_declined');
+    } else if (event.data === 'import_bookmarks') {
+      api.port.emit('import_bookmarks');
     }
   }
 
