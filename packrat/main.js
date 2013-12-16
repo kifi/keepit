@@ -954,12 +954,19 @@ api.port.on({
   unmute_thread: function(threadId, respond, tab) {
     socket.send(['unmute_thread', threadId]);
   },
+  has_imported: function(_, respond, tab) {
+    respond(api.prefs.get("hasImported"));
+  },
+  do_not_import: function(_, respond, tab) {
+    api.prefs.set("hasImported", 'opt out');
+  },
   get_bookmark_count: function(_, respond, tab) {
     api.bookmarks.getAll(function(bms) {
       respond(bms.length);
     });
   },
   import_bookmarks: function(_, respond, tab) {
+    api.prefs.set("hasImported", true);
     postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
   },
   report_error: function(data, _, tag) {

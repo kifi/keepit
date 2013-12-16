@@ -372,33 +372,22 @@ class UserController @Inject() (
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
-  private val DynamicSitePrefNames = Set("do_not_import")
 
   def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(db.readOnly { implicit s =>
-      val shouldPromptForImport = request.kifiInstallationId match {
-        case Some(inst) =>
-          val pref = userValueRepo.getValue(request.userId, "has_imported_from_" + inst)
-          if (pref.isDefined && pref.get == "false") true
-          else false
-        case None => false
-      }
       JsObject(SitePrefNames.toSeq.map { name =>
         name -> userValueRepo.getValue(request.userId, name).map(JsString).getOrElse(JsNull)
-      } ++ Seq("prompt_for_import" -> JsBoolean(shouldPromptForImport)))
+      })
     })
   }
 
   def savePrefs() = AuthenticatedJsonToJsonAction { request =>
     val o = request.request.body.as[JsObject]
-    if (o.keys.subsetOf(SitePrefNames ++ DynamicSitePrefNames)) {
+    if (o.keys.subsetOf(SitePrefNames)) {
       db.readWrite { implicit s =>
         o.fields.foreach { case (name, value) =>
-          if (value == JsNull || value == JsUndefined) {
+          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
             userValueRepo.clearValue(request.userId, name)
-          } else if (name == "do_not_import" && request.kifiInstallationId.isDefined) {
-            // User selected not to import Léo
-            userValueRepo.setValue(request.userId, "has_imported_from_" + request.kifiInstallationId.get, "opt_out")
           } else {
             userValueRepo.setValue(request.userId, name, value.as[String])
           }
