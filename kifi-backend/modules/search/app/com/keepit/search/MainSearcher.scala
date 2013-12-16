@@ -394,7 +394,7 @@ class MainSearcher(
     timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
 
-    ShardSearchResult(toDetailedSearchHits(hitList), myTotal, friendsTotal, othersTotal, collections.toSeq, svVar, show, friendStats)
+    ShardSearchResult(toDetailedSearchHits(hitList), myTotal, friendsTotal, othersTotal, friendStats, collections.toSeq, svVar, show)
   }
 
   private[this] def toDetailedSearchHits(hitList: List[MutableArticleHit]): List[DetailedSearchHit] = {
@@ -414,7 +414,7 @@ class MainSearcher(
         h.isMyBookmark,
         h.users.nonEmpty, // isFriendsBookmark
         h.isPrivate,
-        h.users,
+        h.users.toSeq,
         h.score,
         h.scoring
       )
@@ -613,10 +613,6 @@ class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, 
     isPrivate = newIsPrivate
     users = newUsers
     bookmarkCount = newBookmarkCount
-  }
-  def toArticleHit(friendStats: FriendStats) = {
-    val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }
-    ArticleHit(Id[NormalizedURI](id), score, isMyBookmark, isPrivate, sortedUsers, bookmarkCount)
   }
 }
 

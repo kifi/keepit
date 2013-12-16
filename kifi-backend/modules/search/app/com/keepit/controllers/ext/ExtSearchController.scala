@@ -94,9 +94,6 @@ class ExtSearchController @Inject() (
 
     timing.search
 
-    val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
-    val searchUUID = ExternalId[ArticleSearchResult]()
-
     val searchRes = if (maxHits > 0) {
       searcher.search()
     } else {
@@ -110,10 +107,11 @@ class ExtSearchController @Inject() (
 
     timing.decoration
 
+    val searchUUID = ExternalId[ArticleSearchResult]()
     val newIdFilter = searchFilter.idFilter ++ searchRes.hits.map(_.uriId.id)
     val numPreviousHits = searchFilter.idFilter.size
     val mayHaveMoreHits = if (numPreviousHits <= 0) searchRes.hits.nonEmpty else searchRes.hits.length == maxHits
-    val decorator = ResultDecorator(query, lang, shoeboxClient, config, monitoredAwait)
+    val decorator = ResultDecorator(query, lang, searchRes.friendStats, shoeboxClient, config, monitoredAwait)
     val res = toKifiSearchResult(
       searchUUID,
       query,
@@ -133,6 +131,7 @@ class ExtSearchController @Inject() (
       // stash timing information
       val timeLogs = searcher.timing()
 
+      val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val articleSearchResult = ResultUtil.toArticleSearchResult(
         searchUUID,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.

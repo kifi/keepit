@@ -30,8 +30,8 @@ object ResultDecorator extends Logging {
 
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
-  def apply(query: String, lang: Lang, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
-    new ResultDecoratorImpl(query, lang, shoeboxClient, monitoredAwait)
+  def apply(query: String, lang: Lang, friendStats: FriendStats, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
+    new ResultDecoratorImpl(query, lang, friendStats, shoeboxClient, monitoredAwait)
   }
 
   def getQueryTerms(queryText: String, analyzer: Analyzer): Set[String] = {
@@ -113,7 +113,7 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(query: String, lang: Lang, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
+class ResultDecoratorImpl(query: String, lang: Lang, friendStats: FriendStats, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
 
   val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
   val terms = ResultDecorator.getQueryTerms(query, analyzer)
@@ -124,7 +124,7 @@ class ResultDecoratorImpl(query: String, lang: Lang, shoeboxClient: ShoeboxServi
 
     val highlightedHits = highlight(hits)
     val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
-    new DecoratedResult(basicUserMap, addBasicUsers(highlightedHits, basicUserMap))
+    new DecoratedResult(basicUserMap, addBasicUsers(highlightedHits, friendStats, basicUserMap))
   }
 
   private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
@@ -137,8 +137,10 @@ class ResultDecoratorImpl(query: String, lang: Lang, shoeboxClient: ShoeboxServi
     h.addMatches(titleMatches, urlMatches)
   }
 
-  private def addBasicUsers(hits: Seq[DetailedSearchHit], basicUserMap: Map[Id[User], BasicUser]): Seq[DetailedSearchHit] = {
+  private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], BasicUser]): Seq[DetailedSearchHit] = {
     hits.map{ h =>
+      val sortedUsers = h.users.sortBy{ id => - friendStats.score(id) }
+
       val basicUsers = h.users.flatMap(basicUserMap.get(_))
       h.add("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
     }

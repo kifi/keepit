@@ -85,6 +85,7 @@ class ShardSearchResult(val json: JsValue) extends AnyVal {
   def myTotal: Int = (json \ "myTotal").as[Int]
   def friendsTotal: Int = (json \ "friendsTotal").as[Int]
   def othersTotal: Int = (json \ "othersTotal").as[Int]
+  def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
   def collections: Seq[ExternalId[Collection]] = (json \ "collections").as[JsArray].value.map(id => ExternalId[Collection](id.as[String]))
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
   def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
@@ -96,10 +97,10 @@ object ShardSearchResult extends Logging {
     myTotal: Int,
     friendsTotal: Int,
     othersTotal: Int,
+    friendStats: FriendStats,
     collections: Seq[ExternalId[Collection]],
     svVariance: Float, // TODO: remove
-    show: Boolean, // TODO: remove
-    friendStats: FriendStats
+    show: Boolean // TODO: remove
   ): ShardSearchResult = {
     try {
       new ShardSearchResult(JsObject(List(
@@ -107,13 +108,14 @@ object ShardSearchResult extends Logging {
         "myTotal" -> JsNumber(myTotal),
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
+        "friendStats" -> Json.toJson(friendStats),
         "collections" -> JsArray(collections.map{ id => JsString(id.id) }),
         "svVariance" -> JsNumber(svVariance), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize ShardSearchResult [hits=$hits][myTotal=$myTotal][friendsTotal=$friendsTotal][othersTotal=$othersTotal]", e)
+        log.error(s"can't serialize ShardSearchResult [hits=$hits][myTotal=$myTotal][friendsTotal=$friendsTotal][othersTotal=$othersTotal][friendStats=$friendStats]", e)
         throw e
     }
   }
@@ -124,6 +126,7 @@ object ShardSearchResult extends Logging {
       "myTotal" -> JsNumber(0),
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
+      "firendsStats" -> Json.toJson(FriendStats.empty),
       "collections" -> JsArray(),
       "svVariance" -> JsNumber(-1.0f), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
@@ -131,18 +134,13 @@ object ShardSearchResult extends Logging {
   }
 }
 
-class DetailedSearchHit(val json: JsObject) {
+class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def uriId: Id[NormalizedURI] = Id[NormalizedURI]((json \ "uriId").as[Long])
   def isMyBookmark: Boolean = (json \ "isMyBookmark").as[Boolean]
   def isFriendsBookmark: Boolean = (json \ "isFriendsBookmark").as[Boolean]
   def isPrivate: Boolean = (json \ "isPrivate").as[Boolean]
   def bookmarkCount: Int = (json \ "bookmarkCount").as[Int]
-  def users: Seq[Id[User]] = {
-    (json \ "users").asOpt[JsArray] match {
-      case Some(JsArray(users)) => users.collect{ case JsNumber(id) => Id[User](id.toLong) }
-      case _ => Seq.empty
-    }
-  }
+  def users: Seq[Id[User]] = (json \ "users").asOpt[Seq[Long]].map{ users => users.map{ id => Id[User](id.toLong) } }.getOrElse(Seq.empty)
   def score: Float = (json \ "score").as[Float]
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: SimpleSearchHit = new SimpleSearchHit((json \ "bookmark").as[JsObject])
@@ -158,7 +156,7 @@ object DetailedSearchHit extends Logging {
     isMyBookmark: Boolean,
     isFriendsBookmark: Boolean,
     isPrivate: Boolean,
-    users: Set[Id[User]],
+    users: Seq[Id[User]],
     score: Float,
     scoring: Scoring
   ): DetailedSearchHit = {
@@ -167,7 +165,7 @@ object DetailedSearchHit extends Logging {
         "uriId" -> JsNumber(uriId),
         "bookmarkCount" -> JsNumber(bookmarkCount),
         "bookmark" -> hit.json,
-        "users" -> JsArray(users.map(id => JsNumber(id.id)).toSeq),
+        "users" -> JsArray(users.map(id => JsNumber(id.id))),
         "score" -> JsNumber(score),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
