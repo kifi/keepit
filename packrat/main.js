@@ -242,7 +242,7 @@ var socketHandlers = {
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
       if (friendsById[f.id]) {
-        friends = friends.filter(function(e) {return e.id != f.id})
+        friends = friends.filter(function(e) {return e.id !== f.id})
       }
       friends.push(f)
       friendsById[f.id] = f;
@@ -253,7 +253,6 @@ var socketHandlers = {
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   thread_participants: function(threadId, participants) {
     log("[socket:thread_participants]", threadId, participants)();
-    participants = participants.filter(idIsNot(session.user.id));
     var thread = threadsById[threadId];
     if (thread) {
       thread.participants = participants;
