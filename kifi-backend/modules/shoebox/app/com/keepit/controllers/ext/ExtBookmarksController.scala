@@ -184,11 +184,7 @@ class ExtBookmarksController @Inject() (
       case _ =>
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
-          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.initLoad) {
-            db.readWrite { implicit session =>
-              userValueRepo.setValue(request.userId, "has_imported_from_" + request.kifiInstallationId.get, clock.now().toString())
-            }
-          }
+
           val experiments = request.experiments
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
           val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", request.user, experiments, bookmarkSource, installationId)

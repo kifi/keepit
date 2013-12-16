@@ -3786,6 +3786,7 @@ $(function () {
 			$bookmarkImportDialog = null;
 			// don't open again!
 			event.source.postMessage('do_not_import', '*');
+			welcomeUser();
 		}).on('click', 'button.do-import', function () {
 
 			$bookmarkImportDialog.find('.import-step-1').hide();
@@ -3804,7 +3805,7 @@ $(function () {
 			if (event.data.bookmarkCount && event.data.bookmarkCount > 0) {
 				receiveBookmarkCount(event);
 			} else if (event.data.hasImported === false || event.data.hasImported === null) {
-				$('.welcome-dialog').hide();
+				$('.welcome-dialog').dialog('hide');
 				window.postMessage('get_bookmark_count', '*'); // message comes back with bookmark count, handled above
 			}
 		}
@@ -3812,14 +3813,17 @@ $(function () {
 	window.addEventListener('message', onMessage);
 
 	function welcomeUser() {
-		$welcomeDialog.dialog('show').on('click', 'button', function () {
-			$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-				log('[prefs]', data);
-			});
-			$welcomeDialog.dialog('hide');
-			$welcomeDialog = null;
-			setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
-		}).find('button').focus();
+		if ($bookmarkImportDialog && $bookmarkImportDialog.is(":visible")) return;
+		if ((!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") && $welcomeDialog) {
+			$welcomeDialog.dialog('show').on('click', 'button', function () {
+				$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
+					log('[prefs]', data);
+				});
+				$welcomeDialog.dialog('hide');
+				$welcomeDialog = null;
+				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
+			}).find('button').focus();
+		}
 	}
 
 	// render initial view
