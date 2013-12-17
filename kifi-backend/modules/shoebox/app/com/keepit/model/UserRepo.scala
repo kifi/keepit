@@ -50,11 +50,8 @@ class UserRepoImpl @Inject() (
   }
 
   override def save(user: User)(implicit session: RWSession): User = {
-    Thread.dumpStack()
     val toSave = user.copy(seq = sequence.incrementAndGet())
-    val res = super.save(toSave)
-    log.info(s"[UserRepo.save] id=${res.id} name=${user.firstName + " " + user.lastName} state=${user.state} extId=${user.externalId} emailId=${user.primaryEmailId} picName=${user.pictureName}")
-    res
+    super.save(toSave)
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
