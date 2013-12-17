@@ -131,12 +131,8 @@ var toaster = (function () {
   function onOthersClick(e) {
     if (e.which !== 1) return;
     hide();
-    var data = $(this).data();
-    if (data.count === 1) {
-      pane.show({locator: '/messages/' + data.id});
-    } else {
-      pane.show({locator: '/messages'});
-    }
+    var threadId = $(this).data('id');
+    pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
   }
 
   function idOf(o) {

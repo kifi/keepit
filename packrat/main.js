@@ -817,7 +817,7 @@ function gotLatestThreads(kind, arr, numUnreadUnmuted) {  // initial load
     standardizeNotification(n);
     threadsById[n.thread] = n;
   });
-  var list = threadLists[kind] = new ThreadList(threadsById, arr.map(getThreadId), numUnreadUnmuted);
+  var list = threadLists[kind] = new ThreadList(threadsById, arr.map(getThreadId), null, numUnreadUnmuted);
   list.includesOldest = arr.length < THREAD_BATCH_SIZE;
   threadListCallbacks[kind].forEach(function (callback) {
     callback(list);
@@ -970,7 +970,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
 }
 
 function sendPageThreadCount(tab, tl) {
-  api.tabs.emit(tab, 'page_thread_count', {count: tl.ids.length, id: tl.ids.length === 1 ? tl.ids[0] : undefined});
+  api.tabs.emit(tab, 'page_thread_count', {count: tl.numTotal, id: tl.numTotal === 1 ? tl.ids[0] : undefined});
 }
 
 function awaitDeepLink(link, tabId, retrySec) {
@@ -1063,7 +1063,7 @@ function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
 }
 
 function tellVisibleTabsNoticeCountIfChanged() {
-  api.tabs.eachSelected(function(tab) {
+  api.tabs.eachSelected(function (tab) {
     if (tab.count !== threadLists.all.numUnreadUnmuted) {
       tab.count = threadLists.all.numUnreadUnmuted;
       api.tabs.emit(tab, 'count', tab.count, {queue: 1});
@@ -1285,8 +1285,8 @@ function gotPageDetailsFor(url, tab, resp) {
   }
 }
 
-function gotPageThreads(uri, nUri, threads, numUnreadUnmuted) {
-  log('[gotPageThreads] n:', threads.length, uri, nUri !== uri ? nUri : '')();
+function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
+  log('[gotPageThreads]', threads.length, 'of', numTotal, 'unread & unmuted:', numUnreadUnmuted, uri, nUri !== uri ? nUri : '')();
 
   // incorporating new threads into our cache and noting any changes
   var numNewThreads = 0;
@@ -1314,8 +1314,10 @@ function gotPageThreads(uri, nUri, threads, numUnreadUnmuted) {
   var pt = threadLists[nUri] || threadLists[threads.length ? threads[0].url : ''];
   if (pt) {
     pt.insertAll(threads);
+    pt.numTotal = numTotal;
+    pt.numUnreadUnmuted = numUnreadUnmuted;
   } else {
-    pt = new ThreadList(threadsById, threads.map(getThreadId), numUnreadUnmuted);
+    pt = new ThreadList(threadsById, threads.map(getThreadId), numTotal, numUnreadUnmuted);
   }
 
   // invoking callbacks
