@@ -280,7 +280,7 @@ object ScorerFactory {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        new BooleanScorer(weight, conjunction(), disjunction(), 1f, 0, 0)
+        new BooleanScorer(weight, conjunction(), disjunction(), 1f)
       } else if (required.length > 0) {
         conjunction()
       } else if (optional.length > 0) {
