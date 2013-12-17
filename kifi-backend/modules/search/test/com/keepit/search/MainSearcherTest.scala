@@ -76,6 +76,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
       inject[ShoeboxServiceClient],
       inject[SpellCorrector],
       inject[MonitoredAwait],
+      inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)
