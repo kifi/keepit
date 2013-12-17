@@ -151,18 +151,15 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
 
       val totalMatchFactor = optionalSemanticMatch.foldLeft(1f)(_*_)
       var matchedFactor = 1f
-      var numMatch = 0
       var optionalScore = 0f
 
       val optionalExpl = new Explanation(0f, "semantic clause match, product of")
       val optionalSumExpl = new Explanation(0f, "optional clause match, sum of")
       val semanticMatchExpl = new Explanation(0f, "semanticMatch")
-      val numMatchExpl = new Explanation(0f, "num of matches")
 
       sumExpl.addDetail(optionalExpl)
       optionalExpl.addDetail(optionalSumExpl)
       optionalExpl.addDetail(semanticMatchExpl)
-      optionalExpl.addDetail(numMatchExpl)
 
       (optionalWeights zip optionalSemanticMatch).foreach{ case (w, m) =>
         val e = w.explain(context, doc)
@@ -170,18 +167,16 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
           optionalSumExpl.addDetail(e)
           coord += 1
           matchedFactor *= m
-          numMatch += 1
           optionalScore += e.getValue()
         }
       }
 
       var semanticMatch = totalMatchFactor / matchedFactor
-      sum += optionalScore * semanticMatch * numMatch
+      sum += optionalScore * semanticMatch
 
       optionalSumExpl.setValue(optionalScore)
       semanticMatchExpl.setValue(semanticMatch)
-      numMatchExpl.setValue(numMatch)
-      optionalExpl.setValue(optionalScore * semanticMatch * numMatch)
+      optionalExpl.setValue(optionalScore * semanticMatch)
 
       if (fail) {
         sumExpl.setMatch(false)
@@ -377,7 +372,7 @@ class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerW
 
   override def docID(): Int = doc
 
-  override def score(): Float = { docScore * numMatches }
+  override def score(): Float = { docScore }
 
   override def freq(): Int = numMatches
 
