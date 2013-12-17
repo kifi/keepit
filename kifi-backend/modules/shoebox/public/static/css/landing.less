@@ -1,0 +1,288 @@
+@import "lesshat";
+@import "common";
+
+@green: #a0bf67;
+@gray: #737980;
+@blue: #5e98e2;
+
+body {
+	position: relative;
+	font-size: 16px;
+	letter-spacing: 0.05em;
+	margin: 0 auto;
+	text-align: center;
+	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+	font-weight: 300;
+}
+
+h1, h2, h3, h4, h5 {
+	margin: 0;
+	font-weight: 200;
+}
+
+@import "header";
+@import "footer";
+
+.kifi-content {
+	margin-top: 131px;
+}
+
+.kifi-video-bg {
+	background: #f6f6f6;
+}
+
+.kifi-video {
+	position: relative;
+	.centered-content;
+	padding-bottom: 188px;
+
+	h2 {
+		font-size: 43px;
+		color: black;
+		letter-spacing: 2.5px;
+		padding: 40px 0;
+		margin: 0;
+	}
+}
+
+.kifi-video-play {
+	display: inline-block;
+	width: 149px;
+	height: 149px;
+	margin-bottom: 18px;
+	background: #a3c6f2;
+	cursor: pointer;
+}
+
+.kifi-video-caption {
+	font-size: 16px;
+	letter-spacing: 1px;
+}
+
+.kifi-scroll-down {
+	position: absolute;
+	bottom: 31px;
+	right: 0;
+	font-size: 16px;
+	writing-mode: tb-rl;
+	.rotate(90deg);
+	color: #909090;
+	letter-spacing: 1.4px;
+}
+
+.kifi-while {
+	padding: 80px 20px 47px;
+
+	h3 {
+		font-size: 24px;
+		color: @gray;
+		letter-spacing: 1.2px;
+		margin: 0;
+		margin-left: 2px;
+		text-align: left;
+		//.scale(1.1, 1);
+	}
+
+	h2 {
+		font-size: 38px;
+		margin: 0;
+		margin-top: 12px;
+		letter-spacing: 2px;
+	}
+
+	img {
+		display: block;
+		margin: 0 auto;
+		margin-top: 63px;
+	}
+}
+
+.kifi-while-text {
+	display: inline-block;
+	margin: 0 auto;
+}
+
+.kifi-image-keep-it {
+	display: block;
+	width: 837px;
+	max-width: 100%;
+	height: 291px;
+	margin: 0 auto;
+	background: #e7e7e7;
+}
+
+.kifi-image-search {
+	display: block;
+	width: 611px;
+	max-width: 100%;
+	height: 429px;
+	margin: 0 auto;
+	background: #e7e7e7;
+}
+
+.kifi-image-message {
+	display: block;
+	width: 507px;
+	max-width: 100%;
+	height: 421px;
+	margin: 0 auto;
+	background: #e7e7e7;
+}
+
+.kifi-try-kifi {
+	padding: 54px 20px;
+	margin-top: 76px;
+	background: #f6f6f6;
+
+	h3 {
+		font-size: 20px;
+		font-weight: 400;
+		color: @gray;
+		letter-spacing: 1px;
+		margin: 0;
+
+		a {
+			font-size: 0.9em;
+			color: @blue;
+			margin-left: 10px;
+		}
+	}
+
+	hr {
+		display: inline-block;
+		margin: 35px 0 15px;
+		width: 120px;
+		border: 1px solid #dddddd;
+	}
+
+	h2 {
+		margin: 0;
+		font-size: 42px;
+		letter-spacing: 2.5px;
+	}
+}
+
+.kifi-try-kifi-button {
+	display: inline-block;
+	font-size: 16px;
+	color: @blue;
+	padding: 14px 32px;
+	border: 2px solid @blue;
+	margin-top: 23px;
+	.border-radius(4px);
+	background-clip: padding-box;
+	text-transform: uppercase;
+	text-decoration: none;
+	letter-spacing: 3px;
+	font-weight: 500;
+}
+
+.kifi-two-more-things {
+	position: relative;
+	padding: 135px 0 200px;
+	.centered-content;
+
+	h2 {
+		font-size: 35px;
+		letter-spacing: 2px;
+		margin: 0;
+		margin-bottom: 50px;
+	}
+}
+
+.kifi-more-column {
+	width: 50%;
+	.box-sizing(border-box);
+	padding: 0 30px;
+	float: left;
+
+	h2 {
+		margin: 0;
+		margin-bottom: 40px;
+		font-size: 35px;
+		letter-spacing: 2.5px;
+
+		a {
+			color: @blue;
+			text-decoration: none;
+		}
+	}
+
+	h3 {
+		margin-top: 50px;
+		font-size: 21px;
+		letter-spacing: 1.5px;
+		color: @gray;
+	}
+}
+
+.kifi-mobile-links {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	text-align: left;
+
+	li {
+		padding: 12px 0;
+	}
+}
+
+.kifi-image-laptop {
+	display: block;
+	width: 481px;
+	max-width: 100%;
+	height: 276px;
+	margin: 0 auto;
+	background: #d2d3d5;
+}
+
+.kifi-mobile-images {
+	margin: 0 auto;
+	border-spacing: 0;
+	border-collapse: collapse;
+
+	td, th {
+		padding: 0;
+	}
+}
+
+@cell-spacing: 45px / 2;
+
+.kifi-image-iphone {
+	display: inline-block;
+	width: 130px;
+	max-width: 100%;
+	height: 278px;
+	margin: 0 auto;
+	margin-right: @cell-spacing;
+	background: #ced4dc;
+}
+
+.kifi-mobile-links {
+	display: inline-block;
+	margin-left: @cell-spacing;
+}
+
+.kifi-mobile-link {
+	display: inline-block;
+	color: white;
+	background: #dddddd;
+	width: 150px;
+	padding: 8px 11px;
+	line-height: 1;
+	.border-radius(3px);
+	text-decoration: none;
+	.box-sizing(border-box);
+}
+
+.kifi-mobile-link-status {
+	display: block;
+	font-size: 10px;
+	text-transform: uppercase;
+}
+
+.kifi-mobile-link-device {
+	display: block;
+	font-size: 17px;
+	margin-top: 4px;
+}
