@@ -296,9 +296,9 @@ var socketHandlers = {
     delete threadCallbacks[th.id];
   },
   message: function(threadId, message) {
-    log("[socket:message]", threadId, message, message.nUrl)();
+    log('[socket:message]', threadId, message, message.nUrl)();
     forEachTabAtLocator('/messages/' + threadId, function(tab) {
-      api.tabs.emit(tab, "message", {threadId: threadId, message: message, userId: session.user.id});
+      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: session.user.id});
     });
     var messages = messageData[threadId];
     if (messages) {
@@ -554,24 +554,27 @@ api.port.on({
       tc.push(respond);
     }
   },
-  get_page_thread_count: function(_, respond, tab) {
-    var list = threadLists[tab.nUri];
+  get_page_thread_count: function(_, __, tab) {
+    var list = threadLists[tab.nUri || tab.url];
     if (list) {
-      reply(list);
+      sendPageThreadCount(tab, list);
     } else {
-      (threadListCallbacks[tab.nUri] || (threadListCallbacks[tab.nUri] = [])).push(reply);
-    }
-    function reply(tl) {
-      respond({count: tl.ids.length, id: tl.ids.length === 1 ? tl.ids[0] : undefined});
+      var cb = threadListCallbacks[tab.nUri || tab.url];
+      if (cb) {
+        cb.push(sendPageThreadCount.bind(null, tab));
+      }
     }
   },
   get_threads: function(kind, respond, tab) {
-    var listKey = kind === 'page' ? tab.nUri : kind;
+    var listKey = kind === 'page' ? tab.nUri || tab.url : kind;
     var list = threadLists[listKey];
     if (list) {
       reply(list);
     } else {
-      (threadListCallbacks[listKey] || (threadListCallbacks[listKey] = [])).push(reply);
+      var cb = threadListCallbacks[listKey];
+      if (cb) {
+        cb.push(reply);
+      }
     }
     if (kind === 'all') {
       syncNumUnreadUnmutedThreads(); // sanity checking
@@ -853,23 +856,21 @@ function insertNewNotification(n) {
       n.unread = false;
       n.unreadAuthors = n.unreadMessages = 0;
     }
-    var keys = {all: null, page: n.url};
-    if (n.unread) {
-      keys.unread = null;
-    }
-    if (isSent(n)) {
-      keys.sent = null;
-    }
-    for (var kind in keys) {
-      var list = threadLists[keys[kind] || kind];
-      if (list) {
-        list.insert(n);
-        var locator = kind !== 'page' ? '/messages:' + kind : '/messages';
-        forEachTabAtLocator(locator, function (tab) {
-          api.tabs.emit(tab, 'new_thread', {kind: kind, thread: n}, {queue: true});
-        });
+    var o = {all: true, page: true, unread: n.unread, sent: isSent(n)};
+    for (var kind in o) {
+      if (o[kind]) {
+        var tl = threadLists[kind === 'page' ? n.url : kind];
+        if (tl && tl.insert(n) && kind === 'page') {
+          forEachTabAt(n.url, function (tab) {
+            sendPageThreadCount(tab, tl);
+          });
+        }
       }
     }
+    forEachTabAtThreadList(function (tab) {
+      var thisPage = n.url === tab.nUri || n.url === tab.url;
+      api.tabs.emit(tab, 'new_thread', {thread: n, thisPage: thisPage}, {queue: true});
+    });
     return true;
   }
 }
@@ -931,7 +932,7 @@ function markRead(category, threadId, messageId, timeStr) {
       });
     }
 
-    forEachTabAtThreadList(function(tab, tl) {
+    forEachTabAtThreadList(function (tab, tl) {
       api.tabs.emit(tab, 'thread_read', {
         category: category,
         time: timeStr,
@@ -958,7 +959,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   });
   // TODO: update numUnreadUnmuted for each ThreadList in threadLists?
 
-  forEachTabAtThreadList(function(tab, tl) {
+  forEachTabAtThreadList(function (tab, tl) {
     api.tabs.emit(tab, 'all_threads_read', {
       id: id,
       time: timeStr,
@@ -966,6 +967,10 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   });
 
   tellVisibleTabsNoticeCountIfChanged();
+}
+
+function sendPageThreadCount(tab, tl) {
+  api.tabs.emit(tab, 'page_thread_count', {count: tl.ids.length, id: tl.ids.length === 1 ? tl.ids[0] : undefined});
 }
 
 function awaitDeepLink(link, tabId, retrySec) {
@@ -1320,38 +1325,43 @@ function gotPageThreads(uri, nUri, threads, numUnreadUnmuted) {
   }
   delete threadListCallbacks[uri];
 
-  // sending new page threads (or just the count) to tabs at '/messages' on this page
+  // sending new page threads and count to tabs on this page
   if (numNewThreads) {
     forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
       api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler in notices.js
     });
-    // forEachTabAtUriAndLocator(uri, nUri, /^\/messages:.*/, function(tab) {
-    //   api.tabs.emit(tab, 'page_thread_count', pt.ids.length);  // TODO: write handler in notices.js
-    // });
+    forEachTabAt(uri, nUri, function(tab) {
+      sendPageThreadCount(tab, pt);
+    });
   }
 
   // updating tabs currently displaying any updated threads
   updatedThreads.forEach(loadThreadMessagesAndUpdateTabsViewingIt);
+
+  // prefetch any unread threads
+  pt.forEachUnread(function(threadId) {
+    if (!messageData[threadId] && !threadCallbacks[threadId]) {
+      threadCallbacks[threadId] = [];
+      socket.send(['get_thread', threadId]);
+    }
+  });
 }
 
 function gotPageThreadsFor(url, tab, pt, nUri) {
-  var tabIsOld = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
-  log('[gotPageThreadsFor]', tab.id, tabIsOld ? 'OLD' : '', url, nUri === url ? '' : nUri, pt.ids)();
+  var tooLate = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
+  log('[gotPageThreadsFor]', tab.id, tooLate ? 'TOO LATE' : '', url, nUri === url ? '' : nUri, pt.ids)();
 
-  if (!tabIsOld) {
+  if (!tooLate) {
     threadLists[nUri] = pt;
     if (ruleSet.rules.message && pt.numUnreadUnmuted) {  // open immediately to unread message(s)
+      // TODO: verify that there is not a pending deep link listener for this tab (or the pane is not already open)
       api.tabs.emit(tab, 'open_to', {
         locator: pt.numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/messages',
         trigger: 'message'
       }, {queue: 1});
-      pt.forEachUnread(function(threadId) {
-        if (!threadCallbacks[threadId]) {
-          socket.send(['get_thread', threadId]);  // prefetch
-          threadCallbacks[threadId] = [];
-        }
-      });
     }
+    sendPageThreadCount(tab, pt);
+    // TODO: send page threads to tab if at /messages
   }
 }
 

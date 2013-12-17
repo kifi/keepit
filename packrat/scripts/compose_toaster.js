@@ -14,6 +14,18 @@ var toaster = (function () {
   'use strict';
   var $toaster;
 
+  var handlers = {
+    page_thread_count: function (o) {
+      if ($toaster) {
+        $toaster.find('.kifi-toast-other-n')
+          .attr('data-n', o.count || null)
+        .parent()
+          .css('display', o.count ? 'block' : 'none')
+          .data(o);
+      }
+    }
+  };
+
   return {
     toggle: function ($parent) {
       if ($toaster) {
@@ -57,17 +69,15 @@ var toaster = (function () {
       if (e.which !== 1) return;
       hide();
     })
+    .on('click', '.kifi-toast-other', onOthersClick)
     .appendTo($parent);
 
     $toaster.data('compose', initCompose($toaster, session.prefs.enterToSend, {onSubmit: send}));
     $(document).data('esc').add(hide);
     pane.onHide.add(hide);
 
-    api.port.emit('get_page_thread_count', function (o) {
-      if (o.count) {
-        $toaster.find('.kifi-toast-other-n').attr('data-n', o.count).parent().show().data(o).click(onOthersClick);
-      }
-    });
+    api.port.on(handlers);
+    api.port.emit('get_page_thread_count');
 
     var deferred = Q.defer();
 
@@ -88,6 +98,7 @@ var toaster = (function () {
 
   function hide(e) {
     log('[toaster:hide]')();
+    api.port.off(handlers);
     pane.onHide.remove(hide);
     $(document).data('esc').remove(hide);
     $toaster.on('transitionend', onHidden).addClass('kifi-down');

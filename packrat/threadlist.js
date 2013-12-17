@@ -37,6 +37,7 @@
       if (n.unread && !n.muted) {
         this.numUnreadUnmuted++;
       }
+      return !nOld;
     },
     insertOlder: function(olderThreadIds) {
       Array.prototype.push.apply(this.ids, olderThreadIds);
