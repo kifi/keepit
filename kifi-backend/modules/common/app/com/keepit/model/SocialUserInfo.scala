@@ -37,7 +37,7 @@ case class SocialUserInfo(
   def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      Some(s"http://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
   def getProfileUrl: Option[String] = profileUrl orElse (networkType match {
