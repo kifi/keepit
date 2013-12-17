@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.controllers
 
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController

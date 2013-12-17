@@ -1,5 +1,6 @@
-package com.keepit.eliza
+package com.keepit.eliza.controllers.internal
 
+import com.keepit.eliza._
 import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
@@ -638,7 +639,7 @@ class MessagingController @Inject() (
   }
 
   // todo: Add adding non-users by kind/identifier
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext) = {
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Future[Boolean] = {
     shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
 
       val messageThreadOpt = db.readWrite { implicit session =>
@@ -662,9 +663,14 @@ class MessagingController @Inject() (
           Some((actuallyNewParticipantUserIds, message, thread))
         }
       }
-      SafeFuture { db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) } }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
+        SafeFuture {
+          db.readOnly { implicit session =>
+            messageRepo.refreshCache(thread.id.get)
+          }
+        }
+
         shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
           val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
@@ -879,28 +885,28 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Future[Seq[JsObject]], Future[Int])] = {
-    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
-      if (nUriOrPrenorm.isLeft) {
-        val nUri = nUriOrPrenorm.left.get
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject], Int, Int)] = {
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap { nUriOrPrenorm =>
+      nUriOrPrenorm match {
+      case Left(nUri) =>
         val noticesFuture = db.readOnly { implicit session =>
           userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
         }
-        val numUnreadUnmutedFuture = new SafeFuture(noticesFuture.map { notices =>
-          if (notices.length < howMany) {
-            notices.count { n =>
+        new SafeFuture(noticesFuture map { notices =>
+          val (numTotal, numUnreadUnmuted): (Int, Int) = if (notices.length < howMany) {
+            (notices.length, notices.count { n =>
               (n \ "unread").asOpt[Boolean].getOrElse(false) &&
               !(n \ "muted").asOpt[Boolean].getOrElse(false)
-            }
+            })
           } else {
             db.readOnly { implicit session =>
-              userThreadRepo.getUnreadUnmutedThreadCountForUri(userId, nUri.id.get)
+              userThreadRepo.getThreadCountsForUri(userId, nUri.id.get)
             }
           }
+          (nUri.url, notices, numTotal, numUnreadUnmuted)
         })
-        (nUri.url, noticesFuture, numUnreadUnmutedFuture)
-      } else {
-        (nUriOrPrenorm.right.get, Promise.successful(Seq[JsObject]()).future, Promise.successful(0).future)
+      case Right(prenormUri) =>
+        Promise.successful(prenormUri, Seq.empty, 0, 0).future
       }
     })
   }

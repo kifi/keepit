@@ -246,7 +246,10 @@ var pane = pane || function () {  // idempotent for Chrome
           $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
         }, 150);
-        return;
+      })
+      .on("mouseup", ".kifi-pane-settings-link", function (e) {
+        e.preventDefault();
+        window.open('https://www.kifi.com/profile');
       })
       .on("kifi:show-pane", function (e, loc, paramsArg) {
         showPane(loc, false, paramsArg);
