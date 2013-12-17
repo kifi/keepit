@@ -5,11 +5,12 @@
 
   // allById is a read-only object for looking up threads by their IDs
   // recentThreadIds should be contiguous and in chronological order, newest first
-  // numUnreadUnmnuted may refer to threads not yet represented in this ThreadList
-  function ThreadList(allById, recentThreadIds, numUnreadUnmuted) {
+  // numUnreadUnmuted and numTotal may refer to threads not yet inserted into this ThreadList
+  function ThreadList(allById, recentThreadIds, numTotal, numUnreadUnmuted) {
     this.allById = allById;
     this.ids = recentThreadIds;
-    this.numUnreadUnmuted = numUnreadUnmuted || 0;
+    this.numTotal = numTotal;
+    this.numUnreadUnmuted = numUnreadUnmuted;
   };
   ThreadList.prototype = {
     contains: function (threadId) {
@@ -34,7 +35,10 @@
         }
       }
       this.ids.splice(i, 0, n.thread);
-      if (n.unread && !n.muted) {
+      if (this.numTotal >= 0 && !nOld) {
+        this.numTotal++;
+      }
+      if (n.unread && !n.muted && this.numUnreadUnmuted >= 0) {
         this.numUnreadUnmuted++;
       }
       return !nOld;
@@ -45,7 +49,13 @@
     remove: function(threadId) {
       var nRemoved = 0, i;
       while (~(i = this.ids.indexOf(threadId))) {
-        this.ids.splice(i, 1);
+        var n = this.ids.splice(i, 1)[0];
+        if (this.numTotal > 0) {
+          this.numTotal--;
+        }
+        if (n.unread && !n.muted) {
+          this.decNumUnreadUnmuted();
+        }
         nRemoved++;
       }
       return nRemoved;
@@ -73,11 +83,13 @@
       }
     },
     decNumUnreadUnmuted: function() {
-      if (this.numUnreadUnmuted <= 0) {
-        log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted)();
-      }
-      if (this.numUnreadUnmuted > 0 || ~session.experiments.indexOf('admin')) {  // exposing -1 to admins to help debug
+      if (this.numUnreadUnmuted > 0) {
         this.numUnreadUnmuted--;
+      } else if (this.numUnreadUnmuted <= 0) {
+        log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted)();
+        if (~session.experiments.indexOf('admin')) {
+          this.numUnreadUnmuted--;
+        }
       }
     }
   };
