@@ -188,57 +188,7 @@ class AuthController @Inject() (
     emailPasswordForm.bindFromRequest.fold(
       hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
       success = { case EmailPassword(emailAddress, password) =>
-        val hasher = Registry.hashers.currentHasher
-
-        db.readOnly { implicit s =>
-          socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
-            emailAddressRepo.getByAddressOpt(emailAddress).map {
-              case emailAddr if emailAddr.state == EmailAddressStates.VERIFIED =>
-                (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
-              case emailAddr =>
-                // Someone is trying to register with someone else's unverified + non-login email address.
-                (false, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
-            }
-            None
-          }
-        }.collect {
-          case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
-            // Social user exists with these credentials
-            val identity = sui.credentials.get
-            if (hasher.matches(identity.passwordInfo.get, password)) {
-              Authenticator.create(identity).fold(
-                error => Status(INTERNAL_SERVER_ERROR)("0"),
-                authenticator => {
-                  val finalized = db.readOnly { implicit session =>
-                    userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
-                  }
-                  if (finalized) {
-                    Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
-                      .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
-                      .withCookies(authenticator.toCookie)
-                  } else {
-                    Ok(Json.obj("success" -> true))
-                      .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
-                      .withCookies(authenticator.toCookie)
-                  }
-                }
-              )
-            } else {
-              // emailIsVerifiedOrPrimary lets you know if the email is verified to the user.
-              // Deal with later?
-              Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
-            }
-        }.getOrElse {
-          val pInfo = hasher.hash(password)
-          val (newIdentity, userId) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
-          Authenticator.create(newIdentity).fold(
-            error => Status(INTERNAL_SERVER_ERROR)("0"),
-            authenticator =>
-              Ok(Json.obj("success" -> true))
-                .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
-                .withCookies(authenticator.toCookie)
-          )
-        }
+        authCommander.handleEmailPasswordSuccessForm(emailAddress, password)
       }
     )
   }
@@ -315,51 +265,6 @@ class AuthController @Inject() (
   def OkStreamFile(filename: String) =
     Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-
-  private val url = current.configuration.getString("application.baseUrl").get
-
-  private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
-      email: String, passwordInfo: PasswordInfo,
-      firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
-    val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
-    val lName = User.sanitizeName(lastName)
-    val newIdentity = UserIdentity(
-      userId = userIdOpt,
-      socialUser = SocialUser(
-        identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = fName,
-        lastName = lName,
-        fullName = s"$fName $lName",
-        email = Some(email),
-        avatarUrl = GravatarHelper.avatarFor(email),
-        authMethod = AuthenticationMethod.UserPassword,
-        passwordInfo = Some(passwordInfo)
-      ),
-      allowSignup = true,
-      isComplete = isComplete)
-
-    UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
-
-    val userIdFromEmailIdentity = for {
-      identity <- identityOpt
-      socialUserInfo <- db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
-      }
-      userId <- socialUserInfo.userId
-    } yield {
-      UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
-      userId
-    }
-
-    val user = userIdFromEmailIdentity.orElse {
-      db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO).map(_.userId).flatten
-      }
-    }
-
-    (newIdentity, user.get)
-  }
-
   def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = doVerifyEmail(code)(_))
   def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
     db.readWrite { implicit s =>
@@ -419,38 +324,7 @@ class AuthController @Inject() (
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
-  def doForgotPassword(implicit request: Request[JsValue]): Result = {
-    (request.body \ "email").asOpt[String] map { emailAddrStr =>
-        db.readOnly { implicit session =>
-          getResetEmailAddresses(emailAddrStr)
-        } match {
-          case Some((userId, verifiedEmailAddressOpt)) =>
-            val emailAddresses = Set(GenericEmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
-            db.readWrite { implicit session =>
-              emailAddresses.map { resetEmailAddress =>
-                // TODO: Invalidate both reset tokens the first time one is used.
-                val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
-                val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
-                postOffice.sendMail(ElectronicMail(
-                  from = EmailAddresses.NOTIFICATIONS,
-                  to = Seq(resetEmailAddress),
-                  subject = "Kifi.com | Password reset requested",
-                  htmlBody = views.html.email.resetPassword(resetUrl).body,
-                  category = PostOffice.Categories.User.RESET_PASSWORD
-                ))
-              }
-            }
-            Ok(Json.obj("addresses" -> emailAddresses.map { email =>
-              if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
-            }))
-          case _ =>
-            log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
-            BadRequest(Json.obj("error" -> "no_account"))
-        }
-    } getOrElse BadRequest("0")
-  }
-
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doForgotPassword(_), unauthenticatedAction = authCommander.doForgotPassword(_))
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
@@ -467,49 +341,7 @@ class AuthController @Inject() (
     }
   }
 
-  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doSetPassword(_), unauthenticatedAction = doSetPassword(_))
-  def doSetPassword(implicit request: Request[JsValue]): Result = {
-    (for {
-      code <- (request.body \ "code").asOpt[String]
-      password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
-    } yield {
-      db.readWrite { implicit s =>
-        passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-            for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
-              UserService.save(UserIdentity(
-                userId = sui.userId,
-                socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
-                )
-              ))
-            }
-            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
-          case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
-            Ok(Json.obj("error" -> "expired"))
-          case Some(pr) if pr.state == PasswordResetStates.USED =>
-            Ok(Json.obj("error" -> "already_used"))
-          case _ =>
-            Ok(Json.obj("error" -> "invalid_code"))
-        }
-      }
-    }) getOrElse BadRequest("0")
-  }
-
-  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
-    db.readOnly { implicit s =>
-      val emailAddrOpt = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None)  // TODO: exclude INACTIVE records
-      emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
-        emailAddrOpt.filter(_.verified) map { _ =>
-          (userId, None)
-        } getOrElse {
-          // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified))
-        }
-      }
-    }
-  }
+  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doSetPassword(_), unauthenticatedAction = authCommander.doSetPassword(_))
 
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authCommander.doUploadBinaryPicture(_), unauthenticatedAction = authCommander.doUploadBinaryPicture(_))
 
