@@ -10,7 +10,7 @@ import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.Filter
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.query.BooleanQueryWithSemanticLoss
+import com.keepit.search.query.BooleanQueryWithSemanticMatch
 
 trait PercentMatch extends QueryParser {
 
@@ -33,7 +33,7 @@ trait PercentMatch extends QueryParser {
     if (clauses.isEmpty) {
       None // all clause words were filtered away by the analyzer.
     } else {
-      val query = if (useSemanticMatch) new BooleanQueryWithSemanticLoss(false) else new BooleanQueryWithPercentMatch(false)
+      val query = if (useSemanticMatch) new BooleanQueryWithSemanticMatch(false) else new BooleanQueryWithPercentMatch(false)
       query.setPercentMatch(percentMatch)
       hotDocFilter.foreach{ f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
 

@@ -47,7 +47,7 @@ object SearchConfig {
       "showExperts" -> "false",
       "forbidEmptyFriendlyHits" -> "false",
       "useNonPersonalizedContextVector" -> "false",
-      "useSemanticMatch" -> "true"
+      "useSemanticMatch" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
