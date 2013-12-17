@@ -526,12 +526,11 @@ api.port.on({
         reply({messages: msgs});
       } else {
         var tc = threadCallbacks[id];
-        if (tc) {
-          tc.push(reply);
-        } else {
+        if (!tc) {
+          tc = threadCallbacks[id] = [];
           socket.send(['get_thread', id]);
-          threadCallbacks[id] = [reply];
         }
+        tc.push(reply);
       }
     }
     function reply(o) {
@@ -548,12 +547,11 @@ api.port.on({
       respond({id: id, messages: msgs});
     } else {
       var tc = threadCallbacks[id];
-      if (tc) {
-        tc.push(respond);
-      } else {
+      if (!tc) {
+        tc = threadCallbacks[id] = [];
         socket.send(['get_thread', id]);
-        threadCallbacks[id] = [respond];
       }
+      tc.push(respond);
     }
   },
   get_page_thread_count: function(_, respond, tab) {
@@ -900,10 +898,8 @@ function requestMissedNotifications() {
         if (serverTime - new Date(n.time) < 60000) {
           handleRealTimeNotification(n);
         }
-        var md = messageData[n.thread];
-        if (md && !threadCallbacks[n.thread]) {
-          socket.send(['get_thread', n.thread]);  // TODO: "get_thread_since" (don't need messages already loaded)
-          threadCallbacks[n.thread] = [];  // TODO: add callback that updates tabs at /messages/threadId
+        if (messageData[n.thread]) {
+          loadThreadMessagesAndUpdateTabsViewingIt(n);
         }
       }
     }
@@ -1335,25 +1331,7 @@ function gotPageThreads(uri, nUri, threads, numUnreadUnmuted) {
   }
 
   // updating tabs currently displaying any updated threads
-  updatedThreads.forEach(function (th) {
-    if (threadCallbacks[th.thread]) {
-      threadCallbacks[th.thread].push(updateThreadInTabs.bind(null, th));
-    } else {
-      socket.send(['get_thread', th.thread]);
-      threadCallbacks[th.thread] = [updateThreadInTabs.bind(null, th)];
-    }
-  });
-  function updateThreadInTabs(oldTh, o) {
-    forEachTabAtLocator('/messages/' + o.id, function(tab) {
-      if (o.messages.length === oldTh.messages + 1) {
-        api.tabs.emit(tab, 'message', {
-          threadId: o.id,
-          message: o.messages[o.messages.length - 1]});
-      } else {
-        api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages});
-      }
-    });
-  }
+  updatedThreads.forEach(loadThreadMessagesAndUpdateTabsViewingIt);
 }
 
 function gotPageThreadsFor(url, tab, pt, nUri) {
@@ -1375,6 +1353,27 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
       });
     }
   }
+}
+
+function loadThreadMessagesAndUpdateTabsViewingIt(th) {
+  var tc = threadCallbacks[th.thread];
+  if (!tc) {
+    tc = threadCallbacks[th.thread] = [];
+    socket.send(['get_thread', th.thread]);
+  }
+  tc.push(updateThreadInTabs.bind(null, th.messages));
+}
+
+function updateThreadInTabs(oldMessageCount, o) {
+  forEachTabAtLocator('/messages/' + o.id, function(tab) {
+    if (o.messages.length === oldMessageCount + 1) {
+      api.tabs.emit(tab, 'message', {
+        threadId: o.id,
+        message: o.messages[o.messages.length - 1]});
+    } else {
+      api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages});
+    }
+  });
 }
 
 function isSent(th) {
