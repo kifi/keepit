@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.{AuthCommander, InviteCommander}
 import com.keepit.social._
-import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
+import securesocial.core.providers.utils.PasswordHasher
 import com.keepit.common.controller.ActionAuthenticator._
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common._
@@ -21,13 +21,11 @@ import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import securesocial.core.IdentityId
 import scala.util.Failure
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
 import scala.util.Success
-import securesocial.core.PasswordInfo
 import play.api.mvc.Cookie
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
