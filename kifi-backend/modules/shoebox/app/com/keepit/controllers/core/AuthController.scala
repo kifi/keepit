@@ -265,63 +265,10 @@ class AuthController @Inject() (
   def OkStreamFile(filename: String) =
     Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = doVerifyEmail(code)(_))
-  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
-    db.readWrite { implicit s =>
-      emailAddressRepo.getByCode(code).map { address =>
-        val user = userRepo.get(address.userId)
-        val verification = emailAddressRepo.verify(address.userId, code)
-
-        if (verification._2) { // code is being used for the first time
-          if (user.primaryEmailId.isEmpty) {
-            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            userValueRepo.clearValue(user.id.get, "pending_primary_email")
-          } else {
-            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
-            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
-              userValueRepo.clearValue(user.id.get, "pending_primary_email")
-              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            }
-          }
-        }
-
-        verification match {
-          case (true, _) if user.state == UserStates.PENDING =>
-            Redirect("/?m=1")
-          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
-            // first time being used, not logged in OR logged in as correct user
-            authenticateUser(user.id.get,
-              error => throw error,
-              authenticator => {
-                val resp = if (kifiInstallationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
-                  // user has no installations
-                  Redirect("/install")
-                } else {
-                  Redirect("/profile?m=1")
-                }
-                resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
-              }
-            )
-          case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
-        }
-      }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
-      }
-    }
-  }
+  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authCommander.doVerifyEmail(code)(_), unauthenticatedAction = authCommander.doVerifyEmail(code)(_))
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
-  }
-  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
-    val identity = db.readOnly { implicit session =>
-      val suis = socialRepo.getByUser(userId)
-      val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
-      sui.credentials.get
-    }
-    Authenticator.create(identity).fold(onError, onSuccess)
   }
 
   def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doForgotPassword(_), unauthenticatedAction = authCommander.doForgotPassword(_))
