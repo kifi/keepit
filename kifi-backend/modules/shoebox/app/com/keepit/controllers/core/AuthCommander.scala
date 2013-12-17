@@ -3,14 +3,14 @@ package com.keepit.controllers.core
 import com.google.inject.Inject
 import play.api.mvc._
 import play.api.http.{Status, HeaderNames}
-import play.api.libs.json.{JsNumber, Json, JsValue}
+import play.api.libs.json.{Json, JsValue}
 import securesocial.core._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.InviteCommander
 import com.keepit.social._
-import securesocial.core.providers.utils.GravatarHelper
+import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 import com.keepit.common.controller.ActionAuthenticator._
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common._
@@ -18,21 +18,22 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
 import play.api.Play._
+import play.api.data._
+import play.api.data.Forms._
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import securesocial.core.IdentityId
-import scala.Some
+import scala.util.Failure
 import play.api.mvc.SimpleResult
+import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
+import scala.util.Success
 import securesocial.core.PasswordInfo
 import play.api.mvc.Cookie
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
+import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
-import play.api.data._
-import play.api.data.Forms._
-import com.keepit.common.controller.AuthenticatedRequest
-import scala.util.{Failure, Success}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
 class AuthCommander @Inject() (
   db: Database,
@@ -43,6 +44,7 @@ class AuthCommander @Inject() (
   socialRepo: SocialUserInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   userValueRepo: UserValueRepo,
+  passwordResetRepo: PasswordResetRepo,
   s3ImageStore: S3ImageStore,
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander
@@ -53,6 +55,64 @@ class AuthCommander @Inject() (
     val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
     f(resCookies, resSession)
   }
+
+  def handleEmailPasswordSuccessForm(emailAddress:String, password:String)(implicit request:Request[_]) = {
+    val hasher = Registry.hashers.currentHasher
+    val tupleOpt: Option[(Boolean, SocialUserInfo)] = db.readOnly { implicit s =>
+      socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
+        emailAddressRepo.getByAddressOpt(emailAddress).map {
+          case emailAddr if emailAddr.state == EmailAddressStates.VERIFIED =>
+            (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
+          case emailAddr =>
+            // Someone is trying to register with someone else's unverified + non-login email address.
+            (false, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
+        }
+        None
+      }
+    }
+    val session = request.session
+    val home = com.keepit.controllers.website.routes.HomeController.home()
+    val res: PlainResult = tupleOpt collect {
+      case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
+        // Social user exists with these credentials
+        val identity = sui.credentials.get
+        if (hasher.matches(identity.passwordInfo.get, password)) {
+          Authenticator.create(identity).fold(
+            error => Status(INTERNAL_SERVER_ERROR)("0"),
+            authenticator => {
+              val finalized = db.readOnly { implicit session =>
+                userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
+              }
+              if (finalized) {
+                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
+                  .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  .withCookies(authenticator.toCookie)
+              } else {
+                Ok(Json.obj("success" -> true))
+                  .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  .withCookies(authenticator.toCookie)
+              }
+            }
+          )
+        } else {
+          // emailIsVerifiedOrPrimary lets you know if the email is verified to the user.
+          // Deal with later?
+          Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
+        }
+    } getOrElse {
+      val pInfo = hasher.hash(password)
+      val (newIdentity, userId) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
+      Authenticator.create(newIdentity).fold(
+        error => Status(INTERNAL_SERVER_ERROR)("0"),
+        authenticator =>
+          Ok(Json.obj("success" -> true))
+            .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
+            .withCookies(authenticator.toCookie)
+      )
+    }
+    res
+  }
+
 
   private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
                                        email: String, passwordInfo: PasswordInfo,
@@ -249,6 +309,81 @@ class AuthCommander @Inject() (
 
       finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
     })
+  }
+
+  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
+    db.readOnly { implicit s =>
+      val emailAddrOpt = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None)  // TODO: exclude INACTIVE records
+      emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
+        emailAddrOpt.filter(_.verified) map { _ =>
+          (userId, None)
+        } getOrElse {
+          // TODO: use user's primary email address once hooked up
+          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified))
+        }
+      }
+    }
+  }
+
+  def doForgotPassword(implicit request: Request[JsValue]): Result = {
+    (request.body \ "email").asOpt[String] map { emailAddrStr =>
+      db.readOnly { implicit session =>
+        getResetEmailAddresses(emailAddrStr)
+      } match {
+        case Some((userId, verifiedEmailAddressOpt)) =>
+          val emailAddresses = Set(GenericEmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
+          db.readWrite { implicit session =>
+            emailAddresses.map { resetEmailAddress =>
+            // TODO: Invalidate both reset tokens the first time one is used.
+              val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
+              val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
+              postOffice.sendMail(ElectronicMail(
+                from = EmailAddresses.NOTIFICATIONS,
+                to = Seq(resetEmailAddress),
+                subject = "Kifi.com | Password reset requested",
+                htmlBody = views.html.email.resetPassword(resetUrl).body,
+                category = PostOffice.Categories.User.RESET_PASSWORD
+              ))
+            }
+          }
+          Ok(Json.obj("addresses" -> emailAddresses.map { email =>
+            if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
+          }))
+        case _ =>
+          log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
+          BadRequest(Json.obj("error" -> "no_account"))
+      }
+    } getOrElse BadRequest("0")
+  }
+
+
+  def doSetPassword(implicit request: Request[JsValue]): Result = {
+    (for {
+      code <- (request.body \ "code").asOpt[String]
+      password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
+    } yield {
+      db.readWrite { implicit s =>
+        passwordResetRepo.getByToken(code) match {
+          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
+            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+            for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+              UserService.save(UserIdentity(
+                userId = sui.userId,
+                socialUser = sui.credentials.get.copy(
+                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
+                )
+              ))
+            }
+            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
+          case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
+            Ok(Json.obj("error" -> "expired"))
+          case Some(pr) if pr.state == PasswordResetStates.USED =>
+            Ok(Json.obj("error" -> "already_used"))
+          case _ =>
+            Ok(Json.obj("error" -> "invalid_code"))
+        }
+      }
+    }) getOrElse BadRequest("0")
   }
 
   def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): Result = {
