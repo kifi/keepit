@@ -1,5 +1,6 @@
-package com.keepit.eliza
+package com.keepit.eliza.controllers.internal
 
+import com.keepit.eliza._
 import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
@@ -638,7 +639,7 @@ class MessagingController @Inject() (
   }
 
   // todo: Add adding non-users by kind/identifier
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext) = {
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Future[Boolean] = {
     shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
 
       val messageThreadOpt = db.readWrite { implicit session =>
@@ -659,12 +660,17 @@ class MessagingController @Inject() (
             sentOnUrl = None,
             sentOnUriId = None
           ))
-          SafeFuture { db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) } }
           Some((actuallyNewParticipantUserIds, message, thread))
         }
       }
 
       messageThreadOpt.exists { case (newParticipants, message, thread) =>
+        SafeFuture {
+          db.readOnly { implicit session =>
+            messageRepo.refreshCache(thread.id.get)
+          }
+        }
+
         shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
           val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get

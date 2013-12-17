@@ -1,7 +1,8 @@
 package com.keepit.eliza
 
-import com.keepit.model.{User}
-import com.keepit.common.db.{Id}
+import com.keepit.eliza.controllers.SocketInfo
+import com.keepit.model.User
+import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 
@@ -20,7 +21,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 
 @ImplementedBy(classOf[NotificationRouterImpl])
 trait NotificationRouter { //TODO Stephen: This needs a better name
-  
+
   def sendNotification(userOpt: Option[Id[User]], notification: Notification) : Unit
 
   def onNotification(f: (Option[Id[User]], Notification) => Unit) : Unit
@@ -44,7 +45,7 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient, 
   system.scheduler.schedule(30 seconds, 1 minutes)(updateStatsD _)
 
   private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
-  private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]() 
+  private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]()
 
 
   private def logTiming(tag: String, msg: JsArray) = {
@@ -76,7 +77,7 @@ class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient, 
   }
 
   def sendNotification(userOpt: Option[Id[User]], notification: Notification) : Unit = {
-    notificationCallbacks.par.foreach { f => 
+    notificationCallbacks.par.foreach { f =>
       f(userOpt, notification)
     }
   }
