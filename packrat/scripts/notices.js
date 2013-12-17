@@ -26,39 +26,42 @@ panes.notices = function () {
 
   var handlers = {
     new_thread: function (o) {
-      var listKind = $list && $list.data('kind');
-      if (o.kind === listKind) {
-        log('[new_thread]', o.thread)();
+      var kind = $list && $list.data('kind');
+      if (kind === 'all' ||
+          kind === 'page' && o.thisPage ||
+          kind === 'unread' && o.thread.unread ||
+          kind === 'sent' && isSent(o.thread)) {
         showNew(o.thread);
         if (o.thread.unread) {
           //$markAll.show();
         }
       } else {
-        log('[new_thread] kind mismatch', listKind, o.kind, o.thread.thread)();
+        log('[new_thread] kind mismatch', kind, o)();
       }
     },
     thread_read: function (o) {
-      log('[notifications_visited]', o)();
       markRead(o.category, o.time, o.threadId, o.id);
       //$markAll.toggle(o.anyUnread);
     },
     all_threads_read: function (o) {
-      log('[all_threads_read]', o)();
       markAllRead(o.id, o.time);
       //$markAll.toggle(o.anyUnread);
+    },
+    page_thread_count: function (o) {
+      $pageCount.text(o.count || 0);
     }
   };
 
-  var $list;
+  var $pageCount, $list;
   return {
     render: function ($paneBox, locator) {
       var kind = locator.substr(10) || 'page';
       $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
+      $pageCount = $paneBox.find('.kifi-notices-page-count');
+
       api.port.emit('get_threads', kind, function (o) {
         var $box = $(render('html/keeper/notices', {})).appendTo($paneBox.find('.kifi-notices-cart'));
         renderList($box, kind, o);
-
-        api.port.on(handlers);
 
         $paneBox.on('kifi:remove', function () {
           $list = null;
@@ -77,9 +80,8 @@ panes.notices = function () {
         // });
       });
 
-      api.port.emit('get_page_thread_count', function (o) {
-        $paneBox.find('.kifi-notices-page-count').text(o.count || 0);
-      });
+      api.port.on(handlers);
+      api.port.emit('get_page_thread_count');
     },
     switchTo: function (locator) {
       var kind = locToKind(locator);
@@ -307,6 +309,10 @@ panes.notices = function () {
       }
       return o;
     };
+  }
+
+  function isSent(th) {
+    return th.firstAuthor && th.participants[th.firstAuthor].id === session.user.id;
   }
 
   function toNamesJson(users) {
