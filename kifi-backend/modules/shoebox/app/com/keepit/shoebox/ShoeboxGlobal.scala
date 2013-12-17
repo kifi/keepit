@@ -12,7 +12,7 @@ import play.api.Mode._
 import play.api._
 import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 import com.keepit.social.SocialGraphPlugin
-import com.keepit.controllers.shoebox.ExpertRecommenderController
+import com.keepit.controllers.internal.ExpertRecommenderController
 import com.keepit.learning.topicmodel.TopicModelSwitcherPlugin
 import com.keepit.integrity.{UriIntegrityPlugin, DataIntegrityPlugin}
 

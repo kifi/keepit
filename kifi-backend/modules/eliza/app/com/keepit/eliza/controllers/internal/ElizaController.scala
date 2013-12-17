@@ -1,5 +1,6 @@
-package com.keepit.eliza
+package com.keepit.eliza.controllers.internal
 
+import com.keepit.eliza._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.model.{User}
@@ -14,7 +15,9 @@ import play.api.libs.json.{JsObject, JsArray}
 import com.google.inject.Inject
 
 
-class ElizaController @Inject() (notificationRouter: NotificationRouter) extends ElizaServiceController with Logging {
+class ElizaController @Inject() (
+  notificationRouter: NotificationRouter)
+    extends ElizaServiceController with Logging {
 
   def sendToUserNoBroadcast() = Action { request =>
     Async(future{
