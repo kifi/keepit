@@ -17,6 +17,7 @@ import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 
+import scala.slick.jdbc.StaticQuery
 import scala.slick.lifted.Query
 import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration._
@@ -113,7 +114,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
 
-  def getUnreadUnmutedThreadCountForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Int
+  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int)
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
@@ -458,8 +459,8 @@ class UserThreadRepoImpl @Inject() (
     updateSendableNotifications(rawNotifications)
   }
 
-  def getUnreadUnmutedThreadCountForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
-    Query((for (row <- table if row.user === userId && row.uriId === uriId && row.unread && !row.muted) yield row).length).first
+  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int) = {
+    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId").first
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {

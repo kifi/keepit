@@ -43,6 +43,7 @@ class MainQueryParser(
   override val siteBoost: Float,
   override val concatBoost: Float,
   homePageBoost: Float,
+  override val useSemanticMatch: Boolean,
   phraseDetector: PhraseDetector,
   phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
   monitoredAwait: MonitoredAwait

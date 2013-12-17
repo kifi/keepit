@@ -77,4 +77,13 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
     val terms = getTerms(query, stem = true)
     searcher.getSemanticVector(terms)
   }
+
+  def semanticLoss(terms: Set[Term]): Map[String, Float] = {
+    val svTerms = terms.map{ t => new Term("sv", t.text) }
+    val completeVector = searcher.getSemanticVector(svTerms)
+    svTerms.map{ t => (t, svTerms - t) }.map{ case (term, subTerms) =>
+      val subVector = searcher.getSemanticVector(subTerms)
+      (term.text, completeVector.similarity(subVector))
+    }.toMap
+  }
 }

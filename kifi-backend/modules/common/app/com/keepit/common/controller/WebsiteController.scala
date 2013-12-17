@@ -6,32 +6,7 @@ import play.api.mvc._
 import play.api.libs.json._
 
 
-class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Controller with Logging {
-
-  def AuthenticatedJsonAction(allowPending: Boolean)(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    AuthenticatedJsonAction(allowPending, parse.anyContent)(action)
-
-  def AuthenticatedJsonToJsonAction(allowPending: Boolean)(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] =
-    AuthenticatedJsonAction(allowPending, parse.tolerantJson)(action)
-
-  def AuthenticatedJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    AuthenticatedJsonAction(false, parse.anyContent)(action)
-
-  def AuthenticatedJsonToJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] =
-    AuthenticatedJsonAction(false, parse.tolerantJson)(action)
-
-  def AuthenticatedJsonAction[T](allowPending: Boolean, bodyParser: BodyParser[T])(action: AuthenticatedRequest[T] => Result): Action[T] = Action(bodyParser) { request =>
-    actionAuthenticator.authenticatedAction(true, allowPending, bodyParser, action)(request) match {
-      case r: PlainResult => r.as(ContentTypes.JSON)
-      case any => any
-    }
-  }
-
-  def JsonToJsonAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] =
-    actionAuthenticator.authenticatedAction(true, allowPending, parse.tolerantJson, authenticatedAction, unauthenticatedAction)
-
-  def JsonAction[T](allowPending: Boolean, parser: BodyParser[T] = parse.anyContent)(authenticatedAction: AuthenticatedRequest[T] => Result, unauthenticatedAction: Request[T] => Result): Action[T] =
-    actionAuthenticator.authenticatedAction(true, allowPending, parser, authenticatedAction, unauthenticatedAction)
+class WebsiteController(override val actionAuthenticator: ActionAuthenticator) extends Controller with JsonActions with Logging {
 
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AuthenticatedHtmlAction(false)(action)
 
