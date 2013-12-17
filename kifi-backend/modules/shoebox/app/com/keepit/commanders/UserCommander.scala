@@ -16,6 +16,10 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import scala.util.Try
 import scala.Some
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -65,6 +69,8 @@ class UserCommander @Inject() (
   bookmarkRepo: BookmarkRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  eventContextBuilder: HeimdalContextBuilderFactory,
+  heimdalServiceClient: HeimdalServiceClient,
   abook: ABookServiceClient) {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -137,5 +143,18 @@ class UserCommander @Inject() (
 
     val segment = UserSegmentFactory(numBms, numFriends)
     segment
+  }
+
+  def createUser(firstName: String, lastName: String, state: State[User])(implicit session: RWSession) = {
+    val newUser = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
+    SafeFuture {
+      val contextBuilder = eventContextBuilder()
+      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.SIGNUP))
+    }
+    session.conn.commit()
+
+    // Here you can do things with default keeps / tags. See ExtBookmarksController / BookmarkInterner for examples.
+
+    newUser
   }
 }

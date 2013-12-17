@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.realtime.{DeviceType, UrbanAirship}

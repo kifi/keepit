@@ -3,14 +3,11 @@ package com.keepit.controllers.mobile
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, MobileController}
 import com.keepit.common.logging.Logging
-import play.api.libs.json.{JsBoolean, Json}
+import play.api.libs.json.Json
 import securesocial.core._
-import securesocial.core.LoginEvent
-import securesocial.core.OAuth2Info
-import securesocial.core.IdentityId
 import play.api.mvc._
-import scala.util.{Failure, Success, Try}
-import com.keepit.controllers.core.AuthCommander
+import scala.util.Try
+import com.keepit.controllers.core.{AuthController, AuthCommander}
 import securesocial.controllers.ProviderController
 import securesocial.core.IdentityId
 import scala.util.Failure
@@ -20,6 +17,7 @@ import securesocial.core.LoginEvent
 import securesocial.core.OAuth2Info
 import scala.util.Success
 import play.api.mvc.Cookie
+
 
 class MobileAuthController @Inject() (
   actionAuthenticator:ActionAuthenticator,
@@ -62,8 +60,11 @@ class MobileAuthController @Inject() (
   def loginWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        authCommander.handleAuthResult(link, request, res) { (cookies:Seq[Cookie], sess:Session) =>
-          Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(sess)
+        authCommander.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
+          val newSession = if (link != "") {
+            sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
+          } else sess
+          Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(newSession)
         }
       case res => res
     }
