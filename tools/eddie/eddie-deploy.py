@@ -80,10 +80,6 @@ if __name__=="__main__":
 
   for instance in instances: #ZZZ include version, force mode
     shell = spur.SshShell(hostname=instance.ip,username="fortytwo")
-    env = {
-      "AWS_ACCESS_KEY_ID" : os.environ["AWS_ACCESS_KEY_ID"],
-      "AWS_SECRET_ACCESS_KEY" : os.environ["AWS_SECRET_ACCESS_KEY"]
-    }
-    shell.run(["python", "/home/fortytwo/eddie/eddie-self-deploy.py"], stdout=sys.stdout, update_env=env)
+    shell.run(["python", "/home/fortytwo/eddie/eddie-self-deploy.py"], stdout=sys.stdout)
 
 

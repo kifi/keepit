@@ -49,8 +49,7 @@ class MainSearcherFactory @Inject() (
     lang: Lang,
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig,
-    lastUUID: Option[ExternalId[ArticleSearchResult]]
+    config: SearchConfig
   ) = {
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
     val articleSearcher = articleIndexer.getSearcher
@@ -66,7 +65,6 @@ class MainSearcherFactory @Inject() (
         numHitsToReturn,
         filter,
         config,
-        lastUUID,
         articleSearcher,
         parserFactory,
         socialGraphInfoFuture,

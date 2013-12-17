@@ -4313,6 +4313,109 @@ span.long-text, a.long-text {
   transition: none;
 }
 
+/* bookmark import dialog */
+
+.import-dialog>.dialog-content {
+  height: 490px;
+  margin-top: -262px;
+  width: 675px;
+  margin-left: -337px;
+  color: #66829b;
+  line-height: 1.5;
+}
+.import-dialog>.dialog-content>.dialog-title {
+  color: #515051;
+  background: url(../img/kifi-logo-color.png) 30px 50% / 32px no-repeat;
+  font-size: 0;
+  background-color: #eff2f7;
+  line-height: 50px;
+  margin-bottom: 30px;
+}
+.import-dialog>.dialog-content>.dialog-title>.import-dialog-x {
+  font-size: 13px;
+  float: right;
+  margin: 0 15px;
+  color: #888;
+  cursor: pointer;
+  padding: 0px 8px;
+}
+.import-dialog>.dialog-content>.dialog-body {
+  width: 500px;
+  margin: 20px auto;
+}
+.import-dialog>.dialog-content>.dialog-body>h1 {
+  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  color: #333;
+  text-align: center;
+}
+.import-dialog>.dialog-content>.dialog-body>ul {
+  list-style: disc;
+  margin: 0 0 0 30px;
+  color: #6fa6ef;
+  font-size: 24px
+}
+.import-dialog>.dialog-content>.dialog-body>.import-star-to-kifi {
+  width: 127px;
+  height: 37px;
+  margin: 12px 168px 16px;
+}
+.import-dialog>.dialog-content>.dialog-body>.import-check {
+  width: 72px;
+  height: 72px;
+  margin: 12px 210px 5px;
+}
+.import-dialog>.dialog-content>.dialog-body>ul>li {margin-bottom:10px; }
+.import-dialog>.dialog-content>.dialog-body>ul>li>span {color: #333; font-size: 18px; }
+
+.import-dialog>.dialog-content>.dialog-body>.importing-explanation {
+  margin-top: 30px;
+  color: #333;
+  font-size: 18px;
+}
+
+.import-dialog>.dialog-content>.cancel-import {
+  left: 0;
+  position: absolute;
+  bottom: 15px;
+  left: 5px;
+  margin: 36px 65px;
+  color: #888;
+  text-decoration: underline;
+  font-size: 16px;
+}
+.import-dialog>.dialog-content>button {
+  margin: 20px 41px;
+  position: absolute;
+  bottom: 15px;
+  right: 5px;
+  width: 165px;
+  height: 58px;
+  line-height: 58px;
+  padding: 0;
+  background-color: #6fa5ef;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 17px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  -webkit-transition: background-color .1s;
+  transition: background-color .1s;
+}
+.import-dialog>.dialog-content>button.do-import {
+  padding-left: 18px;
+  background: url(../img/bookmark-lock.png) 12px 50% / 16px 20px no-repeat;
+  background-color: #6fa5ef;
+}
+.import-dialog>.dialog-content>button:hover {background-color: #7faeef}
+.import-dialog>.dialog-content>button:active {background-color: #5f9cef; -webkit-transition: none; transition: none}
+
+
+
 /* tips */
 .tip {
   position: absolute;
@@ -4564,6 +4667,10 @@ a.friend-nw-google[href] {
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header-logo {
     background-image: url(../img/kifi-logo.2x.png);
+  }
+
+  .import-dialog>.dialog-content>button.do-import {
+    background-image: url(../img/bookmark-lock.2x.png);
   }
 
   .query-mag::before,

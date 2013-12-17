@@ -42,6 +42,9 @@
       <tr>
         <th>Show</th><td>@{result.toShow}</td>
       </tr>
+      <tr>
+        <th>Last</th><td><a href="@{result.last.map(last => s"/admin/search/results/$last").getOrElse("")}">@{result.last.getOrElse("")}</a></td>
+      </tr>
    </table>
 
    <table class="table table-bordered">
@@ -59,7 +62,7 @@
      </tr>
      @for(meta <- metas) {
       <tr>
-        <td><a href="@meta.uri.url">@{if(meta.uri.title.getOrElse("NO TITLE").length > 50) meta.uri.title.get.substring(0, 50) else meta.uri.title.getOrElse("NO TITLE") }</a></td>
+        <td><a href="/admin/scraped/@{meta.uri.id}">@{if(meta.uri.title.getOrElse("NO TITLE").length > 50) meta.uri.title.get.substring(0, 50) else meta.uri.title.getOrElse("NO TITLE") }</a></td>
         <td>@meta.hit.score</td>
         <td>@meta.users.size</td>
         <td>@{meta.scoring.textScore} / @{meta.scoring.normalizedTextScore} / @{meta.scoring.boostedTextScore}</td>
