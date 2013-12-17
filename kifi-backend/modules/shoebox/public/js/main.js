@@ -1065,6 +1065,46 @@ $(function () {
 			});
 	}
 
+	function sendResetPassword(old, new1) {
+		console.log("BOOOOM!");
+		var $changePassword = $(this).closest('.profile-reset-password');
+
+	}
+
+	$(document).on('click', '.profile-reset-password-title-wrapper', function (e) {
+		e.preventDefault();
+		var $changePassword = $(this).closest('.profile-reset-password');
+		$changePassword.toggleClass('opened');
+		$changePassword.find('input').val('');
+	});
+
+	$(document).on('click', '.profile-reset-password-save', function (e) {
+		var $changePassword = $(this).closest('.profile-reset-password');
+		var $old = $changePassword.find('input[name=old-password]');
+		var $new1 = $changePassword.find('input[name=new-password1]');
+		var $new2 = $changePassword.find('input[name=new-password2]');
+		var $message = $('.profile-reset-password-message');
+		if ($old.val().length < 7) {
+			$message.text('Your current password is not correct.').addClass('error').show();
+			$old.val('').focus();
+		} else if($new1.val() != $new2.val()) {
+			$message.text('Your new passwords do not match.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else if($new1.val().length < 7) {
+			$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else if($old.val() == $new1.val()) {
+			$message.text('Your new password needs to be different than your current one.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else {
+			$message.hide().text('');
+			sendResetPassword($old.val(), $new1.val());
+		}
+	});
+
 	var $disconnectDialog = $('.disconnect-dialog')
 		.detach()
 		.show()
