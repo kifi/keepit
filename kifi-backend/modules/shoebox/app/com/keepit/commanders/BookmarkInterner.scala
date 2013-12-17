@@ -37,7 +37,7 @@ class BookmarkInterner @Inject() (
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
-  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
+  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
     val parseStart = System.currentTimeMillis()
@@ -53,7 +53,7 @@ class BookmarkInterner @Inject() (
     }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
 
-    var count = new AtomicInteger(0)
+    val count = new AtomicInteger(0)
     val total = bookmarks.size
     val batchConcurrency = 1
     val batchSize = 100
@@ -62,7 +62,7 @@ class BookmarkInterner @Inject() (
         val startTime = System.currentTimeMillis
         log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
         val persisted = db.readWrite(attempts = 2) { implicit session =>
-          bms.map { bm => internUriAndBookmark(bm, user, experiments, source) }.flatten
+          bms.map { bm => internUriAndBookmark(bm, user, experiments, source, mutatePrivacy) }.flatten
         }
         log.info(s"[internBookmarks-$referenceId] Done with ${count.addAndGet(bms.size)}/$total. Took ${System.currentTimeMillis - startTime}ms")
         persisted
@@ -89,20 +89,20 @@ class BookmarkInterner @Inject() (
     }
   }
 
-  private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[ExperimentType],
+  private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, mutatePrivacy: Boolean, experiments: Set[ExperimentType],
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
     bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
-      case Some(bookmark) if bookmark.isActive =>
-        (false, bookmarkRepo.save(bookmark.withPrivate(isPrivate).withTitle(title orElse bookmark.title orElse uri.title)))
       case Some(bookmark) =>
-        (false, bookmarkRepo.save(bookmark.withPrivate(isPrivate).withTitle(title orElse bookmark.title orElse uri.title).withUrl(url).withActive(true).copy(createdAt = clock.now)))
+        val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
+        val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(true) } else keepWithPrivate
+        (false, bookmarkRepo.save(keep.withTitle(title orElse bookmark.title orElse uri.title).copy(createdAt = clock.now)))
       case None =>
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         (true, bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
     }
   }
 
-  private def internUriAndBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI, Boolean)] = try {
+  private def internUriAndBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI, Boolean)] = try {
     val startTime = System.currentTimeMillis
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
@@ -116,7 +116,7 @@ class BookmarkInterner @Inject() (
           uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
         else initialURI
       }
-      val (isNewKeep, bookmark) = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
+      val (isNewKeep, bookmark) = internBookmark(uri, user, isPrivate, mutatePrivacy, experiments, installationId, source, title, url)
 
       if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
         Try(scraper.scheduleScrape(uri))
