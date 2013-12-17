@@ -19,7 +19,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
 
 import com.keepit.eliza.controllers.internal.MessagingController
-import com.keepit.eliza.model.NonUserParticipant
+import com.keepit.eliza.model._
 
 import com.google.inject.Injector
 
