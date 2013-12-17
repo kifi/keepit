@@ -3,7 +3,7 @@ package com.keepit.controllers.mobile
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, MobileController}
 import com.keepit.common.logging.Logging
-import play.api.libs.json.Json
+import play.api.libs.json.{JsNumber, Json}
 import securesocial.core._
 import play.api.mvc._
 import scala.util.Try
@@ -17,6 +17,7 @@ import securesocial.core.LoginEvent
 import securesocial.core.OAuth2Info
 import scala.util.Success
 import play.api.mvc.Cookie
+import com.keepit.common.healthcheck.AirbrakeError
 
 
 class MobileAuthController @Inject() (
@@ -70,4 +71,5 @@ class MobileAuthController @Inject() (
     }
   }
 
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authHelper.doUploadBinaryPicture(_), unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
 }
