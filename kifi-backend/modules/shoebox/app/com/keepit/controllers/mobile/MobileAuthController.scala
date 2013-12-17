@@ -7,7 +7,7 @@ import play.api.libs.json.Json
 import securesocial.core._
 import play.api.mvc._
 import scala.util.Try
-import com.keepit.controllers.core.{AuthController, AuthCommander}
+import com.keepit.controllers.core.{AuthController, AuthHelper}
 import securesocial.controllers.ProviderController
 import securesocial.core.IdentityId
 import scala.util.Failure
@@ -21,7 +21,7 @@ import play.api.mvc.Cookie
 
 class MobileAuthController @Inject() (
   actionAuthenticator:ActionAuthenticator,
-  authCommander:AuthCommander
+  authHelper:AuthHelper
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
@@ -60,7 +60,7 @@ class MobileAuthController @Inject() (
   def loginWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        authCommander.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
+        authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
           } else sess
