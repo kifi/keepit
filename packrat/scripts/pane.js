@@ -152,30 +152,6 @@ var pane = pane || function () {  // idempotent for Chrome
           position: {my: 'center top+10', at: 'center bottom', of: this, collision: 'none'}
         });
       })
-      .hoverfu(".kifi-pane-head-feedback", function (configureHover) {
-        var btn = this;
-        render("html/keeper/titled_tip", {
-          dir: "below",
-          title: "Give Us Feedback",
-          html: "Tell us your ideas for Kifi<br>or report an issue."
-        }, function (html) {
-          configureHover(html, {
-            mustHoverFor: 700, hideAfter: 4000, click: "hide",
-            position: {my: 'center top+16', at: 'center bottom', of: btn, collision: 'none'}
-          });
-        });
-      })
-      .on("click", ".kifi-pane-head-feedback", function (e) {
-        e.preventDefault();
-        var width = 700;
-        var height = 400;
-        var left = (screen.width - width) / 2;
-        var top = (screen.height - height) / 2;
-        window.open(
-          "https://www.kifi.com/feedback/form",
-          "kifi-feedback",
-          "width="+width+",height="+height+",resizable,top="+top+",left="+left);
-      })
       .hoverfu('.kifi-pane-settings:not(.kifi-active)', function (configureHover) {
         var btn = this;
         render("html/keeper/titled_tip", {
@@ -194,7 +170,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         var $sett = $(this).addClass("kifi-active");
         var $menu = $sett.next(".kifi-pane-settings-menu").fadeIn(50);
-        var $hide = $menu.find(".kifi-pane-settings-hide")
+        var $hide = $menu.find('.kifi-pane-settings-menu-item')
           .on("mouseenter", enterItem)
           .on("mouseleave", leaveItem);
         document.addEventListener("mousedown", docMouseDown, true);

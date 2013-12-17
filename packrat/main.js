@@ -285,7 +285,7 @@ var socketHandlers = {
   },
   all_notifications_visited: function(id, time) {
     log('[socket:all_notifications_visited]', id, time)();
-    markAllNoticesVisited(id, time);
+    markAllThreadsRead(id, time);
   },
   thread: function(th) {
     log("[socket:thread]", th)();
@@ -580,9 +580,7 @@ api.port.on({
       syncNumUnreadUnmutedThreads(); // sanity checking
     }
     function reply(tl) {
-      respond({
-        threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread),
-        anyUnread: tl.anyUnread()});
+      respond({threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread)});
       if (kind === 'page') {  // prefetch
         tl.ids.forEach(function (id) {
           if (!messageData[id] && !threadCallbacks[id]) {
@@ -650,8 +648,8 @@ api.port.on({
       tabsByLocator[o.new] = arr || [tab];
     }
   },
-  all_notifications_visited: function(o) {
-    markAllNoticesVisited(o.id, o.time);
+  set_all_threads_read: function(o) {
+    // not updating local cache until server responds due to bulk nature of action
     socket.send(['set_all_notifications_visited', o.id]);
   },
   session: function(_, respond) {
@@ -937,8 +935,7 @@ function markRead(category, threadId, messageId, timeStr) {
         category: category,
         time: timeStr,
         threadId: threadId,
-        id: messageId,
-        anyUnread: tl.anyUnread()});
+        id: messageId});
     });
 
     tellVisibleTabsNoticeCountIfChanged();
@@ -946,24 +943,39 @@ function markRead(category, threadId, messageId, timeStr) {
   }
 }
 
-function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
+function markAllThreadsRead(id, timeStr) {  // id and time of most recent notification to mark
   var time = new Date(timeStr);
-  threadLists.all.forEachUnread(function (threadId, th) {
-    if (th.id === id || new Date(th.time) <= time) {
+  var markedThreads = {};
+  var n = 0;
+  for (var id in threadsById) {
+    var th = threadsById[id];
+    if (th.unread && (th.id === id || new Date(th.time) <= time)) {
       th.unread = false;
       th.unreadAuthors = th.unreadMessages = 0;
-      if (!th.muted) {
-        threadLists.all.decNumUnreadUnmuted();
+      markedThreads[id] = th;
+      n++;
+    }
+  }
+  for (var key in threadLists) {
+    var tl = threadLists[key];
+    for (var i = tl.ids.length; i--;) {
+      var id = tl.ids[i];
+      var th = markedThreads[id];
+      if (th && !th.muted) {
+        tl.decNumUnreadUnmuted();
       }
     }
-  });
-  // TODO: update numUnreadUnmuted for each ThreadList in threadLists?
+  }
+  for (var i = threadLists.unread.length; i--;) {
+    var id = threadLists.unread.ids[i];
+    if (markedThreads[id]) {
+      threadLists.unread.ids.splice(i, 1);
+      threadLists.unread.decNumTotal();
+    }
+  }
 
   forEachTabAtThreadList(function (tab, tl) {
-    api.tabs.emit(tab, 'all_threads_read', {
-      id: id,
-      time: timeStr,
-      anyUnread: tl.anyUnread()});
+    api.tabs.emit(tab, 'all_threads_read', {id: id, time: timeStr});
   });
 
   tellVisibleTabsNoticeCountIfChanged();

@@ -5,24 +5,6 @@
 .kifi-notices-page-count:not(:empty):after {
   content: ')';
 }
-.kifi-pane-mark-notices-read {
-  position: absolute;
-  top: 8px;
-  right: 0;
-  z-index: 2;
-  padding: 0 10px;
-  font-size: 12px;
-  line-height: 26px;
-  color: #fff !important;
-  text-decoration: none !important;
-  display: none;
-}
-.kifi-pane-mark-notices-read:hover {
-  background-color: #67829c;
-}
-.kifi-pane-mark-notices-read:active {
-  background-color: #607991;
-}
 .kifi-notices-cart {
   position: absolute;
   top: 0;

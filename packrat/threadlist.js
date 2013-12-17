@@ -60,11 +60,6 @@
       }
       return nRemoved;
     },
-    anyUnread: function() {
-      return this.numUnreadUnmuted > 0 || this.ids.some(function (id) {
-        return this.allById[id].unread;
-      }, this);
-    },
     forEachUnread: function (f) {
       for (var i = 0; i < this.ids.length; i++) {
         var id = this.ids[i];
@@ -82,15 +77,26 @@
         }
       }
     },
+    decNumTotal: function() {
+      if (this.numTotal) {
+        dec.call(this, 'numTotal');
+      }
+    },
     decNumUnreadUnmuted: function() {
-      if (this.numUnreadUnmuted > 0) {
-        this.numUnreadUnmuted--;
-      } else if (this.numUnreadUnmuted <= 0) {
-        log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted)();
-        if (~session.experiments.indexOf('admin')) {
-          this.numUnreadUnmuted--;
-        }
+      if (this.numUnreadUnmuted) {
+        dec.call(this, 'numUnreadUnmuted');
       }
     }
   };
+
+  function dec(field) {
+    if (this[field] > 0) {
+      this[field]--;
+    } else {
+      log('#a00', '[dec:' + field + '] already at:', this[field])();
+      if (~session.experiments.indexOf('admin')) {
+        this[field]--;
+      }
+    }
+  }
 }.call(this.exports || this));
