@@ -8,9 +8,9 @@ import securesocial.core._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.commanders.InviteCommander
+import com.keepit.commanders.{AuthCommander, InviteCommander}
 import com.keepit.social._
-import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
+import securesocial.core.providers.utils.PasswordHasher
 import com.keepit.common.controller.ActionAuthenticator._
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common._
@@ -21,13 +21,11 @@ import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import securesocial.core.IdentityId
 import scala.util.Failure
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
 import scala.util.Success
-import securesocial.core.PasswordInfo
 import play.api.mvc.Cookie
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
@@ -35,16 +33,18 @@ import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 
-class AuthCommander @Inject() (
+class AuthHelper @Inject() (
   db: Database,
   clock: Clock,
   airbrakeNotifier:AirbrakeNotifier,
+  authCommander: AuthCommander,
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
   socialRepo: SocialUserInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   userValueRepo: UserValueRepo,
   passwordResetRepo: PasswordResetRepo,
+  kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
   s3ImageStore: S3ImageStore,
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander
@@ -101,7 +101,7 @@ class AuthCommander @Inject() (
         }
     } getOrElse {
       val pInfo = hasher.hash(password)
-      val (newIdentity, userId) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
+      val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
       Authenticator.create(newIdentity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator =>
@@ -111,49 +111,6 @@ class AuthCommander @Inject() (
       )
     }
     res
-  }
-
-
-  private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
-                                       email: String, passwordInfo: PasswordInfo,
-                                       firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
-    val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
-    val lName = User.sanitizeName(lastName)
-    val newIdentity = UserIdentity(
-      userId = userIdOpt,
-      socialUser = SocialUser(
-        identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = fName,
-        lastName = lName,
-        fullName = s"$fName $lName",
-        email = Some(email),
-        avatarUrl = GravatarHelper.avatarFor(email),
-        authMethod = AuthenticationMethod.UserPassword,
-        passwordInfo = Some(passwordInfo)
-      ),
-      allowSignup = true,
-      isComplete = isComplete)
-
-    UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
-
-    val userIdFromEmailIdentity = for {
-      identity <- identityOpt
-      socialUserInfo <- db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
-      }
-      userId <- socialUserInfo.userId
-    } yield {
-      UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
-      userId
-    }
-
-    val user = userIdFromEmailIdentity.orElse {
-      db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO).map(_.userId).flatten
-      }
-    }
-
-    (newIdentity, user.get)
   }
 
   private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
@@ -173,26 +130,23 @@ class AuthCommander @Inject() (
       db.readWrite { implicit s =>
         val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
         val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
-        val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+        val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}" // todo: remove
         userValueRepo.setValue(user.id.get, "pending_primary_email", emailAddr.address)
 
-        if (user.state != UserStates.ACTIVE) {
-          postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Kifi.com | Please confirm your email address",
-            htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
-          ))
+        val (subj, body) = if (user.state != UserStates.ACTIVE) {
+          ("Kifi.com | Please confirm your email address",
+            views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body)
         } else {
-          postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Welcome to Kifi! Please confirm your email address",
-            htmlBody = views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body,
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
-          ))
+          ("Welcome to Kifi! Please confirm your email address",
+            views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body)
         }
+        val mail = ElectronicMail(
+          from = EmailAddresses.NOTIFICATIONS,
+          to = Seq(GenericEmailAddress(emailAddrStr)),
+          category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+          subject = subj,
+          htmlBody = body)
+        postOffice.sendMail(mail)
       }
     } else {
       db.readWrite { implicit session =>
@@ -244,7 +198,7 @@ class AuthCommander @Inject() (
     { case SocialFinalizeInfo(emailAddress, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
       val pInfo = Registry.hashers.currentHasher.hash(password)
 
-      val (emailPassIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
+      val (emailPassIdentity, userId) = authCommander.saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
         email = emailAddress, passwordInfo = pInfo, firstName = firstName, lastName = lastName, isComplete = true)
 
       inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
@@ -292,7 +246,7 @@ class AuthCommander @Inject() (
       } getOrElse(request.identityOpt.get)
       val passwordInfo = identity.passwordInfo.get
       val email = identity.email.get
-      val (newIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = passwordInfo,
+      val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = passwordInfo,
         firstName = firstName, lastName = lastName, isComplete = true)
 
       inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
@@ -384,6 +338,61 @@ class AuthCommander @Inject() (
         }
       }
     }) getOrElse BadRequest("0")
+  }
+
+  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
+    val identity = db.readOnly { implicit session =>
+      val suis = socialRepo.getByUser(userId)
+      val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
+      sui.credentials.get
+    }
+    Authenticator.create(identity).fold(onError, onSuccess)
+  }
+
+  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
+    db.readWrite { implicit s =>
+      emailAddressRepo.getByCode(code).map { address =>
+        val user = userRepo.get(address.userId)
+        val verification = emailAddressRepo.verify(address.userId, code)
+
+        if (verification._2) { // code is being used for the first time
+          if (user.primaryEmailId.isEmpty) {
+            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            userValueRepo.clearValue(user.id.get, "pending_primary_email")
+          } else {
+            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
+            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
+              userValueRepo.clearValue(user.id.get, "pending_primary_email")
+              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
+            }
+          }
+        }
+
+        verification match {
+          case (true, _) if user.state == UserStates.PENDING =>
+            Redirect("/?m=1")
+          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
+            // first time being used, not logged in OR logged in as correct user
+            authenticateUser(user.id.get,
+              error => throw error,
+              authenticator => {
+                val resp = if (kifiInstallationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
+                  // user has no installations
+                  Redirect("/install")
+                } else {
+                  Redirect("/profile?m=1")
+                }
+                resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                  .withCookies(authenticator.toCookie)
+              }
+            )
+          case (true, _) =>
+            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
+        }
+      }.getOrElse {
+        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
+      }
+    }
   }
 
   def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): Result = {

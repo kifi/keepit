@@ -4,15 +4,13 @@ import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
 import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.social.SocialId
-import com.keepit.social.UserIdentity
-import com.keepit.social.{SocialNetworkType, SocialNetworks}
+import com.keepit.social.SocialNetworkType
 
 import play.api.Play._
 import play.api.data.Forms._
@@ -21,7 +19,6 @@ import play.api.libs.json.{JsNumber, JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
-import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
 import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
@@ -38,7 +35,7 @@ object AuthController {
 class AuthController @Inject() (
     db: Database,
     clock: Clock,
-    authCommander: AuthCommander,
+    authHelper: AuthHelper,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -62,7 +59,7 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        authCommander.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
+        authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
           } else sess
@@ -112,7 +109,7 @@ class AuthController @Inject() (
   def signup(provider: String) = Action { implicit request =>
     ProviderController.authenticate(provider)(request) match {
       case res: SimpleResult[_] =>
-        authCommander.authHandler(request, res) { (_, sess:Session) =>
+        authHelper.authHandler(request, res) { (_, sess:Session) =>
           // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
           res.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
         }
@@ -188,7 +185,7 @@ class AuthController @Inject() (
     emailPasswordForm.bindFromRequest.fold(
       hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
       success = { case EmailPassword(emailAddress, password) =>
-        authCommander.handleEmailPasswordSuccessForm(emailAddress, password)
+        authHelper.handleEmailPasswordSuccessForm(emailAddress, password)
       }
     )
   }
@@ -257,74 +254,21 @@ class AuthController @Inject() (
   }
 
   // user/email finalize action (new)
-  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
+  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
 
   // social finalize action (new)
-  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doSocialFinalizeAccountAction(_), unauthenticatedAction = authCommander.doSocialFinalizeAccountAction(_))
+  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doSocialFinalizeAccountAction(_), unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_))
 
   def OkStreamFile(filename: String) =
     Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = doVerifyEmail(code)(_))
-  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
-    db.readWrite { implicit s =>
-      emailAddressRepo.getByCode(code).map { address =>
-        val user = userRepo.get(address.userId)
-        val verification = emailAddressRepo.verify(address.userId, code)
-
-        if (verification._2) { // code is being used for the first time
-          if (user.primaryEmailId.isEmpty) {
-            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            userValueRepo.clearValue(user.id.get, "pending_primary_email")
-          } else {
-            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
-            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
-              userValueRepo.clearValue(user.id.get, "pending_primary_email")
-              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            }
-          }
-        }
-
-        verification match {
-          case (true, _) if user.state == UserStates.PENDING =>
-            Redirect("/?m=1")
-          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
-            // first time being used, not logged in OR logged in as correct user
-            authenticateUser(user.id.get,
-              error => throw error,
-              authenticator => {
-                val resp = if (kifiInstallationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
-                  // user has no installations
-                  Redirect("/install")
-                } else {
-                  Redirect("/profile?m=1")
-                }
-                resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
-              }
-            )
-          case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
-        }
-      }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
-      }
-    }
-  }
+  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authHelper.doVerifyEmail(code)(_), unauthenticatedAction = authHelper.doVerifyEmail(code)(_))
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
-  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
-    val identity = db.readOnly { implicit session =>
-      val suis = socialRepo.getByUser(userId)
-      val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
-      sui.credentials.get
-    }
-    Authenticator.create(identity).fold(onError, onSuccess)
-  }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doForgotPassword(_), unauthenticatedAction = authCommander.doForgotPassword(_))
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doForgotPassword(_), unauthenticatedAction = authHelper.doForgotPassword(_))
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
@@ -341,11 +285,11 @@ class AuthController @Inject() (
     }
   }
 
-  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doSetPassword(_), unauthenticatedAction = authCommander.doSetPassword(_))
+  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doSetPassword(_), unauthenticatedAction = authHelper.doSetPassword(_))
 
-  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authCommander.doUploadBinaryPicture(_), unauthenticatedAction = authCommander.doUploadBinaryPicture(_))
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authHelper.doUploadBinaryPicture(_), unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
 
-  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authCommander.doUploadFormEncodedPicture(_), unauthenticatedAction = authCommander.doUploadFormEncodedPicture(_))
+  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authHelper.doUploadFormEncodedPicture(_), unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_))
 
   def cancelAuth() = JsonAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
   private def doCancelPage(implicit request: Request[_]): Result = {
