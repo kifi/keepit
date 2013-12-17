@@ -117,12 +117,13 @@ class SecureSocialUserPluginImpl @Inject() (
   private def newUserState: State[User] = if (Play.isDev) UserStates.ACTIVE else UserStates.PENDING
 
   private def createUser(identity: Identity, isComplete: Boolean)(implicit session: RWSession): User = {
-    log.info(s"Creating new user for ${identity.fullName}")
-    userCommander.createUser(
+    val u = userCommander.createUser(
       firstName = identity.firstName,
       lastName = identity.lastName,
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
+    log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
+    u
   }
 
   private def getOrCreateUser(existingUserOpt: Option[User], allowSignup: Boolean, isComplete: Boolean, socialUser: SocialUser)(implicit session: RWSession): Option[User] = existingUserOpt orElse {
@@ -151,7 +152,7 @@ class SecureSocialUserPluginImpl @Inject() (
       socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
       userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean)
       (implicit session: RWSession): SocialUserInfo = {
-    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
+    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val existingUserOpt = userId orElse {
