@@ -24,61 +24,8 @@ h1, h2, h3, h4, h5 {
 	font-weight: 200;
 }
 
-.centered-content {
-	max-width: 1349px;
-	margin: 0 auto;
-	.box-sizing(border-box);
-}
-
-.kifi-header-bg {
-	position: fixed;
-	top: 0;
-	width: 100%;
-	background: #f6f6f6;
-}
-
-.kifi-header {
-	max-width: 1349px;
-	padding: 27px 65px;
-	margin: 0 auto;
-	.box-sizing(border-box);
-	.centered-content;
-}
-
-.kifi-header-logo {
-	float: left;
-	font-size: 4em;
-	color: transparent;
-	background: #71a7ec;
-}
-
-.kifi-header-right {
-	float: right;
-	font-size: 18px;
-	line-height: 37px;
-	margin: 18px 0;
-}
-
-.kifi-header-right-link {
-	display: inline-block;
-	text-decoration: none;
-	color: black;
-	font-weight: 300;
-	padding: 0 8px;
-}
-
-.kifi-header-signup {
-	font-weight: 500;
-	padding: 0 53px;
-	border: 2px solid @green;
-	.border-radius(21px);
-	margin-right: 13px;
-	background: white;
-}
-
-.kifi-header-right-separator {
-	color: @green;
-}
+@import "header";
+@import "footer";
 
 .kifi-content {
 	margin-top: 131px;
@@ -237,7 +184,43 @@ h1, h2, h3, h4, h5 {
 	}
 
 	h3 {
-		font-size: 20px;
+		font-size: 21px;
+		letter-spacing: 1.5px;
 		color: @gray;
 	}
+}
+
+.kifi-mobile-links {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	text-align: left;
+
+	li {
+		padding: 12px 0;
+	}
+}
+
+.kifi-mobile-link {
+	display: inline-block;
+	color: white;
+	background: #dddddd;
+	width: 150px;
+	padding: 8px 11px;
+	line-height: 1;
+	.border-radius(3px);
+	text-decoration: none;
+	.box-sizing(border-box);
+}
+
+.kifi-mobile-link-status {
+	display: block;
+	font-size: 10px;
+	text-transform: uppercase;
+}
+
+.kifi-mobile-link-device {
+	display: block;
+	font-size: 17px;
+	margin-top: 4px;
 }

@@ -191,7 +191,7 @@ module.exports = function (grunt) {
 				tasks: 'default'
 			},
 			statics: {
-				files: ['static/css/landing.less'],
+				files: ['static/css/*.less'],
 				tasks: 'less:statics'
 			}
 		}
