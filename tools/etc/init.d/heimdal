@@ -4,7 +4,7 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/java/jdk1.7.0_21
+JAVA_HOME=/usr/local/java/jdk1.7.0_25
 
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }
@@ -16,10 +16,10 @@ serviceGroup="fortytwo"                                    # OS group name for t
 applDir="/home/$serviceUser/run/$serviceNameLo"                          # home directory of the service application
 serviceUserHome="/home/$serviceUser"                       # home directory of the service user
 serviceLogFile="$applDir/log/$serviceNameLo.out"               # log file for StdOut/StdErr
-maxShutdownTime=15                                         # maximum number of seconds to wait for the daemon to terminate normally
+maxShutdownTime=30                                         # maximum number of seconds to wait for the daemon to terminate normally
 pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (PID = process ID number)
-yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/shoebox/log" #Yourkit profiler agent
-newrelic="-javaagent:/opt/newrelic/newrelic.jar -Dnewrelic.bootstrap_classpath=true"
+#yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/shoebox/log" #Yourkit profiler agent
+#newrelic="-javaagent:/opt/newrelic/newrelic.jar -Dnewrelic.bootstrap_classpath=true"
 jmxArgs="-Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
@@ -65,7 +65,6 @@ function getServicePID {
    return 0; }
 
 function startServiceProcess {
-   curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=$serviceName" -d "message=$serviceName is coming up." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null
    cd $applDir || return 1
    rm -f $pidFile
    makeFileWritable $pidFile || return 1
@@ -85,7 +84,6 @@ function startServiceProcess {
    return 0; }
 
 function stopServiceProcess {
-   curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=$serviceName" -d "message=$serviceName is going down." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null
    kill $pid || return 1
    for ((i=0; i<maxShutdownTime*10; i++)); do
       checkProcessIsRunning $pid
@@ -164,3 +162,4 @@ function main {
 }
 
 main $1
+

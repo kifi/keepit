@@ -45,9 +45,7 @@ class ExtAuthController @Inject() (
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
          val kiId = ExternalId.asOpt[KifiInstallation](id)
-         kiId match {
-           case Some(_) =>
-           case None =>
+         if (kiId.isEmpty) {
              // They sent an invalid id. Bug on client side?
              airbrake.notify(AirbrakeError(
                method = Some(request.method.toUpperCase()),
@@ -64,7 +62,8 @@ class ExtAuthController @Inject() (
         installationRepo.getOpt(userId, id)
       } match {
         case None =>
-          (installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version)), true, true)
+          val inst = installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
+          (inst, true, true)
         case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
           (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
         case Some(install) =>
@@ -81,7 +80,7 @@ class ExtAuthController @Inject() (
         contextBuilder.addRequestInfo(request)
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId.id, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
       }
     }
 

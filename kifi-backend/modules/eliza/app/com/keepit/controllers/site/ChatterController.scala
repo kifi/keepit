@@ -1,19 +1,20 @@
 package com.keepit.controllers.site
 
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
-import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.healthcheck.{HealthcheckPlugin}
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json.Json
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-import com.keepit.eliza.{NotificationRouter, MessagingController, MessageThreadRepo}
+import com.keepit.eliza.controllers.internal.MessagingController
+import com.keepit.eliza.{NotificationRouter, MessageThreadRepo}
 
 
 class ChatterController @Inject() (

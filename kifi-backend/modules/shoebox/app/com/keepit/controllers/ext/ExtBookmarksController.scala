@@ -52,29 +52,32 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  bookmarksCommander: BookmarksCommander,
+  userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier,
-  bookmarksCommander: BookmarksCommander)
+  kifiInstallationRepo: KifiInstallationRepo,
+  clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }
 
   def createTag() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
     Ok(Json.toJson(SendableTag from tag))
   }
 
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
-        bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.hover, request.kifiInstallationId)
+        bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.keeper, request.kifiInstallationId)
         Ok(Json.toJson(SendableTag from tag))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
@@ -84,9 +87,9 @@ class ExtBookmarksController @Inject() (
 
   def addToUrl() = AuthenticatedJsonToJsonAction { request =>
     val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.hover, request.kifiInstallationId)
+    bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.keeper, request.kifiInstallationId)
     Ok(Json.toJson(SendableTag from tag))
   }
 
@@ -132,7 +135,7 @@ class ExtBookmarksController @Inject() (
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
       val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
       Ok(Json.obj(
         "removedKeep" -> deactivatedKeepInfo
@@ -142,9 +145,12 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def updatePrivacy() = AuthenticatedJsonToJsonAction { request =>
+  def updateKeepInfo() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
-    val (url, priv) = ((json \ "url").as[String], (json \ "private").as[Boolean])
+    val url = (json \ "url").as[String]
+    val priv =  (json \ "private").asOpt[Boolean]
+    val title = (json \ "title").asOpt[String]
+
     val bookmarkOpt = db.readOnly { implicit s =>
       uriRepo.getByUri(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
@@ -153,8 +159,8 @@ class ExtBookmarksController @Inject() (
     val maybeOk = for {
       bookmark <- bookmarkOpt
       updatedBookmark <- {
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.hover).build
-        bookmarksCommander.updateKeep(bookmark, Some(priv), None)
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
+        bookmarksCommander.updateKeep(bookmark, priv, title)
       }
     } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
 
@@ -169,19 +175,28 @@ class ExtBookmarksController @Inject() (
     val installationId = request.kifiInstallationId
     val json = request.body
 
-    val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource(_)) getOrElse BookmarkSource.unknown
+    val bookmarkSource = (json \ "source").asOpt[String].map(BookmarkSource.get) getOrElse BookmarkSource.unknown
     if (!BookmarkSource.valid.contains(bookmarkSource)) {
       airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(s"Invalid bookmark source: $bookmarkSource")))
     }
     bookmarkSource match {
-      case BookmarkSource("PLUGIN_START") => Forbidden
+      case BookmarkSource("plugin_start") => Forbidden
       case _ =>
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
+
           val experiments = request.experiments
-          val user = db.readOnly { implicit s => userRepo.get(userId) }
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
+          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", request.user, experiments, bookmarkSource, mutatePrivacy = true, installationId = installationId)
+
+          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.initLoad) {
+            // User selected to import Léo
+            val tagName = db.readOnly { implicit session =>
+              s"Imported from ${kifiInstallationRepo.get(request.kifiInstallationId.get).userAgent.name}"
+            }
+            val tag = bookmarksCommander.getOrCreateTag(request.userId, tagName)
+            bookmarksCommander.addToCollection(tag, bookmarks)
+          }
           //the bookmarks list may be very large!
           bookmarks.grouped(50) foreach { chunk =>
             searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)

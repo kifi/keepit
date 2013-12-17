@@ -19,6 +19,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.social.BasicUser
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.ExternalId
+import play.api.libs.json.JsValue
 
 trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): DecoratedResult
@@ -135,18 +136,16 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
         PersonalSearchHit(
           Some(r.title),
           r.url,
-          r.isPrivate,
           ResultDecorator.highlight(r.title, analyzer, field, terms),
           ResultDecorator.highlightURL(r.url, analyzer, field, terms),
-          r.externalId,
-          collections
+          collections,
+          r.externalId
         )
       } else {
         val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
         PersonalSearchHit(
           Some(r.title),
           r.url,
-          false,
           ResultDecorator.highlight(r.title, analyzer, field, terms),
           ResultDecorator.highlightURL(r.url, analyzer, field, terms),
           None,
@@ -161,11 +160,11 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
       basicUserMap,
       (hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
         val users = hit.users.map(basicUserMap)
-        PersonalSearchResult(
+        KifiSearchHit(
           personalHit,
           hit.bookmarkCount,
           hit.isMyBookmark,
-          personalHit.isPrivate,
+          hit.isPrivate,
           users,
           hit.score)
       },
@@ -174,4 +173,4 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
   }
 }
 
-class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[PersonalSearchResult], val collections: Seq[ExternalId[Collection]])
+class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[KifiSearchHit], val collections: Seq[ExternalId[Collection]])

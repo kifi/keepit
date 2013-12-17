@@ -1,4 +1,4 @@
-  package com.keepit.common.healthcheck
+package com.keepit.common.healthcheck
 
 import scala.collection.mutable.{HashMap => MMap}
 import scala.concurrent.Await
@@ -19,6 +19,9 @@ import com.keepit.common.time._
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
+
+import play.api.Mode
+import play.api.Mode._
 import play.api.Plugin
 import play.api.templates.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -71,18 +74,22 @@ case class HealthcheckHost(host: String) extends AnyVal {
 }
 
 @ImplementedBy(classOf[RemoteHealthcheckMailSender])
-trait HealthcheckMailSender {
-  def sendMail(email: ElectronicMail)
+trait HealthcheckMailSender extends Logging {
+  def sendMail(email: ElectronicMail): Unit
 }
 
-class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice) extends HealthcheckMailSender {
-  def sendMail(email: ElectronicMail) = postOffice.queueMail(email)
+class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice, playMode: Mode) extends HealthcheckMailSender {
+  def sendMail(email: ElectronicMail): Unit = playMode match {
+    case Prod => postOffice.queueMail(email)
+    case _ => log.info(s"skip sending email: $email")
+  }
 }
 
 
-class MailSender @Inject() (sender: HealthcheckMailSender) {
-  def sendMail(email: ElectronicMail) {
-    sender.sendMail(email)
+class MailSender @Inject() (sender: HealthcheckMailSender, playMode: Mode) extends Logging {
+  def sendMail(email: ElectronicMail): Unit = playMode match {
+    case Prod => sender.sendMail(email)
+    case _ => log.info(s"skip sending email: $email")
   }
 }
 
@@ -203,10 +210,12 @@ class HealthcheckPluginImpl @Inject() (
     email
   }
 
+  val sleep = sys.props.getOrElse("healthcheck.startup.sleep", "30").toInt // seconds
+
   override def warmUp(benchmarkRunner: BenchmarkRunner) : Unit = {
-    log.info("going to sleep for one minute to make sure all plugins are ready to go")
+    log.info(s"going to sleep for $sleep seconds to make sure all plugins are ready to go")
     log.info(s"benchmark 1: ${benchmarkRunner.runBenchmark()}")
-    Thread.sleep(30 * 1000)//30 sec
+    Thread.sleep(sleep * 1000)
     log.info(s"benchmark 2: ${benchmarkRunner.runBenchmark()}")
     log.info("ok, i'm warmed up and ready to roll!")
     super.warmUp(benchmarkRunner)

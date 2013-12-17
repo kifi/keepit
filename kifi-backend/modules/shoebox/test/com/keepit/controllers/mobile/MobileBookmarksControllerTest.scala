@@ -60,7 +60,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
   def externalIdForCollection(userId: Id[User], name: String): String = forCollection(userId, name).externalId.id
 
-  def sourceForTitle(title: String): String = forTitle(title).source.value
+  def sourceForTitle(title: String): BookmarkSource = forTitle(title).source
 
   def stateForTitle(title: String): String = forTitle(title).state.value
 
@@ -89,7 +89,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
-      val hover = BookmarkSource("HOVER_KEEP")
+      val keeper = BookmarkSource.keeper
       val keepToCollectionRepo = inject[KeepToCollectionRepo]
       val db = inject[Database]
 
@@ -103,9 +103,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
         val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-          uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
         val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-          uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -155,7 +155,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
-      val hover = BookmarkSource("HOVER_KEEP")
+      val keeper = BookmarkSource.keeper
       val db = inject[Database]
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite {implicit s =>
@@ -170,9 +170,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
         val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-          uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE, isPrivate = false))
         val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-          uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE, isPrivate = false))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -213,8 +213,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val bookmarks = db.readOnly { implicit s =>
         bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
       }
+
       bookmarks.size === 1
-      bookmarks(0) === bookmark1
+      bookmarks(0).id.get === bookmark1.id.get
     }
   }
 
@@ -227,7 +228,6 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
-      val hover = BookmarkSource("HOVER_KEEP")
       val db = inject[Database]
 
       val (user, collections) = db.readWrite {implicit s =>
@@ -288,8 +288,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
-      val hover = BookmarkSource("HOVER_KEEP")
-      val initLoad = BookmarkSource("INIT_LOAD")
+      val keeper = BookmarkSource.keeper
+      val initLoad = BookmarkSource.initLoad
       val db = inject[Database]
 
       val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -304,9 +304,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
         val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-          uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
         val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-          uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
         val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
           uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
 
@@ -370,8 +370,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
-      val hover = BookmarkSource("HOVER_KEEP")
-      val initLoad = BookmarkSource("INIT_LOAD")
+      val keeper = BookmarkSource.keeper
+      val initLoad = BookmarkSource.initLoad
       val db = inject[Database]
 
       val (user, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -386,9 +386,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
         val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-          uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
         val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-          uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
         val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
           uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
 
@@ -455,9 +455,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       }
       collection.name === "my tag"
 
-      val expected = Json.parse(s"""
-        {"id":"${collection.externalId}","name":"my tag"}
-      """)
+      val expected = Json.parse(s"""{"id":"${collection.externalId}","name":"my tag"}""")
       Json.parse(contentAsString(result)) must equalTo(expected)
     }
   }
@@ -524,9 +522,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        sourceForTitle("title 11") === "MOBILE"
-        sourceForTitle("title 21") === "MOBILE"
-        sourceForTitle("title 31") === "MOBILE"
+        sourceForTitle("title 11") === BookmarkSource.mobile
+        sourceForTitle("title 21") === BookmarkSource.mobile
+        sourceForTitle("title 31") === BookmarkSource.mobile
 
         stateForTitle("title 11") === "active"
         stateForTitle("title 21") === "active"
@@ -568,9 +566,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         status(keepRes) must equalTo(OK);
         contentType(keepRes) must beSome("application/json");
 
-        sourceForTitle("title 11") === "MOBILE"
-        sourceForTitle("title 21") === "MOBILE"
-        sourceForTitle("title 31") === "MOBILE"
+        sourceForTitle("title 11") === BookmarkSource.mobile
+        sourceForTitle("title 21") === BookmarkSource.mobile
+        sourceForTitle("title 31") === BookmarkSource.mobile
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.unkeepMultiple().toString
         path === "/m/1/keeps/remove"

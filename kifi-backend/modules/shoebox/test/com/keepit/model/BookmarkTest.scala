@@ -11,7 +11,7 @@ import com.google.inject.Injector
 
 class BookmarkTest extends Specification with ShoeboxTestInjector {
 
-  val hover = BookmarkSource.hover
+  val hover = BookmarkSource.keeper
   val initLoad = BookmarkSource.initLoad
 
   def setup()(implicit injector: Injector) = {

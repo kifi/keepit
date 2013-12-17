@@ -7,7 +7,7 @@ import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatist
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.{KifiInstallation, User}
+import com.keepit.model.{Gender, KifiInstallation, User}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.util.{Failure, Success}
@@ -32,12 +32,13 @@ class ProdUserEventLoggingRepo(
 
   val warnBufferSize = 500
   val maxBufferSize = 10000
+  private val augmentors = Seq(UserIdAugmentor, new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new UserValuesAugmentor(shoeboxClient))
 
   def toBSON(event: UserEvent) : BSONDocument = {
-    val userBatch: Long = event.userId / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
+    val userBatch: Long = event.userId.id / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
     val fields = EventRepo.eventToBSONFields(event) ++ Seq(
         "userBatch" -> BSONLong(userBatch),
-        "userId" -> BSONLong(event.userId)
+        "userId" -> BSONLong(event.userId.id)
       )
     BSONDocument(fields)
   }
@@ -49,54 +50,47 @@ class ProdUserEventLoggingRepo(
   def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit = mixpanel.alias(userId, externalId)
 
-  override def persist(userEvent: UserEvent) : Unit = {
-    val augmentors = Seq(new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient))
-    augmentUserEvent(userEvent, augmentors) onComplete {
-      case Success(moreData) => {
-        val oldContext = userEvent.context.data
-        val newEvent = userEvent.copy(context = HeimdalContext(oldContext ++ moreData.toMap))
-        super.persist(newEvent)
-      }
-      case Failure(_) => super.persist(userEvent)
-    }
-  }
-
-  private def augmentUserEvent(userEvent: UserEvent, augmentors: Seq[UserEventAugmentor]): Future[Seq[(String, ContextData)]] = {
-    val seqFuture = augmentors.map{ a => a.augment(userEvent) }
-    Future.sequence(seqFuture).map{_.flatten}
-  }
+  override def persist(userEvent: UserEvent): Unit =
+   EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).foreach { augmentedContext =>
+     super.persist(userEvent.copy(context = augmentedContext))
+   }
 }
 
-trait UserEventAugmentor {
-  def augment(userEvent: UserEvent): Future[Seq[(String, ContextData)]]
-}
-
-class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends UserEventAugmentor {
-  override def augment(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
-    val contextData = userEvent.context.data
-    val default = Future.successful(Seq())
-    contextData.get("extensionVersion") match {
-      case None | Some(ContextStringData("")) => contextData.get("kifiInstallationId") match {
-        case Some(ContextStringData(id)) => {
+class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = userEvent.context.get[String]("extensionVersion").filter(_.nonEmpty).isEmpty
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
+    userEvent.context.data.get("kifiInstallationId") collect {
+        case ContextStringData(id) => {
            shoeboxClient.getExtensionVersion(ExternalId[KifiInstallation](id)).map{
-             version => Seq(("extensionVersion" -> ContextStringData(version)))
-           } fallbackTo default
+             version => Seq("extensionVersion" -> ContextStringData(version))
+           }
         }
-        case _ => default
-      }
-      case _ => default
-    }
+      } getOrElse Future.successful(Seq.empty)
   }
 }
 
-class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends UserEventAugmentor {
-  override def augment(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
-    val contextData = userEvent.context.data
-    val uid = Id[User](userEvent.userId)
+class UserValuesAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = true
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
+    shoeboxClient.getUserValue(userEvent.userId, Gender.key).map(Seq(_).flatten.map { gender =>
+      Gender.key -> ContextStringData(Gender(gender).toString)
+    })
+  }
+}
+
+class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = true
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
+    val uid = userEvent.userId
     shoeboxClient.getUserSegment(uid).map{ seg =>
       Seq(("userSegment" -> ContextStringData(seg.description)))
-    } fallbackTo Future.successful(Seq())
+    }
   }
+}
+
+object UserIdAugmentor extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = true
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq("userId" -> ContextDoubleData(userEvent.userId.id)))
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]

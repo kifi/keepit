@@ -105,7 +105,7 @@ class MailToKeepActor @Inject() (
                   val bookmark = bookmarkInterner.internBookmarks(Json.obj(
                     "url" -> uri.toString,
                     "isPrivate" -> (keepType == KeepType.Private)
-                  ), user, Set(), BookmarkSource.email).head
+                  ), user, Set(), BookmarkSource.email, mutatePrivacy = true).head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
                   sendReply(
                     message = message,

@@ -6,11 +6,9 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.scraper.{BasicArticle, FakeScrapeSchedulerModule}
 import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import com.keepit.akka.TestKitScope
-import akka.actor.ActorSystem
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
@@ -19,7 +17,7 @@ import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.TestElizaServiceClientModule
 
-class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
+class NormalizationServiceTest extends TestKitScope with Specification with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
     case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
@@ -31,7 +29,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
-    val id = Await.result(normalizationService.update(uri, candidates: _*), Duration(1, SECONDS))
+    val id = Await.result(normalizationService.update(uri, candidates: _*), 1 seconds)
     uriIntegrityPlugin.batchURIMigration()
     id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }
@@ -48,9 +46,8 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
   "NormalizationService" should {
 
     withDb(modules:_*) { implicit injector =>
-      implicit val system = inject[ActorSystem]
 
-      "normalize a new http:// url to HTTP" in new TestKitScope() {
+      "normalize a new http:// url to HTTP" in {
         val httpUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://vimeo.com/48578814")) }
         httpUri.normalization === None
         updateNormalizationNow(httpUri)
@@ -58,13 +55,13 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestHttpUri.normalization === Some(Normalization.HTTP)
       }
 
-      "does not normalize an http:// url to HTTP twice" in new TestKitScope() {
+      "does not normalize an http:// url to HTTP twice" in {
         val httpUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://vimeo.com/48578814") }.get
         httpUri.normalization === Some(Normalization.HTTP)
         updateNormalizationNow(httpUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.HTTP)) === None
       }
 
-      "redirect an existing http url to a new https:// url" in new TestKitScope() {
+      "redirect an existing http url to a new https:// url" in {
         val httpUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://vimeo.com/48578814") }.get
 
         val httpsUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://vimeo.com/48578814")) }
@@ -78,7 +75,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit session => uriRepo.getByUri("http://vimeo.com/48578814") } === Some(latestHttpsUri)
       }
 
-      "redirect a new http://www url to an existing https:// url" in new TestKitScope() {
+      "redirect a new http://www url to an existing https:// url" in {
         val httpsUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
 
         val httpWWWUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://www.vimeo.com/48578814")) }
@@ -90,7 +87,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit session => uriRepo.getByUri("http://www.vimeo.com/48578814") }.map(_.id) === Some(httpsUri.id)
       }
 
-      "upgrade an existing https:// url to a better normalization" in new TestKitScope() {
+      "upgrade an existing https:// url to a better normalization" in {
         val httpsUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
         httpsUri.normalization === Some(Normalization.HTTPS)
         updateNormalizationNow(httpsUri, TrustedCandidate("https://vimeo.com/48578814", Normalization.CANONICAL))
@@ -98,7 +95,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestHttpsUri.normalization === Some(Normalization.CANONICAL)
       }
 
-      "redirect an existing canonical normalization to a most recent one" in new TestKitScope() {
+      "redirect an existing canonical normalization to a most recent one" in {
         val canonicalUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
         canonicalUri.normalization === Some(Normalization.CANONICAL)
 
@@ -112,18 +109,18 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         redirectedCanonicalUri.state === NormalizedURIStates.REDIRECTED
       }
 
-      "ignore a random untrusted candidate" in new TestKitScope() {
+      "ignore a random untrusted candidate" in {
         val httpsUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
         val newReference = updateNormalizationNow(httpsUri, UntrustedCandidate("http://www.iamrandom.com", Normalization.CANONICAL), UntrustedCandidate("http://www.iamsociallyrandom.com", Normalization.OPENGRAPH))
         newReference === None
       }
 
-      "not normalize a LinkedIn private profile to its public url if ids do not match" in new TestKitScope() {
+      "not normalize a LinkedIn private profile to its public url if ids do not match" in {
         val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/profile/view?id=17558679", normalization = Some(Normalization.HTTPSWWW))) }
         updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)) === None
       }
 
-      "normalize a LinkedIn private profile to its public url if ids match" in new TestKitScope() {
+      "normalize a LinkedIn private profile to its public url if ids match" in {
         val httpsPublicUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", normalization = Some(Normalization.HTTPSWWW))) }
         val privateUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
         val publicUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)).get
@@ -136,7 +133,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestHttpsPublicUri.state === NormalizedURIStates.REDIRECTED
       }
 
-      "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in new TestKitScope() {
+      "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in {
         val publicUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3").get }
         updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)) === None
         db.readWrite { implicit session => urlPatternRuleRepo.save(UrlPatternRule(pattern = LinkedInNormalizer.linkedInCanonicalPublicProfile.toString(), trustedDomain = Some("""^https?://([a-z]{2,3})\.linkedin\.com/.*"""))) }
@@ -152,7 +149,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestPublicUri.state === NormalizedURIStates.REDIRECTED
       }
 
-      "normalize a French LinkedIn private profile to a vanity public url" in new TestKitScope() {
+      "normalize a French LinkedIn private profile to a vanity public url" in {
         val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://fr.linkedin.com/profile/view?id=136123062")) }
         val vanityUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).get
         val latestPrivateUri = db.readOnly { implicit session => uriRepo.get(privateUri.id.get) }
@@ -162,7 +159,7 @@ class NormalizationServiceTest extends Specification with ShoeboxTestInjector {
         latestPrivateUri.state === NormalizedURIStates.REDIRECTED
       }
 
-      "find a variation with an upgraded normalization" in new TestKitScope() {
+      "find a variation with an upgraded normalization" in {
         val canonicalVariation = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/in/viviensaulue").get }
         val httpsUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/in/viviensaulue")) }
         updateNormalizationNow(httpsUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).map(_.id) === Some(canonicalVariation.id)

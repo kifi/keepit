@@ -18,28 +18,29 @@ object UserEventTypes {
   val INVITE_SENT = EventType("invite_sent")
 
   // Activity
-  val WS_CONNECT = EventType("ws_connect")
-  val WS_DISCONNECT = EventType("ws_disconnect")
+  val CONNECTED = EventType("connected")
+  val USED_KIFI = EventType("used_kifi")
 
   // Keeping
   val KEPT = EventType("kept")
 
   // Messaging
-  val NEW_MESSAGE = EventType("new_message")
-  val REPLY_MESSAGE = EventType("reply_message")
+  val MESSAGED = EventType("messaged")
 
   // Notifications
   val WAS_NOTIFIED = EventType("was_notified")
 
+  // Settings (= mute/unmute conversation before more)
+  val CHANGED_SETTINGS = EventType("changed_settings")
+
   // Search
-  val PERFORMED_SEARCH = EventType("performed_search")
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
-  val ENDED_SEARCH = EventType("ended_search")
+  val SEARCHED = EventType("searched")
 
   // Maintenance
   val EXT_ERROR = EventType("ext_error")
 }
 
 object SystemEventTypes {
-  val DOMAIN_TAG_IMPORT = EventType("domain_tag_import")
+  val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
 }

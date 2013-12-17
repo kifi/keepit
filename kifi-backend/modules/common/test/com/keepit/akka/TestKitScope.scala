@@ -6,4 +6,5 @@ import akka.testkit.TestKit
 import org.specs2.time.NoTimeConversions
 import org.specs2.specification.Scope
 
-class TestKitScope(implicit system: ActorSystem) extends TestKit(system) with Scope with NoTimeConversions
+class TestKitScope(system: ActorSystem = ActorSystem("test-actor-system")) extends TestKit(system) with FutureTestScope
+trait FutureTestScope extends Scope with NoTimeConversions

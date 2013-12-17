@@ -4,22 +4,19 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{State, ExternalId, Id}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
-import com.keepit.heimdal._
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import com.keepit.common.KestrelCombinator
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.Play.current
 import play.api.{Application, Play}
 import securesocial.core._
-import securesocial.core.providers.{UsernamePasswordProvider, Token}
+import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.IdentityId
 import com.keepit.model.EmailAddress
 import securesocial.core.providers.Token
@@ -27,6 +24,7 @@ import scala.Some
 import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
+import com.keepit.commanders.UserCommander
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -38,8 +36,7 @@ class SecureSocialUserPluginImpl @Inject() (
   airbrake: AirbrakeNotifier,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  eventContextBuilder: HeimdalContextBuilderFactory,
-  heimdal: HeimdalServiceClient,
+  userCommander: UserCommander,
   userExperimentRepo: UserExperimentRepo,
   clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
@@ -119,24 +116,19 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def newUserState: State[User] = if (Play.isDev) UserStates.ACTIVE else UserStates.PENDING
 
-  private def createUser(identity: Identity, isComplete: Boolean): User = {
-    log.info(s"Creating new user for ${identity.fullName}")
-    User(
+  private def createUser(identity: Identity, isComplete: Boolean)(implicit session: RWSession): User = {
+    val u = userCommander.createUser(
       firstName = identity.firstName,
       lastName = identity.lastName,
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
+    log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
+    u
   }
 
   private def getOrCreateUser(existingUserOpt: Option[User], allowSignup: Boolean, isComplete: Boolean, socialUser: SocialUser)(implicit session: RWSession): Option[User] = existingUserOpt orElse {
     if (allowSignup) {
-      val userOpt: Option[User] = Some(userRepo.save(
-        createUser(socialUser, isComplete)
-      ))
-      SafeFuture{
-        val contextBuilder = eventContextBuilder()
-        heimdal.trackEvent(UserEvent(userOpt.get.id.get.id, contextBuilder.build, UserEventTypes.SIGNUP))
-      }
+      val userOpt: Option[User] = Some(createUser(socialUser, isComplete))
       userOpt
     } else None
   }
@@ -160,7 +152,7 @@ class SecureSocialUserPluginImpl @Inject() (
       socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
       userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean)
       (implicit session: RWSession): SocialUserInfo = {
-    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
+    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val existingUserOpt = userId orElse {
