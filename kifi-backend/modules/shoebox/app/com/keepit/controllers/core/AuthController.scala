@@ -38,7 +38,7 @@ object AuthController {
 class AuthController @Inject() (
     db: Database,
     clock: Clock,
-    authCommander: AuthCommander,
+    authCommander: AuthHelper,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,

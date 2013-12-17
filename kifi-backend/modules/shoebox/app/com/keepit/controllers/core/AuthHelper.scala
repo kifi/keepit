@@ -35,7 +35,7 @@ import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 
-class AuthCommander @Inject() (
+class AuthHelper @Inject() (
   db: Database,
   clock: Clock,
   airbrakeNotifier:AirbrakeNotifier,
