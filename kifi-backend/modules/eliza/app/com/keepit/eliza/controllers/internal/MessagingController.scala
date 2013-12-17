@@ -911,16 +911,17 @@ class MessagingController @Inject() (
     })
   }
 
-  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[(String, Future[Seq[JsObject]])] = {
-    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
-      if (nUriOrPrenorm.isLeft) {
-        val nUri = nUriOrPrenorm.left.get
-        val notices = db.readOnly { implicit session => userThreadRepo.getSendableNotificationsForUriBefore(userId, nUri.id.get, time, howMany) }
-        (nUri.url, notices)
-      } else {
-        (nUriOrPrenorm.right.get, Promise.successful(Seq[JsObject]()).future)
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap { nUriOrPrenorm =>
+      nUriOrPrenorm match {
+      case Left(nUri) =>
+        db.readOnly { implicit session =>
+          userThreadRepo.getSendableNotificationsForUriBefore(userId, nUri.id.get, time, howMany)
+        }
+      case Right(prenormUri) =>
+        Promise.successful(Seq.empty).future
       }
-    }
+    })
   }
 
   def getThreadInfo(userId: Id[User], threadExtId: ExternalId[MessageThread]): ElizaThreadInfo = {
