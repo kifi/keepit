@@ -173,8 +173,8 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
         sumExpl.setValue(0.0f)
         sumExpl.setDescription("Failure to meet condition(s) of required/prohibited clause(s)")
         return sumExpl
-      } else if (! (semanticMatch < percentMatch/100f || (hotDocSet.get(doc) && semanticMatch < percentMatchForHotDocs / 100f))) {
-        sumExpl.setDescription(s"below percentMatch threshold")
+      } else if (! (semanticMatch > percentMatch/100f || (hotDocSet.get(doc) && semanticMatch > percentMatchForHotDocs / 100f))) {
+        sumExpl.setDescription(s"below percentMatch threshold. semantic match = ${semanticMatch}")
         sumExpl.setMatch(false)
         sumExpl.setValue(0.0f)
         return sumExpl
@@ -190,7 +190,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
           if (hotDocSet.get(doc)) new Explanation(1.0f, "hot") else new Explanation(0.0f, "")
       }
 
-      sumExpl.setDescription(s"SematnicPercentMatch: ${hot.getDescription}), sum of:")
+      sumExpl.setDescription(s"SematnicPercentMatch: ${hot.getDescription}, sum of:")
 
       if (disableCoord) {
         sumExpl
@@ -316,7 +316,6 @@ class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerW
           pq.pop()
           if (pq.size == 0) { doc = NO_MORE_DOCS; return doc }
         }
-
         if (pq.top.docID >= target) {
           val scoreCandidate = pq.top.docID
           findCandidate = true
@@ -331,7 +330,6 @@ class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerW
 
   private def goThrough(scoreCandidate: Int): (Int, Float) = {
 
-    println("\n======\n semantic boolean or: scoring for doc " + scoreCandidate)
     doc = scoreCandidate
     var matchFactor = 1.0
     while (pq.size > 0 && scoreCandidate == pq.top.docID) {
@@ -341,12 +339,10 @@ class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerW
       if (pq.top.nextDoc() == NO_MORE_DOCS) pq.pop()
       pq.updateTop()
     }
+
     val semanticMatch = totalMatchFactor / matchFactor
 
-    println(s"semantic match for doc ${doc} is " + semanticMatch)
-
     docScore *= semanticMatch.toFloat
-    println(s"semantic boolean scorer: setting docScore to ${docScore}")
     (scoreCandidate, semanticMatch.toFloat)
   }
 
