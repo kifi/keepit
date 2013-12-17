@@ -270,7 +270,7 @@ object BooleanScorer {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        new BooleanScorer(weight, conjunction(), disjunction(), threshold, requiredValue + optionalValue, required.length + optional.length)
+        new BooleanScorer(weight, conjunction(), disjunction(), threshold)
       } else if (required.length > 0) {
         conjunction()
       } else if (optional.length > 0) {
@@ -281,9 +281,8 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float) extends Scorer(weight) {
 
-  private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
