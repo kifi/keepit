@@ -16,7 +16,7 @@ import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.{MessageThread, Message}
+import com.keepit.eliza.model._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.http.Status.NOT_FOUND

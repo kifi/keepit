@@ -5,6 +5,7 @@ import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
+import com.keepit.eliza.model._
 
 import play.api.libs.json.{JsArray, Json}
 import play.modules.statsd.api.Statsd

@@ -1,6 +1,7 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.eliza._
+import com.keepit.eliza.model._
 import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database

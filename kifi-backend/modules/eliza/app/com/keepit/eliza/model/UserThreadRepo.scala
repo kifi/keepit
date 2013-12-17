@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.model
 
 import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
 import com.keepit.common.db.slick.FortyTwoTypeMappers._

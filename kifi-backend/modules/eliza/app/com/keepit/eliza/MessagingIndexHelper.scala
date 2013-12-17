@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.eliza.model._
 
 import scala.concurrent.Future
 
@@ -32,10 +33,10 @@ trait MessagingIndexHelper{
     val participants : Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(participants)
 
-    val messages : Seq[Message] = db.readOnly{ implicit session => 
-      messageRepo.get(threadId, 0, None) 
+    val messages : Seq[Message] = db.readOnly{ implicit session =>
+      messageRepo.get(threadId, 0, None)
     } sortWith { case (m1, m2) =>
-      m1.createdAt.isAfter(m2.createdAt)  
+      m1.createdAt.isAfter(m2.createdAt)
     } filter { message =>
       message.from.isDefined
     }

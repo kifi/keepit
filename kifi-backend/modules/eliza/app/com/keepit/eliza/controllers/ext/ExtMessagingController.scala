@@ -1,6 +1,7 @@
 package com.keepit.eliza.controllers.ext
 
 import com.keepit.eliza._
+import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.common.db.{ExternalId, State}

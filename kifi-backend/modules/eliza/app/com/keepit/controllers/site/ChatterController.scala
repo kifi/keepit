@@ -14,8 +14,8 @@ import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.eliza.controllers.internal.MessagingController
-import com.keepit.eliza.{NotificationRouter, MessageThreadRepo}
-
+import com.keepit.eliza._
+import com.keepit.eliza.model._
 
 class ChatterController @Inject() (
   messagingController: MessagingController,
