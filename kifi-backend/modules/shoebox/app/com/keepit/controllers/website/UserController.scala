@@ -45,6 +45,21 @@ import play.api.libs.json.JsNumber
 import scala.util.Success
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
+import securesocial.core.{Registry, SecureSocial, Authenticator}
+import com.keepit.common.controller.ActionAuthenticator._
+import com.keepit.model.SocialConnection
+import scala.util.Failure
+import com.keepit.model.EmailAddress
+import play.api.libs.json.JsString
+import play.api.libs.json.JsBoolean
+import scala.Some
+import play.api.libs.json.JsUndefined
+import play.api.libs.json.JsArray
+import play.api.mvc.MaxSizeExceeded
+import play.api.libs.json.JsNumber
+import scala.util.Success
+import com.keepit.common.mail.GenericEmailAddress
+import play.api.libs.json.JsObject
 
 class UserController @Inject() (
   db: Database,
@@ -234,6 +249,27 @@ class UserController @Inject() (
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
     getUserInfo(request.userId)
+  }
+
+  def resetPassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
+    val oldPassword = (request.body \ "oldPassword").as[String]
+    val newPassword = (request.body \ "newPassword").as[String]
+    db.readOnly { implicit session =>
+      socialUserRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO)
+    } match {
+      case Some(sui) =>
+        val hasher = Registry.hashers.currentHasher
+        val identity = sui.credentials.get
+        if (hasher.matches(identity.passwordInfo.get, oldPassword)) {
+
+        } else {
+          // emailIsVerifiedOrPrimary lets you know if the email is verified to the user.
+          // Deal with later?
+          Forbidden(Json.obj("error" -> "bad_old_password"))
+        }
+      case None =>
+    }
+    Ok
   }
 
   def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>
