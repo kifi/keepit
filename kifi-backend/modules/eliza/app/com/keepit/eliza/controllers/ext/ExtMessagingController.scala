@@ -276,10 +276,8 @@ class ExtMessagingController @Inject() (
       }
     },
     "get_page_threads_before" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      messagingController.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt).map { case (nUriStr, noticesFuture) =>
-        noticesFuture.map { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices))
-        }
+      messagingController.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt).map { case (notices) =>
+        socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     // TODO: contextual marking read (e.g. all Sent threads)
