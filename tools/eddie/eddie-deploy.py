@@ -85,7 +85,7 @@ if __name__=="__main__":
   if args.mode and args.mode=="force":
     command.append("force")
 
-  for instance in instances: #ZZZ include version, force mode
+  for instance in instances:
     shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
     remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
     try:
