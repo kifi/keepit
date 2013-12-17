@@ -147,7 +147,7 @@ class SearchAnalytics @Inject() (
 
     // Search Parameters
     searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    contextBuilder += ("queryTerms", initialSearchResult.query.split("""\b""").length)
+    contextBuilder += ("queryTerms", initialSearchResult.query.split(" ").length)
     contextBuilder += ("queryCharacters", initialSearchResult.query.length)
     contextBuilder += ("lang", initialSearchResult.lang.lang)
     searchContext.filterByPeople.foreach { filter => contextBuilder += ("filterByPeople", filter) }
