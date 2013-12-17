@@ -13,24 +13,19 @@ import com.keepit.model._
 import com.keepit.social.SocialId
 import com.keepit.social.UserIdentity
 import com.keepit.social.{SocialNetworkType, SocialNetworks}
-import com.keepit.common.KestrelCombinator
 
-import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.Play._
 import play.api.data.Forms._
 import play.api.data._
-import play.api.data.validation.Constraints
-import play.api.http.HeaderNames.{LOCATION, REFERER, SET_COOKIE}
-import play.api.libs.json.{JsNumber, JsObject, JsString, JsValue, Json}
+import play.api.libs.json.{JsNumber, JsValue, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
 import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
-import play.api.libs.iteratee.{Iteratee, Enumerator}
+import play.api.libs.iteratee.Enumerator
 import play.api.Play
-import com.keepit.common.store.{S3UserPictureConfig, ImageCropAttributes, S3ImageStore}
-import scala.util.{Failure, Success}
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
 
 object AuthController {
@@ -67,8 +62,11 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
-        authCommander.handleAuthResult(link, request, res) { (cookies:Seq[Cookie], sess:Session) =>
-          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
+        authCommander.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
+          val newSession = if (link != "") {
+            sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
+          } else sess
+          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
         }
       case res => res
     }
@@ -114,11 +112,10 @@ class AuthController @Inject() (
   def signup(provider: String) = Action { implicit request =>
     ProviderController.authenticate(provider)(request) match {
       case res: SimpleResult[_] =>
-        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
-        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-        // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-        res.withSession(resSession - FORTYTWO_USER_ID
-          + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+        authCommander.authHandler(request, res) { (_, sess:Session) =>
+          // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
+          res.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+        }
       case res => res
     }
   }
@@ -191,57 +188,7 @@ class AuthController @Inject() (
     emailPasswordForm.bindFromRequest.fold(
       hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
       success = { case EmailPassword(emailAddress, password) =>
-        val hasher = Registry.hashers.currentHasher
-
-        db.readOnly { implicit s =>
-          socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
-            emailAddressRepo.getByAddressOpt(emailAddress).map {
-              case emailAddr if emailAddr.state == EmailAddressStates.VERIFIED =>
-                (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
-              case emailAddr =>
-                // Someone is trying to register with someone else's unverified + non-login email address.
-                (false, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
-            }
-            None
-          }
-        }.collect {
-          case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
-            // Social user exists with these credentials
-            val identity = sui.credentials.get
-            if (hasher.matches(identity.passwordInfo.get, password)) {
-              Authenticator.create(identity).fold(
-                error => Status(INTERNAL_SERVER_ERROR)("0"),
-                authenticator => {
-                  val finalized = db.readOnly { implicit session =>
-                    userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
-                  }
-                  if (finalized) {
-                    Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
-                      .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
-                      .withCookies(authenticator.toCookie)
-                  } else {
-                    Ok(Json.obj("success" -> true))
-                      .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
-                      .withCookies(authenticator.toCookie)
-                  }
-                }
-              )
-            } else {
-              // emailIsVerifiedOrPrimary lets you know if the email is verified to the user.
-              // Deal with later?
-              Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
-            }
-        }.getOrElse {
-          val pInfo = hasher.hash(password)
-          val (newIdentity, userId) = saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
-          Authenticator.create(newIdentity).fold(
-            error => Status(INTERNAL_SERVER_ERROR)("0"),
-            authenticator =>
-              Ok(Json.obj("success" -> true))
-                .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
-                .withCookies(authenticator.toCookie)
-          )
-        }
+        authCommander.handleEmailPasswordSuccessForm(emailAddress, password)
       }
     )
   }
@@ -310,302 +257,21 @@ class AuthController @Inject() (
   }
 
   // user/email finalize action (new)
-  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
-  private case class EmailPassFinalizeInfo(
-    firstName: String,
-    lastName: String,
-    picToken: Option[String],
-    picWidth: Option[Int],
-    picHeight: Option[Int],
-    cropX: Option[Int],
-    cropY: Option[Int],
-    cropSize: Option[Int])
-  private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
-      "firstName" -> nonEmptyText,
-      "lastName" -> nonEmptyText,
-      "picToken" -> optional(text),
-      "picWidth" -> optional(number),
-      "picHeight" -> optional(number),
-      "cropX" -> optional(number),
-      "cropY" -> optional(number),
-      "cropSize" -> optional(number)
-    )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
-  def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Result = {
-    userPassFinalizeAccountForm.bindFromRequest.fold(
-    formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
-    { case EmailPassFinalizeInfo(firstName, lastName, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-      val identity = db.readOnly { implicit session =>
-        socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
-      } getOrElse(request.identityOpt.get)
-      val pinfo = identity.passwordInfo.get
-      val email = identity.email.get
-      val (newIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = pinfo,
-        firstName = firstName, lastName = lastName, isComplete = true)
-
-      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-
-      val user = db.readOnly(userRepo.get(userId)(_))
-
-      val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${request.user.id.get}: " + r))
-      picToken.map { token =>
-        s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
-      }.orElse {
-        s3ImageStore.getPictureUrl(None, user, "0")
-        None
-      }
-
-      finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
-    })
-  }
+  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
 
   // social finalize action (new)
-  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = doSocialFinalizeAccountAction(_), unauthenticatedAction = doSocialFinalizeAccountAction(_))
-  private case class SocialFinalizeInfo(
-    email: String,
-    password: String,
-    firstName: String,
-    lastName: String,
-    picToken: Option[String],
-    picHeight: Option[Int], picWidth: Option[Int],
-    cropX: Option[Int], cropY: Option[Int],
-    cropSize: Option[Int])
-  private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
-    mapping(
-      "email" -> email.verifying("known_email_address", email => db.readOnly { implicit s =>
-        userCredRepo.findByEmailOpt(email).isEmpty
-      }),
-      "firstName" -> nonEmptyText,
-      "lastName" -> nonEmptyText,
-      "password" -> text.verifying("password_too_short", pw => pw.length >= 7),
-      "picToken" -> optional(text),
-      "picHeight" -> optional(number),
-      "picWidth" -> optional(number),
-      "cropX" -> optional(number),
-      "cropY" -> optional(number),
-      "cropSize" -> optional(number)
-    )
-      (SocialFinalizeInfo.apply)
-      (SocialFinalizeInfo.unapply)
-  )
-  def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
-    socialFinalizeAccountForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-      { case SocialFinalizeInfo(emailAddress, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-        val pInfo = Registry.hashers.currentHasher.hash(password)
-
-        val (emailPassIdentity, userId) = saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
-          email = emailAddress, passwordInfo = pInfo, firstName = firstName, lastName = lastName, isComplete = true)
-
-        inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-
-        val user = db.readOnly { implicit session =>
-          userRepo.get(userId)
-        }
-
-        val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
-        picToken.map { token =>
-          s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
-        }
-
-        val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
-
-        finishSignup(user, emailAddress, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
-      })
-  }
-
-  private def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
-    if (!emailConfirmedAlready) {
-      // todo: Move to user controller/commander
-      db.readWrite { implicit s =>
-        val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
-        val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
-        val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
-        userValueRepo.setValue(user.id.get, "pending_primary_email", emailAddr.address)
-
-        if (user.state != UserStates.ACTIVE) {
-          postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Kifi.com | Please confirm your email address",
-            htmlBody = views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body,
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
-          ))
-        } else {
-          postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(emailAddrStr)),
-            subject = "Welcome to Kifi! Please confirm your email address",
-            htmlBody = views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body,
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
-          ))
-        }
-      }
-    } else {
-      db.readWrite { implicit session =>
-        emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
-          userRepo.save(user.copy(primaryEmailId = Some(emailAddr.id.get)))
-        }
-        userValueRepo.clearValue(user.id.get, "pending_primary_email")
-      }
-    }
-
-    val uri = session.get(SecureSocial.OriginalUrlKey).getOrElse("/")
-
-    Authenticator.create(newIdentity).fold(
-      error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
-    )
-  }
-
-  private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
-    for {
-      h <- picHeight
-      w <- picWidth
-      x <- cropX
-      y <- cropY
-      s <- cropSize
-    } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
-  }
+  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doSocialFinalizeAccountAction(_), unauthenticatedAction = authCommander.doSocialFinalizeAccountAction(_))
 
   def OkStreamFile(filename: String) =
     Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-
-  private val url = current.configuration.getString("application.baseUrl").get
-
-  private def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
-      email: String, passwordInfo: PasswordInfo,
-      firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
-    val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
-    val lName = User.sanitizeName(lastName)
-    val newIdentity = UserIdentity(
-      userId = userIdOpt,
-      socialUser = SocialUser(
-        identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
-        firstName = fName,
-        lastName = lName,
-        fullName = s"$fName $lName",
-        email = Some(email),
-        avatarUrl = GravatarHelper.avatarFor(email),
-        authMethod = AuthenticationMethod.UserPassword,
-        passwordInfo = Some(passwordInfo)
-      ),
-      allowSignup = true,
-      isComplete = isComplete)
-
-    UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
-
-    val userIdFromEmailIdentity = for {
-      identity <- identityOpt
-      socialUserInfo <- db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
-      }
-      userId <- socialUserInfo.userId
-    } yield {
-      UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
-      userId
-    }
-
-    val user = userIdFromEmailIdentity.orElse {
-      db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO).map(_.userId).flatten
-      }
-    }
-
-    (newIdentity, user.get)
-  }
-
-  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = doVerifyEmail(code)(_), unauthenticatedAction = doVerifyEmail(code)(_))
-  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
-    db.readWrite { implicit s =>
-      emailAddressRepo.getByCode(code).map { address =>
-        val user = userRepo.get(address.userId)
-        val verification = emailAddressRepo.verify(address.userId, code)
-
-        if (verification._2) { // code is being used for the first time
-          if (user.primaryEmailId.isEmpty) {
-            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            userValueRepo.clearValue(user.id.get, "pending_primary_email")
-          } else {
-            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
-            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
-              userValueRepo.clearValue(user.id.get, "pending_primary_email")
-              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            }
-          }
-        }
-
-        verification match {
-          case (true, _) if user.state == UserStates.PENDING =>
-            Redirect("/?m=1")
-          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
-            // first time being used, not logged in OR logged in as correct user
-            authenticateUser(user.id.get,
-              error => throw error,
-              authenticator => {
-                val resp = if (kifiInstallationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
-                  // user has no installations
-                  Redirect("/install")
-                } else {
-                  Redirect("/profile?m=1")
-                }
-                resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
-              }
-            )
-          case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
-        }
-      }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
-      }
-    }
-  }
+  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authCommander.doVerifyEmail(code)(_), unauthenticatedAction = authCommander.doVerifyEmail(code)(_))
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
-  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
-    val identity = db.readOnly { implicit session =>
-      val suis = socialRepo.getByUser(userId)
-      val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
-      sui.credentials.get
-    }
-    Authenticator.create(identity).fold(onError, onSuccess)
-  }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doForgotPassword(_), unauthenticatedAction = doForgotPassword(_))
-  def doForgotPassword(implicit request: Request[JsValue]): Result = {
-    (request.body \ "email").asOpt[String] map { emailAddrStr =>
-        db.readOnly { implicit session =>
-          getResetEmailAddresses(emailAddrStr)
-        } match {
-          case Some((userId, verifiedEmailAddressOpt)) =>
-            val emailAddresses = Set(GenericEmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
-            db.readWrite { implicit session =>
-              emailAddresses.map { resetEmailAddress =>
-                // TODO: Invalidate both reset tokens the first time one is used.
-                val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
-                val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
-                postOffice.sendMail(ElectronicMail(
-                  from = EmailAddresses.NOTIFICATIONS,
-                  to = Seq(resetEmailAddress),
-                  subject = "Kifi.com | Password reset requested",
-                  htmlBody = views.html.email.resetPassword(resetUrl).body,
-                  category = PostOffice.Categories.User.RESET_PASSWORD
-                ))
-              }
-            }
-            Ok(Json.obj("addresses" -> emailAddresses.map { email =>
-              if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
-            }))
-          case _ =>
-            log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
-            BadRequest(Json.obj("error" -> "no_account"))
-        }
-    } getOrElse BadRequest("0")
-  }
-
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doForgotPassword(_), unauthenticatedAction = authCommander.doForgotPassword(_))
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
@@ -622,83 +288,11 @@ class AuthController @Inject() (
     }
   }
 
-  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = doSetPassword(_), unauthenticatedAction = doSetPassword(_))
-  def doSetPassword(implicit request: Request[JsValue]): Result = {
-    (for {
-      code <- (request.body \ "code").asOpt[String]
-      password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
-    } yield {
-      db.readWrite { implicit s =>
-        passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-            for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
-              UserService.save(UserIdentity(
-                userId = sui.userId,
-                socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
-                )
-              ))
-            }
-            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
-          case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
-            Ok(Json.obj("error" -> "expired"))
-          case Some(pr) if pr.state == PasswordResetStates.USED =>
-            Ok(Json.obj("error" -> "already_used"))
-          case _ =>
-            Ok(Json.obj("error" -> "invalid_code"))
-        }
-      }
-    }) getOrElse BadRequest("0")
-  }
+  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authCommander.doSetPassword(_), unauthenticatedAction = authCommander.doSetPassword(_))
 
-  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
-    db.readOnly { implicit s =>
-      val emailAddrOpt = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None)  // TODO: exclude INACTIVE records
-      emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
-        emailAddrOpt.filter(_.verified) map { _ =>
-          (userId, None)
-        } getOrElse {
-          // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified))
-        }
-      }
-    }
-  }
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authCommander.doUploadBinaryPicture(_), unauthenticatedAction = authCommander.doUploadBinaryPicture(_))
 
-  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = doUploadBinaryPicture(_), unauthenticatedAction = doUploadBinaryPicture(_))
-  def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): Result = {
-    request.userOpt.orElse(request.identityOpt) match {
-      case Some(_) =>
-        s3ImageStore.uploadTemporaryPicture(request.body.file) match {
-          case Success((token, pictureUrl)) =>
-            Ok(Json.obj("token" -> token, "url" -> pictureUrl))
-          case Failure(ex) =>
-            airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
-            BadRequest(JsNumber(0))
-        }
-      case None => Forbidden(JsNumber(0))
-    }
-  }
-
-  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = doUploadFormEncodedPicture(_), unauthenticatedAction = doUploadFormEncodedPicture(_))
-  def doUploadFormEncodedPicture(implicit request: Request[MultipartFormData[play.api.libs.Files.TemporaryFile]]) = {
-    request.userOpt.orElse(request.identityOpt) match {
-      case Some(_) =>
-        request.body.file("picture").map { picture =>
-          s3ImageStore.uploadTemporaryPicture(picture.ref.file) match {
-            case Success((token, pictureUrl)) =>
-              Ok(Json.obj("token" -> token, "url" -> pictureUrl))
-            case Failure(ex) =>
-              airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (form encoded)")))
-              BadRequest(JsNumber(0))
-          }
-        } getOrElse {
-          BadRequest(JsNumber(0))
-        }
-      case None => Forbidden(JsNumber(0))
-    }
-  }
+  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authCommander.doUploadFormEncodedPicture(_), unauthenticatedAction = authCommander.doUploadFormEncodedPicture(_))
 
   def cancelAuth() = JsonAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
   private def doCancelPage(implicit request: Request[_]): Result = {

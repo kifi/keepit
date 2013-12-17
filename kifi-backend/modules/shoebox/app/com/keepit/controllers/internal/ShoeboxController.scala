@@ -1,4 +1,4 @@
-package com.keepit.controllers.shoebox
+package com.keepit.controllers.internal
 
 import com.google.inject.{Provider, Inject}
 import com.keepit.common.controller.ShoeboxServiceController

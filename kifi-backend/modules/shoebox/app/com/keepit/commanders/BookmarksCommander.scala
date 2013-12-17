@@ -101,7 +101,7 @@ class BookmarksCommander @Inject() (
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source)
+    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source, true)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -183,7 +183,7 @@ class BookmarksCommander @Inject() (
   }
 
   def tagUrl(tag: Collection, json: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val bookmark = bookmarkInterner.internBookmarks(json, user, experiments, source, kifiInstallationId)
+    val bookmark = bookmarkInterner.internBookmarks(json, user, experiments, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag, bookmark)
   }
 

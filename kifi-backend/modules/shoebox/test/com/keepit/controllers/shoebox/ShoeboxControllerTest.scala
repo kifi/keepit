@@ -1,4 +1,4 @@
-package com.keepit.controllers.shoebox
+package com.keepit.controllers.internal
 
 import org.specs2.mutable.Specification
 
@@ -97,7 +97,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
 
         val query = users.map(_.id.get).mkString(",")
         val payload = JsArray(users.map(_.id.get).map(x => JsNumber(x.id)))
-        val path = com.keepit.controllers.shoebox.routes.ShoeboxController.getBasicUsers().toString
+        val path = com.keepit.controllers.internal.routes.ShoeboxController.getBasicUsers().toString
         val result = route(FakeRequest("POST", path).withJsonBody(payload)).get
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
@@ -119,7 +119,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     "return phrases changed from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
-        val route = com.keepit.controllers.shoebox.routes.ShoeboxController.getPhrasesChanged(4, 2).toString
+        val route = com.keepit.controllers.internal.routes.ShoeboxController.getPhrasesChanged(4, 2).toString
         route === "/internal/shoebox/database/getPhrasesChanged?seqNum=4&fetchSize=2"
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getPhrasesChanged(4 ,2)(FakeRequest())
