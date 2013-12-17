@@ -137,19 +137,14 @@ class ExtSearchController @Inject() (
         searchUUID,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
         query,
-        mergedResult.myTotal,
-        mergedResult.friendsTotal,
-        mergedResult.othersTotal,
+        mergedResult,
         mayHaveMoreHits,
         newIdFilter,
         timing.getTotalTime.toInt,
         numPreviousHits/maxHits,
         numPreviousHits,
         currentDateTime,
-        mergedResult.svVariance, // svVar
-        mergedResult.show,
-        lang,
-        mergedResult.hits
+        lang
       )
 
       try {
