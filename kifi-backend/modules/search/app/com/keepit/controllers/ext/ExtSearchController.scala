@@ -84,14 +84,12 @@ class ExtSearchController @Inject() (
 
     val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
 
-    val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
-
     timing.factory
 
     // TODO: use user profile info as a bias
     val lang = LangDetector.detectShortText(query, getLangsPriorProbabilities(acceptLangs))
 
-    val searcher = mainSearcherFactory(userId, query, lang, maxHits, searchFilter, config, lastUUID)
+    val searcher = mainSearcherFactory(userId, query, lang, maxHits, searchFilter, config)
 
     timing.search
 
@@ -100,7 +98,7 @@ class ExtSearchController @Inject() (
     } else {
       log.warn("maxHits is zero")
       val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, 0)
+      ArticleSearchResult(None, query, Seq.empty[ArticleHit], 0, 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, 0)
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
@@ -118,8 +116,9 @@ class ExtSearchController @Inject() (
       // stash timing information
       val timeLogs = searcher.timing()
 
+      val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       try {
-        articleSearchResultStore += (searchRes.uuid -> searchRes)
+        articleSearchResultStore += (searchRes.uuid -> searchRes.copy(last = lastUUID))
       } catch {
         case e: Throwable => airbrake.notify(AirbrakeError(e, Some("Could not store article search result.")))
       }

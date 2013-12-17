@@ -23,6 +23,7 @@ import com.keepit.normalizer.TestNormalizationServiceModule
 import com.keepit.eliza.TestElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.abook.TestABookServiceClientModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -38,6 +39,7 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
+      TestABookServiceClientModule(),
       TestHeimdalServiceClientModule(),
       TestElizaServiceClientModule(),
       FakeAirbrakeModule(),

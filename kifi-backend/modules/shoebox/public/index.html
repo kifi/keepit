@@ -676,6 +676,35 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 		</div>
 	</div>
 
+	<div class="dialog import-dialog" style="display:none">
+		<div class="dialog-content import-step-1">
+			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
+			<div class="dialog-body">
+				<h1>Privately add your bookmarks to Kifi?</h1>
+				<img src="/assets/img/bookmark-to-kifi.2x.png" class="import-star-to-kifi">
+				<ul>
+					<li><span>Your <span class="import-bookmark-count"></span> bookmarks will be securely kept as private keeps and will never appear in your friends’ search results.</span>
+					<li><span>You can find them anytime with Kifi, and organize them at Kifi.com.</span>
+				</ul>
+			</div>
+			<a href="javascript:" class="cancel-import">Cancel</a>
+			<button class="do-import"><strong>Yes</strong> - Import</button>
+		</div>
+		<div class="dialog-content import-step-2" style="display:none">
+			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
+			<div class="dialog-body">
+				<h1>Importing your bookmarks to Kifi</h1>
+				<img src="/assets/img/bookmark-check.2x.png" class="import-check">
+				<div class="importing-explanation">
+					This might take a few minutes (especially if you have a lot of bookmarks). Feel free to browse around — we’re syncing in the background.
+				</div>
+			</div>
+			<button>Done</button>
+		</div>
+	</div>
+
+
+
 	<script type="text/x-handlebars" id="no-results-template">
 		<h2>We couldn’t find any friends matching ‘{{filter}}’</h2>
 		<h3>Why did this happen?</h3>

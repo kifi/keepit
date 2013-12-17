@@ -52,8 +52,11 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  bookmarksCommander: BookmarksCommander,
+  userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier,
-  bookmarksCommander: BookmarksCommander)
+  kifiInstallationRepo: KifiInstallationRepo,
+  clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) {
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
@@ -181,10 +184,19 @@ class ExtBookmarksController @Inject() (
       case _ =>
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
+
           val experiments = request.experiments
-          val user = db.readOnly { implicit s => userRepo.get(userId) }
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", user, experiments, bookmarkSource, installationId)
+          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", request.user, experiments, bookmarkSource, mutatePrivacy = true, installationId = installationId)
+
+          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.initLoad) {
+            // User selected to import Léo
+            val tagName = db.readOnly { implicit session =>
+              s"Imported from ${kifiInstallationRepo.get(request.kifiInstallationId.get).userAgent.name}"
+            }
+            val tag = bookmarksCommander.getOrCreateTag(request.userId, tagName)
+            bookmarksCommander.addToCollection(tag, bookmarks)
+          }
           //the bookmarks list may be very large!
           bookmarks.grouped(50) foreach { chunk =>
             searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
