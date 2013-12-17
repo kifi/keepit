@@ -32,20 +32,15 @@ panes.notices = function () {
           kind === 'unread' && o.thread.unread ||
           kind === 'sent' && isSent(o.thread)) {
         showNew(o.thread);
-        if (o.thread.unread) {
-          //$markAll.show();
-        }
       } else {
         log('[new_thread] kind mismatch', kind, o)();
       }
     },
     thread_read: function (o) {
-      markRead(o.category, o.time, o.threadId, o.id);
-      //$markAll.toggle(o.anyUnread);
+      markOneRead(o.category, o.time, o.threadId, o.id);
     },
     all_threads_read: function (o) {
       markAllRead(o.id, o.time);
-      //$markAll.toggle(o.anyUnread);
     },
     page_thread_count: function (o) {
       $pageCount.text(o.count || 0);
@@ -68,16 +63,9 @@ panes.notices = function () {
           $(window).off('resize.notices');
           api.port.off(handlers);
         })
-        .on('click', '.kifi-notices-filter[href]', onSubTabClick);
-
-        // $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
-        //   var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
-        //       var t = new Date(el.dataset.createdAt);
-        //     return t > o.time ? {time: t, id: el.dataset.id} : o;
-        //   }, {time: 0});
-        //   api.port.emit('all_notifications_visited', o);
-        //   // not updating DOM until response received due to bulk nature of action
-        // });
+        .on('click', '.kifi-notices-filter[href]', onSubTabClick)
+        .on('mousedown', '.kifi-notices-menu-a', onMenuBtnMouseDown)
+        .on('mouseup', '.kifi-notices-mark-all-read', onMarkAllRead);
       });
 
       api.port.on(handlers);
@@ -104,8 +92,6 @@ panes.notices = function () {
     $list.on('click', '.kifi-notice', onClick)
     .scroll(onScroll)
     .hoverfu('.kifi-notice-n-others', onHoverfuOthers);
-
-    // $markAll.toggle(o.anyUnread);
   }
 
   function onSubTabClick(e) {
@@ -207,10 +193,20 @@ panes.notices = function () {
       .prependTo($list);
   }
 
-  function markRead(category, timeStr, threadId, id) {
-    $list.find('.kifi-notice-' + category + '[data-thread="' + threadId + '"]:not(.kifi-notice-visited)').each(function () {
-      if (id === this.dataset.id || new Date(timeStr) >= new Date(this.dataset.createdAt)) {
-        if ($list.data('kind') === 'unread') {
+  function markOneRead(category, timeStr, threadId, id) {
+    markEachRead(id, timeStr, '.kifi-notice-' + category + '[data-thread="' + threadId + '"]');
+  }
+
+  function markAllRead(id, timeStr) {
+    markEachRead(id, timeStr, '.kifi-notice');
+  }
+
+  function markEachRead(id, timeStr, sel) {
+    var time = new Date(timeStr);
+    var discard = $list.data('kind') === 'unread';
+    $list.find(sel + ':not(.kifi-notice-visited)').each(function () {
+      if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
+        if (discard) {
           $(this).remove();
         } else {
           this.classList.add('kifi-notice-visited');
@@ -219,13 +215,49 @@ panes.notices = function () {
     });
   }
 
-  function markAllRead(id, timeStr) {
-    var time = new Date(timeStr);
-    $list.find('.kifi-notice:not(.kifi-notice-visited)').each(function () {
-      if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
-        this.classList.add('kifi-notice-visited');
+  function onMenuBtnMouseDown(e) {
+    e.preventDefault();
+    var $a = $(this).addClass('kifi-active');
+    var $menu = $a.next('.kifi-notices-menu').fadeIn(50);
+    var $items = $menu.find('.kifi-notices-menu-item')
+      .on('mouseenter', enterItem)
+      .on('mouseleave', leaveItem);
+    document.addEventListener('mousedown', docMouseDown, true);
+    $menu.on('kifi:hide', hide);
+    // .kifi-hover class needed because :hover does not work during drag
+    function enterItem() { $(this).addClass('kifi-hover'); }
+    function leaveItem() { $(this).removeClass('kifi-hover'); }
+    function docMouseDown(e) {
+      if (!$menu[0].contains(e.target)) {
+        $menu.triggerHandler('kifi:hide');
+        if ($a[0] === e.target) {
+          e.stopPropagation();
+        }
       }
-    });
+    }
+    function hide() {
+      document.removeEventListener('mousedown', docMouseDown, true);
+      $a.removeClass('kifi-active');
+      $items.off('mouseenter', enterItem)
+            .off('mouseleave', leaveItem);
+      $menu.off('kifi:hide', hide).fadeOut(50, function () {
+        $menu.find('.kifi-hover').removeClass('kifi-hover');
+      });
+    }
+  }
+
+  function onMarkAllRead(e) {
+    $(this).closest('.kifi-notices-menu').triggerHandler('kifi:hide');
+    var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
+      var t = el.dataset.createdAt;
+      if (o.time < new Date(t)) {
+        o.time = t;
+        o.id = el.dataset.id;
+      }
+      return o;
+    }, {time: 0});
+    api.port.emit('set_all_threads_read', o);
+    // not updating DOM until response received due to bulk nature of action
   }
 
   function onClick(e) {
