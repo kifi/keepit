@@ -271,17 +271,13 @@ class ExtMessagingController @Inject() (
       }
     },
     "get_page_threads" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-      messagingController.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt).map { case (nUriStr, noticesFuture, numUnreadUnmutedFuture) =>
-        noticesFuture.map { notices =>
-          numUnreadUnmutedFuture.map { numUnreadUnmuted =>
-            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices, numUnreadUnmuted))
-          }
-        }
+      messagingController.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt).map { case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
+        socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices, numTotal, numUnreadUnmuted))
       }
     },
     "get_page_threads_before" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
       messagingController.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt).map { case (nUriStr, noticesFuture) =>
-        noticesFuture.map{ notices =>
+        noticesFuture.map { notices =>
           socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices))
         }
       }
