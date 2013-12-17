@@ -1,6 +1,6 @@
 package com.keepit.eliza.controllers.mobile
 
-import com.keepit.eliza.MessagingController
+import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 
 import play.api.libs.json.Json
