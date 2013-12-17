@@ -91,33 +91,37 @@ class ExtSearchController @Inject() (
 
     timing.search
 
-    val searchRes = if (maxHits > 0) {
-      searcher.search()
-    } else {
-      log.warn("maxHits is zero")
-      ShardSearchResult.empty
+    val mergedResult = {
+      val shardRes = if (maxHits > 0) {
+        searcher.search()
+      } else {
+        log.warn("maxHits is zero")
+        ShardSearchResult.empty
+      }
+
+      ResultUtil.merge(Seq(shardRes), maxHits, config)
     }
 
     val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
-      suggestExperts(searchRes.hits)
+      suggestExperts(mergedResult.hits)
     } else { Promise.successful(List.empty[Id[User]]).future }
 
     timing.decoration
 
     val searchUUID = ExternalId[ArticleSearchResult]()
-    val newIdFilter = searchFilter.idFilter ++ searchRes.hits.map(_.uriId.id)
+    val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
     val numPreviousHits = searchFilter.idFilter.size
-    val mayHaveMoreHits = if (numPreviousHits == 0) searchRes.hits.nonEmpty else searchRes.hits.size == maxHits
-    val decorator = ResultDecorator(query, lang, searchRes.friendStats, shoeboxClient, config, monitoredAwait)
+    val mayHaveMoreHits = if (numPreviousHits == 0) mergedResult.hits.nonEmpty else mergedResult.hits.size == maxHits
+    val decorator = ResultDecorator(query, lang, mergedResult.friendStats, shoeboxClient, config, monitoredAwait)
     val res = toKifiSearchResult(
       searchUUID,
       query,
-      decorator.decorate(searchRes.hits),
+      decorator.decorate(mergedResult.hits),
       userId,
       newIdFilter,
       config,
       mayHaveMoreHits,
-      (!searchFilter.isDefault || searchRes.show),
+      (!searchFilter.isDefault || mergedResult.show),
       searchExperimentId,
       experts
     )
@@ -133,19 +137,19 @@ class ExtSearchController @Inject() (
         searchUUID,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
         query,
-        searchRes.myTotal,
-        searchRes.friendsTotal,
-        searchRes.othersTotal,
+        mergedResult.myTotal,
+        mergedResult.friendsTotal,
+        mergedResult.othersTotal,
         mayHaveMoreHits,
         newIdFilter,
         timing.getTotalTime.toInt,
         numPreviousHits/maxHits,
         numPreviousHits,
         currentDateTime,
-        searchRes.svVariance, // svVar
-        searchRes.show,
+        mergedResult.svVariance, // svVar
+        mergedResult.show,
         lang,
-        searchRes.hits
+        mergedResult.hits
       )
 
       try {

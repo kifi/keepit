@@ -6,6 +6,13 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 object ResultUtil {
+
+  def merge(results: Seq[ShardSearchResult], maxHits: Int, config: SearchConfig): MergedSearchResult = {
+    // TODO: this is a skeleton
+    val head = results.head
+    MergedSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.show, head.svVariance)
+  }
+
   def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
     hits.map{ h =>
       val json = h.json
@@ -61,3 +68,13 @@ object ResultUtil {
     )
   }
 }
+
+case class MergedSearchResult(
+  hits: Seq[DetailedSearchHit],
+  myTotal: Int,
+  friendsTotal: Int,
+  othersTotal: Int,
+  friendStats: FriendStats,
+  show: Boolean,
+  svVariance: Float
+)
