@@ -186,8 +186,14 @@ module.exports = function (grunt) {
 
 		// Run: `grunt watch` from command line for this section to take effect
 		watch: {
-			files: ['<%= jshint.files %>'],
-			tasks: 'default'
+			jshint: {
+				files: ['<%= jshint.files %>'],
+				tasks: 'default'
+			},
+			statics: {
+				files: ['static/css/landing.less'],
+				tasks: 'less:statics'
+			}
 		}
 
 	});

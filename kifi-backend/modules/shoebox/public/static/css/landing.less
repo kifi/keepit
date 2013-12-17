@@ -1,4 +1,243 @@
 @import "lesshat";
 @import "common";
 
+@green: #a0bf67;
+@gray: #737980;
+@blue: #5e98e2;
 
+body {
+	position: relative;
+	font-size: 16px;
+	font-weight: 200;
+	letter-spacing: 0.05em;
+	margin: 0 auto;
+	text-align: center;
+	font-family: Arial, san-serif;
+
+	.mac & {
+		font-family: 'Helvetica Neue', Arial, san-serif;
+	}
+}
+
+h1, h2, h3, h4, h5 {
+	margin: 0;
+	font-weight: 200;
+}
+
+.centered-content {
+	max-width: 1349px;
+	margin: 0 auto;
+	.box-sizing(border-box);
+}
+
+.kifi-header-bg {
+	position: fixed;
+	top: 0;
+	width: 100%;
+	background: #f6f6f6;
+}
+
+.kifi-header {
+	max-width: 1349px;
+	padding: 27px 65px;
+	margin: 0 auto;
+	.box-sizing(border-box);
+	.centered-content;
+}
+
+.kifi-header-logo {
+	float: left;
+	font-size: 4em;
+	color: transparent;
+	background: #71a7ec;
+}
+
+.kifi-header-right {
+	float: right;
+	font-size: 18px;
+	line-height: 37px;
+	margin: 18px 0;
+}
+
+.kifi-header-right-link {
+	display: inline-block;
+	text-decoration: none;
+	color: black;
+	font-weight: 300;
+	padding: 0 8px;
+}
+
+.kifi-header-signup {
+	font-weight: 500;
+	padding: 0 53px;
+	border: 2px solid @green;
+	.border-radius(21px);
+	margin-right: 13px;
+	background: white;
+}
+
+.kifi-header-right-separator {
+	color: @green;
+}
+
+.kifi-content {
+	margin-top: 131px;
+}
+
+.kifi-video-bg {
+	background: #f6f6f6;
+}
+
+.kifi-video {
+	position: relative;
+	.centered-content;
+	padding-bottom: 188px;
+
+	h2 {
+		font-size: 43px;
+		color: black;
+		letter-spacing: 2.5px;
+		padding: 40px 0;
+		margin: 0;
+	}
+}
+
+.kifi-video-play {
+	display: inline-block;
+	width: 149px;
+	height: 149px;
+	margin-bottom: 18px;
+	background: #a3c6f2;
+	cursor: pointer;
+}
+
+.kifi-video-caption {
+	font-size: 16px;
+	letter-spacing: 1px;
+}
+
+.kifi-scroll-down {
+	position: absolute;
+	bottom: 31px;
+	right: 0;
+	font-size: 16px;
+	writing-mode: tb-rl;
+	.rotate(90deg);
+	color: #909090;
+	letter-spacing: 1.4px;
+}
+
+.kifi-while {
+	padding: 80px 20px;
+
+	h3 {
+		font-size: 24px;
+		color: @gray;
+		letter-spacing: 1.2px;
+		margin: 0;
+		margin-left: 2px;
+		text-align: left;
+		//.scale(1.1, 1);
+	}
+
+	h2 {
+		font-size: 38px;
+		margin: 0;
+		margin-top: 16px;
+		letter-spacing: 2px;
+	}
+
+	img {
+		display: block;
+		margin: 0 auto;
+		margin-top: 63px;
+	}
+}
+
+.kifi-while-text {
+	display: inline-block;
+	margin: 0 auto;
+}
+
+.kifi-try-kifi {
+	padding: 54px 20px;
+	background: #f6f6f6;
+
+	h3 {
+		font-size: 20px;
+		font-weight: 400;
+		color: @gray;
+		letter-spacing: 1px;
+		margin: 0;
+
+		a {
+			font-size: 0.9em;
+			color: @blue;
+			margin-left: 10px;
+		}
+	}
+
+	hr {
+		display: inline-block;
+		margin: 35px 0 15px;
+		width: 120px;
+		border: 1px solid #dddddd;
+	}
+
+	h2 {
+		margin: 0;
+		font-size: 42px;
+		letter-spacing: 2.5px;
+	}
+}
+
+.kifi-try-kifi-button {
+	display: inline-block;
+	font-size: 16px;
+	color: @blue;
+	padding: 14px 32px;
+	border: 2px solid @blue;
+	margin-top: 23px;
+	.border-radius(4px);
+	background-clip: padding-box;
+	text-transform: uppercase;
+	text-decoration: none;
+	letter-spacing: 3px;
+	font-weight: 500;
+}
+
+.kifi-two-more-things {
+	position: relative;
+	padding: 120px 0;
+	.centered-content;
+
+	h2 {
+		font-size: 35px;
+		letter-spacing: 2px;
+		margin: 0;
+		margin-bottom: 50px;
+	}
+}
+
+.kifi-more-column {
+	width: 50%;
+	.box-sizing(border-box);
+	padding: 0 30px;
+	float: left;
+
+	h2 {
+		margin: 0;
+		font-size: 35px;
+		letter-spacing: 2.5px;
+
+		a {
+			color: @blue;
+			text-decoration: none;
+		}
+	}
+
+	h3 {
+		font-size: 20px;
+		color: @gray;
+	}
+}
