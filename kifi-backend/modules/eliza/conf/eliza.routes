@@ -22,10 +22,10 @@ GET     /eliza/m/1/notifications          @com.keepit.eliza.controllers.mobile.M
 #INTERNAL ROUTES/Eliza
 ##########################################
 
-POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.ElizaController.sendToUserNoBroadcast
-POST  /internal/eliza/sendToUser                @com.keepit.eliza.ElizaController.sendToUser
-POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.ElizaController.sendToAllUsers
-GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.ElizaController.connectedClientCount
+POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.controllers.internal.ElizaController.sendToUserNoBroadcast
+POST  /internal/eliza/sendToUser                @com.keepit.eliza.controllers.internal.ElizaController.sendToUser
+POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.controllers.internal.ElizaController.sendToAllUsers
+GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.controllers.internal.ElizaController.connectedClientCount
 POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.MessagingController.sendGlobalNotification
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 
