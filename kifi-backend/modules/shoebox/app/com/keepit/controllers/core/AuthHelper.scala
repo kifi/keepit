@@ -232,7 +232,8 @@ class AuthHelper @Inject() (
               val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
               val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
               postOffice.sendMail(ElectronicMail(
-                from = EmailAddresses.NOTIFICATIONS,
+                fromName = Some("Kifi Support"),
+                from = EmailAddresses.SUPPORT,
                 to = Seq(resetEmailAddress),
                 subject = "Kifi.com | Password reset requested",
                 htmlBody = views.html.email.resetPassword(resetUrl).body,
