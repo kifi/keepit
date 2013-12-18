@@ -31,6 +31,7 @@ trait SearchCommander {
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
@@ -58,6 +59,7 @@ class SearchCommanderImpl @Inject() (
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
@@ -71,7 +73,10 @@ class SearchCommanderImpl @Inject() (
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
-    val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
+    val (config, searchExperimentId) = predefinedConfig match {
+      case None => searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
+      case Some(conf) => (conf, None)
+    }
 
 
     // TODO: use user profile info as a bias
