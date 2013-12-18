@@ -152,8 +152,6 @@ class AuthController @Inject() (
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
   }
 
-  private case class EmailPassword(email: String, password: String)
-
   def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
     Redirect("/")
   }, unauthenticatedAction = { request =>
@@ -166,29 +164,9 @@ class AuthController @Inject() (
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
-    authenticatedAction = userPasswordSignupAction(_),
-    unauthenticatedAction = userPasswordSignupAction(_)
+    authenticatedAction = authHelper.userPasswordSignupAction(_),
+    unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
-  private val emailPasswordForm = Form[EmailPassword](
-    mapping(
-      "email" -> email,
-      "password" -> text.verifying("password_too_short", pw => pw.length >= 7)
-    )(EmailPassword.apply)(EmailPassword.unapply)
-  )
-  private def userPasswordSignupAction(implicit request: Request[JsValue]) = {
-    // For email logins, a (emailString, password) is tied to a user. This email string
-    // has no direct connection to a user's actual active email address. So, we need to
-    // keep in mind that whenever the user supplies an email address, it may or may not
-    // be related to what's their (emailString, password) login combination.
-
-    val home = com.keepit.controllers.website.routes.HomeController.home()
-    emailPasswordForm.bindFromRequest.fold(
-      hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
-      success = { case EmailPassword(emailAddress, password) =>
-        authHelper.handleEmailPasswordSuccessForm(emailAddress, password)
-      }
-    )
-  }
 
   private def doSignupPage(implicit request: Request[_]): Result = {
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {

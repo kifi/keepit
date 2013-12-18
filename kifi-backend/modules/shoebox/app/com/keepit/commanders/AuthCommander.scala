@@ -20,6 +20,7 @@ import com.keepit.common._
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.controllers.core.AuthHelper
 
 // todo: password as char[]; also order of fields is important -- beware
 case class SocialFinalizeInfo(
@@ -142,7 +143,7 @@ class AuthCommander @Inject()(
 
   def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
     log.info(s"[finalizeSocialAccount] sfi=$sfi userId=$userIdOpt identity=$identityOpt extId=$inviteExtIdOpt")
-    require(sfi.password.nonEmpty && sfi.password.length > 7, "invalid password")
+    require(AuthHelper.validatePwd(sfi.password), "invalid password")
     val pInfo = Registry.hashers.currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
 
     val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,
