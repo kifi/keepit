@@ -92,6 +92,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("threadId", thread.externalId.id)
       contextBuilder += ("newParticipants", newParticipants.map(_.id))
       contextBuilder += ("participantsAdded", newParticipants.length)
+      thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
     }
@@ -112,6 +113,7 @@ class MessagingAnalytics @Inject() (
 
       contextBuilder += ("threadId", thread.externalId.id)
       contextBuilder += ("messageId", message.externalId.id)
+      thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
         contextBuilder += ("isKeep", bookmarkOption.isDefined)
