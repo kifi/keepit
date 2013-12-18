@@ -383,8 +383,9 @@ $(function () {
 					var match = url.match(youtubeRegex);
 					if (match && match.length == 2) {
 						var vID = match[1];
-						var embedHtml = '<object width= "434" height="226"><param name="movie" value="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white" type="application/x-shockwave-flash" allowfullscreen="true" width="434" height="226" allowscriptaccess="always"></embed></object>';
-						$('.page-pic-special').html(embedHtml).show();
+						var embedHtml = '<div class="youtube"><object><param name="movie" value="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></object></div>';
+						$('.page-pic-special').html(embedHtml).addClass('page-pic-special-cell').show();
+						$pic.hide();
 						skipImage = true;
 					}
 				}
