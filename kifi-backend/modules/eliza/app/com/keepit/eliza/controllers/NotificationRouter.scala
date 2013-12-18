@@ -1,6 +1,6 @@
-package com.keepit.eliza
+package com.keepit.eliza.controllers
 
-import com.keepit.eliza.controllers.SocketInfo
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.common.time._
@@ -41,7 +41,10 @@ trait NotificationRouter { //TODO Stephen: This needs a better name
 }
 
 @Singleton
-class NotificationRouterImpl @Inject() (elizaServiceClient: ElizaServiceClient, system: ActorSystem) extends NotificationRouter with Logging {
+class NotificationRouterImpl @Inject() (
+  elizaServiceClient: ElizaServiceClient,
+  system: ActorSystem
+  ) extends NotificationRouter with Logging {
 
   system.scheduler.schedule(30 seconds, 1 minutes)(updateStatsD _)
 
