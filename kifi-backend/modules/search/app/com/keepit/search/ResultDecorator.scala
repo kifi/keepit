@@ -185,9 +185,7 @@ class ResultDecoratorImpl(
 
   private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], BasicUser]): Seq[DetailedSearchHit] = {
     hits.map{ h =>
-      val sortedUsers = h.users.sortBy{ id => - friendStats.score(id) }
-
-      val basicUsers = h.users.flatMap(basicUserMap.get(_))
+      val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
       h.add("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
     }
   }
