@@ -121,6 +121,11 @@ class MessagingAnalytics @Inject() (
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
         heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
+
+        // Anonymized event with page information
+        anonymise(contextBuilder)
+        bookmarkOption.map(_.url) orElse thread.url foreach contextBuilder.addUrlInfo
+        heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.MESSAGED, sentAt))
       }
     }
   }
@@ -150,4 +155,7 @@ class MessagingAnalytics @Inject() (
     // contextBuilder += ("otherParticipantsTotal", externalParticipants.size)
     // contextBuilder += ("otherParticipantsKinds", externalParticipants.map(_.kind.name))
   }
+
+  private def anonymise(contextBuilder: HeimdalContextBuilder): Unit =
+    contextBuilder.anonymise("userParticipants", "newParticipants", "otherParticipants", "threadId", "messageId", "uriId")
 }

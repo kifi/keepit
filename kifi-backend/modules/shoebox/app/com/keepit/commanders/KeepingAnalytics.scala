@@ -18,6 +18,12 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "renamedTag")
       heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, renamedAt))
+
+      // Anonymized event with tag information
+      anonymise(contextBuilder)
+      contextBuilder += ("oldTagName", oldTag.name)
+      contextBuilder += ("tagName", newTag.name)
+      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, renamedAt))
     }
   }
 
@@ -29,6 +35,11 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       contextBuilder += ("action", "createdTag")
       heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, createdAt))
       heimdal.incrementUserProperties(newTag.userId, "tags" -> 1)
+
+      // Anonymized event with tag information
+      anonymise(contextBuilder)
+      contextBuilder += ("tagName", newTag.name)
+      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, createdAt))
     }
   }
 
@@ -58,6 +69,11 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
         if (bookmark.source.value != BookmarkSource.initLoad) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
+
+        // Anonymized event with page information
+        anonymise(contextBuilder)
+        contextBuilder.addUrlInfo(bookmark.url)
+        heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, keptAt))
       }
       val kept = keeps.length
       val keptPrivate = keeps.count(_.isPrivate)
@@ -108,6 +124,14 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
 
     heimdal.trackEvent(UserEvent(updatedKeep.userId, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
+
+    // Anonymized event with page information
+    if (contextBuilder.data.contains("updatedPrivacy")) {
+      anonymise(contextBuilder)
+      contextBuilder.addUrlInfo(updatedKeep.url)
+      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, updatedKeep.updatedAt))
+    }
+
   }
 
   def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit =
@@ -123,5 +147,15 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
+
+    // Anonymized event with tag information
+    if (action == "taggedPage") {
+      anonymise(contextBuilder)
+      contextBuilder.addUrlInfo(keep.url)
+      contextBuilder += ("tagName", tag.name)
+      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, changedAt))
+    }
   }
+
+  private def anonymise(contextBuilder: HeimdalContextBuilder): Unit = contextBuilder.anonymise("uriId")
 }

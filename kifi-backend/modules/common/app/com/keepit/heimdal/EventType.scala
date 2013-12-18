@@ -42,4 +42,6 @@ object UserEventTypes {
 
 object SystemEventTypes {
   val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
+  val KEPT = EventType("kept")
+  val MESSAGED = EventType("messaged")
 }
