@@ -19,6 +19,7 @@ import scala.Some
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import securesocial.core.SocialUser
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -149,7 +150,13 @@ class UserCommander @Inject() (
     val newUser = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
     SafeFuture {
       val contextBuilder = eventContextBuilder()
-      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.SIGNUP))
+      contextBuilder += ("action", "registered")
+      // more properties to be added after some refactoring in SecureSocialUserServiceImpl
+      // requestInfo ???
+      // val socialUser: SocialUser = ???
+      // contextBuilder += ("identityProvider", socialUser.identityId.providerId)
+      // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
+      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
     session.conn.commit()
 
