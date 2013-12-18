@@ -376,11 +376,26 @@ $(function () {
 				$('.page-who-pics').append($detailed.find('.keep-who>.pic').clone());
 				$('.page-who-text').html($detailed.find('.keep-who-text').html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
-				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
-					$pic.css('background-image', 'url(' + data.url + ')');
-				}).fail(function () {
-					$pic.find('.page-pic-soon').addClass('showing');
-				});
+				var skipImage = false;
+
+				if (o.url.indexOf('://www.youtube.com/') > -1) {
+					var youtubeRegex = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
+					var match = url.match(youtubeRegex);
+					if (match && match.length == 2) {
+						var vID = match[1];
+						var embedHtml = '<object width= "434" height="226"><param name="movie" value="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white" type="application/x-shockwave-flash" allowfullscreen="true" width="434" height="226" allowscriptaccess="always"></embed></object>';
+						$('.page-pic-special').html(embedHtml).show();
+						skipImage = true;
+					}
+				}
+
+				if (!skipImage) {
+					$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
+						$pic.css('background-image', 'url(' + data.url + ')');
+					}).fail(function () {
+						$pic.find('.page-pic-soon').addClass('showing');
+					});
+				}
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
 				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
 					$chatter.attr({

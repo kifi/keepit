@@ -3722,6 +3722,14 @@ a.page-url[href]:hover {
   transition: width .18s, max-width .18s;
 }
 
+.page-pic-special {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
 .page-pic-1 {
   position: absolute;
   top: 0;
