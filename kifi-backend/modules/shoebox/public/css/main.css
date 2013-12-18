@@ -1188,7 +1188,7 @@ a.profile-email-pending-cancel {
   color: #777c87;
 }
 
-.profile-email-addresses-arrow, .profile-reset-password-arrow  {
+.profile-email-addresses-arrow, .profile-change-password-arrow  {
   display: block;
   background-image: url(../img/arrow-gray-right.png);
   background-repeat: no-repeat;
@@ -1203,7 +1203,7 @@ a.profile-email-pending-cancel {
 }
 
 .profile-email-addresses.opened .profile-email-addresses-arrow,
-.profile-reset-password.opened .profile-reset-password-arrow {
+.profile-change-password.opened .profile-change-password-arrow {
   background-image: url(../img/arrow-gray-down.png);
   background-size: 10px 6px;
   background-position: 0 7px;
@@ -1419,7 +1419,7 @@ a.profile-email-address-add-save:active {
   background-color: #9EB56B;
 }
 
-a.profile-reset-password-title-wrapper {
+a.profile-change-password-title-wrapper {
   display: block;
   color: #9FB1C3;
   font-size: 15px;
@@ -1432,11 +1432,11 @@ a.profile-reset-password-title-wrapper {
   display: none;
 }
 
-.profile-reset-password.opened .profile-reset-password-change {
+.profile-change-password.opened .profile-change-password-change {
   display: block;
 }
 
-.profile-reset-password-change {
+.profile-change-password-change {
   display: none;
   margin-left: 17px;
 }
@@ -1445,7 +1445,7 @@ a.profile-reset-password-title-wrapper {
   margin-bottom: 10px;
 }
 
-a.profile-reset-password-save {
+a.profile-change-password-save {
   font-size: 12px;
   line-height: 17px;
   display: inline-block;
@@ -1458,21 +1458,21 @@ a.profile-reset-password-save {
   transition: background 0.2s ease;
 }
 
-a.profile-reset-password-save:hover {
+a.profile-change-password-save:hover {
   background-color: #C5D2DE;
 }
 
-.profile-reset-password-message {
+.profile-change-password-message {
   color: #333;
   margin-left: 20px;
   display: none;
 }
 
-.profile-reset-password span.error {
+.profile-change-password span.error {
   color: #ed7071;
 }
 
-.profile-reset-password-success {
+.profile-change-password-success {
   color: #b7ce84;
   margin-left: 17px;
   position: absolute;
