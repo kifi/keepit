@@ -1,6 +1,6 @@
 package com.keepit.test
 
-import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.controller._
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
 import play.api.{Application, Mode}
@@ -34,17 +34,18 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
   }
 }
 
-class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/Eliza/"))
+class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
       TestABookServiceClientModule(),
       TestHeimdalServiceClientModule(),
-      TestElizaServiceClientModule(),
+      FakeElizaServiceClientModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
       FakeClockModule(),
       FakeHealthcheckModule(),
       TestFortyTwoModule(),
+      TestSlickModule(TestDbInfo.dbInfo),
       FakeDiscoveryModule(),
       ElizaCacheModule(HashMapMemoryCacheModule())
     ), overridingModules
