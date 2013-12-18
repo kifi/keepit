@@ -103,8 +103,8 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
 
     if (oldKeep.title != updatedKeep.title) {
-      contextBuilder += ("updatedTitle", updatedKeep.title.getOrElse(""))
-      contextBuilder += ("oldTitle", oldKeep.title.getOrElse(""))
+      val updatedTitle = if (oldKeep.title.isEmpty) "missing" else "different"
+      contextBuilder += ("updatedTitle", updatedTitle)
     }
 
     heimdal.trackEvent(UserEvent(updatedKeep.userId, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
