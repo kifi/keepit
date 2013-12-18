@@ -26,7 +26,7 @@ case class SocialFinalizeInfo(
   email: String,
   firstName: String,
   lastName: String,
-  password: String,
+  password: Array[Char],
   picToken: Option[String],
   picHeight: Option[Int],
   picWidth: Option[Int],
@@ -39,7 +39,7 @@ object SocialFinalizeInfo {
       (__ \ 'email).format[String] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
-      (__ \ 'password).format[String] and
+      (__ \ 'password).format[String].inmap((s:String) => s.toCharArray, unlift((c:Array[Char]) => Some(c.toString))) and
       (__ \ 'picToken).formatNullable[String] and
       (__ \ 'picHeight).formatNullable[Int] and
       (__ \ 'picWidth).formatNullable[Int] and
@@ -142,7 +142,8 @@ class AuthCommander @Inject()(
 
   def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
     log.info(s"[finalizeSocialAccount] sfi=$sfi userId=$userIdOpt identity=$identityOpt extId=$inviteExtIdOpt")
-    val pInfo = Registry.hashers.currentHasher.hash(sfi.password)
+    require(sfi.password.nonEmpty && sfi.password.length > 7, "invalid password")
+    val pInfo = Registry.hashers.currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
 
     val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,
       email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)

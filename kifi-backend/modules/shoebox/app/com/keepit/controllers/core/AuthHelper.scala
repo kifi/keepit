@@ -169,9 +169,10 @@ class AuthHelper @Inject() (
       "cropX" -> optional(number),
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
-    )
-      (SocialFinalizeInfo.apply)
-      (SocialFinalizeInfo.unapply)
+    ) ((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
+        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))
+      ((sfi:SocialFinalizeInfo) =>
+        Some(sfi.email, sfi.firstName, sfi.lastName, sfi.password.toString, sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
   )
   def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
