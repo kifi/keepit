@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.commanders
 
 import com.google.inject.{Singleton, Inject}
 import com.keepit.heimdal._

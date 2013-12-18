@@ -1,5 +1,6 @@
 package com.keepit.eliza.commanders
 
+import com.keepit.eliza.controllers.NotificationRouter
 import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.model.{User, DeepLocator, NormalizedURI}
@@ -50,9 +51,9 @@ object MessagingCommander {
 
 
 class MessagingCommander @Inject() (
-  protected val threadRepo: MessageThreadRepo,
+  threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
-  protected val messageRepo: MessageRepo,
+  messageRepo: MessageRepo,
   db: Database,
   clock: Clock,
   abookServiceClient: ABookServiceClient,

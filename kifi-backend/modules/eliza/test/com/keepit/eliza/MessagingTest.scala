@@ -19,6 +19,7 @@ import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
 
+import com.keepit.eliza.controllers.NotificationRouter
 import com.keepit.eliza.commanders.{MessagingCommander, MessagingIndexCommander}
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
