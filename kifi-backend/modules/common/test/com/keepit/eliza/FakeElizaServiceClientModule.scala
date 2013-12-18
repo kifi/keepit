@@ -8,7 +8,7 @@ import com.keepit.common.service.ServiceType
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
 
-case class TestElizaServiceClientModule() extends ElizaServiceClientModule {
+case class FakeElizaServiceClientModule() extends ElizaServiceClientModule {
   def configure() {}
 
   @Singleton

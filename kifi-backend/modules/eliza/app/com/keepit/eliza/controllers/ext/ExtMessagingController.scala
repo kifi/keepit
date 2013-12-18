@@ -35,7 +35,6 @@ import scala.concurrent.{Future, Promise}
 import com.keepit.eliza.model.{NonUserEmailParticipant, NonUserParticipant}
 import com.keepit.common.mail.GenericEmailAddress
 
-
 class ExtMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
@@ -77,7 +76,6 @@ class ExtMessagingController @Inject() (
       userRecipients <- messagingCommander.constructUserRecipients(userExtRecipients)
       nonUserRecipients <- messagingCommander.constructNonUserRecipients(request.userId, nonUserRecipients)
     } yield {
-
       val (thread, message) = messagingCommander.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)(contextBuilder.build)
       val messageThreadFut = messagingCommander.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
@@ -87,7 +85,12 @@ class ExtMessagingController @Inject() (
       messageThreadFut.map { case (_, messages) =>
         val tDiff = currentDateTime.getMillis - tStart.getMillis
         Statsd.timing(s"messaging.newMessage", tDiff)
-        Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt, "threadInfo" -> threadInfoOpt, "messages" -> messages.reverse))
+        Ok(Json.obj(
+          "id" -> message.externalId.id,
+          "parentId" -> message.threadExtId.id,
+          "createdAt" -> message.createdAt,
+          "threadInfo" -> threadInfoOpt,
+          "messages" -> messages.reverse))
       }
     }
 

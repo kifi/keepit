@@ -44,7 +44,7 @@ class MessagingTest extends Specification with DbTestInjector {
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
       TestHeimdalServiceClientModule(),
-      TestElizaServiceClientModule(),
+      FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule()
