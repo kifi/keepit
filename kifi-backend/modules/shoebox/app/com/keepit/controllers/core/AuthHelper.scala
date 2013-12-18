@@ -113,16 +113,6 @@ class AuthHelper @Inject() (
     res
   }
 
-  private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
-    for {
-      h <- picHeight
-      w <- picWidth
-      x <- cropX
-      y <- cropY
-      s <- cropSize
-    } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
-  }
-
   private val url = current.configuration.getString("application.baseUrl").get
 
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {

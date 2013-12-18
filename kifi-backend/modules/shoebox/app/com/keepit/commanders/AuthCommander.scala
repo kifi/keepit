@@ -21,22 +21,25 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
+// todo: password as char[]; also order of fields is important -- beware
 case class SocialFinalizeInfo(
   email: String,
-  password: String,
   firstName: String,
   lastName: String,
+  password: String,
   picToken: Option[String],
-  picHeight: Option[Int], picWidth: Option[Int],
-  cropX: Option[Int], cropY: Option[Int],
+  picHeight: Option[Int],
+  picWidth: Option[Int],
+  cropX: Option[Int],
+  cropY: Option[Int],
   cropSize: Option[Int])
 
 object SocialFinalizeInfo {
   implicit val format = (
       (__ \ 'email).format[String] and
-      (__ \ 'password).format[String] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
+      (__ \ 'password).format[String] and
       (__ \ 'picToken).formatNullable[String] and
       (__ \ 'picHeight).formatNullable[Int] and
       (__ \ 'picWidth).formatNullable[Int] and
@@ -87,6 +90,7 @@ class AuthCommander @Inject()(
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
                                email: String, passwordInfo: PasswordInfo,
                                firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
+    log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
     val lName = User.sanitizeName(lastName)
     val newIdentity = UserIdentity(
@@ -137,7 +141,7 @@ class AuthCommander @Inject()(
   }
 
   def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
-
+    log.info(s"[finalizeSocialAccount] sfi=$sfi userId=$userIdOpt identity=$identityOpt extId=$inviteExtIdOpt")
     val pInfo = Registry.hashers.currentHasher.hash(sfi.password)
 
     val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,
@@ -159,6 +163,7 @@ class AuthCommander @Inject()(
 
   def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
     require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
+    log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
     val identity = db.readOnly { implicit session =>
       socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
