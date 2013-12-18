@@ -221,15 +221,18 @@ panes.notices = function () {
     var $menu = $a.next('.kifi-notices-menu').fadeIn(50);
     var $items = $menu.find('.kifi-notices-menu-item')
       .on('mouseenter', enterItem)
-      .on('mouseleave', leaveItem);
+      .on('mouseleave', leaveItem)
+      .on('mouseup', hide);
     document.addEventListener('mousedown', docMouseDown, true);
-    $menu.on('kifi:hide', hide);
+    document.addEventListener('mousewheel', hide, true);
+    document.addEventListener('wheel', hide, true);
+    document.addEventListener('keypress', hide, true);
     // .kifi-hover class needed because :hover does not work during drag
     function enterItem() { $(this).addClass('kifi-hover'); }
     function leaveItem() { $(this).removeClass('kifi-hover'); }
     function docMouseDown(e) {
       if (!$menu[0].contains(e.target)) {
-        $menu.triggerHandler('kifi:hide');
+        hide();
         if ($a[0] === e.target) {
           e.stopPropagation();
         }
@@ -237,17 +240,20 @@ panes.notices = function () {
     }
     function hide() {
       document.removeEventListener('mousedown', docMouseDown, true);
+      document.removeEventListener('mousewheel', hide, true);
+      document.removeEventListener('wheel', hide, true);
+      document.removeEventListener('keypress', hide, true);
       $a.removeClass('kifi-active');
       $items.off('mouseenter', enterItem)
-            .off('mouseleave', leaveItem);
-      $menu.off('kifi:hide', hide).fadeOut(50, function () {
+            .off('mouseleave', leaveItem)
+            .off('mouseup', hide);
+      $menu.fadeOut(50, function () {
         $menu.find('.kifi-hover').removeClass('kifi-hover');
       });
     }
   }
 
   function onMarkAllRead(e) {
-    $(this).closest('.kifi-notices-menu').triggerHandler('kifi:hide');
     var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
       var t = el.dataset.createdAt;
       if (o.time < new Date(t)) {
