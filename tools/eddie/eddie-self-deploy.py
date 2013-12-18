@@ -6,6 +6,7 @@
 import boto.ec2
 import requests
 import os
+import os.path
 import shutil
 import sys
 import iso8601
@@ -39,6 +40,14 @@ def abort(why):
 def whoAmI():
   ec2 = boto.ec2.connect_to_region("us-west-1", aws_access_key_id="AKIAINZ2TABEYCFH7SMQ", aws_secret_access_key="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")
   myID = requests.get("http://169.254.169.254/latest/meta-data/instance-id", timeout=1.0).text
+  instance = ec2.get_only_instances([myID])[0]
+  spotRequestId = instance.spot_instance_request_id
+  if spotRequestId is not None:
+    spotRequest = ec2.get_all_spot_instance_requests([spotRequestId])[0]
+    tags = spotRequest.tags
+    for key, value in tags.items():
+      if key not in instance.tags:
+        instance.add_tag(key, value)
   return ec2.get_only_instances([myID])[0].tags
 
 def log(msg):
@@ -69,7 +78,11 @@ def aquireLock(): #return truthy when lock aquired
 
 def releaseLock(): #silently fails if there is no lock
   if lockFile is not None:
-    lockFile.close()
+    try:
+      portalocker.unlock(lockFile)
+      lockFile.close()
+    except:
+      pass
 
 
 #######################
@@ -168,12 +181,16 @@ def setUpCode(serviceType):
     os.remove("/home/fortytwo/run/" + serviceType)
   except:
     print "No symlink to remove"
+  if not os.path.exists("/home/fortytwo/old"):
+    os.makedirs("/home/fortytwo/old")
   for the_file in os.listdir("/home/fortytwo/old"):
     shutil.rmtree(os.path.join("/home/fortytwo/old", the_file))
   for item in os.listdir("/home/fortytwo/run"):
     srcpath = os.path.join("/home/fortytwo/run", item)
     dstpath = os.path.join("/home/fortytwo/old", item)
     shutil.move(srcpath, dstpath)
+  for the_file in os.listdir("/home/fortytwo/run"):
+    shutil.rmtree(os.path.join("/home/fortytwo/run", the_file))
   if subprocess.call('unzip -qq -o %s -d /home/fortytwo/run' % os.path.join("/home/fortytwo/repo", os.listdir("/home/fortytwo/repo")[0]), shell=True): return False
   cmd = 'ln -s {0} {1}'.format(os.path.join("/home/fortytwo/run", os.listdir("/home/fortytwo/run")[0]), "/home/fortytwo/run/" + serviceType)
   if os.system(cmd):
@@ -189,10 +206,18 @@ def setUpCode(serviceType):
 def startService(serviceType):
   return not os.system("/etc/init.d/" + serviceType + " start")
 
+#######################
+#### Insta Rollback ###
+#######################
+
+def instaRollback(serviceType):
+  pass #go back to the version in ~/old
+
 
 if __name__=="__main__":
   try:
     me = whoAmI()
+    print me
     serviceType = me['Service']
     version = sys.argv[1] if (len(sys.argv)>1 and sys.argv[1]!='force') else me.get('Version','latest')
     force = 'force' in sys.argv
@@ -201,6 +226,7 @@ if __name__=="__main__":
     logHead = "[%s:%s:%s]" % (name, serviceType, deployId)
     if not force and not aquireLock():
       log(logHead + " Deploy in progress. Aborting this one.")
+      releaseLock()
       sys.exit(1)
     try:
       log(logHead + " Starting self deploy. Target Version: " + version)
@@ -208,21 +234,25 @@ if __name__=="__main__":
       versionFileName = getNewVersion(serviceType, version)
       if not versionFileName:
         log(logHead + " Failed to retrieve version. Aborting.")
+        releaseLock()
         sys.exit(1)
       log(logHead + " Retrieved Version: " + versionFileName)
 
       if not stopService(serviceType):
         log(logHead + " Failed to stop service. Aborting.")
+        releaseLock()
         sys.exit(1)
       log(logHead + " Running service has been stopped.")
 
       if not setUpCode(serviceType):
         log(logHead + " Failed to install code. Aborting.")
+        releaseLock()
         sys.exit(1)
       log(logHead + " Service has been installed.")
 
       if not startService(serviceType):
         log(logHead + " Failed to start service. Aborting.")
+        releaseLock()
         sys.exit(1)
       log(logHead + " Service has been started. Waiting for it to come up.")
 
@@ -243,6 +273,7 @@ if __name__=="__main__":
         log(logHead + " Service Up. Deploy Finished.")
       else:
         log(logHead + " Service failed to come up. Deployment Failed!")
+      releaseLock()
     except Exception as e:
       traceback.print_exc()
       log(logHead + " Fatal Error during deploy! Machine may need cleanup. (%s)" %str(e))

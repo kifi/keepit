@@ -91,6 +91,7 @@ class InviteController @Inject() (db: Database,
             val messageWithUrl = s"${message getOrElse ""}\n$url$path"
             linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
             invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+            reportSentInvitation(invite, SocialNetworks.LINKEDIN)
             CloseWindow()
           case _ =>
             BadRequest("Unsupported social network")
@@ -143,6 +144,7 @@ class InviteController @Inject() (db: Database,
                       }
                       sendEmailInvitation(c, invite, request.user)
                       invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+                      reportSentInvitation(invite, SocialNetworks.EMAIL)
                     }
                   }
                 }
@@ -248,16 +250,24 @@ class InviteController @Inject() (db: Database,
         case Some(invite) =>
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
-            SafeFuture{
-              val contextBuilder = eventContextBuilder()
-              contextBuilder += ("invitee", invite.recipientSocialUserId.getOrElse(invite.recipientEContactId.get).id)
-              heimdal.trackEvent(UserEvent(invite.senderUserId.getOrElse(Id[User](-1)), contextBuilder.build, UserEventTypes.INVITE_SENT))
-            }
+            reportSentInvitation(invite, SocialNetworks.FACEBOOK)
           }
           CloseWindow()
         case None =>
           Redirect(routes.HomeController.home)
       }
+    }
+  }
+
+  private def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType): Unit = invite.senderUserId.foreach { senderId =>
+    SafeFuture {
+      val contextBuilder = eventContextBuilder()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("socialNetwork", socialNetwork.toString)
+      contextBuilder += ("inviteId", invite.externalId.id)
+      invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
+      invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
+      heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED))
     }
   }
 }

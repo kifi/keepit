@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.db.Id
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.google.inject.{Singleton, Inject, Provides}
 import com.keepit.common.mail.{PostOffice, ElectronicMail}

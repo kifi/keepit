@@ -11,14 +11,14 @@ import com.keepit.model._
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.social.{SocialNetworks, SocialId}
 import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
-import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
 class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInjector {
 
-  val modules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), TestElizaServiceClientModule())
+  val modules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule())
 
   "UserConnectionCreator" should {
     "create connections between friends for social users and kifi users" in {

@@ -376,11 +376,27 @@ $(function () {
 				$('.page-who-pics').append($detailed.find('.keep-who>.pic').clone());
 				$('.page-who-text').html($detailed.find('.keep-who-text').html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
-				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
-					$pic.css('background-image', 'url(' + data.url + ')');
-				}).fail(function () {
-					$pic.find('.page-pic-soon').addClass('showing');
-				});
+				var skipImage = false;
+
+				if (url.indexOf('://www.youtube.com/') > -1 || url.indexOf('youtu.be/') > -1) {
+					var youtubeRegex = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
+					var match = url.match(youtubeRegex);
+					if (match && match.length == 2) {
+						var vID = match[1];
+						var embedHtml = '<div class="youtube"><embed src="//www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white&iv_load_policy=3" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></div>';
+						$('.page-pic-special').html(embedHtml).addClass('page-pic-special-cell').show();
+						$pic.hide();
+						skipImage = true;
+					}
+				}
+
+				if (!skipImage) {
+					$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
+						$pic.css('background-image', 'url(' + data.url + ')');
+					}).fail(function () {
+						$pic.find('.page-pic-soon').addClass('showing');
+					});
+				}
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
 				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
 					$chatter.attr({
@@ -1064,6 +1080,73 @@ $(function () {
 				showMessage('Uh oh! Something went wrong!');
 			});
 	}
+
+	function sendChangePassword(oldPass, newPass) {
+		var $changePassword = $('.profile-change-password');
+		$.postJson(xhrBase + '/user/password',
+			{'oldPassword': oldPass, 'newPassword': newPass}
+		).done(function() {
+			$changePassword.find('input').val('');
+			$changePassword.removeClass('opened');
+			$changePassword.find('.profile-change-password-success').text('Password updated!').show().delay(5000).fadeOut();
+		}).fail(function(xhr) {
+			var $message = $('.profile-change-password-message');
+			if (xhr.responseJSON) {
+				if (xhr.responseJSON.error == 'bad_old_password') {
+					$changePassword.find('input[name=old-password]').val('').focus();
+					$message.text('Your current password is not correct.').addClass('error').show();
+				} else if (xhr.responseJSON.error == 'bad_new_password') {
+					$changePassword.find('input[name=new-password1]').val('').focus();
+					$changePassword.find('input[name=new-password2]').val('');
+					$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
+				} else {
+					$message.text('That got weird.').addClass('error').show();
+				}
+			} else {
+				$message.text('Couldn’t submit. Try again?').addClass('error').show();
+			}
+		});
+	}
+
+	$(document).on('click', '.profile-change-password-title-wrapper', function (e) {
+		e.preventDefault();
+		var $changePassword = $(this).closest('.profile-change-password');
+		$changePassword.find('.profile-change-password-success').hide();
+		$changePassword.find('.profile-change-password-message').text('');
+		$changePassword.find('input').val('');
+		$changePassword.toggleClass('opened');
+	});
+
+	$(document).on('click', '.profile-change-password-save', function (e) {
+		var $changePassword = $(this).closest('.profile-change-password');
+		var $old = $changePassword.find('input[name=old-password]');
+		var $new1 = $changePassword.find('input[name=new-password1]');
+		var $new2 = $changePassword.find('input[name=new-password2]');
+		var $message = $changePassword.find('.profile-change-password-message');
+		if ($old.val().length < 7) {
+			$message.text('Your current password is not correct.').addClass('error').show();
+			$old.val('').focus();
+		} else if($new1.val() != $new2.val()) {
+			$message.text('Your new passwords do not match.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else if($new1.val().length < 7) {
+			$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else if($old.val() == $new1.val()) {
+			$message.text('Your new password needs to be different than your current one.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else {
+			$message.hide().text('');
+			sendChangePassword($old.val(), $new1.val());
+		}
+		$changePassword.on('keydown', function(e) {
+			$message.fadeOut(100);
+			$changePassword.off('keydown');
+		});
+	});
 
 	var $disconnectDialog = $('.disconnect-dialog')
 		.detach()

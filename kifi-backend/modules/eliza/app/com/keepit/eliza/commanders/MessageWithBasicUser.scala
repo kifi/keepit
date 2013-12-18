@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.commanders
 
 import scala.concurrent.duration.Duration
 
@@ -8,6 +8,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.eliza.model._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

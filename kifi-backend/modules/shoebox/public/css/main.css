@@ -1023,6 +1023,12 @@ a.profile-image-change:active {
   transition: padding .25s ease;
 }
 
+.profile-input-box + .profile-input-box {
+  padding-top: 3px;
+  position: relative;
+  transition: padding .25s ease;
+}
+
 .profile-input-box.edit {
   padding-right: 58px;
 }
@@ -1182,7 +1188,7 @@ a.profile-email-pending-cancel {
   color: #777c87;
 }
 
-.profile-email-addresses-arrow {
+.profile-email-addresses-arrow, .profile-change-password-arrow  {
   display: block;
   background-image: url(../img/arrow-gray-right.png);
   background-repeat: no-repeat;
@@ -1196,7 +1202,8 @@ a.profile-email-pending-cancel {
   vertical-align: middle;
 }
 
-.profile-email-addresses.opened .profile-email-addresses-arrow {
+.profile-email-addresses.opened .profile-email-addresses-arrow,
+.profile-change-password.opened .profile-change-password-arrow {
   background-image: url(../img/arrow-gray-down.png);
   background-size: 10px 6px;
   background-position: 0 7px;
@@ -1410,6 +1417,66 @@ a.profile-email-address-add-save:focus {
 
 a.profile-email-address-add-save:active {
   background-color: #9EB56B;
+}
+
+a.profile-change-password-title-wrapper {
+  display: block;
+  color: #9FB1C3;
+  font-size: 15px;
+  padding: 5px 0;
+  margin-top: 10px;
+  letter-spacing: 0.8px;
+}
+
+.profile-email-address-manage {
+  display: none;
+}
+
+.profile-change-password.opened .profile-change-password-change {
+  display: block;
+}
+
+.profile-change-password-change {
+  display: none;
+  margin-left: 17px;
+}
+
+.profile-new-password {
+  margin-bottom: 10px;
+}
+
+a.profile-change-password-save {
+  font-size: 12px;
+  line-height: 17px;
+  display: inline-block;
+  width: 132px;
+  padding: 6px 0;
+  color: white;
+  background-color: #b8c5d1;
+  border-radius: 2px;
+  text-align: center;
+  transition: background 0.2s ease;
+}
+
+a.profile-change-password-save:hover {
+  background-color: #C5D2DE;
+}
+
+.profile-change-password-message {
+  color: #333;
+  margin-left: 20px;
+  display: none;
+}
+
+.profile-change-password span.error {
+  color: #ed7071;
+}
+
+.profile-change-password-success {
+  color: #b7ce84;
+  margin-left: 17px;
+  position: absolute;
+  display: none;
 }
 
 .profile-section {
@@ -3720,6 +3787,33 @@ a.page-url[href]:hover {
   max-width: 0;
   -webkit-transition: width .18s, max-width .18s;
   transition: width .18s, max-width .18s;
+}
+
+.page-pic-special {
+  display: none;
+  width:100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.page-pic-special.page-pic-special-cell {
+  display: table-cell;
+}
+
+.page-pic-special .youtube {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 */
+  height: 0;
+  z-index: 2;
+}
+
+.page-pic-special .youtube object,
+.page-pic-special .youtube embed  {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .page-pic-1 {
