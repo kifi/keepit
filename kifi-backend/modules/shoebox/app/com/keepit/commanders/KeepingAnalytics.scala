@@ -17,6 +17,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "renamedTag")
+      contextBuilder += ("tagId", newTag.id.get.toString)
       heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, renamedAt))
 
       // Anonymized event with tag information
@@ -33,6 +34,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "createdTag")
+      contextBuilder += ("tagId", newTag.id.get.toString)
       heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, createdAt))
       heimdal.incrementUserProperties(newTag.userId, "tags" -> 1)
 
@@ -49,6 +51,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "deletedTag")
+      contextBuilder += ("tagId", oldTag.id.get.toString)
       heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, deletedAt))
       heimdal.incrementUserProperties(oldTag.userId, "tags" -> -1)
     }
@@ -146,6 +149,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     contextBuilder += ("isPrivate", keep.isPrivate)
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
+    contextBuilder += ("tagId", tag.id.get.toString)
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
 
     // Anonymized event with tag information
@@ -157,5 +161,5 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
-  private def anonymise(contextBuilder: HeimdalContextBuilder): Unit = contextBuilder.anonymise("uriId")
+  private def anonymise(contextBuilder: HeimdalContextBuilder): Unit = contextBuilder.anonymise("uriId", "tagId")
 }
