@@ -10,8 +10,11 @@ import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.Filter
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.query.BooleanQueryWithSemanticMatch
 
 trait PercentMatch extends QueryParser {
+
+  val useSemanticMatch = false
 
   private[this] var percentMatch: Float = 0.0f
   private[this] var percentMatchForHotDocs: Float = 1.0f
@@ -30,7 +33,7 @@ trait PercentMatch extends QueryParser {
     if (clauses.isEmpty) {
       None // all clause words were filtered away by the analyzer.
     } else {
-      val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
+      val query = if (useSemanticMatch) new BooleanQueryWithSemanticMatch(false) else new BooleanQueryWithPercentMatch(false)
       query.setPercentMatch(percentMatch)
       hotDocFilter.foreach{ f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
 

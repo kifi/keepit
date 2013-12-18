@@ -10,7 +10,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.ExperimentType
 import com.keepit.model.{User, NormalizedURI}
-import play.api.libs.json.{JsValue, JsArray}
 import com.keepit.search.ClickedURI
 import com.keepit.search.BrowsedURI
 import com.keepit.search.ArticleSearchResult
@@ -22,7 +21,7 @@ import com.keepit.common.healthcheck._
 import com.typesafe.plugin.MailerPlugin
 import com.keepit.common.healthcheck.Healthcheck.EMAIL
 import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail}
-import play.api.libs.json.JsArray
+import play.api.libs.json._
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.search.ClickedURI
 import scala.Some
@@ -60,8 +59,8 @@ class ExtSearchEventController @Inject() (
       SearchEngine.get(resultSource) match {
 
         case SearchEngine.Kifi => {
-          val hit = KifiSearchHit(json \ "hit")
-          shoeboxClient.getNormalizedURIByURL(hit.url).onSuccess { case Some(uri) =>
+          val hit = KifiSearchHit((json \ "hit").as[JsObject])
+          shoeboxClient.getNormalizedURIByURL(hit.bookmark.url).onSuccess { case Some(uri) =>
             val uriId = uri.id.get
             clickHistoryTracker.add(userId, ClickedURI(uriId))
             resultClickedTracker.add(userId, query, uriId, resultPosition, hit.isMyBookmark, isDemo)

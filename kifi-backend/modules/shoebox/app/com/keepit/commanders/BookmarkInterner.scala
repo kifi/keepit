@@ -94,8 +94,10 @@ class BookmarkInterner @Inject() (
     bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
       case Some(bookmark) =>
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
-        val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(true) } else keepWithPrivate
-        (false, bookmarkRepo.save(keep.withTitle(title orElse bookmark.title orElse uri.title).copy(createdAt = clock.now)))
+        val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(true).copy(createdAt = clock.now) } else keepWithPrivate
+        val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
+        val persistedKeep = if(keepWithTitle != bookmark) bookmarkRepo.save(keepWithTitle) else bookmark
+        (false, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         (true, bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))

@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.commanders
 
 import com.google.inject.{Singleton, Inject}
 import com.keepit.heimdal._
@@ -11,6 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.realtime.PushNotification
 import com.keepit.common.db.slick.Database
+import com.keepit.eliza.model._
 
 @Singleton
 class MessagingAnalytics @Inject() (

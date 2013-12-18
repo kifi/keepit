@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -52,7 +53,8 @@ class MainSearcher(
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
-    monitoredAwait: MonitoredAwait)
+    monitoredAwait: MonitoredAwait,
+    airbrake: AirbrakeNotifier)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
@@ -66,7 +68,7 @@ class MainSearcher(
   def getLang: Lang = lang
 
   private[this] val currentTime = currentDateTime.getMillis()
-  private[this] val timeLogs = new MutableSearchTimeLogs()
+  private[this] val timeLogs = new SearchTimeLogs()
   private[this] val idFilter = filter.idFilter
   private[this] val isInitialSearch = idFilter.isEmpty
 
@@ -238,7 +240,7 @@ class MainSearcher(
     Await.result(promise.future, 10 seconds)
   }
 
-  def search(): ArticleSearchResult = {
+  def search(): ShardSearchResult = {
     val now = currentDateTime
     val (myHits, friendsHits, othersHits, personalizedSearcher) =
       if (enableWarp && isInitialSearch && filter.isDefault) {
@@ -386,25 +388,20 @@ class MainSearcher(
       hitList = (hitList.take(numHitsToReturn - 1) :+ h)
     }
 
+    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
+    val shardHits = toDetailedSearchHits(hitList)
+    val collections = parser.collectionIds.map(getCollectionExternalId)
+
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
+    timing()
 
-    val searchResultUuid = ExternalId[ArticleSearchResult]()
-    val mayHaveMoreHits = if (isInitialSearch) hitList.nonEmpty else hitList.length == numHitsToReturn
-    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-
-    checkScoreValues(hitList)
-
-    ArticleSearchResult(None, queryString, hitList.map(_.toArticleHit(friendStats)),
-        myTotal, friendsTotal, othersTotal, mayHaveMoreHits, hitList.map(_.scoring), newIdFilter, timeLogs.total.toInt,
-        (idFilter.size / numHitsToReturn), idFilter.size, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = -1.0f, toShow = show,
-        collections = parser.collectionIds,
-        lang = lang)
+    ShardSearchResult(toDetailedSearchHits(hitList), myTotal, friendsTotal, othersTotal, friendStats, collections.toSeq, svVar, show)
   }
 
-  private[this] def checkScoreValues(hitList: List[MutableArticleHit]): Unit = {
-    hitList.foreach{ h =>
+  private[this] def toDetailedSearchHits(hitList: List[MutableArticleHit]): List[DetailedSearchHit] = {
+    hitList.map{ h =>
       if (h.score.isInfinity) {
         log.error(s"the score value is infinity textScore=${h.luceneScore} clickBoost=${h.clickBoost} scoring=${h.scoring}")
         h.score = Float.MaxValue
@@ -412,6 +409,45 @@ class MainSearcher(
         log.error(s"the score value is NaN textScore=${h.luceneScore} clickBoost=${h.clickBoost} scoring=${h.scoring}")
         h.score = -1.0f
       }
+
+      DetailedSearchHit(
+        h.id,
+        h.bookmarkCount,
+        toBasicSearchHit(h),
+        h.isMyBookmark,
+        h.users.nonEmpty, // isFriendsBookmark
+        h.isPrivate,
+        h.users.toSeq,
+        h.score,
+        h.scoring
+      )
+    }
+  }
+
+  private[this] var collectionIdCache: Map[Long, ExternalId[Collection]] = Map()
+
+  private def getCollectionExternalId(id: Long): ExternalId[Collection] = {
+    collectionIdCache.getOrElse(id, {
+      val extId = collectionSearcher.getExternalId(id)
+      collectionIdCache += (id -> extId)
+      extId
+    })
+  }
+
+  private[this] def toBasicSearchHit(h: MutableArticleHit): BasicSearchHit = {
+    val uriId = Id[NormalizedURI](h.id)
+    if (h.isMyBookmark) {
+      val r = getBookmarkRecord(uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${uriId}"))
+
+      val collections = {
+        val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
+        if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
+      }
+
+      BasicSearchHit(Some(r.title), r.url, collections, r.externalId)
+    } else {
+      val r = getArticleRecord(uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${uriId}"))
+      BasicSearchHit(Some(r.title), r.url)
     }
   }
 
@@ -478,24 +514,23 @@ class MainSearcher(
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
-  def timing(): SearchTimeLogs = {
-    Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
-    Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
-    Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
-    Statsd.timing("mainSearch.nlpPhraseDetection", timeLogs.nlpPhraseDetection)
-    Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
-    Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
-    Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
-    Statsd.timing("mainSearch.processHits", timeLogs.processHits)
-    Statsd.timing("mainSearch.total", timeLogs.total)
+  def timing(): Unit = {
+    SafeFuture {
+      timeLogs.send()
 
-    articleSearcher.indexWarmer.foreach{ warmer =>
-      parsedQuery.foreach{ query =>
-          warmer.addTerms(QueryUtil.getTerms(query))
+      articleSearcher.indexWarmer.foreach{ warmer =>
+        parsedQuery.foreach{ query =>
+            warmer.addTerms(QueryUtil.getTerms(query))
+        }
+      }
+
+      val timeLimit = 1000L
+      // search is a little slow after service restart. allow some grace period
+      if (timeLogs.total > timeLimit && currentTime - fortyTwoServices.started.getMillis() > 1000*60*8) {
+        val msg = s"search time exceeds limit! Limit time = $timeLimit, main-search-details: ${timeLogs.toString}."
+        airbrake.notify(msg)
       }
     }
-
-    timeLogs.toSearchTimeLogs
   }
 }
 
@@ -581,13 +616,9 @@ class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, 
     users = newUsers
     bookmarkCount = newBookmarkCount
   }
-  def toArticleHit(friendStats: FriendStats) = {
-    val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }
-    ArticleHit(Id[NormalizedURI](id), score, isMyBookmark, isPrivate, sortedUsers, bookmarkCount)
-  }
 }
 
-case class MutableSearchTimeLogs(
+class SearchTimeLogs(
     var socialGraphInfo: Long = 0,
     var getClickBoost: Long = 0,
     var queryParsing: Long = 0,
@@ -598,5 +629,20 @@ case class MutableSearchTimeLogs(
     var processHits: Long = 0,
     var total: Long = 0
 ) {
-  def toSearchTimeLogs = SearchTimeLogs(socialGraphInfo, getClickBoost, queryParsing, personalizedSearcher, search, processHits, total)
+  def send(): Unit = {
+    Statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo)
+    Statsd.timing("mainSearch.queryParsing", queryParsing)
+    Statsd.timing("mainSearch.phraseDetection", phraseDetection)
+    Statsd.timing("mainSearch.nlpPhraseDetection", nlpPhraseDetection)
+    Statsd.timing("mainSearch.getClickboost", getClickBoost)
+    Statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher)
+    Statsd.timing("mainSearch.LuceneSearch", search)
+    Statsd.timing("mainSearch.processHits", processHits)
+    Statsd.timing("mainSearch.total", total)
+  }
+
+  override def toString() = {
+    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
+      s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
+  }
 }

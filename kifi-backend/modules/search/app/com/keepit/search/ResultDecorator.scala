@@ -1,36 +1,47 @@
 package com.keepit.search
 
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
+import com.keepit.common.db.ExternalId
+import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.index.Analyzer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryUtil
+import com.keepit.search.query.parser.DefaultSyntax
+import com.keepit.search.query.parser.QueryParser
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.BasicUser
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
+import scala.collection.immutable.SortedMap
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
 import scala.concurrent.duration._
 import java.io.StringReader
-import scala.collection.immutable.SortedMap
-import com.keepit.search.index.SymbolDecompounder
-import com.keepit.common.logging.Logging
-import com.keepit.social.BasicUser
-import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.db.ExternalId
-import play.api.libs.json.JsValue
+import play.api.libs.json._
 
 trait ResultDecorator {
-  def decorate(resultSet: ArticleSearchResult): DecoratedResult
+  def decorate(hits: Seq[DetailedSearchHit]): DecoratedResult
 }
 
 object ResultDecorator extends Logging {
 
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
-  def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
-    new ResultDecoratorImpl(searcher, shoeboxClient, monitoredAwait)
+  def apply(query: String, lang: Lang, friendStats: FriendStats, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
+    new ResultDecoratorImpl(query, lang, friendStats, shoeboxClient, monitoredAwait)
+  }
+
+  def getQueryTerms(queryText: String, analyzer: Analyzer): Set[String] = {
+    if (queryText != null && queryText.trim.length != 0) {
+      // use the minimum parser to avoid expansions etc.
+      val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
+      parser.parse(queryText).map{ query => QueryUtil.getTerms("", query).map(_.text) }.getOrElse(Set.empty)
+    } else {
+      Set.empty
+    }
   }
 
   def highlight(text: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
@@ -102,75 +113,38 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
+class ResultDecoratorImpl(query: String, lang: Lang, friendStats: FriendStats, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
 
-  override def decorate(resultSet: ArticleSearchResult): DecoratedResult = {
-    var collectionIdCache: Map[Long, ExternalId[Collection]] = Map()
-    def getCollectionExternalId(id: Long): ExternalId[Collection] = {
-      collectionIdCache.getOrElse(id, {
-        val extId = searcher.collectionSearcher.getExternalId(id)
-        collectionIdCache += (id -> extId)
-        extId
-      })
-    }
+  val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
+  val terms = ResultDecorator.getQueryTerms(query, analyzer)
 
-    val collectionSearcher = searcher.collectionSearcher
-    val myCollectionEdgeSet = collectionSearcher.myCollectionEdgeSet
-    val hits = resultSet.hits
-    val users = hits.map(_.users).flatten.distinct
+  override def decorate(hits: Seq[DetailedSearchHit]): DecoratedResult = {
+    val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }.toSeq
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users)
 
-    val field = "title_stemmed"
-    val analyzer = DefaultAnalyzer.forIndexingWithStemmer(searcher.getLang)
-    val terms = searcher.getParsedQuery.map(QueryUtil.getTerms(field, _).map(_.text()))
-
-    val personalSearchHits = hits.map{ h =>
-      if (h.isMyBookmark) {
-        val r = searcher.getBookmarkRecord(h.uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${h.uriId}"))
-
-        val collections = {
-          val collIds = collectionSearcher.intersect(myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(h.uriId)).destIdLongSet
-          if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
-        }
-
-        PersonalSearchHit(
-          Some(r.title),
-          r.url,
-          ResultDecorator.highlight(r.title, analyzer, field, terms),
-          ResultDecorator.highlightURL(r.url, analyzer, field, terms),
-          collections,
-          r.externalId
-        )
-      } else {
-        val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
-        PersonalSearchHit(
-          Some(r.title),
-          r.url,
-          ResultDecorator.highlight(r.title, analyzer, field, terms),
-          ResultDecorator.highlightURL(r.url, analyzer, field, terms),
-          None,
-          None
-        )
-      }
-    }
-
+    val highlightedHits = highlight(hits)
     val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
+    new DecoratedResult(basicUserMap, addBasicUsers(highlightedHits, friendStats, basicUserMap))
+  }
 
-    new DecoratedResult(
-      basicUserMap,
-      (hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
-        val users = hit.users.map(basicUserMap)
-        KifiSearchHit(
-          personalHit,
-          hit.bookmarkCount,
-          hit.isMyBookmark,
-          hit.isPrivate,
-          users,
-          hit.score)
-      },
-      resultSet.collections.iterator.map{ id => getCollectionExternalId(id) }.toSeq
-    )
+  private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
+    hits.map{ h => h.add("bookmark", highlight(h.bookmark).json) }
+  }
+
+  private def highlight(h: BasicSearchHit): BasicSearchHit = {
+    val titleMatches = h.title.map(t => ResultDecorator.highlight(t, analyzer, "", terms))
+    val urlMatches = Some(ResultDecorator.highlightURL(h.url, analyzer, "", terms))
+    h.addMatches(titleMatches, urlMatches)
+  }
+
+  private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], BasicUser]): Seq[DetailedSearchHit] = {
+    hits.map{ h =>
+      val sortedUsers = h.users.sortBy{ id => - friendStats.score(id) }
+
+      val basicUsers = h.users.flatMap(basicUserMap.get(_))
+      h.add("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
+    }
   }
 }
 
-class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[KifiSearchHit], val collections: Seq[ExternalId[Collection]])
+class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[DetailedSearchHit])
