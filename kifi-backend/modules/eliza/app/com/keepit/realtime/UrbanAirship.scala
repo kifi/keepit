@@ -25,14 +25,15 @@ import play.api.libs.json.Json
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
 case class Device(
-                   id: Option[Id[Device]] = None,
-                   userId: Id[User],
-                   token: String,
-                   deviceType: DeviceType,
-                   state: State[Device] = DeviceStates.ACTIVE,
-                   createdAt: DateTime = currentDateTime,
-                   updatedAt: DateTime = currentDateTime
-                   ) extends Model[Device] {
+   id: Option[Id[Device]] = None,
+   userId: Id[User],
+   token: String,
+   deviceType: DeviceType,
+   state: State[Device] = DeviceStates.ACTIVE,
+   createdAt: DateTime = currentDateTime,
+   updatedAt: DateTime = currentDateTime
+   ) extends Model[Device] {
+
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
 }
@@ -108,12 +109,12 @@ trait UrbanAirship {
 }
 
 class UrbanAirshipImpl @Inject()(
-                                  client: HttpClient,
-                                  config: UrbanAirshipConfig,
-                                  deviceRepo: DeviceRepo,
-                                  db: Database,
-                                  clock: Clock
-                                  ) extends UrbanAirship with Logging {
+  client: HttpClient,
+  config: UrbanAirshipConfig,
+  deviceRepo: DeviceRepo,
+  db: Database,
+  clock: Clock
+  ) extends UrbanAirship with Logging {
 
   lazy val authenticatedClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.key}:${config.secret}".getBytes)
@@ -204,11 +205,4 @@ class UrbanAirshipImpl @Inject()(
         ???
     }
   }
-}
-
-class FakeUrbanAirshipImpl extends UrbanAirship {
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = ???
-  def notifyUser(userId: Id[User], notification: PushNotification): Unit = {}
-  def sendNotification(device: Device, notification: PushNotification): Unit = {}
-  def updateDeviceState(device: Device): Future[Device] = Promise.successful(device).future
 }

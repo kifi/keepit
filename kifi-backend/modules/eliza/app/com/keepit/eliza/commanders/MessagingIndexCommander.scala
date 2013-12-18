@@ -1,5 +1,6 @@
-package com.keepit.eliza
+package com.keepit.eliza.commanders
 
+import com.keepit.eliza.MessageLookHereRemover
 import com.keepit.search.message.{ThreadContent, FULL}
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.db.slick.Database
@@ -7,6 +8,7 @@ import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.model._
+import com.google.inject.Inject
 
 import scala.concurrent.Future
 
@@ -14,12 +16,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 //This thing isn't really very efficient, but it should do for now, on account of most threads being very short -Stephen
-trait MessagingIndexHelper{
-
-  protected val messageRepo : MessageRepo
-  protected val threadRepo : MessageThreadRepo
-  protected val db: Database
-  protected val shoebox: ShoeboxServiceClient
+class MessagingIndexCommander @Inject() (
+    messageRepo : MessageRepo,
+    threadRepo : MessageThreadRepo,
+    db: Database,
+    shoebox: ShoeboxServiceClient
+  ) {
 
   private def getMessages(fromId: Id[Message], toId: Id[Message], maxId: Id[Message]) : Seq[Message] = {
     val messages = db.readOnly{ implicit session => messageRepo.getFromIdToId(fromId, toId) }

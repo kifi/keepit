@@ -16,9 +16,10 @@ import com.google.inject.Inject
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza._
 import com.keepit.eliza.model._
+import com.keepit.eliza.commanders.MessagingCommander
 
 class ChatterController @Inject() (
-  messagingController: MessagingController,
+  messagingCommander: MessagingCommander,
   actionAuthenticator: ActionAuthenticator,
   notificationRouter: NotificationRouter,
   amazonInstanceInfo: AmazonInstanceInfo,
@@ -35,7 +36,7 @@ class ChatterController @Inject() (
   def getChatter() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     Async {
-      messagingController.getChatter(request.user.id.get, Seq(url)).map { res =>
+      messagingCommander.getChatter(request.user.id.get, Seq(url)).map { res =>
         Ok(res.headOption.map { case (url, msgs) =>
           if (msgs.size == 1) {
             db.readOnly { implicit session =>
@@ -48,8 +49,5 @@ class ChatterController @Inject() (
       }
     }
   }
-
 }
-
-
 

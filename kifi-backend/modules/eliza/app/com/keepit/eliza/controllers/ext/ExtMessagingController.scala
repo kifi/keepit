@@ -3,6 +3,7 @@ package com.keepit.eliza.controllers.ext
 import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
+import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.common.db.{ExternalId, State}
 import com.keepit.model.{User, ExperimentType}
@@ -29,7 +30,6 @@ import play.modules.statsd.api.Statsd
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
 import com.keepit.social.BasicUser
 import scala.concurrent.{Future, Promise}
 import com.keepit.eliza.model.{NonUserEmailParticipant, NonUserParticipant}
@@ -37,12 +37,11 @@ import com.keepit.common.mail.GenericEmailAddress
 
 
 class ExtMessagingController @Inject() (
-    messagingController: MessagingController,
+    messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
     notificationRouter: NotificationRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
-    db: Database,
     protected val shoebox: ShoeboxServiceClient,
     protected val search: SearchServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
@@ -76,14 +75,14 @@ class ExtMessagingController @Inject() (
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val messageSubmitResponse = for {
-      userRecipients <- messagingController.constructUserRecipients(userExtRecipients)
-      nonUserRecipients <- messagingController.constructNonUserRecipients(request.userId, nonUserRecipients)
+      userRecipients <- messagingCommander.constructUserRecipients(userExtRecipients)
+      nonUserRecipients <- messagingCommander.constructNonUserRecipients(request.userId, nonUserRecipients)
     } yield {
 
-      val (thread, message) = messagingController.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)(contextBuilder.build)
-      val messageThreadFut = messagingController.getThreadMessagesWithBasicUser(thread, None)
+      val (thread, message) = messagingCommander.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)(contextBuilder.build)
+      val messageThreadFut = messagingCommander.getThreadMessagesWithBasicUser(thread, None)
       val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
-        messagingController.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
+        messagingCommander.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
       }.flatten
 
       messageThreadFut.map { case (_, messages) =>
@@ -125,7 +124,7 @@ class ExtMessagingController @Inject() (
     val text = (o \ "text").as[String].trim
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
-    val (_, message) = messagingController.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
+    val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
@@ -160,11 +159,11 @@ class ExtMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
-      messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+      messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
-          messagingController.modifyMessageWithAuxData(m)
+          messagingCommander.modifyMessageWithAuxData(m)
         }
         SafeFuture(Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
           socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse)))
@@ -176,10 +175,10 @@ class ExtMessagingController @Inject() (
         ExternalId[User](s.asInstanceOf[JsString].value)
       }
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingController.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
+      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
     },
     "get_unread_notifications_count" -> { _ =>
-      val numUnreadUnmuted = messagingController.getUnreadUnmutedThreadCount(socket.userId)
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
       socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmuted))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
@@ -187,104 +186,104 @@ class ExtMessagingController @Inject() (
     // pre-inbox notification/thread handlers (soon will be obsolete)
 
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
-      messagingController.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map{ notices =>
-        val numUnreadUnmuted = messagingController.getUnreadUnmutedThreadCount(socket.userId)
+      messagingCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map{ notices =>
+        val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
         socket.channel.push(Json.arr("notifications", notices, numUnreadUnmuted, END_OF_TIME))
       }
     },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
-      messagingController.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time)).map{ notices =>
+      messagingCommander.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time)).map{ notices =>
         socket.channel.push(Json.arr("missed_notifications", notices, currentDateTime))
       }
     },
     "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
-      messagingController.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
+      messagingCommander.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)
-      val lastModified = messagingController.setAllNotificationsReadBefore(socket.userId, messageId)
+      val lastModified = messagingCommander.setAllNotificationsReadBefore(socket.userId, messageId)
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
     "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
-      messagingController.getThreadInfos(socket.userId, url).map{ case (_, threadInfos) =>
+      messagingCommander.getThreadInfos(socket.userId, url).map{ case (_, threadInfos) =>
         socket.channel.push(Json.arr("thread_infos", threadInfos))
       }
     },
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      messagingController.getThreadInfos(socket.userId, url).map { case (nUriStr, threadInfos) =>
+      messagingCommander.getThreadInfos(socket.userId, url).map { case (nUriStr, threadInfos) =>
         socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
       }
     },
     "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
       log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
-      val info = messagingController.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
+      val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
       socket.channel.push(Json.arr(requestId.toLong, info))
     },
 
     // inbox notification/thread handlers
 
     "get_latest_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
-        val numUnreadUnmuted = messagingController.getUnreadUnmutedThreadCount(socket.userId)
+      messagingCommander.getLatestSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
+        val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
         socket.channel.push(Json.arr(requestId.toLong, notices, numUnreadUnmuted))
       }
     },
     "get_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      messagingController.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
+      messagingCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_threads_since" -> { case JsNumber(requestId) +: JsString(time) +: _ =>
-      messagingController.getSendableNotificationsSince(socket.userId, parseStandardTime(time)).map{ notices =>
+      messagingCommander.getSendableNotificationsSince(socket.userId, parseStandardTime(time)).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices, currentDateTime))
       }
     },
     "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      messagingController.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
+      messagingCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_unread_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      messagingController.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
+      messagingCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_muted_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      messagingController.getLatestMutedSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
+      messagingCommander.getLatestMutedSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_muted_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      messagingController.getMutedSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
+      messagingCommander.getMutedSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      messagingController.getLatestSentSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
+      messagingCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_sent_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      messagingController.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
+      messagingCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt).map{ notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     "get_page_threads" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-      messagingController.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt).map { case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
+      messagingCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt).map { case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
         socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices, numTotal, numUnreadUnmuted))
       }
     },
     "get_page_threads_before" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      messagingController.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt).map { case (notices) =>
+      messagingCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt).map { case (notices) =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
     // TODO: contextual marking read (e.g. all Sent threads)
     // "set_threads_read" -> { case JsString(messageId) +: _ =>
     //   val messageId = ExternalId[Message](messageId)
-    //   val messageTime = messagingController.setAllNotificationsReadBefore(socket.userId, messageId)
+    //   val messageTime = messagingCommander.setAllNotificationsReadBefore(socket.userId, messageId)
     //   socket.channel.push(Json.arr("threads_read", messageId, messageTime))
     // },
     // end of inbox notification/thread handlers
@@ -294,27 +293,27 @@ class ExtMessagingController @Inject() (
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", false)
       implicit val context = contextBuilder.build
-      messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
-      messagingController.setLastSeen(socket.userId, msgExtId)
+      messagingCommander.setNotificationReadForMessage(socket.userId, msgExtId)
+      messagingCommander.setLastSeen(socket.userId, msgExtId)
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", true)
       implicit val context = contextBuilder.build
-      messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
-      messagingController.setLastSeen(socket.userId, msgExtId)
+      messagingCommander.setNotificationReadForMessage(socket.userId, msgExtId)
+      messagingCommander.setLastSeen(socket.userId, msgExtId)
     },
     "mute_thread" -> { case JsString(jsThreadId) +: _ =>
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingController.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+      messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
     },
     "unmute_thread" -> { case JsString(jsThreadId) +: _ =>
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingController.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+      messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
     },
     "set_notfication_unread" -> { case JsString(threadId) +: _ =>
-      messagingController.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
+      messagingCommander.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
     },
     "eip" -> { case JsString(eip) +: _ =>
       socket.ip = crypt.decrypt(ipkey, eip).toOption

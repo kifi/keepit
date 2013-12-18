@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.commanders
 
 import org.joda.time.DateTime
 
