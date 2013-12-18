@@ -309,15 +309,6 @@ var socketHandlers = {
     log("[socket:message_read]", nUri, threadId, time)();
     removeNotificationPopups(threadId);
     markRead('message', threadId, messageId, time);
-  },
-  unread_notifications_count: function(count) {
-    // see comment in syncNumUnreadUnmutedThreads() :(
-    if (threadLists.all && threadLists.all.numUnreadUnmuted !== count) {
-      reportError('numUnreadUnmuted incorrect: ' + threadLists.all.numUnreadUnmuted + ' != ' + count);
-      threadLists.all.numUnreadUnmuted = count;
-      tellVisibleTabsNoticeCountIfChanged();
-      requestMissedNotifications();
-    }
   }
 };
 
@@ -582,9 +573,8 @@ api.port.on({
         cb.push(reply);
       }
     }
-    if (kind === 'all') {
-      syncNumUnreadUnmutedThreads(); // sanity checking
-    }
+    // Note: This would be a good place to potentially ask the server if there are any new threads
+    // if we ever notice that we sometimes don't have them all.
     function reply(tl) {
       respond({threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread)});
       if (kind === 'page') {  // prefetch
@@ -877,18 +867,6 @@ function insertNewNotification(n) {
       api.tabs.emit(tab, 'new_thread', {thread: n, thisPage: thisPage}, {queue: true});
     });
     return true;
-  }
-}
-
-function syncNumUnreadUnmutedThreads() {
-  // We have an open issue where numUnreadUnmuted gets off - it goes below 0
-  // So either an increment is not happening, or a decrement is happening too often.
-  // The issue goes back several months (with the -1 notification issue), but has gotten
-  // much worse lately. I've had difficulty consistantly reproducing, so am adding this
-  // sync in until we can identify the real issue counts get off. Could be related to
-  // spotty internet, or some logic error above. -Andrew
-  if (socket) {
-    socket.send(['get_unread_notifications_count']);
   }
 }
 
@@ -1776,7 +1754,6 @@ function startSession(callback, retryMs) {
         }
       } else {
         requestMissedNotifications();
-        syncNumUnreadUnmutedThreads();
       }
       api.tabs.eachSelected(kifify);
     }, function onDisconnect(why) {
