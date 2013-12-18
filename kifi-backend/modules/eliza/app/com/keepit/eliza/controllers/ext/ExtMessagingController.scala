@@ -5,7 +5,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.internal.MessagingController
-import com.keepit.common.db.{ExternalId, State}
+import com.keepit.common.db.{ExternalId, Id, State}
 import com.keepit.model.{User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.{ShoeboxServiceClient}
@@ -15,9 +15,9 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.Id
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice, RemotePostOffice}
 
 import scala.util.{Success, Failure}
 
@@ -36,6 +36,7 @@ import com.keepit.eliza.model.{NonUserEmailParticipant, NonUserParticipant}
 import com.keepit.common.mail.GenericEmailAddress
 
 class ExtMessagingController @Inject() (
+    postOffice: RemotePostOffice,
     messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
     notificationRouter: NotificationRouter,
@@ -161,6 +162,10 @@ class ExtMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
+      if (threadId == "undefined") {
+        postOffice.queueMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.JARED),
+          subject = "get_thread undefined", htmlBody = s"user: ${socket.userId}, info: ${socket}", category = PostOffice.Categories.System.ADMIN))
+      } else  // TODO: Remove "undefined" check above (and postOffice) once mystery is solved
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads

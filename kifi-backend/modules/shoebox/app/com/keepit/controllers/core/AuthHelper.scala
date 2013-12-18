@@ -8,12 +8,11 @@ import securesocial.core._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.commanders.{EmailPassFinalizeInfo, SocialFinalizeInfo, AuthCommander, InviteCommander}
+import com.keepit.commanders._
 import com.keepit.social._
 import securesocial.core.providers.utils.PasswordHasher
 import com.keepit.common.controller.ActionAuthenticator._
-import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
-import com.keepit.common._
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
@@ -21,7 +20,9 @@ import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import scala.util.Failure
+import scala.Some
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
@@ -90,7 +91,7 @@ class AuthHelper @Inject() (
                 userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
               }
               if (finalized) {
-                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
+                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))  // todo(ray): uri not relevant for mobile
                   .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                   .withCookies(authenticator.toCookie)
               } else {
@@ -119,7 +120,6 @@ class AuthHelper @Inject() (
     res
   }
 
-  case class EmailPassword(email: String, password: Array[Char])
   val emailPasswordForm = Form[EmailPassword](
     mapping(
       "email" -> email,
@@ -129,12 +129,11 @@ class AuthHelper @Inject() (
       ((ep:EmailPassword) => Some(ep.email, new String(ep.password)))
   )
   def userPasswordSignupAction(implicit request: Request[JsValue]) = {
-    // For email logins, a (emailString, password) is tied to a user. This email string
+    // For email login, a (emailString, password) is tied to a user. This email string
     // has no direct connection to a user's actual active email address. So, we need to
     // keep in mind that whenever the user supplies an email address, it may or may not
     // be related to what's their (emailString, password) login combination.
 
-    val home = com.keepit.controllers.website.routes.HomeController.home()
     emailPasswordForm.bindFromRequest.fold(
       hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
       success = { case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress, password) }
