@@ -1309,6 +1309,7 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
   var numNewThreads = 0;
   var updatedThreads = [];
   threads.forEach(function (th) {
+    standardizeNotification(th);
     var oldTh = threadsById[th.thread];
     if (!oldTh || oldTh.id !== th.id && new Date(oldTh.time) <= new Date(th.time)) {
       threadsById[th.thread] = th;
