@@ -202,6 +202,9 @@
 .kifi-notice-received>.kifi-notice-kicker::after {
   content: 'Received from';
 }
+.kifi-notices-list-sent .kifi-notice-kicker::after {
+  content: 'Conversation you started';
+}
 .kifi-notice-dir {
   content: ' ';
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAALCAYAAACZIGYHAAAAiElEQVR42p3PIQ6DQBBG4VnuQQ0Hw5FU4NojodsLoLhCFUEVhWiDwE9f3Z81TFZ8YjaTN1l7LatK6DHDonS4YIT/lURa7PDSyAA/scGw4oYqjzwDkQ9M5gmNRhKuOALfcXGgQ9KFBlMW+cJPPPJLFe54w7AFIoMEQlzsaGGlkRE1rCQyo0fS9x9eWSm84pN2nwAAAABJRU5ErkJggg==);
