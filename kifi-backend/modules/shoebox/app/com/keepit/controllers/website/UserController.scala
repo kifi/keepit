@@ -239,7 +239,7 @@ class UserController @Inject() (
     getUserInfo(request.userId)
   }
 
-  def resetPassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
+  def changePassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
     val oldPassword = (request.body \ "oldPassword").as[String]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {

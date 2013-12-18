@@ -1081,16 +1081,16 @@ $(function () {
 			});
 	}
 
-	function sendResetPassword(oldPass, newPass) {
-		var $changePassword = $('.profile-reset-password');
+	function sendChangePassword(oldPass, newPass) {
+		var $changePassword = $('.profile-change-password');
 		$.postJson(xhrBase + '/user/password',
 			{'oldPassword': oldPass, 'newPassword': newPass}
 		).done(function() {
 			$changePassword.find('input').val('');
 			$changePassword.removeClass('opened');
-			$changePassword.find('.profile-reset-password-success').text('Password updated!').show().delay(5000).fadeOut();
+			$changePassword.find('.profile-change-password-success').text('Password updated!').show().delay(5000).fadeOut();
 		}).fail(function(xhr) {
-			var $message = $('.profile-reset-password-message');
+			var $message = $('.profile-change-password-message');
 			if (xhr.responseJSON) {
 				if (xhr.responseJSON.error == 'bad_old_password') {
 					$changePassword.find('input[name=old-password]').val('').focus();
@@ -1108,21 +1108,21 @@ $(function () {
 		});
 	}
 
-	$(document).on('click', '.profile-reset-password-title-wrapper', function (e) {
+	$(document).on('click', '.profile-change-password-title-wrapper', function (e) {
 		e.preventDefault();
-		var $changePassword = $(this).closest('.profile-reset-password');
-		$changePassword.find('.profile-reset-password-success').hide();
-		$changePassword.find('.profile-reset-password-message').text('');
+		var $changePassword = $(this).closest('.profile-change-password');
+		$changePassword.find('.profile-change-password-success').hide();
+		$changePassword.find('.profile-change-password-message').text('');
 		$changePassword.find('input').val('');
 		$changePassword.toggleClass('opened');
 	});
 
-	$(document).on('click', '.profile-reset-password-save', function (e) {
-		var $changePassword = $(this).closest('.profile-reset-password');
+	$(document).on('click', '.profile-change-password-save', function (e) {
+		var $changePassword = $(this).closest('.profile-change-password');
 		var $old = $changePassword.find('input[name=old-password]');
 		var $new1 = $changePassword.find('input[name=new-password1]');
 		var $new2 = $changePassword.find('input[name=new-password2]');
-		var $message = $changePassword.find('.profile-reset-password-message');
+		var $message = $changePassword.find('.profile-change-password-message');
 		if ($old.val().length < 7) {
 			$message.text('Your current password is not correct.').addClass('error').show();
 			$old.val('').focus();
@@ -1140,7 +1140,7 @@ $(function () {
 			$new2.val('');
 		} else {
 			$message.hide().text('');
-			sendResetPassword($old.val(), $new1.val());
+			sendChangePassword($old.val(), $new1.val());
 		}
 		$changePassword.on('keydown', function(e) {
 			$message.fadeOut(100);
