@@ -275,7 +275,7 @@ panes.notices = function () {
   function onClickState(e) {
     log('[onClickState] marking read')();
     e.stopImmediatePropagation();
-    var data = $(this).closest('.kifi-notice').data();
+    var data = $(this).hoverfu('hide').closest('.kifi-notice').data();
     api.port.emit('set_message_read', {threadId: data.thread, messageId: data.id, time: data.createdAt});
   }
 

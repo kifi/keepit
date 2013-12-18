@@ -838,22 +838,22 @@ function removeNotificationPopups(threadId) {
 }
 
 function standardizeNotification(n) {
-  n.category = (n.category || "message").toLowerCase();
+  n.category = (n.category || 'message').toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
 }
 
 function handleRealTimeNotification(n) {
-  api.tabs.eachSelected(function (tab) {
-    api.tabs.emit(tab, 'show_notification', n, {queue: true});
-  });
   if (n.unread && !n.muted) {
     api.play('media/notification.mp3');
+    api.tabs.eachSelected(function (tab) {
+      api.tabs.emit(tab, 'show_notification', n, {queue: true});
+    });
   }
 }
 
 function insertNewNotification(n) {
   var n0 = threadsById[n.thread];
-  // proceed only if we don’t already have this notification or a newer one for the same thread
+  // proceed only if we don't already have this notification or a newer one for the same thread
   if (!n0 || n0.id !== n.id && new Date(n0.time) < new Date(n.time)) {
     threadsById[n.thread] = n;
     // need to mark read if new message was already viewed
@@ -865,7 +865,7 @@ function insertNewNotification(n) {
     for (var kind in o) {
       if (o[kind]) {
         var tl = threadLists[kind === 'page' ? n.url : kind];
-        if (tl && tl.insert(n) && kind === 'page') {
+        if (tl && tl.insertOrReplace(n0, n) && kind === 'page') {
           forEachTabAt(n.url, function (tab) {
             sendPageThreadCount(tab, tl);
           });
@@ -1334,7 +1334,7 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
   // reusing (sharing) the page ThreadList of an earlier normalization of the URL if possible
   var pt = threadLists[nUri] || threadLists[threads.length ? threads[0].url : ''];
   if (pt) {
-    pt.insertAll(threads);
+    pt.ids = threads.map(getThreadId);
     pt.numTotal = numTotal;
     pt.numUnreadUnmuted = numUnreadUnmuted;
   } else {
@@ -1412,7 +1412,7 @@ function updateThreadInTabs(oldMessageCount, o) {
 }
 
 function isSent(th) {
-  return th.firstAuthor && th.participants[th.firstAuthor].id === session.user.id;
+  return th.firstAuthor != null && th.participants[th.firstAuthor].id === session.user.id;
 }
 
 function setIcon(tab, kept) {

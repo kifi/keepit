@@ -20,7 +20,6 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
       }
     },
     show_notification: function(n) {
-      if (!n.unread) return;
       var p = document.querySelector('.kifi-pane'), loc = p && p.dataset.locator;
       if (loc !== n.locator) {
         api.require('scripts/notifier.js', function() {
