@@ -1,0 +1,195 @@
+@import "lesshat";
+@import "common";
+
+@green: #a0bf67;
+@gray: #737980;
+@blue: #5e98e2;
+@green2: #93c059;
+
+body {
+	position: relative;
+	font-size: 16px;
+	margin: 0 auto;
+	text-align: center;
+	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+	font-weight: 300;
+	.body-font;
+}
+
+h1, h2, h3, h4, h5 {
+	margin: 0;
+	font-weight: 100;
+	.header-font;
+}
+
+@import "header";
+@import "footer";
+
+.kifi-splash-bg {
+	background: #f6f6f6;
+}
+
+.kifi-splash {
+	position: relative;
+	.centered-content;
+	padding-top: 200px;
+	padding-bottom: 300px;
+
+	h2 {
+		font-size: 58px;
+		color: black;
+		letter-spacing: 2.5px;
+		margin: 0;
+	}
+
+	h3 {
+		font-size: 26px;
+		letter-spacing: 2px;
+		margin-top: 10px;
+	}
+}
+
+.kifi-scroll-down {
+	position: absolute;
+	bottom: 31px;
+	right: 0;
+	font-size: 16px;
+	writing-mode: tb-rl;
+	.rotate(90deg);
+	color: #909090;
+	letter-spacing: 1.4px;
+}
+
+.kifi-about-page {
+	padding: 0 35px;
+	margin: 150px auto 70px;
+	max-width: 730px;
+	text-align: left;
+
+	h2 {
+		font-size: 50px;
+		text-align: center;
+	}
+
+	p {
+		padding: 20px 0;
+		color: @gray;
+		font-size: 24px;
+		line-height: 42px;
+		font-weight: 100;
+		margin: 0;
+	}
+
+	p:first-child:first-letter {
+		font-size: 48px;
+		color: #fe9999;
+	}
+}
+
+.kifi-about-page-more {
+	font-size: 26px;
+	font-weight: 100;
+	line-height: 42px;
+	.header-font;
+	letter-spacing: 1px;
+	margin-top: 25px;
+
+	a {
+		text-decoration: none;
+		color: #6fa6ef;
+
+		.kifi-vision-behind-kifi & {
+			color: @green2;
+		}
+	}
+
+	.kifi-link-text {
+		margin-left: 40px;
+
+		&:hover {
+			border-bottom: 2px dotted #6fa6ef;
+		}
+
+		.kifi-vision-behind-kifi & {
+			border-color: @green2;
+		}
+	}
+
+	.kifi-vision-behind-kifi & {
+		margin-top: 82px;
+	}
+}
+
+.kifi-available {
+	text-align: left;
+	padding: 26px 90px 46px;
+	margin: 0 auto;
+	margin-bottom: 8px;
+	max-width: 645px;
+	background: #fbfbfb;
+
+	h3 {
+		font-size: 24px;
+		line-height: 42px;
+		color: @gray;
+		letter-spacing: 2px;
+	}
+}
+
+.kifi-platform {
+	margin-top: 19px;
+	.header-font;
+}
+
+.kifi-platform-type {
+	font-size: 18px;
+	line-height: 24px;
+	color: @gray;
+	letter-spacing: 0.5px;
+}
+
+.kifi-platform-vendors {
+	font-size: 16px;
+	font-weight: 100;
+	line-height: 24px;
+	color: @gray;
+	letter-spacing: 0.5px;
+}
+
+.kifi-content-divider {
+	max-width: 730px;
+	border: 2px solid #eaeaea;
+}
+
+.kifi-learn-more-box {
+	margin: 0 auto;
+}
+
+.kifi-learn-more {
+	text-align: left;
+	font-size: 26px;
+	font-weight: 100;
+	line-height: 42px;
+	letter-spacing: 1.5px;
+	padding: 0;
+	margin: 0 auto;
+	margin-top: 53px;
+	margin-bottom: 135px;
+	max-width: 730px;
+	list-style: none;
+	color: @green2;
+
+	a {
+		color: @green2;
+		text-decoration: none;
+
+		&:hover {
+			border-bottom: 2px dotted @green2;
+		}
+	}
+
+	li {
+		margin-bottom: 28px;
+		margin-left: 72px;
+	}
+}
