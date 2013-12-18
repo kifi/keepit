@@ -533,6 +533,7 @@ api.port.on({
         if (!tc) {
           tc = threadCallbacks[id] = [];
           socket.send(['get_thread', id]);
+          if (!id) log('#c00', '[participants] get_thread', id)();
         }
         tc.push(reply);
       }
@@ -554,6 +555,7 @@ api.port.on({
       if (!tc) {
         tc = threadCallbacks[id] = [];
         socket.send(['get_thread', id]);
+        if (!id) log('#c00', '[thread] get_thread', id)();
       }
       tc.push(respond);
     }
@@ -588,8 +590,9 @@ api.port.on({
       if (kind === 'page') {  // prefetch
         tl.ids.forEach(function (id) {
           if (!messageData[id] && !threadCallbacks[id]) {
-            socket.send(['get_thread', id]);
             threadCallbacks[id] = [];
+            socket.send(['get_thread', id]);
+            if (!id) log('#c00', '[get_threads:reply] get_thread', id)();
           }
         });
       }
@@ -1363,6 +1366,7 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
     if (!messageData[threadId] && !threadCallbacks[threadId]) {
       threadCallbacks[threadId] = [];
       socket.send(['get_thread', threadId]);
+      if (!threadId) log('#c00', '[gotPageThreads] get_thread', threadId)();
     }
   });
 }
@@ -1390,6 +1394,7 @@ function loadThreadMessagesAndUpdateTabsViewingIt(th) {
   if (!tc) {
     tc = threadCallbacks[th.thread] = [];
     socket.send(['get_thread', th.thread]);
+    if (!th.thread) log('#c00', '[loadThreadMessagesAndUpdateTabsViewingIt] get_thread', th.thread, th)();
   }
   tc.push(updateThreadInTabs.bind(null, th.messages));
 }
