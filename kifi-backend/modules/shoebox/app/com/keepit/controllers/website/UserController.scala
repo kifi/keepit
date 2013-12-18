@@ -25,7 +25,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
 import java.util.concurrent.atomic.AtomicBoolean
-import com.keepit.social.SocialNetworks
+import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.eliza.ElizaServiceClient
 import play.api.mvc.Request
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -45,7 +45,7 @@ import play.api.libs.json.JsNumber
 import scala.util.Success
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
-import securesocial.core.{Registry, SecureSocial, Authenticator}
+import securesocial.core.{UserService, Registry, SecureSocial, Authenticator}
 import com.keepit.common.controller.ActionAuthenticator._
 import com.keepit.model.SocialConnection
 import scala.util.Failure
@@ -60,6 +60,7 @@ import play.api.libs.json.JsNumber
 import scala.util.Success
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
+import securesocial.core.providers.utils.PasswordHasher
 
 class UserController @Inject() (
   db: Database,
@@ -83,6 +84,7 @@ class UserController @Inject() (
   s3ImageStore: S3ImageStore,
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
+  authCommander: AuthCommander,
   emailAddressRepo: EmailAddressRepo
 ) extends WebsiteController(actionAuthenticator) {
 
@@ -254,22 +256,29 @@ class UserController @Inject() (
   def resetPassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
     val oldPassword = (request.body \ "oldPassword").as[String]
     val newPassword = (request.body \ "newPassword").as[String]
-    db.readOnly { implicit session =>
-      socialUserRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO)
-    } match {
-      case Some(sui) =>
-        val hasher = Registry.hashers.currentHasher
-        val identity = sui.credentials.get
-        if (hasher.matches(identity.passwordInfo.get, oldPassword)) {
-
-        } else {
-          // emailIsVerifiedOrPrimary lets you know if the email is verified to the user.
-          // Deal with later?
-          Forbidden(Json.obj("error" -> "bad_old_password"))
-        }
-      case None =>
+    if (newPassword.length < 7) {
+      BadRequest(Json.obj("error" -> "bad_new_password"))
+    } else {
+      db.readOnly { implicit session =>
+        socialUserRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO)
+      } match {
+        case Some(sui) =>
+          val hasher = Registry.hashers.currentHasher
+          val identity = sui.credentials.get
+          if (hasher.matches(identity.passwordInfo.get, oldPassword)) {
+            val pInfo = Registry.hashers.currentHasher.hash(newPassword)
+            UserService.save(UserIdentity(
+              userId = sui.userId,
+              socialUser = sui.credentials.get.copy(passwordInfo = Some(pInfo))
+            ))
+            Ok(Json.obj("success" -> true))
+          } else {
+            Forbidden(Json.obj("error" -> "bad_old_password"))
+          }
+        case None =>
+          Forbidden(Json.obj("error" -> "no_user"))
+      }
     }
-    Ok
   }
 
   def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>

@@ -1065,17 +1065,41 @@ $(function () {
 			});
 	}
 
-	function sendResetPassword(old, new1) {
+	function sendResetPassword(oldPass, newPass) {
 		console.log("BOOOOM!");
-		var $changePassword = $(this).closest('.profile-reset-password');
-
+		var $changePassword = $('.profile-reset-password');
+		$.postJson(xhrBase + '/user/reset-password',
+			{'oldPassword': oldPass, 'newPassword': newPass}
+		).done(function(data, e) {
+			$changePassword.find('input').val('');
+			$changePassword.removeClass('opened');
+			$changePassword.find('.profile-reset-password-success').text('Password updated!').show().delay(5000).fadeOut();
+		}).fail(function(data, e) {
+			var $message = $('.profile-reset-password-message');
+			if (data.responseJSON) {
+				if (data.responseJSON.error == 'bad_old_password') {
+					$changePassword.find('input[name=old-password]').val('').focus();
+					$message.text('Your current password is not correct.').addClass('error').show();
+				} else if (data.responseJSON.error == 'bad_new_password') {
+					$changePassword.find('input[name=new-password1]').val('').focus();
+					$changePassword.find('input[name=new-password2]').val('');
+					$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
+				} else {
+					$message.text('That got weird.').addClass('error').show();
+				}
+			} else {
+				$message.text('Couldn’t submit. Try again?').addClass('error').show();
+			}
+		});
 	}
 
 	$(document).on('click', '.profile-reset-password-title-wrapper', function (e) {
 		e.preventDefault();
 		var $changePassword = $(this).closest('.profile-reset-password');
-		$changePassword.toggleClass('opened');
+		$changePassword.find('.profile-reset-password-success').hide();
+		$changePassword.find('.profile-reset-password-message').text('');
 		$changePassword.find('input').val('');
+		$changePassword.toggleClass('opened');
 	});
 
 	$(document).on('click', '.profile-reset-password-save', function (e) {
@@ -1083,7 +1107,7 @@ $(function () {
 		var $old = $changePassword.find('input[name=old-password]');
 		var $new1 = $changePassword.find('input[name=new-password1]');
 		var $new2 = $changePassword.find('input[name=new-password2]');
-		var $message = $('.profile-reset-password-message');
+		var $message = $changePassword.find('.profile-reset-password-message');
 		if ($old.val().length < 7) {
 			$message.text('Your current password is not correct.').addClass('error').show();
 			$old.val('').focus();
@@ -1103,6 +1127,10 @@ $(function () {
 			$message.hide().text('');
 			sendResetPassword($old.val(), $new1.val());
 		}
+		$changePassword.on('keydown', function(e) {
+			$message.fadeOut(100);
+			$changePassword.off('keydown');
+		});
 	});
 
 	var $disconnectDialog = $('.disconnect-dialog')

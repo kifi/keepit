@@ -1467,12 +1467,15 @@ a.profile-reset-password-save:hover {
   display: none;
 }
 
-.profile-reset-password-message.error {
+.profile-reset-password span.error {
   color: #ed7071;
 }
 
-.profile-reset-password-message.success {
+.profile-reset-password-success {
   color: #b7ce84;
+  margin-left: 17px;
+  position: absolute;
+  display: none;
 }
 
 .profile-section {
