@@ -3729,7 +3729,7 @@ a.page-url[href]:hover {
   z-index: 1;
 }
 
-.page-pic-special .page-pic-special-cell {
+.page-pic-special.page-pic-special-cell {
   display: table-cell;
 }
 
@@ -3741,7 +3741,7 @@ a.page-url[href]:hover {
 }
 
 .page-pic-special .youtube object,
-.page-pic-special .youtube embed,  {
+.page-pic-special .youtube embed  {
   position: absolute;
   top: 0;
   left: 0;

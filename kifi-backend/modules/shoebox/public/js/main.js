@@ -378,12 +378,12 @@ $(function () {
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
 				var skipImage = false;
 
-				if (o.url.indexOf('://www.youtube.com/') > -1) {
+				if (url.indexOf('://www.youtube.com/') > -1 || url.indexOf('youtu.be/') > -1) {
 					var youtubeRegex = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
 					var match = url.match(youtubeRegex);
 					if (match && match.length == 2) {
 						var vID = match[1];
-						var embedHtml = '<div class="youtube"><object><param name="movie" value="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></object></div>';
+						var embedHtml = '<div class="youtube"><embed src="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white&iv_load_policy=3" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></div>';
 						$('.page-pic-special').html(embedHtml).addClass('page-pic-special-cell').show();
 						$pic.hide();
 						skipImage = true;
