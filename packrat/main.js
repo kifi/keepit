@@ -1399,7 +1399,7 @@ function kififyWithPageData(tab, d) {
       } else if (ruleSet.rules.shown && d.shown) {
         log("[initTab]", tab.id, "shown before")();
       } else {
-        if (api.prefs.get("showSlider")) {
+        if (api.prefs.get("showSlider") && ruleSet.rules.scroll) {
           api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
         }
         tab.autoShowSec = (ruleSet.rules.focus || [])[0];

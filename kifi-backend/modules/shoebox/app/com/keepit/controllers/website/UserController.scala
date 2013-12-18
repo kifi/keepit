@@ -25,7 +25,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 
 import java.util.concurrent.atomic.AtomicBoolean
-import com.keepit.social.SocialNetworks
+import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.eliza.ElizaServiceClient
 import play.api.mvc.Request
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -33,12 +33,14 @@ import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
+import securesocial.core.{UserService, Registry}
 import com.keepit.model.SocialConnection
 import scala.util.Failure
 import com.keepit.model.EmailAddress
 import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
+import play.api.libs.json.JsUndefined
 import play.api.libs.json.JsArray
 import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
@@ -68,6 +70,7 @@ class UserController @Inject() (
   s3ImageStore: S3ImageStore,
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
+  authCommander: AuthCommander,
   emailAddressRepo: EmailAddressRepo
 ) extends WebsiteController(actionAuthenticator) {
 
@@ -234,6 +237,34 @@ class UserController @Inject() (
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request =>
     getUserInfo(request.userId)
+  }
+
+  def changePassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
+    val oldPassword = (request.body \ "oldPassword").as[String]
+    val newPassword = (request.body \ "newPassword").as[String]
+    if (newPassword.length < 7) {
+      BadRequest(Json.obj("error" -> "bad_new_password"))
+    } else {
+      db.readOnly { implicit session =>
+        socialUserRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO)
+      } match {
+        case Some(sui) =>
+          val hasher = Registry.hashers.currentHasher
+          val identity = sui.credentials.get
+          if (hasher.matches(identity.passwordInfo.get, oldPassword)) {
+            val pInfo = Registry.hashers.currentHasher.hash(newPassword)
+            UserService.save(UserIdentity(
+              userId = sui.userId,
+              socialUser = sui.credentials.get.copy(passwordInfo = Some(pInfo))
+            ))
+            Ok(Json.obj("success" -> true))
+          } else {
+            Forbidden(Json.obj("error" -> "bad_old_password"))
+          }
+        case None =>
+          Forbidden(Json.obj("error" -> "no_user"))
+      }
+    }
   }
 
   def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>

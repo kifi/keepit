@@ -15,7 +15,7 @@ import scala.ref.WeakReference
 import akka.actor.{Props, ActorSystem}
 import play.api.Play.current
 import com.keepit.common.actor.ActorInstance
-import akka.routing.RoundRobinRouter
+import akka.routing.{SmallestMailboxRouter, RoundRobinRouter}
 import scala.concurrent._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -32,10 +32,8 @@ class ContactsUpdaterPluginImpl @Inject() (actorInstance:ActorInstance[ContactsU
 
   lazy val system = sysProvider.get
   lazy val actor = {
-    if (Play.maybeApplication.isDefined && (!Play.isTest))
-      system.actorOf(Props(updaterProvider.get).withRouter(RoundRobinRouter(Runtime.getRuntime.availableProcessors)))
-    else
-      actorInstance.ref
+    val nrOfInstances = if (Play.maybeApplication.isDefined && (!Play.isTest)) Runtime.getRuntime.availableProcessors else 1
+    system.actorOf(Props(updaterProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
   }
 
   def asyncProcessContacts(userId: Id[User], origin:ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {

@@ -18,7 +18,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     val eventName = s"${eventCode}_${event.eventType.name}"
     val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
-    properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0)))
+    if (!properties.data.contains("ip")) { properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0))) }
     properties += ("distinct_id", getDistinctId(event))
     properties += ("time", event.time.getMillis)
     if (!properties.data.contains("token")) { properties += ("token", projectToken) }

@@ -7,7 +7,7 @@ import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.{BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.net.UserAgent
+import com.keepit.common.net.{URI, UserAgent}
 import com.keepit.common.time.DateTimeJsonFormat
 
 sealed trait ContextData
@@ -144,6 +144,28 @@ class HeimdalContextBuilder {
         this += ("clientVersion", agent.getVersionNumber.getMajor)
         this += ("clientBuild", agent.getVersionNumber.toVersionString)
     }
+  }
+
+  def addUrlInfo(url: String): Unit = {
+    this += ("url", url)
+    URI.parse(url).foreach { uri =>
+      uri.host.foreach { host =>
+        this += ("host", host.name)
+        this += ("domain", host.domain.take(2).reverse.mkString("."))
+        this += ("domainName", host.domain(1))
+        this += ("domainExtension", host.domain(0))
+      }
+      uri.scheme.foreach { scheme => this += ("scheme", scheme) }
+    }
+  }
+
+  def anonymise(toBeRemoved: String*): Unit = {
+    toBeRemoved.foreach(this.data.remove)
+    this.data.get("remoteAddress").foreach { ip =>
+      this.data += ("ip" -> ip) // ip address will be processed by Mixpanel to extract geolocation data but will not be displayed as a property
+      this.data.remove("remoteAddress")
+    }
+    this.data.remove("kifiInstallationId")
   }
 }
 

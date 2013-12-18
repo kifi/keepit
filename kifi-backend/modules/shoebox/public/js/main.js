@@ -1081,6 +1081,73 @@ $(function () {
 			});
 	}
 
+	function sendChangePassword(oldPass, newPass) {
+		var $changePassword = $('.profile-change-password');
+		$.postJson(xhrBase + '/user/password',
+			{'oldPassword': oldPass, 'newPassword': newPass}
+		).done(function() {
+			$changePassword.find('input').val('');
+			$changePassword.removeClass('opened');
+			$changePassword.find('.profile-change-password-success').text('Password updated!').show().delay(5000).fadeOut();
+		}).fail(function(xhr) {
+			var $message = $('.profile-change-password-message');
+			if (xhr.responseJSON) {
+				if (xhr.responseJSON.error == 'bad_old_password') {
+					$changePassword.find('input[name=old-password]').val('').focus();
+					$message.text('Your current password is not correct.').addClass('error').show();
+				} else if (xhr.responseJSON.error == 'bad_new_password') {
+					$changePassword.find('input[name=new-password1]').val('').focus();
+					$changePassword.find('input[name=new-password2]').val('');
+					$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
+				} else {
+					$message.text('That got weird.').addClass('error').show();
+				}
+			} else {
+				$message.text('Couldn’t submit. Try again?').addClass('error').show();
+			}
+		});
+	}
+
+	$(document).on('click', '.profile-change-password-title-wrapper', function (e) {
+		e.preventDefault();
+		var $changePassword = $(this).closest('.profile-change-password');
+		$changePassword.find('.profile-change-password-success').hide();
+		$changePassword.find('.profile-change-password-message').text('');
+		$changePassword.find('input').val('');
+		$changePassword.toggleClass('opened');
+	});
+
+	$(document).on('click', '.profile-change-password-save', function (e) {
+		var $changePassword = $(this).closest('.profile-change-password');
+		var $old = $changePassword.find('input[name=old-password]');
+		var $new1 = $changePassword.find('input[name=new-password1]');
+		var $new2 = $changePassword.find('input[name=new-password2]');
+		var $message = $changePassword.find('.profile-change-password-message');
+		if ($old.val().length < 7) {
+			$message.text('Your current password is not correct.').addClass('error').show();
+			$old.val('').focus();
+		} else if($new1.val() != $new2.val()) {
+			$message.text('Your new passwords do not match.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else if($new1.val().length < 7) {
+			$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else if($old.val() == $new1.val()) {
+			$message.text('Your new password needs to be different than your current one.').addClass('error').show();
+			$new1.val('').focus();
+			$new2.val('');
+		} else {
+			$message.hide().text('');
+			sendChangePassword($old.val(), $new1.val());
+		}
+		$changePassword.on('keydown', function(e) {
+			$message.fadeOut(100);
+			$changePassword.off('keydown');
+		});
+	});
+
 	var $disconnectDialog = $('.disconnect-dialog')
 		.detach()
 		.show()
