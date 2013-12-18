@@ -1066,7 +1066,6 @@ $(function () {
 	}
 
 	function sendResetPassword(oldPass, newPass) {
-		console.log("BOOOOM!");
 		var $changePassword = $('.profile-reset-password');
 		$.postJson(xhrBase + '/user/reset-password',
 			{'oldPassword': oldPass, 'newPassword': newPass}

@@ -33,20 +33,7 @@ import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
-import com.keepit.model.SocialConnection
-import scala.util.Failure
-import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsArray
-import play.api.mvc.MaxSizeExceeded
-import play.api.libs.json.JsNumber
-import scala.util.Success
-import com.keepit.common.mail.GenericEmailAddress
-import play.api.libs.json.JsObject
-import securesocial.core.{UserService, Registry, SecureSocial, Authenticator}
-import com.keepit.common.controller.ActionAuthenticator._
+import securesocial.core.{UserService, Registry}
 import com.keepit.model.SocialConnection
 import scala.util.Failure
 import com.keepit.model.EmailAddress
@@ -60,7 +47,6 @@ import play.api.libs.json.JsNumber
 import scala.util.Success
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
-import securesocial.core.providers.utils.PasswordHasher
 
 class UserController @Inject() (
   db: Database,
