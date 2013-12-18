@@ -5,6 +5,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
@@ -13,13 +14,13 @@ import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.MonitoredAwait
-import scala.concurrent._
-import scala.concurrent.duration._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
+import scala.concurrent._
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 
 @Singleton
@@ -34,6 +35,7 @@ class MainSearcherFactory @Inject() (
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
+    airbrake: AirbrakeNotifier,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
@@ -74,7 +76,8 @@ class MainSearcherFactory @Inject() (
         clickHistoryFuture,
         shoeboxClient,
         spellCorrector,
-        monitoredAwait
+        monitoredAwait,
+        airbrake
     )
   }
 

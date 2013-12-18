@@ -55,16 +55,15 @@ class SearchCommander @Inject() (
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val (config, searchExperimentId) = searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
 
-    timing.factory
 
     // TODO: use user profile info as a bias
     val lang = LangDetector.detectShortText(query, getLangsPriorProbabilities(acceptLangs))
 
-    val searcher = mainSearcherFactory(userId, query, lang, maxHits, searchFilter, config)
-
-    timing.search
-
     val mergedResult = {
+      timing.factory
+      val searcher = mainSearcherFactory(userId, query, lang, maxHits, searchFilter, config)
+
+      timing.search
       val shardRes = if (maxHits > 0) {
         searcher.search()
       } else {
@@ -103,7 +102,7 @@ class SearchCommander @Inject() (
 
     SafeFuture {
       // stash timing information
-      val timeLogs = searcher.timing()
+      timing.send()
 
       val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val articleSearchResult = ResultUtil.toArticleSearchResult(
@@ -126,19 +125,11 @@ class SearchCommander @Inject() (
         case e: Throwable => airbrake.notify(AirbrakeError(e, Some("Could not store article search result.")))
       }
 
-      timing.send()
-
-      log.info(timing.toString)
-
-      val searchDetails =  "main-search details: " + timeLogs.toString
-      log.info(searchDetails)
-
       val timeLimit = 1000
       // search is a little slow after service restart. allow some grace period
       if (timing.getTotalTime > timeLimit && timing.timestamp - fortyTwoServices.started.getMillis() > 1000*60*8) {
         val link = "https://admin.kifi.com/admin/search/results/" + searchUUID.id
-        val msg = s"search time exceeds limit! searchUUID = ${searchUUID.id}, Limit time = $timeLimit, ${timing.toString}." +
-            s" More details at: $link $searchDetails"
+        val msg = s"search time exceeds limit! searchUUID = ${searchUUID.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
         airbrake.notify(msg)
       }
     }

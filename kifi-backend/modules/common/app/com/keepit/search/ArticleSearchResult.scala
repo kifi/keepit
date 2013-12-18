@@ -141,16 +141,3 @@ object Scoring extends Logging {
   }
 }
 
-case class SearchTimeLogs(
-  socialGraphInfo: Long = 0,
-  getClickBoost: Long = 0,
-  queryParsing: Long = 0,
-  personalizedSearcher: Long = 0,
-  search: Long = 0,
-  processHits: Long = 0,
-  total: Long = 0) {
-  override def toString() = {
-    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
-      s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
-  }
-}
