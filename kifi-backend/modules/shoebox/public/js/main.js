@@ -376,11 +376,27 @@ $(function () {
 				$('.page-who-pics').append($detailed.find('.keep-who>.pic').clone());
 				$('.page-who-text').html($detailed.find('.keep-who-text').html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter-messages');
-				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
-					$pic.css('background-image', 'url(' + data.url + ')');
-				}).fail(function () {
-					$pic.find('.page-pic-soon').addClass('showing');
-				});
+				var skipImage = false;
+
+				if (url.indexOf('://www.youtube.com/') > -1 || url.indexOf('youtu.be/') > -1) {
+					var youtubeRegex = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
+					var match = url.match(youtubeRegex);
+					if (match && match.length == 2) {
+						var vID = match[1];
+						var embedHtml = '<div class="youtube"><embed src="//www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white&iv_load_policy=3" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></div>';
+						$('.page-pic-special').html(embedHtml).addClass('page-pic-special-cell').show();
+						$pic.hide();
+						skipImage = true;
+					}
+				}
+
+				if (!skipImage) {
+					$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
+						$pic.css('background-image', 'url(' + data.url + ')');
+					}).fail(function () {
+						$pic.find('.page-pic-soon').addClass('showing');
+					});
+				}
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
 				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
 					$chatter.attr({

@@ -8,9 +8,9 @@ import securesocial.core._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.commanders.{AuthCommander, InviteCommander}
+import com.keepit.commanders.{EmailPassFinalizeInfo, SocialFinalizeInfo, AuthCommander, InviteCommander}
 import com.keepit.social._
-import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
+import securesocial.core.providers.utils.PasswordHasher
 import com.keepit.common.controller.ActionAuthenticator._
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common._
@@ -21,13 +21,11 @@ import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import securesocial.core.IdentityId
 import scala.util.Failure
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
 import scala.util.Success
-import securesocial.core.PasswordInfo
 import play.api.mvc.Cookie
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
@@ -115,16 +113,6 @@ class AuthHelper @Inject() (
     res
   }
 
-  private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
-    for {
-      h <- picHeight
-      w <- picWidth
-      x <- cropX
-      y <- cropY
-      s <- cropSize
-    } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
-  }
-
   private val url = current.configuration.getString("application.baseUrl").get
 
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
@@ -167,15 +155,6 @@ class AuthHelper @Inject() (
     )
   }
 
-  private case class SocialFinalizeInfo(
-    email: String,
-    password: String,
-    firstName: String,
-    lastName: String,
-    picToken: Option[String],
-    picHeight: Option[Int], picWidth: Option[Int],
-    cropX: Option[Int], cropY: Option[Int],
-    cropSize: Option[Int])
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
       "email" -> email.verifying("known_email_address", email => db.readOnly { implicit s =>
@@ -190,45 +169,22 @@ class AuthHelper @Inject() (
       "cropX" -> optional(number),
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
-    )
-      (SocialFinalizeInfo.apply)
-      (SocialFinalizeInfo.unapply)
+    ) ((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
+        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))
+      ((sfi:SocialFinalizeInfo) =>
+        Some(sfi.email, sfi.firstName, sfi.lastName, sfi.password.toString, sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
   )
   def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-    { case SocialFinalizeInfo(emailAddress, firstName, lastName, password, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-      val pInfo = Registry.hashers.currentHasher.hash(password)
-
-      val (emailPassIdentity, userId) = authCommander.saveUserPasswordIdentity(request.userIdOpt, request.identityOpt,
-        email = emailAddress, passwordInfo = pInfo, firstName = firstName, lastName = lastName, isComplete = true)
-
-      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-
-      val user = db.readOnly { implicit session =>
-        userRepo.get(userId)
-      }
-
-      val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
-      picToken.map { token =>
-        s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
-      }
-
-      val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == emailAddress.trim)
-
-      finishSignup(user, emailAddress, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+    { case sfi:SocialFinalizeInfo =>
+      val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+      val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, request.userIdOpt, request.identityOpt, inviteExtIdOpt)
+      val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == sfi.email.trim)
+      finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
     })
   }
 
-  private case class EmailPassFinalizeInfo(
-    firstName: String,
-    lastName: String,
-    picToken: Option[String],
-    picWidth: Option[Int],
-    picHeight: Option[Int],
-    cropX: Option[Int],
-    cropY: Option[Int],
-    cropSize: Option[Int])
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
     "firstName" -> nonEmptyText,
     "lastName" -> nonEmptyText,
@@ -242,27 +198,9 @@ class AuthHelper @Inject() (
   def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Result = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
-    { case EmailPassFinalizeInfo(firstName, lastName, picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-      val identity = db.readOnly { implicit session =>
-        socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
-      } getOrElse(request.identityOpt.get)
-      val passwordInfo = identity.passwordInfo.get
-      val email = identity.email.get
-      val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(request.userIdOpt, request.identityOpt, email = email, passwordInfo = passwordInfo,
-        firstName = firstName, lastName = lastName, isComplete = true)
-
-      inviteCommander.markPendingInvitesAsAccepted(userId, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-
-      val user = db.readOnly(userRepo.get(userId)(_))
-
-      val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize) tap (r => log.info(s"Cropped attributes for ${request.user.id.get}: " + r))
-      picToken.map { token =>
-        s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
-      }.orElse {
-        s3ImageStore.getPictureUrl(None, user, "0")
-        None
-      }
-
+    { case efi:EmailPassFinalizeInfo =>
+      val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+      val (user, email, newIdentity) = authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt)
       finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
     })
   }
