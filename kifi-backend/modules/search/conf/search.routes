@@ -11,7 +11,14 @@ POST    /search/events/browsed      @com.keepit.controllers.ext.ExtSearchEventCo
 GET     /search/users/page          @com.keepit.controllers.ext.ExtUserSearchController.page(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
 GET     /search/users/search        @com.keepit.controllers.ext.ExtUserSearchController.search(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 
+##########################################
+# Mobile V1
+##########################################
+GET     /m/1/search                 @com.keepit.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+
+##########################################
 # INTERNAL ROUTES/Search
+##########################################
 GET     /internal/search            @com.keepit.controllers.ext.ExtSearchController.internalSearch(userId: Long, nse: Boolean, al: String, q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 
 GET     /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])

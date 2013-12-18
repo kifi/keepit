@@ -11,7 +11,7 @@ class KifiSearchResult(val json: JsObject) extends AnyVal {
 }
 
 object KifiSearchResult extends Logging {
-  def apply(
+  def v1(
     uuid: ExternalId[ArticleSearchResult],
     query: String,
     hits: Seq[KifiSearchHit],

@@ -23,15 +23,30 @@ import java.io.StringReader
 import play.api.libs.json._
 
 trait ResultDecorator {
-  def decorate(hits: Seq[DetailedSearchHit]): DecoratedResult
+  def decorate(
+    hits: Seq[DetailedSearchHit],
+    idFilter: Set[Long],
+    mayHaveMoreHits: Boolean,
+    show: Boolean,
+    searchExperimentId: Option[Id[SearchConfigExperiment]],
+    showExperts: Boolean
+  ): DecoratedResult
 }
 
 object ResultDecorator extends Logging {
 
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
-  def apply(query: String, lang: Lang, friendStats: FriendStats, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig, monitoredAwait: MonitoredAwait): ResultDecorator = {
-    new ResultDecoratorImpl(query, lang, friendStats, shoeboxClient, monitoredAwait)
+  def apply(
+    userId: Id[User],
+    query: String,
+    lang: Lang,
+    friendStats: FriendStats,
+    shoeboxClient: ShoeboxServiceClient,
+    searchConfig: SearchConfig,
+    monitoredAwait: MonitoredAwait
+  ): ResultDecorator = {
+    new ResultDecoratorImpl(userId, query, lang, friendStats, shoeboxClient, monitoredAwait)
   }
 
   def getQueryTerms(queryText: String, analyzer: Analyzer): Set[String] = {
@@ -113,18 +128,49 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(query: String, lang: Lang, friendStats: FriendStats, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
+class ResultDecoratorImpl(
+  userId: Id[User],
+  query: String,
+  lang: Lang,
+  friendStats: FriendStats,
+  shoeboxClient: ShoeboxServiceClient,
+  monitoredAwait: MonitoredAwait
+) extends ResultDecorator with Logging {
 
   val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
   val terms = ResultDecorator.getQueryTerms(query, analyzer)
 
-  override def decorate(hits: Seq[DetailedSearchHit]): DecoratedResult = {
+  override def decorate(
+    hits: Seq[DetailedSearchHit],
+    idFilter: Set[Long],
+    mayHaveMoreHits: Boolean,
+    show: Boolean,
+    searchExperimentId: Option[Id[SearchConfigExperiment]],
+    showExperts: Boolean
+  ): DecoratedResult = {
     val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }.toSeq
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users)
+    val expertsFuture = if (showExperts) { suggestExperts(hits) } else { Promise.successful(List.empty[Id[User]]).future }
 
     val highlightedHits = highlight(hits)
     val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
-    new DecoratedResult(basicUserMap, addBasicUsers(highlightedHits, friendStats, basicUserMap))
+
+    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
+    val expertNames = experts.flatMap{ expert => basicUserMap.get(expert).map{x => x.firstName + " " + x.lastName} }
+    if (expertNames.nonEmpty) log.info("experts recommended: " + expertNames.mkString(" ; "))
+
+    new DecoratedResult(
+      ExternalId[ArticleSearchResult](),
+      addBasicUsers(highlightedHits, friendStats, basicUserMap),
+      query,
+      userId,
+      idFilter,
+      mayHaveMoreHits,
+      show,
+      searchExperimentId,
+      expertNames,
+      basicUserMap
+    )
   }
 
   private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
@@ -145,6 +191,27 @@ class ResultDecoratorImpl(query: String, lang: Lang, friendStats: FriendStats, s
       h.add("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
     }
   }
+
+  private def suggestExperts(hits: Seq[DetailedSearchHit]): Future[Seq[Id[User]]] = {
+    val urisAndUsers = hits.map{ hit => (hit.uriId, hit.users) }
+    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
+      Promise.successful(List.empty[Id[User]]).future
+    } else{
+      shoeboxClient.suggestExperts(urisAndUsers)
+    }
+  }
+
 }
 
-class DecoratedResult(val users: Map[Id[User], BasicUser], val hits: Seq[DetailedSearchHit])
+case class DecoratedResult(
+  uuid: ExternalId[ArticleSearchResult],
+  hits: Seq[DetailedSearchHit],
+  query: String,
+  userId: Id[User],
+  idFilter: Set[Long],
+  mayHaveMoreHits: Boolean,
+  show: Boolean,
+  searchExperimentId: Option[Id[SearchConfigExperiment]],
+  expertNames: Seq[String],
+  users: Map[Id[User], BasicUser]
+)
