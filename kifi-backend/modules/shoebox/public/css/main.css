@@ -1202,7 +1202,8 @@ a.profile-email-pending-cancel {
   vertical-align: middle;
 }
 
-.profile-email-addresses.opened .profile-email-addresses-arrow, .profile-reset-password.opened .profile-reset-password-arrow {
+.profile-email-addresses.opened .profile-email-addresses-arrow,
+.profile-reset-password.opened .profile-reset-password-arrow {
   background-image: url(../img/arrow-gray-down.png);
   background-size: 10px 6px;
   background-position: 0 7px;

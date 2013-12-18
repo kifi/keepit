@@ -1069,17 +1069,17 @@ $(function () {
 		var $changePassword = $('.profile-reset-password');
 		$.postJson(xhrBase + '/user/reset-password',
 			{'oldPassword': oldPass, 'newPassword': newPass}
-		).done(function(data, e) {
+		).done(function() {
 			$changePassword.find('input').val('');
 			$changePassword.removeClass('opened');
 			$changePassword.find('.profile-reset-password-success').text('Password updated!').show().delay(5000).fadeOut();
-		}).fail(function(data, e) {
+		}).fail(function(xhr) {
 			var $message = $('.profile-reset-password-message');
-			if (data.responseJSON) {
-				if (data.responseJSON.error == 'bad_old_password') {
+			if (xhr.responseJSON) {
+				if (xhr.responseJSON.error == 'bad_old_password') {
 					$changePassword.find('input[name=old-password]').val('').focus();
 					$message.text('Your current password is not correct.').addClass('error').show();
-				} else if (data.responseJSON.error == 'bad_new_password') {
+				} else if (xhr.responseJSON.error == 'bad_new_password') {
 					$changePassword.find('input[name=new-password1]').val('').focus();
 					$changePassword.find('input[name=new-password2]').val('');
 					$message.text('Your password needs to be longer than 7 characters.').addClass('error').show();
