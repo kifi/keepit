@@ -22,7 +22,14 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.controllers.core.AuthHelper
 
-// todo: password as char[]; also order of fields is important -- beware
+case class EmailPassword(email: String, password: Array[Char])
+object EmailPassword {
+  implicit val format = (
+      (__ \ 'email).format[String] and
+      (__ \ 'password).format[String].inmap((s:String) => s.toCharArray, unlift((c:Array[Char]) => Some(c.toString)))
+  )(EmailPassword.apply, unlift(EmailPassword.unapply))
+}
+
 case class SocialFinalizeInfo(
   email: String,
   firstName: String,

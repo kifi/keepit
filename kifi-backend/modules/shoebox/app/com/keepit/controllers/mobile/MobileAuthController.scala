@@ -71,7 +71,18 @@ class MobileAuthController @Inject() (
     }
   }
 
-  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authHelper.doUploadBinaryPicture(_), unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
-  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authHelper.doUploadFormEncodedPicture(_), unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_))
+  def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.userPasswordSignupAction(_),
+    unauthenticatedAction = authHelper.userPasswordSignupAction(_)
+  )
+
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(
+    authenticatedAction = authHelper.doUploadBinaryPicture(_),
+    unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
+
+  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(
+    authenticatedAction = authHelper.doUploadFormEncodedPicture(_),
+    unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_)
+  )
 
 }
