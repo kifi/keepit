@@ -16,32 +16,32 @@
     contains: function (threadId) {
       return this.ids.indexOf(threadId) >= 0;
     },
-    insertAll: function(arr) {
-      arr.forEach(this.insert.bind(this));
-    },
-    insert: function (n) {
-      // remove old representation of same thread first
-      var i = this.ids.indexOf(n.thread);
-      var nOld = i >= 0 ? this.ids.splice(i, 1)[0] : null;
-      if (nOld && nOld.unread && !nOld.muted) {
-        this.decNumUnreadUnmuted();
+    // Returns whether the new thread was new to this list (true if nNew was just inserted, false if nNew replaced nOld).
+    insertOrReplace: function (nOld, nNew) {
+      // remove old thread from old position
+      var iOld = nOld ? this.ids.indexOf(nOld.thread) : -1;
+      if (iOld >= 0) {
+        this.ids.splice(iOld, 1);
+        if (nOld.unread && !nOld.muted) {
+          this.decNumUnreadUnmuted();
+        }
       }
 
-      // add in chronological order
-      var time = new Date(n.time);
-      for (i = 0; i < this.ids.length; i++) {
-        if (new Date(this.allById[this.ids[i]].time) <= time) {
+      // insert in chronological order
+      var time = new Date(nNew.time);
+      for (var iNew = 0; iNew < this.ids.length; iNew++) {
+        if (new Date(this.allById[this.ids[iNew]].time) <= time) {
           break;
         }
       }
-      this.ids.splice(i, 0, n.thread);
-      if (this.numTotal >= 0 && !nOld) {
+      this.ids.splice(iNew, 0, nNew.thread);
+      if (this.numTotal != null && iOld < 0) {
         this.numTotal++;
       }
-      if (n.unread && !n.muted && this.numUnreadUnmuted >= 0) {
+      if (this.numUnreadUnmuted != null && nNew.unread && !nNew.muted) {
         this.numUnreadUnmuted++;
       }
-      return !nOld;
+      return iOld < 0;
     },
     insertOlder: function(olderThreadIds) {
       Array.prototype.push.apply(this.ids, olderThreadIds);
@@ -78,12 +78,12 @@
       }
     },
     decNumTotal: function() {
-      if (this.numTotal) {
+      if (this.numTotal != null) {
         dec.call(this, 'numTotal');
       }
     },
     decNumUnreadUnmuted: function() {
-      if (this.numUnreadUnmuted) {
+      if (this.numUnreadUnmuted != null) {
         dec.call(this, 'numUnreadUnmuted');
       }
     }
