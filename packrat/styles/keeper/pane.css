@@ -413,6 +413,7 @@ a.kifi-notices-menu-a.kifi-active {
   color: inherit !important;
 }
 .kifi-notices-menu-item:hover,
+.kifi-notices-menu-item:focus,
 .kifi-notices-menu-item.kifi-hover {
   background: #e7eaf1;
   cursor: pointer;
