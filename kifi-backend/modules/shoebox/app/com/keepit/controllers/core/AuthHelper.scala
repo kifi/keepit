@@ -260,15 +260,24 @@ class AuthHelper @Inject() (
         passwordResetRepo.getByToken(code) match {
           case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
             val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-            for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+            val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
               UserService.save(UserIdentity(
                 userId = sui.userId,
                 socialUser = sui.credentials.get.copy(
                   passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
                 )
               ))
+              authenticateUser(sui.userId.get, onError = { error =>
+                throw error
+              }, onSuccess = { authenticator =>
+                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
+                  .withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                  .withCookies(authenticator.toCookie)
+              })
             }
-            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
+            results.headOption.getOrElse {
+              Ok(Json.obj("error" -> "invalid_user"))
+            }
           case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
             Ok(Json.obj("error" -> "expired"))
           case Some(pr) if pr.state == PasswordResetStates.USED =>
