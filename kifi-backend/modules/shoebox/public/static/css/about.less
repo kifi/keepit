@@ -4,6 +4,7 @@
 @green: #a0bf67;
 @gray: #737980;
 @blue: #5e98e2;
+@blue2: #6fa6ef;
 @green2: #93c059;
 
 body {
@@ -51,7 +52,7 @@ h1, h2, h3, h4, h5 {
 
 .kifi-scroll-down {
 	position: absolute;
-	bottom: 31px;
+	bottom: 9px;
 	right: 0;
 	font-size: 16px;
 	writing-mode: tb-rl;
@@ -60,7 +61,17 @@ h1, h2, h3, h4, h5 {
 	letter-spacing: 1.4px;
 }
 
+.kifi-scroll-down-arrow {
+	display: inline-block;
+	margin-left: 11px;
+	width: 13px;
+	height: 31px;
+	background: #fcadae;
+	vertical-align: middle;
+}
+
 .kifi-about-page {
+	position: relative;
 	padding: 0 35px;
 	margin: 150px auto 70px;
 	max-width: 730px;
@@ -86,6 +97,26 @@ h1, h2, h3, h4, h5 {
 	}
 }
 
+.kifi-image-what-is-kifi {
+	position: absolute;
+	top: -11px;
+	right: -8px;
+	width: 217px;
+	height: 79px;
+	background: #d4e4f9;
+	z-index: -1;
+}
+
+.kifi-image-vision-behind-kifi {
+	position: absolute;
+	top: -60px;
+	right: -31px;
+	width: 139px;
+	height: 147px;
+	background: #d4e4f9;
+	z-index: -1;
+}
+
 .kifi-about-page-more {
 	font-size: 26px;
 	font-weight: 100;
@@ -93,21 +124,30 @@ h1, h2, h3, h4, h5 {
 	.header-font;
 	letter-spacing: 1px;
 	margin-top: 25px;
+	margin-left: 5px;
 
 	a {
+		margin-left: 10px;
 		text-decoration: none;
-		color: #6fa6ef;
+		color: @blue2;
 
 		.kifi-vision-behind-kifi & {
 			color: @green2;
 		}
 	}
 
-	.kifi-link-text {
-		margin-left: 40px;
+	.kifi-about-page-more-icon {
+		display: inline-block;
+		width: 30px;
+		height: 30px;
+		margin-right: 9px;
+		vertical-align: text-bottom;
+		background: @blue2;
+	}
 
+	.kifi-link-text {
 		&:hover {
-			border-bottom: 2px dotted #6fa6ef;
+			border-bottom: 2px dotted @blue2;
 		}
 
 		.kifi-vision-behind-kifi & {
@@ -133,6 +173,11 @@ h1, h2, h3, h4, h5 {
 		line-height: 42px;
 		color: @gray;
 		letter-spacing: 2px;
+	}
+
+	.kifi-separator {
+		color: #fbd1d2;
+		margin: 0 9px;
 	}
 }
 
@@ -183,13 +228,19 @@ h1, h2, h3, h4, h5 {
 		color: @green2;
 		text-decoration: none;
 
-		&:hover {
-			border-bottom: 2px dotted @green2;
-		}
+		border-bottom: 2px dotted @green2;
 	}
 
 	li {
 		margin-bottom: 28px;
-		margin-left: 72px;
 	}
+}
+
+.kifi-learn-more-icon {
+	display: inline-block;
+	width: 35px;
+	height: 35px;
+	margin-right: 37px;
+	vertical-align: text-bottom;
+	background: @green2;
 }
