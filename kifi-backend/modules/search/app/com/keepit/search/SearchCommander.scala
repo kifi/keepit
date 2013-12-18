@@ -1,4 +1,4 @@
-package com.keepit.controllers.ext
+package com.keepit.search
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, JsValue}
@@ -18,7 +18,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
-import com.keepit.search.LangDetector
 import com.keepit.shoebox.ShoeboxServiceClient
 
 class SearchCommander @Inject() (
@@ -43,7 +42,7 @@ class SearchCommander @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None) : JsValue = {
+    coll: Option[String] = None) : DecoratedResult = {
 
     val timing = new SearchTiming
 
@@ -74,28 +73,20 @@ class SearchCommander @Inject() (
       ResultUtil.merge(Seq(shardRes), maxHits, config)
     }
 
-    val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
-      suggestExperts(mergedResult.hits)
-    } else { Promise.successful(List.empty[Id[User]]).future }
-
     timing.decoration
 
-    val searchUUID = ExternalId[ArticleSearchResult]()
+    val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
     val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
     val numPreviousHits = searchFilter.idFilter.size
     val mayHaveMoreHits = if (numPreviousHits == 0) mergedResult.hits.nonEmpty else mergedResult.hits.size == maxHits
-    val decorator = ResultDecorator(query, lang, mergedResult.friendStats, shoeboxClient, config, monitoredAwait)
-    val res = toKifiSearchResult(
-      searchUUID,
-      query,
-      decorator.decorate(mergedResult.hits),
-      userId,
+    val decorator = ResultDecorator(userId, query, lang, mergedResult.friendStats, shoeboxClient, config, monitoredAwait)
+    val res = decorator.decorate(
+      mergedResult.hits,
       newIdFilter,
-      config,
       mayHaveMoreHits,
-      (!searchFilter.isDefault || mergedResult.show),
+      mergedResult.show,
       searchExperimentId,
-      experts
+      showExperts
     )
 
     timing.end
@@ -106,7 +97,7 @@ class SearchCommander @Inject() (
 
       val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val articleSearchResult = ResultUtil.toArticleSearchResult(
-        searchUUID,
+        res.uuid,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
         query,
         mergedResult,
@@ -120,7 +111,7 @@ class SearchCommander @Inject() (
       )
 
       try {
-        articleSearchResultStore += (searchUUID -> articleSearchResult)
+        articleSearchResultStore += (res.uuid -> articleSearchResult)
       } catch {
         case e: Throwable => airbrake.notify(AirbrakeError(e, Some("Could not store article search result.")))
       }
@@ -128,8 +119,8 @@ class SearchCommander @Inject() (
       val timeLimit = 1000
       // search is a little slow after service restart. allow some grace period
       if (timing.getTotalTime > timeLimit && timing.timestamp - fortyTwoServices.started.getMillis() > 1000*60*8) {
-        val link = "https://admin.kifi.com/admin/search/results/" + searchUUID.id
-        val msg = s"search time exceeds limit! searchUUID = ${searchUUID.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
+        val link = "https://admin.kifi.com/admin/search/results/" + res.uuid.id
+        val msg = s"search time exceeds limit! searchUUID = ${res.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
         airbrake.notify(msg)
       }
     }
@@ -183,50 +174,6 @@ class SearchCommander @Inject() (
   }
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
-
-  private[ext] def toKifiSearchResult(
-    uuid: ExternalId[ArticleSearchResult],
-    query: String,
-    decoratedResult: DecoratedResult,
-    userId: Id[User],
-    idFilter: Set[Long],
-    config: SearchConfig,
-    mayHaveMoreHits: Boolean,
-    show: Boolean,
-    searchExperimentId: Option[Id[SearchConfigExperiment]],
-    expertsFuture: Future[Seq[Id[User]]]): JsValue = {
-
-    val filter = IdFilterCompressor.fromSetToBase64(idFilter)
-    val kifiHits = ResultUtil.toKifiSearchHits(decoratedResult.hits)
-    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
-    val expertNames = {
-      if (experts.size == 0) List.empty[String]
-      else {
-        experts.flatMap{ expert => decoratedResult.users.get(expert).map{x => x.firstName + " " + x.lastName} }
-      }
-    }
-    log.info("experts recommended: " + expertNames.mkString(" ; "))
-
-    KifiSearchResult(
-      uuid,
-      query,
-      kifiHits,
-      mayHaveMoreHits,
-      show,
-      searchExperimentId,
-      filter,
-      Nil,
-      expertNames).json
-  }
-
-  private def suggestExperts(hits: Seq[DetailedSearchHit]) = {
-    val urisAndUsers = hits.map{ hit => (hit.uriId, hit.users) }
-    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
-      Promise.successful(List.empty[Id[User]]).future
-    } else{
-      shoeboxClient.suggestExperts(urisAndUsers)
-    }
-  }
 
   private[this] def fetchUserDataInBackground(userId: Id[User]): Prefetcher = new Prefetcher(userId)
 
