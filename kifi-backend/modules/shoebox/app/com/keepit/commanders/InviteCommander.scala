@@ -17,6 +17,7 @@ import play.api.libs.json.Json
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalContextBuilder, HeimdalServiceClient}
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class InviteCommander @Inject() (
   db: Database,
