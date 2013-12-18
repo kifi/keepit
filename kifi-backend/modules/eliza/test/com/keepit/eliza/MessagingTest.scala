@@ -4,6 +4,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
 
+import com.keepit.common.db.Id
 import com.keepit.inject._
 import com.keepit.test.{DbTestInjector}
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
@@ -13,13 +14,14 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.social.BasicUser
-import com.keepit.realtime.{UrbanAirship, FakeUrbanAirshipImpl}
+import com.keepit.realtime.{UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule}
 import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient}
+import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
 
+import com.keepit.eliza.commanders.{MessagingCommander, MessagingIndexCommander}
 import com.keepit.eliza.controllers.internal.MessagingController
-import com.keepit.eliza.model.NonUserParticipant
+import com.keepit.eliza.model._
 
 import com.google.inject.Injector
 
@@ -42,30 +44,19 @@ class MessagingTest extends Specification with DbTestInjector {
       FakeShoeboxServiceModule(),
       TestHeimdalServiceClientModule(),
       TestElizaServiceClientModule(),
-      StandaloneTestActorSystemModule()
+      StandaloneTestActorSystemModule(),
+      TestABookServiceClientModule(),
+      FakeUrbanAirshipModule()
     )
   }
 
   def setup()(implicit injector: Injector) = {
-    val threadRepo = inject[MessageThreadRepo]
-    val userThreadRepo = inject[UserThreadRepo]
-    val messageRepo = inject[MessageRepo]
-    val shoebox = inject[ShoeboxServiceClient]
-    val db = inject[Database]
-    val notificationRouter = inject[NotificationRouter]
-    val clock = inject[Clock]
-    val uriNormalizationUpdater: UriNormalizationUpdater = null
-    val urbanAirship: UrbanAirship = new FakeUrbanAirshipImpl()
-    val messagingAnalytics = inject[MessagingAnalytics]
-    val abookServiceClient: ABookServiceClient = new FakeABookServiceClientImpl(new FakeAirbrakeNotifier())
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, abookServiceClient, clock, uriNormalizationUpdater, urbanAirship, messagingAnalytics)
-
     val user1 = Id[User](42)
     val user2 = Id[User](43)
     val user3 = Id[User](44)
     val user2n3Seq = Seq[Id[User]](user2, user3)
 
-    (messagingController, user1, user2, user3, user2n3Seq, notificationRouter)
+    (user1, user2, user3, user2n3Seq)
   }
 
   "Messaging Contoller" should {
@@ -73,16 +64,16 @@ class MessagingTest extends Specification with DbTestInjector {
     "send correctly" in {
       withDb(modules:_*) { implicit injector =>
 
-        val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
+        val (user1, user2, user3, user2n3Seq) = setup()
+        val messagingCommander = inject[MessagingCommander]
+        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
-        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Set, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
+        Await.result(messagingCommander.getLatestSendableNotificationsNotJustFromMe(user1, 20), Duration(4, "seconds")).length === 0
 
-        Await.result(messagingController.getLatestSendableNotificationsNotJustFromMe(user1, 20), Duration(4, "seconds")).length === 0
+        val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None)
 
-        val (thread2, msg2) = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
-
-        val messageIds : Seq[Option[Id[Message]]] = messagingController.getThreads(user2).flatMap(messagingController.getThreadMessages(_, None)).map(_.id)
-        val messageContents : Seq[String] = messagingController.getThreads(user2).flatMap(messagingController.getThreadMessages(_, None)).map(_.messageText)
+        val messageIds : Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messagingCommander.getThreadMessages(_, None)).map(_.id)
+        val messageContents : Seq[String] = messagingCommander.getThreads(user2).flatMap(messagingCommander.getThreadMessages(_, None)).map(_.messageText)
 
         messageIds.contains(msg1.id) === true
         messageIds.contains(msg2.id) === true
@@ -97,11 +88,11 @@ class MessagingTest extends Specification with DbTestInjector {
     "merge and notify correctly" in {
       withDb(modules:_*) { implicit injector =>
 
-        val (messagingController, user1, user2, user3, user2n3Seq, notificationRouter) = setup()
-
+        val (user1, user2, user3, user2n3Seq) = setup()
+        val messagingCommander = inject[MessagingCommander]
         var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
-        notificationRouter.onNotification{ (userId, notification) =>
+        inject[NotificationRouter].onNotification{ (userId, notification) =>
           // println(s"Got Notification $notification for $userId")
           if (notified.isDefinedAt(userId.get)) {
             notified(userId.get) = notified(userId.get) + 1
@@ -110,20 +101,20 @@ class MessagingTest extends Specification with DbTestInjector {
           }
         }
 
-        val (thread1, msg1) = messagingController.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
-        val (thread2, msg2) = messagingController.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
+        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
+        val (thread2, msg2) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
 
-        messagingController.getUnreadUnmutedThreadCount(user1) === 0
+        messagingCommander.getUnreadUnmutedThreadCount(user1) === 0
 
         notified.isDefinedAt(user1) === false
         notified(user2) === 2
 
-        messagingController.getLatestSendableNotifications(user3, 10)
+        messagingCommander.getLatestSendableNotifications(user3, 10)
 
-        messagingController.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
-        messagingController.getUnreadUnmutedThreadCount(user3) === 1
+        messagingCommander.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
+        messagingCommander.getUnreadUnmutedThreadCount(user3) === 1
 
-        val notifications : Seq[JsObject] = Await.result(messagingController.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))
+        val notifications : Seq[JsObject] = Await.result(messagingCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))
         notifications.length === 1
         val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
         println(participants)
@@ -132,9 +123,9 @@ class MessagingTest extends Specification with DbTestInjector {
         participants(1).lastName.endsWith(user2.id.toString) === true
         participants(2).lastName.endsWith(user3.id.toString) === true
 
-        messagingController.setAllNotificationsRead(user3)
-        messagingController.getUnreadThreadNotifications(user3).length === 0
-        messagingController.getUnreadUnmutedThreadCount(user3) === 0
+        messagingCommander.setAllNotificationsRead(user3)
+        messagingCommander.getUnreadThreadNotifications(user3).length === 0
+        messagingCommander.getUnreadUnmutedThreadCount(user3) === 0
 
 
       }

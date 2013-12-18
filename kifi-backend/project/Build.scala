@@ -180,7 +180,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
-      (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
+      (commonSettings ++ (routesImport ++= Seq("com.keepit.eliza._", "com.keepit.eliza.model._"))) : _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
