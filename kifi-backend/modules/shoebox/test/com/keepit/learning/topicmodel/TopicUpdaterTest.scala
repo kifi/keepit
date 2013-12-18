@@ -16,12 +16,12 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   val numTopics = TopicModelGlobalTest.numTopics
 
-  val topicUpdaterTestModules = Seq(DevTopicModelModule(), ShoeboxFakeStoreModule(), TestActorSystemModule(), TestElizaServiceClientModule())
+  val topicUpdaterTestModules = Seq(DevTopicModelModule(), ShoeboxFakeStoreModule(), TestActorSystemModule(), FakeElizaServiceClientModule())
   "TopicUpdater" should {
     "correctly update topic tables and be able to reset tables" in {
       running(new ShoeboxApplication(topicUpdaterTestModules:_*)) {

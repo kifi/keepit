@@ -15,7 +15,7 @@ import com.keepit.integrity.UriIntegrityPlugin
 import com.google.inject.Injector
 import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 
 class NormalizationServiceTest extends TestKitScope with Specification with ShoeboxTestInjector {
 
@@ -40,7 +40,7 @@ class NormalizationServiceTest extends TestKitScope with Specification with Shoe
     FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),
     StandaloneTestActorSystemModule(),
-    TestElizaServiceClientModule(),
+    FakeElizaServiceClientModule(),
     new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
 
   "NormalizationService" should {

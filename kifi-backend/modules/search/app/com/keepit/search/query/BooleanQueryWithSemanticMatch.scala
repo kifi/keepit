@@ -1,25 +1,31 @@
 package com.keepit.search.query
 
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.index.IndexReader
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.search.Weight
-import org.apache.lucene.index.AtomicReaderContext
-import org.apache.lucene.search.Explanation
-import org.apache.lucene.util.Bits
-import org.apache.lucene.search.Scorer
-import org.apache.lucene.util.PriorityQueue
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import collection.JavaConversions._
-import org.apache.lucene.index.Term
-import scala.collection.mutable.ArrayBuffer
-import org.apache.lucene.search.similarities.Similarity
-import com.keepit.search.index.Searcher
-import java.util.{ Set => JSet }
 import java.util.HashSet
+import scala.collection.JavaConversions.asScalaBuffer
+import scala.collection.JavaConversions.asScalaSet
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.Term
+import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.ComplexExplanation
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Explanation
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.Scorer
+import org.apache.lucene.search.Weight
+import org.apache.lucene.search.similarities.Similarity
+import org.apache.lucene.util.Bits
 import org.apache.lucene.util.Bits.MatchNoBits
+import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.index.Searcher
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
+
 
 class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery {
 
@@ -65,8 +71,8 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
 
     private[this] val (requiredWeights, optionalWeights, prohibitedWeights) = initWeights
 
-    val optionalSemanticMatch = computeOptionalClausesSemanticMatch
-
+    val optionalSemanticMatchFuture = Future {computeOptionalClausesSemanticMatch}
+    def optionalSemanticMatch = {Await.result(optionalSemanticMatchFuture, 100 milli)}
     // each optional clause is associated with a probability. The probability indicates how well the semantic of the boolean query is preserved
     // if ONLY THAT clause is NOT satisfied. e.g. if we have three clauses c1, c2, c3, and three factors p1, p2, p3.
     // If c1 and c3 are satisfied, the semantic matching will be p2 (because only c2 is missing). note p2 = p1*p2*p3 /(p1 * p3), this formula
@@ -151,18 +157,15 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
 
       val totalMatchFactor = optionalSemanticMatch.foldLeft(1f)(_*_)
       var matchedFactor = 1f
-      var numMatch = 0
       var optionalScore = 0f
 
       val optionalExpl = new Explanation(0f, "semantic clause match, product of")
       val optionalSumExpl = new Explanation(0f, "optional clause match, sum of")
       val semanticMatchExpl = new Explanation(0f, "semanticMatch")
-      val numMatchExpl = new Explanation(0f, "num of matches")
 
       sumExpl.addDetail(optionalExpl)
       optionalExpl.addDetail(optionalSumExpl)
       optionalExpl.addDetail(semanticMatchExpl)
-      optionalExpl.addDetail(numMatchExpl)
 
       (optionalWeights zip optionalSemanticMatch).foreach{ case (w, m) =>
         val e = w.explain(context, doc)
@@ -170,18 +173,16 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
           optionalSumExpl.addDetail(e)
           coord += 1
           matchedFactor *= m
-          numMatch += 1
           optionalScore += e.getValue()
         }
       }
 
       var semanticMatch = totalMatchFactor / matchedFactor
-      sum += optionalScore * semanticMatch * numMatch
+      sum += optionalScore * semanticMatch
 
       optionalSumExpl.setValue(optionalScore)
       semanticMatchExpl.setValue(semanticMatch)
-      numMatchExpl.setValue(numMatch)
-      optionalExpl.setValue(optionalScore * semanticMatch * numMatch)
+      optionalExpl.setValue(optionalScore * semanticMatch)
 
       if (fail) {
         sumExpl.setMatch(false)
@@ -299,7 +300,9 @@ case class ScorerWithSemanicMatchFactor(scorer: Scorer, semanticMatchFactor: Flo
   def getSemanticMatchFactor: Float = semanticMatchFactor
 }
 
-class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerWithSemanicMatchFactor], percentMatchThreshold: Float, percentMatchThresholdForHot: Float, hotDocSet: Bits) extends Scorer(weight) with BooleanOrScorer {
+class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerWithSemanicMatchFactor], percentMatchThreshold: Float, percentMatchThresholdForHot: Float, hotDocSet: Bits) extends Scorer(weight) with BooleanOrScorer with Logging {
+
+  log.info(s"SemanticBooleanOrScorer: percentMatchThreshold = ${percentMatchThreshold}")
 
   private var doc = -1
   private var docScore = Float.NaN
@@ -377,7 +380,7 @@ class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerW
 
   override def docID(): Int = doc
 
-  override def score(): Float = { docScore * numMatches }
+  override def score(): Float = { docScore }
 
   override def freq(): Int = numMatches
 

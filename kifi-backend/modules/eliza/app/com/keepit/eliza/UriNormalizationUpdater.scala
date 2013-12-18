@@ -6,9 +6,10 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.logging.Logging 
+import com.keepit.common.logging.Logging
 import com.keepit.integrity.URIMigrationSeqNumKey
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.eliza.model._
 
 import akka.actor.ActorSystem
 
@@ -23,10 +24,10 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class UriNormalizationUpdater @Inject() (
-    threadRepo: MessageThreadRepo, 
-    userThreadRepo: UserThreadRepo, 
-    messageRepo: MessageRepo, 
-    shoebox: ShoeboxServiceClient, 
+    threadRepo: MessageThreadRepo,
+    userThreadRepo: UserThreadRepo,
+    messageRepo: MessageRepo,
+    shoebox: ShoeboxServiceClient,
     db: Database,
     centralConfig: CentralConfig,
     renormRepo: UriRenormalizationTrackingRepo,
@@ -48,7 +49,7 @@ class UriNormalizationUpdater @Inject() (
           db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
         }
       }
-      case _ => 
+      case _ =>
     }
   }
 
@@ -64,7 +65,7 @@ class UriNormalizationUpdater @Inject() (
     if (reapply){
       system.scheduler.scheduleOnce(1 minutes){
         applyUpdates(updates)
-      } 
+      }
     }
   }
 

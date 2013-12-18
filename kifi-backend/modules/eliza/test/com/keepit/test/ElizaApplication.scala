@@ -1,5 +1,6 @@
 package com.keepit.test
 
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.controller._
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
 import play.api.{Application, Mode}
@@ -16,11 +17,8 @@ import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule}
 import com.google.inject.util.Modules
 import com.google.inject.Module
-import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
+import com.keepit.common.cache.{HashMapMemoryCacheModule, ElizaCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.scraper.{ProdScraperServiceClientModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
-import com.keepit.normalizer.TestNormalizationServiceModule
-import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
@@ -36,7 +34,7 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
   }
 }
 
-class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
+class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
       TestABookServiceClientModule(),
@@ -47,28 +45,22 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       FakeClockModule(),
       FakeHealthcheckModule(),
       TestFortyTwoModule(),
-      FakeDiscoveryModule(),
       TestSlickModule(TestDbInfo.dbInfo),
-      ShoeboxCacheModule(HashMapMemoryCacheModule()),
-      TestNormalizationServiceModule(),
-      FakeActionAuthenticatorModule()
+      FakeDiscoveryModule(),
+      ElizaCacheModule(HashMapMemoryCacheModule())
     ), overridingModules
   ))
 
-trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
+trait ElizaApplicationInjector extends ApplicationInjector with DbInjectionHelper with ElizaInjectionHelpers
 
-trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
+trait ElizaTestInjector extends EmptyInjector with DbInjectionHelper with ElizaInjectionHelpers {
   val mode = Mode.Test
   val module = Modules.combine(
-    TestHeimdalServiceClientModule(),
-    FakeElizaServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),
-    ShoeboxCacheModule(HashMapMemoryCacheModule()),
-    TestNormalizationServiceModule(),
-    TestScraperServiceClientModule()
+    ElizaCacheModule(HashMapMemoryCacheModule())
   )
 }

@@ -1,5 +1,6 @@
 package com.keepit.eliza
 
+import com.keepit.eliza.model._
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
