@@ -78,9 +78,11 @@ class ExtAuthController @Inject() (
       SafeFuture {
         val contextBuilder = heimdalContextBuilder()
         contextBuilder.addRequestInfo(request)
+        contextBuilder += ("action", "installedExtension")
         contextBuilder += ("extensionVersion", installation.version.toString)
+        contextBuilder += ("kifiInstallationId", installation.id.get.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.EXTENSION_INSTALL))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED))
       }
     }
 
