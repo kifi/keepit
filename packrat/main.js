@@ -516,6 +516,10 @@ api.port.on({
       }
     });
   },
+  set_message_read: function (o) {
+    markRead('message', o.threadId, o.messageId, o.time);
+    socket.send(['set_message_read', o.messageId]);
+  },
   participants: function(id, respond, tab) {
     var th = threadsById[id];
     if (th) {
@@ -979,6 +983,7 @@ function markAllThreadsRead(id, timeStr) {  // id and time of most recent notifi
   });
 
   tellVisibleTabsNoticeCountIfChanged();
+  // TODO: hide all notification popups?
 }
 
 function sendPageThreadCount(tab, tl) {
