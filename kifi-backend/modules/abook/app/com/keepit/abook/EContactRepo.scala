@@ -91,11 +91,11 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     val cdt = currentDateTime
     if (Play.maybeApplication.isDefined && Play.isProd) {
       sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update id=id".execute
-    } else {
+    } else { // test-only branch (H2 workarounds)
       getByUserIdAndEmail(userId, c.email) match {
         case Some(e) => 0
         case None => {
-          sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName})".execute
+          sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name, state) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}, 'active')".execute
         }
       }
     }
@@ -114,7 +114,7 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
     cOpt match {
       case Some(econtact) => econtact
-      case None => throw new IllegalStateException("Failed to retrieve econtact for $email")
+      case None => throw new IllegalStateException(s"Failed to retrieve econtact for $email")
     }
   }
 

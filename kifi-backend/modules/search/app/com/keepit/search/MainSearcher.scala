@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -52,7 +53,8 @@ class MainSearcher(
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
-    monitoredAwait: MonitoredAwait)
+    monitoredAwait: MonitoredAwait,
+    airbrake: AirbrakeNotifier)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
@@ -66,7 +68,7 @@ class MainSearcher(
   def getLang: Lang = lang
 
   private[this] val currentTime = currentDateTime.getMillis()
-  private[this] val timeLogs = new MutableSearchTimeLogs()
+  private[this] val timeLogs = new SearchTimeLogs()
   private[this] val idFilter = filter.idFilter
   private[this] val isInitialSearch = idFilter.isEmpty
 
@@ -393,6 +395,7 @@ class MainSearcher(
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
+    timing()
 
     ShardSearchResult(toDetailedSearchHits(hitList), myTotal, friendsTotal, othersTotal, friendStats, collections.toSeq, svVar, show)
   }
@@ -511,24 +514,23 @@ class MainSearcher(
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
-  def timing(): SearchTimeLogs = {
-    Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
-    Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
-    Statsd.timing("mainSearch.phraseDetection", timeLogs.phraseDetection)
-    Statsd.timing("mainSearch.nlpPhraseDetection", timeLogs.nlpPhraseDetection)
-    Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
-    Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
-    Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
-    Statsd.timing("mainSearch.processHits", timeLogs.processHits)
-    Statsd.timing("mainSearch.total", timeLogs.total)
+  def timing(): Unit = {
+    SafeFuture {
+      timeLogs.send()
 
-    articleSearcher.indexWarmer.foreach{ warmer =>
-      parsedQuery.foreach{ query =>
-          warmer.addTerms(QueryUtil.getTerms(query))
+      articleSearcher.indexWarmer.foreach{ warmer =>
+        parsedQuery.foreach{ query =>
+            warmer.addTerms(QueryUtil.getTerms(query))
+        }
+      }
+
+      val timeLimit = 1000L
+      // search is a little slow after service restart. allow some grace period
+      if (timeLogs.total > timeLimit && currentTime - fortyTwoServices.started.getMillis() > 1000*60*8) {
+        val msg = s"search time exceeds limit! Limit time = $timeLimit, main-search-details: ${timeLogs.toString}."
+        airbrake.notify(msg)
       }
     }
-
-    timeLogs.toSearchTimeLogs
   }
 }
 
@@ -616,7 +618,7 @@ class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, 
   }
 }
 
-case class MutableSearchTimeLogs(
+class SearchTimeLogs(
     var socialGraphInfo: Long = 0,
     var getClickBoost: Long = 0,
     var queryParsing: Long = 0,
@@ -627,5 +629,20 @@ case class MutableSearchTimeLogs(
     var processHits: Long = 0,
     var total: Long = 0
 ) {
-  def toSearchTimeLogs = SearchTimeLogs(socialGraphInfo, getClickBoost, queryParsing, personalizedSearcher, search, processHits, total)
+  def send(): Unit = {
+    Statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo)
+    Statsd.timing("mainSearch.queryParsing", queryParsing)
+    Statsd.timing("mainSearch.phraseDetection", phraseDetection)
+    Statsd.timing("mainSearch.nlpPhraseDetection", nlpPhraseDetection)
+    Statsd.timing("mainSearch.getClickboost", getClickBoost)
+    Statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher)
+    Statsd.timing("mainSearch.LuceneSearch", search)
+    Statsd.timing("mainSearch.processHits", processHits)
+    Statsd.timing("mainSearch.total", total)
+  }
+
+  override def toString() = {
+    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
+      s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
+  }
 }

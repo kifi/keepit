@@ -26,15 +26,3 @@ case class ProdABookServiceClientModule() extends ABookServiceClientModule {
   }
 
 }
-
-
-case class TestABookServiceClientModule() extends ABookServiceClientModule {
-  def configure() {}
-
-  @Singleton
-  @Provides
-  def ABookServiceClient(airbrakeNotifier: AirbrakeNotifier): ABookServiceClient = {
-    new FakeABookServiceClientImpl(airbrakeNotifier)
-  }
-
-}

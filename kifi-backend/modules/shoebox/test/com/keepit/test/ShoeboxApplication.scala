@@ -20,7 +20,7 @@ import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.scraper.{ProdScraperServiceClientModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.normalizer.TestNormalizationServiceModule
-import com.keepit.eliza.TestElizaServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
@@ -41,7 +41,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     Seq(
       TestABookServiceClientModule(),
       TestHeimdalServiceClientModule(),
-      TestElizaServiceClientModule(),
+      FakeElizaServiceClientModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
       FakeClockModule(),
@@ -61,7 +61,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
   val mode = Mode.Test
   val module = Modules.combine(
     TestHeimdalServiceClientModule(),
-    TestElizaServiceClientModule(),
+    FakeElizaServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),

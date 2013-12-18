@@ -22,6 +22,19 @@ import scala.math._
 import java.util.{ArrayList, List => JList}
 import com.keepit.common.logging.Logging
 
+trait PercentMatchQuery extends Query {
+  protected var percentMatch: Float = 0f
+  protected var percentMatchForHotDocs: Float = 1f
+  protected var hotDocs: Option[Filter] = None
+  def getPercentMatch(): Float = percentMatch
+  def getPercentMatchForHotDocs(): Float = percentMatchForHotDocs
+  def setPercentMatch(pctMatch: Float) = { percentMatch = pctMatch }
+  def setPercentMatchForHotDocs(pctMatch: Float, hotDocFilter: Filter) = {
+    percentMatchForHotDocs = pctMatch
+    hotDocs = Some(hotDocFilter)
+  }
+}
+
 object BooleanQueryWithPercentMatch {
   def apply(clauses: JList[BooleanClause], percentMatch: Float, disableCoord: Boolean) = {
     val query = new BooleanQueryWithPercentMatch(disableCoord)
@@ -31,20 +44,7 @@ object BooleanQueryWithPercentMatch {
   }
 }
 
-class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) {
-
-  private[this] var percentMatch = 0.0f
-  private[this] var percentMatchForHotDocs = 1.0f
-  private[this] var hotDocs: Option[Filter] = None
-
-  def setPercentMatch(pctMatch: Float) { percentMatch = pctMatch }
-  def getPercentMatch() = percentMatch
-
-  def setPercentMatchForHotDocs(pctMatch: Float, hotDocFilter: Filter) {
-    percentMatchForHotDocs = pctMatch
-    hotDocs = Some(hotDocFilter)
-  }
-  def getPercentMatchForHotDocs() = percentMatchForHotDocs
+class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery{
 
   override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
@@ -262,7 +262,7 @@ object BooleanScorer {
       new BooleanAndScorer(weight, coordFactorForRequired, required, requiredValue)
     }
     def disjunction() = {
-      new BooleanOrScorer(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
+      new BooleanOrScorerImpl(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
     }
     def prohibit(source: Scorer) = {
       new BooleanNotScorer(weight, source, prohibited)
@@ -270,7 +270,7 @@ object BooleanScorer {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        new BooleanScorer(weight, conjunction(), disjunction(), threshold, requiredValue + optionalValue, required.length + optional.length)
+        new BooleanScorer(weight, conjunction(), disjunction(), threshold)
       } else if (required.length > 0) {
         conjunction()
       } else if (optional.length > 0) {
@@ -281,9 +281,8 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float) extends Scorer(weight) {
 
-  private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -368,9 +367,11 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
   override def freq(): Int = 1
 }
 
-class BooleanOrScorer(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float],
+trait BooleanOrScorer extends Scorer
+
+class BooleanOrScorerImpl(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float],
                       threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
-extends Scorer(weight) with Logging {
+extends Scorer(weight) with BooleanOrScorer with Logging {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1

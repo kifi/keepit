@@ -13,9 +13,8 @@ object EventType {
 
 object UserEventTypes {
   // Growth
-  val SIGNUP = EventType("signup")
-  val EXTENSION_INSTALL = EventType("extension_install")
-  val INVITE_SENT = EventType("invite_sent")
+  val JOINED = EventType("joined")
+  val INVITED = EventType("invited")
 
   // Activity
   val CONNECTED = EventType("connected")
@@ -43,4 +42,6 @@ object UserEventTypes {
 
 object SystemEventTypes {
   val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
+  val KEPT = EventType("kept")
+  val MESSAGED = EventType("messaged")
 }

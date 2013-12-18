@@ -5,6 +5,7 @@ import getpass
 import boto.ec2
 import spur
 import os
+import time
 
 class ServiceInstance(object):
   def __init__(self, instance):
@@ -74,12 +75,26 @@ if __name__=="__main__":
   else:
     instances = [instance for instance in instances if instance.service==args.serviceType]
 
-  pprint(instances)
-
   log("Triggered deploy of %s to %s in %s mode" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode))
 
-  for instance in instances: #ZZZ include version, force mode
-    shell = spur.SshShell(hostname=instance.ip,username="fortytwo")
-    shell.run(["python", "/home/fortytwo/eddie/eddie-self-deploy.py"], stdout=sys.stdout)
+  command = ["python", "/home/fortytwo/eddie/eddie-self-deploy.py"]
+
+  if args.version:
+    command.append(args.version)
+
+  if args.mode and args.mode=="force":
+    command.append("force")
+
+  for instance in instances:
+    shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
+    remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
+    try:
+      while remoteProc.is_running():
+        time.sleep(1)
+    except KeyboardInterrupt:
+      log("Manual Abort.")
+      remoteProc.send_signal(2)
+      sys.exit(1)
+
 
 

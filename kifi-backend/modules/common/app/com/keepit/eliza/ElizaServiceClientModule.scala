@@ -27,13 +27,3 @@ case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
   }
 }
 
-case class TestElizaServiceClientModule() extends ElizaServiceClientModule {
-  def configure() {}
-
-  @Singleton
-  @Provides
-  def elizaServiceClient(airbrakeNotifier: AirbrakeNotifier): ElizaServiceClient = {
-    new FakeElizaServiceClientImpl(airbrakeNotifier)
-  }
-
-}
