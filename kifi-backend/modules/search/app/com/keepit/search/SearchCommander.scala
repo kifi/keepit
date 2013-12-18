@@ -7,7 +7,7 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Try
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ExternalId, Id}
@@ -20,7 +20,26 @@ import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.shoebox.ShoeboxServiceClient
 
-class SearchCommander @Inject() (
+@ImplementedBy(classOf[SearchCommanderImpl])
+trait SearchCommander {
+  def search(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    noSearchExperiments: Boolean,
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None) : DecoratedResult
+
+  def warmUp(userId: Id[User]): Unit
+}
+
+class SearchCommanderImpl @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
@@ -28,7 +47,7 @@ class SearchCommander @Inject() (
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait,
   fortyTwoServices: FortyTwoServices
-) extends Logging {
+) extends SearchCommander with Logging {
 
   def search(
     userId: Id[User],
