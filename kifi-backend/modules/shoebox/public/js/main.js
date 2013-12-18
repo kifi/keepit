@@ -383,7 +383,7 @@ $(function () {
 					var match = url.match(youtubeRegex);
 					if (match && match.length == 2) {
 						var vID = match[1];
-						var embedHtml = '<div class="youtube"><embed src="http://www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white&iv_load_policy=3" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></div>';
+						var embedHtml = '<div class="youtube"><embed src="//www.youtube.com/v/' + vID + '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white&iv_load_policy=3" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed></div>';
 						$('.page-pic-special').html(embedHtml).addClass('page-pic-special-cell').show();
 						$pic.hide();
 						skipImage = true;
