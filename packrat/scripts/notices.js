@@ -88,8 +88,11 @@ panes.notices = function () {
     var scroller = $box.data('antiscroll');
     $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
 
-    $list.on('click', '.kifi-notice', onClick)
-    .scroll(onScroll)
+    $list.scroll(onScroll)
+    .on('mouseover mouseout', '.kifi-notice-state', onMouseOverOrOutState)
+    .on('click', '.kifi-notice-state', onClickState)
+    .on('click', '.kifi-notice', onClickNotice)
+    .hoverfu('.kifi-notice-state', onHoverfuState)
     .hoverfu('.kifi-notice-n-others', onHoverfuOthers);
   }
 
@@ -265,7 +268,18 @@ panes.notices = function () {
     // not updating DOM until response received due to bulk nature of action
   }
 
-  function onClick(e) {
+  function onMouseOverOrOutState(e) {
+    $(this).closest('.kifi-notice').toggleClass('kifi-hover-suppressed', e.type === 'mouseover');
+  }
+
+  function onClickState(e) {
+    log('[onClickState] marking read')();
+    e.stopImmediatePropagation();
+    var data = $(this).closest('.kifi-notice').data();
+    api.port.emit('set_message_read', {threadId: data.thread, messageId: data.id, time: data.createdAt});
+  }
+
+  function onClickNotice(e) {
     if (e.which !== 1) return;
     var uri = this.dataset.uri;
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
@@ -314,6 +328,12 @@ panes.notices = function () {
         });
       }
     }
+  }
+
+  function onHoverfuState(configureHover) {
+    configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: 'Mark as read'}), {
+      position: {my: 'left-26 bottom-7', at: 'center top', of: this, collision: 'none'}
+    });
   }
 
   function onHoverfuOthers(configureHover) {
