@@ -26,6 +26,11 @@ case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
 
   @Singleton
   @Provides
-  def fakeShoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
+  def shoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
+    fakeShoeboxServiceClient(airbrakeNotifier)
+
+  @Singleton
+  @Provides
+  def fakeShoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier): FakeShoeboxServiceClientImpl =
     new FakeShoeboxServiceClientImpl(airbrakeNotifier)
 }

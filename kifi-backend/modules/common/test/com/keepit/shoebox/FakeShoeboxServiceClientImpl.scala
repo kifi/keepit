@@ -104,6 +104,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       val updatedUser = user.withId(id).copy(seq = nextUserSeqNum)
       allUsers(id) = updatedUser
       allUserExternalIds(updatedUser.externalId) = updatedUser
+      log.info(s"saving user $user into allUserExternalIds $allUserExternalIds")
       updatedUser
     }
   }
@@ -288,7 +289,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getUserIdsByExternalIds(extIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val ids = extIds.map(allUserExternalIds(_).id.get)
+    val ids = extIds.map{ id =>
+      allUserExternalIds.get(id).getOrElse{
+        throw new Exception(s"can't find id $id in allUserExternalIds: $allUserExternalIds")
+      }.id.get
+    }
     Future.successful(ids)
   }
 
