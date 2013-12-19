@@ -12,10 +12,6 @@ body {
 	text-align: center;
 }
 
-.kifi-content {
-	margin-top: 131px;
-}
-
 .kifi-video-bg {
 	background: #f6f6f6;
 }
@@ -23,10 +19,11 @@ body {
 .kifi-video {
 	position: relative;
 	.centered-content;
-	padding-bottom: 187px;
+	padding-top: 131px;
+	.padding-bottom(187px);
 
 	h2 {
-		font-size: 42px;
+		.font-size(42px);
 		color: black;
 		padding: 36px 0 34px;
 		margin: 0;
@@ -43,16 +40,18 @@ body {
 }
 
 .kifi-video-caption {
-	font-size: 16px;
+	.font-size(16px);
 	letter-spacing: 0.25px;
 	font-weight: 400;
 }
 
 .kifi-while {
-	padding: 80px 20px 43px;
+	.padding-top(80px);
+	.padding-lr(20px);
+	.padding-bottom(43px);
 
 	h3 {
-		font-size: 26px;
+		.font-size(26px);
 		color: @gray;
 		letter-spacing: 1px;
 		margin: 0;
@@ -63,7 +62,7 @@ body {
 	}
 
 	h2 {
-		font-size: 38px;
+		.font-size(38px);
 		margin: 0;
 		margin-top: 6px;
 	}
@@ -71,7 +70,7 @@ body {
 	img {
 		display: block;
 		margin: 0 auto;
-		margin-top: 64px;
+		.margin-top(64px);
 	}
 }
 
@@ -82,13 +81,13 @@ body {
 
 .kifi-while-searching {
 	h2 {
-		max-width: 470px;
+		.max-width(470px, 38px);
 	}
 }
 
 .kifi-while-on-the-page {
 	h2 {
-		max-width: 640px;
+		.max-width(640px, 38px);
 	}
 }
 
@@ -120,21 +119,24 @@ body {
 }
 
 .kifi-try-kifi {
-	padding: 54px 20px;
-	margin-top: 76px;
+	.padding-tb(54px);
+	.padding-lr(20px);
+	.margin-top(76px);
 	background: #f6f6f6;
 
 	h3 {
-		font-size: 22px;
+		@fontSize: 22px;
+		.font-size(@fontSize);
 		font-weight: 500;
 		color: @gray;
 		letter-spacing: 1px;
 		margin: 0;
 
 		a {
-			font-size: 0.9em;
+			@fontSize2: 20px;
+			.font-size(@fontSize2, @fontSize);
 			color: @blue;
-			margin-left: 10px;
+			.margin-left(10px, @fontSize2);
 			white-space: nowrap;
 			text-decoration: none;
 
@@ -146,60 +148,67 @@ body {
 
 	hr {
 		display: inline-block;
-		margin: 38px 0 16px;
-		width: 120px;
+		.margin-top(38px);
+		.margin-bottom(16px);
+		.width(120px);
 		border: 1px solid #dddddd;
 	}
 
 	h2 {
+		@fontSize: 42px;
 		margin: 0 auto;
-		font-size: 42px;
+		.font-size(@fontSize);
 		font-weight: 200;
 		letter-spacing: 2px;
-		max-width: 715px;
+		.max-width(715px, @fontSize);
 	}
 }
 
 .kifi-try-kifi-button {
+	@fontSize: 19px;
 	display: inline-block;
-	font-size: 19px;
+	.font-size(@fontSize);
 	color: @blue;
-	padding: 13px 28px;
+	.padding-tb(13px, @fontSize);
+	.padding-lr(28px, @fontSize);
 	border: 2px solid @blue;
-	margin-top: 23px;
+	.margin-top(23px, @fontSize);
 	.border-radius(4px);
 	background-clip: padding-box;
 	text-transform: uppercase;
 	text-decoration: none;
-	letter-spacing: 5px;
+	.letter-spacing(5px, @fontSize);
 	font-weight: 600;
 }
 
 .kifi-two-more-things {
 	position: relative;
-	padding: 136px 0 192px;
+	.padding-top(136px);
+	.padding-bottom(192px);
 	.centered-content;
 
 	h2 {
-		font-size: 36px;
+		@fontSize: 36px;
+		.font-size(@fontSize);
 		font-weight: 200;
-		letter-spacing: 2px;
+		.letter-spacing(2px, @fontSize);
 		margin: 0;
-		margin-bottom: 80px;
+		.margin-bottom(80px, @fontSize);
 	}
 }
 
 .kifi-more-column {
 	width: 50%;
 	.box-sizing(border-box);
-	padding: 0 30px;
+	.padding-lr(30px);
 	float: left;
 
 	h2 {
+		@fontSize: 35px;
 		margin: 0;
-		margin-bottom: 40px;
-		font-size: 35px;
-		letter-spacing: 2.5px;
+		.font-size(@fontSize);
+		.margin-bottom(40px, @fontSize);
+		.letter-spacing(2.5px, @fontSize);
 
 		a {
 			color: @blue;
@@ -208,31 +217,32 @@ body {
 	}
 
 	h3 {
+		@fontSize: 22px;
 		margin: 0 auto;
-		margin-top: 50px;
-		font-size: 22px;
-		letter-spacing: 1.5px;
+		.font-size(@fontSize);
+		.margin-top(50px, @fontSize);
+		.letter-spacing(1.5px, @fontSize);
 		color: @gray;
 	}
 }
 
 .kifi-kifi-com {
 	h2 {
-		max-width: 585px;
+		.max-width(585px, 35px);
 	}
 
 	h3 {
-		max-width: 515px;
+		.max-width(515px, 22px);
 	}
 }
 
 .kifi-mobile {
 	h2 {
-		max-width: 450px;
+		.max-width(450px, 35px);
 	}
 
 	h3 {
-		max-width: 530px;
+		.max-width(530px, 22px);
 	}
 }
 
@@ -243,7 +253,7 @@ body {
 	text-align: left;
 
 	li {
-		padding: 12px 0;
+		.padding-tb(12px);
 	}
 }
 
@@ -287,8 +297,9 @@ body {
 	display: inline-block;
 	color: white;
 	background: #dddddd;
-	width: 150px;
-	padding: 8px 11px;
+	.width(150px);
+	.padding-tb(8px);
+	.padding-lr(11px);
 	line-height: 1;
 	.border-radius(3px);
 	text-decoration: none;
@@ -297,12 +308,13 @@ body {
 
 .kifi-mobile-link-status {
 	display: block;
-	font-size: 10px;
+	.font-size(10px);
 	text-transform: uppercase;
 }
 
 .kifi-mobile-link-device {
 	display: block;
-	font-size: 17px;
-	margin-top: 4px;
+	@fontSize: 17px;
+	.font-size(@fontSize);
+	.margin-top(4px, @fontSize);
 }

@@ -10,10 +10,13 @@
 
 .kifi-header {
 	max-width: 1349px;
-	padding: 26px 65px;
+	.padding-tb(26px);
+	.padding-lr(65px);
 	margin: 0 auto;
 	.box-sizing(border-box);
 	.centered-content;
+	.transition(padding 0.3s ease);
+	white-space: nowrap;
 }
 
 .kifi-header-logo {
@@ -23,11 +26,15 @@
 	background: #71a7ec;
 }
 
+@rightFontSize: 18px;
+
 .kifi-header-right {
 	float: right;
-	font-size: 18px;
-	line-height: 37px;
-	margin: 18px 0;
+	.font-size(@rightFontSize);
+	.line-height(37px, @rightFontSize);
+	margin: 0;
+	.margin-tb(@rightFontSize, @rightFontSize);
+	.transition(font-size 0.3s ease);
 }
 
 .kifi-header-right-link {
@@ -35,16 +42,19 @@
 	text-decoration: none;
 	color: black;
 	font-weight: 300;
-	padding: 0 8px;
+	padding: 0;
+	.padding-lr(8px, @rightFontSize);
 }
 
 .kifi-header-signup {
 	font-weight: 500;
-	padding: 0 53px;
+	padding: 0;
+	.padding-lr(53px, @rightFontSize);
 	border: 2px solid @green;
 	.border-radius(21px);
-	margin-right: 13px;
+	.margin-right(13px, @rightFontSize);
 	background: white;
+	white-space: nowrap;
 }
 
 .kifi-header-right-separator {
