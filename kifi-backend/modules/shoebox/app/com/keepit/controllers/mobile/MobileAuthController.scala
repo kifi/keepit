@@ -76,6 +76,11 @@ class MobileAuthController @Inject() (
     unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
 
+  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_),
+    unauthenticatedAction = _ => Forbidden(JsNumber(0))
+  )
+
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(
     authenticatedAction = authHelper.doUploadBinaryPicture(_),
     unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
