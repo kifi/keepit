@@ -20,10 +20,12 @@
 
 .body-font() {
 	font-family: 'Open Sans', sans-serif;
+	-webkit-font-smoothing: antialiased;
 }
 
 .header-font() {
 	font-family: 'Raleway', sans-serif;
+	-webkit-font-smoothing: antialiased;
 }
 
 body {
@@ -36,19 +38,20 @@ body {
 
 h1, h2, h3, h4, h5 {
 	margin: 0;
-	font-weight: 100;
+	font-weight: 200;
 	.header-font;
 }
 
 .kifi-scroll-down {
 	position: absolute;
-	bottom: 9px;
+	bottom: 15px;
 	right: 0;
-	font-size: 16px;
+	font-size: 18px;
+	font-weight: 400;
 	writing-mode: tb-rl;
 	.rotate(90deg);
 	color: #909090;
-	letter-spacing: 1.4px;
+	letter-spacing: .75px;
 }
 
 .kifi-scroll-down-arrow {
