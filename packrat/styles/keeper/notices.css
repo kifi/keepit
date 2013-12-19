@@ -1,8 +1,8 @@
-.kifi-notices-page-count:not(:empty):before {
+.kifi-notices-count:not(:empty):before {
   content: '(';
-  margin-left: 5px;
+  margin-left: 4px;
 }
-.kifi-notices-page-count:not(:empty):after {
+.kifi-notices-count:not(:empty):after {
   content: ')';
 }
 .kifi-notices-cart {
