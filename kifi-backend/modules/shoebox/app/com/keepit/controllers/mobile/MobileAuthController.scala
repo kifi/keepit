@@ -128,6 +128,12 @@ class MobileAuthController @Inject() (
     resOpt getOrElse BadRequest(Json.obj("error" -> "invalid arguments"))
   }
 
+
+  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
+    unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
+  )
+
   def loginWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
       case res: SimpleResult[_] if res.header.status == 303 =>
@@ -165,5 +171,4 @@ class MobileAuthController @Inject() (
     authenticatedAction = authHelper.doForgotPassword(_),
     unauthenticatedAction = authHelper.doForgotPassword(_)
   )
-
 }
