@@ -3,10 +3,10 @@ package com.keepit.search.spellcheck
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 
-case class SpellCorrectorModule() extends ScalaModule {
+case class FakeSpellCorrectorModule() extends ScalaModule {
   def configure{}
 
   @Singleton
   @Provides
-  def spellCorrector(indexer: SpellIndexer): SpellCorrector = new SpellCorrectorImpl(indexer, "viterbi", true, true)
+  def spellCorrector(indexer: SpellIndexer): SpellCorrector = new FakeSpellCorrector()
 }
