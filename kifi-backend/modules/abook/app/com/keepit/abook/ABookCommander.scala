@@ -65,7 +65,7 @@ class ABookCommander @Inject() (
           (abookInfo, dbEntryOpt)
         }
         case ABookOrigins.GMAIL => {
-          val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException("Owner info not set for $userId and $origin"))
+          val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException(s"Owner info not set for $userId and $origin"))
           val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id),  numContacts = numContacts, state = ABookInfoStates.INACTIVE)
           val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
           (abookInfo, dbEntryOpt)

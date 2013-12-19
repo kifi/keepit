@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import _root_.java.io.File
 import com.google.inject.Inject
 import play.api.mvc._
 import play.api.http.{Status, HeaderNames}
@@ -8,12 +9,11 @@ import securesocial.core._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.commanders.{EmailPassFinalizeInfo, SocialFinalizeInfo, AuthCommander, InviteCommander}
+import com.keepit.commanders._
 import com.keepit.social._
 import securesocial.core.providers.utils.PasswordHasher
 import com.keepit.common.controller.ActionAuthenticator._
-import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
-import com.keepit.common._
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
@@ -21,7 +21,9 @@ import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import scala.util.Failure
+import scala.Some
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
@@ -32,6 +34,11 @@ import com.keepit.social.SocialId
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
+
+object AuthHelper {
+  val PWD_MIN_LEN = 7
+  def validatePwd(pwd:Array[Char]) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
+}
 
 class AuthHelper @Inject() (
   db: Database,
@@ -56,7 +63,8 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress:String, password:String)(implicit request:Request[_]) = {
+  def handleEmailPasswordSuccessForm(emailAddress:String, password:Array[Char])(implicit request:Request[_]) = {
+    require(AuthHelper.validatePwd(password), "invalid password")
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = db.readOnly { implicit s =>
       socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
@@ -76,7 +84,7 @@ class AuthHelper @Inject() (
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
         val identity = sui.credentials.get
-        if (hasher.matches(identity.passwordInfo.get, password)) {
+        if (hasher.matches(identity.passwordInfo.get, new String(password))) { // char[] -> string due to SecureSocial
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator => {
@@ -84,7 +92,7 @@ class AuthHelper @Inject() (
                 userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
               }
               if (finalized) {
-                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
+                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))  // todo(ray): uri not relevant for mobile
                   .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                   .withCookies(authenticator.toCookie)
               } else {
@@ -100,7 +108,7 @@ class AuthHelper @Inject() (
           Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
         }
     } getOrElse {
-      val pInfo = hasher.hash(password)
+      val pInfo = hasher.hash(new String(password)) // see SecureSocial
       val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
       Authenticator.create(newIdentity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -111,6 +119,26 @@ class AuthHelper @Inject() (
       )
     }
     res
+  }
+
+  val emailPasswordForm = Form[EmailPassword](
+    mapping(
+      "email" -> email,
+      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray))
+    )
+      ((email, pwd) => EmailPassword(email, pwd.toCharArray))
+      ((ep:EmailPassword) => Some(ep.email, new String(ep.password)))
+  )
+  def userPasswordSignupAction(implicit request: Request[JsValue]) = {
+    // For email login, a (emailString, password) is tied to a user. This email string
+    // has no direct connection to a user's actual active email address. So, we need to
+    // keep in mind that whenever the user supplies an email address, it may or may not
+    // be related to what's their (emailString, password) login combination.
+
+    emailPasswordForm.bindFromRequest.fold(
+      hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
+      success = { case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress, password) }
+    )
   }
 
   private val url = current.configuration.getString("application.baseUrl").get
@@ -151,7 +179,7 @@ class AuthHelper @Inject() (
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
+      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv")) // todo: uri not relevant for mobile
     )
   }
 
@@ -162,7 +190,7 @@ class AuthHelper @Inject() (
       }),
       "firstName" -> nonEmptyText,
       "lastName" -> nonEmptyText,
-      "password" -> text.verifying("password_too_short", pw => pw.length >= 7),
+      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)),
       "picToken" -> optional(text),
       "picHeight" -> optional(number),
       "picWidth" -> optional(number),
@@ -172,7 +200,7 @@ class AuthHelper @Inject() (
     ) ((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
         SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))
       ((sfi:SocialFinalizeInfo) =>
-        Some(sfi.email, sfi.firstName, sfi.lastName, sfi.password.toString, sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
+        Some(sfi.email, sfi.firstName, sfi.lastName, new String(sfi.password), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
   )
   def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
@@ -232,7 +260,8 @@ class AuthHelper @Inject() (
               val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
               val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
               postOffice.sendMail(ElectronicMail(
-                from = EmailAddresses.NOTIFICATIONS,
+                fromName = Some("Kifi Support"),
+                from = EmailAddresses.SUPPORT,
                 to = Seq(resetEmailAddress),
                 subject = "Kifi.com | Password reset requested",
                 htmlBody = views.html.email.resetPassword(resetUrl).body,
@@ -260,15 +289,24 @@ class AuthHelper @Inject() (
         passwordResetRepo.getByToken(code) match {
           case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
             val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
-            for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) {
+            val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
               UserService.save(UserIdentity(
                 userId = sui.userId,
                 socialUser = sui.credentials.get.copy(
                   passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
                 )
               ))
+              authenticateUser(sui.userId.get, onError = { error =>
+                throw error
+              }, onSuccess = { authenticator =>
+                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
+                  .withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                  .withCookies(authenticator.toCookie)
+              })
             }
-            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url)) // TODO: create session
+            results.headOption.getOrElse {
+              Ok(Json.obj("error" -> "invalid_user"))
+            }
           case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
             Ok(Json.obj("error" -> "expired"))
           case Some(pr) if pr.state == PasswordResetStates.USED =>

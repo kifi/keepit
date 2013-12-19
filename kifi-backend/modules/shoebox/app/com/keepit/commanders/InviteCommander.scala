@@ -15,6 +15,9 @@ import scala.util.Try
 import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.Json
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalContextBuilder, HeimdalServiceClient}
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class InviteCommander @Inject() (
   db: Database,
@@ -28,6 +31,7 @@ class InviteCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   eliza: ElizaServiceClient,
   basicUserRepo: BasicUserRepo,
+  heimdal: HeimdalServiceClient,
   clock: Clock) {
 
   def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
@@ -71,6 +75,7 @@ class InviteCommander @Inject() (
   }
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
+    val acceptedAt = clock.now
     val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (_, in) =>
       Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(in.state)
     }
@@ -89,6 +94,33 @@ class InviteCommander @Inject() (
           connectInvitedUsers(userId, invite)
           if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+            invite.senderUserId.foreach { senderId =>
+              SafeFuture {
+                val contextBuilder = new HeimdalContextBuilder
+                contextBuilder += ("socialNetwork", su.networkType.toString)
+                contextBuilder += ("inviteId", invite.externalId.id)
+                invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
+                invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
+
+                if (invId == Some(invite.externalId)) {
+                  // Credit the sender of the accepted invite
+                  contextBuilder += ("action", "accepted")
+                  contextBuilder += ("recipientId", userId.toString)
+                  heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, acceptedAt))
+
+                  // Include "future" acceptance in past event
+                  contextBuilder.data.remove("recipientId")
+                  contextBuilder.data.remove("action")
+                  contextBuilder += ("toBeAccepted", acceptedAt)
+                  contextBuilder
+                }
+
+                // Backfill the history of the new user with all the invitations he/she received
+                contextBuilder += ("action", "wasInvited")
+                contextBuilder += ("senderId", senderId.id)
+                heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, invite.createdAt))
+              }
+            }
             if (invite.senderUserId.isEmpty) {
               notifyAdminsAboutNewSignupRequest(userId, su.fullName)
             }

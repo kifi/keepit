@@ -128,7 +128,8 @@ module.exports = function (grunt) {
 					cleancss: true
 				},
 				files: {
-					'static/css/landing.css': 'static/css/landing.less'
+					'static/css/landing.css': 'static/css/landing.less',
+					'static/css/about.css': 'static/css/about.less'
 				}
 			}
 		},
