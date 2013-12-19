@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import _root_.java.io.File
 import com.google.inject.Inject
 import play.api.mvc._
 import play.api.http.{Status, HeaderNames}
