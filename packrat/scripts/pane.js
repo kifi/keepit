@@ -70,7 +70,7 @@ var pane = pane || function () {  // idempotent for Chrome
     var name = toPaneName(locator);
     if (locator === locatorCurr) {
       deferred.resolve();
-    } else if (name === nameCurr) {
+    } else if (name === nameCurr && panes[name].switchTo) {
       panes[name].switchTo(locator);
       deferred.resolve();
     } else {
