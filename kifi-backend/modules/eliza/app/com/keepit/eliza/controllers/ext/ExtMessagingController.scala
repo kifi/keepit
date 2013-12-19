@@ -61,44 +61,32 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
-
+    val extVersion = (o \ "extVersion").asOpt[String]
     val (title, text) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim
     )
     val (userExtRecipients, nonUserRecipients) = recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
-
+    val url = (o \ "url").asOpt[String]
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
-    val messageSubmitResponse = for {
-      userRecipients <- messagingCommander.constructUserRecipients(userExtRecipients)
-      nonUserRecipients <- messagingCommander.constructNonUserRecipients(request.userId, nonUserRecipients)
-    } yield {
-      val (thread, message) = messagingCommander.sendNewMessage(request.user.id.get, userRecipients, nonUserRecipients, urls, title, text)(contextBuilder.build)
-      val messageThreadFut = messagingCommander.getThreadMessagesWithBasicUser(thread, None)
-      val threadInfoOpt = (o \ "url").asOpt[String].map { url =>
-        messagingCommander.buildThreadInfos(request.user.id.get, Seq(thread), Some(url)).headOption
-      }.flatten
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
 
-      messageThreadFut.map { case (_, messages) =>
-        val tDiff = currentDateTime.getMillis - tStart.getMillis
-        Statsd.timing(s"messaging.newMessage", tDiff)
-        Ok(Json.obj(
-          "id" -> message.externalId.id,
-          "parentId" -> message.threadExtId.id,
-          "createdAt" -> message.createdAt,
-          "threadInfo" -> threadInfoOpt,
-          "messages" -> messages.reverse))
-      }
+    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
+        userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
+      Ok(Json.obj(
+        "id" -> message.externalId.id,
+        "parentId" -> message.threadExtId.id,
+        "createdAt" -> message.createdAt,
+        "threadInfo" -> threadInfoOpt,
+        "messages" -> messages.reverse))
     }
 
-    Async(messageSubmitResponse.flatMap(r => r)) // why scala.concurrent.Future doesn't have a .flatten is beyond me
+    Async(messageSubmitResponse)
   }
 
-  private def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]) = {
+  private def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {
     rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[NonUserParticipant]())) { case ((externalUserIds, nonUserParticipants), elem) =>
       elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
         case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
