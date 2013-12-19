@@ -59,8 +59,8 @@ panes.notices = function () {
       $pageCount = $paneBox.find('.kifi-notices-filter-page>.kifi-notices-count');
 
       api.port.emit('get_threads', kind, function (o) {
-        var $box = $(render('html/keeper/notices', {kind: kind})).appendTo($paneBox.find('.kifi-notices-cart'));
-        renderList($box, o);
+        var $box = $(renderListHolder(kind)).appendTo($paneBox.find('.kifi-notices-cart'));
+        renderList($box, kind, o);
 
         $paneBox.on('kifi:remove', function () {
           $list = null;
@@ -83,9 +83,16 @@ panes.notices = function () {
       }
     }};
 
-  function renderList($box, o) {
+  function renderListHolder(kind) {
+    var params = {kind: kind};
+    params[kind] = true;
+    return render('html/keeper/notices', params);
+  }
+
+  function renderList($box, kind, o) {
     $list = $box.find('.kifi-notices-list')
       .append(o.threads.map(renderOne).join(''))
+      .removeClass('kifi-loading')
       .preventAncestorScroll();
     $list.find('time').timeago();
     $box.antiscroll({x: false});
@@ -113,8 +120,8 @@ panes.notices = function () {
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     var $old = $cart.find('.kifi-notices-box');
 
-    var $new = $(render('html/keeper/notices', {kind: kindNew}))[back ? 'prependTo' : 'appendTo']($cart).layout();
-    api.port.emit('get_threads', kindNew, renderList.bind(null, $new));
+    var $new = $(renderListHolder(kindNew))[back ? 'prependTo' : 'appendTo']($cart).layout();
+    api.port.emit('get_threads', kindNew, renderList.bind(null, $new, kindNew));
 
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll').on('transitionend', function end(e) {
       if (e.target !== this) return;
