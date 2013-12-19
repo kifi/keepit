@@ -184,7 +184,7 @@
 .kifi-notice-state {
   position: relative;
   padding: 0 3px;
-  margin: 0 -2px 0 -5px;
+  margin: 0 1px 0 -5px;
 }
 .kifi-notice-visited .kifi-notice-state {
   display: none;
@@ -198,8 +198,9 @@
   background-clip: content-box;
   border: 2px solid transparent;
   border-radius: 50%;
+  vertical-align: top;
   position: relative;
-  top: 2px;
+  top: 1px;
 }
 .kifi-notice-state:hover::before {
   border-color: #fff;
