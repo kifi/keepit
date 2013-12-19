@@ -74,7 +74,7 @@ class SearchCommanderImpl @Inject() (
 
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val (config, searchExperimentId) = predefinedConfig match {
-      case None => searchConfigManager.getConfigByUserSegment(userId, query, noSearchExperiments)
+      case None => searchConfigManager.getConfig(userId, query, noSearchExperiments)
       case Some(conf) => (conf, None)
     }
 
