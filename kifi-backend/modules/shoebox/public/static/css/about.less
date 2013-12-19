@@ -117,8 +117,18 @@ body {
 	}
 
 	.kifi-link-text {
+		display: inline-block;
+		height: 38px;
+
 		&:hover {
-			border-bottom: 2px dotted @blue2;
+			background-image: url(/assets/static/images/bluedots.png);
+			background-repeat: repeat-x;
+			background-position: 0 36px;
+			background-size: auto 2px;
+
+			&.kifi-join-kifi {
+				background-image: url(/assets/static/images/greendots.png);
+			}
 		}
 
 		.kifi-vision-behind-kifi & {
@@ -202,7 +212,12 @@ body {
 		color: @green2;
 		text-decoration: none;
 
-		border-bottom: 2px dotted @green2;
+		display: inline-block;
+		height: 40px;
+		background-image: url(/assets/static/images/greendots.png);
+		background-repeat: repeat-x;
+		background-position: 0 38px;
+		background-size: auto 2px
 	}
 
 	li {
@@ -217,4 +232,24 @@ body {
 	margin-right: 37px;
 	vertical-align: text-bottom;
 	background: @green2;
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+.kifi-about-page-more {
+	.kifi-link-text {
+		&:hover {
+			background-image: url(/assets/static/images/bluedots.2x.png);
+
+			&.kifi-join-kifi {
+				background-image: url(/assets/static/images/greendots.2x.png);
+			}
+		}
+	}
+}
+
+.kifi-learn-more {
+	a {
+		background-image: url(/assets/static/images/greendots.2x.png);
+	}
+}
 }
