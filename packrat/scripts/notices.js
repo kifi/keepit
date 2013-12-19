@@ -369,7 +369,7 @@ panes.notices = function () {
   }
 
   function isSent(th) {
-    return th.firstAuthor && th.participants[th.firstAuthor].id === session.user.id;
+    return th.firstAuthor != null && th.participants[th.firstAuthor].id === session.user.id;
   }
 
   function toNamesJson(users) {
