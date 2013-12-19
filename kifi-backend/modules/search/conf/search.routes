@@ -50,6 +50,7 @@ POST    /internal/search/search/keeps          @com.keepit.controllers.search.Se
 GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String])
 GET     /internal/search/search/causeError     @com.keepit.controllers.search.SearchController.causeError()
 GET     /internal/search/search/causeHandbrakeError  @com.keepit.controllers.search.SearchController.causeHandbrakeError()
+POST    /internal/searchWithConfig              @com.keepit.controllers.search.SearchController.searchWithConfig
 
 GET     /internal/search/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
 POST    /internal/search/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
