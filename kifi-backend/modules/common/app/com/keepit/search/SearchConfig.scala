@@ -45,7 +45,7 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
       "showExperts" -> "false",
-      "forbidEmptyFriendlyHits" -> "false",
+      "forbidEmptyFriendlyHits" -> "true",
       "useNonPersonalizedContextVector" -> "false",
       "useSemanticMatch" -> "false"
     )
