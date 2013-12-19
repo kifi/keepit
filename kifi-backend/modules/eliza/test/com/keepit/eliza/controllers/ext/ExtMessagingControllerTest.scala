@@ -141,5 +141,64 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
 
       }
     }
+
+    "sendMessageReplyAction" in {
+      running(new ElizaApplication(modules:_*)) {
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+
+        val controller = inject[ExtMessagingController]
+        inject[FakeActionAuthenticator].setUser(shanee)
+        val createThreadJson = Json.parse("""
+          {
+            "title": "Search Experiments",
+            "text": "test me out",
+            "recipients":["${shachaf.externalId.value}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments",
+            "extVersion": "2.6.65"
+          }
+          """)
+        status(route(FakeRequest("POST", "/eliza/messages").withJsonBody(createThreadJson)).get) must equalTo(OK)
+
+        val message = inject[Database].readOnly { implicit s => inject[MessageRepo].all } head
+        val thread = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all } head
+
+        val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId).toString
+        path === s"/eliza/messages/${thread.externalId}"
+
+        val input = Json.parse("""
+          {
+            "title": "Search Experiments",
+            "text": "cool man!",
+            "recipients":["${shachaf.externalId.value}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments",
+            "extVersion": "2.6.65"
+          }
+          """)
+        val request = FakeRequest("POST", path).withJsonBody(input)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+        println(s"thread = $thread")
+
+        val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
+        messages.size === 2
+        val replys = messages filter {m => m.id != message.id}
+        replys.size === 1
+        val reply = replys.head
+        reply.messageText === "cool man!"
+        val expected = Json.parse(s"""
+          {
+            "id":"${reply.externalId.id}",
+            "parentId":"${reply.threadExtId.id}",
+            "createdAt":"${reply.createdAt.toStandardTimeString}"
+          }
+          """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+
+      }
+    }
   }
 }
