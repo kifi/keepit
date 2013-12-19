@@ -199,6 +199,15 @@ body {
 	.line-height(24px, @fontSize);
 	color: @gray;
 	.letter-spacing(0.5px, @fontSize);
+
+	a {
+		color: @gray;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
 }
 
 .kifi-content-divider-wrapper {
