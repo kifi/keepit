@@ -20,7 +20,9 @@
     {{/otherParticipants.length}}
   </div>
   <a class="kifi-notice-link" href="{{url}}" target="_blank">{{title}}</a>
-  <div class="kifi-notice-author">{{authorShortName}}: </div>
-  <div class="kifi-notice-blurb">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
+  <div class="kifi-notice-blurb">
+    <span class="kifi-notice-author">{{authorShortName}}:</span>
+    {{#formatMessage}}{{{text}}}{{/formatMessage}}
+  </div>
   <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
 </div>

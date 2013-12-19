@@ -316,14 +316,14 @@
   white-space: nowrap;
   overflow: hidden;
 }
-.kifi-notice-author {
-  display: run-in;
-  font-weight: 500;
-  margin-right: 1px;
-}
 .kifi-notice-blurb {
   color: #3a3c3d;
   word-wrap: break-word;
+}
+.kifi-notice-author {
+  color: #000;
+  font-weight: 500;
+  margin-right: 1px;
 }
 .kifi-notice-time {
   position: absolute;
