@@ -1,9 +1,10 @@
 package com.keepit.commanders
 
+import _root_.java.io.File
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.model._
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common.mail._
@@ -21,6 +22,7 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.controllers.core.AuthHelper
+import scala.util.{Failure, Success}
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {

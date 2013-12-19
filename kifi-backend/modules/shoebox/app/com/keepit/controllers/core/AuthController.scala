@@ -250,7 +250,10 @@ class AuthController @Inject() (
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doForgotPassword(_), unauthenticatedAction = authHelper.doForgotPassword(_))
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doForgotPassword(_),
+    unauthenticatedAction = authHelper.doForgotPassword(_)
+  )
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>

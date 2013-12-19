@@ -90,4 +90,10 @@ class MobileAuthController @Inject() (
     unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_)
   )
 
+  // this one sends an email with a link to a page -- more work for mobile likely needed
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doForgotPassword(_),
+    unauthenticatedAction = authHelper.doForgotPassword(_)
+  )
+
 }
