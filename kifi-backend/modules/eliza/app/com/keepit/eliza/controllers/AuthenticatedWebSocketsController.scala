@@ -69,8 +69,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   private val crypt = new SimpleDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-
-
   private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     val extVersion = extVersionOpt.getOrElse("N/A")
     import play.api.libs.iteratee._
