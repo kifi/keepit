@@ -19,7 +19,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUser(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
-  def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
+  def getCountByUser(userId: Id[User], includePrivate: Boolean = true, source: Option[BookmarkSource] = None)(implicit session: RSession): Int
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
@@ -76,11 +76,13 @@ class BookmarkRepoImpl @Inject() (
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(BookmarkUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    countCache.remove(BookmarkCountKey(Some(bookmark.userId), Some(bookmark.source)))
   }
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    countCache.remove(BookmarkCountKey(Some(bookmark.userId), Some(bookmark.source)))
     latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
     bookmark
   }
@@ -133,12 +135,12 @@ class BookmarkRepoImpl @Inject() (
     } getOrElse q).sortBy(_.id desc).sortBy(_.createdAt desc).take(count).list
   }
 
-  def getCountByUser(userId: Id[User], includePrivate: Boolean)(implicit session: RSession): Int =
+  def getCountByUser(userId: Id[User], includePrivate: Boolean, source: Option[BookmarkSource])(implicit session: RSession): Int =
     if (includePrivate) {
-      countCache.getOrElse(BookmarkCountKey(Some(userId))) {
-        Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first
+      countCache.getOrElse(BookmarkCountKey(Some(userId), source)) {
+        Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE && source.map(b.source === _).getOrElse(true)) yield b).length).first
       }
-    } else Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE && !b.isPrivate) yield b).length).first
+    } else Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE && !b.isPrivate && source.map(b.source === _).getOrElse(true)) yield b).length).first
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int =
     Query((for(b <- table if b.updatedAt >= from && b.updatedAt <= to && b.state === BookmarkStates.ACTIVE) yield b).length).first
