@@ -115,6 +115,10 @@ POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.M
 POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 POST    /m/1/auth/upload-binary-image           @com.keepit.controllers.mobile.MobileAuthController.uploadBinaryPicture()
 POST    /m/1/auth/upload-multipart-image        @com.keepit.controllers.mobile.MobileAuthController.uploadFormEncodedPicture()
+POST    /m/1/auth/sign-up                       @com.keepit.controllers.mobile.MobileAuthController.userPasswordSignup()
+POST    /m/1/auth/email-finalize                @com.keepit.controllers.mobile.MobileAuthController.userPassFinalizeAccountAction()
+
+POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
 
 ##########################################
 # Website
@@ -332,6 +336,8 @@ POST     /admin/search/semanticVector/visualize           @com.keepit.controller
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
+POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
+GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules

@@ -152,8 +152,6 @@ class AuthController @Inject() (
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
   }
 
-  private case class EmailPassword(email: String, password: String)
-
   def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
     Redirect("/")
   }, unauthenticatedAction = { request =>
@@ -166,29 +164,9 @@ class AuthController @Inject() (
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
-    authenticatedAction = userPasswordSignupAction(_),
-    unauthenticatedAction = userPasswordSignupAction(_)
+    authenticatedAction = authHelper.userPasswordSignupAction(_),
+    unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
-  private val emailPasswordForm = Form[EmailPassword](
-    mapping(
-      "email" -> email,
-      "password" -> text.verifying("password_too_short", pw => pw.length >= 7)
-    )(EmailPassword.apply)(EmailPassword.unapply)
-  )
-  private def userPasswordSignupAction(implicit request: Request[JsValue]) = {
-    // For email logins, a (emailString, password) is tied to a user. This email string
-    // has no direct connection to a user's actual active email address. So, we need to
-    // keep in mind that whenever the user supplies an email address, it may or may not
-    // be related to what's their (emailString, password) login combination.
-
-    val home = com.keepit.controllers.website.routes.HomeController.home()
-    emailPasswordForm.bindFromRequest.fold(
-      hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
-      success = { case EmailPassword(emailAddress, password) =>
-        authHelper.handleEmailPasswordSuccessForm(emailAddress, password)
-      }
-    )
-  }
 
   private def doSignupPage(implicit request: Request[_]): Result = {
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
@@ -253,11 +231,15 @@ class AuthController @Inject() (
     }
   }
 
-  // user/email finalize action (new)
-  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
+  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_),
+    unauthenticatedAction = _ => Forbidden(JsNumber(0))
+  )
 
-  // social finalize action (new)
-  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doSocialFinalizeAccountAction(_), unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_))
+  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
+    unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
+  )
 
   def OkStreamFile(filename: String) =
     Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
@@ -268,7 +250,10 @@ class AuthController @Inject() (
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doForgotPassword(_), unauthenticatedAction = authHelper.doForgotPassword(_))
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doForgotPassword(_),
+    unauthenticatedAction = authHelper.doForgotPassword(_)
+  )
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
@@ -285,13 +270,25 @@ class AuthController @Inject() (
     }
   }
 
-  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doSetPassword(_), unauthenticatedAction = authHelper.doSetPassword(_))
+  def setPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doSetPassword(_),
+    unauthenticatedAction = authHelper.doSetPassword(_)
+  )
 
-  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authHelper.doUploadBinaryPicture(_), unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(
+    authenticatedAction = authHelper.doUploadBinaryPicture(_),
+    unauthenticatedAction = authHelper.doUploadBinaryPicture(_)
+  )
 
-  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authHelper.doUploadFormEncodedPicture(_), unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_))
+  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(
+    authenticatedAction = authHelper.doUploadFormEncodedPicture(_),
+    unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_)
+  )
 
-  def cancelAuth() = JsonAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
+  def cancelAuth() = JsonAction(allowPending = true)(
+    authenticatedAction = doCancelPage(_),
+    unauthenticatedAction = doCancelPage(_)
+  )
   private def doCancelPage(implicit request: Request[_]): Result = {
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(

@@ -38,7 +38,7 @@ class ExtSearchController @Inject() (
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
     val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, start, end, tz, coll)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
@@ -80,7 +80,7 @@ class ExtSearchController @Inject() (
     coll: Option[String] = None
   ) = Action { request =>
 
-    val decoratedResult = searchCommander.search(Id[User](userId), acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, start, end, tz, coll)
+    val decoratedResult = searchCommander.search(Id[User](userId), acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }

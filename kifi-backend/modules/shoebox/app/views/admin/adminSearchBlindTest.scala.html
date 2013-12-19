@@ -1,0 +1,36 @@
+@()
+
+@admin("Search Blind Test"){
+
+	<form id = "queryForm">
+		<div>
+			<input id = "userId" type = "text" value = "" placeholder = "userId">
+			<input id = "queryText" type = "text" value = "" placeholder = "queryText">
+			<input id = "maxHits" type = "text" value = "" placeholder = "maxHits">
+			<button type = "submit">submit</button>
+	  </div>
+	</form>
+
+	<p id = "result"></p>
+
+
+<script type="text/javascript">
+
+	$(document).ready(function(){
+		$("#queryForm").submit(function() {
+			event.preventDefault();
+			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
+				{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val()}
+			).done(done).fail(fail);
+
+
+      function done(data) { $("#result").empty().prepend(data) }
+      function fail() { alert("bad") }
+
+		})
+
+	});
+
+</script>
+
+}
