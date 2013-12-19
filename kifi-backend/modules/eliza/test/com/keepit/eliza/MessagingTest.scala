@@ -115,7 +115,7 @@ class MessagingTest extends Specification with DbTestInjector {
         messagingCommander.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
         messagingCommander.getUnreadUnmutedThreadCount(user3) === 1
 
-        val notifications : Seq[JsObject] = Await.result(messagingCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))
+        val notifications : Seq[JsObject] = Await.result(messagingCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))._1
         notifications.length === 1
         val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
         println(participants)
