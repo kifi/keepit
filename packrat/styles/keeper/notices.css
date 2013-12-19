@@ -308,17 +308,22 @@
   white-space: nowrap;
 }
 .kifi-notice-link {
+  margin: 5px 0;
   display: block;
-  line-height: 24px;
+  line-height: 14px;
   color: #6fa6ef !important;
   width: 227px;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
 }
+.kifi-notices-list-page .kifi-notice-link {
+  display: none;
+}
 .kifi-notice-blurb {
-  color: #3a3c3d;
+  margin-top: 3px;
   word-wrap: break-word;
+  color: #3a3c3d;
 }
 .kifi-notice-author {
   color: #000;
