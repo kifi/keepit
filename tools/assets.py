@@ -11,6 +11,7 @@ import pwd
 import boto
 from boto.s3.key import Key
 from multiprocessing.pool import ThreadPool
+import traceback
 
 def compute_hash(files):
   out = []
@@ -47,15 +48,19 @@ def upload_to_s3(orig_name, new_name):
   key.set_contents_from_filename(orig_name, replace=False)
 
 def process(file_with_hash):
-  orig_name = file_with_hash[0]
-  hash = file_with_hash[1]
+  try:
+    orig_name = file_with_hash[0]
+    hash = file_with_hash[1]
 
-  new_name = key_name(orig_name, hash)
-  print orig_name, new_name
-  upload_to_s3(orig_name, new_name)
+    new_name = key_name(orig_name, hash)
+    print orig_name, new_name
+    upload_to_s3(orig_name, new_name)
+  except:
+    traceback.print_exc()
 
 if __name__=="__main__":
-  if len(sys.argv) > 1 and sys.argv[1] is "prod":
+  print sys.argv
+  if len(sys.argv) > 1 and sys.argv[1] == "prod":
     bucket_name = 'assets-b-prod'
   else:
     bucket_name = 'assets-b-dev'
