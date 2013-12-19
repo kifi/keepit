@@ -7,7 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.inject._
 import com.keepit.test.{DbTestInjector}
-import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
+import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl}
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
@@ -57,7 +57,24 @@ class MessagingTest extends Specification with DbTestInjector {
     val user3 = Id[User](44)
     val user2n3Seq = Seq[Id[User]](user2, user3)
 
-    (user1, user2, user3, user2n3Seq)
+    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    shoebox.saveUsers(User(
+      id = Some(user1),
+      firstName = "Some",
+      lastName = "User42"
+    ))
+    shoebox.saveUsers(User(
+      id = Some(user2),
+      firstName = "Some",
+      lastName = "User43"
+    ))
+    shoebox.saveUsers(User(
+      id = Some(user3),
+      firstName = "Some",
+      lastName = "User44"
+    ))
+
+    (user1, user2, user3, user2n3Seq, shoebox)
   }
 
   "Messaging Contoller" should {
@@ -65,7 +82,7 @@ class MessagingTest extends Specification with DbTestInjector {
     "send correctly" in {
       withDb(modules:_*) { implicit injector =>
 
-        val (user1, user2, user3, user2n3Seq) = setup()
+        val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
@@ -89,7 +106,7 @@ class MessagingTest extends Specification with DbTestInjector {
     "merge and notify correctly" in {
       withDb(modules:_*) { implicit injector =>
 
-        val (user1, user2, user3, user2n3Seq) = setup()
+        val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
         var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
@@ -115,7 +132,7 @@ class MessagingTest extends Specification with DbTestInjector {
         messagingCommander.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
         messagingCommander.getUnreadUnmutedThreadCount(user3) === 1
 
-        val notifications : Seq[JsObject] = Await.result(messagingCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))
+        val notifications : Seq[JsObject] = Await.result(messagingCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))._1
         notifications.length === 1
         val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
         println(participants)
@@ -131,6 +148,27 @@ class MessagingTest extends Specification with DbTestInjector {
 
       }
     }
+
+    "add participants correctly" in {
+      withDb(modules:_*) { implicit injector =>
+
+        val (user1, user2, user3, user2n3Seq, shoebox) = setup()
+        val messagingCommander = inject[MessagingCommander]
+
+        val (thread, msg) = messagingCommander.sendNewMessage(user1, Seq(user2), Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Fortytwo")
+
+        Thread.sleep(100) //AHHHHHH. Really need to figure out how to test Async code with multiple execution contexts. (https://app.asana.com/0/5674704693855/9223435240746)
+        Await.result(messagingCommander.getLatestSendableNotificationsNotJustFromMe(user2, 1), Duration(4, "seconds")).length===1
+        Await.result(messagingCommander.getLatestSendableNotificationsNotJustFromMe(user3, 1), Duration(4, "seconds")).length===0
+
+        val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
+        messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId))
+        Thread.sleep(100) //See comment for same above
+        Await.result(messagingCommander.getLatestSendableNotificationsNotJustFromMe(user3, 1), Duration(4, "seconds")).length===1
+      }
+    }
+
+
 
 
   }

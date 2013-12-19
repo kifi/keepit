@@ -231,11 +231,15 @@ class AuthController @Inject() (
     }
   }
 
-  // user/email finalize action (new)
-  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_), unauthenticatedAction = _ => Forbidden(JsNumber(0)))
+  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_),
+    unauthenticatedAction = _ => Forbidden(JsNumber(0))
+  )
 
-  // social finalize action (new)
-  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doSocialFinalizeAccountAction(_), unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_))
+  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
+    unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
+  )
 
   def OkStreamFile(filename: String) =
     Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
@@ -246,7 +250,10 @@ class AuthController @Inject() (
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doForgotPassword(_), unauthenticatedAction = authHelper.doForgotPassword(_))
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doForgotPassword(_),
+    unauthenticatedAction = authHelper.doForgotPassword(_)
+  )
 
   def setPasswordPage(code: String) = Action { implicit request =>
     db.readWrite { implicit s =>
@@ -263,13 +270,25 @@ class AuthController @Inject() (
     }
   }
 
-  def setPassword() = JsonToJsonAction(allowPending = true)(authenticatedAction = authHelper.doSetPassword(_), unauthenticatedAction = authHelper.doSetPassword(_))
+  def setPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doSetPassword(_),
+    unauthenticatedAction = authHelper.doSetPassword(_)
+  )
 
-  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authHelper.doUploadBinaryPicture(_), unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(
+    authenticatedAction = authHelper.doUploadBinaryPicture(_),
+    unauthenticatedAction = authHelper.doUploadBinaryPicture(_)
+  )
 
-  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authHelper.doUploadFormEncodedPicture(_), unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_))
+  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(
+    authenticatedAction = authHelper.doUploadFormEncodedPicture(_),
+    unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_)
+  )
 
-  def cancelAuth() = JsonAction(allowPending = true)(authenticatedAction = doCancelPage(_), unauthenticatedAction = doCancelPage(_))
+  def cancelAuth() = JsonAction(allowPending = true)(
+    authenticatedAction = doCancelPage(_),
+    unauthenticatedAction = doCancelPage(_)
+  )
   private def doCancelPage(implicit request: Request[_]): Result = {
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(

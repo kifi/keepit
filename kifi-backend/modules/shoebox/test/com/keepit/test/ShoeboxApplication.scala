@@ -25,17 +25,6 @@ import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
 
-class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
-  extends TestGlobal(defaultModules, overridingModules) {
-
-  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
-    injector.instance[Database].readWrite { implicit session =>
-      val conn = session.conn
-      conn.createStatement().execute("DROP ALL OBJECTS")
-    }
-  }
-}
-
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
