@@ -260,7 +260,7 @@
 .kifi-kept-lock {
   top: 0;
   left: 0;
-  width: 20px;
+  width: 24px;
   height: 24px;
   border-top-left-radius: inherit;
   border-bottom-right-radius: 18px;
@@ -307,8 +307,8 @@
 }
 .kifi-keep-lock::before,
 .kifi-kept-lock::before {
-  top: 6px;
-  left: 5px;
+  top: 5px;
+  left: 7px;
   width: 7px;
   height: 9px;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAASCAQAAADBVSe6AAAAhklEQVQoz9XOoQ5BARTH4ZNUxaZ5JXdTjKZx38EDCIpg3kXQRVNsgsi12e5M9CnXdW3ofid+/3AiinStXOWW2vGehWqTKg1AZmbuAjov3OGgGRGh5YT1kxpgXE6nuKtFsYV+iSNQr2KvxGGJEltwtC8uAxtJFN996hx+9G94+2p5SOWfSfoAsjiOPBfa3D8AAAAASUVORK5CYII=);
@@ -326,7 +326,7 @@
 .kifi-kept-tag {
   top: 0;
   right: 0;
-  width: 20px;
+  width: 24px;
   height: 24px;
   border-top-right-radius: inherit;
   border-bottom-left-radius: 18px;
@@ -334,7 +334,7 @@
 .kifi-keep-tag::before,
 .kifi-kept-tag::before {
   top: 6px;
-  left: 5px;
+  left: 8px;
   width: 10px;
   height: 10px;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAQAAAAngNWGAAAApElEQVR4AY3PwQnCQBCF4bdTiIfFkzZiISnFTsQ6vAtCDqYAVxDBCkT0eTCPxSeG/XPK8DHDwmPmgd6T20R8lbHDDL+9ookBEX/ZA3ucUaO+zBNrhXOCwbUGzlQ3zkPzsKPqpkfgik+2TW3GjQveddpZpSt2vOg38YglGgoktNSDmYWeV5jBSSpGgJNUTNCpM0GnzgSdOnNoVMygUWMGRQcOzog3KSW3ax2koYIAAAAASUVORK5CYII=);
