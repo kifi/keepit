@@ -133,13 +133,13 @@ class AirbrakeTest extends Specification with TestInjector {
         def method1() = try {
             Option(null).get
           } catch {
-            case e => throw new IllegalArgumentException("me iae", e)
+            case e: Throwable => throw new IllegalArgumentException("me iae", e)
           }
         try {
           method1()
           1 === 2
         } catch {
-          case error =>
+          case error: Throwable =>
             val xml = formatter.noticeError(ErrorWithStack(error), None)
             val lines = (xml \\ "line").toVector
             lines.head === <line method="java.lang.IllegalArgumentException: me iae" file="InjectorProvider.scala" number="39"/>
