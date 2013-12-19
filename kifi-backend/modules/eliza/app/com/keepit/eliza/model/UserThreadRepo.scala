@@ -77,6 +77,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
+  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int
+
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
   def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msg: Message)(implicit session: RWSession): Unit
@@ -424,6 +426,10 @@ class UserThreadRepoImpl @Inject() (
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {
     Query((for (row <- table if row.user === userId && row.unread && !row.muted) yield row).length).first
+  }
+
+  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
+    Query((for (row <- table if row.user === userId && row.unread) yield row).length).first
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {

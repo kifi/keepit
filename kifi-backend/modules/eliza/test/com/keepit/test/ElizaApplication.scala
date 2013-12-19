@@ -22,6 +22,7 @@ import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.common.net.FakeHttpClientModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -37,6 +38,7 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
 class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
     Seq(
+      FakeHttpClientModule(),
       TestABookServiceClientModule(),
       TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),

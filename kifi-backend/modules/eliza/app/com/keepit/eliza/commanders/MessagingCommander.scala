@@ -779,10 +779,20 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Future[(Seq[JsObject], Int)] = {
+    val noticesFuture = db.readOnly { implicit session =>
       userThreadRepo.getLatestUnreadSendableNotifications(userId, howMany)
     }
+    new SafeFuture(noticesFuture map { notices =>
+      val numTotal = if (notices.length < howMany) {
+        notices.length
+      } else {
+        db.readOnly { implicit session =>
+          userThreadRepo.getUnreadThreadCount(userId)
+        }
+      }
+      (notices, numTotal)
+    })
   }
 
   def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
