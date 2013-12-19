@@ -43,10 +43,10 @@ panes.notices = function () {
       markAllRead(o.id, o.time);
     },
     page_thread_count: function (o) {
-      $pageCount.text(o.count || 0);
+      $pageCount.text(o.count || '');
     },
     unread_thread_count: function (n) {
-      $unreadCount.text(n || 0);
+      $unreadCount.text(n || '');
     }
   };
 
