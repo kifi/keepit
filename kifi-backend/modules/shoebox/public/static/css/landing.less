@@ -23,9 +23,11 @@ body {
 	.padding-bottom(187px);
 
 	h2 {
-		.font-size(42px);
+		@fontSize: 42px;
+		.font-size(@fontSize);
 		color: black;
 		padding: 36px 0 34px;
+		.padding-lr(35px, @fontSize);
 		margin: 0;
 	}
 }
@@ -184,7 +186,7 @@ body {
 .kifi-two-more-things {
 	position: relative;
 	.padding-top(136px);
-	.padding-bottom(192px);
+	.padding-bottom(112px);
 	.centered-content;
 
 	h2 {
@@ -192,20 +194,22 @@ body {
 		.font-size(@fontSize);
 		font-weight: 200;
 		.letter-spacing(2px, @fontSize);
+		.padding-lr(35px, @fontSize);
 		margin: 0;
 		.margin-bottom(80px, @fontSize);
 	}
 }
 
 .kifi-more-column {
+	float: left;
 	width: 50%;
 	.box-sizing(border-box);
 	.padding-lr(30px);
-	float: left;
+	.padding-bottom(80px);
 
 	h2 {
 		@fontSize: 35px;
-		margin: 0;
+		margin: 0 auto;
 		.font-size(@fontSize);
 		.margin-bottom(40px, @fontSize);
 		.letter-spacing(2.5px, @fontSize);
@@ -224,6 +228,12 @@ body {
 		.letter-spacing(1.5px, @fontSize);
 		color: @gray;
 	}
+}
+
+@media screen and (max-width: 639px) {
+.kifi-more-column {
+	width: 100%;
+}
 }
 
 .kifi-kifi-com {
