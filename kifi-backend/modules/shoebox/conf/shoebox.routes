@@ -115,6 +115,10 @@ POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.M
 POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 POST    /m/1/auth/upload-binary-image           @com.keepit.controllers.mobile.MobileAuthController.uploadBinaryPicture()
 POST    /m/1/auth/upload-multipart-image        @com.keepit.controllers.mobile.MobileAuthController.uploadFormEncodedPicture()
+POST    /m/1/auth/sign-up                       @com.keepit.controllers.mobile.MobileAuthController.userPasswordSignup()
+POST    /m/1/auth/email-finalize                @com.keepit.controllers.mobile.MobileAuthController.userPassFinalizeAccountAction()
+
+POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
 
 ##########################################
 # Website

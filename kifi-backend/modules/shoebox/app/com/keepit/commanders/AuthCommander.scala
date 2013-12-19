@@ -1,9 +1,10 @@
 package com.keepit.commanders
 
+import _root_.java.io.File
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.model._
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common.mail._
@@ -20,8 +21,17 @@ import com.keepit.common._
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.controllers.core.AuthHelper
+import scala.util.{Failure, Success}
 
-// todo: password as char[]; also order of fields is important -- beware
+case class EmailPassword(email: String, password: Array[Char])
+object EmailPassword {
+  implicit val format = (
+      (__ \ 'email).format[String] and
+      (__ \ 'password).format[String].inmap((s:String) => s.toCharArray, unlift((c:Array[Char]) => Some(c.toString)))
+  )(EmailPassword.apply, unlift(EmailPassword.unapply))
+}
+
 case class SocialFinalizeInfo(
   email: String,
   firstName: String,
@@ -142,7 +152,7 @@ class AuthCommander @Inject()(
 
   def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
     log.info(s"[finalizeSocialAccount] sfi=$sfi userId=$userIdOpt identity=$identityOpt extId=$inviteExtIdOpt")
-    require(sfi.password.nonEmpty && sfi.password.length > 7, "invalid password")
+    require(AuthHelper.validatePwd(sfi.password), "invalid password")
     val pInfo = Registry.hashers.currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
 
     val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,

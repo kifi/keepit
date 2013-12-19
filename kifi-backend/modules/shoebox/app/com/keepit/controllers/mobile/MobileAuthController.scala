@@ -71,7 +71,29 @@ class MobileAuthController @Inject() (
     }
   }
 
-  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(authenticatedAction = authHelper.doUploadBinaryPicture(_), unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
-  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(authenticatedAction = authHelper.doUploadFormEncodedPicture(_), unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_))
+  def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.userPasswordSignupAction(_),
+    unauthenticatedAction = authHelper.userPasswordSignupAction(_)
+  )
+
+  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_),
+    unauthenticatedAction = _ => Forbidden(JsNumber(0))
+  )
+
+  def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(
+    authenticatedAction = authHelper.doUploadBinaryPicture(_),
+    unauthenticatedAction = authHelper.doUploadBinaryPicture(_))
+
+  def uploadFormEncodedPicture() = JsonAction(allowPending = true, parser = parse.multipartFormData)(
+    authenticatedAction = authHelper.doUploadFormEncodedPicture(_),
+    unauthenticatedAction = authHelper.doUploadFormEncodedPicture(_)
+  )
+
+  // this one sends an email with a link to a page -- more work for mobile likely needed
+  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+    authenticatedAction = authHelper.doForgotPassword(_),
+    unauthenticatedAction = authHelper.doForgotPassword(_)
+  )
 
 }
