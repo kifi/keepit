@@ -179,14 +179,14 @@ class ExtMessagingController @Inject() (
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
       messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
     },
+
+    // pre-inbox notification/thread handlers (soon will be obsolete)
+
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
       socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmuted))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
-
-    // pre-inbox notification/thread handlers (soon will be obsolete)
-
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map{ notices =>
         val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
