@@ -551,6 +551,16 @@ api.port.on({
       tc.push(respond);
     }
   },
+  get_unread_thread_count: function(_, __, tab) {
+    if (threadLists.unread) {
+      sendUnreadThreadCount(tab);
+    } else {
+      var cb = threadListCallbacks.unread;
+      if (cb) {
+        cb.push(sendUnreadThreadCount.bind(null, tab));
+      }
+    }
+  },
   get_page_thread_count: function(_, __, tab) {
     var list = threadLists[tab.nUri || tab.url];
     if (list) {
@@ -806,13 +816,13 @@ function onTagChangeFromServer(op, tag) {
   }, {op: op, tag: tag});
 }
 
-function gotLatestThreads(kind, arr, numUnreadUnmuted) {  // initial load
-  log('[gotLatestThreads]', kind, arr, numUnreadUnmuted)();
+function gotLatestThreads(kind, arr, num) {  // initial load
+  log('[gotLatestThreads]', kind, arr, num)();
   arr.forEach(function (n) {
     standardizeNotification(n);
     threadsById[n.thread] = n;
   });
-  var list = threadLists[kind] = new ThreadList(threadsById, arr.map(getThreadId), null, numUnreadUnmuted);
+  var list = threadLists[kind] = new ThreadList(threadsById, arr.map(getThreadId), kind === 'unread' ? num : null, kind === 'all' ? num : null);
   list.includesOldest = arr.length < THREAD_BATCH_SIZE;
   threadListCallbacks[kind].forEach(function (callback) {
     callback(list);
@@ -862,9 +872,13 @@ function insertNewNotification(n) {
         }
       }
     }
+    var unreadCountChanged = n0 ? n0.unread !== n.unread : n.unread;
     forEachTabAtThreadList(function (tab) {
       var thisPage = n.url === tab.nUri || n.url === tab.url;
       api.tabs.emit(tab, 'new_thread', {thread: n, thisPage: thisPage}, {queue: true});
+      if (unreadCountChanged) {
+        sendUnreadThreadCount(tab);
+      }
     });
     return true;
   }
@@ -921,6 +935,7 @@ function markRead(category, threadId, messageId, timeStr) {
         time: timeStr,
         threadId: threadId,
         id: messageId});
+      sendUnreadThreadCount(tab);
     });
 
     tellVisibleTabsNoticeCountIfChanged();
@@ -959,12 +974,17 @@ function markAllThreadsRead(id, timeStr) {  // id and time of most recent notifi
     }
   }
 
-  forEachTabAtThreadList(function (tab, tl) {
+  forEachTabAtThreadList(function (tab) {
     api.tabs.emit(tab, 'all_threads_read', {id: id, time: timeStr});
+    sendUnreadThreadCount(tab);
   });
 
   tellVisibleTabsNoticeCountIfChanged();
   // TODO: hide all notification popups?
+}
+
+function sendUnreadThreadCount(tab) {
+  api.tabs.emit(tab, 'unread_thread_count', threadLists.unread.numTotal);
 }
 
 function sendPageThreadCount(tab, tl) {
@@ -1307,7 +1327,7 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
         numNewThreads++;
       }
     }
-  });
+  });  // TODO: update threadLists.all.numUnreadUnmuted and threadLists.unread.numTotal and notify interested tabs
 
   // reusing (sharing) the page ThreadList of an earlier normalization of the URL if possible
   var pt = threadLists[nUri] || threadLists[threads.length ? threads[0].url : ''];
@@ -1318,6 +1338,7 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
   } else {
     pt = new ThreadList(threadsById, threads.map(getThreadId), numTotal, numUnreadUnmuted);
   }
+  pt.includesOldest = threads.length < THREAD_BATCH_SIZE;
 
   // invoking callbacks
   var callbacks = threadListCallbacks[uri];
@@ -1362,8 +1383,6 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
         trigger: 'message'
       }, {queue: 1});
     }
-    sendPageThreadCount(tab, pt);
-    // TODO: send page threads to tab if at /messages
   }
 }
 

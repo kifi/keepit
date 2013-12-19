@@ -44,15 +44,19 @@ panes.notices = function () {
     },
     page_thread_count: function (o) {
       $pageCount.text(o.count || 0);
+    },
+    unread_thread_count: function (n) {
+      $unreadCount.text(n || 0);
     }
   };
 
-  var $pageCount, $list;
+  var $unreadCount, $pageCount, $list;
   return {
     render: function ($paneBox, locator) {
       var kind = locator.substr(10) || 'page';
       $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
-      $pageCount = $paneBox.find('.kifi-notices-page-count');
+      $unreadCount = $paneBox.find('.kifi-notices-filter-unread>.kifi-notices-count');
+      $pageCount = $paneBox.find('.kifi-notices-filter-page>.kifi-notices-count');
 
       api.port.emit('get_threads', kind, function (o) {
         var $box = $(render('html/keeper/notices', {kind: kind})).appendTo($paneBox.find('.kifi-notices-cart'));
@@ -69,6 +73,7 @@ panes.notices = function () {
       });
 
       api.port.on(handlers);
+      api.port.emit('get_unread_thread_count');
       api.port.emit('get_page_thread_count');
     },
     switchTo: function (locator) {
