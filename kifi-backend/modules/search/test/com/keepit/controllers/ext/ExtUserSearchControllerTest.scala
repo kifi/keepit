@@ -37,7 +37,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
-  private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
+  private def setup(client: FakeShoeboxServiceClientImpl) = {
     val users = (0 until 4).map{ i =>
       User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
     } :+ User(externalId = ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
@@ -49,24 +49,11 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     } ++ Seq(EmailAddress(userId = usersWithId(4).id.get, address = "woody@fox.com"),
      EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
 
-    val exps = Seq( UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
-        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can invite")),
-        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can message all users")),
-        UserExperiment(userId = usersWithId(1).id.get, experimentType = ExperimentType("fake")),
-        UserExperiment(userId = usersWithId(2).id.get, experimentType = ExperimentType("admin"))
-    )
-    exps.foreach{client.saveUserExperiment(_)}
-
     client.saveEmails(emails: _*)
     usersWithId
   }
 
   def filterFactory = inject[UserSearchFilterFactory]
-
-  def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserIndexer = {
-    new UserIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-  }
-
 
   def modules = {
     implicit val system = ActorSystem("test")
@@ -78,7 +65,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
   }
 
   "ExtUserSearchController" should {
-    "do a trivial search" in {
+    "search user" in {
       running(new SearchApplication(modules:_*)) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
@@ -99,7 +86,17 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
           {
             "hits":
               [
-                {"userId":5,"basicUser":{"id":"4e5f7b8c-951b-4497-8661-a1001885b2ec","firstName":"Woody","lastName":"Allen","pictureName":"fake.jpg"},"isFriend":false}
+                {
+                  "userId":5,
+                  "basicUser":
+                    {
+                      "id":"4e5f7b8c-951b-4497-8661-a1001885b2ec",
+                      "firstName":"Woody",
+                      "lastName":"Allen",
+                      "pictureName":"fake.jpg"
+                    },
+                  "isFriend":false
+                }
               ],
             "context":"AgAJAAcBBQ=="
             }
