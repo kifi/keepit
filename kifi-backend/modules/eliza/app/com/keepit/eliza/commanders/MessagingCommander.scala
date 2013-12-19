@@ -13,6 +13,7 @@ import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.heimdal._
 
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
@@ -1006,4 +1007,33 @@ class MessagingCommander @Inject() (
     notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
   }
+
+  def sendMessageAction(title: Option[String], text: String,
+      userExtRecipients: Seq[ExternalId[User]],
+      nonUserRecipients: Seq[NonUserParticipant],
+      url: Option[String],
+      urls: JsObject, //wtf its not Seq[String]?
+      userId: Id[User],
+      context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
+    val tStart = currentDateTime
+
+    val res = for {
+      userRecipients <- constructUserRecipients(userExtRecipients)
+      nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
+    } yield {
+      val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
+      val messageThreadFut = getThreadMessagesWithBasicUser(thread, None)
+      val threadInfoOpt = url.map { url =>
+        buildThreadInfos(userId, Seq(thread), Some(url)).headOption
+      }.flatten
+
+      messageThreadFut.map { case (_, messages) =>
+        val tDiff = currentDateTime.getMillis - tStart.getMillis
+        Statsd.timing(s"messaging.newMessage", tDiff)
+        (message, threadInfoOpt, messages)
+      }
+    }
+    res.flatMap(r => r) // why scala.concurrent.Future doesn't have a .flatten is beyond me
+  }
+
 }
