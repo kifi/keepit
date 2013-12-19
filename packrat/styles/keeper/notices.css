@@ -51,7 +51,7 @@
 .kifi-notice {
   position: relative;
   border-bottom: 1px solid #d2d2d2;
-  padding: 10px 12px 10px 71px;
+  padding: 16px 12px 16px 71px;
   min-height: 53px;
   cursor: pointer;
   background: #e5ebf1;
@@ -106,7 +106,7 @@
 /* message */
 .kifi-notice-mosaic {
   position: absolute;
-  top: 11px;
+  top: 16px;
   left: 9px;
   height: 53px;
   width: 53px;
@@ -142,6 +142,17 @@
   border-radius: 50%;
   z-index: 1;
 }
+.kifi-notice-sent>.kifi-notice-mosaic-3::before,
+.kifi-notice-sent>.kifi-notice-mosaic-4::before {
+  content: ' ';
+  position: absolute;
+  top: 27px;
+  left: 27px;
+  height: 26px;
+  width: 26px;
+  background-color: #d4dce3;
+  border-bottom-right-radius: 50%;
+}
 .kifi-notice-pic-1 {
   top: 0;
   left: 0;
@@ -173,11 +184,12 @@
 }
 
 .kifi-notice-kicker {
-  font-size: 12px;
+  font-size: 10px;
   line-height: 15px;
   color: #67829c;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.7px;
   position: relative;
   top: -2px;
 }
@@ -211,20 +223,22 @@
   display: inline-block;
   height: 11px;
   width: 17px;
-  vertical-align: -1px;
   margin-right: 3px;
+  vertical-align: baseline;
+  position: relative;
+  top: 2px;
 }
 .kifi-notice-sent .kifi-notice-dir {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAICAYAAADA+m62AAAAUklEQVR4AWNABlfuPGYE4lwgvgXEDMgYmSMHxHuB+D8I41IYD8QfQArwKVwKkiCAX4IUbiBC4VuYBzKB+Ashq2FYGYgP41eIwExAXArEj9AVAgCpkepYKFbU1AAAAABJRU5ErkJggg==);
   height: 8px;
   width: 10px;
-  vertical-align: 0;
+  top: 0;
 }
 .kifi-notice-received .kifi-notice-dir {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAICAYAAADA+m62AAAATklEQVQY02NgQANX7jx+DMQlQMzEgA8AFfyH4sNArEyMQhD+AsRpQMwIkniHJokNrwcpfEmEwqWErP4AxPGE3LgXiGXxeeYWEOeCPYAEAKwIl/TyVx1aAAAAAElFTkSuQmCC);
   height: 8px;
   width: 10px;
-  vertical-align: 0;
+  top: 0;
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
 .kifi-notice-dir {
@@ -308,11 +322,11 @@
   white-space: nowrap;
 }
 .kifi-notice-link {
-  margin: 5px 0;
+  margin-top: 5px;
   display: block;
   line-height: 14px;
   color: #6fa6ef !important;
-  width: 227px;
+  width: 170px;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
@@ -321,13 +335,13 @@
   display: none;
 }
 .kifi-notice-blurb {
-  margin-top: 3px;
+  margin-top: 10px;
   word-wrap: break-word;
   color: #3a3c3d;
 }
 .kifi-notice-author {
   color: #000;
-  font-weight: 500;
+  font-weight: bold;
   margin-right: 1px;
 }
 .kifi-notice-time {
