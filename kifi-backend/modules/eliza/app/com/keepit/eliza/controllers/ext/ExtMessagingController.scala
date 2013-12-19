@@ -66,7 +66,7 @@ class ExtMessagingController @Inject() (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim
     )
-    val (userExtRecipients, nonUserRecipients) = recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
+    val (userExtRecipients, nonUserRecipients) = messagingCommander.recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
     val url = (o \ "url").asOpt[String]
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
@@ -84,29 +84,6 @@ class ExtMessagingController @Inject() (
     }
 
     Async(messageSubmitResponse)
-  }
-
-  private def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {
-    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[NonUserParticipant]())) { case ((externalUserIds, nonUserParticipants), elem) =>
-      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
-        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
-        case None =>
-          elem.asOpt[JsObject].flatMap { obj =>
-            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
-            (obj \ "kind").asOpt[String] match {
-              case Some("email") if (obj \ "email").asOpt[String].isDefined =>
-                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None))
-              case _ => // Unsupported kind
-                None
-            }
-          } match {
-            case Some(nonUser) =>
-              (externalUserIds, nonUserParticipants :+ nonUser)
-            case None =>
-              (externalUserIds, nonUserParticipants)
-          }
-      }
-    }
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = AuthenticatedJsonToJsonAction { request =>
