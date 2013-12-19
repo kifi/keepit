@@ -61,7 +61,6 @@
   <!-- ================================ -->
 
   <logger name="com.mysql" level="ERROR"/>
-  <logger name="com.jolbox.bonecp" level="INFO"/>
   <logger name="com.ning.http" level="INFO"/>
   <logger name="securesocial.core" level="DEBUG"/>
 
