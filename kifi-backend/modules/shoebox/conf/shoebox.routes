@@ -336,6 +336,8 @@ POST     /admin/search/semanticVector/visualize           @com.keepit.controller
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
+POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
+GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
