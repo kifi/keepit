@@ -1,3 +1,29 @@
 <div class="kifi-notices-box">
-  <div class="kifi-notices-list kifi-notices-list-{{kind}} kifi-scroll-inner" data-kind="{{kind}}"></div>
+  <div class="kifi-notices-list kifi-notices-list-{{kind}} kifi-loading kifi-scroll-inner" data-kind="{{kind}}">
+    <div class="kifi-notices-none">
+      {{#all}}
+      <div class="kifi-notices-none-child kifi-notices-none-page">
+        You don’t have any conversations&hellip; <span class="kifi-notices-none-yet">yet</span>.
+        <div class="kifi-notices-none-click">Click to start one</div>
+      </div>
+      {{/all}}
+      {{#sent}}
+      <div class="kifi-notices-none-child kifi-notices-none-sent">
+        You haven’t started any conversations&hellip; <span class="kifi-notices-none-yet">yet</span>.
+        <div class="kifi-notices-none-click">Click to start one</div>
+      </div>
+      {{/sent}}
+      {{#unread}}
+      <div class="kifi-notices-none-child kifi-notices-none-unread">
+        No unread messages.
+      </div>
+      {{/unread}}
+      {{#page}}
+      <div class="kifi-notices-none-child kifi-notices-none-page">
+        You don’t have any conversations on this page<br>&hellip;<span class="kifi-notices-none-yet">yet</span>.
+        <div class="kifi-notices-none-click">Click to start one</div>
+      </div>
+      {{/page}}
+    </div>
+  </div>
 </div>
