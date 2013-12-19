@@ -16,8 +16,10 @@ POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.ext.ExtD
 # Mobile V1
 ##########################################
 
+GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
+## the following route is an old convention, keep around until eduardo say its ok to kill
 GET     /eliza/m/1/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
-## POST    /eliza/m/1/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
+## POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 
 ##########################################
 #INTERNAL ROUTES/Eliza
