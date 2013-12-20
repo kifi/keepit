@@ -60,6 +60,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val emailIdCounter = new AtomicInteger(0)
   private def nextEmailId = Id[EmailAddress](emailIdCounter.incrementAndGet())
 
+  private val friendRequestIdCounter = new AtomicInteger(0)
+  private def nextFriendRequestId = Id[FriendRequest](friendRequestIdCounter.incrementAndGet())
+
   // Fake sequence counters
 
   private val userSeqCounter = new AtomicInteger(0)
@@ -95,6 +98,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allEmails = MutableMap[Id[EmailAddress], EmailAddress]()
   val allUserEmails = MutableMap[Id[User], Seq[EmailAddress]]()
   val allUserValues = MutableMap[(Id[User], String), String]()
+  val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
+  val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
 
   // Fake data initialization methods
 
@@ -214,6 +219,15 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       val emailWithId = email.copy(id = Some(id))
       allEmails(id) = emailWithId
       allUserEmails(emailWithId.userId) = allUserEmails.getOrElse(emailWithId.userId, Nil) :+ emailWithId
+    }
+  }
+
+  def saveFriendRequests(requests: FriendRequest*) = {
+    requests.map{ request =>
+      val id = request.id.getOrElse(nextFriendRequestId)
+      val requestWithId = request.copy(id = Some(id))
+      allFriendRequests(id) = requestWithId
+      allUserFriendRequests(requestWithId.senderId) = allUserFriendRequests.getOrElse(requestWithId.senderId, Nil) :+ requestWithId
     }
   }
 
@@ -444,7 +458,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int): Future[Boolean] = ???
 
-  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = ???
+  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
+    Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
+  }
 
   def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(allUserValues.get((userId, key)))
 
