@@ -13,6 +13,8 @@ import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.heimdal._
+import com.keepit.common.mail.GenericEmailAddress
 
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
@@ -404,6 +406,7 @@ class MessagingCommander @Inject() (
   }
 
 
+
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
@@ -574,6 +577,64 @@ class MessagingCommander @Inject() (
     }
   }
 
+  //for a given user and thread make sure the notification is correct
+  def recreateNotificationForAddedParticipant(userId: Id[User], thread: MessageThread) : Future[JsValue]  = {
+    val message = db.readOnly { implicit session => messageRepo.getLatest(thread.id.get) }
+
+    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    new SafeFuture(shoebox.getBasicUsers(participantSet.toSeq).map{ id2BasicUser =>
+
+      val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
+        val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
+        val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
+          (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
+        }
+        (numMessages, numUnread, threadActivity)
+      }
+
+      val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
+      val numAuthors = threadActivity.count(_.lastActive.isDefined)
+
+      val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
+
+      val orderedMessageWithBasicUser = MessageWithBasicUser(
+        message.externalId,
+        message.createdAt,
+        message.messageText,
+        None,
+        message.sentOnUrl.getOrElse(""),
+        thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
+        message.from.map(id2BasicUser(_)),
+        threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers
+      )
+
+
+      val notifJson = buildMessageNotificationJson(
+        message = message,
+        thread = thread,
+        messageWithBasicUser = orderedMessageWithBasicUser,
+        locator = "/messages/" + thread.externalId,
+        unread = true,
+        originalAuthorIdx = originalAuthor,
+        unseenAuthors = numAuthors,
+        numAuthors = numAuthors,
+        numMessages = numMessages,
+        numUnread = numMessages,
+        muted = false
+      )
+
+      db.readWrite(attempts=2){ implicit session =>
+        userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, true)
+      }
+
+      messagingAnalytics.sentNotificationForMessage(userId, message, thread, false)
+      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator("/messages/" + thread.externalId))
+
+      notifJson
+    })
+
+  }
+
   // todo: Add adding non-users by kind/identifier
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Future[Boolean] = {
     shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
@@ -637,31 +698,39 @@ class MessagingCommander @Inject() (
                 uriId = thread.uriId,
                 lastSeen = None,
                 unread = true,
-                lastMsgFromOther = Some(message.id.get),
-                lastNotification = notificationJson,
-                notificationUpdatedAt = message.createdAt,
-                replyable = false
+                lastMsgFromOther = None,
+                lastNotification = JsNull
               ))
-              notificationRouter.sendToUser(
-                pUserId,
-                Json.arr("notification", notificationJson)
-              )
             }
           }
+          Future.sequence(newParticipants.map { userId =>
+            recreateNotificationForAddedParticipant(userId, thread)
+          }) map { permanentNotification =>
 
-          val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
-          modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
-            thread.participants.map(_.allUsers.par.foreach { userId =>
+            newParticipants.map { userId =>
               notificationRouter.sendToUser(
                 userId,
-                Json.arr("message", thread.externalId.id, augmentedMessage)
+                Json.arr("notification", notificationJson, permanentNotification)
               )
-              notificationRouter.sendToUser(
-                userId,
-                Json.arr("thread_participants", thread.externalId.id, participants)
-              )
-            })
+            }
+
+
+            val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
+            modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
+              thread.participants.map(_.allUsers.par.foreach { userId =>
+                notificationRouter.sendToUser(
+                  userId,
+                  Json.arr("message", thread.externalId.id, augmentedMessage)
+                )
+                notificationRouter.sendToUser(
+                  userId,
+                  Json.arr("thread_participants", thread.externalId.id, participants)
+                )
+              })
+            }
+
           }
+
         }
         messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
         true
@@ -939,4 +1008,58 @@ class MessagingCommander @Inject() (
     notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
     notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
   }
+
+  def sendMessageAction(title: Option[String], text: String,
+      userExtRecipients: Seq[ExternalId[User]],
+      nonUserRecipients: Seq[NonUserParticipant],
+      url: Option[String],
+      urls: JsObject, //wtf its not Seq[String]?
+      userId: Id[User],
+      context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
+    val tStart = currentDateTime
+
+    val res = for {
+      userRecipients <- constructUserRecipients(userExtRecipients)
+      nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
+    } yield {
+      val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
+      val messageThreadFut = getThreadMessagesWithBasicUser(thread, None)
+      val threadInfoOpt = url.map { url =>
+        buildThreadInfos(userId, Seq(thread), Some(url)).headOption
+      }.flatten
+
+      messageThreadFut.map { case (_, messages) =>
+        val tDiff = currentDateTime.getMillis - tStart.getMillis
+        Statsd.timing(s"messaging.newMessage", tDiff)
+        (message, threadInfoOpt, messages)
+      }
+    }
+    res.flatMap(r => r) // why scala.concurrent.Future doesn't have a .flatten is beyond me
+  }
+
+  def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {
+    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[NonUserParticipant]())) { case ((externalUserIds, nonUserParticipants), elem) =>
+      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
+        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
+        case None =>
+          elem.asOpt[JsObject].flatMap { obj =>
+            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
+            (obj \ "kind").asOpt[String] match {
+              case Some("email") if (obj \ "email").asOpt[String].isDefined =>
+                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None))
+              case _ => // Unsupported kind
+                None
+            }
+          } match {
+            case Some(nonUser) =>
+              (externalUserIds, nonUserParticipants :+ nonUser)
+            case None =>
+              (externalUserIds, nonUserParticipants)
+          }
+      }
+    }
+  }
+
+  //THIS FILE IS WAAAAAAY TOOOOO LLLLLAAAARRRRRRGGGGGGGGEEEEEEEE
+  //todo(martin): SPLIT ME!!!
 }

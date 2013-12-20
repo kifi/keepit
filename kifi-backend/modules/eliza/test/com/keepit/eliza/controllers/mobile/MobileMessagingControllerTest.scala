@@ -1,4 +1,4 @@
-package com.keepit.eliza.controllers.ext
+package com.keepit.eliza.controllers.mobile
 
 import com.keepit.test.{ElizaApplication, ElizaApplicationInjector}
 import org.specs2.mutable._
@@ -21,6 +21,8 @@ import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
 
+import com.keepit.common.db.{Id, ExternalId}
+
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.NotificationRouter
 import com.keepit.eliza.commanders.{MessagingCommander, MessagingIndexCommander}
@@ -37,7 +39,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
 
-class ExtMessagingControllerTest extends Specification with ElizaApplicationInjector {
+class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
   implicit val context = HeimdalContext.empty
 
@@ -64,10 +66,10 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
         val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
-        val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageAction().toString
-        path === "/eliza/messages"
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString
+        path === "/m/1/eliza/messages"
 
-        val controller = inject[ExtMessagingController]
+        val controller = inject[MobileMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
         val input = Json.parse("""
           {
@@ -140,16 +142,14 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
         Json.parse(contentAsString(result)) must equalTo(expected)
 
       }
-    }
 
-    "sendMessageReplyAction" in {
       running(new ElizaApplication(modules:_*)) {
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
         val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 
-        val controller = inject[ExtMessagingController]
+        val controller = inject[MobileMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
         val createThreadJson = Json.parse("""
           {
@@ -160,13 +160,13 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
             "extVersion": "2.6.65"
           }
           """)
-        status(route(FakeRequest("POST", "/eliza/messages").withJsonBody(createThreadJson)).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(createThreadJson)).get) must equalTo(OK)
 
         val message = inject[Database].readOnly { implicit s => inject[MessageRepo].all } head
         val thread = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all } head
 
-        val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId).toString
-        path === s"/eliza/messages/${thread.externalId}"
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageReplyAction(thread.externalId).toString
+        path === s"/m/1/eliza/messages/${thread.externalId}"
 
         val input = Json.parse("""
           {
@@ -200,5 +200,6 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
 
       }
     }
+
   }
 }
