@@ -503,6 +503,8 @@ class AdminUserController @Inject() (
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
         properties += ("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value).toSeq)
 
+        val allInstallations = kifiInstallationRepo.all(userId)
+        if (allInstallations.nonEmpty) { properties += ("installedExtension", allInstallations.maxBy(_.updatedAt).version.toString) }
         userValueRepo.getValue(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
