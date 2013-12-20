@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses, EmailAddressHolder}
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.model._
@@ -21,11 +22,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 
+
 import scala.concurrent.Future
 import scala.util.Try
 import scala.Some
 
-import securesocial.core.SocialUser
+import securesocial.core.{Identity, UserService, Registry, SocialUser}
+
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -243,9 +246,25 @@ class UserCommander @Inject() (
           postOffice.sendMail(mail)
         }
       }
-
-
     }
+  }
+
+  def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
+    val resOpt = db.readOnly { implicit session =>
+      socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
+    } map { sui =>
+      val hasher = Registry.hashers.currentHasher
+      val identity = sui.credentials.get
+      if (!hasher.matches(identity.passwordInfo.get, oldPassword)) throw new IllegalArgumentException("bad_old_password")
+      else {
+        val pInfo = Registry.hashers.currentHasher.hash(newPassword)
+        UserService.save(UserIdentity(
+          userId = sui.userId,
+          socialUser = sui.credentials.get.copy(passwordInfo = Some(pInfo))
+        ))
+      }
+    }
+    resOpt getOrElse { throw new IllegalArgumentException("no_user") }
   }
 
 }

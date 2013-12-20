@@ -37,10 +37,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
-  private def setup(client: FakeShoeboxServiceClientImpl) = {
+   private def setup(client: FakeShoeboxServiceClientImpl) = {
+    val extIds = (0 until 5).map{ i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString}.map{ExternalId[User]}
     val users = (0 until 4).map{ i =>
-      User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
-    } :+ User(externalId = ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
+      User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
+    } :+ User(externalId = extIds(4), firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
 
     val usersWithId = client.saveUsers(users: _*)
 
@@ -50,6 +51,13 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
      EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
 
     client.saveEmails(emails: _*)
+
+    val friendRequests = Seq(FriendRequest(senderId = Id[User](1), recipientId = Id[User](2)))
+    client.saveFriendRequests(friendRequests: _*)
+
+    val connections = Map(Id[User](1) -> Set(Id[User](3)))
+    client.saveConnections(connections)
+
     usersWithId
   }
 
@@ -89,7 +97,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
                   "userId":5,
                   "basicUser":
                     {
-                      "id":"4e5f7b8c-951b-4497-8661-a1001885b2ec",
+                      "id":"4e5f7b8c-951b-4497-8661-123456789004",
                       "firstName":"Woody",
                       "lastName":"Allen",
                       "pictureName":"fake.jpg"
@@ -101,6 +109,92 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
             }
           """)
         Json.parse(contentAsString(result)) === expected
+      }
+    }
+
+    "page user by name" in {
+      running(new SearchApplication(modules:_*)) {
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val users = setup(client)
+        val indexer = inject[UserIndexer]
+        indexer.run(100, 100)
+
+        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("firstNa", None, 0, 10).toString
+        path === "/search/users/page?query=firstNa&pageNum=0&pageSize=10"
+
+        inject[FakeActionAuthenticator].setUser(users(0))
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+          [
+            {
+              "user":{
+                "id":"4e5f7b8c-951b-4497-8661-123456789001",
+                "firstName":"firstName1",
+                "lastName":"lastName1",
+                "pictureName":"fake.jpg"
+              },
+              "status":"requested"
+            },
+
+            {
+              "user":{
+                "id":"4e5f7b8c-951b-4497-8661-123456789002",
+                "firstName":"firstName2",
+                "lastName":"lastName2",
+                "pictureName":"fake.jpg"
+              },
+              "status":"friend"
+            },
+
+            {
+              "user":{
+                "id":"4e5f7b8c-951b-4497-8661-123456789003",
+                "firstName":"firstName3",
+                "lastName":"lastName3",
+                "pictureName":"fake.jpg"
+              },
+              "status":""
+            }
+          ]
+          """)
+        Json.parse(contentAsString(result)) === expected
+      }
+    }
+
+    "page user by email" in {
+      running(new SearchApplication(modules:_*)) {
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val users = setup(client)
+        val indexer = inject[UserIndexer]
+        indexer.run(100, 100)
+
+        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).toString
+        path === "/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
+
+        inject[FakeActionAuthenticator].setUser(users(0))
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+          [
+            {
+              "user":{
+                "id":"4e5f7b8c-951b-4497-8661-123456789004",
+                "firstName":"Woody",
+                "lastName":"Allen",
+                "pictureName":"fake.jpg"
+              },
+              "status":""
+            }
+          ]
+         """)
+         Json.parse(contentAsString(result)) === expected
       }
     }
   }

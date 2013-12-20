@@ -24,182 +24,358 @@
 panes.notices = function () {
   'use strict';
 
-  var PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
-
   var handlers = {
-    new_notification: function (n) {
-      log('[new_notification]', n)();
-      showNew([n]);
-      if (n.unread) {
-        $markAll.show();
+    new_thread: function (o) {
+      var kind = $list && $list.data('kind');
+      if (kind === 'all' ||
+          kind === 'page' && o.thisPage ||
+          kind === 'unread' && o.thread.unread ||
+          kind === 'sent' && isSent(o.thread)) {
+        showNew(o.thread);
+      } else {
+        log('[new_thread] kind mismatch', kind, o)();
       }
     },
-    missed_notifications: function (arr) {
-      log('[missed_notifications]', arr)();
-      showNew(arr);
-      if (arr.some(function (n) {return n.unread})) {
-        $markAll.show();
-      }
+    thread_read: function (o) {
+      markOneRead(o.time, o.threadId, o.id);
     },
-    notifications_visited: function (o) {
-      log('[notifications_visited]', o)();
-      markVisited(o.category, o.time, o.locator, o.id);
-      $markAll.toggle(o.numNotVisited > 0);
+    all_threads_read: function (o) {
+      markAllRead(o.id, o.time);
     },
-    all_notifications_visited: function (o) {
-      log('[all_notifications_visited]', o)();
-      markAllVisited(o.id, o.time);
-      $markAll.toggle(o.numNotVisited > 0);
+    page_thread_count: function (o) {
+      $pageCount.text(o.count || '');
+    },
+    unread_thread_count: function (n) {
+      $unreadCount.text(n || '');
     }
   };
 
-  var $notices, $markAll;
+  var $unreadCount, $pageCount, $list;
   return {
-    render: function ($paneBox) {
-      api.port.emit('notifications', function (o) {
-        renderNotices($paneBox, $paneBox.find('.kifi-pane-tall'), o.notifications, o.timeLastSeen, o.numNotVisited);
-        api.port.on(handlers);
+    render: function ($paneBox, locator) {
+      var kind = locator.substr(10) || 'page';
+      $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
+      $unreadCount = $paneBox.find('.kifi-notices-unread-count');
+      $pageCount = $paneBox.find('.kifi-notices-page-count');
+
+      api.port.emit('get_threads', kind, function (o) {
+        var $box = $(renderListHolder(kind))
+          .appendTo($paneBox.find('.kifi-notices-cart'));
+        renderList($box, kind, o);
       });
+
+      api.port.on(handlers);
+      api.port.emit('get_unread_thread_count');
+      api.port.emit('get_page_thread_count');
+
+      $paneBox
+      .on('click', '.kifi-notices-filter[href]', onSubTabClick)
+      .on('mousedown', '.kifi-notices-menu-a', onMenuBtnMouseDown)
+      .on('mouseup', '.kifi-notices-mark-all-read', onMarkAllRead)
+      .on('kifi:remove', function () {
+        $list = null;
+        $(window).off('resize.notices');
+        api.port.off(handlers);
+      })
+    },
+    switchTo: function (locator) {
+      var kind = locToKind(locator);
+      if (kind !== $list.data('kind')) {
+        onSubTabClick.call($list.closest('.kifi-pane-box').find('.kifi-notices-filter-' + kind)[0], {which: 1});
+      }
     }};
 
-  function renderNotices($paneBox, $tall, notices, timeLastSeen, numNotVisited) {
-    $notices = $(render('html/keeper/notices', {}))
-      .append(notices.map(renderNotice).join(''))
-      .appendTo($tall)
-      .preventAncestorScroll();
-    $notices.find('time').timeago();
-    $tall.antiscroll({x: false});
-
-    var scroller = $tall.data('antiscroll');
-    $(window).on('resize.notices', scroller.refresh.bind(scroller));
-
-    $notices.on('click', '.kifi-notice', function (e) {
-      if (e.which !== 1) return;
-      var uri = this.dataset.uri;
-      var locator = this.dataset.locator;
-      var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
-      if (locator) {
-        api.port.emit('open_deep_link', {nUri: uri, locator: locator, inThisTab: inThisTab});
-        if (inThisTab && uri !== document.URL) {
-          window.location = uri;
-        }
-      } else if (this.dataset.category === 'global') {
-        markVisited('global', undefined, undefined, this.dataset.id);
-        api.port.emit('set_global_read', {noticeId: this.dataset.id});
-        if (uri && uri !== document.URL) {
-          if (inThisTab) {
-            window.location = uri;
-          } else {
-            window.open(uri, '_blank').focus();
-          }
-        }
-      }
-      return false;
-    })
-    .scroll(onScroll)
-    .hoverfu('.kifi-notice-n-others', function(configureHover) {
-      var $a = $(this);
-      render('html/keeper/others', {names: $a.data('names')}, function(html) {
-        configureHover(html, {
-          mustHoverFor: 100,
-          position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'}
-        });
-      });
-    });
-
-    $paneBox.on('kifi:remove', function () {
-      $notices = $markAll = null;
-      $(window).off('resize.notices');
-      api.port.off(handlers);
-    });
-
-    $markAll = $paneBox.find('.kifi-pane-mark-notices-read').click(function () {
-      var o = $notices.find('.kifi-notice').toArray().reduce(function (o, el) {
-        var t = new Date(el.dataset.createdAt);
-        return t > o.time ? {time: t, id: el.dataset.id} : o;
-      }, {time: 0});
-      api.port.emit('all_notifications_visited', o);
-      // not updating DOM until response received due to bulk nature of action
-    }).toggle(numNotVisited > 0);
-
-    if (notices.length && new Date(notices[0].time) > new Date(timeLastSeen)) {
-      api.port.emit('notifications_read', notices[0].time);
-    }
+  function renderListHolder(kind) {
+    var params = {kind: kind};
+    params[kind] = true;
+    return render('html/keeper/notices', params);
   }
 
-  function renderNotice(notice) {
+  function renderList($box, kind, o) {
+    $list = $box.find('.kifi-notices-list')
+      .append(o.threads.map(renderOne).join(''))
+      .removeClass('kifi-loading')
+      .preventAncestorScroll();
+    $list.find('time').timeago();
+    $box.antiscroll({x: false});
+
+    var scroller = $box.data('antiscroll');
+    $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
+
+    if (o.includesOldest) {
+      $list.data('showingOldest', true);
+    } else {
+      $list.scroll(onScroll);
+      if ($list[0].scrollHeight <= $list[0].clientHeight) {
+        getOlderThreads();
+      }
+    }
+
+    $list
+    .on('mouseover mouseout', '.kifi-notice-state', onMouseOverOrOutState)
+    .on('click', '.kifi-notice-state', onClickState)
+    .on('click', '.kifi-notice', onClickNotice)
+    .hoverfu('.kifi-notice-state', onHoverfuState)
+    .hoverfu('.kifi-notice-n-others', onHoverfuOthers);
+  }
+
+  function onSubTabClick(e) {
+    if (e.which !== 1) return;
+    var $aNew = $(this).removeAttr('href');
+    var $aOld = $aNew.siblings('.kifi-notices-filter:not([href])').attr('href', 'javascript:');
+    var back = $aNew.index() < $aOld.index();
+    var kindNew = $aNew.data('kind');
+
+    var $cart = $list.closest('.kifi-notices-cart');
+    var $cubby = $cart.parent().css('overflow', 'hidden').layout();
+    $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
+    var $old = $cart.find('.kifi-notices-box');
+
+    var $new = $(renderListHolder(kindNew))[back ? 'prependTo' : 'appendTo']($cart).layout();
+    api.port.emit('get_threads', kindNew, renderList.bind(null, $new, kindNew));
+
+    $cart.addClass('kifi-animated').layout().addClass('kifi-roll').on('transitionend', function end(e) {
+      if (e.target !== this) return;
+      if (!back) $cart.removeClass('kifi-animated kifi-back kifi-forward');
+      $old.remove();
+      $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward').off('transitionend', end);
+      $cubby.css('overflow', '');
+    });
+    $list = $new.find('.kifi-notices-list');
+
+    var locatorOld = formatLocator($aOld.data('kind'));
+    var locatorNew = formatLocator($aNew.data('kind'));
+    pane.pushState(locatorNew);
+    api.port.emit('pane', {old: locatorOld, new: locatorNew});
+  }
+
+  function renderOne(notice) {
     notice.isVisited = !notice.unread;
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
+      notice.title = notice.title || notice.url.replace(/^https?:\/\//, '');
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
-      notice.oneParticipant = nParticipants === 1;
-      notice.twoParticipants = nParticipants === 2;
-      notice.threeParticipants = nParticipants === 3;
-      notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+      if (notice.authors === 1) {
+        notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
+      } else if (notice.firstAuthor > 1) {
+        participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
+      }
+      var nPicsMax = 4;
+      notice.picturedParticipants = nParticipants <= nPicsMax ?
+        notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
+        participants.slice(0, nPicsMax);
+      notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
+      var nNamesMax = 4;
+      if (notice.isReceived) {
+        notice.namedParticipant = notice.author;
+      } else if (notice.isSent) {
+        if (nParticipants === 2) {
+          notice.namedParticipant = participants[1];
+        } else if (nParticipants - 1 <= nNamesMax) {
+          notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
+        } else {
+          notice.namedParticipants = participants.slice(1, nNamesMax);
+          notice.otherParticipants = participants.slice(nNamesMax);
+          notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+        }
+      } else {
+        if (nParticipants === 2) {
+          notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
+        } else if (nParticipants <= nNamesMax) {
+          notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
+        } else {
+          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
+          notice.otherParticipants = participants.slice(nNamesMax - 1);
+          notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+        }
+        if (notice.namedParticipants) {
+          notice.namedParticipants.push(notice.namedParticipants.shift());
+        }
+      }
+      if (notice.namedParticipants) {
+        notice.nameIndex = counter();
+        notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
+      }
+      notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
       return render('html/keeper/notice_message', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
     default:
-      log('#a00', '[renderNotice] unrecognized category', notice.category)();
+      log('#a00', '[renderOne] unrecognized category', notice.category)();
       return '';
     }
   }
 
-  function showNew(notices) {
-    notices.forEach(function (n) {
-      $notices.find('.kifi-notice[data-id="' + n.id + '"]').remove();
-      $notices.find('.kifi-notice[data-thread="' + n.thread + '"]').remove();
-    });
-    $(notices.map(renderNotice).join(''))
+  function showNew(th) {
+    $list.find('.kifi-notice[data-id="' + th.id + '"],.kifi-notice[data-thread="' + th.thread + '"]').remove();
+    $(renderOne(th))
       .find('time').timeago().end()
-      .prependTo($notices);
-    api.port.emit('notifications_read', notices[0].time);
+      .prependTo($list);
   }
 
-  function markVisited(category, timeStr, locator, id) {
-    var time = new Date(timeStr);  // event time, not notification time
-    $notices.find('.kifi-notice-' + category + ':not(.kifi-notice-visited)').each(function () {
-      if (id && id === this.dataset.id) {
-        this.classList.add('kifi-notice-visited');
-      } else if (dateWithoutMs(this.dataset.createdAt) <= time &&
-          (!locator || this.dataset.locator === locator)) {
-        this.classList.add('kifi-notice-visited');
-      }
-    });
+  function markOneRead(timeStr, threadId, id) {
+    markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]');
   }
 
-  function markAllVisited(id, timeStr) {
+  function markAllRead(id, timeStr) {
+    markEachRead(id, timeStr, '.kifi-notice');
+  }
+
+  function markEachRead(id, timeStr, sel) {
     var time = new Date(timeStr);
-    $notices.find('.kifi-notice:not(.kifi-notice-visited)').each(function () {
-      if (id === this.dataset.id || dateWithoutMs(this.dataset.createdAt) <= time) {
-        this.classList.add('kifi-notice-visited');
+    var discard = $list.data('kind') === 'unread';
+    $list.find(sel + ':not(.kifi-notice-visited)').each(function () {
+      if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
+        if (discard) {
+          $(this).remove();
+        } else {
+          this.classList.add('kifi-notice-visited');
+        }
       }
     });
+    if (discard && !$list.data('showingOldest') && $list[0].scrollHeight <= $list[0].clientHeight) {
+      getOlderThreads();
+    }
+  }
+
+  function onMenuBtnMouseDown(e) {
+    e.preventDefault();
+    var $a = $(this).addClass('kifi-active');
+    var $menu = $a.next('.kifi-notices-menu').fadeIn(50);
+    var $items = $menu.find('.kifi-notices-menu-item')
+      .on('mouseenter', enterItem)
+      .on('mouseleave', leaveItem)
+      .on('mouseup', hide);
+    document.addEventListener('mousedown', docMouseDown, true);
+    document.addEventListener('mousewheel', hide, true);
+    document.addEventListener('wheel', hide, true);
+    document.addEventListener('keypress', hide, true);
+    // .kifi-hover class needed because :hover does not work during drag
+    function enterItem() { $(this).addClass('kifi-hover'); }
+    function leaveItem() { $(this).removeClass('kifi-hover'); }
+    function docMouseDown(e) {
+      if (!$menu[0].contains(e.target)) {
+        hide();
+        if ($a[0] === e.target) {
+          e.stopPropagation();
+        }
+      }
+    }
+    function hide() {
+      document.removeEventListener('mousedown', docMouseDown, true);
+      document.removeEventListener('mousewheel', hide, true);
+      document.removeEventListener('wheel', hide, true);
+      document.removeEventListener('keypress', hide, true);
+      $a.removeClass('kifi-active');
+      $items.off('mouseenter', enterItem)
+            .off('mouseleave', leaveItem)
+            .off('mouseup', hide);
+      $menu.fadeOut(50, function () {
+        $menu.find('.kifi-hover').removeClass('kifi-hover');
+      });
+    }
+  }
+
+  function onMarkAllRead(e) {
+    var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
+      var t = el.dataset.createdAt;
+      if (o.time < new Date(t)) {
+        o.time = t;
+        o.id = el.dataset.id;
+      }
+      return o;
+    }, {time: 0});
+    api.port.emit('set_all_threads_read', o);
+    // not updating DOM until response received due to bulk nature of action
+  }
+
+  function onMouseOverOrOutState(e) {
+    $(this).closest('.kifi-notice').toggleClass('kifi-hover-suppressed', e.type === 'mouseover');
+  }
+
+  function onClickState(e) {
+    log('[onClickState] marking read')();
+    e.stopImmediatePropagation();
+    var data = $(this).hoverfu('hide').closest('.kifi-notice').data();
+    api.port.emit('set_message_read', {threadId: data.thread, messageId: data.id, time: data.createdAt});
+  }
+
+  function onClickNotice(e) {
+    if (e.which !== 1) return;
+    var uri = this.dataset.uri;
+    var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
+    switch (this.dataset.category) {
+    case 'message':
+      api.port.emit('open_deep_link', {nUri: uri, locator: '/messages/' + this.dataset.thread, inThisTab: inThisTab});
+      if (inThisTab && uri !== document.URL) {
+        window.location = uri;
+      }
+      break;
+    case 'global':
+      markOneRead(this.dataset.createdAt, this.dataset.thread, this.dataset.id);
+      api.port.emit('set_message_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});
+      if (uri && uri !== document.URL) {
+        if (inThisTab) {
+          window.location = uri;
+        } else {
+          window.open(uri, '_blank').focus();
+        }
+      }
+      break;
+    }
+    return false;
   }
 
   function onScroll() {
-    if (this.scrollTop + this.clientHeight > this.scrollHeight - PIXELS_FROM_BOTTOM) {
-      var $oldest = $notices.children('.kifi-notice').last(), now = new Date;
-      if (now - ($oldest.data('lastOlderReqTime') || 0) > 10000) {
-        $oldest.data('lastOlderReqTime', now);
-        api.port.emit('old_notifications', $oldest.find('time').attr('datetime'), function (notices) {
-          if ($notices) {
-            if (notices.length) {
-              $(notices.map(renderNotice).join(''))
-                .find('time').timeago().end()
-                .appendTo($notices);
-            } else {
-              $notices.off('scroll', onScroll);  // got 'em all
-            }
-          }
-        });
+    if (this.scrollTop + this.clientHeight > this.scrollHeight - 40) {
+      getOlderThreads();
+    }
+  }
+
+  function getOlderThreads() {
+    var now = Date.now();
+    if (now - ($list.data('pendingOlderReqTime') || 0) > 10000) {
+      $list.data('pendingOlderReqTime', now);
+      api.port.emit('get_older_threads', {
+        time: $list.find('.kifi-notice').last().data('createdAt'),
+        kind: $list.data('kind')
+      }, gotOlderThreads.bind(null, now));
+    }
+  }
+
+  function gotOlderThreads(whenRequested, o) {
+    if ($list && $list.data('pendingOlderReqTime') === whenRequested) {
+      $list.data('pendingOlderReqTime', 0);
+      $(o.threads.map(renderOne).join(''))
+        .find('time').timeago().end()
+        .appendTo($list);
+      if (o.includesOldest) {
+        $list.data('showingOldest', true).off('scroll', onScroll);
+      } else if ($list[0].scrollHeight <= $list[0].clientHeight) {
+        getOlderThreads();
       }
     }
+  }
+
+  function onHoverfuState(configureHover) {
+    configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: 'Mark as read'}), {
+      position: {my: 'left-26 bottom-7', at: 'center top', of: this, collision: 'none'}
+    });
+  }
+
+  function onHoverfuOthers(configureHover) {
+    var $a = $(this);
+    render('html/keeper/others', {names: $a.data('names')}, function(html) {
+      configureHover(html, {
+        mustHoverFor: 100,
+        position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'}
+      });
+    });
   }
 
   function counter() {
@@ -207,12 +383,6 @@ panes.notices = function () {
     return function() {
       return i++;
     };
-  }
-
-  function dateWithoutMs(t) { // until db has ms precision
-    var d = new Date(t);
-    d.setMilliseconds(0);
-    return d;
   }
 
   function idIsNot(id) {
@@ -230,12 +400,24 @@ panes.notices = function () {
     };
   }
 
+  function isSent(th) {
+    return th.firstAuthor != null && th.participants[th.firstAuthor].id === session.user.id;
+  }
+
   function toNamesJson(users) {
     return JSON.stringify(users.map(toName));
   }
 
   function toName(user) {
     return user.firstName + ' ' + user.lastName;
+  }
+
+  function formatLocator(kind) {
+    return kind && kind !== 'page' ? '/messages:' + kind : '/messages';
+  }
+
+  function locToKind(locator) {
+    return /^\/messages(?:$|:)/.test(locator) ? locator.substr(10) || 'page' : null;
   }
 }();
 
