@@ -6,8 +6,8 @@ import java.lang.management.ManagementFactory
 case class ThreadCPUInfo(totalShare: Double, usage: Option[Double]) {
   def toTSV() = {
     usage match {
-      case Some(percent) => f"$percent%1.2f%% cpu / $totalShare%1.2f%% share"
-      case None => f"$totalShare%1.2f%% share"
+      case Some(percent) => f"$percent%1.2fPER cpu / $totalShare%1.2fPER share".replaceAll("PER", "%")
+      case None => f"$totalShare%1.2fPER share".replaceAll("PER", "%")
     }
   }
 }
@@ -51,7 +51,7 @@ object ThreadStatistics {
 
         val cpuInfo = new ThreadCPUInfo(cpuShare, cpuUsage.get(thread.getId()).map(_._2).flatten)
 
-        val header = f"${thread.getName}\t${thread.getState.toString}\t$cpuShare%1.2f%%"
+        val header = f"${thread.getName}\t${thread.getState.toString}\t$cpuShare%1.2fPER".replaceAll("PER", "%")
         val stackInfos = if(!hideStack) {
           val _stackTrace = if (short) {
             val filtered = Seq("java.lang.Thread", "sun.misc", "java.util.concurrent", "scala.concurrent", "akka.util.internal", "sun.nio.ch", "java.lang.Object", "java.lang.ref", "org.jboss.netty")
