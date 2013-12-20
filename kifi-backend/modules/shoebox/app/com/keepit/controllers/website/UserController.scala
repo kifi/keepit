@@ -35,7 +35,7 @@ import play.api.data.Forms._
 import play.api.libs.json._
 import securesocial.core.{UserService, Registry}
 import com.keepit.model.SocialConnection
-import scala.util.Failure
+import scala.util.{Try, Failure, Success}
 import com.keepit.model.EmailAddress
 import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
@@ -44,7 +44,6 @@ import play.api.libs.json.JsUndefined
 import play.api.libs.json.JsArray
 import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
-import scala.util.Success
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 
@@ -240,29 +239,14 @@ class UserController @Inject() (
   }
 
   def changePassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
-    val oldPassword = (request.body \ "oldPassword").as[String]
+    val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
-      db.readOnly { implicit session =>
-        socialUserRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.FORTYTWO)
-      } match {
-        case Some(sui) =>
-          val hasher = Registry.hashers.currentHasher
-          val identity = sui.credentials.get
-          if (hasher.matches(identity.passwordInfo.get, oldPassword)) {
-            val pInfo = Registry.hashers.currentHasher.hash(newPassword)
-            UserService.save(UserIdentity(
-              userId = sui.userId,
-              socialUser = sui.credentials.get.copy(passwordInfo = Some(pInfo))
-            ))
-            Ok(Json.obj("success" -> true))
-          } else {
-            Forbidden(Json.obj("error" -> "bad_old_password"))
-          }
-        case None =>
-          Forbidden(Json.obj("error" -> "no_user"))
+      userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
+        case Failure(e)  => Forbidden(Json.obj("error" -> e.getMessage))
+        case Success(_) => Ok(Json.obj("success" -> true))
       }
     }
   }
