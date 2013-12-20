@@ -9,6 +9,8 @@ POST    /eliza/messages/:parentId         @com.keepit.eliza.controllers.ext.ExtM
 POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
 
 GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
+
+## Deprecated, kill after Eduardo gives an OK
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 
