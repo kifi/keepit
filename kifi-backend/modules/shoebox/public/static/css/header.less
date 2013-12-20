@@ -124,7 +124,15 @@
 .kifi-header-right-separator {
 	color: @green;
 
-	html.scroll & {
+	html.about & {
+		display: none;
+	}
+
+	html.about.guest & {
+		display: inline;
+	}
+
+	html.scroll.scroll & {
 		display: none;
 	}
 }
