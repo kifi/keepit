@@ -54,7 +54,8 @@ class AuthHelper @Inject() (
   kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
   s3ImageStore: S3ImageStore,
   postOffice: LocalPostOffice,
-  inviteCommander: InviteCommander
+  inviteCommander: InviteCommander,
+  userCommander: UserCommander
 ) extends HeaderNames with Results with Status with Logging {
 
   def authHandler(request:Request[_], res:SimpleResult[_])(f : => (Seq[Cookie], Session) => Result) = {
@@ -145,27 +146,8 @@ class AuthHelper @Inject() (
 
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
-      db.readWrite { implicit s =>
-        val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
-        val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(emailAddrStr).get.withVerificationCode(clock.now))
-        val verifyUrl = s"$url${routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}" // todo: remove
-        userValueRepo.setValue(user.id.get, "pending_primary_email", emailAddr.address)
-
-        val (subj, body) = if (user.state != UserStates.ACTIVE) {
-          ("Kifi.com | Please confirm your email address",
-            views.html.email.verifyEmail(newIdentity.firstName, verifyUrl).body)
-        } else {
-          ("Welcome to Kifi! Please confirm your email address",
-            views.html.email.verifyAndWelcomeEmail(user, verifyUrl).body)
-        }
-        val mail = ElectronicMail(
-          from = EmailAddresses.NOTIFICATIONS,
-          to = Seq(GenericEmailAddress(emailAddrStr)),
-          category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
-          subject = subj,
-          htmlBody = body)
-        postOffice.sendMail(mail)
-      }
+      val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
+      userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr)))
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -173,6 +155,7 @@ class AuthHelper @Inject() (
         }
         userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
+      userCommander.sendWelcomeEmail(user, withVerification=false)
     }
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/")

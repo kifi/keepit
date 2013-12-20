@@ -5,7 +5,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses}
+import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses, EmailAddressHolder}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
@@ -13,7 +13,9 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.social.BasicUser
+import com.keepit.common.time._
 
+import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -77,7 +79,8 @@ class UserCommander @Inject() (
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
   abook: ABookServiceClient,
-  postOffice: LocalPostOffice) {
+  postOffice: LocalPostOffice,
+  clock: Clock) {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -171,8 +174,9 @@ class UserCommander @Inject() (
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, "friendsNotifiedAboutJoining").exists(_=="true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUserId, "friendsNotifiedAboutJoining", "true") }
+    val guardKey = "friendsNotifiedAboutJoining"
+    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, guardKey).exists(_=="true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
       val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
@@ -194,6 +198,53 @@ class UserCommander @Inject() (
           )
         }
       }
+    }
+  }
+
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
+    val guardKey = "welcomeEmailSent"
+    val url = current.configuration.getString("application.baseUrl").get
+    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
+
+      if (withVerification) {
+        db.readWrite { implicit session =>
+          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
+          val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+          userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
+
+          val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
+            ("Kifi.com | Please confirm your email address",
+              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body) //ZZZ make this the new template when ready. Remember newIdentity
+          } else {
+            ("Welcome to Kifi! Please confirm your email address",
+              views.html.email.verifyAndWelcomeEmail(newUser, verifyUrl).body) //ZZZ make this the new template when ready
+          }
+          val mail = ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(targetEmailOpt.get),
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            subject = subj,
+            htmlBody = body
+          )
+          postOffice.sendMail(mail)
+        }
+      } else {
+        db.readWrite{ implicit session =>
+          val emailAddr = emailRepo.getByUser(newUser.id.get)
+          val mail = ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(emailAddr),
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            subject = "Welcome to Kifi!", //ZZZ add new copy
+            htmlBody = views.html.email.verifyAndWelcomeEmail(newUser, "http://www.kifi.com").body //ZZZ make this the new template when ready
+            //ZZZ should we have a text only body as well?
+          )
+          postOffice.sendMail(mail)
+        }
+      }
+
+
     }
   }
 
