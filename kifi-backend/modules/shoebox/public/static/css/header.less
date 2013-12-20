@@ -1,4 +1,5 @@
 @green: #a0bf67;
+@import "retina-1.1.0";
 
 .kifi-header-bg {
 	position: fixed;
@@ -21,14 +22,18 @@
 
 .kifi-header-logo {
 	float: left;
-	font-size: 4em;
+	display: inline-block;
+	.width(102px);
+	.height(83px);
 	color: transparent;
-	background: #71a7ec;
+	.at2x('/assets/static/images/logo.png', 100%, 100%);
+	background-repeat: no-repeat;
 }
 
 @rightFontSize: 18px;
 
 .kifi-header-right {
+	display: inline-block;
 	float: right;
 	.font-size(@rightFontSize);
 	.line-height(37px, @rightFontSize);

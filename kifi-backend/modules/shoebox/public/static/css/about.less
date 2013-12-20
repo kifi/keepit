@@ -1,5 +1,6 @@
 @import "lesshat";
 @import "common";
+@import "retina-1.1.0";
 
 @import "header";
 @import "footer";
@@ -131,13 +132,13 @@ body {
 		.height(40px, @fontSize);
 
 		&:hover {
-			background-image: url(/assets/static/images/bluedots.png);
+			.at2x('/assets/static/images/bluedots.png', auto, 2px);
+			background-size: auto 2px;
 			background-repeat: repeat-x;
 			background-position: 0 unit(35px / @fontSize, em);
-			background-size: auto 2px;
 
 			&.kifi-join-kifi {
-				background-image: url(/assets/static/images/greendots.png);
+				.at2x('/assets/static/images/greendots.png', auto, 2px);
 			}
 		}
 
@@ -244,10 +245,10 @@ body {
 
 		display: inline-block;
 		.height(40px, @fontSize);
-		background-image: url(/assets/static/images/greendots.png);
 		background-repeat: repeat-x;
-		background-position: 0 unit(38px / @fontSize, em);
+		.at2x('/assets/static/images/greendots.png', auto, 2px);
 		background-size: auto 2px;
+		background-position: 0 unit(38px / @fontSize, em);
 	}
 
 	li {
@@ -261,24 +262,4 @@ body {
 		vertical-align: text-bottom;
 		background: @green2;
 	}
-}
-
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-.kifi-about-page-more {
-	.kifi-link-text {
-		&:hover {
-			background-image: url(/assets/static/images/bluedots.2x.png);
-
-			&.kifi-join-kifi {
-				background-image: url(/assets/static/images/greendots.2x.png);
-			}
-		}
-	}
-}
-
-.kifi-learn-more {
-	a {
-		background-image: url(/assets/static/images/greendots.2x.png);
-	}
-}
 }

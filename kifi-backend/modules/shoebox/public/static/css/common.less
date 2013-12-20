@@ -184,24 +184,30 @@ h1, h2, h3, h4, h5 {
 }
 
 .kifi-scroll-down {
+	@fontSize: 18px;
 	position: absolute;
-	bottom: 15px;
+	.bottom(-5px, @fontSize);
 	right: 0;
-	.font-size(18px);
+	.font-size(@fontSize);
 	font-weight: 400;
 	writing-mode: tb-rl;
 	.rotate(90deg);
 	color: #909090;
-	letter-spacing: .75px;
+	.letter-spacing(.75px, @fontSize);
 }
 
 .kifi-scroll-down-arrow {
+	@fontSize: 18px;
+	position: relative;
+	.left(-25px, @fontSize);
 	display: inline-block;
-	.margin-left(11px);
-	.width(13px);
-	.height(31px);
-	background: #fcadae;
+	.width(50px, @fontSize);
+	.height(50px, @fontSize);
+	background: url(/assets/static/images/scroll.png) no-repeat;
+	background-size: 100%;
 	vertical-align: middle;
+	.rotate(-90deg);
+	z-index: -1;
 }
 
 @media screen and (max-width: 639px) {
