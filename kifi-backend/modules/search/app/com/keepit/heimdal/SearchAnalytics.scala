@@ -17,8 +17,8 @@ case class SearchEngine(name: String) {
 }
 
 object SearchEngine {
-  object Google extends SearchEngine("Google")
-  object Kifi extends SearchEngine("Kifi")
+  object Google extends SearchEngine("google")
+  object Kifi extends SearchEngine("kifi")
   def get(name: String): SearchEngine = Seq(Kifi, Google).find(_.name.toLowerCase == name.toLowerCase) getOrElse { throw new Exception(s"Unknown search engine: $name") }
 }
 
@@ -141,6 +141,7 @@ class SearchAnalytics @Inject() (
 
     // Search Context
     contextBuilder += ("origin", searchContext.origin)
+    contextBuilder += ("source", getSource(searchContext.origin))
     contextBuilder += ("sessionId", searchContext.sessionId)
     searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
@@ -199,6 +200,8 @@ class SearchAnalytics @Inject() (
     else if (hit.users.length > 0) friends
     else others
   }
+
+  private def getSource(origin: String): String = origin.split('.').reverse(1)
 
   private val own = "own"
   private val friends = "friends"
