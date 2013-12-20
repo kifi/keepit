@@ -77,6 +77,17 @@
         }
       }
     },
+    // Counts the number of loaded threads that are unread and not muted
+    countUnreadUnmuted: function () {
+      for (var n = 0, i = 0; i < this.ids.length; i++) {
+        var id = this.ids[i];
+        var th = this.allById[id];
+        if (th.unread && !th.muted) {
+          n++;
+        }
+      }
+      return n;
+    },
     decNumTotal: function() {
       if (this.numTotal != null) {
         dec.call(this, 'numTotal');
