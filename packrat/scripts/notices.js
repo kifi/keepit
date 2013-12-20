@@ -37,7 +37,7 @@ panes.notices = function () {
       }
     },
     thread_read: function (o) {
-      markOneRead(o.category, o.time, o.threadId, o.id);
+      markOneRead(o.time, o.threadId, o.id);
     },
     all_threads_read: function (o) {
       markAllRead(o.id, o.time);
@@ -218,8 +218,8 @@ panes.notices = function () {
       .prependTo($list);
   }
 
-  function markOneRead(category, timeStr, threadId, id) {
-    markEachRead(id, timeStr, '.kifi-notice-' + category + '[data-thread="' + threadId + '"]');
+  function markOneRead(timeStr, threadId, id) {
+    markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]');
   }
 
   function markAllRead(id, timeStr) {
@@ -317,8 +317,8 @@ panes.notices = function () {
       }
       break;
     case 'global':
-      markRead('global', this.dataset.createdAt, this.dataset.thread, this.dataset.id);
-      api.port.emit('set_global_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});
+      markOneRead(this.dataset.createdAt, this.dataset.thread, this.dataset.id);
+      api.port.emit('set_message_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});
       if (uri && uri !== document.URL) {
         if (inThisTab) {
           window.location = uri;

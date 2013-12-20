@@ -308,7 +308,7 @@ var socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     log("[socket:message_read]", nUri, threadId, time)();
     removeNotificationPopups(threadId);
-    markRead('message', threadId, messageId, time);
+    markRead(threadId, messageId, time);
   }
 };
 
@@ -502,13 +502,13 @@ api.port.on({
   },
   message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {
-      if (markRead('message', o.threadId, o.messageId, o.time) || o.forceSend) {
+      if (markRead(o.threadId, o.messageId, o.time) || o.forceSend) {
         socket.send(['set_message_read', o.messageId]);
       }
     });
   },
   set_message_read: function (o) {
-    markRead('message', o.threadId, o.messageId, o.time);
+    markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
   },
   participants: function(id, respond, tab) {
@@ -531,10 +531,6 @@ api.port.on({
     function reply(o) {
       respond(o.messages[o.messages.length - 1].participants);
     }
-  },
-  set_global_read: function(o, _, tab) {
-    markRead('global', o.threadId, o.messageId, o.time);
-    socket.send(['set_global_read', o.messageId]);
   },
   thread: function(id, respond, tab) {
     var msgs = messageData[id];
@@ -908,7 +904,7 @@ function requestMissedNotifications() {
 }
 
 // messageId is of last read message, timeStr is its createdAt time.
-function markRead(category, threadId, messageId, timeStr) {
+function markRead(threadId, messageId, timeStr) {
   var time = new Date(timeStr);
   if (!(threadReadAt[threadId] > time)) {
     threadReadAt[threadId] = time;
@@ -933,7 +929,6 @@ function markRead(category, threadId, messageId, timeStr) {
 
     forEachTabAtThreadList(function (tab, tl) {
       api.tabs.emit(tab, 'thread_read', {
-        category: category,
         time: timeStr,
         threadId: threadId,
         id: messageId});

@@ -116,41 +116,25 @@
   background: #f8fafd;
 }
 
-/* global */
-.kifi-notice-avatar {
+/* global-specific */
+.kifi-notice-kifi-logo {
   position: absolute;
-  top: 12px;
-  left: 8px;
-  width: 40px;
-  height: 40px;
+  top: 5px;
+  left: 9px;
+  width: 52px;
+  height: 52px;
 }
-.kifi-notice-name {
+.kifi-notice-title {
   font-size: 12px;
-  margin: 0 0 2px 0;
-  color: #333;
-}
-.kifi-notice-name .kifi-author-name {
   font-weight: bold;
+  margin: 0 0 2px;
+  color: #76ab6f;
 }
-.kifi-notice-action {
-  font-size: 12px;
-  margin: 2px 0 4px;
-  color: #333;
-}
-.kifi-notice:not(.kifi-notice-visited) .kifi-notice-action::before {
-  content: " ";
-  background-color: #6fa6ef;
-  display: inline-block;
-  font: 0/0 serif;
-  height: 9px;
-  width: 9px;
-  border-radius: 5px;
-}
-.kifi-notice-text {
-  margin: 6px 0;
-  font-size: 13px;
-  color: #3a3c3d;
+.kifi-notice-announcement {
+  margin-top: 6px;
   word-wrap: break-word;
+  color: #3a3c3d;
+  line-height: 14px;
 }
 
 /* message */
@@ -323,6 +307,9 @@
 .kifi-notices-list-sent .kifi-notice-kicker::after {
   content: 'Conversation you started';
 }
+.kifi-notice-global>.kifi-notice-kicker::after {
+  content: 'Announcement';
+}
 .kifi-notice-state-tip {
   padding: 6px 10px;
 }
@@ -398,6 +385,9 @@
   margin-top: 10px;
   word-wrap: break-word;
   color: #3a3c3d;
+  line-height: 14px;
+  max-height: 42px;
+  overflow: hidden;
 }
 .kifi-notice-author {
   color: #000;
