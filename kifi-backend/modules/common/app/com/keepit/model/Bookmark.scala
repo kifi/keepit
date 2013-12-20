@@ -69,10 +69,10 @@ object Bookmark {
   )(Bookmark.apply, unlift(Bookmark.unapply))
 }
 
-case class BookmarkCountKey(userId: Option[Id[User]] = None, source: Option[BookmarkSource] = None) extends Key[Int] {
+case class BookmarkCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
   override val version = 3
   val namespace = "bookmark_count"
-  def toKey(): String = (userId map (_.toString) getOrElse "all") + source.map("#" + _.value).getOrElse("")
+  def toKey(): String = userId map (_.toString) getOrElse "all"
 }
 
 class BookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
