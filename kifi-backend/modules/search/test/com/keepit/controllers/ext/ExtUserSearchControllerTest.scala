@@ -4,7 +4,7 @@ package com.keepit.controllers.ext
 import com.keepit.test.{SearchApplication, SearchApplicationInjector}
 import org.specs2.mutable._
 
-import com.keepit.model.User
+import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.inject._
 import com.keepit.common.time._
@@ -21,26 +21,61 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
 
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.util.Version
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.IdFilterCompressor
+
+
+import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.search.user.UserIndexer
+import com.keepit.search.user.{UserSearchFilterFactory, UserQueryParser}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+
+
 class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
+
+  private def setup(client: FakeShoeboxServiceClientImpl) = {
+    val users = (0 until 4).map{ i =>
+      User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
+    } :+ User(externalId = ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
+
+    val usersWithId = client.saveUsers(users: _*)
+
+    val emails = (0 until 4).map{ i =>
+      EmailAddress(userId = usersWithId(i).id.get, address = s"user${i}@42go.com")
+    } ++ Seq(EmailAddress(userId = usersWithId(4).id.get, address = "woody@fox.com"),
+     EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
+
+    client.saveEmails(emails: _*)
+    usersWithId
+  }
+
+  def filterFactory = inject[UserSearchFilterFactory]
 
   def modules = {
     implicit val system = ActorSystem("test")
     Seq(
       StandaloneTestActorSystemModule(),
-      FakeActionAuthenticatorModule()
+      FakeActionAuthenticatorModule(),
+      FakeShoeboxServiceModule()
     )
   }
 
   "ExtUserSearchController" should {
-    "do a trivial search" in {
+    "search user" in {
       running(new SearchApplication(modules:_*)) {
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val users = setup(client)
+        val indexer = inject[UserIndexer]
+        indexer.run(100, 100)
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("elephents", None, None, 1).toString
-        path === "/search/users/search?query=elephents&maxHits=1"
+        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
+        path === "/search/users/search?query=woody&maxHits=3"
 
-        val controller = inject[ExtUserSearchController]
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
         val result = route(request).get
         status(result) must equalTo(OK)
@@ -48,11 +83,24 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
 
         val expected = Json.parse(s"""
           {
-            "hits":[],
-            "context":"AgABAAEA"
-          }
+            "hits":
+              [
+                {
+                  "userId":5,
+                  "basicUser":
+                    {
+                      "id":"4e5f7b8c-951b-4497-8661-a1001885b2ec",
+                      "firstName":"Woody",
+                      "lastName":"Allen",
+                      "pictureName":"fake.jpg"
+                    },
+                  "isFriend":false
+                }
+              ],
+            "context":"AgAJAAcBBQ=="
+            }
           """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        Json.parse(contentAsString(result)) === expected
       }
     }
   }

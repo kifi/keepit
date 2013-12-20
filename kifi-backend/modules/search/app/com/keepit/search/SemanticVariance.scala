@@ -38,10 +38,6 @@ object SemanticVariance {
   /**
    * Given a hitList, find the variance of the semantic vectors.
    */
-  def svVariance(textQueries: Seq[TextQuery], hitList: List[MutableArticleHit], personalizedSearcher: Option[PersonalizedSearcher]): Float = {
-    svVariance(textQueries, hitList.map(_.id).toSet, personalizedSearcher)
-  }
-
   def svVariance(textQueries: Seq[TextQuery], ids: Set[Long], personalizedSearcher: Option[PersonalizedSearcher]): Float = {
     val uriIdFilter = new IdSetFilter(ids)
     var composer: Option[SemanticVectorComposer] = None

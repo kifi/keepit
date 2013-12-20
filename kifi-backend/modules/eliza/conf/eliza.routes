@@ -8,19 +8,27 @@ POST    /eliza/messages/:parentId         @com.keepit.eliza.controllers.ext.ExtM
 
 POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
 
-GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.ext.ExtMessagingController.websocket(version: Option[String], eip: Option[String])
-POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.ext.ExtDevicesController.registerDevice(deviceType:String)
+GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
+
+## Deprecated, kill after Eduardo gives an OK
+POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 
 ##########################################
 # Mobile V1
 ##########################################
 
+GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
+POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
+POST    /m/1/eliza/messages/:parentId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
+GET     /m/1/eliza/ext/w                  @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
+POST    /m/1/eliza/devices/:deviceType    @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
+
+## the following route is an old convention, keep around until eduardo say its ok to kill
 GET     /eliza/m/1/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
-## POST    /eliza/m/1/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 
 ##########################################
-#INTERNAL ROUTES/Eliza
+# INTERNAL ROUTES/Eliza
 ##########################################
 
 POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.controllers.internal.ElizaController.sendToUserNoBroadcast
@@ -32,12 +40,8 @@ GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
 
-
-
-
+##########################################
+# IMPORTS
+##########################################
 
 ->  / common.Routes
-
-
-
-
