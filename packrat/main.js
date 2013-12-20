@@ -524,7 +524,6 @@ api.port.on({
         if (!tc) {
           tc = threadCallbacks[id] = [];
           socket.send(['get_thread', id]);
-          if (!id) log('#c00', '[participants] get_thread', id)();
         }
         tc.push(reply);
       }
@@ -546,7 +545,6 @@ api.port.on({
       if (!tc) {
         tc = threadCallbacks[id] = [];
         socket.send(['get_thread', id]);
-        if (!id) log('#c00', '[thread] get_thread', id)();
       }
       tc.push(respond);
     }
@@ -592,7 +590,6 @@ api.port.on({
           if (!messageData[id] && !threadCallbacks[id]) {
             threadCallbacks[id] = [];
             socket.send(['get_thread', id]);
-            if (!id) log('#c00', '[get_threads:reply] get_thread', id)();
           }
         });
       }
@@ -1303,8 +1300,8 @@ function gotPageDetailsFor(url, tab, resp) {
   }
 }
 
-function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
-  log('[gotPageThreads]', threads.length, 'of', numTotal, 'unread & unmuted:', numUnreadUnmuted, uri, nUri !== uri ? nUri : '')();
+function gotPageThreads(uri, nUri, threads, numTotal) {
+  log('[gotPageThreads]', threads.length, 'of', numTotal, uri, nUri !== uri ? nUri : '')();
 
   // incorporating new threads into our cache and noting any changes
   var numNewThreads = 0;
@@ -1317,9 +1314,6 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
       if (th.unread && threadReadAt[th.thread] >= new Date(th.time)) {
         th.unread = false;
         th.unreadAuthors = th.unreadMessages = 0;
-        if (!th.muted) {
-          numUnreadUnmuted--;
-        }
       }
       if (oldTh) {
         updatedThreads.push(oldTh);
@@ -1334,9 +1328,8 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
   if (pt) {
     pt.ids = threads.map(getThreadId);
     pt.numTotal = numTotal;
-    pt.numUnreadUnmuted = numUnreadUnmuted;
   } else {
-    pt = new ThreadList(threadsById, threads.map(getThreadId), numTotal, numUnreadUnmuted);
+    pt = new ThreadList(threadsById, threads.map(getThreadId), numTotal, null);
   }
   pt.includesOldest = threads.length < THREAD_BATCH_SIZE;
 
@@ -1365,7 +1358,6 @@ function gotPageThreads(uri, nUri, threads, numTotal, numUnreadUnmuted) {
     if (!messageData[threadId] && !threadCallbacks[threadId]) {
       threadCallbacks[threadId] = [];
       socket.send(['get_thread', threadId]);
-      if (!threadId) log('#c00', '[gotPageThreads] get_thread', threadId)();
     }
   });
 }
@@ -1376,10 +1368,11 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
 
   if (!tooLate) {
     threadLists[nUri] = pt;
-    if (ruleSet.rules.message && pt.numUnreadUnmuted) {  // open immediately to unread message(s)
+    var numUnreadUnmuted = pt.countUnreadUnmuted();
+    if (ruleSet.rules.message && numUnreadUnmuted > 0) {  // open immediately to unread message(s)
       // TODO: verify that there is not a pending deep link listener for this tab (or the pane is not already open)
       api.tabs.emit(tab, 'open_to', {
-        locator: pt.numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/messages',
+        locator: numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/messages',
         trigger: 'message'
       }, {queue: 1});
     }
@@ -1391,7 +1384,6 @@ function loadThreadMessagesAndUpdateTabsViewingIt(th) {
   if (!tc) {
     tc = threadCallbacks[th.thread] = [];
     socket.send(['get_thread', th.thread]);
-    if (!th.thread) log('#c00', '[loadThreadMessagesAndUpdateTabsViewingIt] get_thread', th.thread, th)();
   }
   tc.push(updateThreadInTabs.bind(null, th.messages));
 }
