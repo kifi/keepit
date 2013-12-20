@@ -9,6 +9,7 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.google.inject.Injector
+import com.keepit.common.usersegment.UserSegment
 
 class SearchConfigTest extends Specification with TestInjector {
   "The search configuration" should {
@@ -146,6 +147,12 @@ class SearchConfigTest extends Specification with TestInjector {
       val exp = new SearchConfigExperiment()
       val startedExp = exp.withState(SearchConfigExperimentStates.ACTIVE)
       startedExp.startedAt must beSome
+    }
+
+    "config overriders should work" in {
+      val conf = SearchConfigOverrider.byUserSegment(new UserSegment(3, "foo"), SearchConfig.defaultConfig)
+      conf.asFloat("dampingHalfDecayFriends") === 2.5f
+      conf.asInt("percentMatch") === 85
     }
   }
 }

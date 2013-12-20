@@ -19,8 +19,8 @@ object KifiSearchResult extends Logging {
     show: Boolean,
     experimentId: Option[Id[SearchConfigExperiment]],
     context: String,
-    collections: Seq[ExternalId[Collection]] = Nil,
-    expertNames: Seq[String] = Nil
+    collections: Seq[ExternalId[Collection]],
+    experts: Seq[JsObject]
   ): KifiSearchResult = {
     try {
       new KifiSearchResult(JsObject(List(
@@ -31,11 +31,11 @@ object KifiSearchResult extends Logging {
         "show" -> JsBoolean(show),
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
         "context" -> JsString(context),
-        "expertNames" -> JsString(expertNames.mkString("\t"))
+        "experts" -> JsArray(experts)
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize KifiSearchResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context][expertNames=$expertNames]", e)
+        log.error(s"can't serialize KifiSearchResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context][experts=$experts]", e)
         throw e
     }
   }
@@ -48,6 +48,8 @@ class KifiSearchHit(val json: JsObject) extends AnyVal {
   def users: Seq[BasicUser] = TraversableFormat.seq[BasicUser].reads(json \ "users").get
   def score: Float = (json \ "score").as[Float]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
+
+  override def toString(): String = json.toString()
 }
 
 object KifiSearchHit extends Logging {
@@ -146,6 +148,8 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
   def add(key: String, value: JsValue): DetailedSearchHit = new DetailedSearchHit(json + (key ->value))
+
+  override def toString(): String = json.toString()
 }
 
 object DetailedSearchHit extends Logging {

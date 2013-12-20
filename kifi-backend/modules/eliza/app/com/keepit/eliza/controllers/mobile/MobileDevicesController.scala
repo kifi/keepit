@@ -1,4 +1,4 @@
-package com.keepit.eliza.controllers.ext
+package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.realtime.{DeviceType, UrbanAirship}
@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ActionAuthenticator, ElizaServiceController
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
 
-class ExtDevicesController @Inject() (urbanAirship:UrbanAirship, actionAuthenticator:ActionAuthenticator) extends WebsiteController(actionAuthenticator) with ElizaServiceController with Logging {
+class MobileDevicesController @Inject() (urbanAirship:UrbanAirship, actionAuthenticator:ActionAuthenticator) extends WebsiteController(actionAuthenticator) with ElizaServiceController with Logging {
 
     def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
       (request.body \ "token").asOpt[String] map { token =>

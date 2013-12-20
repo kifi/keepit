@@ -39,6 +39,8 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
 
+  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Message
+
 }
 
 @Singleton
@@ -133,6 +135,10 @@ class MessageRepoImpl @Inject() (
       val n = Query(table.filter(row => row.thread === threadId).length).first
       (n, n)
     }
+  }
+
+  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Message = {
+    (for (row <- table if row.thread === threadId && row.from.isNotNull) yield row).sortBy(row => row.id desc).first
   }
 
 }

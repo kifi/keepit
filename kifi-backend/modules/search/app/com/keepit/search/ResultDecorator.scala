@@ -153,11 +153,10 @@ class ResultDecoratorImpl(
     val expertsFuture = if (showExperts) { suggestExperts(hits) } else { Promise.successful(List.empty[Id[User]]).future }
 
     val highlightedHits = highlight(hits)
-    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
+    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users").map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) }
 
-    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
-    val expertNames = experts.flatMap{ expert => basicUserMap.get(expert).map{x => x.firstName + " " + x.lastName} }
-    if (expertNames.nonEmpty) log.info("experts recommended: " + expertNames.mkString(" ; "))
+    val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
+    val experts = expertIds.flatMap{ expert => basicUserMap.get(expert) }
 
     new DecoratedResult(
       ExternalId[ArticleSearchResult](),
@@ -168,8 +167,7 @@ class ResultDecoratorImpl(
       mayHaveMoreHits,
       show,
       searchExperimentId,
-      expertNames,
-      basicUserMap
+      experts
     )
   }
 
@@ -183,10 +181,10 @@ class ResultDecoratorImpl(
     h.addMatches(titleMatches, urlMatches)
   }
 
-  private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], BasicUser]): Seq[DetailedSearchHit] = {
+  private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], JsObject]): Seq[DetailedSearchHit] = {
     hits.map{ h =>
       val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
-      h.add("basicUsers", JsArray(basicUsers.map{ bu => Json.toJson(bu) }))
+      h.add("basicUsers", JsArray(basicUsers))
     }
   }
 
@@ -198,7 +196,6 @@ class ResultDecoratorImpl(
       shoeboxClient.suggestExperts(urisAndUsers)
     }
   }
-
 }
 
 case class DecoratedResult(
@@ -210,6 +207,5 @@ case class DecoratedResult(
   mayHaveMoreHits: Boolean,
   show: Boolean,
   searchExperimentId: Option[Id[SearchConfigExperiment]],
-  expertNames: Seq[String],
-  users: Map[Id[User], BasicUser]
+  experts: Seq[JsObject]
 )

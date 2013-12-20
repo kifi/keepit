@@ -69,6 +69,8 @@ trait SearchServiceClient extends ServiceClient {
     acceptLangs: Seq[String],
     rawQuery: String): Future[String]
 
+  def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]]
+
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
   def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
   def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
@@ -233,6 +235,15 @@ class SearchServiceClientImpl(
     acceptLangs: Seq[String],
     rawQuery: String): Future[String] = {
       tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,rawQuery)).map(_.body)
+  }
+
+  def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]] = {
+    val payload = Json.obj( "userId" -> userId.id, "query" -> query, "maxHits" -> maxHits, "config" -> Json.toJson(config.params))
+    call(Search.internal.searchWithConfig(), payload).map{ r =>
+      r.json.as[JsArray].value.map{ js =>
+        ((js \ "uriId").as[Long].toString, (js \ "title").as[String], (js \ "url").as[String])
+      }
+    }
   }
 
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
