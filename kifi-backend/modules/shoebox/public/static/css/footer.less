@@ -36,13 +36,15 @@
 	.margin-top(21px, @fontSize);
 	color: #929292;
 	.letter-spacing(0.75px, @fontSize);
-}
 
-.kifi-love-icon {
-	display: inline-block;
-	position: relative;
-	.top(1px);
-	.width(15px);
-	.height(13px);
-	background: #ec7f75;
+	.kifi-love-icon {
+		display: inline-block;
+		position: relative;
+		@width: unit(15px / @fontSize, em);
+		@height: unit(13px / @fontSize, em);
+		.at2x('/assets/static/images/heart.png', @width, @height);
+		.top(1px);
+		width: @width;
+		height: @height;
+	}
 }
