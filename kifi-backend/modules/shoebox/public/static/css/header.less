@@ -109,15 +109,11 @@
 		text-decoration: none;
 		background: #fbfbfb;
 	}
-
-	html.scroll & {
-		display: none !important;
-	}
 }
 
 .kifi-header-about {
 	html.scroll & {
-		display: none !important;
+		display: none;
 	}
 }
 
@@ -125,7 +121,7 @@
 	color: @green;
 
 	html.scroll & {
-		display: none !important;
+		display: none;
 	}
 }
 
@@ -150,9 +146,15 @@
 	}
 }
 
+.kifi-header-signup {
+	html.scroll & {
+		display: none;
+	}
+}
+
 .kifi-header-home {
 	html.guest & {
-		display: none !important;
+		display: none;
 	}
 }
 
