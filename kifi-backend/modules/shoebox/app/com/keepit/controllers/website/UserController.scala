@@ -138,6 +138,7 @@ class UserController @Inject() (
           Ok(Json.obj("success" -> true, "alreadySent" -> true))
         } else {
           friendRequestRepo.getBySenderAndRecipient(user.id.get, request.userId) map { friendReq =>
+            //Accepting a friend request
             val socialUser1 = socialUserRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
             val socialUser2 = socialUserRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
             for {
@@ -158,6 +159,7 @@ class UserController @Inject() (
 
             Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
           } getOrElse {
+            //Sending a friend request
             friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
             Ok(Json.obj("success" -> true, "sentRequest" -> true))
           }
