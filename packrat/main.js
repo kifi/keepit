@@ -5,7 +5,7 @@ var api = api || require('./api');
 var log = log || api.log;
 var ThreadList = ThreadList || require('./threadlist').ThreadList;
 
-var THREAD_BATCH_SIZE = 10;
+var THREAD_BATCH_SIZE = 8;
 
 //                          | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
 var domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
@@ -584,7 +584,11 @@ api.port.on({
     // Note: This would be a good place to potentially ask the server if there are any new threads
     // if we ever notice that we sometimes don't have them all.
     function reply(tl) {
-      respond({threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread)});
+      var threads = tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread);
+      respond({
+        threads: threads,
+        includesOldest: list.includesOldest && threads.length === tl.ids.length
+      });
       if (kind === 'page') {  // prefetch
         tl.ids.forEach(function (id) {
           if (!messageData[id] && !threadCallbacks[id]) {
@@ -599,12 +603,13 @@ api.port.on({
     var time = new Date(o.time);
     var list = threadLists[o.kind === 'page' ? tab.nUri : o.kind];
     var n = list.ids.length;
-    for (var i = n - 1; ~i && new Date(threadsById[list.ids[i]].time) < time; i--);
-    if (++i < n) {
-      // TODO: change response format to explicitly indicate whether there might be more.
-      respond(list.ids.slice(i, i + THREAD_BATCH_SIZE).map(idToThread));
-    } else if (list.includesOldest) {
-      respond([]);
+    for (var i = n - 1; i >= 0 && new Date(threadsById[list.ids[i]].time) < time; i--);
+    if (++i < n || list.includesOldest) {
+      var threads = list.ids.slice(i, i + THREAD_BATCH_SIZE).map(idToThread);
+      respond({
+        threads: threads,
+        includesOldest: list.includesOldest && i + threads.length === n
+      });
     } else {
       var oldest = list.ids[n - 1];
       var socketMessage = {
@@ -624,8 +629,8 @@ api.port.on({
           if (arr.length < THREAD_BATCH_SIZE) {
             list.includesOldest = true;
           }
+          respond({threads: arr, includesOldest: list.includesOldest});
         }
-        respond(arr);
       });
     }
   },
@@ -940,17 +945,18 @@ function markRead(category, threadId, messageId, timeStr) {
   }
 }
 
-function markAllThreadsRead(id, timeStr) {  // id and time of most recent notification to mark
+function markAllThreadsRead(messageId, timeStr) {  // .id and .time of most recent thread to mark
   var time = new Date(timeStr);
   var markedThreads = {};
-  var n = 0;
   for (var id in threadsById) {
     var th = threadsById[id];
-    if (th.unread && (th.id === id || new Date(th.time) <= time)) {
+    if (th.unread && (th.id === messageId || new Date(th.time) <= time)) {
       th.unread = false;
       th.unreadAuthors = th.unreadMessages = 0;
       markedThreads[id] = th;
-      n++;
+      if (time - new Date(th.time) < 180000) {
+        removeNotificationPopups(id);
+      }
     }
   }
   for (var key in threadLists) {
@@ -963,7 +969,7 @@ function markAllThreadsRead(id, timeStr) {  // id and time of most recent notifi
       }
     }
   }
-  for (var i = threadLists.unread.length; i--;) {
+  for (var i = threadLists.unread.ids.length; i--;) {
     var id = threadLists.unread.ids[i];
     if (markedThreads[id]) {
       threadLists.unread.ids.splice(i, 1);
@@ -972,12 +978,11 @@ function markAllThreadsRead(id, timeStr) {  // id and time of most recent notifi
   }
 
   forEachTabAtThreadList(function (tab) {
-    api.tabs.emit(tab, 'all_threads_read', {id: id, time: timeStr});
+    api.tabs.emit(tab, 'all_threads_read', {id: messageId, time: timeStr});
     sendUnreadThreadCount(tab);
   });
 
   tellVisibleTabsNoticeCountIfChanged();
-  // TODO: hide all notification popups?
 }
 
 function sendUnreadThreadCount(tab) {
