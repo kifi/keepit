@@ -55,8 +55,8 @@ panes.notices = function () {
     render: function ($paneBox, locator) {
       var kind = locator.substr(10) || 'page';
       $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
-      $unreadCount = $paneBox.find('.kifi-notices-filter-unread>.kifi-notices-count');
-      $pageCount = $paneBox.find('.kifi-notices-filter-page>.kifi-notices-count');
+      $unreadCount = $paneBox.find('.kifi-notices-unread-count');
+      $pageCount = $paneBox.find('.kifi-notices-page-count');
 
       api.port.emit('get_threads', kind, function (o) {
         var $box = $(renderListHolder(kind)).appendTo($paneBox.find('.kifi-notices-cart'));
