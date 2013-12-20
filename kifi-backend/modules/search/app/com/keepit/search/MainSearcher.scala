@@ -357,6 +357,7 @@ class MainSearcher(
           val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
           if (score > othersThreshold) {
             h.bookmarkCount = getPublicBookmarkCount(h.id)
+            if (h.bookmarkCount == 0) h.bookmarkCount = 1 // not kept by anyone, but we treat this as kept by someone because the hit count will include such URIs.
             val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
             queue.insert(newScore, scoring, h)
@@ -458,14 +459,7 @@ class MainSearcher(
     }
   }
 
-  @inline private[this] def getPublicBookmarkCount(id: Long) = {
-    val cnt = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
-    if (cnt == 0) {
-      1  // not kept by anyone, but we treat this as kept by someone because the hit count will include such URIs.
-    } else {
-      cnt
-    }
-  }
+  @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
 
   @inline private[this] def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
