@@ -111,13 +111,13 @@
 	}
 
 	html.scroll & {
-		display: none;
+		display: none !important;
 	}
 }
 
 .kifi-header-about {
 	html.scroll & {
-		display: none;
+		display: none !important;
 	}
 }
 
@@ -125,10 +125,11 @@
 	color: @green;
 
 	html.scroll & {
-		display: none;
+		display: none !important;
 	}
 }
 
+.kifi-header-home,
 .kifi-header-login {
 	transition: all .3s ease;
 
@@ -136,6 +137,22 @@
 		color: white;
 		font-weight: 600;
 		.letter-spacing(1px);
+	}
+}
+
+.kifi-header-join-box,
+.kifi-header-signup,
+.kifi-header-login {
+	display: none;
+
+	html.guest & {
+		display: inline-block;
+	}
+}
+
+.kifi-header-home {
+	html.guest & {
+		display: none !important;
 	}
 }
 
