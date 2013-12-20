@@ -14,6 +14,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.heimdal._
+import com.keepit.common.mail.GenericEmailAddress
 
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
@@ -1036,4 +1037,29 @@ class MessagingCommander @Inject() (
     res.flatMap(r => r) // why scala.concurrent.Future doesn't have a .flatten is beyond me
   }
 
+  def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {
+    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[NonUserParticipant]())) { case ((externalUserIds, nonUserParticipants), elem) =>
+      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
+        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
+        case None =>
+          elem.asOpt[JsObject].flatMap { obj =>
+            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
+            (obj \ "kind").asOpt[String] match {
+              case Some("email") if (obj \ "email").asOpt[String].isDefined =>
+                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None))
+              case _ => // Unsupported kind
+                None
+            }
+          } match {
+            case Some(nonUser) =>
+              (externalUserIds, nonUserParticipants :+ nonUser)
+            case None =>
+              (externalUserIds, nonUserParticipants)
+          }
+      }
+    }
+  }
+
+  //THIS FILE IS WAAAAAAY TOOOOO LLLLLAAAARRRRRRGGGGGGGGEEEEEEEE
+  //todo(martin): SPLIT ME!!!
 }

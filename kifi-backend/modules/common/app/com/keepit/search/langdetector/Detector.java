@@ -59,7 +59,6 @@ import com.cybozu.labs.langdetect.util.NGram;
  */
 public class Detector {
     private static final double ALPHA_DEFAULT = 0.5;
-    private static final double ALPHA_WIDTH = 0.05;
 
     private static final int ITERATION_LIMIT = 1000;
     private static final double PROB_THRESHOLD = 0.1;
@@ -424,13 +423,17 @@ public class Detector {
 
     private String wordProbToString(double[] prob) {
         Formatter formatter = new Formatter();
-        for(int j=0;j<prob.length;++j) {
-            double p = prob[j];
-            if (p>=0.00001) {
-                formatter.format(" %s:%.5f", langlist.get(j), p);
-            }
+        try {
+	        for(int j=0;j<prob.length;++j) {
+	            double p = prob[j];
+	            if (p>=0.00001) {
+	                formatter.format(" %s:%.5f", langlist.get(j), p);
+	            }
+	        }
+	        return formatter.toString();
+        } finally {
+        	formatter.close();
         }
-        return formatter.toString();
     }
 
     /**

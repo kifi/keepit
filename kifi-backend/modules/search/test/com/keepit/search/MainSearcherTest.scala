@@ -162,7 +162,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             myHits.size === min(myUriIds.size, numHitsPerCategory)
             myHits.foreach{ h =>
               //println("users:" + h)
-              (myUriIds contains h.id) === true
+              (myUriIds contains h.hit.id) === true
             }
 
             val friendsUriIds = friends.foldLeft(Set.empty[Long]){ (s, f) =>
@@ -171,16 +171,16 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             friendsHits.size === min(friendsUriIds.size, numHitsPerCategory)
             friendsHits.foreach{ h =>
               //println("friends:"+ h)
-              (myUriIds contains h.id) === false
-              (friendsUriIds contains h.id) === true
+              (myUriIds contains h.hit.id) === false
+              (friendsUriIds contains h.hit.id) === true
             }
 
             val othersUriIds = (uris.map(_.id.get.id).toSet) -- friendsUriIds -- myUriIds
             othersHits.size === min(othersUriIds.size, numHitsPerCategory)
             othersHits.foreach{ h =>
               //println("others:"+ h)
-              (myUriIds contains h.id) === false
-              (friendsUriIds contains h.id) === false
+              (myUriIds contains h.hit.id) === false
+              (friendsUriIds contains h.hit.id) === false
             }
           }
         }
@@ -474,12 +474,11 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
-        val mainSearcher = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig)
+        val mainSearcher = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, SearchFilter.friends(), noBoostConfig)
         val res = mainSearcher.search()
 
         val publicSet = publicUris.map(u => u.id.get).toSet
         val privateSet = privateUris.map(u => u.id.get).toSet
-
         res.hits.foreach{ h =>
           publicSet.contains(h.uriId) === true
           privateSet.contains(h.uriId) === false

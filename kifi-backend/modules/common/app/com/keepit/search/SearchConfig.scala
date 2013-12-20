@@ -13,6 +13,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
+import com.keepit.common.usersegment.UserSegment
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -45,7 +46,7 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "1.5",
       "useS3FlowerFilter" -> "true",
       "showExperts" -> "false",
-      "forbidEmptyFriendlyHits" -> "false",
+      "forbidEmptyFriendlyHits" -> "true",
       "useNonPersonalizedContextVector" -> "false",
       "useSemanticMatch" -> "false"
     )
@@ -130,32 +131,9 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     (hash - min) / (max - min)
   }
 
-  private def assignConfig(userId: Id[User], queryText: String, userSegmentValue: Int) = {
-    val modulo = userId.id.toLong % 3
-    log.info(s"${userSegmentExperiments.size} user segement experiments")
-    if (userSegmentExperiments.size == 4 && modulo == 0) {
-      log.info(s"search config: user segment value = ${userSegmentValue}. Using experimental parameters.")
-      val ex = userSegmentExperiments(userSegmentValue)
-      val config = defaultConfig(ex.config.params)
-      (config, ex.id)
-    } else {
-      log.info(s"search config: user segment value = ${userSegmentValue}. Using default parameters.")
-      getConfig(userId, queryText, false)   // assume not excludedFromExperiments
-    }
-  }
-
-  def getConfigByUserSegment(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
-    userConfig.get(userId.id) match {
-      case Some(config) => (config, None)
-      case None => if (excludeFromExperiments) (SearchConfig.defaultConfig, None) else {
-        val segFuture = shoeboxClient.getUserSegment(userId)
-        val seg = monitoredAwait.result(segFuture, 5 seconds, "getting user segment")
-        assignConfig(userId, queryText, seg.value)
-      }
-    }
-  }
 
   def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+    val segFuture = shoeboxClient.getUserSegment(userId)
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
@@ -168,7 +146,9 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
           }
         }
 
-        (defaultConfig(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
+        val seg = monitoredAwait.result(segFuture, 1 seconds, "getting user segment")
+        val configWithoutExperiment = SearchConfigOverrider.byUserSegment(seg, defaultConfig)
+        (configWithoutExperiment(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
       }
   }
 }
@@ -185,4 +165,16 @@ case class SearchConfig(params: Map[String, String]) {
   def apply(newParams: (String, String)*): SearchConfig = apply(Map(newParams:_*))
 
   def iterator: Iterator[(String, String)] = params.iterator
+}
+
+/**
+ * lightweight config overwriters. These configs are not recorded in DB. They are in action unless overwritten by search experiments.
+ */
+object SearchConfigOverrider extends Logging{
+  def byUserSegment(seg: UserSegment, config: SearchConfig): SearchConfig = {
+    seg.value match {
+      case 3 => new SearchConfig(config.params ++ Map("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
+      case _ => config
+    }
+  }
 }
