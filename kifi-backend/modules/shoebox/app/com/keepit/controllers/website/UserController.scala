@@ -12,6 +12,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.model._
+import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}
@@ -156,10 +157,63 @@ class UserController @Inject() (
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
 
+            SafeFuture{
+              //sending 'friend request accepted' email && Notification
+              val requestingUser = userRepo.get(request.userId)
+              val destinationEmail = emailRepo.getByUser(user.id.get)
+              db.readWrite{ session =>
+                postOffice.sendMail(ElectronicMail(
+                  senderUserId = None,
+                  from = EmailAddresses.INVITATION,
+                  fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName}"),
+                  to = List(destinationEmail),
+                  subject = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!", //ZZZ plug into correct copy and template when ready
+                  htmlBody = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!",
+                  category = PostOffice.Categories.User.INVITATION)
+                )(session)
+              }
+              elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+                userIds = Set(user.id.get),
+                title = "Friend Reqeust",
+                body = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!",
+                linkText = "Click to accept friend request",
+                linkUrl = "https://www.kifi.com/friends/requests",
+                imageUrl = requestingUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+                sticky = false
+              )
+            }
+
             Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
           } getOrElse {
             //Sending a friend request
             friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
+
+            SafeFuture{
+              //sending 'friend request' email && Notification
+              val respondingUser = userRepo.get(request.userId)
+              val destinationEmail = emailRepo.getByUser(user.id.get)
+              db.readWrite{ session =>
+                postOffice.sendMail(ElectronicMail(
+                  senderUserId = None,
+                  from = EmailAddresses.INVITATION,
+                  fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName}"),
+                  to = List(destinationEmail),
+                  subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!", //ZZZ plug into correct copy and template when ready
+                  htmlBody = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                  category = PostOffice.Categories.User.INVITATION)
+                )(session)
+              }
+              elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+                userIds = Set(user.id.get),
+                title = "Friend Reqeust",
+                body = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                linkText = "Click to see friends",
+                linkUrl = "https://www.kifi.com/friends",
+                imageUrl = respondingUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+                sticky = false
+              )
+            }
+
             Ok(Json.obj("success" -> true, "sentRequest" -> true))
           }
         }

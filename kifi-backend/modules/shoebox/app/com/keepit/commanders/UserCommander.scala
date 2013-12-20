@@ -182,7 +182,7 @@ class UserCommander @Inject() (
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
       val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
         val newUser = userRepo.get(newUserId)
-        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
+        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients //ZZZ does this include social connections
         val id2Email = toNotify.map { userId =>
           (userId, emailRepo.getByUser(userId))
         }.toMap
