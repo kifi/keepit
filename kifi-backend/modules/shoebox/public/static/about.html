@@ -34,18 +34,18 @@
 	</head>
 	<body>
 		<div class="kifi-header-bg">
-			<div class="kifi-header">
-				<a class="kifi-header-logo" href="/">Kifi</a>
-				<a class="kifi-header-logo-white" href="/">Kifi</a>
+			<div class="kifi-header" data-track-source="header">
+				<a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
+				<a class="kifi-header-logo-white" href="/" data-track-action="clickLogo">Kifi</a>
 				<div class="kifi-header-right">
 					<div class="kifi-header-join-box">
-						<a href="/signup" class="kifi-header-join">Join kifi now <span class="kifi-header-join-arrow"></span></a>
+						<a class="kifi-header-join" href="/signup" data-track-action="clickJoinKifi">Join kifi now <span class="kifi-header-join-arrow"></span></a>
 					</div>
-					<a href="/signup" class="kifi-header-right-link kifi-header-signup">Sign up</a>
-					<a href="/about" class="kifi-header-right-link kifi-header-about">About</a>
+					<a class="kifi-header-right-link kifi-header-signup" href="/signup" data-track-action="clickSignUp">Sign up</a>
+					<a class="kifi-header-right-link kifi-header-about" href="/about" data-track-action="clickAbout">About</a>
 					<span class="kifi-header-right-separator">|</span>
-					<a href="/" class="kifi-header-right-link kifi-header-home">Home</a>
-					<a href="/login" class="kifi-header-right-link kifi-header-login">Login</a>
+					<a class="kifi-header-right-link kifi-header-home" href="/" data-track-action="clickHome">Home</a>
+					<a class="kifi-header-right-link kifi-header-login" href="/login" data-track-action="clickLogin">Login</a>
 				</div>
 				<div class="clear"></div>
 			</div>
@@ -144,26 +144,26 @@
 				<li><span class="kifi-learn-more-icon kifi-learn-more-icon-tech"></span>Learn about <a href="http://eng.42go.com">the technology</a></li>
 			</ul>
 		</div>
-		<div class="kifi-footer">
+		<div class="kifi-footer" data-track-source="footer">
 			<ul class="kifi-footer-menu">
 				<li>
-					<a href="/about">About</a>
+					<a href="/about" data-track-action="clickAbout">About</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/blog">Blog</a>
+					<a href="/support" data-track-action="clickSupport">Support</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/faq">FAQ</a>
+					<a href="/terms" data-track-action="clickTermsOfService">Terms of Service</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/tos">Terms of Service</a>
+					<a href="/privacy" data-track-action="clickPrivacyPolicy">Privacy</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/privacy">Privacy</a>
+					<a href="/contact" data-track-action="clickContactUs">Contact Us</a>
 				</li>
 			</ul>
 			<div class="kifi-footer-caption">
@@ -175,8 +175,7 @@
 		<script type="text/javascript" src="/assets/static/js/retina-1.1.0.js"></script>
 		<script type="text/javascript" src="/assets/static/js/jquery.min.js"></script>
 		<script type="text/javascript" src="/assets/static/js/header.js"></script>
-		
+		<script type="text/javascript" src="/assets/static/js/track-ext.js"></script>
 		<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js"></script>
-
 	</body>
 </html>

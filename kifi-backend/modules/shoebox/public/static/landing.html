@@ -9,7 +9,7 @@
    We're hiring      __/ |    Join us:
    great engineers! |___/     42go.com
 -->
-<html class="landing">
+<html class="landing" data-track-type="landing">
 	<head>
 		<meta charset="utf-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -34,18 +34,18 @@
 	</head>
 	<body>
 		<div class="kifi-header-bg">
-			<div class="kifi-header">
-				<a class="kifi-header-logo" href="/">Kifi</a>
-				<a class="kifi-header-logo-white" href="/">Kifi</a>
+			<div class="kifi-header" data-track-source="header">
+				<a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
+				<a class="kifi-header-logo-white" href="/" data-track-action="clickLogo">Kifi</a>
 				<div class="kifi-header-right">
 					<div class="kifi-header-join-box">
-						<a href="/signup" class="kifi-header-join">Join kifi now <span class="kifi-header-join-arrow"></span></a>
+						<a class="kifi-header-join" href="/signup" data-track-action="clickJoinKifi">Join kifi now <span class="kifi-header-join-arrow"></span></a>
 					</div>
-					<a href="/signup" class="kifi-header-right-link kifi-header-signup">Sign up</a>
-					<a href="/about" class="kifi-header-right-link kifi-header-about">About</a>
+					<a class="kifi-header-right-link kifi-header-signup" href="/signup" data-track-action="clickSignUp">Sign up</a>
+					<a class="kifi-header-right-link kifi-header-about" href="/about" data-track-action="clickAbout">About</a>
 					<span class="kifi-header-right-separator">|</span>
-					<a href="/" class="kifi-header-right-link kifi-header-home">Home</a>
-					<a href="/login" class="kifi-header-right-link kifi-header-login">Login</a>
+					<a class="kifi-header-right-link kifi-header-home" href="/" data-track-action="clickHome">Home</a>
+					<a class="kifi-header-right-link kifi-header-login" href="/login" data-track-action="clickLogin">Login</a>
 				</div>
 				<div class="clear"></div>
 			</div>
@@ -54,7 +54,7 @@
 			<div class="kifi-video-bg">
 				<div id="video" class="kifi-video">
 					<h2>Search like normal, find like never before</h2>
-					<a href="https://fast.wistia.net/embed/iframe/b7qisfubnv?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still">
+					<a href="https://fast.wistia.net/embed/iframe/b7qisfubnv?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still" data-track-action="playVideo">
 						<div class="kifi-video-play-box">
 							<div class="kifi-video-play"></div>
 							<div class="kifi-video-caption">Watch a quick introduction to kifi</div>
@@ -87,11 +87,11 @@
 				<img class="kifi-image-message" alt="Message friends" src="/assets/static/images/group3.png">
 			</div>
 			<div id="try-kifi" class="kifi-try-kifi">
-				<h3>Any Questions? <a href="#">Find out more...</a></h3>
+				<h3>Any Questions? <a href="/support" data-track-action="clickFindOutMore">Find out more...</a></h3>
 				<hr>
 				<h2>The best things in life are kept
 					and now easily found!</h2>
-				<a class="kifi-try-kifi-button" href="#">Try kifi</a>
+				<a class="kifi-try-kifi-button" href="/signup" data-track-action="clickTryKifi">Try kifi</a>
 			</div>
 			<div class="kifi-two-more-things-bg">
 				<div id="two-more-things" class="kifi-two-more-things">
@@ -114,17 +114,17 @@
 							<td>
 								<ul class="kifi-mobile-links">
 									<li>
-										<a class="kifi-mobile-link kifi-mobile-link-iphone">
+										<a class="kifi-mobile-link kifi-mobile-link-iphone" data-track-action="clickIPhone">
 											<img class="kifi-mobile-iphone" src="/assets/static/images/iphone.png">
 										</a>
 									</li>
 									<li>
-										<a class="kifi-mobile-link kifi-mobile-link-android disabled">
+										<a class="kifi-mobile-link kifi-mobile-link-android disabled" data-track-action="clickAndroid">
 											<img class="kifi-mobile-iphone" src="/assets/static/images/android.png">
 										</a>
 									</li>
 									<li>
-										<a class="kifi-mobile-link kifi-mobile-link-ipad disabled">
+										<a class="kifi-mobile-link kifi-mobile-link-ipad disabled" data-track-action="clickIPad">
 											<img class="kifi-mobile-iphone" src="/assets/static/images/ipad.png">
 										</a>
 									</li>
@@ -140,26 +140,26 @@
 				</div>
 			</div>
 		</div>
-		<div class="kifi-footer">
+		<div class="kifi-footer" data-track-source="footer">
 			<ul class="kifi-footer-menu">
 				<li>
-					<a href="/about">About</a>
+					<a href="/about" data-track-action="clickAbout">About</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/blog">Blog</a>
+					<a href="/support" data-track-action="clickSupport">Support</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/faq">FAQ</a>
+					<a href="/terms" data-track-action="clickTermsOfService">Terms of Service</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/tos">Terms of Service</a>
+					<a href="/privacy" data-track-action="clickPrivacyPolicy">Privacy</a>
 				</li>
 				<li>
 					<span class="kifi-footer-menu-dot">&middot;</span>
-					<a href="/privacy">Privacy</a>
+					<a href="/contact" data-track-action="clickContactUs">Contact Us</a>
 				</li>
 			</ul>
 			<div class="kifi-footer-caption">
@@ -171,6 +171,7 @@
 		<script type="text/javascript" src="/assets/static/js/retina-1.1.0.js"></script>
 		<script type="text/javascript" src="/assets/static/js/jquery.min.js"></script>
 		<script type="text/javascript" src="/assets/static/js/header.js"></script>
+		<script type="text/javascript" src="/assets/static/js/track-ext.js"></script>
 		<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js"></script>
 	</body>
 </html>
