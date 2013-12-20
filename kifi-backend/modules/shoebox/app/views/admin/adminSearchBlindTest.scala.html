@@ -17,17 +17,29 @@
 <script type="text/javascript">
 
 	$(document).ready(function(){
-		$("#queryForm").submit(function() {
+		$("#queryForm").submit(function(event) {
 			event.preventDefault();
-			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
-				{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val()}
-			).done(done).fail(fail);
+			$.post(
+				'@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
+				{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val()},
+				function(data) {
 
+	      	$("#result").empty();
 
-      function done(data) { $("#result").empty().prepend(data) }
-      function fail() { alert("bad") }
+	      	var arr = data;
+	      	var numHits = arr.length
 
-		})
+	      	$("#result").append("<div><strong> num of hits: " + numHits +  "</strong></div>")
+	      	for(var i = 0; i < arr.length; i++){
+	      		var item = arr[i];
+	      		$("#result").append("<div>" + item.title + "</div>");
+	      		$("#result").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+	      	}
+      	},
+				"json"
+			)
+
+		}) <!--submit-->
 
 	});
 

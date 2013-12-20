@@ -10,6 +10,8 @@ import com.keepit.search._
 import views.html
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import play.api.libs.json._
+
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
@@ -35,10 +37,7 @@ class AdminSearchController @Inject() (
     val maxHits = body.get("maxHits").get.toInt
     val config = Await.result(searchClient.getSearchDefaultConfig, 1 second)
     val res = Await.result(searchClient.searchWithConfig(Id[User](userId), query, maxHits, config), 1 second)
-    val msg = res.map{ case (uriId, title, url) =>
-      s"$title\n<br><a href = ${url}> $url </a>\n<br>"
-    }.mkString("\n<br>")
-    Ok(msg)
+    Ok(JsArray(res.zipWithIndex.map{ case ((uriId, title, url), idx) => Json.obj("index" -> (idx + 1) , "title" -> title, "url" -> url) }))
   }
 
   def blindTestPage() = AdminHtmlAction { request =>
