@@ -139,6 +139,9 @@ class SearchAnalytics @Inject() (
     val initialSearchId = articleSearchResultStore.getInitialSearchId(latestSearchResult)
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
+    val productionToken = "ab3499de4fd1c48678100a50d522607c"
+    contextBuilder += ("token", productionToken) // To be removed when the entire project has been migrated to production
+
     // Search Context
     contextBuilder += ("origin", searchContext.origin)
     contextBuilder += ("source", getSource(searchContext.origin))
