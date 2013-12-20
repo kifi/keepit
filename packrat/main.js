@@ -971,11 +971,11 @@ function markAllThreadsRead(messageId, timeStr) {  // .id and .time of most rece
   }
   for (var i = threadLists.unread.ids.length; i--;) {
     var id = threadLists.unread.ids[i];
-    if (markedThreads[id]) {
+    if (!threadsById[id].unread) {
       threadLists.unread.ids.splice(i, 1);
-      threadLists.unread.decNumTotal();
     }
   }
+  threadLists.unread.numTotal = threadLists.unread.ids.length;  // any not loaded are older and now marked read
 
   forEachTabAtThreadList(function (tab) {
     api.tabs.emit(tab, 'all_threads_read', {id: messageId, time: timeStr});

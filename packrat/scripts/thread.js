@@ -194,7 +194,7 @@ panes.thread = function () {
 
   function transmitReply($m, originalText, threadId) {
     api.port.emit('send_reply', {text: originalText, threadId: threadId}, function(o) {
-      log('[transmitReply] resp:', o);
+      log('[transmitReply] resp:', o)();
       if (o.id) { // success, got a response
         $m.attr('data-id', o.id);
         $m.find('.kifi-message-body').css({opacity: ''});

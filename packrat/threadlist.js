@@ -88,26 +88,17 @@
       }
       return n;
     },
-    decNumTotal: function() {
-      if (this.numTotal != null) {
-        dec.call(this, 'numTotal');
-      }
-    },
     decNumUnreadUnmuted: function() {
       if (this.numUnreadUnmuted != null) {
-        dec.call(this, 'numUnreadUnmuted');
+        if (this.numUnreadUnmuted > 0) {
+          this.numUnreadUnmuted--;
+        } else {
+          log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted)();
+          if (~session.experiments.indexOf('admin')) {
+            this.numUnreadUnmuted--;
+          }
+        }
       }
     }
   };
-
-  function dec(field) {
-    if (this[field] > 0) {
-      this[field]--;
-    } else {
-      log('#a00', '[dec:' + field + '] already at:', this[field])();
-      if (~session.experiments.indexOf('admin')) {
-        this[field]--;
-      }
-    }
-  }
 }.call(this.exports || this));

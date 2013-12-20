@@ -362,32 +362,22 @@ a.kifi-notices-filter-page {
 }
 @unread-count-bg-color: #5e778f;
 .kifi-notices-unread-count {
-  margin-left: -2px;
   display: inline-block;
   height: 14px;
   line-height: 14px;
-  min-width: 12px;
-  padding: 0 1px;
-  border: 2px solid;
-  border-color: @notices-head-bg-color;
-  border-radius: 50%;
+  padding: 0 3px;
+  border-radius: 3px;
   font-size: 9px;
   font-weight: bold;
   background-color: @unread-count-bg-color;
   color: #e8e8e8;
   text-align: center;
   position: relative;
-  top: -4px;
+  top: -2px;
+  left: 3px;
 }
 .kifi-notices-unread-count:empty {
   display: none;
-}
-:link:hover>.kifi-notices-unread-count,
-:link:focus>.kifi-notices-unread-count {
-  border-color: @notices-head-bg-color-hover-focus;
-}
-:link:active>.kifi-notices-unread-count {
-  border-color: @notices-head-bg-color-active;
 }
 .kifi-notices-page-count:not(:empty):before {
   content: '(';
