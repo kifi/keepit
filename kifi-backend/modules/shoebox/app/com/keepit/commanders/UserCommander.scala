@@ -203,11 +203,11 @@ class UserCommander @Inject() (
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
     val guardKey = "welcomeEmailSent"
-    val url = current.configuration.getString("application.baseUrl").get
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
       if (withVerification) {
+        val url = current.configuration.getString("application.baseUrl").get
         db.readWrite { implicit session =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
