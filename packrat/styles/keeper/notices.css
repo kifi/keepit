@@ -4,6 +4,7 @@
   bottom: 0;
   left: 0;
   width: 100%;
+  background-color: #d4dce3;
 }
 .kifi-notices-cart.kifi-forward,
 .kifi-notices-cart.kifi-back {
@@ -26,6 +27,7 @@
   width: 310px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  background-color: #fafafa;
 }
 .kifi-notices-cart.kifi-back .kifi-notices-box:last-child,
 .kifi-notices-cart.kifi-forward .kifi-notices-box:nth-child(2) {
