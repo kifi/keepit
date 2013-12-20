@@ -75,7 +75,6 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
         path === "/search/users/search?query=woody&maxHits=3"
 
-        val controller = inject[ExtUserSearchController]
         inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
         val result = route(request).get
