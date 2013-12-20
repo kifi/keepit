@@ -9,7 +9,6 @@
 **********************************************/
 
 /* Client-specific Styles & Reset */
-
 #outlook a {
   padding:0;
 }
@@ -322,7 +321,7 @@ img.center {
 
 body, table.body, h1, h2, h3, h4, h5, h6, p {
   color: #222222;
-  font-family: "Helvetica", "Arial", sans-serif;
+  font-family: Helvetica,Arial,Geneva,Verdana,sans-serif;
   font-weight: normal;
   padding:0;
   margin: 0;
@@ -448,9 +447,8 @@ table.tiny-button td a,
 table.small-button td a,
 table.medium-button td a,
 table.large-button td a {
-  font-weight: bold;
   text-decoration: none;
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: Helvetica,Arial,Geneva,Verdana,sans-serif;
   color: #ffffff;
   font-size: 16px;
 }
@@ -550,9 +548,9 @@ table.alert:hover td {
 }
 
 table.radius td {
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
 }
 
 table.round td {
@@ -699,7 +697,9 @@ body.outlook p {
     }
 
     .header {
-      background: #999999;
+      background: #6FA6EF;
+      color: #fff;
+      font-size: 20px;
     }
 
     .footer .wrapper {
@@ -735,6 +735,46 @@ body.outlook p {
     }
 
   </style>
+<style>
+table.header {
+  line-height: 40px;
+  height: 60px !important;
+  margin-bottom: 30px !important;
+}
+.main-body p {
+  font-size: 18px !important;
+  font-weight: 100 !important;
+}
+
+table.green td {
+  background: #93c059;
+  border-color: #93c059;
+  color: #fff;
+}
+
+table td.cta-button {
+  padding-bottom: 0px;
+  padding-top: 0px;
+  line-height: 55px;
+  border: 0 !important;
+  margin: 0;
+}
+
+table.green td a {
+  color: #fff;
+}
+
+table.green:hover td {
+  background: #ADDA73 !important;
+  color: #fff;
+}
+
+table.green:hover td a,
+table.green td a:visited,
+table.green:active td a {
+  color: #fff !important;
+}
+</style>
 </head>
 <body>
   <table class="body">
@@ -744,7 +784,7 @@ body.outlook p {
 
           <table class="row header">
             <tr>
-              <td class="center" align="center">
+              <td class="center" align="center" bgcolor="#6FA6EF">
                 <center>
 
                   <table class="container">
@@ -753,11 +793,8 @@ body.outlook p {
 
                         <table class="twelve columns">
                           <tr>
-                            <td class="six sub-columns">
-                              <img src="http://placehold.it/200x50">
-                            </td>
-                            <td class="six sub-columns last" style="text-align:right; vertical-align:middle;">
-                              <span class="template-label">BASIC</span>
+                            <td class="twelve sub-columns">
+                              Kifi - Getting popular, huh?
                             </td>
                             <td class="expander"></td>
                           </tr>
@@ -782,8 +819,7 @@ body.outlook p {
 
                       <table class="twelve columns">
                         <tr>
-                          <td>
-                            <h1>Hi, Susan Calvin</h1>
+                          <td class="main-body">
                             <p class="lead">Phasellus dictum sapien a neque luctus cursus. Pellentesque sem dolor, fringilla et pharetra vitae.</p>
                             <p>Phasellus dictum sapien a neque luctus cursus. Pellentesque sem dolor, fringilla et pharetra vitae. consequat vel lacus. Sed iaculis pulvinar ligula, ornare fringilla ante viverra et. In hac habitasse platea dictumst. Donec vel orci mi, eu congue justo. Integer eget odio est, eget malesuada lorem. Aenean sed tellus dui, vitae viverra risus. Nullam massa sapien, pulvinar eleifend fringilla id, convallis eget nisi. Mauris a sagittis dui. Pellentesque non lacinia mi. Fusce sit amet libero sit amet erat venenatis sollicitudin vitae vel eros. Cras nunc sapien, interdum sit amet porttitor ut, congue quis urna.</p>
                           </td>
@@ -795,83 +831,10 @@ body.outlook p {
                   </tr>
                 </table>
 
-                <table class="row callout">
-                  <tr>
-                    <td class="wrapper last">
 
-                      <table class="twelve columns">
-                        <tr>
-                          <td class="panel">
-                            <p>Phasellus dictum sapien a neque luctus cursus. Pellentesque sem dolor, fringilla et pharetra vitae. <a href="#">Click it! »</a></p>
-                          </td>
-                          <td class="expander"></td>
-                        </tr>
-                      </table>
 
-                    </td>
-                  </tr>
-                </table>
 
-                <table class="row footer">
-                  <tr>
-                    <td class="wrapper">
 
-                      <table class="six columns">
-                        <tr>
-                          <td class="left-text-pad">
-
-                            <h5>Connect With Us:</h5>
-
-                            <table class="tiny-button facebook">
-                              <tr>
-                                <td>
-                                  <a href="#">Facebook</a>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <br>
-
-                            <table class="tiny-button twitter">
-                              <tr>
-                                <td>
-                                  <a href="#">Twitter</a>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <br>
-
-                            <table class="tiny-button google-plus">
-                              <tr>
-                                <td>
-                                  <a href="#">Google +</a>
-                                </td>
-                              </tr>
-                            </table>
-
-                          </td>
-                          <td class="expander"></td>
-                        </tr>
-                      </table>
-
-                    </td>
-                    <td class="wrapper last">
-
-                      <table class="six columns">
-                        <tr>
-                          <td class="last right-text-pad">
-                            <h5>Contact Info:</h5>
-                            <p>Phone: 408.341.0600</p>
-                            <p>Email: <a href="mailto:hseldon@trantor.com">hseldon@trantor.com</a></p>
-                          </td>
-                          <td class="expander"></td>
-                        </tr>
-                      </table>
-
-                    </td>
-                  </tr>
-                </table>
 
 
                 <table class="row">
@@ -880,10 +843,23 @@ body.outlook p {
 
                       <table class="twelve columns">
                         <tr>
-                          <td align="center">
-                            <center>
-                              <p style="text-align:center;"><a href="#">Terms</a> | <a href="#">Privacy</a> | <a href="#">Unsubscribe</a></p>
-                            </center>
+                          <td class="main-body">
+                            <table class="six columns" align="left">
+                                <tbody><tr>
+                                  <td>
+                                      <table class="button radius green">
+                                        <tbody><tr>
+                                          <td class="cta-button">
+                                            <a href="#">Connect</a>
+                                          </td>
+                                        </tr>
+                                      </tbody></table>
+
+                                  </td>
+                                  <td class="expander"></td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </td>
                           <td class="expander"></td>
                         </tr>
@@ -892,6 +868,47 @@ body.outlook p {
                     </td>
                   </tr>
                 </table>
+
+
+
+                <table class="row">
+                  <tr>
+                    <td class="wrapper last">
+
+                      <table class="twelve columns">
+                        <tr>
+                          <td class="main-body">
+                            <p>Phasellus dictum sapien a neque luctus cursus. Pellentesque sem dolor, fringilla et pharetra vitae. consequat vel lacus. Sed iaculis pulvinar ligula, ornare fringilla ante viverra et. In hac habitasse platea dictumst. Donec vel orci mi, eu congue justo. Integer eget odio est, eget malesuada lorem. Aenean sed tellus dui, vitae viverra risus. Nullam massa sapien, pulvinar eleifend fringilla id, convallis eget nisi. Mauris a sagittis dui. Pellentesque non lacinia mi. Fusce sit amet libero sit amet erat venenatis sollicitudin vitae vel eros. Cras nunc sapien, interdum sit amet porttitor ut, congue quis urna.</p>
+                          </td>
+                          <td class="expander"></td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+                </table>
+
+
+
+                <table class="row">
+                  <tr>
+                    <td class="wrapper last">
+
+                      <table class="twelve columns">
+                        <tr>
+                          <td class="two sub-columns"><a href="https://www.kifi.com/"><img src="http://i.imgur.com/hv6TWCA.png" class="footer-logo"></a></td>
+                          <td class="ten sub-columns last">
+                            Don't want to recieve these messages from Kifi? <a href="">Unsubscribe here</a>.
+                            <br><b>&copy;</b> <a href="https://www.kifi.com/" class="no-underline">Kifi.com</a> | 883 N Shoreline Blvd, Mountain View, CA 94040 United States
+                          </td>
+                          <td class="expander"></td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+                </table>
+
 
               <!-- container end below -->
               </td>
