@@ -23,12 +23,13 @@ import play.api.libs.json.JsObject
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail.TestMailModule
 
 class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), TestHeimdalServiceClientModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule(), TestHeimdalServiceClientModule(), TestMailModule())) {
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)

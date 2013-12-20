@@ -7,6 +7,7 @@ import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, DirectUr
 import com.keepit.inject._
 import com.keepit.model.{UserPictureSources, UserPicture, User}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.common.mail.TestMailModule
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
@@ -35,6 +36,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         TestShoeboxSecureSocialModule(),
         FakeSocialGraphModule(),
         TestHeimdalServiceClientModule(),
+        TestMailModule(),
         FakeHttpClientModule(Map(
         DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
           FakeClientResponse("image", 200),
