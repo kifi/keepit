@@ -1,10 +1,10 @@
 // @require styles/keeper/pane.css
 // @require scripts/lib/q.min.js
 // @require scripts/keeper.js
+// @require scripts/listen.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_settings.js
 // @require scripts/html/keeper/pane_notices.js
-// @require scripts/html/keeper/pane_threads.js
 // @require scripts/html/keeper/pane_thread.js
 
 $.fn.scrollToBottom = function () {
@@ -40,11 +40,10 @@ var pane = pane || function () {  // idempotent for Chrome
   });
 
   function toPaneName(locator) {
-    var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: "threads", "messages/": "thread"}[name] || name;
+    return /^\/messages\//.test(locator) ? 'thread' : 'notices';
   }
 
-  var paneIdxs = ["notices","threads","thread"];
+  var paneIdxs = ['notices', 'thread'];
   function toPaneIdx(name) {
     return paneIdxs.indexOf(name);
   }
@@ -66,15 +65,20 @@ var pane = pane || function () {  // idempotent for Chrome
   function showPane(locator, back, paramsArg, redirected) {
     log('[showPane]', locator, back ? 'back' : '')();
     var deferred = Q.defer();
-    if (locator !== (paneHistory && paneHistory[0])) {
-      var name = toPaneName(locator);
-      (createPaneParams[name] || function (cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function (params) {
+    var locatorCurr = paneHistory && paneHistory[0];
+    var nameCurr = locatorCurr && toPaneName(locatorCurr);
+    var name = toPaneName(locator);
+    if (locator === locatorCurr) {
+      deferred.resolve();
+    } else if (name === nameCurr && panes[name].switchTo) {
+      panes[name].switchTo(locator);
+      deferred.resolve();
+    } else {
+      (createPaneParams[name] || function (cb) {cb({})})(function (params) {
         params.redirected = redirected;
         showPaneContinued(locator, back, name, params);
         deferred.resolve();
       }, locator, paramsArg);
-    } else {
-      deferred.resolve();
     }
     return deferred.promise;
   }
@@ -148,30 +152,6 @@ var pane = pane || function () {  // idempotent for Chrome
           position: {my: 'center top+10', at: 'center bottom', of: this, collision: 'none'}
         });
       })
-      .hoverfu(".kifi-pane-head-feedback", function (configureHover) {
-        var btn = this;
-        render("html/keeper/titled_tip", {
-          dir: "below",
-          title: "Give Us Feedback",
-          html: "Tell us your ideas for Kifi<br>or report an issue."
-        }, function (html) {
-          configureHover(html, {
-            mustHoverFor: 700, hideAfter: 4000, click: "hide",
-            position: {my: 'center top+16', at: 'center bottom', of: btn, collision: 'none'}
-          });
-        });
-      })
-      .on("click", ".kifi-pane-head-feedback", function (e) {
-        e.preventDefault();
-        var width = 700;
-        var height = 400;
-        var left = (screen.width - width) / 2;
-        var top = (screen.height - height) / 2;
-        window.open(
-          "https://www.kifi.com/feedback/form",
-          "kifi-feedback",
-          "width="+width+",height="+height+",resizable,top="+top+",left="+left);
-      })
       .hoverfu('.kifi-pane-settings:not(.kifi-active)', function (configureHover) {
         var btn = this;
         render("html/keeper/titled_tip", {
@@ -190,7 +170,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         var $sett = $(this).addClass("kifi-active");
         var $menu = $sett.next(".kifi-pane-settings-menu").fadeIn(50);
-        var $hide = $menu.find(".kifi-pane-settings-hide")
+        var $hide = $menu.find('.kifi-pane-settings-menu-item')
           .on("mouseenter", enterItem)
           .on("mouseleave", leaveItem);
         document.addEventListener("mousedown", docMouseDown, true);
@@ -247,19 +227,6 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         window.open('https://www.kifi.com/profile');
       })
-      .on("keydown", ".kifi-pane-search", function (e) {
-        var q;
-        if (e.which == 13 && (q = this.value.trim())) {
-          this.value = '';
-          window.open('https://www.kifi.com/find?q=' + encodeURIComponent(q).replace(/%20/g, "+"));
-        }
-      })
-      .on("click", ".kifi-pane-back", function () {
-        var loc = paneHistory[1] || this.dataset.loc;
-        if (loc) {
-          showPane(loc, true);
-        }
-      })
       .on("kifi:show-pane", function (e, loc, paramsArg) {
         showPane(loc, false, paramsArg);
       })
@@ -275,27 +242,28 @@ var pane = pane || function () {  // idempotent for Chrome
   function hidePane(leaveSlider) {
     log('[hidePane]', leaveSlider ? 'leaving slider' : '')();
     if (leaveSlider) {
-      $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
+      $(tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
       keeper.onPaneChange();
-      // $slider.find(".kifi-keeper-x").css("overflow", "");
+      // $slider.find('.kifi-keeper-x').css('overflow', '');
     } else {
-      $(tile).css("transform", "");
+      $(tile).css('transform', '');
       keeper.discard();
     }
+    pane.onHide.dispatch();
     $pane
-    .off("transitionend") // onPaneShown
+    .off('transitionend') // onPaneShown
     .on("transitionend", function (e) {
       if (e.target === this) {
         var $pane = $(this);
-        $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
+        $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
         $pane.remove();
-        $("html").removeClass("kifi-pane-parent");
+        $('html').removeClass('kifi-pane-parent');
         window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
-    api.port.emit("pane", {old: $pane[0].dataset.locator});
+    api.port.emit('pane', {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
-    $("html").removeClass("kifi-with-pane");
+    $('html').removeClass('kifi-with-pane');
   }
 
   function populatePane($box, name, locator) {
@@ -319,11 +287,12 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     toggle: function (trigger, locator) {
-      if (!locator) {
-        locator = '/notices';
-      }
+      locator = locator || '/messages:all';
       if ($pane) {
-        if (locator == paneHistory[0]) {
+        if (window.toaster && toaster.showing()) {
+          toaster.hide();
+          showPane(locator);
+        } else if (locator === paneHistory[0]) {
           hidePane(trigger === 'keeper');
         } else {
           showPane(locator);
@@ -338,10 +307,10 @@ var pane = pane || function () {  // idempotent for Chrome
         if ($pane) {
           toggleToaster();
         } else {
-          showPane('/notices').then(toggleToaster);
+          showPane('/messages:all').then(toggleToaster);
         }
         function toggleToaster() {
-          toaster.toggleIn($pane).done(function (compose) {
+          toaster.toggle($pane).done(function (compose) {
             compose && compose.focus();
           });
         }
@@ -363,6 +332,15 @@ var pane = pane || function () {  // idempotent for Chrome
     getThreadId: function () {
       var locator = this.getLocator();
       return locator && locator.split('/')[2];
-    }
+    },
+    pushState: function(loc) {
+      if (paneHistory[0] !== loc) {
+        paneHistory.unshift(loc);
+      }
+    },
+    back: function (fallbackLocator) {
+      showPane(paneHistory[1] || fallbackLocator, true);
+    },
+    onHide: new Listeners
   };
 }();
