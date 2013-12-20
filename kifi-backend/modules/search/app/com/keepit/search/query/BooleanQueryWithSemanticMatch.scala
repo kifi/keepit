@@ -27,7 +27,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 
 
-class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery {
+class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery with Logging{
 
   override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
@@ -72,7 +72,12 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
     private[this] val (requiredWeights, optionalWeights, prohibitedWeights) = initWeights
 
     val optionalSemanticMatchFuture = Future {computeOptionalClausesSemanticMatch}
-    def optionalSemanticMatch = {Await.result(optionalSemanticMatchFuture, 100 milli)}
+    def optionalSemanticMatch = {
+      val t = System.currentTimeMillis
+      val res = Await.result(optionalSemanticMatchFuture, 100 milli)
+      log.info(s"\n=====\n waiting for semantic loss: ${System.currentTimeMillis() - t} milliseconds")
+      res
+    }
     // each optional clause is associated with a probability. The probability indicates how well the semantic of the boolean query is preserved
     // if ONLY THAT clause is NOT satisfied. e.g. if we have three clauses c1, c2, c3, and three factors p1, p2, p3.
     // If c1 and c3 are satisfied, the semantic matching will be p2 (because only c2 is missing). note p2 = p1*p2*p3 /(p1 * p3), this formula
@@ -93,6 +98,8 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
         val analyzer = new SemanticContextAnalyzer(searcher.asInstanceOf[Searcher], null, null)
         analyzer.semanticLoss(optionalTerms.flatten.toSet)
       }
+
+      log.info("\n=====\nsemantic match: " + semanticMatch)
 
       val optionalSemanticMatch: Array[Float] = {
         optionalWeights.map { w =>
@@ -301,8 +308,6 @@ case class ScorerWithSemanicMatchFactor(scorer: Scorer, semanticMatchFactor: Flo
 }
 
 class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerWithSemanicMatchFactor], percentMatchThreshold: Float, percentMatchThresholdForHot: Float, hotDocSet: Bits) extends Scorer(weight) with BooleanOrScorer with Logging {
-
-  log.info(s"SemanticBooleanOrScorer: percentMatchThreshold = ${percentMatchThreshold}")
 
   private var doc = -1
   private var docScore = Float.NaN
