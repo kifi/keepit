@@ -1,8 +1,8 @@
 {
-  "name": "Kifi Canary",
+  "name": "Kifi Beta",
   "version": "see build.properties",
   "manifest_version": 2,
-  "description": "Kifi Beta Canary Build",
+  "description": "Kifi Private Beta",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",
