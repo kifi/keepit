@@ -59,22 +59,24 @@ panes.notices = function () {
       $pageCount = $paneBox.find('.kifi-notices-page-count');
 
       api.port.emit('get_threads', kind, function (o) {
-        var $box = $(renderListHolder(kind)).appendTo($paneBox.find('.kifi-notices-cart'));
+        var $box = $(renderListHolder(kind))
+          .appendTo($paneBox.find('.kifi-notices-cart'));
         renderList($box, kind, o);
-
-        $paneBox.on('kifi:remove', function () {
-          $list = null;
-          $(window).off('resize.notices');
-          api.port.off(handlers);
-        })
-        .on('click', '.kifi-notices-filter[href]', onSubTabClick)
-        .on('mousedown', '.kifi-notices-menu-a', onMenuBtnMouseDown)
-        .on('mouseup', '.kifi-notices-mark-all-read', onMarkAllRead);
       });
 
       api.port.on(handlers);
       api.port.emit('get_unread_thread_count');
       api.port.emit('get_page_thread_count');
+
+      $paneBox
+      .on('click', '.kifi-notices-filter[href]', onSubTabClick)
+      .on('mousedown', '.kifi-notices-menu-a', onMenuBtnMouseDown)
+      .on('mouseup', '.kifi-notices-mark-all-read', onMarkAllRead)
+      .on('kifi:remove', function () {
+        $list = null;
+        $(window).off('resize.notices');
+        api.port.off(handlers);
+      })
     },
     switchTo: function (locator) {
       var kind = locToKind(locator);
@@ -100,7 +102,16 @@ panes.notices = function () {
     var scroller = $box.data('antiscroll');
     $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
 
-    $list.scroll(onScroll)
+    if (o.includesOldest) {
+      $list.data('showingOldest', true);
+    } else {
+      $list.scroll(onScroll);
+      if ($list[0].scrollHeight <= $list[0].clientHeight) {
+        getOlderThreads();
+      }
+    }
+
+    $list
     .on('mouseover mouseout', '.kifi-notice-state', onMouseOverOrOutState)
     .on('click', '.kifi-notice-state', onClickState)
     .on('click', '.kifi-notice', onClickNotice)
@@ -227,6 +238,9 @@ panes.notices = function () {
         }
       }
     });
+    if (discard && !$list.data('showingOldest') && $list[0].scrollHeight <= $list[0].clientHeight) {
+      getOlderThreads();
+    }
   }
 
   function onMenuBtnMouseDown(e) {
@@ -318,26 +332,32 @@ panes.notices = function () {
   }
 
   function onScroll() {
-    var PIXELS_FROM_BOTTOM = 40; // load more notifications when this close to the bottom
-    if (this.scrollTop + this.clientHeight > this.scrollHeight - PIXELS_FROM_BOTTOM) {
-      var $oldest = $list.children('.kifi-notice').last(), now = Date.now();
-      if (now - ($oldest.data('lastOlderReqTime') || 0) > 10000) {
-        $oldest.data('lastOlderReqTime', now);
-        api.port.emit('get_older_threads', {
-          time: $oldest.find('time').attr('datetime'),
-          kind: $list.data('kind')
-        },
-        function (threads) {
-          if ($list) {
-            if (threads.length) {
-              $(threads.map(renderOne).join(''))
-                .find('time').timeago().end()
-                .appendTo($list);
-            } else {
-              $list.off('scroll', onScroll);  // got 'em all
-            }
-          }
-        });
+    if (this.scrollTop + this.clientHeight > this.scrollHeight - 40) {
+      getOlderThreads();
+    }
+  }
+
+  function getOlderThreads() {
+    var now = Date.now();
+    if (now - ($list.data('pendingOlderReqTime') || 0) > 10000) {
+      $list.data('pendingOlderReqTime', now);
+      api.port.emit('get_older_threads', {
+        time: $list.find('.kifi-notice').last().data('createdAt'),
+        kind: $list.data('kind')
+      }, gotOlderThreads.bind(null, now));
+    }
+  }
+
+  function gotOlderThreads(whenRequested, o) {
+    if ($list && $list.data('pendingOlderReqTime') === whenRequested) {
+      $list.data('pendingOlderReqTime', 0);
+      $(o.threads.map(renderOne).join(''))
+        .find('time').timeago().end()
+        .appendTo($list);
+      if (o.includesOldest) {
+        $list.data('showingOldest', true).off('scroll', onScroll);
+      } else if ($list[0].scrollHeight <= $list[0].clientHeight) {
+        getOlderThreads();
       }
     }
   }
