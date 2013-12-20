@@ -104,7 +104,7 @@ case class BookmarkSource(value: String) {
 
 object BookmarkSource {
   val keeper = BookmarkSource("keeper")
-  val initLoad = BookmarkSource("init_load")
+  val initLoad = BookmarkSource("bookmarkImport")
   val site = BookmarkSource("site")
   val mobile = BookmarkSource("mobile")
   val email = BookmarkSource("email")

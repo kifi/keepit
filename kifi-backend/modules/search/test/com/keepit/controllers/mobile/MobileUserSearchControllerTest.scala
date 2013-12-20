@@ -1,5 +1,4 @@
-package com.keepit.controllers.ext
-
+package com.keepit.controllers.mobile
 
 import com.keepit.test.{SearchApplication, SearchApplicationInjector}
 import org.specs2.mutable._
@@ -34,10 +33,9 @@ import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.{UserSearchFilterFactory, UserQueryParser}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
+class MobileUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
-class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
-
-   private def setup(client: FakeShoeboxServiceClientImpl) = {
+  private def setup(client: FakeShoeboxServiceClientImpl) = {
     val extIds = (0 until 5).map{ i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString}.map{ExternalId[User]}
     val users = (0 until 4).map{ i =>
       User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
@@ -80,8 +78,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val indexer = inject[UserIndexer]
         indexer.run(100, 100)
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
-        path === "/search/users/search?query=woody&maxHits=3"
+        val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.searchV1("woody", None, None, 3).toString
+        path === "/m/1/search/users/search?query=woody&maxHits=3"
 
         inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
@@ -119,8 +117,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val indexer = inject[UserIndexer]
         indexer.run(100, 100)
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("firstNa", None, 0, 10).toString
-        path === "/search/users/page?query=firstNa&pageNum=0&pageSize=10"
+        val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("firstNa", None, 0, 10).toString
+        path === "/m/1/search/users/page?query=firstNa&pageNum=0&pageSize=10"
 
         inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
@@ -149,7 +147,6 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
               },
               "status":"friend"
             },
-
             {
               "user":{
                 "id":"4e5f7b8c-951b-4497-8661-123456789003",
@@ -172,8 +169,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val indexer = inject[UserIndexer]
         indexer.run(100, 100)
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).toString
-        path === "/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
+        val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("woody@fox.com", None, 0, 10).toString
+        path === "/m/1/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
 
         inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)

@@ -21,6 +21,7 @@ import com.keepit.social.BasicUser
 import com.keepit.common.analytics.{Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.util.{Success, Failure}
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -51,6 +52,19 @@ class MobileUserController @Inject() (
     Ok(toJson(user.basicUser).as[JsObject] ++
        toJson(user.info).as[JsObject] ++
        Json.obj("experiments" -> request.experiments.map(_.value)))
+  }
+
+  def changePassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
+    val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
+    val newPassword = (request.body \ "newPassword").as[String]
+    if (newPassword.length < 7) {
+      BadRequest(Json.obj("error" -> "bad_new_password"))
+    } else {
+      userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
+        case Failure(e)  => Forbidden(Json.obj("code" -> e.getMessage))
+        case Success(_) => Ok(Json.obj("code" -> "password_changed"))
+      }
+    }
   }
 
 }

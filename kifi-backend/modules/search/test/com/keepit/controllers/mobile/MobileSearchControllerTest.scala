@@ -1,4 +1,4 @@
-package com.keepit.controllers.ext
+package com.keepit.controllers.mobile
 
 
 import com.keepit.test.{SearchApplication, SearchApplicationInjector}
@@ -20,7 +20,7 @@ import com.keepit.search.index.{IndexStore, VolatileIndexDirectoryImpl, IndexDir
 import com.keepit.social.BasicUser
 
 
-class ExtSearchControllerTest extends Specification with SearchApplicationInjector {
+class MobileSearchControllerTest extends Specification with SearchApplicationInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
@@ -31,11 +31,11 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
     )
   }
 
-  "ExtSearchController" should {
-    "search keeps" in {
+  "MobileSearchController" should {
+    "search keeps (V1)" in {
       running(new SearchApplication(modules:_*)) {
-        val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None).toString
-        path === "/search?q=test&maxHits=7"
+        val path = com.keepit.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
+        path === "/m/1/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName="prénom", lastName="nom")
         inject[FakeActionAuthenticator].setUser(user)
