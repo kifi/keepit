@@ -15,6 +15,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.social.BasicUser
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -83,7 +84,8 @@ class UserCommander @Inject() (
   heimdalServiceClient: HeimdalServiceClient,
   abook: ABookServiceClient,
   postOffice: LocalPostOffice,
-  clock: Clock) {
+  clock: Clock,
+  elizaServiceClient: ElizaServiceClient) {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -200,7 +202,18 @@ class UserCommander @Inject() (
             category = PostOffice.Categories.User.INVITATION)
           )
         }
+
       }
+
+      elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+        userIds = toNotify,
+        title = "A New Kifi Friend!",
+        body = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
+        linkText = "Click to see friends",
+        linkUrl = "https://www.kifi.com/friends",
+        imageUrl = newUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+        sticky = false
+      )
     }
   }
 
