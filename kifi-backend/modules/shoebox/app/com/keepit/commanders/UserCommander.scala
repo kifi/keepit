@@ -4,21 +4,25 @@ package com.keepit.commanders
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.model._
-import com.keepit.abook.ABookServiceClient
-
-import play.api.libs.json._
-import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses}
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.BasicUser
-import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
+import com.keepit.model._
+import com.keepit.abook.ABookServiceClient
+import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.social.BasicUser
+
+import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import com.google.inject.Inject
+
+import scala.concurrent.Future
 import scala.util.Try
 import scala.Some
-import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import securesocial.core.SocialUser
 
 
@@ -72,7 +76,8 @@ class UserCommander @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
-  abook: ABookServiceClient) {
+  abook: ABookServiceClient,
+  postOffice: LocalPostOffice) {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -164,4 +169,32 @@ class UserCommander @Inject() (
 
     newUser
   }
+
+  def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
+    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, "friendsNotifiedAboutJoining").exists(_=="true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUserId, "friendsNotifiedAboutJoining", "true") }
+      val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
+        val newUser = userRepo.get(newUserId)
+        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
+        val id2Email = toNotify.map { userId =>
+          (userId, emailRepo.getByUser(userId))
+        }.toMap
+        (newUser, toNotify, id2Email)
+      }
+      toNotify.foreach { userId => //ZZZ update content here to the correct content
+        db.readWrite{ implicit session =>
+          postOffice.sendMail(ElectronicMail(
+            senderUserId = None,
+            from = EmailAddresses.CONGRATS,
+            fromName = Some("KiFi Team"),
+            to = List(id2Email(userId)),
+            subject = s"${newUser.firstName} ${newUser.lastName} joined KiFi!",
+            htmlBody = views.html.email.invitationFriendJoined(newUser).body,
+            category = PostOffice.Categories.User.INVITATION)
+          )
+        }
+      }
+    }
+  }
+
 }

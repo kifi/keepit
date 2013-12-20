@@ -1,27 +1,28 @@
 package com.keepit.controllers.website
 
-import com.google.inject.Inject
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.controller.WebsiteController
+import com.keepit.common.controller.{ActionAuthenticator, AuthenticatedRequest, WebsiteController}
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddresses
-import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
 import com.keepit.model._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
+import com.keepit.common.akka.SafeFuture
+import com.keepit.commanders.{InviteCommander, UserCommander}
+import com.keepit.common.db.ExternalId
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
+
 import play.api.Play.current
 import play.api._
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
-import com.keepit.commanders.InviteCommander
-import com.keepit.common.db.ExternalId
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import securesocial.core.{SecureSocial, Authenticator}
+
+import com.google.inject.Inject
 
 class HomeController @Inject() (
   db: Database,
@@ -32,13 +33,13 @@ class HomeController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
-  postOffice: LocalPostOffice,
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices,
   userCache: SocialUserInfoUserCache,
-  inviteCommander: InviteCommander)
+  inviteCommander: InviteCommander,
+  userCommander: UserCommander)
   extends WebsiteController(actionAuthenticator) with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -129,16 +130,7 @@ class HomeController @Inject() (
           if (invite.state != InvitationStates.JOINED) {
             invitationRepo.save(invite.withState(InvitationStates.JOINED))
             invite.senderUserId.map { senderUserId =>
-              for (address <- emailAddressRepo.getAllByUser(senderUserId)) {
-                postOffice.sendMail(ElectronicMail(
-                  senderUserId = None,
-                  from = EmailAddresses.CONGRATS,
-                  fromName = Some("KiFi Team"),
-                  to = List(address),
-                  subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
-                  htmlBody = views.html.email.invitationFriendJoined(request.user).body,
-                  category = PostOffice.Categories.User.INVITATION))
-              }
+              SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, Seq(senderUserId)) }
             }
           }
         }
