@@ -258,7 +258,7 @@ class MainSearcher(
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
-    val othersTotal = othersHits.totalHits
+    var othersTotal = othersHits.totalHits
 
     val hits = createQueue(numHitsToReturn)
 
@@ -357,9 +357,17 @@ class MainSearcher(
           val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
           if (score > othersThreshold) {
             h.bookmarkCount = getPublicBookmarkCount(h.id)
-            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-            val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
-            queue.insert(newScore, scoring, h)
+            if (h.bookmarkCount > 0) {
+              val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+              val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
+              queue.insert(newScore, scoring, h)
+            } else {
+              // no one publicly kept this page.
+              // we don't include this in the result to avoid a security/privacy issue caused by a user mistake that
+              // he kept a sensitive page by mistake and switch it to private.
+              // decrement the count.
+              othersTotal -= 1
+            }
             true
           } else {
             false
@@ -458,14 +466,7 @@ class MainSearcher(
     }
   }
 
-  @inline private[this] def getPublicBookmarkCount(id: Long) = {
-    val cnt = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
-    if (cnt == 0) {
-      1  // not kept by anyone, but we treat this as kept by someone because the hit count will include such URIs.
-    } else {
-      cnt
-    }
-  }
+  @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
 
   @inline private[this] def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
