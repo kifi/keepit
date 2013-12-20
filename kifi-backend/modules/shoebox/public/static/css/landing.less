@@ -44,6 +44,7 @@ body {
 	width: 149px;
 	height: 222px;
 	.at2x('/assets/static/images/play.png', 100%, 100%);
+	background-size: 100%;
 	background-repeat: no-repeat;
 }
 
@@ -184,6 +185,10 @@ body {
 	text-decoration: none;
 	.letter-spacing(5px, @fontSize);
 	font-weight: 600;
+
+	&:hover {
+		background: white;
+	}
 }
 
 .kifi-two-more-things {

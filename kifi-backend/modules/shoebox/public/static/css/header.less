@@ -89,6 +89,10 @@
 	font-weight: 300;
 	padding: 0;
 	.padding-lr(8px, @rightFontSize);
+
+	&:hover {
+		text-decoration: underline;
+	}
 }
 
 .kifi-header-signup {
@@ -100,6 +104,11 @@
 	.margin-right(13px, @rightFontSize);
 	background: white;
 	white-space: nowrap;
+
+	&:hover {
+		text-decoration: none;
+		background: #fbfbfb;
+	}
 
 	html.scroll & {
 		display: none;
@@ -162,15 +171,24 @@
 	text-transform: uppercase;
 	text-decoration: none;
 	.border-radius(unit(20px / @fontSize, em));
+
+	&:hover {
+		background: tint(#a0bf67, 15%);
+	}
+
+	&:active {
+		background: shade(#a0bf67, 15%);
+	}
 }
 
 .kifi-header-join-arrow {
 	position: absolute;
-	top: 14px;
-	right: 21px;
+	.top(14px);
+	.right(21px);
 	display: inline-block;
 	.width(8px);
 	.height(15px);
 	.at2x('/assets/static/images/arrowright.png', 100%, 100%);
+	background-size: 100%;
 	vertical-align: middle;
 }

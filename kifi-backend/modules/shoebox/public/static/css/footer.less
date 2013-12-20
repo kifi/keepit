@@ -22,6 +22,10 @@
 	a {
 		color: white;
 		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
 	}
 }
 
@@ -40,11 +44,10 @@
 	.kifi-love-icon {
 		display: inline-block;
 		position: relative;
-		@width: unit(15px / @fontSize, em);
-		@height: unit(13px / @fontSize, em);
-		.at2x('/assets/static/images/heart.png', @width, @height);
 		.top(1px);
-		width: @width;
-		height: @height;
+		width: unit(15px / @fontSize, em);
+		height: unit(13px / @fontSize, em);
+		.at2x('/assets/static/images/heart.png', 100%, 100%);
+		background-size: 100%;
 	}
 }
