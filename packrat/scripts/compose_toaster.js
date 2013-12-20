@@ -14,11 +14,25 @@ var toaster = (function () {
   'use strict';
   var $toaster;
 
+  var handlers = {
+    page_thread_count: function (o) {
+      if ($toaster) {
+        $toaster.find('.kifi-toast-other-n')
+          .attr('data-n', o.count || null)
+        .parent()
+          .css('display', o.count ? 'block' : 'none')
+          .data(o);
+      }
+    }
+  };
+
   return {
-    toggleIn: function ($parent) {
+    toggle: function ($parent) {
       if ($toaster) {
         if ($toaster.data('compose').isBlank()) {
           hide();
+        } else {
+          log('[toaster:toggle] no-op')();
         }
         var d = Q.defer();
         d.resolve();
@@ -26,13 +40,25 @@ var toaster = (function () {
       } else {
         return show($parent);
       }
+    },
+    hide: function () {
+      if ($toaster) {
+        hide();
+      } else {
+        log('[toaster:hide] no-op')();
+      }
+    },
+    showing: function () {
+      return !!$toaster;
     }
   };
 
   function show($parent) {
+    log('[toaster:show]')();
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
+      draftDefault: 'Check this out.',
       submitButtonLabel: 'Send',
       submitTip: (session.prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
       snapshotUri: api.url('images/snapshot.png')
@@ -43,33 +69,46 @@ var toaster = (function () {
       if (e.which !== 1) return;
       hide();
     })
+    .on('click', '.kifi-toast-other', onOthersClick)
     .appendTo($parent);
 
     $toaster.data('compose', initCompose($toaster, session.prefs.enterToSend, {onSubmit: send}));
+    $(document).data('esc').add(hide);
+    pane.onHide.add(hide);
+
+    api.port.on(handlers);
+    api.port.emit('get_page_thread_count');
 
     var deferred = Q.defer();
 
     $toaster.layout()
     .on('transitionend', $.proxy(onShown, null, deferred))
-    .removeClass('kifi-down')
+    .removeClass('kifi-down');
 
     return deferred.promise;
   }
 
   function onShown(deferred, e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
+      log('[toaster:onShown]')();
       var $t = $(this).off('transitionend', onShown);
       deferred.resolve($t.data('compose'));
     }
   }
 
-  function hide() {
+  function hide(e) {
+    log('[toaster:hide]')();
+    api.port.off(handlers);
+    pane.onHide.remove(hide);
+    $(document).data('esc').remove(hide);
     $toaster.on('transitionend', onHidden).addClass('kifi-down');
     $toaster = null;
+    e && e.preventDefault();
   }
 
   function onHidden(e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
+      log('[toaster:onHidden]')();
       var $t = $(this);
       $t.data('compose').destroy();
       $t.remove();
@@ -84,9 +123,16 @@ var toaster = (function () {
       function (resp) {
         log('[sendMessage] resp:', resp)();
         pane.show({
-          locator: '/messages/' + (resp.parentId || resp.id),
+          locator: '/messages/' + resp.threadId,
           paramsArg: recipients});
       });
+  }
+
+  function onOthersClick(e) {
+    if (e.which !== 1) return;
+    hide();
+    var threadId = $(this).data('id');
+    pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
   }
 
   function idOf(o) {

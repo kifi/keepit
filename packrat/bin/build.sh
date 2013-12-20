@@ -39,6 +39,9 @@ for f in $(find html -name '*.html'); do
   echo $js > out/firefox/data/scripts/${f/%.html/.js}
 done
 
+for f in $(find styles -name '*.less'); do
+  lessc $f ${f/%.less/.css}
+done
 for d in $(find styles -type d); do
   mkdir -p "out/chrome/$d" "out/firefox/data/$d"
 done
@@ -55,8 +58,8 @@ for f in $(find out/chrome/scripts -name '*.js' -not -path '*/iframes/*'); do
   echo "api.injected['${f:11}']=1;"$'\n'"//@ sourceURL=http://kifi/${f:19}" >> $f
 done
 
-cp main.js out/chrome/
-cp main.js out/firefox/lib/
+cp main.js threadlist.js out/chrome/
+cp main.js threadlist.js out/firefox/lib/
 
 matches=()
 cssDeps=()

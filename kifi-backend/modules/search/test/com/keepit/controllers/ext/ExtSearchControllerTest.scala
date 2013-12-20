@@ -174,4 +174,3 @@ class FixedResultSearchCommander extends SearchCommander {
 
   def warmUp(userId: Id[User]): Unit = {}
 }
-

@@ -91,7 +91,7 @@
 	}
 }
 
-.kifi-message-recipient-name {
+.kifi-message-participant-name {
   color: @recipientFgColor;
 }
 
@@ -298,19 +298,21 @@
   background-position: 50%;
   vertical-align: middle;
 
-  &:hover {
-    background-color: shade(@bgColor, 10%);
+  &:hover, &:focus {
+    background-color: tint(@bgColor, 70%);
   }
-
+  &:active {
+    background-color: shade(@bgColor, 5%);
+  }
   &.kifi-active {
     background-color: @dotBgColor;
     background-image: url(@addUserGray);
   }
 }
 
-@media 
-(-webkit-min-device-pixel-ratio: 2), 
-(min-resolution: 192dpi) { 
+@media
+(-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
   .kifi-message-add-participant {
     background-image: url(@addUserDark2x);
 

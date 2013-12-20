@@ -11,4 +11,3 @@ import java.io.File
 case class SearchFakeStoreModule() extends FakeStoreModule {
 
 }
-
