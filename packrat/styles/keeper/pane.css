@@ -347,7 +347,7 @@ a.kifi-notices-filter-page {
   padding-left: 10px;
   padding-right: 10px;
 }
-.kifi-notices-count {
+.kifi-notices-unread-count {
   margin-left: -2px;
   display: inline-block;
   height: 14px;
@@ -365,15 +365,22 @@ a.kifi-notices-filter-page {
   position: relative;
   top: -4px;
 }
-.kifi-notices-count:empty {
+.kifi-notices-unread-count:empty {
   display: none;
 }
-a.kifi-notices-filter:link:hover > .kifi-notices-count,
-a.kifi-notices-filter:link:focus > .kifi-notices-count {
+:link:hover > .kifi-notices-unread-count,
+:link:focus > .kifi-notices-unread-count {
   border-color: #e1e7eb;
 }
-a.kifi-notices-filter:link:active > .kifi-notices-count {
+:link:active > .kifi-notices-unread-count {
   border-color: #c9d1d8;
+}
+.kifi-notices-page-count:not(:empty):before {
+  content: '(';
+  margin-left: 4px;
+}
+.kifi-notices-page-count:not(:empty):after {
+  content: ')';
 }
 .kifi-notices-menu-a {
   position: absolute;
