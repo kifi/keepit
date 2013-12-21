@@ -3,13 +3,17 @@
 
 	var $ = win.jQuery;
 
-	$(win).scroll(function () {
-		var scrolling = $(this).scrollTop() > 0;
-		$('html').toggleClass('scroll', scrolling);
+	var THRESHOLD = 50;
 
-		// for tracking purpose
-		var source = scrolling ? 'scrollingHeader' : 'header';
-		$('.kifi-header').data('trackSource', source);
+	$(win).scroll(function () {
+		win.setTimeout(function () {
+			var scrolling = $(this).scrollTop() > THRESHOLD;
+			$('html').toggleClass('scroll', scrolling);
+
+			// for tracking purpose
+			var source = scrolling ? 'scrollingHeader' : 'header';
+			$('.kifi-header').data('trackSource', source);
+		});
 	});
 
 })(this);
