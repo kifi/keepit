@@ -10,6 +10,7 @@ import views.html
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
+import play.api.mvc.Action
 
 class ElectronicMailController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -28,5 +29,9 @@ class ElectronicMailController @Inject() (
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(html.admin.electronicMails(electronicMails, page, count, pageCount))
+  }
+
+  def friendrequest = Action {
+    Ok(views.html.email.helper.friendRequest())
   }
 }
