@@ -11,9 +11,20 @@
 	  </div>
 	</form>
 
+
+	<form id = "vote">
+		<div>
+			<div>which is better? </div>
+			<input type="radio" name="win" value="config1">config 1<br>
+			<input type="radio" name="win" value="config2">config 2<br>
+			<input type="radio" name="win" value="draw">draw<br>
+			<button type="submit">submit</button>
+		</div>
+	</form>
+
   <p id = "result"></p><br>
-	<p id = "hits1" name = "someConfig"></p><br><br>
-	<p id = "hits2" name = "someConfig"></p>
+	<p id = "hits1" name = "configId" value = "1"></p><br><br>
+	<p id = "hits2" name = "configId" value = "2"></p>
 
 
 <script type="text/javascript">
@@ -36,6 +47,12 @@
 
 	      		var hits1 = data.result1.hits
 	      		var hits2 = data.result2.hits
+
+	      		var id1 = data.result1.id
+	      		var id2 = data.result2.id
+
+	      		$("#hits1").attr("value", id1)
+	      		$("#hits2").attr("value", id2)
 
 	      		$("#hits1").append("<div><strong>" + hits1.length + " hits from config 1:" + "</strong></div>")
 	      		$("#hits2").append("<div><strong>" + hits2.length + " hits from config 2:" + "</strong></div>")
@@ -61,6 +78,18 @@
 			)
 
 		}) <!--submit-->
+
+
+		$("#vote").submit(function(event){
+			event.preventDefault();
+			var voted = $('input[name="win"]:checked').val()
+			var data = null
+			if (voted == "config1") data = {vote: $("#hits1").attr("value")}
+			else if (voted == "config2") data = {vote: $("#hits2").attr("value")}
+			else data = {vote: ""}
+			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
+
+		})
 
 	});
 
