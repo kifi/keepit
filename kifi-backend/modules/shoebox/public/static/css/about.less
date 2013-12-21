@@ -12,17 +12,36 @@
 @green2: #93c059;
 
 @maxWidth: 730px;
+@bodyFontSize: 16px;
 
 body {
 	text-align: center;
 }
 
 .kifi-splash-bg {
+	position: relative;
 	background: #f6f6f6;
+}
+
+.kifi-splash-bg-image {
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin-right: 20%;
+	display: block;
+	width: 100%;
+	height: 100%;
 	.at2x('/assets/static/images/header2.png', auto, auto);
+	background-size: auto unit(465px / @bodyFontSize, em);
 	background-repeat: no-repeat;
-	background-size: auto;
-	background-position: top right;
+	background-position: bottom right;
+}
+
+@media screen and (max-width: 639px) {
+.kifi-splash-bg-image {
+	margin-right: 8%;
+	background-size: auto unit(365px / @bodyFontSize, em);
+}
 }
 
 .kifi-splash {
@@ -81,24 +100,48 @@ body {
 	}
 }
 
+.kifi-splash-term {
+	white-space: nowrap;
+}
+
 .kifi-image-what-is-kifi {
 	position: absolute;
 	top: -11px;
 	right: -8px;
-	width: 217px;
-	height: 79px;
-	background: #d4e4f9;
+	width: unit(217px / @bodyFontSize, em);
+	height: unit(79px / @bodyFontSize, em);
 	z-index: -1;
+	.at2x('/assets/static/images/topicons.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+}
+
+@media screen and (max-width: 639px) {
+.kifi-image-what-is-kifi {
+	top: 40px;
+	width: unit(2 / 3 * 217px / @bodyFontSize, em);
+	height: unit(2 / 3 * 79px / @bodyFontSize, em);
+}
 }
 
 .kifi-image-vision-behind-kifi {
 	position: absolute;
 	top: -60px;
 	right: -31px;
-	width: 139px;
-	height: 147px;
-	background: #d4e4f9;
+	width: unit(139px / @bodyFontSize, em);
+	height: unit(147px / @bodyFontSize, em);
 	z-index: -1;
+	.at2x('/assets/static/images/usericons.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+}
+
+@media screen and (max-width: 639px) {
+.kifi-image-vision-behind-kifi {
+	top: 25px;
+	width: unit(2 / 3 * 139px / @bodyFontSize, em);
+	height: unit(2 / 3 * 147px / @bodyFontSize, em);
+}
 }
 
 .kifi-about-page-more {
@@ -121,6 +164,19 @@ body {
 		.kifi-vision-behind-kifi & {
 			color: @green2;
 		}
+
+		&:hover {
+			.kifi-link-text {
+				.at2x('/assets/static/images/bluedots.png', auto, 2px);
+				background-size: auto 2px;
+				background-repeat: repeat-x;
+				background-position: 0 unit(35px / @fontSize, em);
+
+				&.kifi-join-kifi {
+					.at2x('/assets/static/images/greendots.png', auto, 2px);
+				}
+			}
+		}
 	}
 
 	.kifi-about-page-more-icon {
@@ -128,7 +184,13 @@ body {
 		.size(30px, @fontSize);
 		.margin-right(9px, @fontSize);
 		vertical-align: text-bottom;
-		background: @blue2;
+		.at2x('/assets/static/images/play-small.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
+
+		&.kifi-join-kifi {
+			.at2x('/assets/static/images/plus.png', 100%, 100%);
+		}
 	}
 
 	.kifi-link-text {
@@ -249,9 +311,9 @@ body {
 
 		display: inline-block;
 		.height(40px, @fontSize);
-		background-repeat: repeat-x;
 		.at2x('/assets/static/images/greendots.png', auto, 2px);
 		background-size: auto 2px;
+		background-repeat: repeat-x;
 		background-position: 0 unit(38px / @fontSize, em);
 	}
 
@@ -261,9 +323,25 @@ body {
 
 	.kifi-learn-more-icon {
 		display: inline-block;
+		.margin-right(34px, @fontSize);
+	}
+
+	.kifi-learn-more-icon-team {
+		position: relative;
+		top: -2px;
+		.width(35px, @fontSize);
+		.height(24px, @fontSize);
+		.at2x('/assets/static/images/friends.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
+		vertical-align: middle;
+	}
+
+	.kifi-learn-more-icon-tech {
 		.size(35px, @fontSize);
-		.margin-right(37px, @fontSize);
+		.at2x('/assets/static/images/computer.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
 		vertical-align: text-bottom;
-		background: @green2;
 	}
 }

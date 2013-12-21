@@ -215,3 +215,37 @@ body {
 	font-size: @bodyFontSizeSmall;
 }
 }
+
+.fancybox-wrap {
+	margin-top: -3%;
+	.transition(all .3s ease);
+}
+
+.wistia-fancybox #fancybox-overlay {
+    -webkit-animation: fadeIn 0.5s ease;
+       -moz-animation: fadeIn 0.5s ease;
+            animation: fadeIn 0.5s ease;
+}
+
+.wistia-fancybox .fancybox-close.fancybox-close {
+	.box-shadow(none);
+}
+
+.wistia-fancybox .fancybox-outer.fancybox-outer {
+	background: black;
+}
+
+@-webkit-keyframes fadeIn {
+    0%   {opacity: 0;}
+    100% {opacity: 0.8;}
+}
+
+@-moz-keyframes fadeIn {
+    0%   {opacity: 0;}
+    100% {opacity: 0.8;}
+}
+
+@keyframes fadeIn {
+    0%   {opacity: 0;}
+    100% {opacity: 0.8;}
+}
