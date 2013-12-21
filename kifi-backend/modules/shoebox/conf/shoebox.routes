@@ -119,8 +119,9 @@ POST    /m/1/auth/sign-up                       @com.keepit.controllers.mobile.M
 POST    /m/1/auth/email-finalize                @com.keepit.controllers.mobile.MobileAuthController.userPassFinalizeAccountAction()
 POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
 POST    /m/1/auth/social-finalize               @com.keepit.controllers.mobile.MobileAuthController.socialFinalizeAccountAction()
-POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
 POST    /m/1/social-link/:provider              @com.keepit.controllers.mobile.MobileAuthController.linkSocialNetwork(provider)
+POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
+POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
 
 ##########################################
 # Website
