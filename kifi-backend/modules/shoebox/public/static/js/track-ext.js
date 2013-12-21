@@ -16,7 +16,7 @@
 	var DEFAULT_SOURCE_VALUE = 'body';
 
 	// on clicking on links, track click event
-	$(document).on('click', 'a[href]', function (e) {
+	$(document).on('click', 'a[href]', function () {
 		var $el = $(this),
 			data = $el.data(),
 			trackAction = data.trackAction;
@@ -26,7 +26,6 @@
 				source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
 			});
 		}
-		e.preventDefault();
 	});
 
 	function getDataFromAncestors($el, name, defaultValue) {
@@ -59,7 +58,6 @@
 
 	function track(name, data) {
 		data = addDefaultValues(data);
-		win.console.log('track', name, data);
 		return mixpanel.track(name, data);
 	}
 
