@@ -8,11 +8,13 @@ import com.keepit.common.db.slick.Database
 
 class AbuseControlException(message: String) extends Exception(message)
 
-class KeepsAbuseControl @Inject() (
+class KeepsAbuseController @Inject() (
     absoluteAlert: Int,
     absoluteError: Int,
     bookmarkRepo: BookmarkRepo,
     db: Database) {
+
+  if (absoluteAlert >= absoluteError) throw new IllegalStateException(s"absolute alert $absoluteAlert is larger then error $absoluteError")
 
   implicit val dbMasterSlave = Database.Slave
 
