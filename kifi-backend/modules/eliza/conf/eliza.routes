@@ -21,7 +21,7 @@ POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.M
 GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
 POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 POST    /m/1/eliza/messages/:parentId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
-GET     /m/1/eliza/ext/w                  @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
+GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
 POST    /m/1/eliza/devices/:deviceType    @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 ## the following route is an old convention, keep around until eduardo say its ok to kill

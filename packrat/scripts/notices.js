@@ -57,13 +57,11 @@ panes.notices = function () {
       $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
       $unreadCount = $paneBox.find('.kifi-notices-unread-count');
       $pageCount = $paneBox.find('.kifi-notices-page-count');
+      var $box = $(renderListHolder(kind))
+        .appendTo($paneBox.find('.kifi-notices-cart'));
+      $list = $box.find('.kifi-notices-list');
 
-      api.port.emit('get_threads', kind, function (o) {
-        var $box = $(renderListHolder(kind))
-          .appendTo($paneBox.find('.kifi-notices-cart'));
-        renderList($box, kind, o);
-      });
-
+      api.port.emit('get_threads', kind, renderList.bind(null, $box, $list));
       api.port.on(handlers);
       api.port.emit('get_unread_thread_count');
       api.port.emit('get_page_thread_count');
@@ -91,8 +89,8 @@ panes.notices = function () {
     return render('html/keeper/notices', params);
   }
 
-  function renderList($box, kind, o) {
-    $list = $box.find('.kifi-notices-list')
+  function renderList($box, $list, o) {
+    $list
       .append(o.threads.map(renderOne).join(''))
       .removeClass('kifi-loading')
       .preventAncestorScroll();
@@ -132,7 +130,8 @@ panes.notices = function () {
     var $old = $cart.find('.kifi-notices-box');
 
     var $new = $(renderListHolder(kindNew))[back ? 'prependTo' : 'appendTo']($cart).layout();
-    api.port.emit('get_threads', kindNew, renderList.bind(null, $new, kindNew));
+    $list = $new.find('.kifi-notices-list');
+    api.port.emit('get_threads', kindNew, renderList.bind(null, $new, $list));
 
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll').on('transitionend', function end(e) {
       if (e.target !== this) return;
@@ -141,7 +140,6 @@ panes.notices = function () {
       $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward').off('transitionend', end);
       $cubby.css('overflow', '');
     });
-    $list = $new.find('.kifi-notices-list');
 
     var locatorOld = formatLocator($aOld.data('kind'));
     var locatorNew = formatLocator($aNew.data('kind'));
