@@ -3846,7 +3846,8 @@ $(function () {
 
 	var messages = {
 		0: 'Welcome back!',
-		1: 'Thank you for verifying your email address.'
+		1: 'Thank you for verifying your email address.',
+		2: 'Bookmark import in progress. Reload the page to update.'
 	};
 
 	function showNotification(messageId) {
@@ -3888,7 +3889,8 @@ $(function () {
 			$bookmarkImportDialog.on('click', 'button', function () {
 				$bookmarkImportDialog.dialog('hide');
 				$bookmarkImportDialog = null;
-				welcomeUser();
+				window.location = "https://www.kifi.com/?m=2";
+				//welcomeUser();
 			});
 			event.source.postMessage('import_bookmarks', event.origin);
 		}).find('button').focus();
