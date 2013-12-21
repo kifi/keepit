@@ -739,12 +739,14 @@ table.header {
   vertical-align: middle;
   height: 50px !important;
   margin-bottom: 20px !important;
+  color: #fff;
 }
 .header-text {
   color: #fff !important;
   font-size: 18px !important;
   padding: 15px 0px !important;
   font-family: Helvetica,Arial,Geneva,Verdana,sans-serif !important;
+  white-space: nowrap;
 }
 .main-body p {
   font-size: 18px !important;
@@ -808,7 +810,7 @@ hr.footer-hr {
 
           <table class="row header">
             <tr>
-              <td class="center" align="center" bgcolor="#6FA6EF">
+              <td class="center" align="center">
                 <center>
 
                   <table class="container">
@@ -817,7 +819,7 @@ hr.footer-hr {
 
                         <table class="twelve columns">
                           <tr>
-                            <td class="twelve sub-columns header-text">
+                            <td class="twelve sub-columns header-text" nowrap>
                               @title   <!-- CONFIGURABLE title -->
                             </td>
                           </tr>
@@ -836,7 +838,7 @@ hr.footer-hr {
             <tr>
               <td>
 
-                @body
+                @body <!-- CONFIGURABLE body -->
 
                 <table class="row">
                   <tr>
