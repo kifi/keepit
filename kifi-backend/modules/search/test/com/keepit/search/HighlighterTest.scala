@@ -9,9 +9,8 @@ import play.api.test.Helpers._
 import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import com.keepit.search.index.SymbolDecompounder
 
-class ResultDecoratorTest extends Specification {
+class HighlighterTest extends Specification {
 
   val quote =
     "For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much " +
@@ -20,10 +19,10 @@ class ResultDecoratorTest extends Specification {
 
   val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en"))
 
-  "ResultDecorator" should {
+  "Highlighter" should {
     "highlight terms" in {
       val text = quote
-      val highlights = ResultDecorator.highlight(text, analyzer, "f", Set("instance", "assume", "earth", "sky"))
+      val highlights = Highlighter.highlight(text, analyzer, "f", Set("instance", "assume", "earth", "sky"))
 
       highlights.size === 3
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("instance", "assumed", "Earth")
@@ -31,7 +30,7 @@ class ResultDecoratorTest extends Specification {
 
     "highlight terms with multiple occurrences" in {
       val text = quote
-      val highlights = ResultDecorator.highlight(text, analyzer, "f", Set("dolphin"))
+      val highlights = Highlighter.highlight(text, analyzer, "f", Set("dolphin"))
 
       highlights.size === 3
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("dolphins")
@@ -40,17 +39,17 @@ class ResultDecoratorTest extends Specification {
     "highlight overlapping terms" in {
       val text = "holidays.doc"
 
-      var highlights = ResultDecorator.highlight(text, analyzer, "f", Set("holiday"))
+      var highlights = Highlighter.highlight(text, analyzer, "f", Set("holiday"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
 
-      highlights = ResultDecorator.highlight(text, analyzer, "f", Set("doc"))
+      highlights = Highlighter.highlight(text, analyzer, "f", Set("doc"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
 
-      highlights = ResultDecorator.highlight(text, analyzer, "f", Set("holiday", "doc"))
+      highlights = Highlighter.highlight(text, analyzer, "f", Set("holiday", "doc"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
@@ -59,17 +58,17 @@ class ResultDecoratorTest extends Specification {
     "highlight terms in url" in {
       val url = "http://www.scala-lang.org/api/current/index.html#package"
 
-      var highlights = ResultDecorator.highlightURL(url, analyzer, "f", Set("scala"))
+      var highlights = Highlighter.highlightURL(url, analyzer, "f", Set("scala"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("scala")
 
-      highlights = ResultDecorator.highlightURL(url, analyzer, "f", Set("api"))
+      highlights = Highlighter.highlightURL(url, analyzer, "f", Set("api"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("api")
 
-      highlights = ResultDecorator.highlightURL(url, analyzer, "f", Set("index"))
+      highlights = Highlighter.highlightURL(url, analyzer, "f", Set("index"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("index")
@@ -78,11 +77,11 @@ class ResultDecoratorTest extends Specification {
     "return an empty Seq if no match" in {
       val text = "Looking up into the night sky is looking into infinity"
 
-      ResultDecorator.highlight(text, analyzer, "f", Set("scala")) must beEmpty
+      Highlighter.highlight(text, analyzer, "f", Set("scala")) must beEmpty
 
       val url = "http://kifi.com"
 
-      ResultDecorator.highlightURL(text, analyzer, "f", Set("42go")) must beEmpty
+      Highlighter.highlightURL(text, analyzer, "f", Set("42go")) must beEmpty
     }
   }
 }
