@@ -5,25 +5,34 @@ import org.specs2.mutable.Specification
 import com.keepit.common.controller._
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
-import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.search.{TestSearchServiceClientModule, Lang}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 
-import play.api.libs.json.{Json, JsNumber, JsArray}
+import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.social.SocialNetworks
+import SocialNetworks._
+import securesocial.core._
+import play.api.Play
+import securesocial.core.providers.utils.{PasswordHasher, BCryptPasswordHasher}
 import com.keepit.common.analytics.TestAnalyticsModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.net.FakeHttpClientModule
+import play.api.libs.json.JsArray
+import securesocial.core.IdentityId
+import com.keepit.model.UserConnection
+import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.social.SocialId
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -37,6 +46,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
+    FakeSocialGraphModule(),
+    FakeShoeboxSecureSocialModule(),
     TestABookServiceClientModule()
   )
 
@@ -132,5 +143,43 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }
+
+    "change user password" in {
+      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+        val bcrypt = Registry.hashers.get(PasswordHasher.BCryptHasher) getOrElse (new BCryptPasswordHasher(Play.current))
+        val changePwdRoute = com.keepit.controllers.mobile.routes.MobileUserController.changePassword().toString
+        changePwdRoute === "/m/1/password/change"
+        inject[Database].readWrite {implicit s =>
+          val user = userRepo.save(User(firstName="Richard", lastName="Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
+          val identityId = IdentityId("me@feynman.com", "userpass")
+          val pInfo = bcrypt.hash("welcome")
+          val socialUser = new SocialUser(identityId, "Richard", "Feynman", "Richard Feynman", Some(identityId.userId), None, AuthenticationMethod.UserPassword, passwordInfo = Some(pInfo))
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("me@feynman.com"), networkType = FORTYTWO, credentials = Some(socialUser)))
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = FACEBOOK))
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = LINKEDIN,
+            profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
+          inject[FakeActionAuthenticator].setUser(user)
+        }
+
+        val payload = Json.obj("oldPassword" -> "welcome", "newPassword" -> "welcome1")
+
+        // positive
+        val changePwdRequest = FakeRequest("POST", changePwdRoute).withJsonBody(payload)
+        val result = route(changePwdRequest).get
+        status(result) === OK
+        contentType(result) must beSome("application/json")
+        val expected = Json.obj("code" -> "password_changed")
+        Json.parse(contentAsString(result)) must equalTo(expected)
+
+        // negative
+        val changePwdRequest2 = FakeRequest("POST", changePwdRoute).withJsonBody(payload)
+        val result2 = route(changePwdRequest2).get
+        status(result2) !== OK
+        contentType(result2) must beSome("application/json")
+        val expected2 = Json.obj("code" -> "bad_old_password")
+        Json.parse(contentAsString(result2)) must equalTo(expected2)
+      }
+    }
+
   }
 }
