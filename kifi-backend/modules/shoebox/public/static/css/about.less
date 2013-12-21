@@ -31,7 +31,7 @@ body {
 	display: block;
 	width: 100%;
 	height: 100%;
-	.at2x('/assets/static/images/header2.png', auto, auto);
+	.at2x('/assets/static/images/header2.png', auto, unit(465px / @bodyFontSize, em));
 	background-size: auto unit(465px / @bodyFontSize, em);
 	background-repeat: no-repeat;
 	background-position: bottom right;
@@ -310,11 +310,21 @@ body {
 		text-decoration: none;
 
 		display: inline-block;
-		.height(40px, @fontSize);
+		@height: 38px;
+		.height(@height, @fontSize);
 		.at2x('/assets/static/images/greendots.png', auto, 2px);
 		background-size: auto 2px;
 		background-repeat: repeat-x;
-		background-position: 0 unit(38px / @fontSize, em);
+		background-position: 0 unit(@height / @fontSize, em);
+		.margin-lr(-2px);
+		.padding-lr(2px);
+		.transition(background-color, color .3s ease);
+		border-bottom: 2px solid transparent;
+
+		&:hover {
+			border-color: @green;
+			background-image: none;
+		}
 	}
 
 	li {
