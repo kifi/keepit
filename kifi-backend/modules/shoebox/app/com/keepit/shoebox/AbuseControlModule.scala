@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.commanders.KeepsAbuseController
 import com.keepit.model.BookmarkRepo
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class AbuseControlModule() extends ScalaModule {
 
@@ -13,12 +14,13 @@ case class AbuseControlModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def keepsAbuseController(bookmarkRepo: BookmarkRepo, db: Database): KeepsAbuseController =
+  def keepsAbuseController(bookmarkRepo: BookmarkRepo, db: Database, airbrake: AirbrakeNotifier): KeepsAbuseController =
     new KeepsAbuseController(
       absoluteWarn = 5000,
       absoluteError = 20000,
       bookmarkRepo = bookmarkRepo,
-      db = db)
+      db = db,
+      airbrake = airbrake)
 
 }
 
