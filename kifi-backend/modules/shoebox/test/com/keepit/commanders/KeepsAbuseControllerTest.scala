@@ -56,8 +56,6 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         { controller.inspact(user.id.get, 20) } must throwA[AbuseControlException]
-
-        1 === 1
       }
     }
 
@@ -67,7 +65,6 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
         val bookmarkRepo = inject[BookmarkRepo]
         def createChecker(): Unit = new KeepsAbuseController(absoluteAlert = 10, absoluteError = 5, bookmarkRepo = bookmarkRepo, db = db)
         { createChecker() } must throwA[IllegalStateException]
-        1 === 1
       }
     }
   }
