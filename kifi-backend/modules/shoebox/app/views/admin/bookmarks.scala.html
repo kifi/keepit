@@ -77,15 +77,13 @@
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
         @{bookmark.source.value.toLowerCase match {
-          case "init_load" => {
-            <span class="label">Init Load</span>
+          case "init_load" | "bookmarkImport" => {
+            <span class="label">Bookmark Import</span>
           }
           case "hover_keep" | "keeper"=> {
-            <span class="label label-success">Slider</span>
+            <span class="label label-success">Keeper</span>
           }
-          case "tagged" => {
-            <span class="label label-success">Tagged</span>
-          }
+
           case "plugin_start" => {
             <span class="label label-info">Plugin Restart</span>
           }

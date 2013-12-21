@@ -31,13 +31,18 @@ panes.thread = function () {
       log('[panes.thread.render]', threadId)();
       var $who = $paneBox.find('.kifi-thread-who');  // TODO: uncomment code below once header is pre-rendered again
       var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
-      api.port.emit('thread', {id: threadId, respond: true}, function (th) {
+      api.port.emit('thread', threadId, function (th) {
         renderThread($paneBox, $tall, $who, th.id, th.messages, session);
         api.port.emit('participants', th.id, function (participants) {
           window.messageHeader.init($who.find('.kifi-message-header'), th.id, participants);
         });
         api.port.on(handlers);
       });
+
+      $paneBox.on('click', '.kifi-message-header-back', function () {
+        pane.back($redirected.length ? '/messages:all' : '/messages');
+      });
+
       var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));
       });
@@ -189,7 +194,7 @@ panes.thread = function () {
 
   function transmitReply($m, originalText, threadId) {
     api.port.emit('send_reply', {text: originalText, threadId: threadId}, function(o) {
-      log('[transmitReply] resp:', o);
+      log('[transmitReply] resp:', o)();
       if (o.id) { // success, got a response
         $m.attr('data-id', o.id);
         $m.find('.kifi-message-body').css({opacity: ''});
@@ -206,6 +211,6 @@ panes.thread = function () {
 
 
   function emitRead(threadId, m, forceSend) {
-    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend || false});
+    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend});
   }
 }();

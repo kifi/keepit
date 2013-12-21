@@ -256,7 +256,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * @return {boolean} Whether the conversation is a group conversation
 		 */
 		isGroup: function () {
-			return this.getParticipants().length > 1;
+			return this.getParticipants().length > 2;
 		},
 
 		/**
@@ -273,12 +273,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		/**
-		 * Returns a recipient (the first participant) of the 1:1 conversation.
-		 *
-		 * @return {Object} a recipient of the 1:1 conversation
+		 * Returns the other participant of a 1:1 conversation.
 		 */
-		getRecipient: function () {
-			return this.getParticipants()[0];
+		getOtherParticipant: function () {
+			return this.getParticipants().filter(function (user) {
+				return user.id !== win.session.user.id;
+			})[0];
 		},
 
 		/**
@@ -301,7 +301,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		getView: function () {
 			return {
 				isGroup: this.isGroup(),
-				recipientName: this.getFullName(this.getRecipient()),
+				participantName: this.getFullName(this.getOtherParticipant()),
 				isOverflowed: this.isOverflowed(),
 				participantCount: this.getParticipants().length,
 				avatars: this.renderAvatars(),
@@ -562,7 +562,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				$el = this.get$();
 			$el.toggleClass('kifi-group-conversation', view.isGroup);
 			$el.toggleClass('kifi-overflow', view.isOverflowed);
-			$el.find('.kifi-message-recipient-name').text(view.recipientName);
+			$el.find('.kifi-message-participant-name').text(view.participantName);
 			$el.find('.kifi-participant-count').text(view.participantCount);
 			$el.find('.kifi-message-participants-avatars').html(view.avatars);
 			$el.find('.kifi-message-participant-list-inner').html(view.participants);

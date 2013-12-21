@@ -1,29 +1,28 @@
-<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
-  <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{author.id}}/pics/200/{{author.pictureName}}">
-  <div class="kifi-notice-name">
-    {{#oneParticipant}}
-      <span class="kifi-author-name">{{participants.0.firstName}} {{participants.0.lastName}}</span>
-    {{/oneParticipant}}
-    {{#twoParticipants}}
-      <span class="kifi-author-name">{{participants.0.firstName}}</span> and
-      <span class="kifi-author-name">{{participants.1.firstName}}</span>
-    {{/twoParticipants}}
-    {{#threeParticipants}}
-      <span class="kifi-author-name">{{participants.0.firstName}}</span>,
-      <span class="kifi-author-name">{{participants.1.firstName}}</span> and
-      <span class="kifi-author-name">{{participants.2.firstName}}</span>
-    {{/threeParticipants}}
-    {{#moreParticipants}}
-      <span class="kifi-author-name">{{participants.0.firstName}}</span>,
-      <span class="kifi-author-name">{{participants.1.firstName}}</span> and {{moreParticipants}} others
-    {{/moreParticipants}}
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="message">
+  <div class="kifi-notice-mosaic kifi-notice-mosaic-{{picturedParticipants.length}}">
+  {{#picturedParticipants}}
+    <div class="kifi-notice-pic kifi-notice-pic-{{picIndex}}" style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"></div>
+  {{/picturedParticipants}}
   </div>
-  <div class="kifi-notice-action">
-    Message
+  <div class="kifi-notice-kicker">
+    <span class="kifi-notice-state"></span>{{!
+  }}<span class="kifi-notice-dir"></span>
   </div>
-  <div class="kifi-notice-page">
-    <a href="{{url}}" class="kifi-link" target="_blank">{{title}}</a>
+  <div class="kifi-notice-names{{#nameSeriesLength}} kifi-notice-names-{{nameSeriesLength}}{{/nameSeriesLength}}">
+    {{#namedParticipant}}
+      <span class="kifi-notice-name">{{firstName}} {{lastName}}</span>
+    {{/namedParticipant}}
+    {{#namedParticipants}}
+      <span class="kifi-notice-name kifi-notice-name-{{nameIndex}}">{{firstName}}</span>
+    {{/namedParticipants}}
+    {{#otherParticipants.length}}
+      <a class="kifi-notice-n-others" href="javascript:" data-names="{{otherParticipantsJson}}">{{otherParticipants.length}} others</a>
+    {{/otherParticipants.length}}
   </div>
-  <div class="kifi-notice-text">{{#formatMessage}}{{{text}}}{{/formatMessage}}</div>
-  <time class="kifi-notice-when" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+  <a class="kifi-notice-link" href="{{url}}" target="_blank">{{title}}</a>
+  <div class="kifi-notice-blurb">
+    <span class="kifi-notice-author">{{authorShortName}}:</span>
+    {{#formatMessage}}{{{text}}}{{/formatMessage}}
+  </div>
+  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
 </div>

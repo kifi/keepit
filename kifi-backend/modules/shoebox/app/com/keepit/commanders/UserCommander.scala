@@ -10,16 +10,16 @@ import com.keepit.abook.ABookServiceClient
 import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.BasicUser
+import com.keepit.social.{UserIdentity, SocialNetworks, BasicUser}
 import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.Some
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.SocialUser
+import securesocial.core.{Identity, UserService, Registry}
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -164,4 +164,23 @@ class UserCommander @Inject() (
 
     newUser
   }
+
+  def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
+    val resOpt = db.readOnly { implicit session =>
+      socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
+    } map { sui =>
+      val hasher = Registry.hashers.currentHasher
+      val identity = sui.credentials.get
+      if (!hasher.matches(identity.passwordInfo.get, oldPassword)) throw new IllegalArgumentException("bad_old_password")
+      else {
+        val pInfo = Registry.hashers.currentHasher.hash(newPassword)
+        UserService.save(UserIdentity(
+          userId = sui.userId,
+          socialUser = sui.credentials.get.copy(passwordInfo = Some(pInfo))
+        ))
+      }
+    }
+    resOpt getOrElse { throw new IllegalArgumentException("no_user") }
+  }
+
 }

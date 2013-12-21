@@ -11,23 +11,23 @@ form.kifi-compose {
   border-bottom: none;
   border-radius: 0;
   background-color: #fff;
-  padding: 5px;
-  min-height: 26px;
-  max-height: 145px;
+  padding: 6px 8px;
+  min-height: 21px;
+  max-height: 114px;
   overflow: auto;
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
 }
 .kifi-compose.kifi-empty .kifi-compose-draft:focus {
-  -webkit-animation: paddingLeft7 .16s ease-out;
-  animation: paddingLeft7 .16s ease-out;
+  -webkit-animation: paddingLeft10 .16s ease-out;
+  animation: paddingLeft10 .16s ease-out;
 }
-@-webkit-keyframes paddingLeft7 {
-  50% {padding-left: 7px}
+@-webkit-keyframes paddingLeft10 {
+  50% {padding-left: 10px}
 }
-@keyframes paddingLeft7 {
-  50% {padding-left: 7px}
+@keyframes paddingLeft10 {
+  50% {padding-left: 10px}
 }
 .kifi-ti-token-input:only-child>#token-input-kifi-compose-to:focus {
   -webkit-animation: paddingLeft2 .14s ease-out;
@@ -247,7 +247,7 @@ body.kifi-snapshot-root {
   margin: 0 0 -1px !important;
 }
 .kifi-compose input.kifi-compose-to { /* initial input */
-  padding: 5px;
+  padding: 6px 8px;
 }
 .kifi-compose input#token-input-kifi-compose-to { /* token input */
   width: 100px;
@@ -264,7 +264,7 @@ body.kifi-snapshot-root {
   color: #a9a9a9 !important;
 }
 .kifi-ti-list {
-  padding: 3px 0 0 !important;
+  padding: 4px 3px 1px !important;
   height: auto !important;
   min-height: 1px;
   list-style: none;
