@@ -50,7 +50,7 @@ object ResultDecorator extends Logging {
 
     new DecoratedResult(
       ExternalId[ArticleSearchResult],
-      hits,
+      decoratedHits,
       result.myTotal,
       result.friendsTotal,
       result.othersTotal,
