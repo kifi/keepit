@@ -15,7 +15,7 @@ case class AbuseControlModule() extends ScalaModule {
   @Singleton
   def keepsAbuseController(bookmarkRepo: BookmarkRepo, db: Database): KeepsAbuseController =
     new KeepsAbuseController(
-      absoluteAlert = 5000,
+      absoluteWarn = 5000,
       absoluteError = 20000,
       bookmarkRepo = bookmarkRepo,
       db = db)

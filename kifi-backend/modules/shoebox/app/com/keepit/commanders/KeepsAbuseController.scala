@@ -5,23 +5,29 @@ import com.keepit.model.User
 import com.google.inject.Inject
 import com.keepit.model.BookmarkRepo
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class AbuseControlException(message: String) extends Exception(message)
 
 class KeepsAbuseController @Inject() (
-    absoluteAlert: Int,
+    absoluteWarn: Int,
     absoluteError: Int,
     bookmarkRepo: BookmarkRepo,
-    db: Database) {
+    db: Database,
+    airbrake: AirbrakeNotifier) {
 
-  if (absoluteAlert >= absoluteError) throw new IllegalStateException(s"absolute alert $absoluteAlert is larger then error $absoluteError")
+  if (absoluteWarn >= absoluteError) throw new IllegalStateException(s"absolute warn $absoluteWarn is larger then error $absoluteError")
 
   implicit val dbMasterSlave = Database.Slave
 
-  def inspact(userId: Id[User], newKeepCount: Int): Unit = {
+  def inspect(userId: Id[User], newKeepCount: Int): Unit = {
     val existingBookmarksCount = db.readOnly { implicit s => bookmarkRepo.getCountByUser(userId) }
-    if (existingBookmarksCount > absoluteError) {
+    val afterAdding = newKeepCount + existingBookmarksCount
+    if (afterAdding > absoluteError) {
       throw new AbuseControlException(s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. max allowed is $absoluteError")
+    }
+    if (afterAdding > absoluteWarn) {
+      airbrake.notify(s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. warning threshold is $absoluteWarn")
     }
   }
 
