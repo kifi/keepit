@@ -11,7 +11,9 @@
 	  </div>
 	</form>
 
-	<p id = "result"></p>
+  <p id = "result"></p><br>
+	<p id = "hits1" name = "someConfig"></p><br><br>
+	<p id = "hits2" name = "someConfig"></p>
 
 
 <script type="text/javascript">
@@ -25,16 +27,35 @@
 				function(data) {
 
 	      	$("#result").empty();
+	      	$("#hits1").empty();
+	      	$("#hits2").empty();
 
-	      	var arr = data;
-	      	var numHits = arr.length
+	      	var msg = data.msg
 
-	      	$("#result").append("<div><strong> num of hits: " + numHits +  "</strong></div>")
-	      	for(var i = 0; i < arr.length; i++){
-	      		var item = arr[i];
-	      		$("#result").append("<div>" + item.title + "</div>");
-	      		$("#result").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+	      	if (msg == "OK"){
+
+	      		var hits1 = data.result1.hits
+	      		var hits2 = data.result2.hits
+
+	      		$("#hits1").append("<div><strong>" + hits1.length + " hits from config 1:" + "</strong></div>")
+	      		$("#hits2").append("<div><strong>" + hits2.length + " hits from config 2:" + "</strong></div>")
+
+	      		for(var i = 0 ; i < hits1.length; i++){
+	      			var item = hits1[i]
+	      			$("#hits1").append("<div>" + item.title + "</div>");
+	      		  $("#hits1").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+	      		}
+
+	      		for(var i = 0 ; i < hits2.length; i++){
+	      			var item = hits2[i]
+	      			$("#hits2").append("<div>" + item.title + "</div>");
+	      		  $("#hits2").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+	      		}
+
+	      	} else {
+	      		$("#result").append(msg)
 	      	}
+
       	},
 				"json"
 			)
