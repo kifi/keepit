@@ -123,6 +123,10 @@ POST    /m/1/social-link/:provider              @com.keepit.controllers.mobile.M
 POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
 POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
 
+GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /m/1/user/connections/email             @com.keepit.controllers.mobile.MobileUserController.queryContacts(search: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+
 ##########################################
 # Website
 ##########################################
