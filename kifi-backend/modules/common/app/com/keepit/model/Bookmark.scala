@@ -104,16 +104,17 @@ case class BookmarkSource(value: String) {
 
 object BookmarkSource {
   val keeper = BookmarkSource("keeper")
-  val initLoad = BookmarkSource("bookmarkImport")
+  val bookmarkImport = BookmarkSource("bookmarkImport")
   val site = BookmarkSource("site")
   val mobile = BookmarkSource("mobile")
   val email = BookmarkSource("email")
   val unknown = BookmarkSource("unknown")
 
-  val valid = Set(keeper, initLoad, site, mobile, email)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email)
 
   def get(value: String): BookmarkSource = BookmarkSource(value.toLowerCase) match {
     case BookmarkSource("hover_keep") => keeper
+    case BookmarkSource("init_load") => bookmarkImport
     case source => source
   }
 }

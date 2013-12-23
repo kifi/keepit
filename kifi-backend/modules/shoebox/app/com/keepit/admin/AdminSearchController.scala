@@ -12,6 +12,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
 import scala.concurrent.Future
+import com.keepit.common.logging.Logging
+import scala.util.Random
 
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
@@ -35,7 +37,9 @@ class AdminSearchController @Inject() (
     uriRepo: NormalizedURIRepo,
     searchConfigRepo: SearchConfigExperimentRepo,
     searchClient: SearchServiceClient
-  ) extends AdminController(actionAuthenticator) {
+  ) extends AdminController(actionAuthenticator) with Logging {
+
+  val rand = new Random()
 
   def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction { request =>
     Async {
@@ -51,8 +55,16 @@ class AdminSearchController @Inject() (
 
   private def fakeGetConfigsForBlindTest: Seq[SearchConfigExperiment] = {
     val config = Await.result(searchClient.getSearchDefaultConfig, 1 second)
-    Seq(SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](1)), config = config),
-        SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](1)), config = config))
+    Seq(SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](42)), config = config),
+        SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](24)), config = config))
+  }
+
+  def blindTestVoted() = AdminHtmlAction{ request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val vote = body.get("vote").get
+    if (vote != "") log.info("user voted for " + vote)
+    else log.info("looks like it was a draw")
+    Ok
   }
 
   def blindTest() = AdminHtmlAction { request =>
@@ -71,7 +83,11 @@ class AdminSearchController @Inject() (
       val (hits1, hits2) = (hits(0).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) },
           hits(1).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) })
 
-      val rv = BlindTestReturn("OK", Some(ConfigIdAndHits(cid1, hits1)), Some(ConfigIdAndHits(cid2, hits2)))
+      // random shuffle
+      val rv = if (rand.nextInt() % 2 == 0) {
+        BlindTestReturn("OK", Some(ConfigIdAndHits(cid1, hits1)), Some(ConfigIdAndHits(cid2, hits2)))
+      } else BlindTestReturn("OK", Some(ConfigIdAndHits(cid2, hits2)), Some(ConfigIdAndHits(cid1, hits1)))
+
       Ok(Json.toJson(rv))
     } else {
       val msg = s"Something is wrong, expecting 2 configs, acutual number of configs: ${configs.size}"
