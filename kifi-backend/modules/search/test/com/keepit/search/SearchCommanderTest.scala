@@ -143,8 +143,8 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         )
 
         res.hits.size === 2
-        Json.parse(res.hits(0).toString) === expected(0)
-        Json.parse(res.hits(1).toString) === expected(1)
+        res.hits(0).json === expected(0)
+        res.hits(1).json === expected(1)
       }
     }
   }
