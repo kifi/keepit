@@ -153,7 +153,9 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
-  def add(key: String, value: JsValue): DetailedSearchHit = new DetailedSearchHit(json + (key ->value))
+  def set(key: String, value: JsValue): DetailedSearchHit = {
+    new DetailedSearchHit((json - key) + (key ->value))
+  }
 
   override def toString(): String = json.toString()
 }
@@ -179,7 +181,7 @@ object DetailedSearchHit extends Logging {
         "score" -> JsNumber(score),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
-        "isFriendsBookmark" -> JsBoolean(isMyBookmark),
+        "isFriendsBookmark" -> JsBoolean(isFriendsBookmark),
         "isPrivate" -> JsBoolean(isPrivate)
       )))
     } catch {
