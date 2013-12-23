@@ -34,7 +34,6 @@ class MobileMessagingController @Inject() (
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime
     val o = request.body
-    val extVersion = (o \ "extVersion").asOpt[String]
     val (title, text) = (
       (o \ "title").asOpt[String],
       (o \ "text").as[String].trim
@@ -44,7 +43,7 @@ class MobileMessagingController @Inject() (
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder += ("source", "mobile")
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
         userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
@@ -64,7 +63,7 @@ class MobileMessagingController @Inject() (
     val o = request.body
     val text = (o \ "text").as[String].trim
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder += ("source", "mobile")
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)

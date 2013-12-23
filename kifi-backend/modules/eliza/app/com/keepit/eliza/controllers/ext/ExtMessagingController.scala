@@ -55,6 +55,7 @@ class ExtMessagingController @Inject() (
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    contextBuilder += ("source", "extension")
     extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
 
@@ -76,6 +77,7 @@ class ExtMessagingController @Inject() (
     val o = request.body
     val text = (o \ "text").as[String].trim
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    contextBuilder += ("source", "extension")
     (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
