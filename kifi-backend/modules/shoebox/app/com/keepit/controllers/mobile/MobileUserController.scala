@@ -67,4 +67,12 @@ class MobileUserController @Inject() (
     }
   }
 
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+        Ok(Json.toJson(r))
+      }
+    }
+  }
+
 }

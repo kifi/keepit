@@ -529,64 +529,11 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
-    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
-      queryContacts(request.userId, search, after, limit)
-    } else Future.successful(Seq.empty[JsObject])
-    @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
-    val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(sci: SocialConnectionInfo): Int = {
-      if (network.exists(sci.networkType.name !=)) 0
-      else if (searchTerms.isEmpty) 1
-      else {
-        val name = normalize(sci.fullName)
-        if (searchTerms.exists(!name.contains(_))) 0
-        else {
-          val names = name.split("\\s+").filterNot(_.isEmpty)
-          names.count(n => searchTerms.exists(n.startsWith))*2 +
-              names.count(n => searchTerms.exists(n.contains)) +
-              (if (searchTerms.exists(name.startsWith)) 1 else 0)
-        }
+    Async {
+      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+        Ok(Json.toJson(r))
       }
     }
-
-    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
-      sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getByRecipientSocialUserId(sci.id) collect {
-          case inv if inv.state != InvitationStates.INACTIVE => "invited"
-        } getOrElse ""
-      }
-
-    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
-      if (sui.networkType == SocialNetworks.FORTYTWO) Nil
-      else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
-
-    val connections = db.readOnly { implicit s =>
-      val filteredConnections = socialUserRepo.getByUser(request.userId)
-        .flatMap(getFilteredConnections)
-        .sortBy { case sui => (-searchScore(sui), normalize(sui.fullName)) }
-
-      (after match {
-        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filteredConnections
-      }).take(limit).map(getWithInviteStatus)
-    }
-
-    val jsConns: Seq[JsObject] = connections.map { conn =>
-      Json.obj(
-        "label" -> conn._1.fullName,
-        "image" -> toJson(conn._1.getPictureUrl(75, 75)),
-        "value" -> socialIdString(conn._1),
-        "status" -> conn._2
-      )
-    }
-    val jsContacts: Seq[JsObject] = Await.result(contactsF, 10 seconds)
-    val jsCombined = jsConns ++ jsContacts
-    log.info(s"[getAllConnections(${request.userId})] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
-    val jsArray = JsArray(jsCombined)
-    Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
   // todo: Combine this and next (abook import)
