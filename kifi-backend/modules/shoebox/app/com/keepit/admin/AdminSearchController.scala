@@ -101,7 +101,7 @@ class AdminSearchController @Inject() (
   }
 
   def blindTestPage() = AdminHtmlAction { request =>
-    val configs = fakeGetConfigsForBlindTest
+    val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchBlindTest(configs))
   }
 
