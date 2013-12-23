@@ -326,7 +326,7 @@ class MainSearcher(
             val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
             min(t, keptTime)
           }
-          recencyScoreVal = recencyScore(introducedAt)
+          recencyScoreVal = if (newContentBoost > 0.0f) recencyScore(introducedAt) else 0.0f
           numCollectStats -= 1
         }
 
@@ -359,7 +359,7 @@ class MainSearcher(
             h.bookmarkCount = getPublicBookmarkCount(h.id)
             if (h.bookmarkCount > 0) {
               val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-              val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost, usefulPageBoost)
+              val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, newContentBoost, usefulPageBoost)
               queue.insert(newScore, scoring, h)
             } else {
               // no one publicly kept this page.
