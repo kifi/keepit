@@ -17,7 +17,8 @@
 			<div>which is better? </div>
 			<input type="radio" name="win" value="config1">config 1<br>
 			<input type="radio" name="win" value="config2">config 2<br>
-			<input type="radio" name="win" value="draw">draw<br>
+			<input type="radio" name="win" value="equallyGood">equally good<br>
+			<input type="radio" name="win" value="equallyBad">equally bad<br>
 			<button type="submit">submit</button>
 		</div>
 	</form>
@@ -86,7 +87,8 @@
 			var data = null
 			if (voted == "config1") data = {vote: $("#hits1").attr("value")}
 			else if (voted == "config2") data = {vote: $("#hits2").attr("value")}
-			else data = {vote: ""}
+			else if (voted == "equallyGood") data = {vote: "equallyGood"}
+			else data = {vote: "equallyBad"}
 			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
 
 		})
