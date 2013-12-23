@@ -9,7 +9,8 @@ import com.keepit.common.store.StoreModule
 abstract class ABookModule(
   // Common Functional Modules
   val cacheModule: CacheModule,
-  val storeModule: StoreModule
+  val storeModule: StoreModule,
+  val contactsUpdaterPluginModule: ContactsUpdaterPluginModule
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

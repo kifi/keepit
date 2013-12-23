@@ -4,25 +4,21 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
-import com.keepit.common.db.{Id}
+import com.keepit.common.db.Id
 import play.api.mvc.{AsyncResult, Action}
-import com.keepit.abook.store.{ABookRawInfoStore}
+import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
 import java.io.File
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.io.Source
-import scala.ref.WeakReference
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, Response}
-import scala.xml.PrettyPrinter
+import play.api.libs.ws.WS
 import scala.concurrent._
-import scala.concurrent.duration._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.Play
 import play.api.Play.current
 import scala.util.{Success, Failure}
-import java.text.Normalizer
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
