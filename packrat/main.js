@@ -707,7 +707,7 @@ api.port.on({
     });
   },
   logged_in: startSession.bind(null, api.noop),
-  remove_notification: function(threadId) {
+  remove_notification: function(threadId) {  // TODO: use messageId instead to avoid removing a new one that subsumes this one?
     removeNotificationPopups(threadId);
   },
   await_deep_link: function(link, _, tab) {
@@ -906,7 +906,7 @@ function requestMissedNotifications() {
 // messageId is of last read message, timeStr is its createdAt time.
 function markRead(threadId, messageId, timeStr) {
   var time = new Date(timeStr);
-  if (!(threadReadAt[threadId] > time)) {
+  if (!(threadReadAt[threadId] >= time)) {
     threadReadAt[threadId] = time;
   }
   var th = threadsById[threadId];
@@ -1310,18 +1310,21 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
     standardizeNotification(th);
     var oldTh = threadsById[th.thread];
     if (!oldTh || new Date(oldTh.time) <= new Date(th.time)) {
-      threadsById[th.thread] = th;
       if (th.unread && threadReadAt[th.thread] >= new Date(th.time)) {
         th.unread = false;
         th.unreadAuthors = th.unreadMessages = 0;
       }
+      if (oldTh && oldTh.unread && !th.unread) {
+        markRead(th.thread, th.id, th.time);
+      }
+      threadsById[th.thread] = th;
       if (oldTh) {
         updatedThreads.push(oldTh);
       } else {
         numNewThreads++;
       }
     }
-  });  // TODO: update threadLists.all.numUnreadUnmuted and threadLists.unread.numTotal and notify interested tabs
+  });
 
   // reusing (sharing) the page ThreadList of an earlier normalization of the URL if possible
   var pt = threadLists[nUri] || threadLists[threads.length ? threads[0].url : ''];
