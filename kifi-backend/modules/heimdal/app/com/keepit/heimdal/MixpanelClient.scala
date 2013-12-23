@@ -20,7 +20,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     properties.data ++= event.context.data
     if (!properties.data.contains("ip")) { properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0))) }
     properties += ("distinct_id", getDistinctId(event))
-    properties += ("time", event.time.getMillis)
+    properties += ("time", event.time.getMillis / 1000)
     if (!properties.data.contains("token")) { properties += ("token", projectToken) }
     val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
     sendData("http://api.mixpanel.com/track", data)

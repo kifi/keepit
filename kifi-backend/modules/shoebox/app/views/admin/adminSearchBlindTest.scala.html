@@ -114,6 +114,7 @@
 
 		$("#vote").submit(function(event){
 			event.preventDefault();
+
 			var checked = $('input[name="win"]:checked')
 			if (checked.length == 0){
 				alert("please check one radio button")
@@ -136,9 +137,7 @@
 				$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
 			}
 
-
 		})
-
 
 
 	});

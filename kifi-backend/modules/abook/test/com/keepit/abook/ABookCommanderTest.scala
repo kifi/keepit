@@ -8,7 +8,6 @@ import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.model._
 import com.keepit.common.db.{TestDbInfo, Id}
 import play.api.libs.json._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
 import play.api.libs.json.JsArray
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
@@ -17,9 +16,8 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import akka.actor.ActorSystem
 
-class ABookUploadTest extends Specification with DbTestInjector {
+class ABookCommanderTest extends Specification with DbTestInjector with ABookUploadTestHelper {
 
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
@@ -34,51 +32,22 @@ class ABookUploadTest extends Specification with DbTestInjector {
 
   implicit def strSeqToJsArray(s:Seq[String]):JsArray = JsArray(s.map(JsString(_)))
 
-  val u42 = Id[User](42)
-
-  val c53 = Json.arr(
-    Json.obj(
-      "name" -> "fifty three",
-      "firstName" -> "fifty",
-      "lastName" -> "three",
-      "emails" -> Seq("fiftythree@53go.com"))
+//  implicit val system = ActorSystem("test")
+  val modules = Seq(
+    FakeABookRawInfoStoreModule(),
+    TestContactsUpdaterPluginModule(),
+    TestSlickModule(TestDbInfo.dbInfo),
+    FakeClockModule(),
+//    StandaloneTestActorSystemModule(),
+    FakeAirbrakeModule(),
+    ABookCacheModule(HashMapMemoryCacheModule())
   )
 
-  val c42 = Json.arr(
-    Json.obj(
-      "name" -> "foo bar",
-      "firstName" -> "foo",
-      "lastName" -> "bar",
-      "emails" -> Seq("foo@42go.com", "bar@42go.com")),
-    Json.obj(
-      "name" -> "forty two",
-      "firstName" -> "forty",
-      "lastName" -> "two",
-      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com ", "BAR@42go.com  ")),
-    Json.obj(
-      "name" -> "ray",
-      "firstName" -> "ray",
-      "lastName" -> "ng",
-      "emails" -> Seq("ray@42go.com", " rAy@42GO.COM "))
-    )
-
-  "ABook Controller" should {
+  "ABook Commander" should {
 
     "handle imports from IOS and gmail" in {
-      implicit val system = ActorSystem("test")
-      withDb(
-        FakeABookRawInfoStoreModule(),
-        TestSlickModule(TestDbInfo.dbInfo),
-        FakeClockModule(),
-        StandaloneTestActorSystemModule(),
-        FakeAirbrakeModule(),
-        ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
-        val iosUploadJson = Json.obj(
-          "origin" -> "ios",
-          "contacts" -> c42
-        )
-
         var abookInfo:ABookInfo = try {
           val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson)
 //          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
@@ -120,13 +89,6 @@ class ABookUploadTest extends Specification with DbTestInjector {
         contactsSeq.isEmpty === false
         contactsSeq.length === 3
 
-        val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
-        val gmailUploadJson = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner.id.get,
-          "ownerEmail"  -> gmailOwner.email.get,
-          "contacts"    -> c42
-        )
         val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get === Id[ABookInfo](2)
         gbookInfo.origin === ABookOrigins.GMAIL
@@ -170,46 +132,25 @@ class ABookUploadTest extends Specification with DbTestInjector {
     }
 
     "handle imports from multiple gmail accounts" in {
-      implicit val system = ActorSystem("test")
-      withDb(
-        FakeABookRawInfoStoreModule(),
-        TestSlickModule(TestDbInfo.dbInfo),
-        FakeClockModule(),
-        StandaloneTestActorSystemModule(),
-        FakeAirbrakeModule(),
-        ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
-        val (abookController) = setup()
-        val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
-        val gmailUploadJson = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner.id.get,
-          "ownerEmail"  -> gmailOwner.email.get,
-          "contacts"    -> c42
-        )
-        val gbookInfo:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
+      withDb(modules: _*) { implicit injector =>
+        val (commander) = setup()
+        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get === Id[ABookInfo](1)
         gbookInfo.origin === ABookOrigins.GMAIL
         gbookInfo.userId === u42
 
-        val gbookInfos = abookController.getABookRawInfosDirect(u42)
+        val gbookInfos = commander.getABookRawInfosDirect(u42)
         val gbookInfoSeqOpt = gbookInfos.validate[Seq[ABookRawInfo]].asOpt
         gbookInfoSeqOpt.isEmpty === false
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length === 1
 
-        val gmailOwner2 = GmailABookOwnerInfo(Some("53"), Some("53@53go.com"), Some(true), Some("53.com"))
-        val gmailUploadJson2 = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner2.id.get,
-          "ownerEmail"  -> gmailOwner2.email.get,
-          "contacts"    -> c53
-        )
-        val gbookInfo2:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
+        val gbookInfo2:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
         gbookInfo2.id.get === Id[ABookInfo](2)
         gbookInfo2.origin === ABookOrigins.GMAIL
         gbookInfo2.userId === u42
 
-        val gbookInfos2 = abookController.getABookRawInfosDirect(u42)
+        val gbookInfos2 = commander.getABookRawInfosDirect(u42)
         val gbookInfoSeqOpt2 = gbookInfos2.validate[Seq[ABookRawInfo]].asOpt
         gbookInfoSeqOpt2.isEmpty === false
         val gBookRawInfoSeq2 = gbookInfoSeqOpt2.get

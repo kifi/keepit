@@ -82,7 +82,7 @@ class ExtAuthController @Inject() (
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("kifiInstallationId", installation.id.get.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
         heimdal.setUserProperties(userId, "installedExtension" -> ContextStringData(installation.version.toString))
       }
     }

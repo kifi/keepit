@@ -6,5 +6,6 @@ import com.keepit.common.store.ABookProdStoreModule
 
 case class ABookProdModule() extends ABookModule(
   cacheModule = ABookCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  storeModule = ABookProdStoreModule()
+  storeModule = ABookProdStoreModule(),
+  contactsUpdaterPluginModule = ProdContactsUpdaterPluginModule()
 ) with CommonProdModule

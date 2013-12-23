@@ -18,7 +18,6 @@ import com.keepit.common.usersegment.UserSegment
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "enableWarp" -> "true",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
@@ -37,7 +36,6 @@ object SearchConfig {
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "newContentBoost" -> "1.0",
-      "newContentDiscoveryThreshold" -> "0.5",
       "tailCutting" -> "0.3",
       "proximityBoost" -> "0.95",
       "semanticBoost" -> "0.8",
@@ -52,7 +50,6 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
-      "enableWarp" -> "warp",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
       "concatBoost" -> "boost value for concatenated terms",
@@ -71,7 +68,6 @@ object SearchConfig {
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
       "newContentBoost" -> "importance of a new content introduced to the network",
-      "newContentDiscoveryThreshold" -> "minimum recency score to instance new content in a result",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
       "proximityBoost" -> "boosting by proximity",
       "semanticBoost" -> "boosting by semantic vector",
