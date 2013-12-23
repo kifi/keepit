@@ -103,16 +103,17 @@ class SearchCommanderImpl @Inject() (
     val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
     val numPreviousHits = searchFilter.idFilter.size
     val mayHaveMoreHits = if (numPreviousHits == 0) mergedResult.hits.nonEmpty else mergedResult.hits.size == maxHits
-    val decorator = ResultDecorator(userId, query, lang, mergedResult.friendStats, shoeboxClient, config, monitoredAwait)
-    val res = decorator.decorate(
-      mergedResult.hits,
-      newIdFilter,
+    val res = ResultDecorator.decorate(
+      userId,
+      query,
+      lang,
+      mergedResult,
       mayHaveMoreHits,
-      mergedResult.show,
       searchExperimentId,
-      showExperts
-    )
-
+      showExperts,
+      newIdFilter,
+      shoeboxClient,
+      monitoredAwait)
     timing.end
 
     SafeFuture {

@@ -1,5 +1,5 @@
 
-  
+
 
 
 <!DOCTYPE html>
@@ -17,8 +17,8 @@
     <meta name="msapplication-TileImage" content="/windows-tile.png">
     <meta name="msapplication-TileColor" content="#ffffff">
 
-    
-    
+
+
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
     <meta content="authenticity_token" name="csrf-param" />
@@ -26,12 +26,12 @@
 
     <link href="https://a248.e.akamai.net/assets.github.com/assets/github-7ef703df15129d3b898830277d50fc760ca91cbc.css" media="screen" rel="stylesheet" type="text/css" />
     <link href="https://a248.e.akamai.net/assets.github.com/assets/github2-204e28c07493b8ba6089c49791ed7ab61ecb6581.css" media="screen" rel="stylesheet" type="text/css" />
-    
+
 
 
       <script src="https://a248.e.akamai.net/assets.github.com/assets/frameworks-cc4895cbb610429d2ce48e7c2392822c33db2dfe.js" type="text/javascript"></script>
       <script src="https://a248.e.akamai.net/assets.github.com/assets/github-e539dcf1e3c93f4acda64d064d3f30a39afabae0.js" type="text/javascript"></script>
-      
+
 
         <link rel='alternate' type='text/x-diff' href='/kangax/fabric.js/pull/381.diff' />
   <link rel='alternate' type='text/x-patch' href='/kangax/fabric.js/pull/381.patch' />
@@ -56,11 +56,11 @@ See issue #380." />
   <body class="logged_in page-pullrequest macintosh vis-public env-production ">
     <div id="wrapper">
 
-      
 
-      
 
-      
+
+
+
 
 
         <div class="header header-logged-in true">
@@ -72,14 +72,14 @@ See issue #380." />
 
             <div class="divider-vertical"></div>
 
-            
+
   <a href="/notifications" class="notification-indicator tooltipped downwards" title="You have unread notifications">
     <span class="mail-status unread"></span>
   </a>
   <div class="divider-vertical"></div>
 
 
-              
+
   <div class="topsearch command-bar-activated">
     <form accept-charset="UTF-8" action="/search" class="command_bar_form" id="top_search_form" method="get">
   <a href="/search/advanced" class="advanced-search tooltipped downwards command-bar-search" id="advanced_search" title="Advanced search"><span class="mini-icon mini-icon-advanced-search "></span></a>
@@ -104,9 +104,9 @@ See issue #380." />
   </div>
 
 
-            
 
-  
+
+
     <ul id="user-links">
       <li>
         <a href="https://github.com/andrewconner" class="name">
@@ -134,23 +134,23 @@ See issue #380." />
 
 
 
-            
+
           </div>
         </div>
 
 
-      
 
-      
+
+
 
 
             <div class="site hfeed" itemscope itemtype="http://schema.org/WebPage">
       <div class="hentry">
-        
+
         <div class="pagehead repohead instapaper_ignore readability-menu">
           <div class="container">
             <div class="title-actions-bar">
-              
+
 
 
                   <ul class="pagehead-actions">
@@ -239,7 +239,7 @@ See issue #380." />
               </h1>
             </div>
 
-            
+
 
   <ul class="tabs">
     <li><a href="/kangax/fabric.js" highlight="repo_sourcerepo_downloadsrepo_commitsrepo_tagsrepo_branches">Code</a></li>
@@ -255,18 +255,18 @@ See issue #380." />
 
 
   </ul>
-  
-  
-  
-  
 
 
-            
+
+
+
+
+
           </div>
         </div><!-- /.repohead -->
 
         <div id="js-repo-pjax-container" class="container context-loader-container" data-pjax-container>
-          
+
 
 
 <!-- base sha1: &quot;1f206d039eab833baef0703e748a8177903f6413&quot; -->
@@ -275,7 +275,7 @@ See issue #380." />
 <div class='view-pull-request clearfix'>
 
   <div class="pull-head" id="pull-head">
-    
+
 <div class="pull-description">
   <span class="pull-state">
       <span class="state-indicator open">Open</span>
@@ -322,7 +322,7 @@ See issue #380." />
       <li>
         <a href="/kangax/fabric.js/pull/381/commits" data-container-id="commits_bucket" class="tabnav-tab ">
           <span class="mini-icon mini-icon-commit"></span>
-          Commits 
+          Commits
 
           <span class='counter'>
             1
@@ -332,7 +332,7 @@ See issue #380." />
       <li>
         <a href="/kangax/fabric.js/pull/381/files" data-container-id="files_bucket" class="tabnav-tab ">
           <span class="mini-icon mini-icon-diff"></span>
-          Files Changed 
+          Files Changed
 
           <span class='counter'>
             1
@@ -346,7 +346,7 @@ See issue #380." />
 
   <div class="discussion-sidebar">
     <div class="discussion-stats">
-      
+
 <span class="state-indicator open">
   Open
 </span>
@@ -381,7 +381,7 @@ See issue #380." />
   <div class="discussion-timeline">
 
     <div class="js-discussion">
-      
+
 
 <div class="discussion-bubble js-comment-container">
   <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
@@ -403,7 +403,7 @@ See issue #380." />
 </div>
 
 <form accept-charset="UTF-8" action="/kangax/fabric.js/issues/381" class="edit_issue" data-remote="true" id="edit_issue_9947059" method="post"><div style="margin:0;padding:0;display:inline"><input name="_method" type="hidden" value="put" /><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>
-  
+
 
 <div class="assignee js-context-menu infobar-widget">
   <span class="text js-context-button">
@@ -425,7 +425,7 @@ See issue #380." />
             </div>
           </div>
 
-          
+
 
         </div> <!-- /.comment-content -->
       </div> <!-- /.comment -->
@@ -451,12 +451,12 @@ See issue #380." />
 </div>
 
 
-      
+
     <div class="discussion-bubble js-comment-container">
     <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
     <div class="discussion-bubble-content bubble">
       <div class="discussion-bubble-inner">
-        
+
 
 
 <div id="commits-pushed-2715ef3" class="js-comment comment">
@@ -480,7 +480,7 @@ See issue #380." />
 
   <div class="comment-content">
     <table class='commits commits-condensed' cellspacing='0' width="100%">
-      
+
 <tr class="commit js-details-container" id="commit-2715ef306cc9605fa6881e3608fd97b5e92f0eb7">
   <td class="gravatar">
     <span class="gravatar"><a href="/Kienz"><img height="16" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="16" /></a></span>
@@ -501,7 +501,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
         <span class="js-status"></span>
 
 
-      
+
     <code>
         <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7">2715ef3</a>
     </code>
@@ -526,7 +526,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
 
       <div id="js-pull-merging">
-        
+
   <div class="merge-pr">
 
   </div>
@@ -534,7 +534,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
       </div>
 
-      
+
 
 <div class="discussion-bubble js-comment-container">
   <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
@@ -543,7 +543,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
   <div class="discussion-bubble-content bubble">
     <div class="discussion-bubble-inner">
       <input type="hidden" name="issue" value="381" />
-      
+
 
 <div class="js-previewable-comment-form previewable-comment-form write-selected" data-preview-url="/preview?repository=712530">
   <div class="comment-form-head tabnav">
@@ -558,7 +558,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
   <div class="comment-form-error" style="display:none;"></div>
 
   <div id="write_bucket_606" class="write-content js-write-bucket js-uploadable-container upload-enabled is-default" data-model="asset">
-    
+
     <textarea name="comment[body]"
               tabindex="1"
               id="comment_body_606"
@@ -567,7 +567,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
               data-suggester="606_new_preview_suggester"
               ></textarea>
 
-    
+
   <p class="drag-and-drop">
     <span class="default">
       Attach images by dragging &amp; dropping them or
@@ -587,7 +587,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
   </div>
   <div id="preview_bucket_606" class="preview-content js-preview-bucket">
-    
+
 <div id="openstruct-226613940" class="js-comment comment">
   <div class="comment-header normal-comment-header">
       <img class="comment-header-gravatar" height="22" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="22" />
@@ -616,7 +616,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
   </div>
 
   <div class="suggester-container">
-    <div class="suggester js-navigation-container" id="606_new_preview_suggester" 
+    <div class="suggester js-navigation-container" id="606_new_preview_suggester"
          data-url="/kangax/fabric.js/suggestions/pullrequest/3665646">
     </div>
   </div>
@@ -625,7 +625,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
     </div>
   </div>
   <div class="form-actions">
-    
+
 
   <div class="tip">
     <img alt="Commit_comment_tip" height="35" src="https://a248.e.akamai.net/assets.github.com/images/modules/commit/commit_comment_tip.gif?1347524281" width="95" />
@@ -648,7 +648,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
 
 
-    
+
 
 <div class="thread-subscription-status clearfix">
   <span class="mega-icon mega-icon-notifications"></span>
@@ -728,7 +728,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
 
 
-    
+
       <div id="commits_bucket" class="tab-content" style='display:none'>
 
 
@@ -739,7 +739,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
       <h3><span class="mini-icon mini-icon-calendar"></span>Jan 14, 2013</h3>
       <div class="body boxed-group-inner">
         <table class='commits commits-condensed' cellspacing='0' width="100%">
-          
+
 <tr class="commit js-details-container" id="commit-2715ef306cc9605fa6881e3608fd97b5e92f0eb7">
   <td class="gravatar">
     <span class="gravatar"><a href="/Kienz"><img height="16" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="16" /></a></span>
@@ -760,7 +760,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
         <span class="js-status"></span>
 
 
-      
+
     <code>
         <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7">2715ef3</a>
     </code>
@@ -777,13 +777,13 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
 
 
-    
-      
+
+
 <div id="files_bucket" class="tab-content" style='display:none'>
 
 
     <div id='diff' class="uncommentable">
-      
+
 <div id='toc' class="details-collapse js-details-container ">
   <p class="explain">
     <span class="mini-icon mini-icon-diff"></span>Showing <strong>1 changed file</strong>
@@ -806,7 +806,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 </div>
 
       <div class="breakout">
-        
+
 <div id="files" class="diff-view commentable">
     <div id="diff-0" class="file js-details-container">
       <div class="meta" data-path="src/canvas.class.js">
@@ -814,7 +814,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
             <span class="diffstat tooltipped rightwards" title="3 additions &amp; 2 deletions">5 <span class="diffstat-bar"><i class='plus'>&#xf053;&#xf053;&#xf053;</i><i class='minus'>&#xf053;&#xf053;</i></span></span>
 
           <span class="js-selectable-text css-truncate css-truncate-target">src/canvas.class.js</span>
-          
+
         </div>
         <div class="actions">
           <span class="show-inline-notes">
@@ -1057,7 +1057,7 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 
 </div>
 
-    
+
 <!-- COMMENTS -->
 <div id='diff-comment-data' style='display:none'>
 </div>
@@ -1138,9 +1138,9 @@ See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-
 </div><!-- /.#footer -->
 
 
-    
 
-    
+
+
 
 <div id="keyboard_shortcuts_pane" class="instapaper_ignore readability-extra" style="display:none">
   <h2>Keyboard Shortcuts <small><a href="#" class="js-see-all-keyboard-shortcuts">(see all)</a></small></h2>
@@ -1518,10 +1518,9 @@ I think you should use an
       <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
     </div>
 
-    
-    
+
+
     <span id='server_response_time' data-time='0.22616' data-host='fe1'></span>
-    
+
   </body>
 </html>
-

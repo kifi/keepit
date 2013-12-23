@@ -54,8 +54,8 @@ var tile = tile || function() {  // idempotent for Chrome
     keepers: function(o) {
       setTimeout(loadAndDo.bind(null, 'keeper', 'showKeepers', o.keepers, o.otherKeeps), 3000);
     },
-    counts: function(counts) {
-      tile && updateCounts(counts);
+    count: function(n) {
+      tile && updateCount(n);
     },
     scroll_rule: function(r) {
       if (!onScroll && !window.keeper) {
@@ -97,7 +97,7 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 76: // l
-        api.port.emit("api:reload");
+        api.port.emit('api:reload');
         e.preventDefault();
         break;
       case 77: // m
@@ -105,22 +105,25 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 79: // o
-        loadAndDo('pane', 'toggle', 'key', '/notices');
+        loadAndDo('pane', 'toggle', 'key', '/messages:all');
+        e.preventDefault();
+        break;
+      case 83: // s
+        loadAndDo('pane', 'compose', 'key');
         e.preventDefault();
         break;
       }
     }
   }
 
-  function updateCounts(counts) {
-    var n = Math.max(counts.m, counts.n);
+  function updateCount(n) {
     if (n) {
       tileCount.textContent = n;
       tile.insertBefore(tileCount, tileCard.nextSibling);
     } else if (tileCount.parentNode) {
       tileCount.remove();
     }
-    tile.dataset.counts = JSON.stringify(counts);
+    tile.dataset.count = n;
   }
 
   function toggleLoginDialog() {

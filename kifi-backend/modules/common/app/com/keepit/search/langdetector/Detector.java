@@ -256,14 +256,14 @@ public class Detector {
      * @throws LangDetectException
      */
     public String detectForShort() throws LangDetectException {
-    	if (langprob == null) detectShortBlock();
+      if (langprob == null) detectShortBlock();
 
-    	ArrayList<Language> list = sortProbability(langprob);
+      ArrayList<Language> list = sortProbability(langprob);
 
         if (list.size() > 0) {
-           	return list.get(0).lang;
+             return list.get(0).lang;
         }else{
-        	return UNKNOWN_LANG;
+          return UNKNOWN_LANG;
         }
     }
 
@@ -334,8 +334,8 @@ public class Detector {
      * @throws LangDetectException
      */
     private void detectShortBlock() throws LangDetectException {
-    	cleaningText();
-    	ArrayList<String> ngrams = extractNGrams();
+      cleaningText();
+      ArrayList<String> ngrams = extractNGrams();
         if (ngrams.size()==0)
             throw new LangDetectException(ErrorCode.CantDetectError, "no features in text");
         langprob = new double[langlist.size()];
@@ -343,31 +343,31 @@ public class Detector {
         int N = ngrams.size();
         int nFeat = 0;
         for(int i = 0 ; i < N; i++){
-        	String gram = ngrams.get(i);
-        	if ( gram != null && wordLangProbMap.containsKey(gram)){
-        		nFeat += 1;
-        		double[] langProbMap = wordLangProbMap.get(gram);
-        		for(int j = 0; j < langlist.size(); j++){
-        			// add 0.001 as a perturbation, since Naive-Bayes doesn't like zero-probability
-        			langprob[j] += Math.log( 0.001 + langProbMap[j] );
-        		}
-        	}
+          String gram = ngrams.get(i);
+          if ( gram != null && wordLangProbMap.containsKey(gram)){
+            nFeat += 1;
+            double[] langProbMap = wordLangProbMap.get(gram);
+            for(int j = 0; j < langlist.size(); j++){
+              // add 0.001 as a perturbation, since Naive-Bayes doesn't like zero-probability
+              langprob[j] += Math.log( 0.001 + langProbMap[j] );
+            }
+          }
         }
 
         if ( nFeat == 0){
-        	langprob = priorMap;
+          langprob = priorMap;
         }else{
-        	for(int j = 0 ; j < langlist.size(); j++){
-        		langprob[j] += Math.log( priorMap[j] );
-        		langprob[j] = Math.exp(langprob[j]);
-        	}
+          for(int j = 0 ; j < langlist.size(); j++){
+            langprob[j] += Math.log( priorMap[j] );
+            langprob[j] = Math.exp(langprob[j]);
+          }
         }
         normalizeProb(langprob);
 
 //      for(int i = 0 ; i < langlist.size(); i++){
-//        	System.out.format( "%s : %-8.3f", langlist.get(i), langprob[i]) ;
-//        	if ( (i+1) % 5 == 0 )
-//        		System.out.println();
+//          System.out.format( "%s : %-8.3f", langlist.get(i), langprob[i]) ;
+//          if ( (i+1) % 5 == 0 )
+//            System.out.println();
 //      }
 //      System.out.println();
     }
@@ -424,15 +424,15 @@ public class Detector {
     private String wordProbToString(double[] prob) {
         Formatter formatter = new Formatter();
         try {
-	        for(int j=0;j<prob.length;++j) {
-	            double p = prob[j];
-	            if (p>=0.00001) {
-	                formatter.format(" %s:%.5f", langlist.get(j), p);
-	            }
-	        }
-	        return formatter.toString();
+          for(int j=0;j<prob.length;++j) {
+              double p = prob[j];
+              if (p>=0.00001) {
+                  formatter.format(" %s:%.5f", langlist.get(j), p);
+              }
+          }
+          return formatter.toString();
         } finally {
-        	formatter.close();
+          formatter.close();
         }
     }
 

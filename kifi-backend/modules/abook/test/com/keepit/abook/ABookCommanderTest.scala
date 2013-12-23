@@ -19,7 +19,7 @@ import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import akka.actor.ActorSystem
 
-class ABookUploadTest extends Specification with DbTestInjector {
+class ABookCommanderTest extends Specification with DbTestInjector {
 
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
@@ -62,7 +62,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
       "emails" -> Seq("ray@42go.com", " rAy@42GO.COM "))
     )
 
-  "ABook Controller" should {
+  "ABook Commander" should {
 
     "handle imports from IOS and gmail" in {
       implicit val system = ActorSystem("test")
@@ -178,7 +178,7 @@ class ABookUploadTest extends Specification with DbTestInjector {
         StandaloneTestActorSystemModule(),
         FakeAirbrakeModule(),
         ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
-        val (abookController) = setup()
+        val (commander) = setup()
         val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
         val gmailUploadJson = Json.obj(
           "origin"      -> "gmail",
@@ -186,12 +186,12 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "ownerEmail"  -> gmailOwner.email.get,
           "contacts"    -> c42
         )
-        val gbookInfo:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
+        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get === Id[ABookInfo](1)
         gbookInfo.origin === ABookOrigins.GMAIL
         gbookInfo.userId === u42
 
-        val gbookInfos = abookController.getABookRawInfosDirect(u42)
+        val gbookInfos = commander.getABookRawInfosDirect(u42)
         val gbookInfoSeqOpt = gbookInfos.validate[Seq[ABookRawInfo]].asOpt
         gbookInfoSeqOpt.isEmpty === false
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
@@ -204,12 +204,12 @@ class ABookUploadTest extends Specification with DbTestInjector {
           "ownerEmail"  -> gmailOwner2.email.get,
           "contacts"    -> c53
         )
-        val gbookInfo2:ABookInfo = abookController.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
+        val gbookInfo2:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
         gbookInfo2.id.get === Id[ABookInfo](2)
         gbookInfo2.origin === ABookOrigins.GMAIL
         gbookInfo2.userId === u42
 
-        val gbookInfos2 = abookController.getABookRawInfosDirect(u42)
+        val gbookInfos2 = commander.getABookRawInfosDirect(u42)
         val gbookInfoSeqOpt2 = gbookInfos2.validate[Seq[ABookRawInfo]].asOpt
         gbookInfoSeqOpt2.isEmpty === false
         val gBookRawInfoSeq2 = gbookInfoSeqOpt2.get

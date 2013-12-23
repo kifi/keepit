@@ -11,21 +11,83 @@
 	  </div>
 	</form>
 
-	<p id = "result"></p>
+
+	<form id = "vote">
+		<div>
+			<div>which is better? </div>
+			<input type="radio" name="win" value="config1">config 1<br>
+			<input type="radio" name="win" value="config2">config 2<br>
+			<input type="radio" name="win" value="draw">draw<br>
+			<button type="submit">submit</button>
+		</div>
+	</form>
+
+  <p id = "result"></p><br>
+	<p id = "hits1" name = "configId" value = "1"></p><br><br>
+	<p id = "hits2" name = "configId" value = "2"></p>
 
 
 <script type="text/javascript">
 
 	$(document).ready(function(){
-		$("#queryForm").submit(function() {
+		$("#queryForm").submit(function(event) {
 			event.preventDefault();
-			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
-				{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val()}
-			).done(done).fail(fail);
+			$.post(
+				'@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
+				{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val()},
+				function(data) {
+
+	      	$("#result").empty();
+	      	$("#hits1").empty();
+	      	$("#hits2").empty();
+
+	      	var msg = data.msg
+
+	      	if (msg == "OK"){
+
+	      		var hits1 = data.result1.hits
+	      		var hits2 = data.result2.hits
+
+	      		var id1 = data.result1.id
+	      		var id2 = data.result2.id
+
+	      		$("#hits1").attr("value", id1)
+	      		$("#hits2").attr("value", id2)
+
+	      		$("#hits1").append("<div><strong>" + hits1.length + " hits from config 1:" + "</strong></div>")
+	      		$("#hits2").append("<div><strong>" + hits2.length + " hits from config 2:" + "</strong></div>")
+
+	      		for(var i = 0 ; i < hits1.length; i++){
+	      			var item = hits1[i]
+	      			$("#hits1").append("<div>" + item.title + "</div>");
+	      		  $("#hits1").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+	      		}
+
+	      		for(var i = 0 ; i < hits2.length; i++){
+	      			var item = hits2[i]
+	      			$("#hits2").append("<div>" + item.title + "</div>");
+	      		  $("#hits2").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+	      		}
+
+	      	} else {
+	      		$("#result").append(msg)
+	      	}
+
+      	},
+				"json"
+			)
+
+		}) <!--submit-->
 
 
-      function done(data) { $("#result").empty().prepend(data) }
-      function fail() { alert("bad") }
+		$("#vote").submit(function(event){
+			event.preventDefault();
+			var voted = $('input[name="win"]:checked').val()
+			var data = null
+			if (voted == "config1") data = {vote: $("#hits1").attr("value")}
+			else if (voted == "config2") data = {vote: $("#hits2").attr("value")}
+			else data = {vote: ""}
+			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
 
 		})
 

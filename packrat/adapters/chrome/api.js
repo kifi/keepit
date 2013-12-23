@@ -335,7 +335,7 @@ var api = function() {
 
     var js = doLogging ? '' : 'function log() {return log}', injected;
     chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
-      injected = arr[0] || {};
+      injected = arr && arr[0] || {};
       done(0);
     });
 
