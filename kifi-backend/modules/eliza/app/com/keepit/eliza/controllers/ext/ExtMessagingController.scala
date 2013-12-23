@@ -56,6 +56,7 @@ class ExtMessagingController @Inject() (
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
         userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
@@ -76,6 +77,7 @@ class ExtMessagingController @Inject() (
     val text = (o \ "text").as[String].trim
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
+    contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
