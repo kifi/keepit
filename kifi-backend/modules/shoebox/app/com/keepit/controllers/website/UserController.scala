@@ -432,24 +432,9 @@ class UserController @Inject() (
 
   @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
 
-  val queryWithABook = sys.props.getOrElse("query.contacts.abook", "true").toBoolean
   private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
+
     @inline def mkId(email:String) = s"email/$email"
-    val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(s: String): Int = {
-      if (s.isEmpty) 0
-      else if (searchTerms.isEmpty) 1
-      else {
-        val name = normalize(s)
-        if (searchTerms.exists(!name.contains(_))) 0
-        else {
-          val names = name.split("\\s+").filterNot(_.isEmpty)
-          names.count(n => searchTerms.exists(n.startsWith))*2 +
-            names.count(n => searchTerms.exists(n.contains)) +
-            (if (searchTerms.exists(name.startsWith)) 1 else 0)
-        }
-      }
-    }
     @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
       contactIdOpt flatMap { contactId =>
         db.readOnly { implicit s =>
@@ -460,20 +445,7 @@ class UserController @Inject() (
       } getOrElse ""
     }
 
-    val pagedF = if (queryWithABook) abookServiceClient.queryEContacts(userId, limit, search, after)
-    else abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
-      val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
-      val paged = after match {
-        case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filtered
-      }
-      paged
-    }
-
-    pagedF.map { paged =>
+    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
       val objs = paged.take(limit).map { e =>
         Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
