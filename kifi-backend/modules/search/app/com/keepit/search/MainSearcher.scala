@@ -75,7 +75,6 @@ class MainSearcher(
   private[this] val isInitialSearch = idFilter.isEmpty
 
   // get config params
-  private[this] val enableWarp = config.asBoolean("enableWarp")
   private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   private[this] val percentMatch = config.asFloat("percentMatch")
@@ -132,37 +131,7 @@ class MainSearcher(
     PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
-  private def warpOrSearchText(maxTextHitsPerCategory: Int): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
-    val promise = Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]
-    tryWarp(promise)
-    future{ trySearchText(maxTextHitsPerCategory, promise) }
-    Await.result(promise.future, 10 seconds)
-  }
-
-  private def tryWarp(promise: Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]): Unit = {
-    clickBoostsFuture.onSuccess{ case clickBoosts =>
-      val warpThreshold = config.asFloat("maxResultClickBoost") * 0.8
-      val myUris = socialGraphInfo.myUris
-      myUris.find{ id =>
-        val clickBoost = clickBoosts(id)
-        if (clickBoost > warpThreshold) {
-          val myHits = createQueue(1)
-          val friendsHits = createQueue(1)
-          val othersHits = createQueue(1)
-
-          val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
-          myUriEdgeAccessor.seek(id)
-          myHits.insert(id, 1.0f, clickBoost, true, !myUriEdgeAccessor.isPublic)
-          promise.trySuccess((myHits, friendsHits, othersHits, None)) // complete the promise if not completed yet
-          true
-        } else {
-          false
-        }
-      }
-    }(ExecutionContext.immediate)
-  }
-
-  private def trySearchText(maxTextHitsPerCategory: Int, promise: Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]): Unit = try {
+  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
@@ -187,8 +156,6 @@ class MainSearcher(
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val friendlyUris = socialGraphInfo.friendlyUris
 
-      if (promise.isCompleted) return
-
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
@@ -198,14 +165,9 @@ class MainSearcher(
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-      if (promise.isCompleted) return
-
       val tLucene = currentDateTime.getMillis()
       hotDocs.set(browsingFilter, clickBoosts)
       personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
-
-        if (promise.isCompleted) return
-
         val visibility = new ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
@@ -230,25 +192,12 @@ class MainSearcher(
       timeLogs.search = currentDateTime.getMillis() - tLucene
       personalizedSearcher
     }
-    promise.trySuccess((myHits, friendsHits, othersHits, personalizedSearcher))
-  } catch {
-    case t: Throwable => promise.tryFailure(t)
-  }
-
-  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
-    val promise = Promise[(ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher])]
-    trySearchText(maxTextHitsPerCategory, promise)
-    Await.result(promise.future, 10 seconds)
+    (myHits, friendsHits, othersHits, personalizedSearcher)
   }
 
   def search(): ShardSearchResult = {
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits, personalizedSearcher) =
-      if (enableWarp && isInitialSearch && filter.isDefault) {
-        warpOrSearchText(maxTextHitsPerCategory = numHitsToReturn * 5)
-      } else {
-        searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
-      }
+    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
 
