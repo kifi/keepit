@@ -19,7 +19,7 @@ import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import akka.actor.ActorSystem
 
-class ABookCommanderTest extends Specification with DbTestInjector {
+class ABookCommanderTest extends Specification with DbTestInjector with ABookUploadTestHelper {
 
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
@@ -34,51 +34,23 @@ class ABookCommanderTest extends Specification with DbTestInjector {
 
   implicit def strSeqToJsArray(s:Seq[String]):JsArray = JsArray(s.map(JsString(_)))
 
-  val u42 = Id[User](42)
-
-  val c53 = Json.arr(
-    Json.obj(
-      "name" -> "fifty three",
-      "firstName" -> "fifty",
-      "lastName" -> "three",
-      "emails" -> Seq("fiftythree@53go.com"))
+//  implicit val system = ActorSystem("test")
+  val modules = Seq(
+    FakeABookRawInfoStoreModule(),
+    TestContactsUpdaterPluginModule(),
+    TestSlickModule(TestDbInfo.dbInfo),
+    FakeClockModule(),
+//    StandaloneTestActorSystemModule(),
+    FakeAirbrakeModule(),
+    ABookCacheModule(HashMapMemoryCacheModule())
   )
-
-  val c42 = Json.arr(
-    Json.obj(
-      "name" -> "foo bar",
-      "firstName" -> "foo",
-      "lastName" -> "bar",
-      "emails" -> Seq("foo@42go.com", "bar@42go.com")),
-    Json.obj(
-      "name" -> "forty two",
-      "firstName" -> "forty",
-      "lastName" -> "two",
-      "emails" -> Seq("fortytwo@42go.com", "Foo@42go.com ", "BAR@42go.com  ")),
-    Json.obj(
-      "name" -> "ray",
-      "firstName" -> "ray",
-      "lastName" -> "ng",
-      "emails" -> Seq("ray@42go.com", " rAy@42GO.COM "))
-    )
 
   "ABook Commander" should {
 
     "handle imports from IOS and gmail" in {
-      implicit val system = ActorSystem("test")
-      withDb(
-        FakeABookRawInfoStoreModule(),
-        TestSlickModule(TestDbInfo.dbInfo),
-        FakeClockModule(),
-        StandaloneTestActorSystemModule(),
-        FakeAirbrakeModule(),
-        ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+//      implicit val system = ActorSystem("test")
+      withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
-        val iosUploadJson = Json.obj(
-          "origin" -> "ios",
-          "contacts" -> c42
-        )
-
         var abookInfo:ABookInfo = try {
           val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson)
 //          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
@@ -170,14 +142,7 @@ class ABookCommanderTest extends Specification with DbTestInjector {
     }
 
     "handle imports from multiple gmail accounts" in {
-      implicit val system = ActorSystem("test")
-      withDb(
-        FakeABookRawInfoStoreModule(),
-        TestSlickModule(TestDbInfo.dbInfo),
-        FakeClockModule(),
-        StandaloneTestActorSystemModule(),
-        FakeAirbrakeModule(),
-        ABookCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
         val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
         val gmailUploadJson = Json.obj(
