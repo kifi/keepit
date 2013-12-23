@@ -34,19 +34,19 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
 
   val modules = Seq()
 
-  def setup()(implicit injector:Injector) = {
-    val db = inject[Database]
-    val abookInfoRepo = inject[ABookInfoRepo]
-    val contactRepo = inject[ContactRepo]
-    val econtactRepo = inject[EContactRepo]
-    val oauth2TokenRepo = inject[OAuth2TokenRepo]
-    val contactsUpdater = inject[ContactsUpdaterPlugin]
-    val s3 = inject[ABookRawInfoStore]
-    val aa = inject[ActionAuthenticator]
-    val commander = new ABookCommander(db, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
-    val controller = new ABookController(aa, db, s3, abookInfoRepo, contactRepo, econtactRepo, oauth2TokenRepo, commander, contactsUpdater)
-    controller
-  }
+//  def setup()(implicit injector:Injector) = {
+//    val db = inject[Database]
+//    val abookInfoRepo = inject[ABookInfoRepo]
+//    val contactRepo = inject[ContactRepo]
+//    val econtactRepo = inject[EContactRepo]
+//    val oauth2TokenRepo = inject[OAuth2TokenRepo]
+//    val contactsUpdater = inject[ContactsUpdaterPlugin]
+//    val s3 = inject[ABookRawInfoStore]
+//    val aa = inject[ActionAuthenticator]
+//    val commander = new ABookCommander(db, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
+//    val controller = new ABookController(aa, db, s3, abookInfoRepo, contactRepo, econtactRepo, oauth2TokenRepo, commander, contactsUpdater)
+//    controller
+//  }
 
   "abook controller" should {
     "support mobile (ios) upload + query" in {
@@ -55,7 +55,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         uploadRoute === "/internal/abook/ios/uploadForUser?userId=1"
         val payload = iosUploadJson
         val uploadRequest = FakeRequest("POST", uploadRoute, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), body = payload)
-        val controller = setup() // inject[ABookController]
+        val controller = inject[ABookController] // setup
         var result = controller.upload(Id[User](1), ABookOrigins.IOS)(uploadRequest)
         println(s"[ios-upload] result=$result")
         status(result) must equalTo(OK)
