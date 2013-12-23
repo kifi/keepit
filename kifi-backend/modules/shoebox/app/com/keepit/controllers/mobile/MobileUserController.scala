@@ -67,6 +67,7 @@ class MobileUserController @Inject() (
     }
   }
 
+  // todo: removeme (legacy api)
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
     Async {
       userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
@@ -75,4 +76,22 @@ class MobileUserController @Inject() (
     }
   }
 
+  def querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+        Ok(Json.toJson(r))
+      }
+    }
+  }
+
+  def queryContacts(search: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.queryContacts(request.userId, search, after, limit) map { r =>
+        Ok(Json.toJson(r))
+      }
+    }
+  }
+
 }
+
+

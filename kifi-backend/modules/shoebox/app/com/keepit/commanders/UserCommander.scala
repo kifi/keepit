@@ -189,8 +189,7 @@ class UserCommander @Inject() (
 
   @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
 
-  private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
-
+  def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email:String) = s"email/$email"
     @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
       contactIdOpt flatMap { contactId =>
@@ -211,6 +210,7 @@ class UserCommander @Inject() (
     }
   }
 
+  // legacy api -- to be replaced after removing dependencies
   def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)
