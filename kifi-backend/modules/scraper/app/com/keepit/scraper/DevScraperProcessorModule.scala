@@ -1,14 +1,11 @@
 package com.keepit.scraper
 
-import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.google.inject.{Provider, Provides, Singleton}
 import com.keepit.scraper.extractor.{ExtractorFactoryImpl, ExtractorFactory}
 import akka.actor.ActorSystem
 
-trait ScrapeProcessorModule extends ScalaModule
-
-case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
+case class DevScraperProcessorModule() extends ScrapeProcessorModule {
 
   def configure {
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
@@ -26,8 +23,8 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
   def httpFetcher: HttpFetcher = {
     new HttpFetcherImpl(
       userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
-      connectionTimeout = scraperConfig.scrapePendingFrequency * 1000, // todo: revisit
-      soTimeOut = scraperConfig.scrapePendingFrequency * 1000,
+      connectionTimeout = 5 * 1000,
+      soTimeOut = 5 * 1000,
       trustBlindly = true
     )
   }
@@ -35,8 +32,6 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
   @Singleton
   @Provides
   def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor]):SyncScrapeProcessor = {
-    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors * 32)
+    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors)
   }
 }
-
-
