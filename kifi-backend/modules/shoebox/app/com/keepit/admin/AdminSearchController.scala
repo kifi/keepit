@@ -1,19 +1,24 @@
 package com.keepit.controllers.admin
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.logging.Logging
+import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model._
 import com.keepit.search._
-import views.html
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import play.api.libs.json._
 import scala.concurrent.Future
-import com.keepit.common.logging.Logging
 import scala.util.Random
+import views.html
+import com.keepit.heimdal.SystemEvent
+import com.keepit.heimdal.SystemEventTypes
 
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
@@ -36,7 +41,9 @@ class AdminSearchController @Inject() (
     articleSearchResultStore: ArticleSearchResultStore,
     uriRepo: NormalizedURIRepo,
     searchConfigRepo: SearchConfigExperimentRepo,
-    searchClient: SearchServiceClient
+    searchClient: SearchServiceClient,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient
   ) extends AdminController(actionAuthenticator) with Logging {
 
   val rand = new Random()
@@ -61,11 +68,17 @@ class AdminSearchController @Inject() (
 
   def blindTestVoted() = AdminHtmlAction{ request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-    val id1 = body.get("configId1").get
-    val id2 = body.get("configId2").get
+    val id1 = body.get("configId1").get.toLong
+    val id2 = body.get("configId2").get.toLong
     val vote = body.get("vote").get
 
     log.info(s"two configs: $id1, $id2, voting result: $vote")
+
+    val builder = new HeimdalContextBuilder()
+    builder += ("search_blind_test_ids", Seq(id1, id2))
+    builder += ("search_blind_test_vote", vote)
+
+    heimdal.trackEvent(SystemEvent(builder.build, SystemEventTypes.SEARCH_TEST_VOTED))
     Ok
   }
 
