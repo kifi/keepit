@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.User
 import play.api.libs.json.Json
 
-trait ABookUploadTestHelper {
+trait ABookTestHelper {
   val u42 = Id[User](42)
   val c42 = Json.arr(
     Json.obj(
@@ -32,7 +32,7 @@ trait ABookUploadTestHelper {
       "emails" -> Seq("fiftythree@53go.com"))
   )
 
-  val iosUploadJson = Json.obj(
+  val iosUploadJson = Json.obj( // ios does not supply owner information
     "origin" -> "ios",
     "contacts" -> c42
   )

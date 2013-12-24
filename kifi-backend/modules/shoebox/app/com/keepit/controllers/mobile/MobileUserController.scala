@@ -39,7 +39,9 @@ class MobileUserController @Inject() (
   def uploadContacts(origin: ABookOriginType) = AuthenticatedJsonAction(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
     Async{
-      userCommander.uploadContactsProxy(request.userId, origin, json).map(Ok(_))
+      userCommander.uploadContactsProxy(request.userId, origin, json).map { abookInfo =>
+        Ok(Json.toJson(abookInfo))
+      }
     }
   }
 

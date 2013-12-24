@@ -116,7 +116,7 @@ class UserCommander @Inject() (
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
-  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
+  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[ABookInfo] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
   }
 
