@@ -4,8 +4,8 @@ import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, Scrape
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.store.ScraperProdStoreModule
 
-case class ScraperProdModule() extends ScraperServiceModule(
+case class ProdScraperServiceModule() extends ScraperServiceModule(
   cacheModule = ScraperCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   storeModule = ScraperProdStoreModule(),
-  scrapeProcessorModule = ScrapeProcessorImplModule()
+  scrapeProcessorModule = ProdScraperProcessorModule()
 ) with CommonProdModule

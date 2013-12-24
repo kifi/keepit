@@ -21,7 +21,7 @@ import java.io.File
 case class ScraperTestModule() extends ScraperServiceModule (
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperTestStoreModule(),
-  scrapeProcessorModule = ScrapeProcessorImplModule()
+  scrapeProcessorModule = ProdScraperProcessorModule()
 ) with CommonDevModule { }
 
 
