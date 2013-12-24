@@ -30,7 +30,7 @@ import play.api.mvc.Result
 import java.sql.{Driver, DriverManager}
 import scala.concurrent.Await
 
-class ABookControllerTest extends Specification with ABookApplicationInjector with ABookUploadTestHelper {
+class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 
   val modules = Seq()
 

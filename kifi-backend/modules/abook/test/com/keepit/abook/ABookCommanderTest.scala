@@ -17,7 +17,7 @@ import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
-class ABookCommanderTest extends Specification with DbTestInjector with ABookUploadTestHelper {
+class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
