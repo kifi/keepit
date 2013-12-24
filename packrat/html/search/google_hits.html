@@ -1,24 +1,24 @@
-{{#anyResults}}
-  <ol id="kifi-res-list"{{^show}} style="display:none"{{/show}}>
+{{#results.length}}
+  <ol id="kifi-res-list">
   {{#results}}
     {{>google_hit}}
   {{/results}}
   </ol>
-{{/anyResults}}
-{{^anyResults}}
+{{/results.length}}
+{{^results.length}}
   <div id="kifi-res-list" class="kifi-res-none"{{^filter}} style="display:none"{{/filter}}>
     Sorry, no keeps match this {{#filter}}filter{{/filter}}{{^filter}}search query{{/filter}}.
   </div>
-{{/anyResults}}
+{{/results.length}}
 
-<div class="kifi-res-end"{{^show}} style="display:none"{{/show}}>{{!
+<div class="kifi-res-end">{{!
 }}{{#mayHaveMore}}
   <div class="kifi-res-more">
-    <span class="kifi-res-more-l" style="background-image:url({{images}}/more_results_left.gif),url({{images}}/more_results_left_top.gif)"></span>
+    <span class="kifi-res-more-l" style="background-image:url({{images}}/more_results_left.gif),url({{images}}/more_results_left_top.png)"></span>
     <span class="kifi-res-more-c" style="background-image:url({{images}}/more_results_bottom.gif)">
-      <a class="kifi-res-more-a" style="background-image:url({{images}}/double_down.png)" href="javascript:">More Kifi Trusted Results</a>
+      <a class="kifi-res-more-a" href="javascript:">Show more</a>
     </span>
-    <span class="kifi-res-more-r" style="background-image:url({{images}}/more_results_right.gif),url({{images}}/more_results_right_top.gif)"></span>
+    <span class="kifi-res-more-r" style="background-image:url({{images}}/more_results_right.gif),url({{images}}/more_results_right_top.png)"></span>
   </div>
 {{/mayHaveMore}}{{!
 }}</div>

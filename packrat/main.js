@@ -1517,6 +1517,7 @@ api.on.beforeSearch.add(throttle(function () {
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
+  if (!session) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
