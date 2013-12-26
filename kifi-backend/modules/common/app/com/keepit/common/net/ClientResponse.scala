@@ -44,6 +44,9 @@ trait ClientResponse {
   def parsingTime: Option[Long] = None
 }
 
+class ClientResponseException(message: String, cause: Throwable) extends Exception(message, cause)
+
+
 class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
@@ -99,12 +102,11 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
           )
         )
       }
-
       json
     } catch {
       case e: Throwable =>
         log.error(s"bad res: $body")
-        throw e
+        throw new ClientResponseException(s"can't parse json $body on request ${request.httpUri}", e)
     }
   }
 
