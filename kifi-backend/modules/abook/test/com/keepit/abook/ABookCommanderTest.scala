@@ -8,7 +8,6 @@ import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.model._
 import com.keepit.common.db.{TestDbInfo, Id}
 import play.api.libs.json._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
 import play.api.libs.json.JsArray
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
@@ -17,9 +16,8 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import akka.actor.ActorSystem
 
-class ABookCommanderTest extends Specification with DbTestInjector with ABookUploadTestHelper {
+class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
@@ -48,7 +46,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookUpl
   "ABook Commander" should {
 
     "handle imports from IOS and gmail" in {
-//      implicit val system = ActorSystem("test")
       withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
         var abookInfo:ABookInfo = try {
@@ -92,13 +89,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookUpl
         contactsSeq.isEmpty === false
         contactsSeq.length === 3
 
-        val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
-        val gmailUploadJson = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner.id.get,
-          "ownerEmail"  -> gmailOwner.email.get,
-          "contacts"    -> c42
-        )
         val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get === Id[ABookInfo](2)
         gbookInfo.origin === ABookOrigins.GMAIL
@@ -144,13 +134,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookUpl
     "handle imports from multiple gmail accounts" in {
       withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
-        val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), Some(true), Some("42go.com"))
-        val gmailUploadJson = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner.id.get,
-          "ownerEmail"  -> gmailOwner.email.get,
-          "contacts"    -> c42
-        )
         val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
         gbookInfo.id.get === Id[ABookInfo](1)
         gbookInfo.origin === ABookOrigins.GMAIL
@@ -162,13 +145,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookUpl
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length === 1
 
-        val gmailOwner2 = GmailABookOwnerInfo(Some("53"), Some("53@53go.com"), Some(true), Some("53.com"))
-        val gmailUploadJson2 = Json.obj(
-          "origin"      -> "gmail",
-          "ownerId"     -> gmailOwner2.id.get,
-          "ownerEmail"  -> gmailOwner2.email.get,
-          "contacts"    -> c53
-        )
         val gbookInfo2:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
         gbookInfo2.id.get === Id[ABookInfo](2)
         gbookInfo2.origin === ABookOrigins.GMAIL

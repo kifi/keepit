@@ -1,6 +1,6 @@
-@()
+@(configs: Seq[SearchConfigExperiment])
 
-@admin("Search Blind Test"){
+@admin("Search BlindTest"){
 
 	<form id = "queryForm">
 		<div>
@@ -12,6 +12,25 @@
 	</form>
 
 
+	<table id = "configs">
+		<thead>
+			<tr>
+				<th>
+				<th> Id
+				<th> Description
+			</tr>
+		</thead>
+
+		@for(config <- configs){
+			<tr>
+				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get">
+				<td>@config.id.get</td>
+				<td>@config.description</td>
+			</tr>
+		}
+
+	</table>
+
 	<form id = "vote">
 		<div>
 			<div>which is better? </div>
@@ -22,79 +41,108 @@
 			<button type="submit">submit</button>
 		</div>
 	</form>
-
-  <p id = "result"></p><br>
+	<p id = "result"></p><br>
 	<p id = "hits1" name = "configId" value = "1"></p><br><br>
 	<p id = "hits2" name = "configId" value = "2"></p>
 
 
-<script type="text/javascript">
+	<script type="text/javascript">
 
 	$(document).ready(function(){
+
+		$("#vote").hide()
+
 		$("#queryForm").submit(function(event) {
 			event.preventDefault();
-			$.post(
-				'@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
-				{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val()},
-				function(data) {
+			var selected = Array()
+			$("input:[name=selectedConfigs]:checked").each(function(){ selected.push($(this).val()) })
 
-	      	$("#result").empty();
-	      	$("#hits1").empty();
-	      	$("#hits2").empty();
+			if (selected.length != 2){
+				alert("please select 2 and only 2 config ids")
+			} else{
 
-	      	var msg = data.msg
+				$.post(
+					'@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
+					{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val(), id1: selected[0], id2: selected[1]},
+					function(data) {
 
-	      	if (msg == "OK"){
+		      	$("#result").empty();
+		      	$("#hits1").empty();
+		      	$("#hits2").empty();
 
-	      		var hits1 = data.result1.hits
-	      		var hits2 = data.result2.hits
+		      	var msg = data.msg
 
-	      		var id1 = data.result1.id
-	      		var id2 = data.result2.id
+		      	if (msg == "OK"){
 
-	      		$("#hits1").attr("value", id1)
-	      		$("#hits2").attr("value", id2)
+		      		var hits1 = data.result1.hits
+		      		var hits2 = data.result2.hits
 
-	      		$("#hits1").append("<div><strong>" + hits1.length + " hits from config 1:" + "</strong></div>")
-	      		$("#hits2").append("<div><strong>" + hits2.length + " hits from config 2:" + "</strong></div>")
+		      		var id1 = data.result1.id
+		      		var id2 = data.result2.id
 
-	      		for(var i = 0 ; i < hits1.length; i++){
-	      			var item = hits1[i]
-	      			$("#hits1").append("<div>" + item.title + "</div>");
-	      		  $("#hits1").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
-	      		}
+		      		$("#hits1").attr("value", id1)
+		      		$("#hits2").attr("value", id2)
 
-	      		for(var i = 0 ; i < hits2.length; i++){
-	      			var item = hits2[i]
-	      			$("#hits2").append("<div>" + item.title + "</div>");
-	      		  $("#hits2").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
-	      		}
+		      		$("#hits1").append("<div><strong>" + hits1.length + " hits from config 1:" + "</strong></div>")
+		      		$("#hits2").append("<div><strong>" + hits2.length + " hits from config 2:" + "</strong></div>")
 
-	      	} else {
-	      		$("#result").append(msg)
-	      	}
+		      		for(var i = 0 ; i < hits1.length; i++){
+		      			var item = hits1[i]
+		      			$("#hits1").append("<div>" + item.title + "</div>");
+		      		  $("#hits1").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+		      		}
 
-      	},
-				"json"
-			)
+		      		for(var i = 0 ; i < hits2.length; i++){
+		      			var item = hits2[i]
+		      			$("#hits2").append("<div>" + item.title + "</div>");
+		      		  $("#hits2").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+		      		}
 
-		}) <!--submit-->
+		      		$("#vote").show()
+
+		      	} else {
+		      		$("#result").append(msg)
+		      	}
+
+	      	},
+					"json"
+				)	// post
+			}		// else
+
+		}) 		//submit
 
 
 		$("#vote").submit(function(event){
 			event.preventDefault();
-			var voted = $('input[name="win"]:checked').val()
-			var data = null
-			if (voted == "config1") data = {vote: $("#hits1").attr("value")}
-			else if (voted == "config2") data = {vote: $("#hits2").attr("value")}
-			else if (voted == "equallyGood") data = {vote: "equallyGood"}
-			else data = {vote: "equallyBad"}
-			$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
+
+			var checked = $('input[name="win"]:checked')
+			if (checked.length == 0){
+				alert("please check one radio button")
+			} else {
+				var voted = checked.val()
+				var id1 = $("#hits1").attr("value")
+				var id2 = $("#hits2").attr("value")
+				var data = null
+				if (voted == "config1") data = {configId1: id1, configId2: id2, vote: id1}
+				else if (voted == "config2") data = {configId1: id1, configId2: id2, vote: id2}
+				else if (voted == "equallyGood") data = {configId1: id1, configId2: id2, vote: "equallyGood"}
+	 			else data = {configId1: id1, configId2: id2, vote: "equallyBad"}
+
+
+	 			$("#vote").hide()
+	 			$("#result").empty().append("Thanks. Vote was submitted!");
+		    $("#hits1").empty();
+		    $("#hits2").empty();
+
+				$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
+			}
 
 		})
+
 
 	});
 
 </script>
+
 
 }
