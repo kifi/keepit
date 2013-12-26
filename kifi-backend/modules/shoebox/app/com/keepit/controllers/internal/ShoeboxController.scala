@@ -487,7 +487,7 @@ class ShoeboxController @Inject() (
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
-    Ok(Json.toJson(db.readOnly(2, Slave) { implicit s =>
+    Ok(Json.toJson(db.readOnly { implicit s => //using cache
       keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
     }))
   }
