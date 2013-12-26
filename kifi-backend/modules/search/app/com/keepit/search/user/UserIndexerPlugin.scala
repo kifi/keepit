@@ -29,7 +29,7 @@ private[user] class UserIndexerActor @Inject()(
       sender ! indexer.run
     } catch {
       case e: Exception =>
-        airbrake.notify(AirbrakeError(exception = e, message = Some("Error updating user index")))
+        airbrake.notify("Error updating user index", e)
         sender ! -1
     }
     case BackUp => indexer.backup()

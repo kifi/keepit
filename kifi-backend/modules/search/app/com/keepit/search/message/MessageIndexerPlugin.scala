@@ -31,7 +31,7 @@ class MessageIndexerActor @Inject() (
         sender ! messageIndexer.update()
       } catch {
         case e: Exception =>
-          airbrake.notify(AirbrakeError(exception = e, message = Some("Error updating message index")))
+          airbrake.notify("Error updating message index", e)
           sender ! -1
       }
     case BackUp => messageIndexer.backup()
