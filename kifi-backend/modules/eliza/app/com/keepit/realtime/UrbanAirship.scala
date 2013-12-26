@@ -189,7 +189,7 @@ class UrbanAirshipImpl @Inject()(
           log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
           if (retry) {
             authenticatedClient.defaultFailureHandler(req)
-            throw new Exception(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", t)
+            throw new Exception(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", e)
           }
           postIOS(device, notification, true)
         case t: Throwable =>
