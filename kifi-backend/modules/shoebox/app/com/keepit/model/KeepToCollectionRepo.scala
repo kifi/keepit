@@ -19,7 +19,6 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
                       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                      (implicit session: RSession): Seq[KeepToCollection]
   def count(collId: Id[Collection])(implicit session: RSession): Int
-  def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit
   def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit
   def getOpt(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
 }
@@ -97,15 +96,6 @@ class KeepToCollectionRepoImpl @Inject() (
       collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
     }
     q.map(c => c.state ~ c.updatedAt).update(KeepToCollectionStates.INACTIVE -> clock.now())
-  }
-
-  def delete(id: Id[KeepToCollection])(implicit session: RWSession): Unit = {
-    val q = for(r <- table if r.id === id) yield r
-    q.firstOption.map{ ktc =>
-      collectionRepo.collectionChanged(ktc.collectionId, false)
-      collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
-    }
-    q.delete
   }
 
 }
