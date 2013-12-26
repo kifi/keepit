@@ -308,7 +308,7 @@ class MainSearcher(
             h.bookmarkCount = getPublicBookmarkCount(h.id)
             if (h.bookmarkCount > 0) {
               val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-              val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, newContentBoost, usefulPageBoost)
+              val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
               queue.insert(newScore, scoring, h)
             } else {
               // no one publicly kept this page.
