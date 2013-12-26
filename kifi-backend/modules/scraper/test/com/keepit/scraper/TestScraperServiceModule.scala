@@ -1,15 +1,15 @@
-package com.keepit.dev
+package com.keepit.scraper
 
 import com.keepit.common.cache.ScraperCacheModule
-import com.keepit.scraper.{ScrapeProcessorImplModule, ScraperServiceModule}
+import com.keepit.scraper.{DevScraperProcessorModule, ProdScraperProcessorModule, ScraperServiceModule}
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperTestStoreModule
 
-case class ScraperTestModule() extends ScraperServiceModule (
+case class TestScraperServiceModule() extends ScraperServiceModule (
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperTestStoreModule(),
-  scrapeProcessorModule = ScrapeProcessorImplModule()
+  scrapeProcessorModule = TestScraperProcessorModule()
 ) with CommonDevModule {
 
 }
