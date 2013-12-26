@@ -55,7 +55,7 @@ class NormalizationServiceImpl @Inject() (
       newReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(current, newReferenceOption)
     } yield newReferenceOptionAfterAdditionalUpdates.map(_.id.get)
   } tap(_.onFailure {
-    case e => airbrake.notify(AirbrakeError(exception = e, message = Some(s"Normalization update failed")))
+    case e => airbrake.notify(s"Normalization update failed", e)
   })
 
   private def processUpdate(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {

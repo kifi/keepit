@@ -100,7 +100,7 @@ class ShoeboxController @Inject() (
         Ok("true")
       case None =>
         val e = new Exception("Unable to parse email")
-        airbrake.notify(AirbrakeError(exception = e, message = Some(s"Unable to parse: ${request.body.toString}")))
+        airbrake.notify(s"Unable to parse: ${request.body.toString}", e)
         Ok("false")
     }
   }
