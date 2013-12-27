@@ -38,7 +38,7 @@ trait ABookServiceClient extends ServiceClient {
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[ABookInfo]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
-  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]):Future[Try[EContact]]
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
 }
 
