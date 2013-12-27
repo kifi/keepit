@@ -6,9 +6,8 @@ import scala.concurrent.duration._
 import java.net.URLEncoder
 
 import com.google.inject.Inject
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.WebsiteController
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId, State}
 import com.keepit.common.net.HttpClient
@@ -29,7 +28,8 @@ import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.social.SocialId
 import com.keepit.model.Invitation
-import scala.util.Success
+import scala.util.{Failure, Try, Success}
+import com.keepit.commanders.{FullSocialId, InviteInfo, InviteCommander}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -41,19 +41,15 @@ class InviteController @Inject() (db: Database,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  linkedIn: LinkedInSocialGraph,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
   httpClient: HttpClient,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
-  postOffice: LocalPostOffice)
-    extends WebsiteController(actionAuthenticator) {
-
-  private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
-    BasicUserInvitation(name = socialUser.fullName, picture = socialUser.getPictureUrl(75, 75), state = state)
-  }
+  postOffice: LocalPostOffice,
+  inviteCommander: InviteCommander
+) extends WebsiteController(actionAuthenticator) {
 
   def invite = AuthenticatedHtmlAction { implicit request =>
     Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
@@ -74,113 +70,72 @@ class InviteController @Inject() (db: Database,
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
     val (fullSocialId, subject, message) = request.request.body.asFormUrlEncoded match {
       case Some(form) =>
-        (form.get("fullSocialId").map(_.head).getOrElse("").split("/"),
-          form.get("subject").map(_.head), form.get("message").map(_.head))
-      case None => (Array(), None, None)
+        (form.get("fullSocialId").map(_.head).getOrElse(""),
+          form.get("subject").map(_.head),
+          form.get("message").map(_.head))
+      case None => ("", None, None)
     }
-    db.readWrite { implicit session =>
 
-      def sendInvitation(socialUserInfo: SocialUserInfo, invite: Invitation) = {
-        socialUserInfo.networkType match {
-          case SocialNetworks.FACEBOOK =>
-            Redirect(fbInviteUrl(invitationRepo.save(invite)))
-          case SocialNetworks.LINKEDIN =>
-            val me = socialUserInfoRepo.getByUser(request.userId)
-                .find(_.networkType == SocialNetworks.LINKEDIN).get
-            val path = routes.InviteController.acceptInvite(invite.externalId).url
-            val messageWithUrl = s"${message getOrElse ""}\n$url$path"
-            linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
-            invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-            reportSentInvitation(invite, SocialNetworks.LINKEDIN)
-            CloseWindow()
-          case _ =>
-            BadRequest("Unsupported social network")
+    if (fullSocialId.split("/").length != 2) CloseWindow() else {
+      val inviteInfo = InviteInfo(FullSocialId(fullSocialId), subject, message)
+      processInvite(request.userId, request.user, inviteInfo)
+    }
+  }
+
+  def processInvite(userId:Id[User], user:User, inviteInfo:InviteInfo):Result = {
+    if (inviteInfo.fullSocialId.network == "email") {
+      abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
+        econtactTr match {
+          case Success(c) =>
+            inviteCommander.sendInvitationForContact(userId, c, user, url, inviteInfo)
+            log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
+          case Failure(e) =>
+            log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
         }
       }
+      CloseWindow()
+    } else {
+      sendInvitationForSocial(userId, inviteInfo)
+    }
+  }
 
-      def sendEmailInvitation(c: EContact, invite:Invitation, invitingUser: User) {
-        val path = routes.InviteController.acceptInvite(invite.externalId).url
-        val messageWithUrl = s"${message getOrElse ""}\n$url$path"
-        val electronicMail = ElectronicMail(
-          senderUserId = None,
-          from = EmailAddresses.INVITATION,
-          fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} via Kifi"),
-          to = List(new EmailAddressHolder {
-            override val address = c.email
-          }),
-          subject = subject.getOrElse("Join me on the Kifi.com Private Beta"),
-          htmlBody = messageWithUrl,
-          category = PostOffice.Categories.User.INVITATION)
-        postOffice.sendMail(electronicMail)
-        log.info(s"[inviteConnection-email] sent invitation to $c")
+  def sendInvitationForSocial(userId: Id[User], inviteInfo:InviteInfo):Result = {
+    def sendInvitation(socialUserInfo: SocialUserInfo, invite: Invitation)(implicit rw:RWSession) = {
+      socialUserInfo.networkType match {
+        case SocialNetworks.FACEBOOK =>
+          Redirect(fbInviteUrl(invitationRepo.save(invite)))
+        case SocialNetworks.LINKEDIN =>
+          inviteCommander.sendInvitationForLinkedIn(userId, invite, socialUserInfo, url, inviteInfo)
+          CloseWindow()
+        case _ =>
+          BadRequest("Unsupported social network")
       }
+    }
 
-      if(fullSocialId.size != 2) {
-        CloseWindow()
-      } else if (fullSocialId(0) == "email") {
-        log.info(s"[inviteConnection-email] inviting: ${fullSocialId(1)}")
-        val econtactTrF = abookServiceClient.getOrCreateEContact(request.userId, fullSocialId(1), None, None, None)
-        Async {
-          econtactTrF.map { econtactTr =>
-            econtactTr match {
-              case Success(c) => {
-                val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(request.userId, c.id.get)
-                log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
-                inviteOpt match {
-                  case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
-                    sendEmailInvitation(c, alreadyInvited, request.user)
-                  }
-                  case inactiveOpt => {
-                    val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(20)
-                    val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
-                    if (currentInvitations.length < totalAllowedInvites) {
-                      val invite = inactiveOpt map { _.copy(senderUserId = Some(request.user.id.get)) } getOrElse {
-                        Invitation(
-                          senderUserId = request.user.id,
-                          recipientSocialUserId = None,
-                          recipientEContactId = c.id,
-                          state = InvitationStates.INACTIVE
-                        )
-                      }
-                      sendEmailInvitation(c, invite, request.user)
-                      invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-                      reportSentInvitation(invite, SocialNetworks.EMAIL)
-                    }
-                  }
-                }
-              }
-              case _ => {
-                log.warn(s"[inviteConnection-email] cannot locate or create econtact entry for ${fullSocialId(1)}")
-              }
-            }
+    db.readWrite { implicit rw =>
+      val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
+      invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
+        case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
+          if (alreadyInvited.senderUserId == userId) {
+            sendInvitation(socialUserInfo, alreadyInvited)
+          } else {
             CloseWindow()
           }
-        }
-      } else {
-        val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworkType(fullSocialId(0)))
-        invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
-          case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
-            if(alreadyInvited.senderUserId == request.user.id) {
-              sendInvitation(socialUserInfo, alreadyInvited)
-            } else {
-              CloseWindow()
-            }
-          case inactiveOpt =>
-            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(20)
-            val currentInvitations = invitationRepo.getByUser(request.user.id.get).filter(_.state != InvitationStates.INACTIVE)
-            if (currentInvitations.length < totalAllowedInvites) {
-              val invite = inactiveOpt map {
-                _.copy(senderUserId = Some(request.user.id.get))
-              } getOrElse Invitation(
-                senderUserId = Some(request.user.id.get),
-                recipientSocialUserId = socialUserInfo.id,
-                state = InvitationStates.INACTIVE
-              )
-              sendInvitation(socialUserInfo, invite)
-            } else {
-              CloseWindow()
-            }
-        }
+        case inactiveOpt =>
+          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20)
+          val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
+          if (currentInvitations.length < totalAllowedInvites) {
+            val invite = inactiveOpt map {
+              _.copy(senderUserId = Some(userId))
+            } getOrElse Invitation(
+              senderUserId = Some(userId),
+              recipientSocialUserId = socialUserInfo.id,
+              state = InvitationStates.INACTIVE
+            )
+            sendInvitation(socialUserInfo, invite)
+          } else {
+            CloseWindow()
+          }
       }
     }
   }
@@ -242,7 +197,6 @@ class InviteController @Inject() (db: Database,
       }
   })
 
-
   def confirmInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]) = Action {
     db.readWrite { implicit session =>
       val invitation = invitationRepo.getOpt(id)
@@ -250,7 +204,7 @@ class InviteController @Inject() (db: Database,
         case Some(invite) =>
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
-            reportSentInvitation(invite, SocialNetworks.FACEBOOK)
+            inviteCommander.reportSentInvitation(invite, SocialNetworks.FACEBOOK)
           }
           CloseWindow()
         case None =>
@@ -259,15 +213,4 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  private def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType): Unit = invite.senderUserId.foreach { senderId =>
-    SafeFuture {
-      val contextBuilder = eventContextBuilder()
-      contextBuilder += ("action", "sent")
-      contextBuilder += ("socialNetwork", socialNetwork.toString)
-      contextBuilder += ("inviteId", invite.externalId.id)
-      invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
-      invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
-      heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED))
-    }
-  }
 }

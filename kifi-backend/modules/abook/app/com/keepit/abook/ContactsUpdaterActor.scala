@@ -20,6 +20,7 @@ import scala.concurrent._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.sql.SQLException
+import play.api.libs.iteratee.{Step, Iteratee}
 
 
 trait ContactsUpdaterPlugin extends Plugin {

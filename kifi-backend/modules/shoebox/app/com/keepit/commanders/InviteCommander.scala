@@ -3,26 +3,48 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.slick._
-import com.keepit.common.mail.EmailAddresses
-import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
+import com.keepit.common.mail._
 import com.keepit.model._
-import com.keepit.social.SocialNetworks
+import com.keepit.social.{SocialNetworkType, SocialNetworks}
 
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
 import scala.util.Try
 import com.keepit.eliza.ElizaServiceClient
-import play.api.libs.json.Json
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalContextBuilder, HeimdalServiceClient}
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
+import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.controllers.website.routes
+import com.keepit.common.logging.Logging
+import com.keepit.model.SocialConnection
+import scala.Some
+import com.keepit.model.Invitation
+
+case class FullSocialId(network:String, id:String)
+object FullSocialId {
+  def apply(s:String):FullSocialId = {
+    val splitted = s.split("/")
+    require(splitted.length == 2, s"invalid fullSocialId($s)")
+    new FullSocialId(splitted(0), splitted(1))
+  }
+}
+case class InviteInfo(fullSocialId:FullSocialId, subject:Option[String], message:Option[String])
+object InviteInfo {
+  implicit val format = (
+    (__ \ 'fullSocialId).format[String].inmap((s:String) => FullSocialId(s), unlift((fid:FullSocialId) => Some(s"${fid.network}/${fid.id}"))) and
+    (__ \ 'subject).formatNullable[String] and
+    (__ \ 'message).formatNullable[String]
+  )(InviteInfo.apply, unlift(InviteInfo.unapply))
+}
 
 class InviteCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
-  socialUserRepo: SocialUserInfoRepo,
+  socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
@@ -31,12 +53,15 @@ class InviteCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   eliza: ElizaServiceClient,
   basicUserRepo: BasicUserRepo,
+  userValueRepo: UserValueRepo,
+  linkedIn: LinkedInSocialGraph,
+  eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
-  clock: Clock) {
+  clock: Clock) extends Logging {
 
   def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
-      val userSocialAccounts = socialUserRepo.getByUser(userId)
+      val userSocialAccounts = socialUserInfoRepo.getByUser(userId)
       val cookieInvite = invId.flatMap { inviteExtId =>
         Try(invitationRepo.get(inviteExtId)).map { invite =>
           val invitedSocial = userSocialAccounts.find(_.id == invite.recipientSocialUserId)
@@ -47,8 +72,8 @@ class InviteCommander @Inject() (
             invite
           }
           invite.recipientSocialUserId match {
-            case Some(rsui) => socialUserRepo.get(rsui) -> detectedInvite
-            case None => socialUserRepo.get(userSocialAccounts.head.id.get) -> detectedInvite
+            case Some(rsui) => socialUserInfoRepo.get(rsui) -> detectedInvite
+            case None => socialUserInfoRepo.get(userSocialAccounts.head.id.get) -> detectedInvite
           }
         }.toOption
       }
@@ -132,8 +157,8 @@ class InviteCommander @Inject() (
 
   private def connectInvitedUsers(userId: Id[User], invite: Invitation)(implicit session: RWSession) = {
     invite.senderUserId.map { senderUserId =>
-      val newFortyTwoSocialUser = socialUserRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
-      val inviterFortyTwoSocialUser = socialUserRepo.getByUser(senderUserId).find(_.networkType == SocialNetworks.FORTYTWO)
+      val newFortyTwoSocialUser = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
+      val inviterFortyTwoSocialUser = socialUserInfoRepo.getByUser(senderUserId).find(_.networkType == SocialNetworks.FORTYTWO)
       for {
         su1 <- newFortyTwoSocialUser
         su2 <- inviterFortyTwoSocialUser
@@ -165,4 +190,75 @@ class InviteCommander @Inject() (
       category = PostOffice.Categories.System.ADMIN))
 
   }
+
+  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
+    val path = routes.InviteController.acceptInvite(invite.externalId).url
+    val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
+    val electronicMail = ElectronicMail(
+      senderUserId = None,
+      from = EmailAddresses.INVITATION,
+      fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} via Kifi"),
+      to = List(new EmailAddressHolder {
+        override val address = c.email
+      }),
+      subject = inviteInfo.subject.getOrElse("Join me on the Kifi.com Private Beta"),
+      htmlBody = messageWithUrl,
+      category = PostOffice.Categories.User.INVITATION)
+    postOffice.sendMail(electronicMail)
+    log.info(s"[inviteConnection-email] sent invitation to $c")
+  }
+
+  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, url:String, inviteInfo:InviteInfo):Unit = {
+    db.readWrite { implicit s =>
+      val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(userId, c.id.get)
+      log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
+      inviteOpt match {
+        case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
+          sendEmailInvitation(c, alreadyInvited, user, url, inviteInfo)
+        }
+        case inactiveOpt => {
+          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20)
+          val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
+          if (currentInvitations.length < totalAllowedInvites) {
+            val invite = inactiveOpt map {
+              _.copy(senderUserId = Some(userId))
+            } getOrElse {
+              Invitation(
+                senderUserId = Some(userId),
+                recipientSocialUserId = None,
+                recipientEContactId = c.id,
+                state = InvitationStates.INACTIVE
+              )
+            }
+            sendEmailInvitation(c, invite, user, url, inviteInfo)
+            invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+            reportSentInvitation(invite, SocialNetworks.EMAIL)
+          }
+        }
+      }
+    }
+  }
+
+  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
+    val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
+    val path = routes.InviteController.acceptInvite(invite.externalId).url
+    val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
+    linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl)
+    invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+    reportSentInvitation(invite, SocialNetworks.LINKEDIN)
+  }
+
+  def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType): Unit = invite.senderUserId.foreach { senderId =>
+    SafeFuture {
+      val contextBuilder = eventContextBuilder()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("socialNetwork", socialNetwork.toString)
+      contextBuilder += ("inviteId", invite.externalId.id)
+      invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
+      invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
+      heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED))
+    }
+  }
+
+
 }
