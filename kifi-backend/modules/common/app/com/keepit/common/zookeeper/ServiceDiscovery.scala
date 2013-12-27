@@ -52,8 +52,6 @@ class ServiceDiscoveryImpl @Inject() (
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
-
-
   def thisInstance: Option[ServiceInstance] = myInstance
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
