@@ -129,6 +129,12 @@ GET     /m/1/user/connections/email             @com.keepit.controllers.mobile.M
 
 POST    /m/1/invite                             @com.keepit.controllers.mobile.MobileInviteController.inviteConnection
 
+POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
+POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
+GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
+GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
+
+
 ##########################################
 # Website
 ##########################################

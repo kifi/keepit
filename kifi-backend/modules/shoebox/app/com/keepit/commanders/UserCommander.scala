@@ -22,6 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import securesocial.core.{Identity, UserService, Registry}
 import java.text.Normalizer
 import com.keepit.common.logging.Logging
+import com.keepit.eliza.ElizaServiceClient
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -74,8 +75,10 @@ class UserCommander @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   invitationRepo: InvitationRepo,
+  friendRequestRepo: FriendRequestRepo,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
+  elizaServiceClient: ElizaServiceClient,
   abookServiceClient: ABookServiceClient) extends Logging {
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -269,6 +272,61 @@ class UserCommander @Inject() (
       val jsCombined = jsConns ++ jsContacts
       log.info(s"[getAllConnections(${userId})] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
       jsCombined
+    }
+  }
+
+  def friend(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { user =>
+        if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
+          (true, "alreadySent")
+        } else {
+          friendRequestRepo.getBySenderAndRecipient(user.id.get, userId) map { friendReq =>
+            for {
+              su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
+              su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
+            } yield {
+              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+                case Some(sc) =>
+                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+                case None =>
+                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+              }
+            }
+            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
+
+            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
+            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+
+            (true, "acceptedRequest")
+          } getOrElse {
+            friendRequestRepo.save(FriendRequest(senderId = userId, recipientId = user.id.get))
+            (true, "sentRequest")
+          }
+        }
+      } getOrElse {
+        (false, s"User with id $id not found.")
+      }
+    }
+  }
+
+  def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
+    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } map { user =>
+      db.readWrite(attempts = 2) { implicit s =>
+        userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
+      }
+    } getOrElse false
+  }
+
+  def incomingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
+    db.readOnly(attempts = 2) { implicit ro =>
+      friendRequestRepo.getByRecipient(userId) map { fr => basicUserRepo.load(fr.senderId) }
+    }
+  }
+
+  def outgoingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
+    db.readOnly(attempts = 2) { implicit ro =>
+      friendRequestRepo.getBySender(userId) map { fr => basicUserRepo.load(fr.recipientId) }
     }
   }
 
