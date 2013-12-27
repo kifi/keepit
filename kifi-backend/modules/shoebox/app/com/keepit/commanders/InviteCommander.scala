@@ -12,7 +12,8 @@ import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
 import scala.util.Try
 import com.keepit.eliza.ElizaServiceClient
-import play.api.libs.json.Json
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
@@ -22,6 +23,23 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.SocialConnection
 import scala.Some
 import com.keepit.model.Invitation
+
+case class FullSocialId(network:String, id:String)
+object FullSocialId {
+  def apply(s:String):FullSocialId = {
+    val splitted = s.split("/")
+    require(splitted.length == 2, s"invalid fullSocialId($s)")
+    new FullSocialId(splitted(0), splitted(1))
+  }
+}
+case class InviteInfo(fullSocialId:FullSocialId, subject:Option[String], message:Option[String])
+object InviteInfo {
+  implicit val format = (
+    (__ \ 'fullSocialId).format[String].inmap((s:String) => FullSocialId(s), unlift((fid:FullSocialId) => Some(s"${fid.network}/${fid.id}"))) and
+    (__ \ 'subject).formatNullable[String] and
+    (__ \ 'message).formatNullable[String]
+  )(InviteInfo.apply, unlift(InviteInfo.unapply))
+}
 
 class InviteCommander @Inject() (
   db: Database,
@@ -173,9 +191,9 @@ class InviteCommander @Inject() (
 
   }
 
-  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, subject:Option[String] = None, message:Option[String] = None)(implicit rw:RWSession) {
+  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
     val path = routes.InviteController.acceptInvite(invite.externalId).url
-    val messageWithUrl = s"${message getOrElse ""}\n$url$path"
+    val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
     val electronicMail = ElectronicMail(
       senderUserId = None,
       from = EmailAddresses.INVITATION,
@@ -183,20 +201,20 @@ class InviteCommander @Inject() (
       to = List(new EmailAddressHolder {
         override val address = c.email
       }),
-      subject = subject.getOrElse("Join me on the Kifi.com Private Beta"),
+      subject = inviteInfo.subject.getOrElse("Join me on the Kifi.com Private Beta"),
       htmlBody = messageWithUrl,
       category = PostOffice.Categories.User.INVITATION)
     postOffice.sendMail(electronicMail)
     log.info(s"[inviteConnection-email] sent invitation to $c")
   }
 
-  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, url:String, subject: Option[String], message: Option[String]):Unit = {
+  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, url:String, inviteInfo:InviteInfo):Unit = {
     db.readWrite { implicit s =>
       val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(userId, c.id.get)
       log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
       inviteOpt match {
         case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
-          sendEmailInvitation(c, alreadyInvited, user, url, subject, message)
+          sendEmailInvitation(c, alreadyInvited, user, url, inviteInfo)
         }
         case inactiveOpt => {
           val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20)
@@ -212,7 +230,7 @@ class InviteCommander @Inject() (
                 state = InvitationStates.INACTIVE
               )
             }
-            sendEmailInvitation(c, invite, user, url, subject, message)
+            sendEmailInvitation(c, invite, user, url, inviteInfo)
             invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
             reportSentInvitation(invite, SocialNetworks.EMAIL)
           }
@@ -221,11 +239,11 @@ class InviteCommander @Inject() (
     }
   }
 
-  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, url:String, subject:Option[String], message:Option[String])(implicit rw:RWSession) {
+  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
     val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
     val path = routes.InviteController.acceptInvite(invite.externalId).url
-    val messageWithUrl = s"${message getOrElse ""}\n$url$path"
-    linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
+    val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
+    linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl)
     invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
     reportSentInvitation(invite, SocialNetworks.LINKEDIN)
   }

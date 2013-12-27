@@ -29,7 +29,7 @@ import play.api.mvc.Cookie
 import com.keepit.social.SocialId
 import com.keepit.model.Invitation
 import scala.util.{Failure, Try, Success}
-import com.keepit.commanders.InviteCommander
+import com.keepit.commanders.{FullSocialId, InviteInfo, InviteCommander}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -70,39 +70,42 @@ class InviteController @Inject() (db: Database,
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
     val (fullSocialId, subject, message) = request.request.body.asFormUrlEncoded match {
       case Some(form) =>
-        (form.get("fullSocialId").map(_.head).getOrElse("").split("/"),
-          form.get("subject").map(_.head), form.get("message").map(_.head))
-      case None => (Array.empty[String], None, None)
+        (form.get("fullSocialId").map(_.head).getOrElse(""),
+          form.get("subject").map(_.head),
+          form.get("message").map(_.head))
+      case None => ("", None, None)
     }
-    processInvite(request.userId, request.user, subject, message, fullSocialId)
+
+    if (fullSocialId.split("/").length != 2) CloseWindow() else {
+      val inviteInfo = InviteInfo(FullSocialId(fullSocialId), subject, message)
+      processInvite(request.userId, request.user, inviteInfo)
+    }
   }
 
-  def processInvite(userId:Id[User], user:User, subject:Option[String], message:Option[String], fullSocialId:Array[String]):Result = {
-    if (fullSocialId.size != 2) {
-      CloseWindow()
-    } else if (fullSocialId(0) == "email") {
-      abookServiceClient.getOrCreateEContact(userId, fullSocialId(1)) map { econtactTr =>
+  def processInvite(userId:Id[User], user:User, inviteInfo:InviteInfo):Result = {
+    if (inviteInfo.fullSocialId.network == "email") {
+      abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
         econtactTr match {
           case Success(c) =>
-            inviteCommander.sendInvitationForContact(userId, c, user, url, subject, message)
-            log.info(s"[inviteConnection-email(${fullSocialId(1)}, $userId)] invite sent successfully")
+            inviteCommander.sendInvitationForContact(userId, c, user, url, inviteInfo)
+            log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
           case Failure(e) =>
-            log.warn(s"[inviteConnection-email(${fullSocialId(1)}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
+            log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
         }
       }
       CloseWindow()
     } else {
-      sendInvitationForSocial(fullSocialId, userId, subject, message)
+      sendInvitationForSocial(userId, inviteInfo)
     }
   }
 
-  def sendInvitationForSocial(fullSocialId:Array[String], userId: Id[User], subject:Option[String], message:Option[String]):Result = {
+  def sendInvitationForSocial(userId: Id[User], inviteInfo:InviteInfo):Result = {
     def sendInvitation(socialUserInfo: SocialUserInfo, invite: Invitation)(implicit rw:RWSession) = {
       socialUserInfo.networkType match {
         case SocialNetworks.FACEBOOK =>
           Redirect(fbInviteUrl(invitationRepo.save(invite)))
         case SocialNetworks.LINKEDIN =>
-          inviteCommander.sendInvitationForLinkedIn(userId, invite, socialUserInfo, url, subject, message)
+          inviteCommander.sendInvitationForLinkedIn(userId, invite, socialUserInfo, url, inviteInfo)
           CloseWindow()
         case _ =>
           BadRequest("Unsupported social network")
@@ -110,7 +113,7 @@ class InviteController @Inject() (db: Database,
     }
 
     db.readWrite { implicit rw =>
-      val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworkType(fullSocialId(0)))
+      val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
       invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
         case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
           if (alreadyInvited.senderUserId == userId) {
