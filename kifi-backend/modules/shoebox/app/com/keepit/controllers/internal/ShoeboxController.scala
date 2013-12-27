@@ -100,7 +100,7 @@ class ShoeboxController @Inject() (
         Ok("true")
       case None =>
         val e = new Exception("Unable to parse email")
-        airbrake.notify(AirbrakeError(exception = e, message = Some(s"Unable to parse: ${request.body.toString}")))
+        airbrake.notify(s"Unable to parse: ${request.body.toString}", e)
         Ok("false")
     }
   }
@@ -487,7 +487,7 @@ class ShoeboxController @Inject() (
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
-    Ok(Json.toJson(db.readOnly(2, Slave) { implicit s =>
+    Ok(Json.toJson(db.readOnly { implicit s => //using cache
       keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
     }))
   }

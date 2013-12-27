@@ -29,7 +29,7 @@ extends FortyTwoActor(airbrake) with Logging {
       sender ! phraseIndexer.update()
     } catch {
       case e: Exception =>
-        airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing Phrases")))
+        airbrake.notify("Error indexing Phrases", e)
         sender ! -1
     }
     case BackUp => phraseIndexer.backup()

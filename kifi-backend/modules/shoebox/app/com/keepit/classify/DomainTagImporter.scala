@@ -175,8 +175,7 @@ private[classify] class DomainTagImportActor @Inject() (
   }
 
   private def failWithException(eventName: String, e: Exception) {
-    log.error(s"fail on event $eventName", e)
-    airbrake.notify(AirbrakeError(exception = e, message = Some(s"on event $eventName")))
+    airbrake.notify(s"on event $eventName", e)
 
     val context = new HeimdalContextBuilder
     context += ("message", e.getMessage)

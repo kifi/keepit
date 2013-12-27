@@ -129,7 +129,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
-        val optional = new ArrayBuffer[(Scorer, Float)]
+        val optional = new ArrayBuffer[BooleanScoreDoc]
 
         requiredWeights.foreach{ w =>
           val subScorer = w.scorer(context, true, false, acceptDocs)
@@ -143,7 +143,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         }
         optionalWeights.foreach{ case (w, value) =>
           val subScorer = w.scorer(context, true, false, acceptDocs)
-          if (subScorer != null) optional += ((subScorer, value))
+          if (subScorer != null) optional += new BooleanScoreDoc(subScorer, value)
         }
 
         if (required.isEmpty && optional.isEmpty) {
@@ -255,7 +255,7 @@ object BooleanScorer {
             coordFactorForRequired: Float,
             coordFactorForOptional: Array[Float],
             required: Array[Scorer], requiredValue: Float,
-            optional: Array[(Scorer, Float)], optionalValue: Float,
+            optional: Array[BooleanScoreDoc], optionalValue: Float,
             prohibited: Array[Scorer],
             hotDocSet: Bits) = {
     def conjunction() = {
@@ -369,52 +369,15 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
 
 trait BooleanOrScorer extends Scorer
 
-class BooleanOrScorerImpl(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float],
+class BooleanOrScorerImpl(weight: Weight, scorers: Array[BooleanScoreDoc], coordFactors: Array[Float],
                       threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
 extends Scorer(weight) with BooleanOrScorer with Logging {
 
   private[this] var doc = -1
+  private[this] var matchValue = 0.0f
   private[this] var scoredDoc = -1
   private[this] var scoreValue = 0.0f
-
-  private[this] class ScorerDoc(scorer: Scorer, value: Float) {
-    private[this] var _doc: Int = -1
-    private[this] var _state: Int = 0
-
-    def doc: Int = _doc
-
-    def state: Int = _state
-
-    def advance(target: Int) {
-      _state = 0
-      _doc = scorer.advance(target)
-    }
-
-    def next() {
-      _state = 0
-      _doc = scorer.nextDoc()
-    }
-
-    def prepare(): Float = {
-      _state = 1
-      value
-    }
-
-    def prepared: Boolean = (_state == 1)
-
-    def scoreAndNext(): Float = {
-      val sc = scorer.score()
-      _state = 0
-      _doc = scorer.nextDoc()
-      sc
-    }
-  }
-
-  private[this] val pq = new PriorityQueue[ScorerDoc](scorers.length) {
-    override def lessThan(a: ScorerDoc, b: ScorerDoc) = ((a.doc < b.doc) || (a.doc == b.doc && a.state < b.state))
-  }
-
-  scorers.foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v)) }
+  private[this] val pq = BooleanSubScorerQueue(scorers)
 
   override def docID() = doc
 
@@ -439,8 +402,9 @@ extends Scorer(weight) with BooleanOrScorer with Logging {
   }
 
   @inline private[this] def qualified(): Boolean = {
+    matchValue = 0.0f
+
     var top = pq.top
-    var matchValue = 0.0f
     while (top.doc == doc && !(top.prepared)) {
       matchValue += top.prepare()
       top = pq.updateTop()
