@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import scala.Some
 import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeNotifier}
 
-class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
+class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
 
   "KeepsAbuseControl" should {
 
@@ -18,11 +18,11 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val db = inject[Database]
         val bookmarkRepo = inject[BookmarkRepo]
-        val controller = new KeepsAbuseController(absoluteWarn = 200, absoluteError = 500, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite {implicit s =>
           inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
         }
-        controller.inspect(user.id.get, 20)
+        monitor.inspect(user.id.get, 20)
         1 === 1
       }
     }
@@ -34,7 +34,7 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
         val keeper = BookmarkSource.keeper
         val db = inject[Database]
         val bookmarkRepo = inject[BookmarkRepo]
-        val controller = new KeepsAbuseController(absoluteWarn = 1, absoluteError = 2, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 2, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite {implicit s =>
           inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -57,7 +57,7 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
           user1
         }
 
-        { controller.inspect(user.id.get, 20) } must throwA[AbuseControlException]
+        { monitor.inspect(user.id.get, 20) } must throwA[AbuseMonitorException]
       }
     }
 
@@ -67,7 +67,7 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
         val keeper = BookmarkSource.keeper
         val db = inject[Database]
         val bookmarkRepo = inject[BookmarkRepo]
-        val controller = new KeepsAbuseController(absoluteWarn = 1, absoluteError = 30, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 30, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite {implicit s =>
           inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -91,7 +91,7 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
         }
         val airbrake = inject[AirbrakeNotifier].asInstanceOf[FakeAirbrakeNotifier]
         airbrake.errorCount() === 0
-        controller.inspect(user.id.get, 20) //should not throw an exception
+        monitor.inspect(user.id.get, 20) //should not throw an exception
         airbrake.errorCount() === 1
       }
     }
@@ -100,7 +100,7 @@ class KeepsAbuseControllerTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val db = inject[Database]
         val bookmarkRepo = inject[BookmarkRepo]
-        def createChecker(): Unit = new KeepsAbuseController(absoluteWarn = 10, absoluteError = 5, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        def createChecker(): Unit = new KeepsAbuseMonitor(absoluteWarn = 10, absoluteError = 5, bookmarkRepo = bookmarkRepo, db = db, airbrake = inject[AirbrakeNotifier])
         { createChecker() } must throwA[IllegalStateException]
       }
     }

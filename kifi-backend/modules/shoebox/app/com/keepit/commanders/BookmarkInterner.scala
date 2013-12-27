@@ -33,7 +33,7 @@ class BookmarkInterner @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
   keptAnalytics: KeepingAnalytics,
-  keepsAbuseControll: KeepsAbuseController,
+  keepsAbuseMonitor: KeepsAbuseMonitor,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -53,7 +53,7 @@ class BookmarkInterner @Inject() (
       }
     }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
-    keepsAbuseControll.inspect(user.id.get, bookmarks.size)
+    keepsAbuseMonitor.inspect(user.id.get, bookmarks.size)
     val count = new AtomicInteger(0)
     val total = bookmarks.size
     val batchConcurrency = 1
