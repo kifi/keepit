@@ -5,7 +5,7 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialNetworks}
+import com.keepit.social.{SocialId, SocialNetworkType, SocialNetworks}
 
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.time._
@@ -23,6 +23,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.SocialConnection
 import scala.Some
 import com.keepit.model.Invitation
+import play.api.mvc.Result
 
 case class FullSocialId(network:String, id:String)
 object FullSocialId {
@@ -239,13 +240,70 @@ class InviteCommander @Inject() (
     }
   }
 
-  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
-    val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
-    val path = routes.InviteController.acceptInvite(invite.externalId).url
-    val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
-    linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl)
-    invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-    reportSentInvitation(invite, SocialNetworks.LINKEDIN)
+  case class InviteStatus(sent:Boolean, savedInvite:Option[Invitation], code:String)
+
+  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, url:String, inviteInfo:InviteInfo):InviteStatus = {
+    val savedOpt:Option[Invitation] = db.readWrite(attempts = 2) { implicit s =>
+      val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
+      val path = routes.InviteController.acceptInvite(invite.externalId).url
+      val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
+      linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl)
+      val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+      Some(saved)
+    }
+    savedOpt match {
+      case Some(saved) =>
+        reportSentInvitation(invite, SocialNetworks.LINKEDIN)
+        InviteStatus(true, savedOpt, "invite_sent")
+      case None =>
+        log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite)")
+        InviteStatus(false, None, "unknown error")
+    }
+  }
+
+  def processSocialInvite(userId: Id[User], inviteInfo:InviteInfo, url:String):InviteStatus = {
+    def sendInvitationCB(socialUserInfo:SocialUserInfo, invite:Invitation):InviteStatus = {
+      socialUserInfo.networkType match {
+        case SocialNetworks.FACEBOOK =>
+          val saved = db.readWrite(attempts = 2) { implicit s => invitationRepo.save(invite) }
+          InviteStatus(false, Some(saved), "client_handle")
+        case SocialNetworks.LINKEDIN =>
+          sendInvitationForLinkedIn(userId, invite, socialUserInfo, url, inviteInfo)
+        case _ =>
+          InviteStatus(false, None, "unsupported_social_network")
+      }
+    }
+    filterSocialInvite(inviteInfo, userId, sendInvitationCB)
+  }
+
+  def filterSocialInvite(inviteInfo:InviteInfo, userId:Id[User], cb:(SocialUserInfo, Invitation) => InviteStatus):InviteStatus = {
+    db.readWrite(attempts = 2) {
+      implicit rw =>
+        val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
+        invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
+          case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE =>
+            if (currInvite.senderUserId == userId) { // todo: removeme
+              cb(socialUserInfo, currInvite)
+            } else {
+              InviteStatus(false, None, "invite_not_sent")
+            }
+          case inactiveOpt =>
+            val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20) // todo: removeme
+            val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
+            if (currentInvitations.length < totalAllowedInvites) {
+              val invite = inactiveOpt map {
+                _.copy(senderUserId = Some(userId))
+              } getOrElse Invitation(
+                senderUserId = Some(userId),
+                recipientSocialUserId = socialUserInfo.id,
+                state = InvitationStates.INACTIVE
+              )
+              cb(socialUserInfo, invite)
+            } else {
+              InviteStatus(false, None, "over_invite_limit")
+            }
+        }
+    }
   }
 
   def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType): Unit = invite.senderUserId.foreach { senderId =>
