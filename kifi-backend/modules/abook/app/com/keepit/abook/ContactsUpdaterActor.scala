@@ -100,9 +100,14 @@ class ContactsUpdater @Inject() (
       }
       val set = new mutable.TreeSet[String] // todo: use parsed email
       existingContacts foreach { e =>
-        set += e.email
+          val parseResult = EmailParser.parseAll(EmailParser.email, e.email) // handle 'dirty' data
+          if (parseResult.successful) {
+            set += parseResult.get.toString
+          } else {
+            log.warn(s"[upload($userId, $origin, ${abookInfo.id})] cannot parse Existing email ${e.email} for contact ${e}") // move along
+          }
       }
-      log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${set.size}): ${set.mkString}")
+      log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${set.size}): ${set.mkString(",")}")
 
       abookRawInfoF map { abookRawInfo =>
         val cBuilder = mutable.ArrayBuilder.make[Contact]
@@ -154,8 +159,13 @@ class ContactsUpdater @Inject() (
               log.info(s"[insertAll($userId)] added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
             } catch {
               case ex:MySQLIntegrityConstraintViolationException => {
-                log.error(s"[insertAll($userId, processed=$processed)] Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString}")
+                log.error(s"[insertAll($userId, processed=$processed)] Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
                 log.error(s"[insertAll($userId)] ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                // moving along
+              }
+              case be:java.sql.BatchUpdateException => {
+                log.error(s"[insertAll($userId, processed=$processed)] Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
+                log.error(s"[insertAll($userId)] ex: $be; cause: ${be.getCause}; stack trace: ${be.getStackTraceString}")
                 // moving along
               }
               case t:Throwable => {
