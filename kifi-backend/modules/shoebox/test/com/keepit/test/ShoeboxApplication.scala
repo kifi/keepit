@@ -24,6 +24,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.shoebox.AbuseControlModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
@@ -40,7 +41,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       TestSlickModule(TestDbInfo.dbInfo),
       ShoeboxCacheModule(HashMapMemoryCacheModule()),
       TestNormalizationServiceModule(),
-      FakeActionAuthenticatorModule()
+      FakeActionAuthenticatorModule(),
+      AbuseControlModule()
     ), overridingModules
   ))
 
@@ -58,6 +60,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     TestSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     TestNormalizationServiceModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    AbuseControlModule()
   )
 }
