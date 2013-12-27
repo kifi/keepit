@@ -5,12 +5,11 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import scala.concurrent.duration._
-import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.plugin.SchedulingProperties
@@ -29,22 +28,16 @@ case class BatchURLMigration(batchSize: Int)
 class UriIntegrityActor @Inject()(
   db: Database,
   clock: Clock,
-  urlHashCache: NormalizedURIUrlHashCache,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
-  userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
-  collectionRepo: CollectionRepo,
-  commentReadRepo: CommentReadRepo,
   deepLinkRepo: DeepLinkRepo,
-  followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
-  airbrake: AirbrakeNotifier,
-  scraper: ScrapeSchedulerPlugin
+  airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
   /** tricky point: make sure (user, uri) pair is unique.  */
@@ -135,10 +128,6 @@ class UriIntegrityActor @Inject()(
 
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUriId))
-      }
-
-      followRepo.getByUrl(url.id.get, excludeState = None).map{ follow =>
-        followRepo.save(follow.withNormUriId(newUriId))
       }
   }
 
