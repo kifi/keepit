@@ -36,6 +36,14 @@ class MobileUserController @Inject() (
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
+  def abookInfo() = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.abookInfo(request.userId) map { abooks =>
+        Ok(Json.toJson(abooks))
+      }
+    }
+  }
+
   def uploadContacts(origin: ABookOriginType) = AuthenticatedJsonAction(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
     Async{
