@@ -20,7 +20,7 @@ import scala.util.hashing.MurmurHash3
 import MessagingTypeMappers._
 import scala.concurrent.duration.Duration
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin}
-
+import com.keepit.common.strings.StringWithNoLineBreaks
 
 class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], val nonUserParticipants: Map[NonUserParticipant, DateTime]) {
 
@@ -104,9 +104,7 @@ object MessageThreadParticipants {
   def apply(userParticipants: Map[Id[User], DateTime], nonUserParticipants: Map[NonUserParticipant, DateTime]): MessageThreadParticipants = {
     new MessageThreadParticipants(userParticipants, nonUserParticipants)
   }
-
 }
-
 
 case class MessageThread(
     id: Option[Id[MessageThread]] = None,
@@ -122,6 +120,8 @@ case class MessageThread(
     replyable: Boolean
   )
   extends ModelWithExternalId[MessageThread] {
+
+  def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)

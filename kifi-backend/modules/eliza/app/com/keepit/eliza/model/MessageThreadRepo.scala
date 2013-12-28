@@ -59,16 +59,19 @@ class MessageThreadRepoImpl @Inject() (
     thread
   }
 
+  override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())
+
   def getOrCreate(userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
     val mtps = MessageThreadParticipants(userParticipants.toSet, nonUserParticipants.toSet)
-    val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash===mtps.userHash && row.uriId===uriIdOpt) yield row).list.filter { thread =>
+    val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash === mtps.userHash && row.uriId === uriIdOpt) yield row).list.filter { thread =>
       thread.uriId.isDefined &&
       thread.participants.isDefined &&
       thread.participants.get == mtps
     }
-    if (candidates.length > 0) (candidates.head, false)
-    else {
+    if (candidates.length > 0) {
+      (candidates.head, false)
+    } else {
       val thread = MessageThread(
         id = None,
         uriId = uriIdOpt,
@@ -79,9 +82,8 @@ class MessageThreadRepoImpl @Inject() (
         participantsHash = Some(mtps.userHash),
         replyable = true
       )
-      (super.save(thread), true)
+      (save(thread), true)
     }
-
   }
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession) : MessageThread = {
@@ -101,5 +103,4 @@ class MessageThreadRepoImpl @Inject() (
       }
     }
   }
-
 }
