@@ -5,6 +5,7 @@ import com.keepit.common.db.LargeString._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.model.User
+import com.keepit.common.strings.StringWithNoLineBreaks
 
 case class ElectronicMailMessageId(id: String) {
   def toEmailHeader = s"<$id>"
@@ -39,6 +40,8 @@ case class ElectronicMail (
   inReplyTo: Option[ElectronicMailMessageId] = None,
   category: ElectronicMailCategory //type of mail in free form, will be use for tracking
 ) extends ModelWithExternalId[ElectronicMail] {
+
+  def clean(): ElectronicMail = copy(subject = subject.trimAndRemoveLineBreaks())
 
   if (subject.length > 1024) {
     throw new IllegalArgumentException(s"email subject length is ${subject.length} (more then 1024 chars): $subject")

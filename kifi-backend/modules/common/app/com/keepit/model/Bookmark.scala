@@ -5,6 +5,7 @@ import org.joda.time.DateTime
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
+import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -29,6 +30,8 @@ case class Bookmark(
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq]"
 
+  def clean(): Bookmark = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
@@ -44,7 +47,7 @@ case class Bookmark(
 
   def withUrl(url: String) = copy(url = url)
 
-  def withTitle(title: Option[String]) = copy(title = title)
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   def isActive: Boolean = state == BookmarkStates.ACTIVE
 }

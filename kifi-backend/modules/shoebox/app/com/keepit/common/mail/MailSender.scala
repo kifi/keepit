@@ -72,7 +72,7 @@ private[mail] class MailSenderActor @Inject() (
       }
     case ProcessMail(mail) =>
       log.info(s"Processing email to send: ${mail.id.getOrElse(mail.externalId)}")
-      val newMail = takeOutOptOuts(mail)
+      val newMail = takeOutOptOuts(mail).clean()
       if (newMail.state != ElectronicMailStates.OPT_OUT) {
         log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
         mailProvider.sendMail(newMail)
