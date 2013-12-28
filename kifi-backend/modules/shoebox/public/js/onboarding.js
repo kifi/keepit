@@ -14,6 +14,11 @@
 		next();
 	});
 
+	$modal.on('click', '.kifi-onboarding-close', function (e) {
+		e.preventDefault();
+		exit();
+	});
+
 	function getPageNum() {
 		return parseInt($modal.data('page'), 10);
 	}

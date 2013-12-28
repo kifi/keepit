@@ -59,6 +59,7 @@
 	background: white;
 	.border-radius(100%);
 	.transition(all @viewAnimationTime ease);
+	z-index: 1;
 
 	.kifi-onboarding-modal.page-1 &,
 	.kifi-onboarding-modal.page-7 & {
@@ -85,6 +86,12 @@
 
 @headerFontSize: 20;
 @headerFactor: unit(1 / @headerFontSize, em);
+
+.kifi-onboarding-header-container {
+	position: relative;
+	overflow: hidden;
+}
+
 .kifi-onboarding-header {
 	position: relative;
 	display: inline-block;
@@ -95,10 +102,12 @@
 	margin-top: 42 * @headerFactor;
 	color: #737980;
 	text-align: center;
+	.transition(all @viewAnimationTime ease);
 
 	.kifi-onboarding-modal.page-1 &,
 	.kifi-onboarding-modal.page-7 & {
-		display: none;
+		top: -42 * @headerFactor;
+		.opacity(0);
 	}
 }
 
@@ -135,6 +144,7 @@
 	width: @size;
 	height: @size;
 	background: #acacac;
+	z-index: 2;
 }
 
 .kifi-onboarding-buttons {
@@ -159,9 +169,30 @@
 	}
 }
 
-.kifi-onboarding-prev {
+@iconFactor: unit(1 / 18, em);
+.kifi-onboarding-next-icon,
+.kifi-onboarding-heart-icon {
+	position: absolute;
+	right: 27 * @iconFactor;
+	background: white;
+}
+
+.kifi-onboarding-next-icon {
+	top: (60 - 22) / 2 * @iconFactor;
+	width: 10 * @iconFactor;
+	height: 22 * @iconFactor;
+}
+
+.kifi-onboarding-heart-icon {
+	top: (60 - 27) / 2 * @iconFactor;
+	width: 31 * @iconFactor;
+	height: 27 * @iconFactor;
+}
+
+.kifi-onboarding-prev.kifi-onboarding-prev {
 	left: 0;
-	@bgColor: #d5dde5;
+	color: white;
+	@bgColor: #b8c5d2;
 	background: @bgColor;
 
 	&:hover {
@@ -170,6 +201,20 @@
 
 	&:active {
 		background: shade(@bgColor, 10%);
+	}
+
+	.kifi-onboarding-modal.page-1 & {
+		color: #444444;
+		@bgColor: #d5dde5;
+		background: @bgColor;
+
+		&:hover {
+			background: tint(@bgColor, 10%);
+		}
+
+		&:active {
+			background: shade(@bgColor, 10%);
+		}
 	}
 }
 
@@ -218,6 +263,7 @@
 		@myFactor: unit(1 / @myFontSize, em);
 		font-size: @myFontSize * @factor;
 		font-weight: 600;
+		padding: 0 30 * @myFactor;
 		margin: 0 auto;
 		color: #444444;
 		line-height: 40 * @myFactor;
@@ -227,28 +273,101 @@
 		@myFontSize: 24;
 		@myFactor: unit(1 / @myFontSize, em);
 		font-size: @myFontSize * @factor;
+		padding: 0 30 * @myFactor;
 		margin: 0 auto;
 		color: #979a9e;
 		line-height: 36 * @myFactor;
 	}
 }
 
-.kifi-onboarding-modal.page-2 p {
-	max-width: 735 * @factor;
-}
-
 @myFontSize: 36;
 @myFactor: unit(1 / @myFontSize, em);
 
-.kifi-onboarding-welcome {
+.kifi-onboarding-welcome,
+.kifi-onboarding-finish {
 	h1 {
 		margin-top: 121 * @myFactor;
 	}
+}
 
+.kifi-onboarding-welcome {
 	p {
-		margin-top: 26 * @myFactor;
 		max-width: 510 * @factor;
 	}
+}
+
+.kifi-onboarding-welcome,
+.kifi-onboarding-keeping-1,
+.kifi-onboarding-keeping-2,
+.kifi-onboarding-finding {
+	p {
+		margin-top: 20 * @factor;
+	}
+}
+
+.kifi-onboarding-keeping-1 {
+	p {
+		max-width: 735 * @factor;
+	}
+}
+
+.kifi-onboarding-finding {
+	p {
+		max-width: 575 * @factor;
+	}
+}
+
+.kifi-onboarding-chatting,
+.kifi-onboarding-organizing {
+	p {
+		margin-top: 30 * @factor;
+	}
+}
+
+.kifi-onboarding-chatting {
+	h1 {
+		max-width: 620 * @myFactor;
+	}
+
+	p {
+		max-width: 390 * @factor;
+	}
+}
+
+.kifi-onboarding-organizing {
+	h1 {
+		max-width: 405 * @myFactor;
+	}
+
+	p {
+		max-width: 390 * @factor;
+	}
+}
+
+.kifi-onboarding-finish {
+	p {
+		.header-font();
+		@myFontSize: 36;
+		@myFactor: unit(1 / @myFontSize, em);
+		font-size: @myFontSize * @factor;
+		line-height: normal;
+		margin-top: 23 * @myFactor;
+		max-width: 610 * @myFactor;
+	}
+}
+
+.kifi-onboarding-quote {
+	display: inline-block;
+	margin: 0 auto;
+}
+
+.kifi-onboarding-author {
+	text-align: right;
+	@myFontSize: 12;
+	@myFactor: unit(1 / @myFontSize, em);
+	font-size: @myFontSize * @factor;
+	margin-top: 16 * @myFactor;
+	margin-right: 97 * @myFactor;
 }
 
 .kifi-onboarding-button-texts {
