@@ -41,24 +41,65 @@
 		return getPages$().eq(val - 1);
 	}
 
-	function moveProgressBar(val, percentage) {
-		var $bar = $modal.find('.kifi-onboarding-section-bar');
-		$bar.toggle(val != null);
-		if (val == null) {
-			return;
+	function updateProgressBar(val, prev, notransition) {
+		var barPos,
+			barPercentage;
+		switch (val) {
+		case 1:
+			break;
+		case 2:
+			barPos = 1;
+			barPercentage = 0.5;
+			break;
+		case 3:
+			barPos = 1;
+			barPercentage = 1;
+			break;
+		case 4:
+			barPos = 2;
+			barPercentage = 1;
+			break;
+		case 5:
+			barPos = 3;
+			barPercentage = 1;
+			break;
+		case 6:
+			barPos = 4;
+			barPercentage = 1;
+			break;
+		case 7:
+			break;
 		}
-		var $sections = $modal.find('.kifi-onboarding-header-section');
-		var $section = $sections.eq(val - 1);
-		var offset = $section.position();
-		$bar.css({
-			top: (offset.top + $section.outerHeight() + 4) + 'px',
-			left: offset.left + 'px'
-		});
-		$bar.width($section.outerWidth());
+		moveProgressBar(barPos, barPercentage, notransition || prev === 1);
+	}
 
-		$bar.find('.kifi-onboarding-section-progress-bar').css({
-			width: ((percentage || 1) * 100) + '%'
-		});
+	function moveProgressBar(val, percentage, notransition) {
+		if (val) {
+			var $bar = $modal.find('.kifi-onboarding-section-bar');
+			var $sections = $modal.find('.kifi-onboarding-header-section');
+			var $section = $sections.eq(val - 1);
+			var offset = $section.position();
+
+			if (notransition) {
+				$bar.addClass('notransition');
+			}
+
+			$bar.css({
+				top: (offset.top + $section.outerHeight() + 4) + 'px',
+				left: offset.left + 'px'
+			});
+			$bar.width($section.outerWidth());
+
+			$bar.find('.kifi-onboarding-section-progress-bar').css({
+				width: ((percentage || 1) * 100) + '%'
+			});
+
+			if (notransition) {
+				// invoking size calculation prevents animation
+				$bar.height();
+				$bar.removeClass('notransition');
+			}
+		}
 	}
 
 	function moveContent(val) {
@@ -98,36 +139,9 @@
 
 	function go(val) {
 		if (val) {
+			var prev = getPageNum();
 			setPageNum(val);
-			var barPos,
-				barPercentage;
-			switch (val) {
-			case 1:
-				break;
-			case 2:
-				barPos = 1;
-				barPercentage = 0.5;
-				break;
-			case 3:
-				barPos = 1;
-				barPercentage = 1;
-				break;
-			case 4:
-				barPos = 2;
-				barPercentage = 1;
-				break;
-			case 5:
-				barPos = 3;
-				barPercentage = 1;
-				break;
-			case 6:
-				barPos = 4;
-				barPercentage = 1;
-				break;
-			case 7:
-				break;
-			}
-			moveProgressBar(barPos, barPercentage);
+			updateProgressBar(val, prev);
 			moveContent(val);
 			renderButtons(val);
 			return val;
@@ -142,5 +156,16 @@
 	function next() {
 		return go(getNextPageNum());
 	}
+
+	var resizeId;
+	$(win).resize(function () {
+		if (resizeId) {
+			win.clearTimeout(resizeId);
+		}
+		resizeId = win.setTimeout(function () {
+			resizeId = null;
+			updateProgressBar(getPageNum(), null, true);
+		}, 0);
+	});
 
 })(this);

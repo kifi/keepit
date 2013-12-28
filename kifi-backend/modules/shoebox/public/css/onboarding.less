@@ -17,6 +17,10 @@
 	text-rendering: optimizeLegibility;
 }
 
+.notransition {
+	.transition(~'none !important');
+}
+
 .kifi-onboarding-shade {
 	position: fixed;
 	top: 0;
@@ -47,12 +51,36 @@
 	position: absolute;
 	top: 0;
 	left: 0;
-	@size: 140 * @factor;
+	@size: 123 * @factor;
 	width: @size;
 	height: @size;
-	border: 10 * @factor solid #c6d1d8;
+	@borderWidth: 20;
+	border: @borderWidth * @factor solid #c6d1d8;
+	background: white;
 	.border-radius(100%);
-	.transition(all 5s ease);
+	.transition(all @viewAnimationTime ease);
+
+	.kifi-onboarding-modal.page-1 &,
+	.kifi-onboarding-modal.page-7 & {
+		border-width: @borderWidth * @factor;
+		left: 50%;
+		top: 78 * @factor;
+		margin-left: -(123 + 2 * @borderWidth) / 2 * @factor;
+	}
+
+	.kifi-onboarding-modal.page-2 &,
+	.kifi-onboarding-modal.page-3 &,
+	.kifi-onboarding-modal.page-4 &,
+	.kifi-onboarding-modal.page-5 &,
+	.kifi-onboarding-modal.page-6 & {
+		@borderWidth: 10;
+		border-width: @borderWidth * @factor;
+		@size: 133 * @factor;
+		width: @size;
+		height: @size;
+		left: -40 * @factor;
+		top: -40 * @factor;
+	}
 }
 
 @headerFontSize: 20;
@@ -79,7 +107,6 @@
 }
 
 .kifi-onboarding-section-bar {
-	display: none;
 	position: absolute;
 	bottom: 0;
 	width: 101 * @headerFactor;
@@ -162,7 +189,7 @@
 
 .kifi-onboarding-view {
 	position: absolute;
-	top: 150px;
+	top: 150 * @factor;
 	bottom: 0;
 	left: 0;
 	width: 100%;
@@ -191,6 +218,7 @@
 		@myFactor: unit(1 / @myFontSize, em);
 		font-size: @myFontSize * @factor;
 		font-weight: 600;
+		margin: 0 auto;
 		color: #444444;
 		line-height: 40 * @myFactor;
 	}
@@ -199,8 +227,27 @@
 		@myFontSize: 24;
 		@myFactor: unit(1 / @myFontSize, em);
 		font-size: @myFontSize * @factor;
+		margin: 0 auto;
 		color: #979a9e;
 		line-height: 36 * @myFactor;
+	}
+}
+
+.kifi-onboarding-modal.page-2 p {
+	max-width: 735 * @factor;
+}
+
+@myFontSize: 36;
+@myFactor: unit(1 / @myFontSize, em);
+
+.kifi-onboarding-welcome {
+	h1 {
+		margin-top: 121 * @myFactor;
+	}
+
+	p {
+		margin-top: 26 * @myFactor;
+		max-width: 510 * @factor;
 	}
 }
 
