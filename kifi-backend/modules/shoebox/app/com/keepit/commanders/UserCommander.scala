@@ -119,6 +119,8 @@ class UserCommander @Inject() (
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
+  def abookInfo(userId:Id[User]) = abookServiceClient.getABookInfos(userId)
+
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[ABookInfo] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
   }
@@ -340,5 +342,6 @@ class UserCommander @Inject() (
       friendRequestRepo.getBySender(userId) map { fr => basicUserRepo.load(fr.recipientId) }
     }
   }
+
 
 }
