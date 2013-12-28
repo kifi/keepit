@@ -48,8 +48,14 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
     "handle imports from IOS and gmail" in {
       withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
+
+        // empty abook upload
+        val emptyABookRawInfo = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray(Seq.empty))
+        val emptyABookOpt = commander.processUpload(u42, ABookOrigins.IOS, None, None, Json.toJson(emptyABookRawInfo))
+        emptyABookOpt.isEmpty === true
+
         var abookInfo:ABookInfo = try {
-          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson)
+          val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson).get
 //          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
           info1.state !== ABookInfoStates.UPLOAD_FAILURE
 //          info2.state !== ABookInfoStates.UPLOAD_FAILURE
@@ -89,7 +95,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         contactsSeq.isEmpty === false
         contactsSeq.length === 3
 
-        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
+        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](2)
         gbookInfo.origin === ABookOrigins.GMAIL
         gbookInfo.userId === u42
@@ -134,7 +140,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
     "handle imports from multiple gmail accounts" in {
       withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
-        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson)
+        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](1)
         gbookInfo.origin === ABookOrigins.GMAIL
         gbookInfo.userId === u42
@@ -145,7 +151,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length === 1
 
-        val gbookInfo2:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2)
+        val gbookInfo2:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2).get
         gbookInfo2.id.get === Id[ABookInfo](2)
         gbookInfo2.origin === ABookOrigins.GMAIL
         gbookInfo2.userId === u42
