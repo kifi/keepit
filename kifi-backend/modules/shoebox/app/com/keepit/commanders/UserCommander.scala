@@ -318,6 +318,17 @@ class UserCommander @Inject() (
     } getOrElse false
   }
 
+  def ignoreFriendRequest(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { sender =>
+        friendRequestRepo.getBySenderAndRecipient(sender.id.get, userId) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+          (true, "friend_request_ignored")
+        } getOrElse (false, "friend_request_not_found")
+      } getOrElse (false, "user_not_found")
+    }
+  }
+
   def incomingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
     db.readOnly(attempts = 2) { implicit ro =>
       friendRequestRepo.getByRecipient(userId) map { fr => basicUserRepo.load(fr.senderId) }

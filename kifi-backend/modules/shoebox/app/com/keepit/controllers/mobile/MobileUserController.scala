@@ -94,18 +94,24 @@ class MobileUserController @Inject() (
     }
   }
 
-  def friend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    val (success, code) = userCommander.friend(request.userId, id)
+  def friend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val (success, code) = userCommander.friend(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
-  def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    if (userCommander.unfriend(request.userId, id)) {
+  def unfriend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    if (userCommander.unfriend(request.userId, externalId)) {
       Ok(Json.obj("code" -> "removed"))
     } else {
-      NotFound(Json.obj("code" -> s"User with id $id not found."))
+      NotFound(Json.obj("code" -> "user_not_found"))
     }
+  }
+  
+  def ignoreFriendRequest(externalId:ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
+    val res = Json.obj("code" -> code)
+    if (success) Ok(res) else NotFound(res)
   }
 
   def incomingFriendRequests = AuthenticatedJsonAction { request =>
