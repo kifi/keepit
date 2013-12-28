@@ -121,7 +121,7 @@ class UserCommander @Inject() (
 
   def abookInfo(userId:Id[User]) = abookServiceClient.getABookInfos(userId)
 
-  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[ABookInfo] = {
+  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
   }
 
