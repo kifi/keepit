@@ -117,10 +117,6 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[EContact](profile)
   }
 
-  implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Follow](profile)
-  }
-
   implicit object UserIdTypeMapper extends BaseTypeMapper[Id[User]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[User](profile)
   }

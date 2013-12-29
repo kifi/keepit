@@ -1,43 +1,25 @@
 package com.keepit.integrity
 
-import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.BookmarkRepo
-import com.keepit.model.BookmarkRepoImpl
-import com.keepit.model.DeepLinkRepo
 import com.keepit.model.DuplicateDocument
 import com.keepit.model.DuplicateDocumentRepo
 import com.keepit.model.DuplicateDocumentStates
-import com.keepit.model.FollowRepo
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.model.NormalizedURIRepoImpl
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
-import views.html
-import com.keepit.model.URLHistoryCause
 
 @Singleton
 class DuplicateDocumentsProcessor @Inject()(
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  normalizedURIRepo: NormalizedURIRepo,
   duplicateDocumentRepo: DuplicateDocumentRepo,
-  followRepo: FollowRepo,
-  deeplinkRepo: DeepLinkRepo,
-  bookmarkRepo: BookmarkRepo,
-  orphanCleaner: OrphanCleaner,
-  dupeDetect: DuplicateDocumentDetection,
   uriIntegrityPlugin: UriIntegrityPlugin
 ){
 
   def mergeUris(old: Id[NormalizedURI], intoNew: Id[NormalizedURI]) = {
-    uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = old, newUri = intoNew))
+      uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = old, newUri = intoNew))
   }
 
   private def typedAction(dupAction: HandleDuplicatesAction) = {
