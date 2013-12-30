@@ -106,6 +106,7 @@ class CollectionIndexer(
 
   def buildIndexable(collection: Collection): CollectionIndexable = {
     val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
+      //todo(eishay) convert using getUriIdsInCollection
       Await.result(shoeboxClient.getBookmarksInCollection(collection.id.get), 180 seconds)
     } else {
       Seq.empty[Bookmark]
