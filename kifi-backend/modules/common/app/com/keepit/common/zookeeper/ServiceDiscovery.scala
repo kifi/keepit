@@ -134,7 +134,7 @@ class ServiceDiscoveryImpl(
   }
 
   def register(): ServiceInstance = {
-    if (unregistered) throw new UnsupportedOperationException("unable to register once unregistered")
+    if (unregistered) throw new IllegalStateException("unable to register once unregistered")
 
     registered = true
     zk.onConnected{ () => doRegister() } // It is expected that zk is ready at this point and invokes doRegister immediately
