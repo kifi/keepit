@@ -17,7 +17,6 @@ import com.keepit.social.{SocialNetworkType, BasicUser}
 import com.keepit.common.mail.{ElectronicMail}
 import com.keepit.model.ExperimentType
 import com.keepit.model.URL
-import com.keepit.model.CommentRecipient
 import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
@@ -53,9 +52,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   private val userExpIdCounter = new AtomicInteger(0)
   private def nextUserExperimentId() = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
-
-  private val commentIdCounter = new AtomicInteger(0)
-  private def nextCommentId() = { Id[Comment](commentIdCounter.incrementAndGet()) }
 
   private val emailIdCounter = new AtomicInteger(0)
   private def nextEmailId = Id[EmailAddress](emailIdCounter.incrementAndGet())
@@ -93,8 +89,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allCollections = MutableMap[Id[Collection], Collection]()
   val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Bookmark]]]()
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
-  val allComments = MutableMap[Id[Comment], Comment]()
-  val allCommentRecipients = MutableMap[Id[Comment], Set[CommentRecipient]]()
   val allEmails = MutableMap[Id[EmailAddress], EmailAddress]()
   val allUserEmails = MutableMap[Id[User], Seq[EmailAddress]]()
   val allUserValues = MutableMap[(Id[User], String), String]()
@@ -201,18 +195,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     experimentWithId
   }
 
-  def saveComment(comment: Comment, recipientIds: Id[User]*): Comment = {
-    val id = comment.id.getOrElse(nextCommentId())
-    val updatedComment = comment.withId(id).copy(seq = nextCommentSeqNum())
-    val commentRecipients = recipientIds match {
-      case Nil => updatedComment.parent.map(allCommentRecipients(_)).getOrElse(Set.empty)
-      case _ => recipientIds.map(userId => CommentRecipient(commentId = updatedComment.id.get, userId = Some(userId))).toSet
-    }
-    allComments(id) = updatedComment
-    allCommentRecipients(id) = commentRecipients
-    updatedComment
-  }
-
   def saveEmails(emails: EmailAddress*) = {
     emails.map{ email =>
       val id = email.id.getOrElse(nextEmailId)
@@ -281,17 +263,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val bookmarks = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(bookmarks)
   }
-
-  def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
-    val comments = allComments.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
-    Future.successful(comments)
-  }
-
-  def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]] = {
-    val commentRecipientIds = allCommentRecipients.getOrElse(commentId, Set.empty).filter(_.state == CommentRecipientStates.ACTIVE).map(_.userId.get).toSeq
-    Future.successful(commentRecipientIds)
-  }
-
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
     //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))

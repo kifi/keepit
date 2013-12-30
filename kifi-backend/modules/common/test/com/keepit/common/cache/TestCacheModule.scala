@@ -4,16 +4,11 @@ import scala.concurrent.duration._
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
-import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
+import com.keepit.social.BasicUserUserIdCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 
 case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
-
-  @Singleton
-  @Provides
-  def commentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new CommentCache(stats, accessLog, (innerRepo, 1 hours), (outerRepo, 2 days))
 
   @Singleton
   @Provides
@@ -24,11 +19,6 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURIUrlHashCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def commentWithBasicUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new CommentWithBasicUserCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -109,11 +99,6 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def socialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoCountCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Singleton
-  @Provides
-  def commentCountUriIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new CommentCountUriIdCache(stats, accessLog, (outerRepo, 1 hour))
 
   @Singleton
   @Provides
