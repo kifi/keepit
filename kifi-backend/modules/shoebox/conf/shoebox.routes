@@ -136,6 +136,7 @@ POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.M
 GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 
+POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
 ##########################################
 # Website
