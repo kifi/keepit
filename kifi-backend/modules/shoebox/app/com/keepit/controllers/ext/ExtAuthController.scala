@@ -82,12 +82,10 @@ class ExtAuthController @Inject() (
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("kifiInstallationId", installation.id.get.toString)
         contextBuilder += ("firstTime", firstTime)
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
         heimdal.setUserProperties(userId, "installedExtension" -> ContextStringData(installation.version.toString))
       }
     }
-
-    maybeEnableOrDisableInboxExperiment(userId, version, request.experiments)
 
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
@@ -103,31 +101,6 @@ class ExtAuthController @Inject() (
       "patterns" -> urlPatterns,
       "eip" -> encryptedIp
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
-  }
-
-  private def maybeEnableOrDisableInboxExperiment(userId: Id[User], version: KifiVersion, experiments: Set[ExperimentType]): Unit = {
-    import ExperimentType.INBOX
-    import UserExperimentStates.{ACTIVE, INACTIVE}
-    if (version >= KifiVersion(2, 7, 0)) {
-      if (!experiments.contains(INBOX)) {
-        SafeFuture {
-          db.readWrite { implicit session =>
-            (userExperimentRepo.get(userId, INBOX, Some(ACTIVE)) match {
-              case Some(ue) => Some(ue.withState(ACTIVE))
-              case _ => Some(UserExperiment(userId = userId, experimentType = INBOX))
-            }) map userExperimentRepo.save
-          }
-        }
-      }
-    } else if (experiments.contains(INBOX)) {
-      SafeFuture {
-        db.readWrite { implicit session =>
-          userExperimentRepo.get(userId, INBOX) map { ue =>
-            userExperimentRepo.save(ue.withState(INACTIVE))
-          }
-        }
-      }
-    }
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

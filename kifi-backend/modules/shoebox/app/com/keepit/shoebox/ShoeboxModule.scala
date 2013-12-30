@@ -38,6 +38,7 @@ abstract class ShoeboxModule(
   val abookServiceClientModule = ProdABookServiceClientModule()
   val scraperServiceClientModule = ProdScraperServiceClientModule()
 
+  val abuseControlModule = AbuseControlModule()
   val slickModule = ShoeboxSlickModule()
   val scrapeSchedulerModule = ProdScrapeSchedulerModule()
   val socialGraphModule = ProdSocialGraphModule()

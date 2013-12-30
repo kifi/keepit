@@ -129,7 +129,9 @@ module.exports = function (grunt) {
 				},
 				files: {
 					'static/css/landing.css': 'static/css/landing.less',
-					'static/css/about.css': 'static/css/about.less'
+					'static/css/about.css': 'static/css/about.less',
+					'static/css/privacy.css': 'static/css/privacy.less',
+					'static/css/auth-footer.css': 'static/css/auth-footer.less'
 				}
 			}
 		},

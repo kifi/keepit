@@ -30,8 +30,7 @@ private[graph] class URIGraphActor @Inject() (
         sender ! uriGraph.update()
       } catch {
         case e: Exception =>
-          airbrake.notify(AirbrakeError(exception = e,
-              message = Some("Error updating uri graph")))
+          airbrake.notify("Error updating uri graph", e)
           sender ! -1
       }
     case BackUp => uriGraph.backup()

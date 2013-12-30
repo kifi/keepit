@@ -15,6 +15,9 @@ object KifiSearchResult extends Logging {
     uuid: ExternalId[ArticleSearchResult],
     query: String,
     hits: Seq[KifiSearchHit],
+    myTotal: Int,
+    friendsTotal: Int,
+    othersTotal: Int,
     mayHaveMoreHits: Boolean,
     show: Boolean,
     experimentId: Option[Id[SearchConfigExperiment]],
@@ -27,6 +30,9 @@ object KifiSearchResult extends Logging {
         "uuid" -> JsString(uuid.toString),
         "query" -> JsString(query),
         "hits" -> JsArray(hits.map(_.json)),
+        "myTotal" -> JsNumber(myTotal),
+        "friendsTotal" -> JsNumber(friendsTotal),
+        "othersTotal" -> JsNumber(othersTotal),
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
         "show" -> JsBoolean(show),
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
@@ -147,7 +153,9 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
-  def add(key: String, value: JsValue): DetailedSearchHit = new DetailedSearchHit(json + (key ->value))
+  def set(key: String, value: JsValue): DetailedSearchHit = {
+    new DetailedSearchHit((json - key) + (key ->value))
+  }
 
   override def toString(): String = json.toString()
 }
@@ -173,7 +181,7 @@ object DetailedSearchHit extends Logging {
         "score" -> JsNumber(score),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
-        "isFriendsBookmark" -> JsBoolean(isMyBookmark),
+        "isFriendsBookmark" -> JsBoolean(isFriendsBookmark),
         "isPrivate" -> JsBoolean(isPrivate)
       )))
     } catch {

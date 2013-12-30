@@ -7,7 +7,7 @@ import play.api.Mode._
 import play.api._
 
 object ScraperGlobal extends FortyTwoGlobal(Prod) with ScraperServices {
-  val module = ScraperProdModule()
+  val module = ProdScraperServiceModule()
 
   override def onStart(app: Application) {
     startScraperServices()

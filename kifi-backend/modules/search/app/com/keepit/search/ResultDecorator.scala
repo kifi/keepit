@@ -22,32 +22,79 @@ import scala.concurrent.duration._
 import java.io.StringReader
 import play.api.libs.json._
 
-trait ResultDecorator {
-  def decorate(
-    hits: Seq[DetailedSearchHit],
-    idFilter: Set[Long],
-    mayHaveMoreHits: Boolean,
-    show: Boolean,
-    searchExperimentId: Option[Id[SearchConfigExperiment]],
-    showExperts: Boolean
-  ): DecoratedResult
-}
-
 object ResultDecorator extends Logging {
 
-  private[this] val emptyMatches = Seq.empty[(Int, Int)]
-
-  def apply(
+  def decorate(
     userId: Id[User],
     query: String,
     lang: Lang,
-    friendStats: FriendStats,
+    result: MergedSearchResult,
+    mayHaveMoreHits: Boolean,
+    searchExperimentId: Option[Id[SearchConfigExperiment]],
+    showExperts: Boolean,
+    idFilter: Set[Long],
     shoeboxClient: ShoeboxServiceClient,
-    searchConfig: SearchConfig,
     monitoredAwait: MonitoredAwait
-  ): ResultDecorator = {
-    new ResultDecoratorImpl(userId, query, lang, friendStats, shoeboxClient, monitoredAwait)
+  ): DecoratedResult = {
+    val hits = result.hits
+    val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
+    val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users.toSeq)
+    val expertsFuture = if (showExperts) { suggestExperts(hits, shoeboxClient) } else { Promise.successful(List.empty[Id[User]]).future }
+
+    val highlightedHits = highlight(hits, query, lang)
+
+    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users").map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) }
+    val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserMap)
+    val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
+    val experts = expertIds.flatMap{ expert => basicUserMap.get(expert) }
+
+    new DecoratedResult(
+      ExternalId[ArticleSearchResult](),
+      decoratedHits,
+      result.myTotal,
+      result.friendsTotal,
+      result.othersTotal,
+      query,
+      userId,
+      idFilter,
+      mayHaveMoreHits,
+      result.show,
+      searchExperimentId,
+      experts)
   }
+
+  private def highlight(hits: Seq[DetailedSearchHit], query: String, lang: Lang): Seq[DetailedSearchHit] = {
+    val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
+    val terms = Highlighter.getQueryTerms(query, analyzer)
+    hits.map{ h => h.set("bookmark", highlight(h.bookmark, analyzer, terms).json) }
+  }
+
+  private def highlight(h: BasicSearchHit, analyzer: Analyzer, terms: Set[String]): BasicSearchHit = {
+    val titleMatches = h.title.map(t => Highlighter.highlight(t, analyzer, "", terms))
+    val urlMatches = Some(Highlighter.highlightURL(h.url, analyzer, "", terms))
+    h.addMatches(titleMatches, urlMatches)
+  }
+
+  private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], JsObject]): Seq[DetailedSearchHit] = {
+    hits.map{ h =>
+      val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
+      h.set("basicUsers", JsArray(basicUsers))
+    }
+  }
+
+  private def suggestExperts(hits: Seq[DetailedSearchHit], shoeboxClient: ShoeboxServiceClient): Future[Seq[Id[User]]] = {
+    val urisAndUsers = hits.map{ hit => (hit.uriId, hit.users) }
+    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
+      Promise.successful(List.empty[Id[User]]).future
+    } else{
+      shoeboxClient.suggestExperts(urisAndUsers)
+    }
+  }
+}
+
+object Highlighter extends Logging {
+
+  private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
   def getQueryTerms(queryText: String, analyzer: Analyzer): Set[String] = {
     if (queryText != null && queryText.trim.length != 0) {
@@ -128,79 +175,12 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(
-  userId: Id[User],
-  query: String,
-  lang: Lang,
-  friendStats: FriendStats,
-  shoeboxClient: ShoeboxServiceClient,
-  monitoredAwait: MonitoredAwait
-) extends ResultDecorator with Logging {
-
-  val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
-  val terms = ResultDecorator.getQueryTerms(query, analyzer)
-
-  override def decorate(
-    hits: Seq[DetailedSearchHit],
-    idFilter: Set[Long],
-    mayHaveMoreHits: Boolean,
-    show: Boolean,
-    searchExperimentId: Option[Id[SearchConfigExperiment]],
-    showExperts: Boolean
-  ): DecoratedResult = {
-    val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }.toSeq
-    val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users)
-    val expertsFuture = if (showExperts) { suggestExperts(hits) } else { Promise.successful(List.empty[Id[User]]).future }
-
-    val highlightedHits = highlight(hits)
-    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users").map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) }
-
-    val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
-    val experts = expertIds.flatMap{ expert => basicUserMap.get(expert) }
-
-    new DecoratedResult(
-      ExternalId[ArticleSearchResult](),
-      addBasicUsers(highlightedHits, friendStats, basicUserMap),
-      query,
-      userId,
-      idFilter,
-      mayHaveMoreHits,
-      show,
-      searchExperimentId,
-      experts
-    )
-  }
-
-  private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
-    hits.map{ h => h.add("bookmark", highlight(h.bookmark).json) }
-  }
-
-  private def highlight(h: BasicSearchHit): BasicSearchHit = {
-    val titleMatches = h.title.map(t => ResultDecorator.highlight(t, analyzer, "", terms))
-    val urlMatches = Some(ResultDecorator.highlightURL(h.url, analyzer, "", terms))
-    h.addMatches(titleMatches, urlMatches)
-  }
-
-  private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], JsObject]): Seq[DetailedSearchHit] = {
-    hits.map{ h =>
-      val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
-      h.add("basicUsers", JsArray(basicUsers))
-    }
-  }
-
-  private def suggestExperts(hits: Seq[DetailedSearchHit]): Future[Seq[Id[User]]] = {
-    val urisAndUsers = hits.map{ hit => (hit.uriId, hit.users) }
-    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
-      Promise.successful(List.empty[Id[User]]).future
-    } else{
-      shoeboxClient.suggestExperts(urisAndUsers)
-    }
-  }
-}
-
 case class DecoratedResult(
   uuid: ExternalId[ArticleSearchResult],
   hits: Seq[DetailedSearchHit],
+  myTotal: Int,
+  friendsTotal: Int,
+  othersTotal: Int,
   query: String,
   userId: Id[User],
   idFilter: Set[Long],

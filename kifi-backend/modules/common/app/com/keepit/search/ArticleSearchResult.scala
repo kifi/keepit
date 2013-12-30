@@ -69,8 +69,8 @@ object ArticleSearchResult extends Logging {
 }
 
 
-class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
-  val nonTextBoostFactor = (1.0d - (1.0d/(1.0d + (pow(4.0d * textScore, 4.0d))))).toFloat // don't boost too much by bookmark/recency if textScore is too low.
+class Scoring(val textScore: Float, var normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
+  def nonTextBoostFactor = (1.0d - (1.0d/(1.0d + (pow(4.0d * textScore, 4.0d))))).toFloat // don't boost too much by bookmark/recency if textScore is too low.
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
   var boostedRecencyScore: Float = Float.NaN
