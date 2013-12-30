@@ -160,43 +160,41 @@ abstract class Indexer[T](
             case None => false
           }
         }.map{ indexable =>
-          val document = try {
-            Some(indexable.buildDocument)
-          } catch {
-            case e: Throwable =>
-              onFailure(indexable, e)
-              None
-          }
-          document.foreach{ doc =>
-            try {
-              if (indexable.isDeleted) {
-                indexWriter.deleteDocuments(indexable.idTerm)
-              } else {
-                indexWriter.updateDocument(indexable.idTerm, doc)
+          try {
+            if (indexable.isDeleted) {
+              indexWriter.deleteDocuments(indexable.idTerm)
+            } else {
+              val document = try {
+                Some(indexable.buildDocument)
+              } catch {
+                case e: Throwable =>
+                  onFailure(indexable, e)
+                  None
               }
-              onSuccess(indexable)
-              successful += indexable
-              if (maxSequenceNumber < indexable.sequenceNumber)
-                maxSequenceNumber = indexable.sequenceNumber
-              log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
-            } catch {
-              case e: CorruptIndexException => {
-                log.error("fatal indexing error", e)
-                throw e
-              }
-              case e: OutOfMemoryError => {
-                log.error("fatal indexing error", e)
-                throw e
-              }
-              case e: IOException => {
-                log.error("fatal indexing error", e)
-                throw e
-              }
-              case e: Throwable =>
-                val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
-                log.error(msg, e)
-                onFailure(indexable, e)
+              document.foreach{ doc => indexWriter.updateDocument(indexable.idTerm, doc) }
             }
+            onSuccess(indexable)
+            successful += indexable
+            if (maxSequenceNumber < indexable.sequenceNumber)
+              maxSequenceNumber = indexable.sequenceNumber
+            log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
+          } catch {
+            case e: CorruptIndexException => {
+              log.error("fatal indexing error", e)
+              throw e
+            }
+            case e: OutOfMemoryError => {
+              log.error("fatal indexing error", e)
+              throw e
+            }
+            case e: IOException => {
+              log.error("fatal indexing error", e)
+              throw e
+            }
+            case e: Throwable =>
+            val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
+            log.error(msg, e)
+            onFailure(indexable, e)
           }
         }
         commit(maxSequenceNumber)
