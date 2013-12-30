@@ -3,7 +3,7 @@ package com.keepit.controllers.internal
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
-import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.social.{FakeSocialGraphModule, BasicUserRepo}
 import com.keepit.model._
 import com.keepit.search.{TestSearchServiceClientModule, Lang}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
@@ -39,6 +39,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeActionAuthenticatorModule(),
     AuthHelperModule(),
     TestABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeScrapeSchedulerModule()
   )
 
