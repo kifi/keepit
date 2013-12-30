@@ -59,12 +59,14 @@ class InviteController @Inject() (db: Database,
 
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
-  private def fbInviteUrl(invite: Invitation)(implicit session: RSession): String = {
-    val identity = socialUserInfoRepo.get(invite.recipientSocialUserId.get)
-    val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
-    val confirmUri = URLEncoder.encode(
-      s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
-    s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId}"
+  private def fbInviteUrl(invite: Invitation): String = {
+    db.readOnly(attempts = 2) { implicit ro =>
+      val identity = socialUserInfoRepo.get(invite.recipientSocialUserId.get)
+      val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
+      val confirmUri = URLEncoder.encode(
+        s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
+      s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId}"
+    }
   }
 
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
@@ -95,48 +97,16 @@ class InviteController @Inject() (db: Database,
       }
       CloseWindow()
     } else {
-      sendInvitationForSocial(userId, inviteInfo)
-    }
-  }
-
-  def sendInvitationForSocial(userId: Id[User], inviteInfo:InviteInfo):Result = {
-    def sendInvitation(socialUserInfo: SocialUserInfo, invite: Invitation)(implicit rw:RWSession) = {
-      socialUserInfo.networkType match {
-        case SocialNetworks.FACEBOOK =>
-          Redirect(fbInviteUrl(invitationRepo.save(invite)))
-        case SocialNetworks.LINKEDIN =>
-          inviteCommander.sendInvitationForLinkedIn(userId, invite, socialUserInfo, url, inviteInfo)
-          CloseWindow()
-        case _ =>
-          BadRequest("Unsupported social network")
-      }
-    }
-
-    db.readWrite { implicit rw =>
-      val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
-      invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
-        case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
-          if (alreadyInvited.senderUserId == userId) {
-            sendInvitation(socialUserInfo, alreadyInvited)
-          } else {
-            CloseWindow()
+      val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, url)
+      if (!inviteStatus.sent && inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") {
+        inviteStatus.savedInvite match {
+          case Some(saved) => Redirect(fbInviteUrl(saved))
+          case None => { // shouldn't happen
+            log.error(s"[processInvite($userId,$user,$inviteInfo)] Could not send Facebook invite")
+            Status(INTERNAL_SERVER_ERROR)("0")
           }
-        case inactiveOpt =>
-          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20)
-          val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
-          if (currentInvitations.length < totalAllowedInvites) {
-            val invite = inactiveOpt map {
-              _.copy(senderUserId = Some(userId))
-            } getOrElse Invitation(
-              senderUserId = Some(userId),
-              recipientSocialUserId = socialUserInfo.id,
-              state = InvitationStates.INACTIVE
-            )
-            sendInvitation(socialUserInfo, invite)
-          } else {
-            CloseWindow()
-          }
-      }
+        }
+      } else CloseWindow()
     }
   }
 

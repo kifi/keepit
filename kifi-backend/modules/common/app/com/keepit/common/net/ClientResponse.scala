@@ -1,31 +1,14 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
-import scala.concurrent.Await
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.{Try, Success, Failure}
-import java.net.ConnectException
-import java.util.concurrent.TimeUnit
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
-import play.mvc._
 
 import com.keepit.common.logging.Logging
-import com.keepit.common._
-import com.keepit.common.strings._
-import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
-import com.keepit.common.logging.Access._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
-import com.keepit.common.concurrent.ExecutionContext.immediate
-import com.keepit.common.controller.CommonHeaders
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
 import scala.xml._
 
-import org.apache.commons.lang3.RandomStringUtils
 import com.ning.http.util.AsyncHttpProviderUtils
 
 
@@ -98,6 +81,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
+            response = Some(res),
             exception = exception
           )
         )

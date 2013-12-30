@@ -36,11 +36,22 @@ class MobileUserController @Inject() (
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
+  def abookInfo() = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.abookInfo(request.userId) map { abooks =>
+        Ok(Json.toJson(abooks))
+      }
+    }
+  }
+
   def uploadContacts(origin: ABookOriginType) = AuthenticatedJsonAction(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
     Async{
-      userCommander.uploadContactsProxy(request.userId, origin, json).map { abookInfo =>
-        Ok(Json.toJson(abookInfo))
+      userCommander.uploadContactsProxy(request.userId, origin, json) map { abookInfoTr =>
+        abookInfoTr match {
+          case Success(abookInfo) => Ok(Json.toJson(abookInfo))
+          case Failure(ex) => BadRequest(Json.obj("code" -> ex.getMessage)) // can do better
+        }
       }
     }
   }
@@ -92,6 +103,36 @@ class MobileUserController @Inject() (
         Ok(Json.toJson(r))
       }
     }
+  }
+
+  def friend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val (success, code) = userCommander.friend(request.userId, externalId)
+    val res = Json.obj("code" -> code)
+    if (success) Ok(res) else NotFound(res)
+  }
+
+  def unfriend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    if (userCommander.unfriend(request.userId, externalId)) {
+      Ok(Json.obj("code" -> "removed"))
+    } else {
+      NotFound(Json.obj("code" -> "user_not_found"))
+    }
+  }
+  
+  def ignoreFriendRequest(externalId:ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
+    val res = Json.obj("code" -> code)
+    if (success) Ok(res) else NotFound(res)
+  }
+
+  def incomingFriendRequests = AuthenticatedJsonAction { request =>
+    val users = userCommander.incomingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
+  }
+
+  def outgoingFriendRequests = AuthenticatedJsonAction { request =>
+    val users = userCommander.outgoingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
   }
 
 }

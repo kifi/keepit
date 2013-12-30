@@ -11,6 +11,12 @@ import scala.util.{Failure, Success}
 import play.api.Play._
 import scala.util.Success
 import scala.util.Failure
+import com.keepit.common.db.Id
+import com.keepit.model.{InvitationStates, Invitation, SocialUserInfo, User}
+import play.api.mvc.Result
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
+import scala.slick.session.Database
 
 
 class MobileInviteController @Inject()(
@@ -23,9 +29,9 @@ class MobileInviteController @Inject()(
 
   def inviteConnection = AuthenticatedJsonToJsonAction { implicit request =>
     Json.fromJson[InviteInfo](request.body).asOpt map { inviteInfo =>
+      val userId = request.userId
+      val user = request.user
       if (inviteInfo.fullSocialId.network == "email") {
-        val userId = request.userId
-        val user = request.user
         Async {
           abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
             econtactTr match {
@@ -40,8 +46,18 @@ class MobileInviteController @Inject()(
           }
         }
       } else {
-
-        Status(NOT_IMPLEMENTED)(Json.obj("code" -> "not_implemented")) // todo
+        val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, url)
+        if (inviteStatus.sent) Ok(Json.obj("code" -> "invitation_sent"))
+        else if (inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") { // special handling
+          inviteStatus.savedInvite match {
+            case Some(saved) =>
+              Ok(Json.obj("code" -> "client_handle", "invite" -> Json.toJson[Invitation](saved)))
+            case None => { // shouldn't happen
+              log.error(s"[processInvite($userId,$user,$inviteInfo)] Could not send Facebook invite")
+              Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error"))
+            }
+          }
+        } else BadRequest(Json.obj("code" -> "invite_not_sent"))
       }
     } getOrElse BadRequest(Json.obj("code" -> "invalid_arguments"))
   }

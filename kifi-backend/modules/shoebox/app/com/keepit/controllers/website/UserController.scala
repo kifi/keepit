@@ -120,60 +120,28 @@ class UserController @Inject() (
   }
 
   def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
-      val removed = db.readWrite { implicit s =>
-        userConnectionRepo.unfriendConnections(request.userId, user.id.toSet) > 0
-      }
-      Ok(Json.obj("removed" -> removed))
-    } getOrElse {
+    if (userCommander.unfriend(request.userId, id)) {
+      Ok(Json.obj("removed" -> true))
+    } else {
       NotFound(Json.obj("error" -> s"User with id $id not found."))
     }
   }
 
   def friend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readWrite { implicit s =>
-      userRepo.getOpt(id) map { user =>
-        if (friendRequestRepo.getBySenderAndRecipient(request.userId, user.id.get).isDefined) {
-          Ok(Json.obj("success" -> true, "alreadySent" -> true))
-        } else {
-          friendRequestRepo.getBySenderAndRecipient(user.id.get, request.userId) map { friendReq =>
-            val socialUser1 = socialUserRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
-            val socialUser2 = socialUserRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
-            for {
-              su1 <- socialUser1
-              su2 <- socialUser2
-            } yield {
-              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-                case Some(sc) =>
-                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-                case None =>
-                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-              }
-            }
-            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
-
-            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
-            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-
-            Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
-          } getOrElse {
-            friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
-            Ok(Json.obj("success" -> true, "sentRequest" -> true))
-          }
-        }
-      } getOrElse NotFound(Json.obj("error" -> s"User with id $id not found."))
+    val (success, code) = userCommander.friend(request.userId, id)
+    if (success) {
+      Ok(Json.obj("success" -> true, code -> true))
+    } else {
+      NotFound(Json.obj("error" -> code))
     }
   }
 
   def ignoreFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readWrite { implicit s =>
-      userRepo.getOpt(id) map { sender =>
-        friendRequestRepo.getBySenderAndRecipient(sender.id.get, request.userId) map { friendRequest =>
-          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
-          Ok(Json.obj("success" -> true))
-        } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
-      } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
-    }
+    val (success, code) = userCommander.ignoreFriendRequest(request.userId, id)
+    if (success) Ok(Json.obj("success" -> true))
+    else if (code == "friend_request_not_found") NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
+    else if (code == "user_not_found") BadRequest(Json.obj("error" -> s"User with id $id not found."))
+    else BadRequest(Json.obj("error" -> code))
   }
 
   def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
@@ -193,17 +161,13 @@ class UserController @Inject() (
   }
 
   def incomingFriendRequests = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s =>
-      val users = friendRequestRepo.getByRecipient(request.userId) map { fr => basicUserRepo.load(fr.senderId) }
-      Ok(Json.toJson(users))
-    }
+    val users = userCommander.incomingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
   }
 
   def outgoingFriendRequests = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s =>
-      val users = friendRequestRepo.getBySender(request.userId) map { fr => basicUserRepo.load(fr.recipientId) }
-      Ok(Json.toJson(users))
-    }
+    val users = userCommander.outgoingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
   }
 
   def excludeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
