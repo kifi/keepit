@@ -22,6 +22,8 @@ import com.keepit.common.analytics.{Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{Success, Failure}
+import securesocial.core.{SecureSocial, Authenticator}
+import play.api.mvc.AnyContent
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -133,6 +135,23 @@ class MobileUserController @Inject() (
   def outgoingFriendRequests = AuthenticatedJsonAction { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
+  }
+
+  def disconnect(networkString: String) = AuthenticatedJsonAction(bodyParser = parse.anyContent) { implicit request =>
+    val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
+    suiOpt match {
+      case None => BadRequest(Json.obj("code" -> code))
+      case Some(newLoginUser) =>
+        val identity = newLoginUser.credentials.get
+        Authenticator.create(identity).fold(
+          error => Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_server_error")),
+          authenticator => {
+            Ok(Json.obj("code" -> code))
+              .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withCookies(authenticator.toCookie)
+          }
+        )
+    }
   }
 
 }

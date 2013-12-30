@@ -107,7 +107,6 @@ class BookmarkInterner @Inject() (
   }
 
   private def internUriAndBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI, Boolean)] = try {
-    val startTime = System.currentTimeMillis
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)

@@ -72,7 +72,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
         val db = inject[Database]
 
-        val (user, bookmark1, bookmark2, collections) = db.readWrite {implicit s =>
+        val (user, collections) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
           val normalizationService = inject[NormalizationService]
           val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
@@ -92,7 +92,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
                             collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
                             Nil
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = collections(0).id.get))
-          (user1, bookmark1, bookmark2, collections)
+          (user1, collections)
         }
 
         val bookmarksWithTags = db.readOnly { implicit s =>

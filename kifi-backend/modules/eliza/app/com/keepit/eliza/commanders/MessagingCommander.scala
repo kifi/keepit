@@ -481,16 +481,10 @@ class MessagingCommander @Inject() (
         numMessages = numMessages,
         numUnread = numUnread,
         muted = false)
-      if (userExperiments.contains(ExperimentType.INBOX)){
-        db.readWrite(attempts=2){ implicit session =>
-          userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
-        }
-        notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
-      } else {
-        db.readWrite(attempts=2){ implicit session =>
-          userThreadRepo.setNotificationJsonIfNotPresent(from, thread.id.get, notifJson, message)
-        }
+      db.readWrite(attempts=2) { implicit session =>
+        userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
       }
+      notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
     }
     //=== END
 
