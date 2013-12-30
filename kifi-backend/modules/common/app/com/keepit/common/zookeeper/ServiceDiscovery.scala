@@ -52,7 +52,7 @@ class ServiceDiscoveryImpl(
   @volatile private[this] var registered = false
   @volatile private[this] var unregistered = false
 
-  private val thisRemoteService = RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.STARTING, services.currentService) // keeping track of the status
+  private lazy val thisRemoteService = RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.STARTING, services.currentService) // keeping track of the status
   private var myInstance: Option[ServiceInstance] = None
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
