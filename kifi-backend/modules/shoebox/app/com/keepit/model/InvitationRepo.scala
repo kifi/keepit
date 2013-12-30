@@ -35,7 +35,7 @@ class InvitationRepoImpl @Inject() (
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
     def recipientEContactId   = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId.? ~ recipientEContactId.? ~ state <> (Invitation, Invitation.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId.? ~ recipientEContactId.? ~ state <> (Invitation.apply _, Invitation.unapply _)
   }
 
   private implicit val userIdTypeMapper = userRepo.idMapper

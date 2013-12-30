@@ -7,7 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{HttpClientImpl, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent._
 
@@ -36,19 +36,23 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
-  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[ABookInfo]
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
-  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]):Future[Try[EContact]]
+  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
 }
 
 
 class ABookServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
-  val httpClient: HttpClient,
+  htpClient: HttpClient,
   val serviceCluster: ServiceCluster
 )
   extends ABookServiceClient with Logging {
+
+  val httpClient =
+    if (!htpClient.isInstanceOf[HttpClientImpl]) htpClient
+    else htpClient.asInstanceOf[HttpClientImpl].copy(silentFail = true) // todo: revisit default behavior
 
   def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
     call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), timeout = 30000).map { r => r.json }
@@ -114,9 +118,12 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[ABookInfo] = {
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[Try[ABookInfo]] = {
     call(ABook.internal.uploadForUser(userId, origin), data).map{ r =>
-      Json.fromJson[ABookInfo](r.json).get
+      r.status match {
+        case Status.OK => Success(Json.fromJson[ABookInfo](r.json).get)
+        case _ => Failure(new IllegalArgumentException((r.json \ "code").asOpt[String].getOrElse("invalid arguments")))
+      }
     }
   }
 
@@ -173,7 +180,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 
-  def uploadContacts(userId: Id[User], origin: ABookOriginType, data: JsValue): Future[ABookInfo] = ???
+  def uploadContacts(userId: Id[User], origin: ABookOriginType, data: JsValue): Future[Try[ABookInfo]] = ???
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 

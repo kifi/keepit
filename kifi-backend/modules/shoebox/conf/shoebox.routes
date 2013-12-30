@@ -101,6 +101,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
+GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
@@ -126,6 +127,15 @@ POST    /m/1/password/change                    @com.keepit.controllers.mobile.M
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /m/1/user/connections/email             @com.keepit.controllers.mobile.MobileUserController.queryContacts(search: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+
+POST    /m/1/invite                             @com.keepit.controllers.mobile.MobileInviteController.inviteConnection
+
+POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
+POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
+POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
+GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
+GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
+
 
 ##########################################
 # Website

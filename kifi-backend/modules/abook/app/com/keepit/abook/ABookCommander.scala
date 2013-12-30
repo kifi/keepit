@@ -43,61 +43,67 @@ class ABookCommander @Inject() (
   }
 
 
-  def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): ABookInfo = {
+  def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): Option[ABookInfo] = {
+    log.info(s"[processUpload($userId,$origin,$ownerInfoOpt)] json=$json")
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
+    log.info(s"[processUpload($userId,$origin,$ownerInfoOpt)] rawInfo=$abookRawInfo")
 
-    val s3Key = toS3Key(userId, origin, ownerInfoOpt)
-    s3 += (s3Key -> abookRawInfo)
-    log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
-
-    val numContacts = abookRawInfo.numContacts orElse {
+    val numContacts = abookRawInfo.numContacts orElse { // todo: remove when ios supplies numContacts
       (json \ "contacts").asOpt[JsArray] map { _.value.length }
-    }
-    val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
-      val (abookInfo, dbEntryOpt) = origin match {
-        case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id), numContacts = numContacts, state = ABookInfoStates.INACTIVE)
-          val dbEntryOpt = {
-            val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
-            if (s.isEmpty) None else Some(s(0))
-          }
-          (abookInfo, dbEntryOpt)
-        }
-        case ABookOrigins.GMAIL => {
-          val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException(s"Owner info not set for $userId and $origin"))
-          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id),  numContacts = numContacts, state = ABookInfoStates.INACTIVE)
-          val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
-          (abookInfo, dbEntryOpt)
-        }
-      }
-      val savedEntry = dbEntryOpt match {
-        case Some(currEntry) => {
-          log.info(s"[upload($userId,$origin)] current entry: $currEntry")
-          abookInfoRepo.save(currEntry.withNumContacts(numContacts))
-        }
-        case None => abookInfoRepo.save(abookInfo)
-      }
-      savedEntry
-    }
-    val (proceed, updatedEntry) = if (savedABookInfo.state != ABookInfoStates.PENDING) {
-      val updated = db.readWrite(attempts = 2) { implicit s =>
-        abookInfoRepo.save(savedABookInfo.withState(ABookInfoStates.PENDING))
-      }
-      (true, updated)
-    } else {
-      val isOverdue = db.readOnly(attempts = 2) { implicit s =>
-        abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
-      }
-      log.warn(s"[upload($userId,$origin)] $savedABookInfo already in PENDING state; overdue=$isOverdue")
-      (isOverdue, savedABookInfo)
-    }
+    } getOrElse 0
 
-    if (proceed) {
-      contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
-      log.info(s"[upload($userId,$origin)] scheduled for processing: $updatedEntry")
+    if (numContacts <= 0) None
+    else {
+      val s3Key = toS3Key(userId, origin, ownerInfoOpt)
+      s3 += (s3Key -> abookRawInfo)
+      log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
+
+      val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
+        val (abookInfo, dbEntryOpt) = origin match {
+          case ABookOrigins.IOS => { // no ownerInfo or numContacts -- revisit later
+          val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id), numContacts = Some(numContacts), state = ABookInfoStates.INACTIVE)
+            val dbEntryOpt = {
+              val s = abookInfoRepo.findByUserIdAndOrigin(userId, origin)
+              if (s.isEmpty) None else Some(s(0))
+            }
+            (abookInfo, dbEntryOpt)
+          }
+          case ABookOrigins.GMAIL => {
+            val ownerInfo = ownerInfoOpt.getOrElse(throw new IllegalArgumentException(s"Owner info not set for $userId and $origin"))
+            val abookInfo = ABookInfo(userId = userId, origin = abookRawInfo.origin, ownerId = ownerInfo.id, ownerEmail = ownerInfo.email, rawInfoLoc = Some(s3Key), oauth2TokenId = oauth2TokenOpt.flatMap(_.id),  numContacts = Some(numContacts), state = ABookInfoStates.INACTIVE)
+            val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
+            (abookInfo, dbEntryOpt)
+          }
+        }
+        val savedEntry = dbEntryOpt match {
+          case Some(currEntry) => {
+            log.info(s"[upload($userId,$origin)] current entry: $currEntry")
+            abookInfoRepo.save(currEntry.withNumContacts(Some(numContacts)))
+          }
+          case None => abookInfoRepo.save(abookInfo)
+        }
+        savedEntry
+      }
+      val (proceed, updatedEntry) = if (savedABookInfo.state != ABookInfoStates.PENDING) {
+        val updated = db.readWrite(attempts = 2) { implicit s =>
+          abookInfoRepo.save(savedABookInfo.withState(ABookInfoStates.PENDING))
+        }
+        (true, updated)
+      } else {
+        val isOverdue = db.readOnly(attempts = 2) { implicit s =>
+          abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
+        }
+        log.warn(s"[upload($userId,$origin)] $savedABookInfo already in PENDING state; overdue=$isOverdue")
+        (isOverdue, savedABookInfo)
+      }
+
+      if (proceed) {
+        contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
+        log.info(s"[upload($userId,$origin)] scheduled for processing: $updatedEntry")
+      }
+      Some(updatedEntry)
     }
-    updatedEntry
   }
 
   def getContactsDirect(userId: Id[User], maxRows: Int): JsArray = {

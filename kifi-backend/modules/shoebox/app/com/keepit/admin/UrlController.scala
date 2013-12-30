@@ -18,33 +18,23 @@ import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.normalizer.NormalizationService
 import com.keepit.model.DuplicateDocument
-import com.keepit.integrity.URLMigration
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.normalizer.TrustedCandidate
-import com.keepit.integrity.URIMigration
 import com.keepit.integrity.HandleDuplicatesAction
-import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.integrity.RenormalizationCheckKey
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  clock: Clock,
   postOffice: LocalPostOffice,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
-  userRepo: UserRepo,
-  bookmarkRepo: BookmarkRepo,
-  collectionRepo: CollectionRepo,
-  deepLinkRepo: DeepLinkRepo,
-  followRepo: FollowRepo,
   changedUriRepo: ChangedURIRepo,
   duplicateDocumentRepo: DuplicateDocumentRepo,
-  ktcRepo: KeepToCollectionRepo,
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
   duplicatesProcessor: DuplicateDocumentsProcessor,
@@ -54,7 +44,6 @@ class UrlController @Inject() (
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
   httpProxyRepo: HttpProxyRepo,
-  eliza: ElizaServiceClient,
   monitoredAwait: MonitoredAwait,
   airbrake: AirbrakeNotifier) extends AdminController(actionAuthenticator) {
 

@@ -37,7 +37,7 @@ private[index] class ArticleIndexerActor @Inject() (
         sender ! articlesIndexed
       } catch {
         case e: Exception =>
-          airbrake.notify(AirbrakeError(exception = e, message = Some("Error indexing articles")))
+          airbrake.notify("Error indexing articles", e)
           sender ! -1
       }
     case BackUp => articleIndexer.backup()

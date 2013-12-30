@@ -59,10 +59,8 @@ body {
 
 
 .video-still {
-	color: black;
 	text-decoration: none;
-	display: block;
-	width: 256px;
+	display: inline-block;
 	margin: 0 auto;
 }
 
@@ -73,13 +71,13 @@ body {
 
 .kifi-video-play {
 	display: inline-block;
-	width: 149px;
-	height: 222px;
+	width: 148px;
+	height: 148px;
 	.at2x('/assets/static/images/play.png', 100%, 100%);
 	background-size: 100%;
 	background-repeat: no-repeat;
 
-	.kifi-video-play-box:hover & {
+	&:hover {
 		.at2x('/assets/static/images/playhover.png', 100%, 100%);
 	}
 }
@@ -89,8 +87,19 @@ body {
 	.font-size(16px);
 	font-weight: 400;
 	letter-spacing: 0.25px;
-	top: -60px;
 	margin: 0 auto;
+	margin-top: 13px;
+}
+
+.kifi-video-play-shadow {
+	display: inline-block;
+	width: 142px;
+	height: 11px;
+	margin-top: 22px;
+	.at2x('/assets/static/images/playshadow.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+
 }
 
 .kifi-while {
