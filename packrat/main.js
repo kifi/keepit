@@ -1125,7 +1125,7 @@ function searchOnServer(request, respond) {
 
   var params = {
     q: request.query,
-    f: request.filter && request.filter.who,
+    f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
     maxHits: getSearchMaxResults(request),
     lastUUID: request.lastUUID,
     context: request.context,
