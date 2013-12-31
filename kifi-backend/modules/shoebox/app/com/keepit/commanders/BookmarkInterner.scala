@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 
+case class RawBookmarkRepresentation(title: Option[String], url: String, isPrivate: Boolean, canonical: Option[String] = None, openGraph: Option[String] = None)
+
 @Singleton
 class BookmarkInterner @Inject() (
   db: Database,
@@ -39,19 +41,16 @@ class BookmarkInterner @Inject() (
     extends Logging {
 
   def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
+    val bookmarks = getBookmarksFromJson(value)
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
+    internRawBookmarks(bookmarks, user, experiments, source, mutatePrivacy, installationId, referenceId)
+  }
+
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None, referenceId: UUID = UUID.randomUUID)(implicit context: HeimdalContext): Seq[Bookmark] = {
+    log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
-    val bookmarks = getBookmarksFromJson(value).sortWith { case (a, b) =>
-      val aUrl = (a \ "url").asOpt[String]
-      val bUrl = (b \ "url").asOpt[String]
-      (aUrl, bUrl) match {
-        case (Some(au), Some(bu)) => au < bu
-        case (Some(au), None) => true
-        case (None, Some(bu)) => false
-        case (None, None) => true
-      }
-    }
+    val bookmarks = rawBookmarks.sortWith { case (a, b) => a.url < b.url }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
     keepsAbuseMonitor.inspect(user.id.get, bookmarks.size)
     val count = new AtomicInteger(0)
@@ -80,15 +79,22 @@ class BookmarkInterner @Inject() (
     persistedBookmarks
   }
 
-  private def getBookmarksFromJson(value: JsValue): Seq[JsObject] = {
-    value match {
-      case JsArray(elements) => elements.map(getBookmarksFromJson).flatten
-      case json: JsObject if json.keys.contains("children") => getBookmarksFromJson(json \ "children")
-      case json: JsObject => Seq(json)
-      case _ =>
-        airbrake.notify(s"error parsing bookmark import json $value")
-        Seq()
-    }
+  private def getBookmarksFromJson(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
+    val title = (json \ "title").asOpt[String]
+    val url = (json \ "url").as[String]
+    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+    val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
+    val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
+    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph)
+  }
+
+  private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
+    case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
+    case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
+    case json: JsObject => Seq(json)
+    case _ =>
+      airbrake.notify(s"error parsing bookmark import json $value")
+      Seq()
   }
 
   private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, mutatePrivacy: Boolean, experiments: Set[ExperimentType],
@@ -106,20 +112,15 @@ class BookmarkInterner @Inject() (
     }
   }
 
-  private def internUriAndBookmark(json: JsObject, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI, Boolean)] = try {
-    val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").as[String]
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
-    if (!url.toLowerCase.startsWith("javascript:")) {
-      log.debug("interning bookmark %s with title [%s]".format(json, title))
-
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[(Bookmark, NormalizedURI, Boolean)] = try {
+    if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       val uri = {
-        val initialURI = uriRepo.internByUri(url, NormalizationCandidate(json):_*)
+        val initialURI = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
         if (initialURI.state == NormalizedURIStates.ACTIVE | initialURI.state == NormalizedURIStates.INACTIVE)
           uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
         else initialURI
       }
-      val (isNewKeep, bookmark) = internBookmark(uri, user, isPrivate, mutatePrivacy, experiments, installationId, source, title, url)
+      val (isNewKeep, bookmark) = internBookmark(uri, user, rawBookmark.isPrivate, mutatePrivacy, experiments, installationId, source, rawBookmark.title, rawBookmark.url)
 
       if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
         Try(scraper.scheduleScrape(uri))
@@ -136,7 +137,7 @@ class BookmarkInterner @Inject() (
       //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
       airbrake.notify(AirbrakeError(
         exception = e,
-        message = Some(s"Exception while loading one of the bookmarks of user $user: ${e.getMessage} from json: $json source: $source")))
+        message = Some(s"Exception while loading one of the bookmarks of user $user: ${e.getMessage} from: $rawBookmark source: $source")))
       None
   }
 }
