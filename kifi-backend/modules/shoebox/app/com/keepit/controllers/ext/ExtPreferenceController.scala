@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import play.api.libs.json.{JsObject, Json}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.social.BasicUser
 import com.keepit.common.db.slick.DBSession.RSession
@@ -13,6 +12,10 @@ import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.normalizer.NormalizationService
 import com.keepit.common.crypto.SimpleDESCrypt
+
+import play.api.libs.json.{JsObject, Json}
+
+import scala.math.{max, min}
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -27,7 +30,7 @@ class ExtPreferenceController @Inject() (
   normalizationService: NormalizationService)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  private case class UserPrefs(enterToSend: Boolean)
+  private case class UserPrefs(enterToSend: Boolean, maxResults: Int)
   private implicit val userPrefsFormat = Json.format[UserPrefs]
 
   private val crypt = new SimpleDESCrypt
@@ -51,6 +54,11 @@ class ExtPreferenceController @Inject() (
 
   def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
+    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+  }
+
+  def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
     Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
   }
 
@@ -84,7 +92,8 @@ class ExtPreferenceController @Inject() (
   private def loadUserPrefs(userId: Id[User]): UserPrefs = {
     db.readOnly { implicit s =>
       UserPrefs(
-        enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true)
+        enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true),
+        maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1)
       )
     }
   }
