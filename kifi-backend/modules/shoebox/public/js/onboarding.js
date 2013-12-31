@@ -4,6 +4,8 @@
 
 	var $modal = $('.kifi-onboarding-modal');
 
+	$('.kifi-onboarding-shade, .kifi-onboarding-modal').addClass('visible');
+
 	$modal.on('click', '.kifi-onboarding-prev', function (e) {
 		e.preventDefault();
 		prev();
@@ -116,12 +118,12 @@
 		var $texts = $page.find('.kifi-onboarding-button-texts > *');
 		$modal
 			.find('.kifi-onboarding-buttons')
-				.find('.kifi-onboarding-prev')
-					.html($texts.first().html())
-					.end()
-				.find('.kifi-onboarding-next')
-					.html($texts.last().html())
-					.end();
+			.find('.kifi-onboarding-prev')
+			.html($texts.first().html())
+			.end()
+			.find('.kifi-onboarding-next')
+			.html($texts.last().html())
+			.end();
 	}
 
 	function getPrevPageNum() {
@@ -139,7 +141,11 @@
 	}
 
 	function exit() {
-		$('.kifi-onboarding-shade, .kifi-onboarding-modal').remove();
+		$('.kifi-onboarding-shade, .kifi-onboarding-modal').removeClass('visible');
+		win.setTimeout(function () {
+			$('.kifi-onboarding-shade, .kifi-onboarding-modal').remove();
+			win.parent.exitWelcome();
+		}, 300);
 	}
 
 	function go(val) {
