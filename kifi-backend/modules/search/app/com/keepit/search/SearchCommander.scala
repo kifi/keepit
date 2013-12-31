@@ -101,8 +101,7 @@ class SearchCommanderImpl @Inject() (
 
     val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
     val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
-    val numPreviousHits = searchFilter.idFilter.size
-    val mayHaveMoreHits = if (numPreviousHits == 0) mergedResult.hits.nonEmpty else mergedResult.hits.size == maxHits
+    val mayHaveMoreHits = (newIdFilter.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
     val res = ResultDecorator.decorate(
       userId,
       query,
@@ -121,6 +120,7 @@ class SearchCommanderImpl @Inject() (
       timing.send()
 
       val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
+      val numPreviousHits = searchFilter.idFilter.size
       val articleSearchResult = ResultUtil.toArticleSearchResult(
         res.uuid,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
