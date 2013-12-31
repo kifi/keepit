@@ -99,8 +99,8 @@
 		@size: 133 * @factor;
 		width: @size;
 		height: @size;
-		left: -40 * @factor;
-		top: -40 * @factor;
+		left: -38 * @factor;
+		top: -29 * @factor;
 	}
 }
 
@@ -146,8 +146,9 @@
 	}
 }
 
+@headerSectionMargin: 26;
 .kifi-onboarding-header-section {
-	margin: 0 36 * @headerFactor;
+	margin: 0 @headerSectionMargin * @headerFactor;
 }
 
 .kifi-onboarding-section-bar {
@@ -155,7 +156,7 @@
 	bottom: 0;
 	width: 101 * @headerFactor;
 	height: 4 * @headerFactor;
-	margin-left: 36 * @headerFactor;
+	margin-left: @headerSectionMargin * @headerFactor;
 	background: #c9ea9b;
 	.transition(all @viewAnimationTime ease);
 	.gpu();
@@ -163,10 +164,10 @@
 
 @media (max-width: 1024px) {
 	.kifi-onboarding-header-section {
-		margin: 0 18 * @headerFactor;
+		margin: 0 @headerSectionMargin / 2 * @headerFactor;
 	}
 	.kifi-onboarding-section-bar {
-		margin-left: 18 * @headerFactor;
+		margin-left: @headerSectionMargin / 2 * @headerFactor;
 	}
 }
 
@@ -218,11 +219,15 @@
 		.kifi-onboarding-modal.page-4 &,
 		.kifi-onboarding-modal.page-5 &,
 		.kifi-onboarding-modal.page-6 & {
-			padding: 10 * @myFactor 53 * @myFactor;
+			padding: 10 * @myFactor 57 * @myFactor;
+
+			&.kifi-onboarding-prev {
+				padding: 10 * @myFactor 47 * @myFactor;
+			}
 		}
 
 		.kifi-onboarding-modal.page-7 & {
-			padding: 10 * @myFactor 77 * @myFactor;
+			padding: 10 * @myFactor 82 * @myFactor;
 		}
 	}
 }
@@ -246,7 +251,7 @@
 
 .kifi-onboarding-heart-icon {
 	top: (60 - 27) / 2 * @iconFactor;
-	right: 36 * @iconFactor;
+	right: 39 * @iconFactor;
 	width: 31 * @iconFactor;
 	height: 27 * @iconFactor;
 	.at2x('/assets/img/onboarding/heart2.png', 100%, 100%);
@@ -358,7 +363,6 @@
 		display: block;
 		width: 100%;
 		margin: 0 auto;
-		.box-sizing(border-box);
 	}
 }
 
@@ -388,6 +392,19 @@
 }
 
 .kifi-onboarding-keeping-1 {
+	h1 {
+		position: relative;
+		left: 5 * @factor;
+	}
+	p {
+		position: relative;
+		left: 16 * @factor;
+	}
+
+	img {
+		left: -29 * @factor;
+	}
+
 	p {
 		max-width: 735 * @factor;
 	}
@@ -399,6 +416,19 @@
 }
 
 .kifi-onboarding-keeping-2 {
+	h1 {
+		position: relative;
+		left: 5 * @factor;
+	}
+	p {
+		position: relative;
+		left: 16 * @factor;
+	}
+
+	img {
+		left: -3 * @factor;
+	}
+
 	img {
 		max-width: 439 * @factor;
 		max-height: 128 * @factor;
@@ -415,7 +445,23 @@
 }
 
 .kifi-onboarding-finding {
+	h1 {
+		position: relative;
+		left: 4 * @factor;
+	}
 	p {
+		position: relative;
+		left: 13 * @factor;
+	}
+
+	img {
+		top: -12 * @factor;
+		left: -23 * @factor;
+	}
+
+	p {
+		line-height: 1.21;
+		margin-top: 23 * @factor;
 		max-width: 575 * @factor;
 	}
 
@@ -427,8 +473,19 @@
 
 .kifi-onboarding-chatting,
 .kifi-onboarding-organizing {
+	h1 {
+		text-align: left;
+	}
+
 	p {
+		line-height: 1.21;
+		margin: 0;
+		text-align: left;
 		margin-top: 30 * @factor;
+	}
+
+	p:last-child {
+		margin-top: 33 * @factor;
 	}
 }
 
@@ -442,9 +499,19 @@
 	}
 
 	img {
-		top: -60px;
+		top: -91px;
 		max-width: 501 * @factor;
 		max-height: 500 * @factor;
+	}
+
+	.kifi-onboarding-texts {
+		position: relative;
+		left: 69 * @factor;
+	}
+
+	.kifi-onboarding-img {
+		position: relative;
+		left: -37 * @factor;
 	}
 
 	.kifi-onboarding-texts,
@@ -464,6 +531,11 @@
 		max-width: 390 * @factor;
 	}
 
+	.kifi-onboarding-texts {
+		position: relative;
+		left: 50 * @factor;
+	}
+
 	img,
 	.kifi-onboarding-texts {
 		display: inline-block;
@@ -473,10 +545,17 @@
 }
 
 .kifi-onboarding-finish {
+	h1 {
+		position: relative;
+		left: 9 * @myFactor;
+	}
+
 	p {
 		.header-font();
 		@myFontSize: 36;
 		@myFactor: unit(1 / @myFontSize, em);
+		position: relative;
+		left: 15 * @myFactor;
 		font-size: @myFontSize * @factor;
 		line-height: normal;
 		margin-top: 23 * @myFactor;
