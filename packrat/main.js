@@ -1086,28 +1086,6 @@ function tellVisibleTabsNoticeCountIfChanged() {
   });
 }
 
-
-var DEFAULT_RES = 5;
-var MAX_RES_FOR_NEW = 2;
-var TWO_WEEKS = 1000 * 60 * 60 * 24 * 7 * 2;
-function getSearchMaxResults(request) {
-  if (request.lastUUID) {
-    return DEFAULT_RES;
-  }
-
-  var pref = api.prefs.get("maxResults");
-  if (pref !== DEFAULT_RES) {
-    return pref;
-  }
-
-  var joined = session.joined;
-  if (joined && (Date.now() - joined) < TWO_WEEKS) {
-    return MAX_RES_FOR_NEW;
-  }
-
-  return DEFAULT_RES;
-}
-
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
@@ -1126,7 +1104,7 @@ function searchOnServer(request, respond) {
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
-    maxHits: getSearchMaxResults(request),
+    maxHits: 5,
     lastUUID: request.lastUUID,
     context: request.context,
     kifiVersion: api.version};
