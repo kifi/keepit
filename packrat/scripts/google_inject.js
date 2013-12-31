@@ -377,9 +377,43 @@ if (searchUrlRe.test(document.URL)) !function() {
       } else {
         collapseResults();
       }
-    }).on('click', '.kifi-res-bar-menu-a', function (e) {
+    }).on('mousedown', '.kifi-res-bar-menu-a', function (e) {
       if (e.which > 1) return;
-      // TODO: show/hide menu
+      e.preventDefault();
+      var $a = $(this).addClass('kifi-active');
+      var $menu = $a.next('.kifi-res-bar-menu').fadeIn(50);
+      var $items = $menu.find('.kifi-res-bar-menu-item').on('mouseup', hide);
+      var $hovers = $menu.find('.kifi-res-bar-submenu-a,.kifi-res-bar-submenu').add($items)
+        .on('mouseenter', enterHover)
+        .on('mouseleave', leaveHover);
+      document.addEventListener('mousedown', docMouseDown, true);
+      document.addEventListener('mousewheel', hide, true);
+      document.addEventListener('wheel', hide, true);
+      document.addEventListener('keypress', hide, true);
+      // .kifi-hover class needed because :hover does not work during drag
+      function enterHover() { $(this).addClass('kifi-hover'); }
+      function leaveHover() { $(this).removeClass('kifi-hover'); }
+      function docMouseDown(e) {
+        if (!$menu[0].contains(e.target)) {
+          hide();
+          if ($a[0] === e.target) {
+            e.stopPropagation();
+          }
+        }
+      }
+      function hide() {
+        document.removeEventListener('mousedown', docMouseDown, true);
+        document.removeEventListener('mousewheel', hide, true);
+        document.removeEventListener('wheel', hide, true);
+        document.removeEventListener('keypress', hide, true);
+        $a.removeClass('kifi-active');
+        $items.off('mouseup', hide);
+        $hovers.off('mouseenter', enterHover)
+               .off('mouseleave', leaveHover);
+        $menu.fadeOut(50, function () {
+          $menu.find('.kifi-hover').removeClass('kifi-hover');
+        });
+      }
     }).on('click', '.kifi-res-bar', function (e) {
       if (e.shiftKey && response.session && ~response.session.experiments.indexOf("admin")) {
         location.href = response.admBaseUri + '/admin/search/results/' + response.uuid;
