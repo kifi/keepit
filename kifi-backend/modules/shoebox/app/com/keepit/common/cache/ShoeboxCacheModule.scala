@@ -59,6 +59,11 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
+  def bookmarksForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new BookmarksForCollectionCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Singleton
+  @Provides
   def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache(stats, accessLog, (outerRepo, 7 days))
 

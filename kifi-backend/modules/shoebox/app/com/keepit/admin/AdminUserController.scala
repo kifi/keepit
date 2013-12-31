@@ -20,7 +20,6 @@ import play.api.data._
 import play.api.libs.json._
 import views.html
 import com.keepit.abook.ABookServiceClient
-import com.keepit.common.zookeeper.ServiceDiscovery
 import java.math.BigInteger
 import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
@@ -47,10 +46,8 @@ class AdminUserController @Inject() (
     db: Database,
     userRepo: UserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    followRepo: FollowRepo,
     normalizedURIRepo: NormalizedURIRepo,
     mailRepo: ElectronicMailRepo,
-    commentRecipientRepo: CommentRecipientRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     bookmarkRepo: BookmarkRepo,
     socialConnectionRepo: SocialConnectionRepo,
@@ -67,13 +64,11 @@ class AdminUserController @Inject() (
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
-    clock: Clock,
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
-    heimdal: HeimdalServiceClient,
-    serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
+    heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 

@@ -30,114 +30,15 @@ import com.keepit.inject._
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import play.api.Play.current
 import com.keepit.search.user.UserIndexer
+import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import akka.actor.ActorSystem
 
-class MainSearcherTest extends Specification with ApplicationInjector {
-
-  val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
-  val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
-
-  implicit val english = Lang("en")
-
-  def initData(numUsers: Int, numUris: Int) = {
-    val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
-    val uris =   (0 until numUris).map {n => NormalizedURI.withHash(title = Some("a" + n),
-        normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)}.toList
-    val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    (fakeShoeboxClient.saveUsers(users:_*), fakeShoeboxClient.saveURIs(uris:_*))
-  }
-
-  def initIndexes(store: ArticleStore) = {
-    val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-
-    val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, articleConfig, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val uriGraph = new URIGraphImpl(
-      new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
-      new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
-      inject[ShoeboxServiceClient],
-      inject[MonitoredAwait])
-    implicit val clock = inject[Clock]
-    implicit val fortyTwoServices = inject[FortyTwoServices]
-
-    val mainSearcherFactory = new MainSearcherFactory(
-      articleIndexer,
-      userIndexer,
-      uriGraph,
-      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
-      resultClickTracker,
-      inject[BrowsingHistoryTracker],
-      inject[ClickHistoryTracker],
-      inject[ShoeboxServiceClient],
-      inject[SpellCorrector],
-      inject[MonitoredAwait],
-      inject[AirbrakeNotifier],
-      clock,
-      fortyTwoServices)
-    (uriGraph, articleIndexer, mainSearcherFactory)
-  }
-
-  def mkStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs documents".format(idx)))
-      store
-    }
-  }
-
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-      id = normalizedUriId,
-      title = title,
-      description = None,
-      keywords = None,
-      media = None,
-      content = content,
-      scrapedAt = currentDateTime,
-      httpContentType = Some("text/html"),
-      httpOriginalContentCharset = Option("UTF-8"),
-      state = SCRAPED,
-      message = None,
-      titleLang = Some(english),
-      contentLang = Some(english))
-  }
-
-  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].clearUserConnections(connections.keys.toSeq:_*)
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveConnections(connections)
-  }
-
-  def saveCollections(collections: Collection*): Seq[Collection] = {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections:_*)
-  }
-
-  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks:_*)
-  }
-
-  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Bookmark] = {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByURI(edgesByURI, uniqueTitle, isPrivate, source)
-  }
-
-  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Bookmark] = {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByUser(edgesByUser, uniqueTitle, isPrivate, source)
-  }
-
-  val source = BookmarkSource("test")
-  val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
-  val noBoostConfig = defaultConfig(
-    "myBookmarkBoost" -> "1", "sharingBoostInNetwork" -> "0", "sharingBoostOutOfNetwork" -> "0",
-    "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
-    "percentMatch" -> "0", "tailCutting" -> "0", "dampingByRank" -> "false")
-  val allHitsConfig = defaultConfig("tailCutting" -> "0")
+class MainSearcherTest extends Specification with SearchApplicationInjector with SearchTestHepler {
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -189,7 +90,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "return a single list of hits" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -241,7 +142,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search personal bookmark titles" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -299,7 +200,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "score using matches in a bookmark title and an article" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -328,7 +229,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "paginate" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -368,7 +269,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "boost recent bookmarks" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val Seq(user) = users
         val userId = user.id.get
@@ -397,7 +298,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "be able to cut the long tail" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val Seq(user) = users
         val userId = user.id.get
@@ -434,7 +335,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "show own private bookmarks" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -458,7 +359,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "not show friends private bookmarks" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -488,7 +389,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search hits using a stemmed word" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
@@ -513,7 +414,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search within collections" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -562,7 +463,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search thru collection names" in {
-      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
+      running(application) {
         val (users, uris) = initData(numUsers = 1, numUris = 20)
         val user1 = users(0)
         val bookmarks = saveBookmarksByUser(Seq((user1, uris)))

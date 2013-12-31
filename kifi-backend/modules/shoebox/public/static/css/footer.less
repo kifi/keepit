@@ -1,41 +1,54 @@
 .kifi-footer {
-	padding: 47px 20px 38px;
+	.padding-top(47px);
+	.padding-lr(20px);
+	.padding-bottom(38px);
 	background: #424242;
 	text-transform: uppercase;
+	text-align: center;
+	font-weight: 600;
 }
 
 .kifi-footer-menu {
 	padding: 0;
 	margin: 0;
 	color: white;
-	letter-spacing: 2px;
+	.letter-spacing(0.5px);
 
 	li {
 		display: inline-block;
+		white-space: nowrap;
 	}
 
 	a {
 		color: white;
 		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
 	}
 }
 
 .kifi-footer-menu-dot {
-	margin: 0 6px;
+	.margin-lr(6px);
 }
 
 .kifi-footer-caption {
-	font-size: 14px;
-	margin-top: 21px;
+	@fontSize: 14px;
+	.font-size(@fontSize);
+	font-weight: 400;
+	.margin-top(21px, @fontSize);
 	color: #929292;
-	letter-spacing: 2px;
-}
+	.letter-spacing(0.75px, @fontSize);
 
-.kifi-love-icon {
-	display: inline-block;
-	position: relative;
-	top: 1px;
-	width: 15px;
-	height: 13px;
-	background: #ec7f75;
+	.kifi-love-icon {
+		display: inline-block;
+		position: relative;
+		.top(1px);
+		width: unit(15px / @fontSize, em);
+		height: unit(13px / @fontSize, em);
+		.at2x('/assets/static/images/heart.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
+	}
 }

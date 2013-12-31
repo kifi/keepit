@@ -58,7 +58,7 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake)
+    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake)
   }
 
   @Singleton
@@ -103,7 +103,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
     new ServiceDiscovery {
       def thisInstance = Some(ServiceInstance(Node(cluster.serviceType.name + "_0"), RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType), true))
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
-      def register(doKeepAlive: Boolean) = thisInstance.get
+      def register() = thisInstance.get
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = {}
       def startSelfCheck(): Future[Boolean] = Promise[Boolean].success(true).future
