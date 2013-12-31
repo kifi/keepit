@@ -448,6 +448,7 @@ a.kifi-res-friends {
 }
 a.kifi-res-more-a {
   display: inline-block;
+  margin: 2px 0;
   border: 1px solid #e5e7e8;
   border-radius: 6px;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAGCAQAAABQ+cdNAAAAW0lEQVQIHTXBsQ7BYAAGwO9/my461IJOJhvpWO9nEYNIJBIWi8VtEpt3QdLexdpZk4HK3jaJmbuTqcoOy4xsvHz0Sv50buYZmDjqk2hcXSzUDh7ajKw8vXVKfr7Ccy8ryIFvtAAAAABJRU5ErkJggg==);
@@ -456,10 +457,8 @@ a.kifi-res-more-a {
   background-repeat: no-repeat;
   background-color: #fafafa;
   padding: 1px 28px 0 15px;
-  position: relative;
-  top: -2px;
   font-size: 12px;
-  line-height: 28px;
+  line-height: 24px;
   white-space: nowrap;
   cursor: pointer;
   -webkit-user-select: none;
