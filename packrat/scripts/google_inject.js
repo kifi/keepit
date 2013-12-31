@@ -161,10 +161,12 @@ if (searchUrlRe.test(document.URL)) !function() {
         $status
           .attr('data-n', numTop)
           .attr('href', numTop ? 'javascript:' : null);
-        $res.find('.kifi-filter-all').attr(
-          numTop ? {'data-top': numTop} : {'data-n': resp.hits.length, 'data-of': (resp.myTotal || 0) + (resp.friendsTotal || 0) + (resp.othersTotal || 0)});
-        $res.find('.kifi-filter-yours').attr('data-n', resp.myTotal || 0);
-        $res.find('.kifi-filter-friends').attr('data-n', resp.friendsTotal || 0);
+        $res.find('.kifi-filter-all').attr(numTop ?
+          {'data-top': numTop} :
+          {'data-n': resp.hits.length,
+           'data-of': insertCommas((resp.myTotal || 0) + (resp.friendsTotal || 0) + (resp.othersTotal || 0))});
+        $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal || 0));
+        $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal || 0));
       }
       if (showExactlyOne && resp.hits.length > 1) {
         resp.nextHits = resp.hits.splice(1);
@@ -581,5 +583,10 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function areSameFilter(f1, f2) {
     return f1 === f2 || !f1 && !f2 || f1 && f1.who === (f2 ? f2.who : 'a') || f2 && f2.who === (f1 ? f1.who : 'a');
+  }
+
+  var insertCommasRe = /(\d)(?=(\d\d\d)+$)/g;
+  function insertCommas(n) {
+    return String(n).replace(insertCommasRe, '$1,');
   }
 }();
