@@ -110,10 +110,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(bookmark1.uriId, bookmark2.uriId)
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(bookmark2.uriId)
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
         }
       }
