@@ -1,0 +1,31 @@
+package com.keepit.commanders
+
+import com.google.inject.Inject
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import play.api.libs.json.{JsArray, JsObject, JsValue}
+import com.keepit.model.Normalization
+
+case class RawBookmarkRepresentation(title: Option[String], url: String, isPrivate: Boolean, canonical: Option[String] = None, openGraph: Option[String] = None)
+
+class RawBookmarkFactory @Inject() (
+    airbrake: AirbrakeNotifier) {
+
+  private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
+    case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
+    case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
+    case json: JsObject => Seq(json)
+    case _ =>
+      airbrake.notify(s"error parsing bookmark import json $value")
+      Seq()
+  }
+
+  def getBookmarksFromJson(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
+    val title = (json \ "title").asOpt[String]
+    val url = (json \ "url").as[String]
+    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+    val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
+    val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
+    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph)
+  }
+}
+
