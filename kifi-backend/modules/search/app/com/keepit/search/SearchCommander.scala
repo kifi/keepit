@@ -101,7 +101,7 @@ class SearchCommanderImpl @Inject() (
 
     val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
     val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
-    val mayHaveMoreHits = (newIdFilter.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
+    val mayHaveMoreHits = (mergedResult.hits.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
     val res = ResultDecorator.decorate(
       userId,
       query,
