@@ -20,10 +20,10 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val bookmarkInterner = inject[BookmarkInterner]
-        val bookmarks = bookmarkInterner.internBookmarks(Json.obj(
+        val bookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
-          ), user, Set(), BookmarkSource.email, true)
+          )), user, Set(), BookmarkSource.email, true)
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
@@ -39,13 +39,13 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val bookmarkInterner = inject[BookmarkInterner]
-        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+        val bookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> false
-          )), user, Set(), BookmarkSource.email, true)
+          ))), user, Set(), BookmarkSource.email, true)
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
@@ -61,7 +61,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val fakeAirbrake = inject[FakeAirbrakeNotifier]
         fakeAirbrake.errorCount() === 0
         val bookmarkInterner = inject[BookmarkInterner]
-        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+        val bookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
           ), Json.obj(
@@ -70,7 +70,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> true
-          )), user, Set(), BookmarkSource.email, true)
+          ))), user, Set(), BookmarkSource.email, true)
         db.readWrite { implicit db =>
           bookmarks.size === 2
           bookmarkRepo.all.size === 2
@@ -84,18 +84,18 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           userRepo.save(User(firstName = "Greg", lastName = "Smith"))
         }
         val bookmarkInterner = inject[BookmarkInterner]
-        val initialBookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+        val initialBookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), BookmarkSource.keeper, true)
+        ))), user, Set(), BookmarkSource.keeper, true)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
           bookmarkRepo.save(bookmarkRepo.getByUser(user.id.get).head.withActive(false))
         }
-        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+        val bookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), BookmarkSource.keeper, true)
+        ))), user, Set(), BookmarkSource.keeper, true)
         db.readOnly { implicit s =>
           bookmarks.size === 1
           bookmarkRepo.all.size === 1
