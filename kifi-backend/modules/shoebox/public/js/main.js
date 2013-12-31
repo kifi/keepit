@@ -3156,6 +3156,9 @@ $(function () {
 		case 'blog':
 			showBlog();
 			break;
+		case 'onboarding':
+			showWelcome();
+			break;
 		default:
 			return;
 		}
@@ -3196,6 +3199,9 @@ $(function () {
 			break;
 		case 'blog':
 			title = 'Updates and Features';
+			break;
+		case 'onboarding':
+			title = 'Welcome to kifi';
 			break;
 		}
 		if (clearTags) {
@@ -4019,4 +4025,13 @@ $(function () {
 				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
+
+	function showWelcome() {
+		$('body').append('<iframe class="kifi-onboarding-iframe" src="/onboarding.html" frameborder="0"></iframe>');
+	}
+
+	window.exitWelcome = function () {
+		$('.kifi-onboarding-iframe').remove();
+		navigate('');
+	};
 });
