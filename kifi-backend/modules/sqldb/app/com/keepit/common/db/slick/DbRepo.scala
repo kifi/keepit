@@ -1,5 +1,6 @@
 package com.keepit.common.db.slick
 
+import com.keepit.common.strings._
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.inject._
@@ -68,8 +69,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     invalidateCache(result)
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
-      throw new MySQLIntegrityConstraintViolationException(s"error persisting $model").initCause(m)
-    case t: SQLException => throw new SQLException(s"error persisting $model", t)
+      throw new MySQLIntegrityConstraintViolationException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}").initCause(m)
+    case t: SQLException => throw new SQLException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}", t)
   }
 
   def count(implicit session: RSession): Int = Query(table.length).first
@@ -78,7 +79,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val startTime = System.currentTimeMillis()
     val model = (for(f <- table if f.id is id) yield f).first
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\tmodel:$model")
+    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 
@@ -95,7 +96,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val startTime = System.currentTimeMillis()
     val inserted = table.autoInc.insert(model)
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:$inserted")
+    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     inserted
   }
 
@@ -105,7 +106,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:$model")
-    if (count != 1) throw new IllegalStateException(s"Updating $count models of [$model] instead of exsactly one")
+    if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exsactly one")
     model
   }
 
@@ -157,7 +158,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
     val startTime = System.currentTimeMillis()
     val model = (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\tmodel:$model")
+    dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 }
