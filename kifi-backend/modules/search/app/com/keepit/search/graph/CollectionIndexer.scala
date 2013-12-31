@@ -15,7 +15,8 @@ import com.keepit.search.index.{Indexable, Indexer}
 import com.keepit.search.index.Searcher
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
+import com.keepit.common.concurrent.ExecutionContext.immediate
 
 object CollectionFields {
   val userField = "coll_usr"
@@ -98,17 +99,16 @@ class CollectionIndexer(
 
   def buildIndexable(collection: Collection): CollectionIndexable = {
     val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
-      Await.result(shoeboxClient.getBookmarksInCollection(collection.id.get), 180 seconds)
+      Await.result(shoeboxClient.getUriIdsInCollection(collection.id.get), 180 seconds)
     } else {
-      Seq.empty[Bookmark]
+      Seq.empty[BookmarkUriAndTime]
     }
-
     new CollectionIndexable(
       id = collection.id.get,
       sequenceNumber = collection.seq,
       isDeleted = bookmarks.isEmpty,
       collection = collection,
-      bookmarks = bookmarks)
+      normalizedUris = bookmarks)
   }
 
   class CollectionIndexable(
@@ -116,13 +116,13 @@ class CollectionIndexer(
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
     val collection: Collection,
-    val bookmarks: Seq[Bookmark]
+    val normalizedUris: Seq[BookmarkUriAndTime]
   ) extends Indexable[Collection] {
 
     override def buildDocument = {
       val doc = super.buildDocument
 
-      val collListBytes = URIList.toByteArray(bookmarks)
+      val collListBytes = URIList.toByteArray(normalizedUris)
       val collListField = buildURIListField(uriListField, collListBytes)
       val collList = URIList(collListBytes)
       doc.add(collListField)

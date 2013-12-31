@@ -1,11 +1,12 @@
 package com.keepit.search.graph
 
-import com.keepit.model.Bookmark
+import com.keepit.model.{BookmarkUriAndTime, NormalizedURI, Bookmark}
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.common.db.Id
 
 trait URIList {
   val version: Int
@@ -66,12 +67,12 @@ object URIList {
     (new SortedBookmarks(publicBookmarks), new SortedBookmarks(privateBookmarks))
   }
 
-  def toByteArray(bookmarks: Seq[Bookmark]): Array[Byte] = {
+  def toByteArray(uris: Seq[BookmarkUriAndTime]): Array[Byte] = {
     // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
-    val sortedBookmarks = bookmarks.sortWith{ (a, b) =>
+    val sortedBookmarks = uris.sortWith{ (a, b) =>
       (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
     }
-    val allBookmarks = new ArrayBuffer[Bookmark]
+    val allBookmarks = new ArrayBuffer[BookmarkUriAndTime]
 
     sortedBookmarks.headOption match {
       case Some(firstBookmark) =>
@@ -89,9 +90,9 @@ object URIList {
     toByteArrayFromSorted(allBookmarks)
   }
 
-  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq)
+  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq map {b => BookmarkUriAndTime(b.uriId, b.createdAt) } )
 
-  private def toByteArrayFromSorted(sortedBookmarks: Seq[Bookmark]): Array[Byte] = {
+  private def toByteArrayFromSorted(sortedBookmarks: Seq[BookmarkUriAndTime]): Array[Byte] = {
     val size = sortedBookmarks.size
     val baos = new ByteArrayOutputStream(size * 4)
     val out = new OutputStreamDataOutput(baos)

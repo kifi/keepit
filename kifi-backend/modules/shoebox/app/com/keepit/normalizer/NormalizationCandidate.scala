@@ -2,6 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.model.Normalization
 import play.api.libs.json.JsObject
+import com.keepit.commanders.RawBookmarkRepresentation
 
 sealed trait NormalizationCandidate {
   val url: String
@@ -26,5 +27,9 @@ object NormalizationCandidate {
       normalization <- acceptedSubmissions
       url <- (json \ normalization.scheme).asOpt[String]
     } yield UntrustedCandidate(url, normalization)
+  }
+
+  def apply(rawBookmark: RawBookmarkRepresentation): Seq[UntrustedCandidate] = {
+    (rawBookmark.canonical.map(UntrustedCandidate(_, Normalization.CANONICAL)) :: rawBookmark.openGraph.map(UntrustedCandidate(_, Normalization.OPENGRAPH)) :: Nil).flatten
   }
 }

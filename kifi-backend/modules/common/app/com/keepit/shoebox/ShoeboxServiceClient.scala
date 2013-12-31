@@ -59,6 +59,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
+  def getUriIdsInCollection(id: Id[Collection]): Future[Seq[BookmarkUriAndTime]]
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
@@ -372,6 +373,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
     call(Shoebox.internal.getBookmarksInCollection(collectionId)) map { r =>
       Json.fromJson[Seq[Bookmark]](r.json).get
+    }
+  }
+
+  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[BookmarkUriAndTime]] = {
+    call(Shoebox.internal.getUriIdsInCollection(collectionId)) map { r =>
+      Json.fromJson[Seq[BookmarkUriAndTime]](r.json).get
     }
   }
 
