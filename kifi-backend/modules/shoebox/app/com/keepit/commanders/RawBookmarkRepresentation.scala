@@ -24,7 +24,7 @@ class RawBookmarkFactory @Inject() (
 
   def toRawBookmark(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
     val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").as[String]
+    val url = (json \ "url").asOpt[String].getOrElse(throw new Exceptio(s"json $value did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
