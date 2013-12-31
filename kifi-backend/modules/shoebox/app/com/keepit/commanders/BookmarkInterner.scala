@@ -1,7 +1,5 @@
 package com.keepit.commanders
 
-import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.analytics.Events
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -9,7 +7,6 @@ import com.keepit.model._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.KestrelCombinator
 
 import play.api.libs.json._
 
@@ -23,8 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 
-case class RawBookmarkRepresentation(title: Option[String], url: String, isPrivate: Boolean, canonical: Option[String] = None, openGraph: Option[String] = None)
-
 @Singleton
 class BookmarkInterner @Inject() (
   db: Database,
@@ -36,12 +31,13 @@ class BookmarkInterner @Inject() (
   airbrake: AirbrakeNotifier,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
+  rawBookmarkFactory: RawBookmarkFactory,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
   def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
-    val bookmarks = getBookmarksFromJson(value)
+    val bookmarks = rawBookmarkFactory.getBookmarksFromJson(value)
     val referenceId = UUID.randomUUID
     log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
     internRawBookmarks(bookmarks, user, experiments, source, mutatePrivacy, installationId, referenceId)
@@ -77,24 +73,6 @@ class BookmarkInterner @Inject() (
     val persistedBookmarks = persistedBookmarksWithUris.map(_._1)
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
-  }
-
-  private def getBookmarksFromJson(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
-    val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").as[String]
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
-    val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
-    val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph)
-  }
-
-  private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
-    case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
-    case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
-    case json: JsObject => Seq(json)
-    case _ =>
-      airbrake.notify(s"error parsing bookmark import json $value")
-      Seq()
   }
 
   private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, mutatePrivacy: Boolean, experiments: Set[ExperimentType],
