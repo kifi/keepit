@@ -1105,10 +1105,11 @@ function searchOnServer(request, respond) {
     delete searchFilterCache[request.query];
   }
 
+  var maxHits = 5;
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
-    maxHits: 5,
+    maxHits: maxHits,
     lastUUID: request.lastUUID,
     context: request.context,
     kifiVersion: api.version};
@@ -1122,6 +1123,12 @@ function searchOnServer(request, respond) {
     resp.hits.forEach(function (hit) {
       hit.uuid = resp.uuid;
     });
+    resp.myTotal = resp.myTotal || 0;
+    resp.friendsTotal = resp.friendsTotal || 0;
+    resp.othersTotal = resp.othersTotal || 0;
+    if (resp.hits.length < maxHits && (params.context || params.f)) {
+      resp.mayHaveMore = false;
+    }
     respond(resp);
   };
 

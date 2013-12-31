@@ -98,9 +98,8 @@ if (searchUrlRe.test(document.URL)) !function() {
     if (isVertical) return;
 
     var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/g, " ");  // TODO: also detect "Showing results for" and prefer that
-    var f = arguments.length > 1 ? newFilter : filter;
-    if (q === query && areSameFilter(f, filter)) {
-      log("[search] nothing new, query:", q, "filter:", f)();
+    if (q === query && areSameFilter(newFilter, filter)) {
+      log("[search] nothing new, query:", q, "filter:", newFilter)();
       return;
     }
     if (response) {
@@ -113,23 +112,28 @@ if (searchUrlRe.test(document.URL)) !function() {
       return;
     }
     query = q;
-    filter = f;
+    filter = newFilter;
 
-    log("[search] query:", q, "filter:", f)();
+    log("[search] query:", q, "filter:", newFilter)();
 
-    $status.removeAttr('href data-n');
-    $arrow.removeAttr('href');
-    if (!f) {
+    if (!newFilter) {
+      if (!isFirst) {
+        collapseResults();
+        $res.find('.kifi-filter').removeAttr('data-n').attr('href', 'javascript:')
+          .filter('.kifi-filter-all').removeAttr('href data-of data-top');
+      }
       $bar.addClass('kifi-loading');
     }
+    $status.removeAttr('href data-n');
+    $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
 
     tKifiResultsReceived = null;
     tKifiResultsShown = null;
     var t1 = tQuery = Date.now();
     refinements++;
-    api.port.emit("get_keeps", {query: q, filter: f, first: isFirst}, function results(resp) {
-      if (q !== query || !areSameFilter(f, filter)) {
+    api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst}, function results(resp) {
+      if (q !== query || !areSameFilter(newFilter, filter)) {
         log("[results] ignoring for query:", q, "filter:", f)();
         return;
       } else if (!resp.session) {
@@ -145,18 +149,18 @@ if (searchUrlRe.test(document.URL)) !function() {
 
       response = resp;
       // if (isFirst && resp.filter && resp.filter.who) {  // restoring previous filter (user navigated back) // TODO: make this work again
-      //   filter = f = newFilter = resp.filter;
+      //   filter = newFilter = resp.filter;
       //   $bar.removeClass('kifi-collapsed kifi-preview');
-      //   $res.find('.kifi-filter[data-val=' + f.who + ']').trigger('click', [true]);
+      //   $res.find('.kifi-filter[data-val=' + newFilter.who + ']').trigger('click', [true]);
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.show && resp.hits.length && (!inDoc || !(tGoogleResultsShown >= tQuery)) || f);
-      var showPreview = Boolean(showAny && isFirst && !f);
+      var showAny = Boolean(resp.show && resp.hits.length && (!inDoc || !(tGoogleResultsShown >= tQuery)) || newFilter);
+      var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit);
 
-      if (!f || f.who === 'a') {
+      if (!newFilter || newFilter.who === 'a') {
         var numTop = resp.numTop = resp.show && resp.hits.length || 0;
         $status
           .attr('data-n', numTop)
@@ -164,16 +168,16 @@ if (searchUrlRe.test(document.URL)) !function() {
         $res.find('.kifi-filter-all').attr(numTop ?
           {'data-top': numTop} :
           {'data-n': resp.hits.length,
-           'data-of': insertCommas((resp.myTotal || 0) + (resp.friendsTotal || 0) + (resp.othersTotal || 0))});
-        $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal || 0));
-        $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal || 0));
+           'data-of': insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal)});
+        $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));
+        $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal));
       }
       if (showPreview && resp.hits.length > resp.session.prefs.maxResults) {
         resp.nextHits = resp.hits.splice(resp.session.prefs.maxResults);
         resp.nextUUID = resp.uuid;
         resp.nextContext = resp.context;
+        resp.mayHaveMore = true;
       }
-      inferMayHaveMore();
       attachResults();
       if (inDoc) {
         tKifiResultsShown = Date.now();
@@ -486,10 +490,6 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function expandResults() {
     $res.find('.kifi-res-box').slideDown(200);
-    if (response.hits.length) {
-      // $res.find(".kifi-filter-btn").fadeToggle(200);
-      // $res.find(".kifi-filters-x:visible").click();
-    }
     $bar.removeClass('kifi-collapsed');
     $status.removeAttr('data-n');
     var onFirstShow = $res.data('onFirstShow');
@@ -501,10 +501,6 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function collapseResults() {
     $res.find('.kifi-res-box').slideUp(200);
-    if (response.hits.length) {
-      // $res.find(".kifi-filter-btn").fadeToggle(200);
-      // $res.find(".kifi-filters-x:visible").click();
-    }
     $bar.addClass('kifi-collapsed').removeClass('kifi-preview');
     $status.attr('href', 'javascript:').removeAttr('data-n');
   }
@@ -520,15 +516,9 @@ if (searchUrlRe.test(document.URL)) !function() {
           mayHaveMore: response.mayHaveMore
         }, {
           google_hit: 'google_hit'
-        }));
+        }))
+      .css('display', '');
     log('[attachResults] done')();
-  }
-
-  function inferMayHaveMore() {
-    var f = response.filter;
-    if (f && response.mayHaveMore && response.hits.length === {m: response.myTotal, f: response.friendsTotal}[f.who]) {
-      response.mayHaveMore = false;
-    }
   }
 
   function prefetchMore() {
@@ -582,7 +572,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     delete response.nextHits;
     delete response.nextUUID;
     delete response.nextContext;
-    inferMayHaveMore();
 
     for (var i = 0; i < hits.length; i++) {
       hitHtml.push(render("html/search/google_hit", $.extend({self: response.session.user, images: api.url("images")}, hits[i])));
@@ -590,10 +579,12 @@ if (searchUrlRe.test(document.URL)) !function() {
     $(hitHtml.join("")).hide().appendTo($res.find('#kifi-res-list')).slideDown(200, function () {
       this.style.overflow = '';  // slideDown clean-up
     });
+    var $filAll = $res.find('.kifi-filter-all');
+    $filAll.filter('[data-n]').attr('data-n', response.hits.length);
     if (!response.mayHaveMore) {
+      $filAll.filter('[data-of]').attr('data-of', response.hits.length);
       $res.find('.kifi-res-end').empty();
     }
-    $res.find('.kifi-filter-all[data-n]').attr('data-n', response.hits.length);
   }
 
   function processHit(hit) {
