@@ -200,10 +200,14 @@ if (searchUrlRe.test(document.URL)) !function() {
     return m && decodeURIComponent(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
   }
 
-  $(window).on("hashchange", function() {
+  $(window).on('hashchange', function () {  // e.g. a click on a Google doodle or a switch from shopping to web search
     log("[hashchange]")();
     checkSearchType();
-    search();  // needed for switch from shopping to web search, for example
+    if (!query && !response.query) {
+      search(parseQuery(location.hash || location.search), null, true);
+    } else {
+      search();
+    }
   }).on("beforeunload", function(e) {
     if (response.query === query) {
       sendSearchedEvent("unload");
