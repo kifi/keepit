@@ -14,6 +14,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
   implicit val context = HeimdalContext.empty
 
   "BookmarkInterner" should {
+
     "persist bookmark" in {
       running(new ShoeboxApplication(FakeScrapeSchedulerModule())) {
         val user = db.readWrite { implicit db =>

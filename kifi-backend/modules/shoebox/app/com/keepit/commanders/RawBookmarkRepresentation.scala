@@ -13,9 +13,10 @@ class RawBookmarkFactory @Inject() (
   def toRawBookmark(keepInfos: Seq[KeepInfo]): Seq[RawBookmarkRepresentation] =
     keepInfos map {k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = k.isPrivate) }
 
-  private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
+  private[commanders] def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
     case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
+    case json: JsObject if json.keys.contains("bookmarks") => getBookmarkJsonObjects(json \ "bookmarks")
     case json: JsObject => Seq(json)
     case _ =>
       airbrake.notify(s"error parsing bookmark import json $value")
@@ -24,7 +25,7 @@ class RawBookmarkFactory @Inject() (
 
   def toRawBookmark(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
     val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $value did not have a url"))
+    val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
