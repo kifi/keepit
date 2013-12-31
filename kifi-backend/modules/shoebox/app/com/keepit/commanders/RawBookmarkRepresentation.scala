@@ -10,6 +10,9 @@ case class RawBookmarkRepresentation(title: Option[String], url: String, isPriva
 class RawBookmarkFactory @Inject() (
     airbrake: AirbrakeNotifier) {
 
+  def fromKeepInfos(keepInfos: Seq[KeepInfo]): Seq[RawBookmarkRepresentation] =
+    keepInfos map {k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = k.isPrivate) }
+
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
     case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
