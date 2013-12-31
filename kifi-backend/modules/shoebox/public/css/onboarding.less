@@ -47,9 +47,8 @@
 	width: 90%;
 	height: 85%;
 	min-width: 440 / @fontFactor * @factor;
-	min-height: 705 * @factor;
-	max-width: 1089 * @factor;
-	max-height: 631 * @factor;
+	max-width: 1130 * @factor;
+	max-height: 653 * @factor;
 	margin: 0 auto;
 	margin-top: 5%;
 	border: 2px solid @blueGray;
@@ -207,9 +206,9 @@
 		@myFontSize: 18;
 		@myFactor: unit(1 / @myFontSize, em);
 		font-size: @myFontSize * @factor;
-		padding: 10 * @myFactor 49 * @myFactor;
+		padding: 9 * @myFactor 49 * @myFactor;
 		line-height: 40 * @myFactor;
-		.border-radius(3px);
+		.border-radius(5px);
 		color: white;
 		text-decoration: none;
 		.transition(background .1s ease);
@@ -296,6 +295,13 @@
 
 	&:active {
 		background: shade(@bgColor, 10%);
+	}
+}
+
+.kifi-onboarding-button-text {
+	.kifi-onboarding-modal.page-1 & {
+		position: relative;
+		left: -5px;
 	}
 }
 
