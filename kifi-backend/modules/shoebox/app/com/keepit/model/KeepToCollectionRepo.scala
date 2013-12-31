@@ -12,7 +12,7 @@ import com.keepit.common.time._
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]]
   def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]]
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[NormalizedURI]]
+  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[BookmarkUriAndTime]
   def getByBookmark(keepId: Id[Bookmark],
                     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                    (implicit session: RSession): Seq[KeepToCollection]
@@ -103,13 +103,15 @@ class KeepToCollectionRepoImpl @Inject() (
     }
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[BookmarkUriAndTime] = {
     import bookmarkRepo.{stateTypeMapper => bookmarkStateMapper}
-    (for {
+    val res = (for {
       c <- table
       b <- bookmarkRepo.table if b.id === c.bookmarkId && c.collectionId === collectionId &&
                                  b.state === BookmarkStates.ACTIVE &&
                                  c.state === KeepToCollectionStates.ACTIVE
-    } yield b.uriId) list
+    } yield (b.uriId, b.createdAt)) list;
+
+    res map {r => BookmarkUriAndTime(r._1, r._2)}
   }
 }

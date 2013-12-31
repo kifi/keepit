@@ -505,7 +505,7 @@ class ShoeboxController @Inject() (
     val uris = db.readOnly(2, Slave) { implicit s =>
       keepToCollectionRepo.getUriIdsInCollection(collectionId)
     }
-    Ok(JsArray(uris map {id => JsNumber(id.id) }))
+    Ok(Json.toJson(uris))
   }
 
   def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
