@@ -13,6 +13,7 @@ import DBSession._
 
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
+import play.api.Logger
 
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
@@ -40,6 +41,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   import db.Driver.Implicit._ // here's the driver, abstracted away
   import db.Driver.Table
 
+  lazy val dbLog = Logger("com.keepit.db")
   override def invalidateCache(model: M)(implicit session: RSession): M = model
 
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
@@ -72,7 +74,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   def count(implicit session: RSession): Int = Query(table.length).first
 
-  def get(id: Id[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
+  def get(id: Id[M])(implicit session: RSession): M = {
+    val startTime = System.currentTimeMillis()
+    val model = (for(f <- table if f.id is id) yield f).first
+    val time = System.currentTimeMillis - startTime
+    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\tmodel:$model")
+    model
+  }
 
   def all()(implicit session: RSession): Seq[M] = table.map(t => t).list
 
@@ -83,11 +91,20 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  private def insert(model: M)(implicit session: RWSession) = table.autoInc.insert(model)
+  private def insert(model: M)(implicit session: RWSession) = {
+    val startTime = System.currentTimeMillis()
+    val inserted = table.autoInc.insert(model)
+    val time = System.currentTimeMillis - startTime
+    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:$inserted")
+    inserted
+  }
 
   private def update(model: M)(implicit session: RWSession) = {
+    val startTime = System.currentTimeMillis()
     val target = for(t <- table if t.id === model.id.get) yield t
     val count = target.update(model)
+    val time = System.currentTimeMillis - startTime
+    dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:$model")
     if (count != 1) throw new IllegalStateException(s"Updating $count models of [$model] instead of exsactly one")
     model
   }
@@ -136,9 +153,11 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
 
   def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
 
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] =
-    (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = {
+    val startTime = System.currentTimeMillis()
+    val model = (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
+    val time = System.currentTimeMillis - startTime
+    dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\tmodel:$model")
+    model
+  }
 }
-
-
-
