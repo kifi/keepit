@@ -71,6 +71,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
           bookmarkRepo.save(bookmark1.withActive(false))
@@ -91,9 +92,12 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           collectionRepo.getByUserAndName(user1.id.get, "Scala").get.id.get === coll3.id.get
           collectionRepo.getByUserAndName(user2.id.get, "Scala").get.id.get === coll4.id.get
           keepToCollectionRepo.getBookmarksInCollection(coll3.id.get).length === 1
+          keepToCollectionRepo.getUriIdsInCollection(coll3.id.get).length === 1
           keepToCollectionRepo.getBookmarksInCollection(coll4.id.get).length === 0
+          keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 0
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll4.id.get).length === 1
+          keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 1
           collectionRepo.getByUserAndName(user2.id.get, "Cooking") must beNone
         }
       }
@@ -106,8 +110,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark2.id.get)
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
         }
       }

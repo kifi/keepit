@@ -10,19 +10,25 @@ import com.keepit.abook.ABookServiceClient
 import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.{UserIdentity, SocialNetworks, BasicUser}
-import scala.concurrent.{Await, Future}
+import com.keepit.social._
+import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
-import scala.util.{Failure, Success, Try}
-import scala.Some
+import scala.util.Try
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{Identity, UserService, Registry}
 import java.text.Normalizer
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.ElizaServiceClient
+import play.api.libs.json.JsSuccess
+import com.keepit.model.SocialConnection
+import play.api.libs.json.JsString
+import com.keepit.model.SocialUserInfoUserKey
+import scala.Some
+import com.keepit.social.UserIdentity
+import play.api.libs.json.JsObject
+import securesocial.core.{UserService, Registry, Identity}
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -76,6 +82,8 @@ class UserCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   invitationRepo: InvitationRepo,
   friendRequestRepo: FriendRequestRepo,
+  userCache: SocialUserInfoUserCache,
+  socialGraphPlugin: SocialGraphPlugin,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
   elizaServiceClient: ElizaServiceClient,
@@ -343,5 +351,29 @@ class UserCommander @Inject() (
     }
   }
 
+  def disconnect(userId:Id[User], networkString: String):(Option[SocialUserInfo], String) = {
+    userCache.remove(SocialUserInfoUserKey(userId))
+    val network = SocialNetworkType(networkString)
+    val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
+      socialUserInfoRepo.getByUser(userId).partition(_.networkType == network)
+    }
+    if (otherNetworks.isEmpty) {
+      (None, "no_other_connected_network")
+    } else if (thisNetwork.isEmpty || thisNetwork.head.networkType == SocialNetworks.FORTYTWO) {
+      (None, "not_connected_to_network")
+    } else {
+      val sui = thisNetwork.head
+      socialGraphPlugin.asyncRevokePermissions(sui)
+      db.readWrite { implicit s =>
+        socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserInfoRepo.invalidateCache(sui)
+        socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
+        socialUserInfoRepo.getByUser(userId).map(socialUserInfoRepo.invalidateCache)
+      }
+      userCache.remove(SocialUserInfoUserKey(userId))
+      val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
+      (Some(newLoginUser), "disconnected")
+    }
+  }
 
 }

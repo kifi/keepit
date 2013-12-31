@@ -366,6 +366,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(bookmarks)
   }
 
+  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[BookmarkUriAndTime]] = {
+    val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
+    Future.successful(bookmarks map {b => BookmarkUriAndTime(b.uriId, b.createdAt) })
+  }
+
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.userId == userId).toSeq
     Future.successful(collections)

@@ -170,7 +170,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         var $sett = $(this).addClass("kifi-active");
         var $menu = $sett.next(".kifi-pane-settings-menu").fadeIn(50);
-        var $hide = $menu.find('.kifi-pane-settings-menu-item')
+        var $items = $menu.find('.kifi-pane-settings-menu-item')
           .on("mouseenter", enterItem)
           .on("mouseleave", leaveItem);
         document.addEventListener("mousedown", docMouseDown, true);
@@ -189,14 +189,14 @@ var pane = pane || function () {  // idempotent for Chrome
         function hide() {
           document.removeEventListener("mousedown", docMouseDown, true);
           $sett.removeClass("kifi-active");
-          $hide.off("mouseenter", enterItem)
+          $items.off("mouseenter", enterItem)
               .off("mouseleave", leaveItem);
           $menu.off("kifi:hide", hide).fadeOut(50, function () {
             $menu.find(".kifi-hover").removeClass("kifi-hover");
           });
         }
         api.port.emit("get_suppressed", function (suppressed) {
-          $hide.toggleClass("kifi-checked", !!suppressed);
+          $items.filter('.kifi-pane-settings-hide').toggleClass('kifi-checked', !!suppressed);
         });
       })
       .on("mouseup", ".kifi-pane-settings-hide", function (e) {

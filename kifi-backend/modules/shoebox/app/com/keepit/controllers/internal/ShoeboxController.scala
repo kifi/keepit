@@ -30,6 +30,15 @@ import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.UserCommander
 import com.keepit.common.db.slick.Database.Slave
+import play.api.libs.json.JsArray
+import com.keepit.model.KifiInstallation
+import play.api.libs.json.JsBoolean
+import play.api.libs.json.JsString
+import scala.Some
+import play.api.libs.json.JsNumber
+import com.keepit.social.SocialId
+import com.keepit.normalizer.TrustedCandidate
+import play.api.libs.json.JsObject
 
 
 class ShoeboxController @Inject() (
@@ -492,6 +501,12 @@ class ShoeboxController @Inject() (
     }))
   }
 
+  def getUriIdsInCollection(collectionId: Id[Collection]) = Action { request =>
+    val uris = db.readOnly(2, Slave) { implicit s =>
+      keepToCollectionRepo.getUriIdsInCollection(collectionId)
+    }
+    Ok(Json.toJson(uris))
+  }
 
   def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
