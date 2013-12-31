@@ -36,14 +36,8 @@ class BookmarkInterner @Inject() (
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
-  def internBookmarks(value: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
-    val bookmarks = rawBookmarkFactory.toRawBookmark(value)
-    val referenceId = UUID.randomUUID
-    log.info(s"[internBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$value $referenceId ")
-    internRawBookmarks(bookmarks, user, experiments, source, mutatePrivacy, installationId, referenceId)
-  }
-
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None, referenceId: UUID = UUID.randomUUID)(implicit context: HeimdalContext): Seq[Bookmark] = {
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
+    val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
     val bookmarks = rawBookmarks.sortWith { case (a, b) => a.url < b.url }
