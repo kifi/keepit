@@ -72,6 +72,15 @@ object Bookmark {
   )(Bookmark.apply, unlift(Bookmark.unapply))
 }
 
+case class BookmarkUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
+
+object BookmarkUriAndTime {
+  implicit def bookmarkUriAndTimeFormat = (
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'createdAt).format(DateTimeJsonFormat)
+  )(BookmarkUriAndTime.apply, unlift(BookmarkUriAndTime.unapply))
+}
+
 case class BookmarkCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
   override val version = 3
   val namespace = "bookmark_count"
