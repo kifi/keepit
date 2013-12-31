@@ -1123,32 +1123,24 @@ function searchOnServer(request, respond) {
     delete searchFilterCache[request.query];
   }
 
-  var when, params = {
-      q: request.query,
-      f: request.filter && request.filter.who,
-      maxHits: getSearchMaxResults(request),
-      lastUUID: request.lastUUID,
-      context: request.context,
-      kifiVersion: api.version};
-  if (when = request.filter && request.filter.when) {
-    var d = new Date();
-    params.tz = d.toTimeString().substr(12, 5);
-    params.start = ymd(new Date(d - {t:0, y:1, w:7, m:30}[when] * 86400000));
-    if (when == "y") {
-      params.end = params.start;
-    }
-  }
+  var params = {
+    q: request.query,
+    f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
+    maxHits: getSearchMaxResults(request),
+    lastUUID: request.lastUUID,
+    context: request.context,
+    kifiVersion: api.version};
 
   var respHandler = function(resp) {
-      log("[searchOnServer] response:", resp)();
-      resp.filter = request.filter;
-      resp.session = session;
-      resp.admBaseUri = admBaseUri();
-      resp.showScores = api.prefs.get("showScores");
-      resp.hits.forEach(function(hit){
-        hit.uuid = resp.uuid;
-      });
-      respond(resp);
+    log('[searchOnServer] response:', resp)();
+    resp.filter = request.filter;
+    resp.session = session;
+    resp.admBaseUri = admBaseUri();
+    resp.showScores = api.prefs.get('showScores');
+    resp.hits.forEach(function (hit) {
+      hit.uuid = resp.uuid;
+    });
+    respond(resp);
   };
 
   if (session.experiments.indexOf('tsearch') < 0) {

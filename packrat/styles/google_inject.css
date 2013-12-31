@@ -63,7 +63,7 @@
 .kifi-loading>.kifi-res-bar-status::after {
   content: 'Loading relevant keeps...';
 }
-.kifi-res-bar-status[data-n="0"]::after {
+.kifi-res-bar-status[data-n='0']::after {
   content: 'No top keeps';
 }
 .kifi-res-bar-status[href][data-n]::after {
@@ -92,16 +92,13 @@
   border-color: inherit;
   text-align: center;
 }
-.kifi-loading>.kifi-res-bar-arrow {
-  cursor: default;
-}
-:not(.kifi-loading)>.kifi-res-bar-arrow:hover,
-:not(.kifi-loading)>.kifi-res-bar-arrow:focus,
+.kifi-res-bar-arrow[href]:hover,
+.kifi-res-bar-arrow[href]:focus,
 .kifi-res-bar-menu-a:hover,
 .kifi-res-bar-menu-a:focus {
   background-color: #fdfdfd;
 }
-:not(.kifi-loading)>.kifi-res-bar-arrow:active,
+.kifi-res-bar-arrow[href]:active,
 .kifi-res-bar-menu-a:active {
   background-color: #f2f2f2;
 }
@@ -120,7 +117,7 @@
   -webkit-transform: translate(1px,0) rotate(90deg) scale(1,1.5);
   transform: translate(1px,1px) rotate(90deg) scale(1,1.5);
 }
-.kifi-loading>.kifi-res-bar-arrow::before {
+.kifi-res-bar-arrow:not([href])::before {
   opacity: .4;
 }
 .kifi-res-bar-menu-a {
@@ -162,12 +159,28 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   user-select: none;
+  cursor: default;
 }
 .kifi-filter[href]:hover {
   background-position: right bottom 8px;
+  cursor: pointer;
 }
 .kifi-filter-all {
   float: left;
+}
+.kifi-filter-all[data-top]::before {
+  content: attr(data-top) ' top keeps';
+}
+.kifi-filter-all[data-of]::after {
+  content: attr(data-of) ' keeps';
+}
+.kifi-filter-all[data-of][data-n]::after {
+  content: attr(data-n) ' of ' attr(data-of) ' keeps';
+}
+.kifi-filter-yours::after,
+.kifi-filter-friends::after {
+  content: attr(data-n);
+  margin-left: 4px;
 }
 .kifi-filter-sep {
   margin: 0 3px;
@@ -176,9 +189,6 @@
 #kifi-res-list {
   margin-top: 18px !important; /* FF */
 }
-/*.kifi-preview+.kifi-res-box>#kifi-res-list>li:nth-child(n+2) {
-  display: none;
-}*/
 #kifi-res-list.kifi-res-none {
   margin: 0 !important;
   text-align: center;
@@ -194,6 +204,14 @@
   content: " ";
   display: block;
   height: 12px;
+}
+.kifi-res-more-heading {
+  margin: -10px 0 20px;
+  padding: 0 12px;
+  color: #929496;
+  font-size: 11px;
+  line-height: 28px;
+  border-bottom: 1px solid #f2f3f3;
 }
 #kifi-res-list a:visited {
   color: #2518b5;
