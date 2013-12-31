@@ -8,7 +8,6 @@ import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
-import play.api.libs.json._
 
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
