@@ -468,6 +468,10 @@ api.port.on({
     session.prefs.enterToSend = data;
     ajax("POST", "/ext/pref/enterToSend?enterToSend=" + data);
   },
+  set_max_results: function(n) {
+    session.prefs.maxResults = n;
+    ajax('POST', '/ext/pref/maxResults?n=' + n);
+  },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
   },

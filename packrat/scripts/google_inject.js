@@ -151,8 +151,8 @@ if (searchUrlRe.test(document.URL)) !function() {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAtLeastOne = Boolean(resp.show && resp.hits.length && (!inDoc || !(tGoogleResultsShown >= tQuery)) || f);
-      var showExactlyOne = Boolean(showAtLeastOne && isFirst && !f);
+      var showAny = Boolean(resp.show && resp.hits.length && (!inDoc || !(tGoogleResultsShown >= tQuery)) || f);
+      var showPreview = Boolean(showAny && isFirst && !f);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit);
 
@@ -168,8 +168,8 @@ if (searchUrlRe.test(document.URL)) !function() {
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal || 0));
         $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal || 0));
       }
-      if (showExactlyOne && resp.hits.length > 1) {
-        resp.nextHits = resp.hits.splice(1);
+      if (showPreview && resp.hits.length > resp.session.prefs.maxResults) {
+        resp.nextHits = resp.hits.splice(resp.session.prefs.maxResults);
         resp.nextUUID = resp.uuid;
         resp.nextContext = resp.context;
       }
@@ -178,9 +178,9 @@ if (searchUrlRe.test(document.URL)) !function() {
       if (inDoc) {
         tKifiResultsShown = Date.now();
       }
-      $bar[0].className = 'kifi-res-bar' + (showExactlyOne ? ' kifi-preview' : showAtLeastOne ? '' : ' kifi-collapsed');
+      $bar[0].className = 'kifi-res-bar' + (showPreview ? ' kifi-preview' : showAny ? '' : ' kifi-collapsed');
       $arrow[0].href = 'javascript:';
-      if (showAtLeastOne) {
+      if (showAny) {
         onFirstShow();
       } else {
         $res.data('onFirstShow', onFirstShow);
@@ -394,9 +394,16 @@ if (searchUrlRe.test(document.URL)) !function() {
       document.addEventListener('mousewheel', hide, true);
       document.addEventListener('wheel', hide, true);
       document.addEventListener('keypress', hide, true);
+      if (response.session) {
+        $items.filter('.kifi-res-max-results-' + response.session.prefs.maxResults).addClass('kifi-checked').removeAttr('href');
+      }
       // .kifi-hover class needed because :hover does not work during drag
-      function enterHover() { $(this).addClass('kifi-hover'); }
-      function leaveHover() { $(this).removeClass('kifi-hover'); }
+      function enterHover() {
+        $(this).addClass('kifi-hover');
+      }
+      function leaveHover() {
+        setTimeout($.fn.removeClass.bind($(this), 'kifi-hover'), 10); // async for submenus
+      }
       function docMouseDown(e) {
         if (!$menu[0].contains(e.target)) {
           hide();
@@ -406,6 +413,10 @@ if (searchUrlRe.test(document.URL)) !function() {
         }
       }
       function hide() {
+        if (this && this.classList && this.classList.contains('kifi-checkable')) {
+          setTimeout(hide, 150);
+          return;
+        }
         document.removeEventListener('mousedown', docMouseDown, true);
         document.removeEventListener('mousewheel', hide, true);
         document.removeEventListener('wheel', hide, true);
@@ -417,6 +428,16 @@ if (searchUrlRe.test(document.URL)) !function() {
         $menu.fadeOut(50, function () {
           $menu.find('.kifi-hover').removeClass('kifi-hover');
         });
+      }
+    }).on('mouseup', '.kifi-res-kifi-com', function () {
+      window.location = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
+    }).on('mouseup', '.kifi-res-max-results-n', function () {
+      var $this = $(this).addClass('kifi-checked').removeAttr('href');
+      $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');
+      var n = +$this.text();
+      api.port.emit('set_max_results', n);
+      if (response.session) {
+        response.session.prefs.maxResults = n;
       }
     }).on('click', '.kifi-res-bar', function (e) {
       if (e.shiftKey && response.session && ~response.session.experiments.indexOf("admin")) {
