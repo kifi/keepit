@@ -45,9 +45,9 @@ class MessageContentIndexable(
 
   override def buildDocument: Document = {
     val doc = super.buildDocument
-    val preferedLang = Lang("en")  
+    val preferedLang = Lang("en")
 
-    //add the content 
+    //add the content
     val threadContentList = (0 until data.content.length).map{ i =>
       val message = data.content(i)
       val messageLang = LangDetector.detect(message, preferedLang)
@@ -132,21 +132,19 @@ class MessageIndexer(
     airbrake: AirbrakeNotifier)
   extends Indexer[ThreadContent](indexDirectory, indexWriterConfig) {
 
-    var indexingInProgress : Boolean = false
     val loadBatchSize : Int = 100
-    val commitBatchSize : Int = 50
-    val updateLock = new AnyRef
+    override val commitBatchSize : Int = 50
 
-  
-    def update() = updateLock.synchronized {
+    def update(): Int = updateLock.synchronized {
       resetSequenceNumberIfReindex()
-      if (!indexingInProgress){
-        indexingInProgress = true 
 
-        var done: Boolean = false
-        while(!done){
+      var total = 0
+      var done = false
+      while (!done) {
+        total += doUpdate("MessageIndex") {
           val batch = Await.result(eliza.getThreadContentForIndexing(sequenceNumber.value, loadBatchSize), 60 seconds)
-          val indexables = batch.map{ threadContent =>
+          done = batch.isEmpty
+          batch.iterator.map{ threadContent =>
             new MessageContentIndexable(
               data = threadContent,
               id = threadContent.id,
@@ -154,13 +152,10 @@ class MessageIndexer(
               airbrake = airbrake
             )
           }
-          indexDocuments(indexables.iterator, commitBatchSize)
-          if (batch.length<=1) done=true
         }
-        indexingInProgress = false
       }
+      total
     }
-
   }
 
 

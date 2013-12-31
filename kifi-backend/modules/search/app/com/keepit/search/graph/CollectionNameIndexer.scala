@@ -31,10 +31,8 @@ class CollectionNameIndexer(
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, CollectionNameFields.decoders) {
 
-  private[this] val commitBatchSize = 3000
-  private[this] val fetchSize = commitBatchSize
-
-  private[this] val updateLock = new AnyRef
+  override val commitBatchSize = 100
+  private val fetchSize = commitBatchSize
 
   override def onFailure(indexable: Indexable[User], e: Throwable) {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
@@ -43,16 +41,9 @@ class CollectionNameIndexer(
   }
 
   def update(collectionsChanged: Seq[Collection], collectionSearcher: CollectionSearcher): Int = updateLock.synchronized {
-    log.info("updating CollectionNameIndex")
-    try {
+    doUpdate("CollectionNameIndex") {
       val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
-
-      val cnt = successCount
-      indexDocuments(usersChanged.iterator.map(buildIndexable(_, collectionSearcher)), commitBatchSize)
-      successCount - cnt
-    } catch { case e: Throwable =>
-      log.error("error in CollectionNameIndex update", e)
-      throw e
+      usersChanged.iterator.map(buildIndexable(_, collectionSearcher))
     }
   }
 

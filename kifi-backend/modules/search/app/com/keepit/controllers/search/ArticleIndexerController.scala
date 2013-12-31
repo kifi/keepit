@@ -21,7 +21,7 @@ class ArticleIndexerController @Inject()(
   extends SearchServiceController {
 
   def index() = Action { implicit request =>
-    val cnt = indexerPlugin.index()
+    val cnt = indexerPlugin.update()
     Ok(JsObject(Seq("articles" -> JsNumber(cnt))))
   }
 

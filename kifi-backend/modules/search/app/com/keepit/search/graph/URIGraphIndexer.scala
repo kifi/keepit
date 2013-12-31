@@ -48,10 +48,9 @@ class URIGraphIndexer(
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
-  private[this] val commitBatchSize = 500
-  private[this] val fetchSize = commitBatchSize
+  override val commitBatchSize = 500
+  private val fetchSize = commitBatchSize
 
-  private[this] val updateLock = new AnyRef
   private[this] var searchers = (this.getSearcher, bookmarkStore.getSearcher)
 
   def getSearchers: (Searcher, Searcher) = searchers
@@ -73,37 +72,31 @@ class URIGraphIndexer(
     var total = 0
     var done = false
     while (!done) {
-      total += update {
+      total += doUpdate("URIGraphIndex") {
         val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
         done = bookmarks.isEmpty
-        bookmarks
+        toIndexables(bookmarks)
       }
+      // update searchers together to get a consistent view of indexes
+      searchers = (this.getSearcher, bookmarkStore.getSearcher)
     }
     total
   }
 
   def update(userId: Id[User]): Int = updateLock.synchronized {
-    update {
-      Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber)
+    val cnt = doUpdate("URIGraphIndex") {
+      toIndexables(Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber))
     }
+    // update searchers together to get a consistent view of indexes
+    searchers = (this.getSearcher, bookmarkStore.getSearcher)
+    cnt
   }
 
-  private def update(bookmarksChanged: => Seq[Bookmark]): Int = {
-    log.info("updating URIGraph")
-    try {
-      val bookmarks = bookmarksChanged
-      bookmarkStore.update(bookmarks)
+  private def toIndexables(bookmarks: Seq[Bookmark]): Iterator[Indexable[User]] = {
+    bookmarkStore.update(bookmarks)
 
-      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
-      val cnt = successCount
-      indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize)
-      // update searchers together to get a consistent view of indexes
-      searchers = (this.getSearcher, bookmarkStore.getSearcher)
-      successCount - cnt
-    } catch { case e: Throwable =>
-      log.error("error in URIGraph update", e)
-      throw e
-    }
+    val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
+    usersChanged.iterator.map(buildIndexable)
   }
 
   override def reindex() {

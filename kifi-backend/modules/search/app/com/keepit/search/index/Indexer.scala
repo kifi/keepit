@@ -61,6 +61,8 @@ abstract class Indexer[T](
 
   def this(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
 
+  val commitBatchSize = 1000
+
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
   private[this] val indexWriterLock = new AnyRef
 
@@ -104,6 +106,8 @@ abstract class Indexer[T](
 
   def getSearcher = searcher
 
+  protected val updateLock = new AnyRef
+
   private[this] var _sequenceNumber =
     SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
@@ -119,6 +123,19 @@ abstract class Indexer[T](
     if (resetSequenceNumber) {
       resetSequenceNumber = false
       sequenceNumber = SequenceNumber.MinValue
+    }
+  }
+
+  protected def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T]]): Int = {
+    try {
+      log.info(s"updating $name")
+      val indexables = changedIndexables
+      val cnt = successCount
+      indexDocuments(indexables, commitBatchSize)
+      successCount - cnt
+    } catch { case ex: Throwable =>
+      log.error(s"error in $name update", ex)
+      throw ex
     }
   }
 

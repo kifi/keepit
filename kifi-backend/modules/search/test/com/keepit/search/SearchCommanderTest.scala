@@ -47,7 +47,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
 

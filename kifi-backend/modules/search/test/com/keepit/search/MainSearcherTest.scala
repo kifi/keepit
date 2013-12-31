@@ -46,7 +46,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         val numHitsPerCategory = 1000
         users.foreach{ user =>
@@ -99,7 +99,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         val numHitsToReturn = 7
         users.foreach{ user =>
@@ -187,13 +187,13 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         indexer.numDocs === 0
         run
         // after main indexing 3 docs
-        indexer.run(3, 3) === 3
+        indexer.update(3) === 3
         run
         // after main indexing 6 docs
-        indexer.run(3, 3) === 3
+        indexer.update(3) === 3
         run
         // after main indexing 9 docs
-        indexer.run(3, 3) === 3
+        indexer.update(3) === 3
         run
         indexer.numDocs === uris.size
       }
@@ -210,7 +210,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         val numHitsToReturn = 100
         val userId = users(0).id.get
@@ -238,7 +238,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         val numHitsToReturn = 3
         val userId = Id[User](8)
@@ -280,7 +280,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         setConnections(Map(userId -> Set.empty[Id[User]]))
 
@@ -314,7 +314,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
         setConnections(Map(userId -> Set.empty[Id[User]]))
 
         var mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig)
@@ -347,7 +347,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === 1
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
@@ -371,7 +371,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === 1
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
@@ -398,7 +398,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         val numHitsToReturn = 100
         val userId = users(0).id.get
@@ -433,7 +433,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === 2
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
@@ -481,7 +481,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === 1
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         val searchFilter = SearchFilter.mine(monitoredAwait = inject[MonitoredAwait])
 
