@@ -144,7 +144,22 @@ class ServiceDiscoveryImpl(
 
   private def doRegister(): Unit = {
     if (registered) {
-      log.info(s"registered clusters: $clusters, my service is ${thisRemoteService.serviceType}")
+      log.info(s"registered clusters: $clusters, my service is ${thisRemoteService.serviceType}, my instance is $myInstance")
+
+      //if the instance already exist, unregister it
+      myInstance foreach { instance =>
+      try {
+          log.warn(s"deleting instance $instance from zookeeper before re-registering itself")
+          //remove the airbrake if we think its cool
+          airbrake.get.notify(s"deleting instance $instance from zookeeper before re-registering itself")
+          zk.deleteNode(instance.node)
+        } catch {
+          case e: Exception => airbrake.get.notify(e)
+        } finally {
+          myInstance = None
+        }
+      }
+
       val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
       myInstance = Some(ServiceInstance(myNode, thisRemoteService, true))
       myCluster.register(myInstance.get)
@@ -156,12 +171,12 @@ class ServiceDiscoveryImpl(
   override def unRegister(): Unit = {
     registered = false
     unregistered = true
-    myInstance map {instance => zk.deleteNode(instance.node)}
+    myInstance foreach {instance => zk.deleteNode(instance.node)}
     myInstance = None
   }
 
-  def changeStatus(newStatus: ServiceStatus) : Unit = if(stillRegistered()) {
-    myInstance.map { instance =>
+  def changeStatus(newStatus: ServiceStatus): Unit = if(stillRegistered()) {
+    myInstance foreach { instance =>
       log.info(s"Changing instance status to $newStatus")
       thisRemoteService.status = newStatus
       instance.remoteService = thisRemoteService
