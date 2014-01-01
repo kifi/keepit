@@ -3889,9 +3889,22 @@ $(function () {
 		$a[0].href = n ? 'friends/requests' : 'friends';
 	}
 
+	function hasExperiment(me, name) {
+		var exp = me.experiments;
+		if (exp) {
+			return exp.indexOf(name) !== -1 || exp.indexOf('admin') !== -1;
+		}
+		return false;
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: refreshMe().promise(),
+		me: refreshMe().promise().then(function (me) {
+			if (hasExperiment(me, 'admin')) {
+				$('.kifi-onboarding-li').show().click(showWelcome);
+			}
+			return me;
+		}),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
@@ -4025,6 +4038,8 @@ $(function () {
 				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
+
+	/* Onboarding */
 
 	function showWelcome() {
 		$('body').append('<iframe class="kifi-onboarding-iframe" src="/onboarding.html" frameborder="0"></iframe>');
