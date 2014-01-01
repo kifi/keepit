@@ -121,11 +121,9 @@ class BookmarksCommander @Inject() (
     val deactivatedBookmarks = db.readWrite { implicit s =>
       keepInfos.map { ki =>
         val url = ki.url
-        db.readWrite { implicit s =>
-          uriRepo.getByUri(url).flatMap { uri =>
-            bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
-              bookmarkRepo.save(b withActive false)
-            }
+        uriRepo.getByUri(url).flatMap { uri =>
+          bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
+            bookmarkRepo.save(b withActive false)
           }
         }
       }
