@@ -168,6 +168,15 @@
 		return go(getNextPageNum());
 	}
 
+	function updateMe(name, pic) {
+		$('.kifi-onboarding-user-name').text(name);
+		$('.kifi-onboarding-pic').attr('src', pic);
+	}
+
+	win.parent.getMe().then(function (me) {
+		updateMe(me.firstName || me.lastName, me.pic200);
+	});
+
 	var resizeId;
 	$(win).resize(function () {
 		if (resizeId) {

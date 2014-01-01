@@ -4030,6 +4030,13 @@ $(function () {
 		$('body').append('<iframe class="kifi-onboarding-iframe" src="/onboarding.html" frameborder="0"></iframe>');
 	}
 
+	window.getMe = function() {
+		return promise.me.then(function (me) {
+			me.pic200 = formatPicUrl(me.id, me.pictureName, 200);
+			return me;
+		});
+	};
+
 	window.exitWelcome = function () {
 		$('.kifi-onboarding-iframe').remove();
 		navigate('');
