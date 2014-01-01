@@ -3889,10 +3889,10 @@ $(function () {
 		$a[0].href = n ? 'friends/requests' : 'friends';
 	}
 
-	function hasExperiment(me, name) {
+	function hasExperiment(me, name, noAdmin) {
 		var exp = me.experiments;
 		if (exp) {
-			return exp.indexOf(name) !== -1 || exp.indexOf('admin') !== -1;
+			return exp.indexOf(name) !== -1 || (!noAdmin && exp.indexOf('admin') !== -1);
 		}
 		return false;
 	}
@@ -3900,7 +3900,7 @@ $(function () {
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: refreshMe().promise().then(function (me) {
-			if (hasExperiment(me, 'admin')) {
+			if (hasExperiment(me, 'onboarding', true)) {
 				$('.kifi-onboarding-li').show().click(showWelcome);
 			}
 			return me;
