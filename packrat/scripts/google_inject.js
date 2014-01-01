@@ -165,10 +165,9 @@ if (searchUrlRe.test(document.URL)) !function() {
         $status
           .attr('data-n', numTop)
           .attr('href', numTop ? 'javascript:' : null);
-        $res.find('.kifi-filter-all').attr(numTop ?
-          {'data-top': numTop} :
-          {'data-n': resp.hits.length,
-           'data-of': insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal)});
+
+        $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length})
+          .attr('data-of', insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal));
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));
         $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal));
       }
