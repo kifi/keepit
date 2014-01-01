@@ -107,11 +107,40 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       Some(leader)
   }
 
+  def deDuplicate(zk: ZooKeeperClient, instances: TrieMap[Node, ServiceInstance]): TrieMap[Node, ServiceInstance] = {
+    try {
+      val machines = new TrieMap[IpAddress, Node]()
+      instances foreach { case (node, instance) =>
+        val ip = instance.instanceInfo.localIp
+        machines.get(ip) foreach { existing =>
+          airbrake.get.notify(s"there are two existing ZK nodes with the same IP address $ip: $existing and $node for service ${instance}, removing the smallest node")
+          val newNodeId = instances(node).id.id
+          val existingNodeId = instances(existing).id.id
+          if (newNodeId == existingNodeId) {
+            airbrake.get.notify(s"The two existing ZK nodes have same node ID! Don't know what to do $ip: $existing and $node for service ${instance}, breaking out")
+          } else if (newNodeId < existingNodeId) {
+            zk.deleteNode(node)
+            instances.remove(node)
+          } else {
+            zk.deleteNode(existing)
+            instances.remove(existing)
+          }
+        }
+        machines(instance.instanceInfo.localIp) = node
+      }
+    } catch {
+      //dedup should not break the discovery service!
+      case e: Exception => airbrake.get.notify(e)
+    }
+    instances
+  }
+
   def update(zk: ZooKeeperClient, children: Seq[Node]): Unit = synchronized {
     val newInstances = instances.clone()
     val childNodes = children map {c => ensureFullPathNode(c, true)}
     addNewNodes(newInstances, childNodes, zk)
     removeOldNodes(newInstances, childNodes)
+    deDuplicate(zk, newInstances)
     leader = findLeader(newInstances)
     instances = newInstances
     resetRoutingList()
