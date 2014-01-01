@@ -5252,6 +5252,10 @@ a.photo-dialog-submit:focus {
   clear: both;
 }
 
+.kifi-onboarding-li {
+	display: none;
+}
+
 .kifi-onboarding-iframe {
 	position: fixed;
 	top: 0;
