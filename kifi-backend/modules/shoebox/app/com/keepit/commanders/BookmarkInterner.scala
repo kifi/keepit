@@ -30,16 +30,18 @@ class BookmarkInterner @Inject() (
   airbrake: AirbrakeNotifier,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
-  rawBookmarkFactory: RawBookmarkFactory,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
+
+  private def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation] =
+    (rawBookmarks map {b => (b.url, b)} toMap).values.toSeq
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
-    val bookmarks = rawBookmarks.sortWith { case (a, b) => a.url < b.url }
+    val bookmarks = deDuplicate(rawBookmarks).sortWith { case (a, b) => a.url < b.url }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
     keepsAbuseMonitor.inspect(user.id.get, bookmarks.size)
     val count = new AtomicInteger(0)
