@@ -171,6 +171,7 @@
 }
 }
 .kifi-res-bar-menu {
+  z-index: 999;
   right: 4px;
   top: 25px;
   white-space: nowrap;
@@ -183,7 +184,6 @@
 .kifi-res-bar-submenu {
   display: none;
   position: absolute;
-  z-index: 1;
   border-style: solid;
   border-color: inherit;
   border-width: 1px 1px 0;
