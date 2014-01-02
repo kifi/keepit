@@ -1,23 +1,24 @@
 @(configs: Seq[SearchConfigExperiment])
 
-@admin("Search BlindTest"){
+@admin("Search BlindTest",
+			stylesheets = List("search_blind_test") ){
 
-	<form id = "queryForm">
+	<form id = "queryForm" class = "center">
 		<div>
 			<input id = "userId" type = "text" value = "" placeholder = "userId">
 			<input id = "queryText" type = "text" value = "" placeholder = "queryText">
 			<input id = "maxHits" type = "text" value = "" placeholder = "maxHits">
-			<button type = "submit">submit</button>
+			<button type = "submit">search</button>
 	  </div>
 	</form>
 
 
-	<table id = "configs">
+	<table id = "configs" class = "center">
 		<thead>
 			<tr>
-				<th>
-				<th> Id
-				<th> Description
+				<th> Select
+				<th> Search Config Id
+				<th> Search Config Description
 			</tr>
 		</thead>
 
@@ -30,10 +31,10 @@
 		}
 
 	</table>
-
-	<form id = "vote">
+	<br><br>
+	<form id = "vote" class = "center">
 		<div>
-			<div>which is better? </div>
+			<div>which search result is better? </div>
 			<input type="radio" name="win" value="config1">config 1<br>
 			<input type="radio" name="win" value="config2">config 2<br>
 			<input type="radio" name="win" value="equallyGood">equally good<br>
@@ -41,9 +42,9 @@
 			<button type="submit">submit</button>
 		</div>
 	</form>
-	<p id = "result"></p><br>
-	<p id = "hits1" name = "configId" value = "1"></p><br><br>
-	<p id = "hits2" name = "configId" value = "2"></p>
+	<p id = "result" class = "center"></p><br>
+	<p id = "hits1" name = "configId" class = "center" value = "1"></p><br><br>
+	<p id = "hits2" name = "configId" class = "center" value = "2"></p>
 
 
 	<script type="text/javascript">
