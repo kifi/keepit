@@ -233,15 +233,15 @@ class BookmarksController @Inject() (
   }
 
   def importStatus() = AuthenticatedJsonAction { request =>
-    val (lastStartOpt, progressOpt, totalOpt) = db.readOnly { implicit session =>
+    val (lastStartOpt, doneOpt, totalOpt) = db.readOnly { implicit session =>
       val lastStartOpt = userValueRepo.getValue(request.user.id.get, "bookmark_import_last_start")
-      val progress = userValueRepo.getValue(request.user.id.get, "bookmark_import_done")
+      val done = userValueRepo.getValue(request.user.id.get, "bookmark_import_done")
       val total = userValueRepo.getValue(request.user.id.get, "bookmark_import_total")
       val lastStart = lastStartOpt.map { lastStart =>
         Seconds.secondsBetween(parseStandardTime(lastStart), clock.now).getSeconds
       }
-      (lastStart, Try(progress.map(_.toInt)).toOption.flatten, Try(total.map(_.toInt)).toOption.flatten)
+      (lastStart, Try(done.map(_.toInt)).toOption.flatten, Try(total.map(_.toInt)).toOption.flatten)
     }
-    Ok(Json.obj("progress" -> progressOpt, "total" -> totalOpt, "lastStart" -> lastStartOpt))
+    Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStartOpt))
   }
 }
