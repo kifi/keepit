@@ -2192,6 +2192,7 @@ $(function () {
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
+
 	var friendsTimeout;
 	function filterFriends() {
 		clearTimeout(friendsTimeout);
@@ -2253,6 +2254,8 @@ $(function () {
 				clearInviteFriends();
 			}
 
+			console.log(search, network, friends.length, limit);
+
 			if (friends.length < limit) {
 				moreFriends = false;
 
@@ -2288,6 +2291,12 @@ $(function () {
 			}
 
 			friendsShowing.push.apply(friendsShowing, friends);
+
+
+			var $inviteEmail = $nwFriends.find('.invite-email').hide();
+			if (network === 'email' && search) {
+				showInviteEmailAddress($inviteEmail, search);
+			}
 
 			var $noResults = $nwFriends.find('.no-results').empty().hide();
 			if (network && !friendsShowing.length) {
@@ -2350,6 +2359,15 @@ $(function () {
 			}
 		}
 		obj.description = description;
+	}
+
+	function showInviteEmailAddress($inviteEmail, search) {
+		if (/.+@.+/.test(search)) {
+			$inviteEmail.show()
+				.find('.invite-email-link').text(search).click(function () {
+					alert(search);
+				});
+		}
 	}
 
 	function showNoSearchInviteResults($noResults, search, network) {

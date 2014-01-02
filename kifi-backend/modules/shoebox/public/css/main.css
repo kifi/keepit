@@ -2541,6 +2541,18 @@ input.user-filter {
   background-position: -79px top;
 }
 
+.invite-email {
+  background: #eff2f7;
+  font-size: 16px;
+  padding: 20px 30px;
+  text-align: center;
+}
+
+.invite-email a {
+  color: #abafb6;
+  text-decoration: underline;
+}
+
 .invite-status {
   font-size: 13px;
   font-weight: 300;
