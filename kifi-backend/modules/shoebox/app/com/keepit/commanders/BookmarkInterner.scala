@@ -31,11 +31,17 @@ class BookmarkInterner @Inject() (
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
   rawBookmarkFactory: RawBookmarkFactory,
+  userValueRepo: UserValueRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
+    db.readWrite { implicit session =>
+      userValueRepo.setValue(user.id.get, "bookmark_import_start", clock.now.toString)
+      userValueRepo.setValue(user.id.get, "bookmark_import_progress", "0")
+    }
+
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
@@ -44,20 +50,26 @@ class BookmarkInterner @Inject() (
     keepsAbuseMonitor.inspect(user.id.get, bookmarks.size)
     val count = new AtomicInteger(0)
     val total = bookmarks.size
-    val batchConcurrency = 1
     val batchSize = 100
 
-    val persistedBookmarksWithUris = bookmarks.grouped(batchSize).grouped(batchConcurrency).map { concurrentGroup =>
-      concurrentGroup.par.map { bms =>
-        val startTime = System.currentTimeMillis
-        log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
-        val persisted = db.readWrite(attempts = 2) { implicit session =>
-          bms.map { bm => internUriAndBookmark(bm, user, experiments, source, mutatePrivacy) }.flatten
-        }
-        log.info(s"[internBookmarks-$referenceId] Done with ${count.addAndGet(bms.size)}/$total. Took ${System.currentTimeMillis - startTime}ms")
-        persisted
-      }.flatten.toList
+    val persistedBookmarksWithUris = bookmarks.grouped(batchSize).map { bms =>
+      val startTime = System.currentTimeMillis
+      log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
+      val persisted = db.readWrite(attempts = 2) { implicit session =>
+        bms.map { bm => internUriAndBookmark(bm, user, experiments, source, mutatePrivacy) }.flatten
+      }
+      val newCount = count.addAndGet(bms.size)
+      log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
+      db.readWrite { implicit session =>
+        userValueRepo.setValue(user.id.get, "bookmark_import_progress", (newCount / total).toString)
+      }
+      persisted
     }.flatten.toList
+
+    db.readWrite { implicit session =>
+      userValueRepo.clearValue(user.id.get, "bookmark_import_progress")
+      userValueRepo.clearValue(user.id.get, "bookmark_import_start")
+    }
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
     val newKeeps = persistedBookmarksWithUris collect { case (bm, uri, isNewBookmark) if isNewBookmark => bm }
