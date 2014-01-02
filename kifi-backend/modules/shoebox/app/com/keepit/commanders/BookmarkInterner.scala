@@ -37,11 +37,6 @@ class BookmarkInterner @Inject() (
     extends Logging {
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
-    db.readWrite { implicit session =>
-      userValueRepo.setValue(user.id.get, "bookmark_import_start", clock.now.toString)
-      userValueRepo.setValue(user.id.get, "bookmark_import_progress", "0")
-    }
-
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
@@ -52,6 +47,12 @@ class BookmarkInterner @Inject() (
     val total = bookmarks.size
     val batchSize = 100
 
+    db.readWrite { implicit session =>
+      userValueRepo.setValue(user.id.get, "bookmark_import_last_start", clock.now.toString)
+      userValueRepo.setValue(user.id.get, "bookmark_import_total", total.toString)
+      userValueRepo.setValue(user.id.get, "bookmark_import_progress", "0")
+    }
+
     val persistedBookmarksWithUris = bookmarks.grouped(batchSize).map { bms =>
       val startTime = System.currentTimeMillis
       log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
@@ -61,14 +62,14 @@ class BookmarkInterner @Inject() (
       val newCount = count.addAndGet(bms.size)
       log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
       db.readWrite { implicit session =>
-        userValueRepo.setValue(user.id.get, "bookmark_import_progress", (newCount / total).toString)
+        userValueRepo.setValue(user.id.get, "bookmark_import_progress", newCount.toString)
       }
       persisted
     }.flatten.toList
 
     db.readWrite { implicit session =>
       userValueRepo.clearValue(user.id.get, "bookmark_import_progress")
-      userValueRepo.clearValue(user.id.get, "bookmark_import_start")
+      userValueRepo.clearValue(user.id.get, "bookmark_import_total")
     }
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")

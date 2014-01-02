@@ -181,6 +181,7 @@ GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksCon
 POST    /site/keeps/add             @com.keepit.controllers.website.BookmarksController.keepMultiple()
 POST    /site/keeps/remove          @com.keepit.controllers.website.BookmarksController.unkeepMultiple()
 GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
+GET     /site/keeps/import/status   @com.keepit.controllers.website.BookmarksController.importStatus()
 GET     /site/keeps/:id             @com.keepit.controllers.website.BookmarksController.getKeepInfo(id: ExternalId[Bookmark])
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksController.updateKeepInfo(id: ExternalId[Bookmark])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
