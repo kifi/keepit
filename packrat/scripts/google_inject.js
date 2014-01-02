@@ -396,23 +396,23 @@ if (searchUrlRe.test(document.URL)) !function() {
       e.preventDefault();
       var $a = $(this).addClass('kifi-active');
       var $menu = $a.next('.kifi-res-bar-menu').fadeIn(50);
-      var $items = $menu.find('.kifi-res-bar-menu-item').on('mouseup', hide);
-      var $hovers = $menu.find('.kifi-res-bar-submenu-a,.kifi-res-bar-submenu').add($items)
-        .on('mouseenter', enterHover)
-        .on('mouseleave', leaveHover);
+      var $items = $menu.find('.kifi-res-bar-menu-item')
+        .on('mouseenter', enterItem)
+        .on('mouseleave', leaveItem);
+      var $leaves = $items.filter('a').on('mouseup', hide);
       document.addEventListener('mousedown', docMouseDown, true);
       document.addEventListener('mousewheel', hide, true);
       document.addEventListener('wheel', hide, true);
       document.addEventListener('keypress', hide, true);
       if (response.session) {
-        $items.filter('.kifi-res-max-results-' + response.session.prefs.maxResults).addClass('kifi-checked').removeAttr('href');
+        $leaves.filter('.kifi-res-max-results-' + response.session.prefs.maxResults).addClass('kifi-checked').removeAttr('href');
       }
       // .kifi-hover class needed because :hover does not work during drag
-      function enterHover() {
-        $(this).addClass('kifi-hover');
+      function enterItem() {
+        this.classList.add('kifi-hover');
       }
-      function leaveHover() {
-        setTimeout($.fn.removeClass.bind($(this), 'kifi-hover'), 10); // async for submenus
+      function leaveItem() {
+        this.classList.remove('kifi-hover');
       }
       function docMouseDown(e) {
         if (!$menu[0].contains(e.target)) {
@@ -432,9 +432,9 @@ if (searchUrlRe.test(document.URL)) !function() {
         document.removeEventListener('wheel', hide, true);
         document.removeEventListener('keypress', hide, true);
         $a.removeClass('kifi-active');
-        $items.off('mouseup', hide);
-        $hovers.off('mouseenter', enterHover)
-               .off('mouseleave', leaveHover);
+        $items.off('mouseenter', enterItem)
+              .off('mouseleave', leaveItem);
+        $leaves.off('mouseup', hide);
         $menu.fadeOut(50, function () {
           $menu.find('.kifi-hover').removeClass('kifi-hover');
         });
