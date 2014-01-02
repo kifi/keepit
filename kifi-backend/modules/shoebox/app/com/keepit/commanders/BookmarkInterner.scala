@@ -37,10 +37,6 @@ class BookmarkInterner @Inject() (
     extends Logging {
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
-    db.readWrite { implicit session =>
-      userValueRepo.setValue(user.id.get, "bookmark_import_last_start", clock.now.toString)
-      userValueRepo.setValue(user.id.get, "bookmark_import_done", "0")
-    }
 
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
@@ -51,6 +47,14 @@ class BookmarkInterner @Inject() (
     val count = new AtomicInteger(0)
     val total = bookmarks.size
     val batchSize = 100
+
+    db.readWrite { implicit session =>
+      // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
+      // If it happens, the user will experience the % complete jumping around a bit until it's finished.
+      userValueRepo.setValue(user.id.get, "bookmark_import_last_start", clock.now.toString)
+      userValueRepo.setValue(user.id.get, "bookmark_import_done", "0")
+      userValueRepo.setValue(user.id.get, "bookmark_import_total", "0")
+    }
 
     val persistedBookmarksWithUris = bookmarks.grouped(batchSize).map { bms =>
       val startTime = System.currentTimeMillis
