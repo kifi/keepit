@@ -163,8 +163,8 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User])(implicit session: RWSession) = {
-    val newUser = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
+  def createUser(firstName: String, lastName: String, state: State[User]) = {
+    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
       val contextBuilder = eventContextBuilder()
       contextBuilder += ("action", "registered")
@@ -175,7 +175,6 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
-    session.conn.commit()
 
     // Here you can do things with default keeps / tags. See ExtBookmarksController / BookmarkInterner for examples.
 
