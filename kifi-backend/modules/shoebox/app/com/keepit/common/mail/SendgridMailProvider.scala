@@ -1,10 +1,10 @@
 package com.keepit.common.mail
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.inject._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.strings._
 
 import java.util.Properties
@@ -15,17 +15,22 @@ import javax.mail.{Authenticator, PasswordAuthentication}
 
 import com.google.inject.{Inject, Singleton}
 
-import play.api.libs.json._
 
 import play.api.Play
 import play.api.Play.current
 import play.api.http.ContentTypes
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal._
+import play.api.libs.json.JsString
+import scala.Some
+import play.api.libs.json.JsObject
 
 @Singleton
 class SendgridMailProvider @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
-    airbrake: AirbrakeNotifier)
+    airbrake: AirbrakeNotifier,
+    heimdal: HeimdalServiceClient)
   extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
@@ -116,16 +121,34 @@ class SendgridMailProvider @Inject() (
         try {
           transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
           val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
-          log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
-          db.readWrite { implicit s =>
+          log.info("mail ${mail.externalId} sent with new Message-ID: $messageId")
+          val sent = db.readWrite { implicit s =>
             mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
           }
+          reportMessageSent(sent)
         } catch {
           case e: Throwable =>
             log.error(e.toString)
             mailError(mail, e.toString(), transport)
         }
       }
+    }
+  }
+
+  private def reportMessageSent(mail: ElectronicMail): Unit = {
+    if (PostOffice.Categories.System.all.contains(mail.category)) return
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder()
+
+      contextBuilder += ("category", mail.category.category)
+      mail.fromName foreach { from => contextBuilder += ("fromName", from) }
+      mail.messageId foreach { id => contextBuilder += ("messageId", id.id) }
+      mail.senderUserId foreach { id => contextBuilder += ("senderUserId", id.id) }
+      mail.inReplyTo foreach { inReplyTwo => contextBuilder += ("inReplyTto", inReplyTwo.id) }
+      contextBuilder += ("from", mail.from.address)
+      contextBuilder += ("to", mail.to.mkString(","))
+      contextBuilder += ("cc", mail.cc.mkString(","))
+      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.EMAIL_SENT, mail.timeSubmitted.get))
     }
   }
 
