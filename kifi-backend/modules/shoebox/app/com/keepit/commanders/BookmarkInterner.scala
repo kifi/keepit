@@ -41,7 +41,7 @@ class BookmarkInterner @Inject() (
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
-    val bookmarks = deDuplicate(rawBookmarks).sortWith { case (a, b) => a.url < b.url }
+    val bookmarks = rawBookmarks.sortWith { case (a, b) => a.url < b.url }
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
     keepsAbuseMonitor.inspect(user.id.get, bookmarks.size)
     val count = new AtomicInteger(0)
