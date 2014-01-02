@@ -75,35 +75,33 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def save(identity: Identity): SocialUser = reportExceptions {
-    db.readWrite { implicit s =>
-      val (userId, socialUser, allowSignup, isComplete) = getUserIdAndSocialUser(identity)
-      log.info(s"[save] persisting (social|42) user $socialUser")
-      val socialUserInfo = internUser(
-        SocialId(socialUser.identityId.userId),
-        SocialNetworkType(socialUser.identityId.providerId),
-        socialUser,
-        userId,
-        allowSignup,
-        isComplete)
-      require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
-      if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
-        socialGraphPlugin.asyncFetch(socialUserInfo)
-      log.info(s"[save] persisting $socialUser into $socialUserInfo")
-      socialUserInfo.userId.map { userId =>
-        emailRepo.getAllByUser(userId) map { email =>
-          updateExperimentIfTestUser(userId, email)
-        }
-      }
-      socialUser
-    }
+    val (userId, socialUser, allowSignup, isComplete) = getUserIdAndSocialUser(identity)
+    log.info(s"[save] persisting (social|42) user $socialUser")
+    val socialUserInfo = internUser(
+      SocialId(socialUser.identityId.userId),
+      SocialNetworkType(socialUser.identityId.providerId),
+      socialUser,
+      userId,
+      allowSignup,
+      isComplete)
+    require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
+    if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
+      socialGraphPlugin.asyncFetch(socialUserInfo)
+    log.info(s"[save] persisting $socialUser into $socialUserInfo")
+    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
+    socialUser
   }
 
-  private def updateExperimentIfTestUser(userId: Id[User], email: EmailAddress)(implicit session: RWSession): Unit = if(email.isTestEmail()) {
-    if(userExperimentRepo.hasExperiment(userId, ExperimentType.FAKE)) {
-      log.info(s"user $userId is already marked as FAKE")
-    } else {
-      log.info(s"setting user $userId as FAKE")
-      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = ExperimentType.FAKE))
+  private def updateExperimentIfTestUser(userId: Id[User]): Unit = db.readWrite { implicit session =>
+    val isTestUser = emailRepo.getAllByUser(userId).exists(_.isTestEmail())
+    if (isTestUser) {
+      val markedAsFake = userExperimentRepo.hasExperiment(userId, ExperimentType.FAKE)
+      if (markedAsFake)
+        log.info(s"test user $userId is already marked as FAKE")
+      else {
+        log.info(s"setting test user $userId as FAKE")
+        db.readWrite { implicit session => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = ExperimentType.FAKE)) }
+      }
     }
   }
 
@@ -149,9 +147,9 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def internUser(
-      socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
-      userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean)
-      (implicit session: RWSession): SocialUserInfo = {
+    socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
+    userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean): SocialUserInfo = db.readWrite { implicit session =>
+
     log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
