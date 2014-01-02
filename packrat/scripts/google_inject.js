@@ -586,10 +586,14 @@ if (searchUrlRe.test(document.URL)) !function() {
     $(hitHtml.join("")).hide().appendTo($res.find('#kifi-res-list')).slideDown(200, function () {
       this.style.overflow = '';  // slideDown clean-up
     });
-    var $filAll = $res.find('.kifi-filter-all');
-    $filAll.filter('[data-n]').attr('data-n', response.hits.length);
+    if (!response.filter || response.filter.who === 'a') {
+      var $filAll = $res.find('.kifi-filter-all');
+      $filAll.filter('[data-n]').attr('data-n', response.hits.length);
+      if (!response.mayHaveMore) {
+        $filAll.filter('[data-of]').attr('data-of', response.hits.length);
+      }
+    }
     if (!response.mayHaveMore) {
-      $filAll.filter('[data-of]').attr('data-of', response.hits.length);
       $res.find('.kifi-res-end').empty();
     }
   }
