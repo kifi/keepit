@@ -36,12 +36,12 @@ object DBSession {
     override def resultSetConcurrency = session.resultSetConcurrency
     override def resultSetHoldability = session.resultSetHoldability
 
-    private val accessLog = Logger("com.keepit.access")
+    private val dbLog = Logger("com.keepit.db")
 
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      accessLog.info(s"t:${clock.now}\ttype:DB\tduration:${time}\tname:$name\ttype:$masterSlave")
+      dbLog.info(s"t:${clock.now}\ttype:SESSION\tduration:${time}\tname:$name\ttype:$masterSlave")
     }
 
     def rollback() { doRollback = true }

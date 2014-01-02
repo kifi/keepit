@@ -9,7 +9,7 @@ package object strings {
   def fromByteArray(bytes: Array[Byte], offset: Int, length: Int): String = if (bytes == null) "" else new String(bytes, offset, length, UTF8)
 
   implicit class AbbreviateString(str: String) {
-    def abbreviate(count: Int) = StringUtils.abbreviate(str, count)
+    def abbreviate(count: Int): String = StringUtils.abbreviate(str, count)
   }
 
   private val humanFriendlyCharacters = Array('a','b','c','d','e','f','g','h','j','k','m','n','p','q','r','s','t','w','x','y','z','2','3','4','5','6','7','8','9')
@@ -19,5 +19,9 @@ package object strings {
       humanFriendlyCharacters(rnd)
     }
     Seq.fill(length)(nextChar).mkString
+  }
+
+  implicit class StringWithNoLineBreaks(str: String) {
+    def trimAndRemoveLineBreaks(): String = str.replaceAll("""[\t\n\x0B\f\r]""", " ").replaceAll("""[ ]{2,}""", " ").trim()
   }
 }

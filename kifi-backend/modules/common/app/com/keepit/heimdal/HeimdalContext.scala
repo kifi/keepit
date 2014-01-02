@@ -7,7 +7,7 @@ import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.{BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.net.{URI, UserAgent}
+import com.keepit.common.net.{Host, URI, UserAgent}
 import com.keepit.common.time.DateTimeJsonFormat
 
 sealed trait ContextData
@@ -93,7 +93,7 @@ object HeimdalContext {
 class HeimdalContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
-  def +=[T ](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = value
+  def +=[T](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = value
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build : HeimdalContext = HeimdalContext(data.toMap)
 
@@ -149,11 +149,11 @@ class HeimdalContextBuilder {
   def addUrlInfo(url: String): Unit = {
     this += ("url", url)
     URI.parse(url).foreach { uri =>
-      uri.host.foreach { host =>
+      uri.host.collect { case host @ Host(domain) if domain.nonEmpty =>
         this += ("host", host.name)
-        this += ("domain", host.domain.take(2).reverse.mkString("."))
-        this += ("domainName", host.domain(1))
-        this += ("domainExtension", host.domain(0))
+        this += ("domain", domain.take(2).reverse.mkString("."))
+        this += ("domainExtension", domain(0))
+        this += ("domainName", domain(1))
       }
       uri.scheme.foreach { scheme => this += ("scheme", scheme) }
     }

@@ -22,6 +22,8 @@ import com.keepit.common.analytics.{Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{Success, Failure}
+import securesocial.core.{SecureSocial, Authenticator}
+import play.api.mvc.AnyContent
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -36,10 +38,23 @@ class MobileUserController @Inject() (
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
+  def abookInfo() = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.abookInfo(request.userId) map { abooks =>
+        Ok(Json.toJson(abooks))
+      }
+    }
+  }
+
   def uploadContacts(origin: ABookOriginType) = AuthenticatedJsonAction(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
     Async{
-      userCommander.uploadContactsProxy(request.userId, origin, json).map(Ok(_))
+      userCommander.uploadContactsProxy(request.userId, origin, json) map { abookInfoTr =>
+        abookInfoTr match {
+          case Success(abookInfo) => Ok(Json.toJson(abookInfo))
+          case Failure(ex) => BadRequest(Json.obj("code" -> ex.getMessage)) // can do better
+        }
+      }
     }
   }
 
@@ -67,4 +82,78 @@ class MobileUserController @Inject() (
     }
   }
 
+  // todo: removeme (legacy api)
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+        Ok(Json.toJson(r))
+      }
+    }
+  }
+
+  def querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+        Ok(Json.toJson(r))
+      }
+    }
+  }
+
+  def queryContacts(search: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
+    Async {
+      userCommander.queryContacts(request.userId, search, after, limit) map { r =>
+        Ok(Json.toJson(r))
+      }
+    }
+  }
+
+  def friend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val (success, code) = userCommander.friend(request.userId, externalId)
+    val res = Json.obj("code" -> code)
+    if (success) Ok(res) else NotFound(res)
+  }
+
+  def unfriend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    if (userCommander.unfriend(request.userId, externalId)) {
+      Ok(Json.obj("code" -> "removed"))
+    } else {
+      NotFound(Json.obj("code" -> "user_not_found"))
+    }
+  }
+  
+  def ignoreFriendRequest(externalId:ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
+    val res = Json.obj("code" -> code)
+    if (success) Ok(res) else NotFound(res)
+  }
+
+  def incomingFriendRequests = AuthenticatedJsonAction { request =>
+    val users = userCommander.incomingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
+  }
+
+  def outgoingFriendRequests = AuthenticatedJsonAction { request =>
+    val users = userCommander.outgoingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
+  }
+
+  def disconnect(networkString: String) = AuthenticatedJsonAction(bodyParser = parse.anyContent) { implicit request =>
+    val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
+    suiOpt match {
+      case None => BadRequest(Json.obj("code" -> code))
+      case Some(newLoginUser) =>
+        val identity = newLoginUser.credentials.get
+        Authenticator.create(identity).fold(
+          error => Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_server_error")),
+          authenticator => {
+            Ok(Json.obj("code" -> code))
+              .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withCookies(authenticator.toCookie)
+          }
+        )
+    }
+  }
+
 }
+
+

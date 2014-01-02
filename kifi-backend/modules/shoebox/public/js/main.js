@@ -294,7 +294,10 @@ $(function () {
 		tolerance: 'pointer',
 		hoverClass: 'drop-hover',
 		drop: function (event, ui) {
-			addKeepsToCollection($(this).data('id'), ui.draggable.hasClass('selected') ? $main.find('.keep.selected') : ui.draggable);
+			addKeepsToCollection(
+				$(this).data('id'),
+				ui.draggable.hasClass('selected') ? $main.find('.keep.selected') : ui.draggable
+			);
 		}
 	};
 
@@ -2369,7 +2372,7 @@ $(function () {
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function (e) {
 		e.preventDefault();
-		$.post(this.action, $(this).serialize()).complete(function (xhr) {
+		$.post(this.action, $(this).serialize()).always(function (xhr) {
 			if (xhr.status >= 400) {
 				log('error sending invite:', xhr);
 			} else {
@@ -3153,6 +3156,9 @@ $(function () {
 		case 'blog':
 			showBlog();
 			break;
+		case 'onboarding':
+			showWelcome();
+			break;
 		default:
 			return;
 		}
@@ -3193,6 +3199,9 @@ $(function () {
 			break;
 		case 'blog':
 			title = 'Updates and Features';
+			break;
+		case 'onboarding':
+			title = 'Welcome to kifi';
 			break;
 		}
 		if (clearTags) {
@@ -3393,8 +3402,14 @@ $(function () {
 
 	function createCollection(name, callback) {
 		$newColl.addClass('submitted');
-		$.postJson(xhrBase + '/collections/create', {name: name}, function (data) {
-			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
+		$.postJson(xhrBase + '/collections/create', {
+			name: name
+		}, function (data) {
+			collTmpl.prepend(collections[data.id] = {
+				id: data.id,
+				name: name,
+				keeps: 0
+			});
 			$collList.find('.antiscroll-inner')[0].scrollTop = 0;
 			callback(data.id);
 		}).fail(function () {
@@ -3403,31 +3418,74 @@ $(function () {
 		});
 	}
 
-	function addKeepsToCollection(collId, $keeps, onError) {
-		$.postJson(xhrBase + '/keeps/add', {
+	function getTagCount(tagId) {
+		return collections[tagId].keeps;
+	}
+
+	function setTagCount(tagId, val) {
+		return collections[tagId].keeps = val;
+	}
+
+	function updateTagCountAndDOM(tagId, val) {
+		val = val || 0;
+		setTagCount(tagId, val);
+		$collList.find('.collection[data-id=' + tagId + '] .tag-count').text(val);
+		return val;
+	}
+
+	function addTagCountAndDOM(tagId, val) {
+		val = getTagCount(tagId) + (val || 0);
+		return updateTagCountAndDOM(tagId, val);
+	}
+
+	function addKeepsToCollection(collId, $keeps) {
+		return $.postJson(xhrBase + '/keeps/add', {
 			collectionId: collId,
-			keeps: $keeps.map(function () {var a = this.querySelector('.keep-title>a'); return {title: a.title, url: a.href}; }).get()
-		},
-			function (data) {
-				$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps += data.addedToCollection);
-				var collName = collections[collId].name;
-				$keeps.addClass('mine')
-					.find('.keep-colls:not(:has(.keep-coll[data-id=' + collId + ']))')
-					.contents().filter(function () {return this.nodeType === 3; }).remove().end().end()
-					.append('<span class=keep-coll data-id=' + collId + '>' +
-						'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
-						'</span>');
-				if ($keeps.is('.detailed')) {
-					$detail.children().attr('data-kept', $keeps.has('.keep-private.on').length === $keeps.length ? 'pri' : 'pub');
-					var $inColl = $detail.find('.page-coll-list');
-					if (!$inColl.has('.page-coll[data-id=' + collId + ']').length) {
-						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
-					}
+			keeps: $keeps.map(function () {
+				var a = this.querySelector('.keep-title>a');
+				return {
+					title: a.title,
+					url: a.href
+				};
+			}).get()
+		})
+		.done(function (data) {
+			addTagCountAndDOM(collId, data.addedToCollection);
+
+			var collName = collections[collId].name;
+
+			$keeps
+			.addClass('mine')
+				.find('.keep-colls:not(:has(.keep-coll[data-id=' + collId + ']))')
+					.contents()
+						.filter(function () {return this.nodeType === 3; })
+						.remove()
+						.end()
+					.end()
+				.append(
+					'<span class=keep-coll data-id=' + collId + '>' +
+					'<a class="keep-coll-a" href="javascript:">' + collName +'</a>' +
+					'<a class="keep-coll-x" href="javascript:"></a>' +
+					'</span>'
+				);
+
+			if ($keeps.is('.detailed')) {
+				$detail
+					.children()
+					.attr('data-kept', $keeps.has('.keep-private.on').length === $keeps.length ? 'pri' : 'pub');
+
+				var $inColl = $detail.find('.page-coll-list');
+				if (!$inColl.has('.page-coll[data-id=' + collId + ']').length) {
+					inCollTmpl.into($inColl[0]).append({
+						id: collId,
+						name: collName
+					});
 				}
-			}).fail(function () {
-				showMessage('Could not add to tag, please try again later');
-				if (onError) { onError(); }
-			});
+			}
+		})
+		.fail(function () {
+			showMessage('Could not add to tag, please try again later');
+		});
 	}
 
 	function removeFromCollection(collId, $keeps) {
@@ -3445,7 +3503,8 @@ $(function () {
 				var $pageColl = $detail.find('.page-coll[data-id=' + collId + ']');
 				$pageColl.css('width', $pageColl[0].offsetWidth).layout().on('transitionend', removeIfThis).addClass('removed');
 			}
-			$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps -= data.removed);
+
+			addTagCountAndDOM(collId, -data.removed);
 		}).fail(showMessage.bind(null, 'Could not remove keep' + ($keeps.length > 1 ? 's' : '') + ' from tag, please try again later'));
 	}
 
@@ -3453,7 +3512,7 @@ $(function () {
 		$.postJson(xhrBase + '/collections/' + collId + '/addKeeps', $keeps.map(getDataId).get(), function (data) {
 			rennervate($keeps, $titles);
 			updateKeepDetails();
-			$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps += data.added);
+			addTagCountAndDOM(collId, data.added);
 		});
 	}
 
@@ -3504,7 +3563,7 @@ $(function () {
 				var collCounts = $keeps.find('.keep-coll').map(getDataId).get()
 					.reduce(function (o, id) {o[id] = (o[id] || 0) + 1; return o; }, {});
 				for (var collId in collCounts) {
-					$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps -= collCounts[collId]);
+					addTagCountAndDOM(collId, -collCounts[collId]);
 				}
 				var $keepsStaying = searchResponse ? $keeps.has('.keep-friends,.keep-others') : $();
 				$keepsStaying.each(function () {
@@ -3642,13 +3701,21 @@ $(function () {
 		}
 	}).on('mousedown', '.page-coll-opt', function (e) {
 		e.preventDefault();  // selection start
-		if (e.which > 1) { return; }
-		var collId = $(this).data('id'), $in = $('.page-coll-input');
+
+		if (e.which > 1) {
+			return;
+		}
+
+		var collId = $(this).data('id'),
+			$in = $('.page-coll-input');
+
 		if (collId) {
 			withCollId(collId);
-		} else {
+		}
+		else {
 			createCollection($.trim($in.val()), withCollId);
 		}
+
 		function withCollId(collId) {
 			if (collId) {
 				$in.val('').trigger('input');
@@ -3713,7 +3780,7 @@ $(function () {
 				var collCounts = $keeps.find('.keep-coll').map(getDataId).get()
 					.reduce(function (o, id) {o[id] = (o[id] || 0) + 1; return o; }, {});
 				for (var collId in collCounts) {
-					$collList.find('.collection[data-id=' + collId + ']').find('.nav-count').text(collections[collId].keeps += collCounts[collId]);
+					addTagCountAndDOM(collId, collCounts[collId]);
 				}
 			});
 	}
@@ -3822,9 +3889,22 @@ $(function () {
 		$a[0].href = n ? 'friends/requests' : 'friends';
 	}
 
+	function hasExperiment(me, name, noAdmin) {
+		var exp = me.experiments;
+		if (exp) {
+			return exp.indexOf(name) !== -1 || (!noAdmin && exp.indexOf('admin') !== -1);
+		}
+		return false;
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: refreshMe().promise(),
+		me: refreshMe().promise().then(function (me) {
+			if (hasExperiment(me, 'onboarding', true)) {
+				$('.kifi-onboarding-li').show().click(showWelcome);
+			}
+			return me;
+		}),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
@@ -3958,4 +4038,22 @@ $(function () {
 				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
+
+	/* Onboarding */
+
+	function showWelcome() {
+		$('body').append('<iframe class="kifi-onboarding-iframe" src="/onboarding.html" frameborder="0"></iframe>');
+	}
+
+	window.getMe = function() {
+		return promise.me.then(function (me) {
+			me.pic200 = formatPicUrl(me.id, me.pictureName, 200);
+			return me;
+		});
+	};
+
+	window.exitWelcome = function () {
+		$('.kifi-onboarding-iframe').remove();
+		navigate('');
+	};
 });

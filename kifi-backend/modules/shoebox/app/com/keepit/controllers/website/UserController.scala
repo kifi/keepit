@@ -120,60 +120,28 @@ class UserController @Inject() (
   }
 
   def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
-      val removed = db.readWrite { implicit s =>
-        userConnectionRepo.unfriendConnections(request.userId, user.id.toSet) > 0
-      }
-      Ok(Json.obj("removed" -> removed))
-    } getOrElse {
+    if (userCommander.unfriend(request.userId, id)) {
+      Ok(Json.obj("removed" -> true))
+    } else {
       NotFound(Json.obj("error" -> s"User with id $id not found."))
     }
   }
 
   def friend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readWrite { implicit s =>
-      userRepo.getOpt(id) map { user =>
-        if (friendRequestRepo.getBySenderAndRecipient(request.userId, user.id.get).isDefined) {
-          Ok(Json.obj("success" -> true, "alreadySent" -> true))
-        } else {
-          friendRequestRepo.getBySenderAndRecipient(user.id.get, request.userId) map { friendReq =>
-            val socialUser1 = socialUserRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
-            val socialUser2 = socialUserRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
-            for {
-              su1 <- socialUser1
-              su2 <- socialUser2
-            } yield {
-              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-                case Some(sc) =>
-                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-                case None =>
-                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-              }
-            }
-            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
-
-            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
-            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-
-            Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
-          } getOrElse {
-            friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
-            Ok(Json.obj("success" -> true, "sentRequest" -> true))
-          }
-        }
-      } getOrElse NotFound(Json.obj("error" -> s"User with id $id not found."))
+    val (success, code) = userCommander.friend(request.userId, id)
+    if (success) {
+      Ok(Json.obj("success" -> true, code -> true))
+    } else {
+      NotFound(Json.obj("error" -> code))
     }
   }
 
   def ignoreFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readWrite { implicit s =>
-      userRepo.getOpt(id) map { sender =>
-        friendRequestRepo.getBySenderAndRecipient(sender.id.get, request.userId) map { friendRequest =>
-          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
-          Ok(Json.obj("success" -> true))
-        } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
-      } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
-    }
+    val (success, code) = userCommander.ignoreFriendRequest(request.userId, id)
+    if (success) Ok(Json.obj("success" -> true))
+    else if (code == "friend_request_not_found") NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
+    else if (code == "user_not_found") BadRequest(Json.obj("error" -> s"User with id $id not found."))
+    else BadRequest(Json.obj("error" -> code))
   }
 
   def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
@@ -193,17 +161,13 @@ class UserController @Inject() (
   }
 
   def incomingFriendRequests = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s =>
-      val users = friendRequestRepo.getByRecipient(request.userId) map { fr => basicUserRepo.load(fr.senderId) }
-      Ok(Json.toJson(users))
-    }
+    val users = userCommander.incomingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
   }
 
   def outgoingFriendRequests = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s =>
-      val users = friendRequestRepo.getBySender(request.userId) map { fr => basicUserRepo.load(fr.recipientId) }
-      Ok(Json.toJson(users))
-    }
+    val users = userCommander.outgoingFriendRequests(request.userId)
+    Ok(Json.toJson(users))
   }
 
   def excludeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
@@ -430,58 +394,6 @@ class UserController @Inject() (
     Ok
   }
 
-  @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
-
-  val queryWithABook = sys.props.getOrElse("query.contacts.abook", "true").toBoolean
-  private def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
-    @inline def mkId(email:String) = s"email/$email"
-    val searchTerms = search.toSeq.map(_.split("[@\\s+]")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(s: String): Int = {
-      if (s.isEmpty) 0
-      else if (searchTerms.isEmpty) 1
-      else {
-        val name = normalize(s)
-        if (searchTerms.exists(!name.contains(_))) 0
-        else {
-          val names = name.split("\\s+").filterNot(_.isEmpty)
-          names.count(n => searchTerms.exists(n.startsWith))*2 +
-            names.count(n => searchTerms.exists(n.contains)) +
-            (if (searchTerms.exists(name.startsWith)) 1 else 0)
-        }
-      }
-    }
-    @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
-      contactIdOpt flatMap { contactId =>
-        db.readOnly { implicit s =>
-          invitationRepo.getBySenderIdAndRecipientEContactId(userId, contactId) map { inv =>
-            if (inv.state != InvitationStates.INACTIVE) "invited" else ""
-          }
-        }
-      } getOrElse ""
-    }
-
-    val pagedF = if (queryWithABook) abookServiceClient.queryEContacts(userId, limit, search, after)
-    else abookServiceClient.getEContacts(userId, 40000000).map { contacts =>
-      val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
-      val paged = after match {
-        case Some(a) => filtered.dropWhile(e => (mkId(e.email) != a)) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filtered
-      }
-      paged
-    }
-
-    pagedF.map { paged =>
-      val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
-      }
-      log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
-      objs
-    }
-  }
-
   def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024*1024*15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
   def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded,play.api.libs.Files.TemporaryFile]]) = {
     request.body match {
@@ -557,64 +469,11 @@ class UserController @Inject() (
   }
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
-    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
-      queryContacts(request.userId, search, after, limit)
-    } else Future.successful(Seq.empty[JsObject])
-    @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
-    val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(sci: SocialConnectionInfo): Int = {
-      if (network.exists(sci.networkType.name !=)) 0
-      else if (searchTerms.isEmpty) 1
-      else {
-        val name = normalize(sci.fullName)
-        if (searchTerms.exists(!name.contains(_))) 0
-        else {
-          val names = name.split("\\s+").filterNot(_.isEmpty)
-          names.count(n => searchTerms.exists(n.startsWith))*2 +
-              names.count(n => searchTerms.exists(n.contains)) +
-              (if (searchTerms.exists(name.startsWith)) 1 else 0)
-        }
+    Async {
+      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+        Ok(Json.toJson(r))
       }
     }
-
-    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
-      sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getByRecipientSocialUserId(sci.id) collect {
-          case inv if inv.state != InvitationStates.INACTIVE => "invited"
-        } getOrElse ""
-      }
-
-    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
-      if (sui.networkType == SocialNetworks.FORTYTWO) Nil
-      else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
-
-    val connections = db.readOnly { implicit s =>
-      val filteredConnections = socialUserRepo.getByUser(request.userId)
-        .flatMap(getFilteredConnections)
-        .sortBy { case sui => (-searchScore(sui), normalize(sui.fullName)) }
-
-      (after match {
-        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filteredConnections
-      }).take(limit).map(getWithInviteStatus)
-    }
-
-    val jsConns: Seq[JsObject] = connections.map { conn =>
-      Json.obj(
-        "label" -> conn._1.fullName,
-        "image" -> toJson(conn._1.getPictureUrl(75, 75)),
-        "value" -> socialIdString(conn._1),
-        "status" -> conn._2
-      )
-    }
-    val jsContacts: Seq[JsObject] = Await.result(contactsF, 10 seconds)
-    val jsCombined = jsConns ++ jsContacts
-    log.info(s"[getAllConnections(${request.userId})] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
-    val jsArray = JsArray(jsCombined)
-    Ok(jsArray).withHeaders("Cache-Control" -> "private, max-age=300")
   }
 
   // todo: Combine this and next (abook import)

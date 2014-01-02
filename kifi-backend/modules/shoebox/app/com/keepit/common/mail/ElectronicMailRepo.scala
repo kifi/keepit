@@ -19,7 +19,6 @@ trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunct
 class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ElectronicMail] with ElectronicMailRepo with ExternalIdColumnDbFunction[ElectronicMail] {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
-  import scala.slick.lifted.Query
   import DBSession._
 
   override val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
@@ -40,6 +39,8 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
       htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
       (ElectronicMail.apply _, ElectronicMail.unapply _)
   }
+
+  override def save(mail: ElectronicMail)(implicit session: RWSession) = super.save(mail.clean())
 
   def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
 

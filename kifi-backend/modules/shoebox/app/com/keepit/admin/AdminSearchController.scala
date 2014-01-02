@@ -1,17 +1,24 @@
 package com.keepit.controllers.admin
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.logging.Logging
+import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.HeimdalServiceClient
+import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model._
 import com.keepit.search._
-import views.html
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import play.api.libs.json._
 import scala.concurrent.Future
+import scala.util.Random
+import views.html
+import com.keepit.heimdal.SystemEvent
+import com.keepit.heimdal.SystemEventTypes
 
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
@@ -34,8 +41,12 @@ class AdminSearchController @Inject() (
     articleSearchResultStore: ArticleSearchResultStore,
     uriRepo: NormalizedURIRepo,
     searchConfigRepo: SearchConfigExperimentRepo,
-    searchClient: SearchServiceClient
-  ) extends AdminController(actionAuthenticator) {
+    searchClient: SearchServiceClient,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient
+  ) extends AdminController(actionAuthenticator) with Logging {
+
+  val rand = new Random()
 
   def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction { request =>
     Async {
@@ -51,37 +62,60 @@ class AdminSearchController @Inject() (
 
   private def fakeGetConfigsForBlindTest: Seq[SearchConfigExperiment] = {
     val config = Await.result(searchClient.getSearchDefaultConfig, 1 second)
-    Seq(SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](1)), config = config),
-        SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](1)), config = config))
+    Seq(SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](42)), config = config),
+        SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](24)), config = config))
+  }
+
+  def blindTestVoted() = AdminHtmlAction{ request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val id1 = body.get("configId1").get.toLong
+    val id2 = body.get("configId2").get.toLong
+    val vote = body.get("vote").get
+
+    log.info(s"two configs: $id1, $id2, voting result: $vote")
+
+    val builder = new HeimdalContextBuilder()
+    builder += ("search_blind_test_ids", Seq(id1, id2))
+    builder += ("search_blind_test_vote", vote)
+
+    heimdal.trackEvent(SystemEvent(builder.build, SystemEventTypes.SEARCH_TEST_VOTED))
+    Ok
   }
 
   def blindTest() = AdminHtmlAction { request =>
+    request.body.asFormUrlEncoded.get
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    println("\n===\n" + body)
     val userId = body.get("userId").get.toLong
     val query = body.get("query").get
     val maxHits = body.get("maxHits").get.toInt
+    val id1 = body.get("id1").get.toLong
+    val id2 = body.get("id2").get.toLong
 
-    val configs = getConfigsForBlindTest
-
-    if (configs.size == 2){
-      val (cid1, cid2) = (configs(0).id.get.id, configs(1).id.get.id)
-      val hitsFuture = Future.sequence(Seq(searchClient.searchWithConfig(Id[User](userId), query, maxHits, configs(0).config),
-                       searchClient.searchWithConfig(Id[User](userId), query, maxHits, configs(1).config)))
-      val hits = Await.result(hitsFuture, 1 seconds)
-      val (hits1, hits2) = (hits(0).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) },
-          hits(1).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) })
-
-      val rv = BlindTestReturn("OK", Some(ConfigIdAndHits(cid1, hits1)), Some(ConfigIdAndHits(cid2, hits2)))
-      Ok(Json.toJson(rv))
-    } else {
-      val msg = s"Something is wrong, expecting 2 configs, acutual number of configs: ${configs.size}"
-      Ok(Json.toJson(BlindTestReturn(msg, None, None)))
+    val (config1, config2) = db.readOnly{ implicit s =>
+      (searchConfigRepo.get(Id[SearchConfigExperiment](id1)), searchConfigRepo.get(Id[SearchConfigExperiment](id2)))
     }
 
+//    val configs = fakeGetConfigsForBlindTest
+//    val (config1, config2) = (configs(0), configs(1))
+
+    val hitsFuture = Future.sequence(Seq(searchClient.searchWithConfig(Id[User](userId), query, maxHits, config1.config),
+                     searchClient.searchWithConfig(Id[User](userId), query, maxHits, config2.config)))
+    val hits = Await.result(hitsFuture, 1 seconds)
+    val (hits1, hits2) = (hits(0).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) },
+        hits(1).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) })
+
+    // random shuffle
+    val rv = if (rand.nextInt() % 2 == 0) {
+      BlindTestReturn("OK", Some(ConfigIdAndHits(id1, hits1)), Some(ConfigIdAndHits(id2, hits2)))
+    } else BlindTestReturn("OK", Some(ConfigIdAndHits(id2, hits2)), Some(ConfigIdAndHits(id1, hits1)))
+
+    Ok(Json.toJson(rv))
   }
 
   def blindTestPage() = AdminHtmlAction { request =>
-    Ok(html.admin.adminSearchBlindTest())
+    val configs = getConfigsForBlindTest
+    Ok(html.admin.adminSearchBlindTest(configs))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction { implicit request =>

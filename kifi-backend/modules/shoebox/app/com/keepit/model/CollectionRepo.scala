@@ -85,11 +85,11 @@ class CollectionRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def collectionChanged(modelId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession) {
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession) {
     if (isNewKeep) {
-      save(get(modelId) withLastKeptTo clock.now())
+      save(get(collectionId) withLastKeptTo clock.now())
     } else {
-      (for (c <- table if c.id === modelId) yield c.seq).update(sequence.incrementAndGet())
+      (for (c <- table if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
     }
   }
 

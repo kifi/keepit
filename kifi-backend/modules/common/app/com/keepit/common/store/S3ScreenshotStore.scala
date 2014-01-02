@@ -9,11 +9,8 @@ import scala.util.Success
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectResult
-import com.google.inject.ImplementedBy
-import com.google.inject.Inject
-import com.google.inject.Singleton
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
@@ -80,6 +77,7 @@ class S3ScreenshotStoreImpl(
   }
 
   def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]] = {
+    val trace = new StackTrace()
     if (config.isLocal) {
       Promise.successful(None).future
     } else {
@@ -125,7 +123,7 @@ class S3ScreenshotStoreImpl(
                       log.warn(s"null image for $url. Will retry later.")
                     case _ =>
                       airbrake.notify(AirbrakeError(
-                        exception = ex,
+                        exception = trace.withCause(ex),
                         message = Some(s"Problem resizing screenshot image from $url")
                       ))
                   }
@@ -148,7 +146,7 @@ class S3ScreenshotStoreImpl(
           }
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
-            exception = e,
+            exception = trace.withCause(e),
             message = Some(s"Failed to upload url screenshot ($url) to S3")
           ))
       }

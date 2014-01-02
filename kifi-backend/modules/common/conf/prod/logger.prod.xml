@@ -20,6 +20,26 @@
 
   <!-- ================================ -->
 
+  <appender name="db" class="ch.qos.logback.core.rolling.RollingFileAppender">
+   <file>log/db.log</file>
+   <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+     <fileNamePattern>log/db.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+   </rollingPolicy>
+   <encoder>
+     <pattern>%msg%n</pattern>
+   </encoder>
+  </appender>
+
+  <appender name="async_db" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="db" />
+  </appender>
+
+  <logger name="com.keepit.db" level="ALL" additivity="false">
+    <appender-ref ref="async_db" />
+  </logger>
+
+  <!-- ================================ -->
+
   <appender name="access" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/access.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">

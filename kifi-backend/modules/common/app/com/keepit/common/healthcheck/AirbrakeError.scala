@@ -6,16 +6,15 @@ import com.keepit.common.time._
 import com.keepit.common.strings._
 import org.joda.time.DateTime
 
-import java.io._
-import java.net._
 import java.security.MessageDigest
 
 import org.apache.commons.codec.binary.Base64
 
-import scala.xml._
 
 import play.api.mvc._
+import play.api.libs.ws.Response
 import play.api.libs.ws.WS.WSRequestHolder
+import com.ning.http.client.FluentCaseInsensitiveStringsMap
 
 case class AirbrakeErrorSignature(value: String) extends AnyVal
 class DefaultAirbrakeException extends Exception
@@ -138,6 +137,8 @@ case class AirbrakeError(
 }
 
 object AirbrakeError {
+  import scala.collection.JavaConverters._
+
   val MaxMessageSize = 10 * 1024 //10KB
   def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError =
     new AirbrakeError(
@@ -148,14 +149,18 @@ object AirbrakeError {
           method = Some(request.method),
           headers = request.headers.toMap)
 
-  def outgoing(request: WSRequestHolder, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError = {
+  def outgoing(request: WSRequestHolder, response: Option[Response] = None, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError = {
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
           url = Some(request.url.abbreviate(MaxMessageSize)),
           params = request.queryString,
-          headers = request.headers)
+          headers = response map { r => ningHeadersToMap(r.getAHCResponse.getHeaders) } getOrElse request.headers.toMap )
   }
+
+  private def ningHeadersToMap(headers: FluentCaseInsensitiveStringsMap): Map[String, Seq[String]] =
+    mapAsScalaMapConverter(headers).asScala.map(e => e._1 -> e._2.asScala.toSeq).toMap
+
 
   implicit def error(t: Throwable): AirbrakeError = AirbrakeError(t)
 }

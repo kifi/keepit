@@ -4,25 +4,21 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
-import com.keepit.common.db.{Id}
+import com.keepit.common.db.Id
 import play.api.mvc.{AsyncResult, Action}
-import com.keepit.abook.store.{ABookRawInfoStore}
+import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
 import java.io.File
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.io.Source
-import scala.ref.WeakReference
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, Response}
-import scala.xml.PrettyPrinter
+import play.api.libs.ws.WS
 import scala.concurrent._
-import scala.concurrent.duration._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.Play
 import play.api.Play.current
 import scala.util.{Success, Failure}
-import java.text.Normalizer
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -155,8 +151,7 @@ class ABookController @Inject() (
 
               val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
               log.debug(Json.prettyPrint(abookUpload))
-              val abookInfo = abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
-              Some(abookInfo)
+              abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
             } else {
               log.error(s"Failed to retrieve gmail contacts") // todo: try later
               None
@@ -172,11 +167,10 @@ class ABookController @Inject() (
 
   def upload(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
-    val abookRepoEntryF: Future[ABookInfo] = Future {
-      abookCommander.processUpload(userId, origin, None, None, json)
-    }
-    Async {
-      abookRepoEntryF.map(e => Ok(Json.toJson(e)))
+    val abookRepoEntryOpt: Option[ABookInfo] = abookCommander.processUpload(userId, origin, None, None, json)
+    abookRepoEntryOpt match {
+      case Some(e) => Ok(Json.toJson(e))
+      case None => BadRequest(Json.obj("code" -> "abook_empty_not_created"))
     }
   }
 
@@ -189,16 +183,16 @@ class ABookController @Inject() (
     log.info(s"[upload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
     val json = Json.parse(jsonSrc) // for testing
     log.info(s"[uploadJson] json=${Json.prettyPrint(json)}")
-    val abookInfoRepoEntry = abookCommander.processUpload(userId, origin, None, None, json)
-    Ok(Json.toJson(abookInfoRepoEntry))
+    val abookInfoRepoEntryOpt = abookCommander.processUpload(userId, origin, None, None, json)
+    Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
   // direct JSON-upload (for testing only)
   def uploadJsonDirect(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
     val json = request.body
     log.info(s"[uploadJsonDirect($userId,$origin)] json=${Json.prettyPrint(json)}")
-    val abookInfoRepoEntry = abookCommander.processUpload(userId, origin, None, None, json)
-    Ok(Json.toJson(abookInfoRepoEntry))
+    val abookInfoRepoEntryOpt = abookCommander.processUpload(userId, origin, None, None, json)
+    Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
   def getContacts(userId:Id[User], maxRows:Int) = Action { request =>

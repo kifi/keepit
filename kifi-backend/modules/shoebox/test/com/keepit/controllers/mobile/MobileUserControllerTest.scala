@@ -179,6 +179,5 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         Json.parse(contentAsString(result2)) must equalTo(expected2)
       }
     }
-
   }
 }

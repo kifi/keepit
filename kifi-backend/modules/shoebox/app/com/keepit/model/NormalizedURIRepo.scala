@@ -84,7 +84,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val num = sequence.incrementAndGet()
     val uriWithSeq = uri.copy(seq = num)
-    val saved = super.save(uriWithSeq)
+    val saved = super.save(uriWithSeq.clean())
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE || uri.state == NormalizedURIStates.REDIRECTED) {

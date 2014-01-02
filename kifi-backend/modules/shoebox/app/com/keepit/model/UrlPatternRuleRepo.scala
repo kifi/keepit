@@ -26,10 +26,8 @@ class UrlPatternRuleRepoImpl @Inject() (
   httpProxyRepo: HttpProxyRepo)
   extends DbRepo[UrlPatternRule] with UrlPatternRuleRepo {
   import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
-  import scala.util.matching.Regex
 
   override val table = new RepoTable[UrlPatternRule](db, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)

@@ -289,7 +289,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
       val keeper = BookmarkSource.keeper
-      val initLoad = BookmarkSource.initLoad
+      val initLoad = BookmarkSource.bookmarkImport
       val db = inject[Database]
 
       val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -371,7 +371,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val urlRepo = inject[URLRepo]
       val bookmarkRepo = inject[BookmarkRepo]
       val keeper = BookmarkSource.keeper
-      val initLoad = BookmarkSource.initLoad
+      val initLoad = BookmarkSource.bookmarkImport
       val db = inject[Database]
 
       val (user, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
