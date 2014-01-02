@@ -1,10 +1,11 @@
 package com.keepit.common.zookeeper
 
+import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.common.amazon._
 import com.keepit.common.service._
-import play.api.libs.json._
 import org.specs2.mutable.Specification
 import com.keepit.common.strings._
+import com.google.inject.util.Providers
 
 class ServiceClusterTest extends Specification {
 
@@ -38,9 +39,24 @@ class ServiceClusterTest extends Specification {
 
   val remoteService2 = RemoteService(instance2, ServiceStatus.UP, ServiceType.TEST_MODE)
 
+  val instance3 = new AmazonInstanceInfo(
+    instanceId = AmazonInstanceId("i-f168c1a8"),
+    localHostname = "ip-10-160-95-2.us-west-1.compute.internal",
+    publicHostname = "ec2-50-18-183-7.us-west-1.compute.amazonaws.com",
+    localIp = IpAddress("10.160.95.2"),
+    publicIp = IpAddress("50.18.183.7"),
+    instanceType = "m1.medium",
+    availabilityZone = "us-west-1a",
+    securityGroups = "default",
+    amiId = "ami-1bf9de5f",
+    amiLaunchIndex = "1"
+  )
+
+  val remoteService3 = RemoteService(instance3, ServiceStatus.UP, ServiceType.TEST_MODE)
+
   "ServiceCluster" should {
     "find node" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, null)
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()))
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
@@ -64,13 +80,39 @@ class ServiceClusterTest extends Specification {
       cluster.registered(ServiceInstance(Node(s"$basePath/node_00000002"), remoteService2, false)) === true
     }
 
+    "dedup nodes" in {
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()))
+      val zk = new FakeZooKeeperClient()
+      val basePath = "/fortytwo/services/TEST_MODE"
+      zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
+      zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService1))//me a dup!
+      zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService2))
+      zk.registeredCount === 3
+      println(zk.nodes.mkString(" : "))
+      zk.nodes.size === 3
+
+      zk.nodes.exists(n => n == Node(s"$basePath/node_00000001")) === true
+      zk.nodes.exists(n => n == Node(s"$basePath/node_00000002")) === true
+      zk.nodes.exists(n => n == Node(s"$basePath/node_00000003")) === true
+      zk.nodes.exists(n => n == Node(s"$basePath/node_00000004")) === false
+
+      cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
+
+      zk.registeredCount === 2
+      println(zk.nodes.mkString(" : "))
+      zk.nodes.size === 2
+
+      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000002"), remoteService1, false)) === true
+      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000003"), remoteService2, false)) === true
+    }
+
     "RR router" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, null)
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()))
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
       zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService2))
-      zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService2))
+      zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService3))
       cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
       val service1 = cluster.nextService()
       val service2 = cluster.nextService()
