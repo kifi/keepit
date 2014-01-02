@@ -97,7 +97,7 @@ class MainSearcher(
 
 
   // tailCutting is set to low when a non-default filter is in use
-  private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
+  private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.0f
 
   // social graph info
   private[this] lazy val socialGraphInfo = monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
@@ -301,7 +301,8 @@ class MainSearcher(
         val othersNorm = max(highScore, othersHighScore)
         val queue = createQueue(numHitsToReturn - hits.size)
         if (hits.size == 0) onlyContainsOthersHits = true
-        othersHits.toRankedIterator.forall{ case (hit, rank) =>
+        var rank = 0 // compute the rank on the fly (there may be hits not kept public)
+        othersHits.toSortedList.forall{ hit =>
           val h = hit.hit
           val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
           if (score > othersThreshold) {
@@ -310,6 +311,7 @@ class MainSearcher(
               val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
               val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
               queue.insert(newScore, scoring, h)
+              rank += 1
             } else {
               // no one publicly kept this page.
               // we don't include this in the result to avoid a security/privacy issue caused by a user mistake that
@@ -323,6 +325,17 @@ class MainSearcher(
           }
         }
         queue.foreach{ h => hits.insert(h) }
+      } else if (hits.size == (myTotal + friendsTotal)) {
+        // make sure there is at least one public keep in others
+        othersHits.toSortedList.exists{ hit =>
+          val h = hit.hit
+          if (getPublicBookmarkCount(h.id) > 0) {
+            true
+          } else {
+            othersTotal -= 1
+            false
+          }
+        }
       }
     }
 
