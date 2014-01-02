@@ -495,6 +495,4 @@ GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.in
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
 
 
-GET      /emailtest          @com.keepit.controllers.admin.ElectronicMailController.friendrequest()
-
 ->  / common.Routes

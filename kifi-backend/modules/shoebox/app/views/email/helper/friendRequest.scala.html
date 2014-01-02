@@ -1,10 +1,10 @@
-@()
+@(name: String, friendName: String)
 
 
 @kifiTemplate(title = "Kifi — Getting popular, huh?") {
   @oneColumnRow {
-    Hey Jen,<br><br>
-    Effi Fuks wants to be your Kifi friend. Woo hoo.
+    Hey @name,<br><br>
+    @friendName wants to be your Kifi friend. Woo hoo.
   }
   @oneColumnRow {
     <table class="six columns" align="left">

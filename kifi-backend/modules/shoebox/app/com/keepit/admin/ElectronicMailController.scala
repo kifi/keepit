@@ -30,8 +30,4 @@ class ElectronicMailController @Inject() (
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(html.admin.electronicMails(electronicMails, page, count, pageCount))
   }
-
-  def friendrequest = Action {
-    Ok(views.html.email.helper.friendRequest())
-  }
 }
