@@ -68,6 +68,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
         url.contains("/getEContacts") ||
         url.contains("/getContacts") ||
         url.contains("/internal/shoebox/database/getIndexable") ||
+        url.contains("/internal/shoebox/database/getUriIdsInCollection") ||
         url.contains("graph.facebook.com/")) {
       5000//ms
     } else {
