@@ -63,9 +63,9 @@
 .kifi-res-bar-status[data-n]:not([data-n='0'])::before {
   content: attr(data-n);
   display: inline-block;
-  width: 11px;
-  height: 11px;
-  line-height: 11px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
   border: 1px solid currentColor;
   border-radius: 50%;
   text-align: center;
