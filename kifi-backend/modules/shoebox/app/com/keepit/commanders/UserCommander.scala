@@ -10,10 +10,11 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
+import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 
@@ -23,12 +24,14 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 
+import java.text.Normalizer
 
 import scala.concurrent.Future
 import scala.util.Try
 import scala.Some
 
 import securesocial.core.{Identity, UserService, Registry, SocialUser}
+
 
 
 
@@ -80,12 +83,18 @@ class UserCommander @Inject() (
   bookmarkRepo: BookmarkRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  invitationRepo: InvitationRepo,
+  friendRequestRepo: FriendRequestRepo,
+  userCache: SocialUserInfoUserCache,
+  socialGraphPlugin: SocialGraphPlugin,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
-  abook: ABookServiceClient,
+  abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
-  elizaServiceClient: ElizaServiceClient) {
+  elizaServiceClient: ElizaServiceClient) extends Logging {
+
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -125,8 +134,10 @@ class UserCommander @Inject() (
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
-  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[JsValue] = {
-    abook.uploadContacts(userId, origin, payload)
+  def abookInfo(userId:Id[User]) = abookServiceClient.getABookInfos(userId)
+
+  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]] = {
+    abookServiceClient.uploadContacts(userId, origin, payload)
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
@@ -278,6 +289,236 @@ class UserCommander @Inject() (
       }
     }
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }
+  }
+
+  @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+
+  def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
+    @inline def mkId(email:String) = s"email/$email"
+    @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
+      contactIdOpt flatMap { contactId =>
+        db.readOnly { implicit s =>
+          invitationRepo.getBySenderIdAndRecipientEContactId(userId, contactId) map { inv =>
+            if (inv.state != InvitationStates.INACTIVE) "invited" else ""
+          }
+        }
+      } getOrElse ""
+    }
+
+    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
+      val objs = paged.take(limit).map { e =>
+        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
+      }
+      log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
+      objs
+    }
+  }
+
+  // legacy api -- to be replaced after removing dependencies
+  def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
+    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
+      queryContacts(userId, search, after, limit)
+    } else Future.successful(Seq.empty[JsObject])
+    @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
+    val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
+    @inline def searchScore(sci: SocialConnectionInfo): Int = {
+      if (network.exists(sci.networkType.name !=)) 0
+      else if (searchTerms.isEmpty) 1
+      else {
+        val name = normalize(sci.fullName)
+        if (searchTerms.exists(!name.contains(_))) 0
+        else {
+          val names = name.split("\\s+").filterNot(_.isEmpty)
+          names.count(n => searchTerms.exists(n.startsWith))*2 +
+            names.count(n => searchTerms.exists(n.contains)) +
+            (if (searchTerms.exists(name.startsWith)) 1 else 0)
+        }
+      }
+    }
+
+    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
+      sci -> sci.userId.map(_ => "joined").getOrElse {
+        invitationRepo.getByRecipientSocialUserId(sci.id) collect {
+          case inv if inv.state != InvitationStates.INACTIVE => "invited"
+        } getOrElse ""
+      }
+
+    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
+      if (sui.networkType == SocialNetworks.FORTYTWO) Nil
+      else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
+
+    val connections = db.readOnly { implicit s =>
+      val filteredConnections = socialUserInfoRepo.getByUser(userId)
+        .flatMap(getFilteredConnections)
+        .sortBy { case sui => (-searchScore(sui), normalize(sui.fullName)) }
+
+      (after match {
+        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case None => filteredConnections
+      }).take(limit).map(getWithInviteStatus)
+    }
+
+    val jsConns: Seq[JsObject] = connections.map { conn =>
+      Json.obj(
+        "label" -> conn._1.fullName,
+        "image" -> Json.toJson(conn._1.getPictureUrl(75, 75)),
+        "value" -> socialIdString(conn._1),
+        "status" -> conn._2
+      )
+    }
+    contactsF map { jsContacts =>
+      val jsCombined = jsConns ++ jsContacts
+      log.info(s"[getAllConnections(${userId})] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
+      jsCombined
+    }
+  }
+
+  def friend(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { user =>
+        if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
+          (true, "alreadySent")
+        } else {
+          friendRequestRepo.getBySenderAndRecipient(user.id.get, userId) map { friendReq =>
+            for {
+              su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
+              su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
+            } yield {
+              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+                case Some(sc) =>
+                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+                case None =>
+                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+              }
+            }
+            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
+
+            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
+            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+
+            SafeFuture{
+              //sending 'friend request accepted' email && Notification
+              val requestingUser = userRepo.get(userId)
+              val destinationEmail = emailRepo.getByUser(user.id.get)
+              db.readWrite{ session =>
+                postOffice.sendMail(ElectronicMail(
+                  senderUserId = None,
+                  from = EmailAddresses.INVITATION,
+                  fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName}"),
+                  to = List(destinationEmail),
+                  subject = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!", //ZZZ plug into correct copy and template when ready
+                  htmlBody = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!",
+                  category = PostOffice.Categories.User.INVITATION)
+                )(session)
+              }
+              elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+                userIds = Set(user.id.get),
+                title = "Friend Reqeust",
+                body = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!",
+                linkText = "Click to accept friend request",
+                linkUrl = "https://www.kifi.com/friends/requests",
+                imageUrl = requestingUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+                sticky = false
+              )
+            }
+
+
+            (true, "acceptedRequest")
+          } getOrElse {
+            friendRequestRepo.save(FriendRequest(senderId = userId, recipientId = user.id.get))
+
+            SafeFuture{
+              //sending 'friend request' email && Notification
+              val respondingUser = userRepo.get(userId)
+              val destinationEmail = emailRepo.getByUser(user.id.get)
+              db.readWrite{ session =>
+                postOffice.sendMail(ElectronicMail(
+                  senderUserId = None,
+                  from = EmailAddresses.INVITATION,
+                  fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName}"),
+                  to = List(destinationEmail),
+                  subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!", //ZZZ plug into correct copy and template when ready
+                  htmlBody = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                  category = PostOffice.Categories.User.INVITATION)
+                )(session)
+              }
+              elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+                userIds = Set(user.id.get),
+                title = "Friend Reqeust",
+                body = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                linkText = "Click to see friends",
+                linkUrl = "https://www.kifi.com/friends",
+                imageUrl = respondingUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+                sticky = false
+              )
+            }
+
+            (true, "sentRequest")
+          }
+        }
+      } getOrElse {
+        (false, s"User with id $id not found.")
+      }
+    }
+  }
+
+  def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
+    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } map { user =>
+      db.readWrite(attempts = 2) { implicit s =>
+        userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
+      }
+    } getOrElse false
+  }
+
+  def ignoreFriendRequest(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { sender =>
+        friendRequestRepo.getBySenderAndRecipient(sender.id.get, userId) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+          (true, "friend_request_ignored")
+        } getOrElse (false, "friend_request_not_found")
+      } getOrElse (false, "user_not_found")
+    }
+  }
+
+  def incomingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
+    db.readOnly(attempts = 2) { implicit ro =>
+      friendRequestRepo.getByRecipient(userId) map { fr => basicUserRepo.load(fr.senderId) }
+    }
+  }
+
+  def outgoingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
+    db.readOnly(attempts = 2) { implicit ro =>
+      friendRequestRepo.getBySender(userId) map { fr => basicUserRepo.load(fr.recipientId) }
+    }
+  }
+
+  def disconnect(userId:Id[User], networkString: String):(Option[SocialUserInfo], String) = {
+    userCache.remove(SocialUserInfoUserKey(userId))
+    val network = SocialNetworkType(networkString)
+    val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
+      socialUserInfoRepo.getByUser(userId).partition(_.networkType == network)
+    }
+    if (otherNetworks.isEmpty) {
+      (None, "no_other_connected_network")
+    } else if (thisNetwork.isEmpty || thisNetwork.head.networkType == SocialNetworks.FORTYTWO) {
+      (None, "not_connected_to_network")
+    } else {
+      val sui = thisNetwork.head
+      socialGraphPlugin.asyncRevokePermissions(sui)
+      db.readWrite { implicit s =>
+        socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserInfoRepo.invalidateCache(sui)
+        socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
+        socialUserInfoRepo.getByUser(userId).map(socialUserInfoRepo.invalidateCache)
+      }
+      userCache.remove(SocialUserInfoUserKey(userId))
+      val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
+      (Some(newLoginUser), "disconnected")
+    }
   }
 
 }

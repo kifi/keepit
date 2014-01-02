@@ -22,6 +22,8 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.mail.TestMailModule
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSocialGraphModule
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -32,6 +34,8 @@ class UserControllerTest extends Specification with ApplicationInjector {
     FakeAirbrakeModule(),
     TestABookServiceClientModule(),
     TestMailModule(),
+    FakeHttpClientModule(),
+    FakeSocialGraphModule(),
     TestHeimdalServiceClientModule()
   )
 

@@ -89,6 +89,7 @@ GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks          @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
@@ -101,6 +102,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
+GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
@@ -122,6 +124,20 @@ POST    /m/1/auth/social-finalize               @com.keepit.controllers.mobile.M
 POST    /m/1/social-link/:provider              @com.keepit.controllers.mobile.MobileAuthController.linkSocialNetwork(provider)
 POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
 POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
+
+GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /m/1/user/connections/email             @com.keepit.controllers.mobile.MobileUserController.queryContacts(search: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+
+POST    /m/1/invite                             @com.keepit.controllers.mobile.MobileInviteController.inviteConnection
+
+POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
+POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
+POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
+GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
+GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
+
+POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
 ##########################################
 # Website
@@ -340,6 +356,7 @@ POST     /admin/search/semanticVector/visualize           @com.keepit.controller
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
+POST    /admin/search/blindTestVoted     @com.keepit.controllers.admin.AdminSearchController.blindTestVoted
 GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
@@ -438,6 +455,7 @@ POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.in
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.internal.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.internal.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
+GET     /internal/shoebox/database/getUriIdsInCollection @com.keepit.controllers.internal.ShoeboxController.getUriIdsInCollection(collectionId: Id[Collection])
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.internal.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxController.getUserIndexable(seqNum: Long, fetchSize: Int)
@@ -475,5 +493,6 @@ GET      /internal/shoebox/database/userValue         @com.keepit.controllers.in
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: String)
 GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.internal.ShoeboxController.getUserSegment(userId: Id[User])
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
+
 
 ->  / common.Routes

@@ -49,8 +49,8 @@ object ResultDecorator extends Logging {
     val experts = expertIds.flatMap{ expert => basicUserMap.get(expert) }
 
     new DecoratedResult(
-      ExternalId[ArticleSearchResult],
-      hits,
+      ExternalId[ArticleSearchResult](),
+      decoratedHits,
       result.myTotal,
       result.friendsTotal,
       result.othersTotal,
@@ -66,7 +66,7 @@ object ResultDecorator extends Logging {
   private def highlight(hits: Seq[DetailedSearchHit], query: String, lang: Lang): Seq[DetailedSearchHit] = {
     val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
     val terms = Highlighter.getQueryTerms(query, analyzer)
-    hits.map{ h => h.add("bookmark", highlight(h.bookmark, analyzer, terms).json) }
+    hits.map{ h => h.set("bookmark", highlight(h.bookmark, analyzer, terms).json) }
   }
 
   private def highlight(h: BasicSearchHit, analyzer: Analyzer, terms: Set[String]): BasicSearchHit = {
@@ -78,7 +78,7 @@ object ResultDecorator extends Logging {
   private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], JsObject]): Seq[DetailedSearchHit] = {
     hits.map{ h =>
       val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
-      h.add("basicUsers", JsArray(basicUsers))
+      h.set("basicUsers", JsArray(basicUsers))
     }
   }
 

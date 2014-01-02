@@ -3,6 +3,8 @@ package com.keepit.model
 import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Invitation(
   id: Option[Id[Invitation]] = None,
@@ -26,4 +28,17 @@ object InvitationStates extends States[Invitation] {
   val ADMIN_REJECTED = State[Invitation]("admin_rejected")
   val ADMIN_ACCEPTED = State[Invitation]("admin_accepted")
   val JOINED = State[Invitation]("joined") // the invited person, after approval, has come back to kifi and logged in
+}
+
+object Invitation {
+  implicit val format = (
+      (__ \ 'id).formatNullable(Id.format[Invitation]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format(ExternalId.format[Invitation]) and
+      (__ \ 'sendUserId).formatNullable(Id.format[User]) and
+      (__ \ 'recipientSocialUserId).formatNullable(Id.format[SocialUserInfo]) and
+      (__ \ 'recipientEContactId).formatNullable(Id.format[EContact]) and
+      (__ \ 'state).format(State.format[Invitation])
+    )(Invitation.apply, unlift(Invitation.unapply))
 }

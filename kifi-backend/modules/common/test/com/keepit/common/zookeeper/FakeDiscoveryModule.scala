@@ -21,6 +21,8 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
 
   val basePath = Path("")
 
+  def onConnected(handler: ()=>Unit): Unit = { handler() }
+
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
   def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {}
   def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
@@ -41,8 +43,8 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
     db(node) = data
   }
 
-  def delete(path: Path) {}
-  def deleteNode(node: Node) {}
-  def deleteRecursive(path: Path) {}
+  def delete(path: Path) { db.remove(path.asNode) }
+  def deleteNode(node: Node) { db.remove(node) }
+  def deleteRecursive(path: Path) { db.remove(path.asNode) }
 }
 

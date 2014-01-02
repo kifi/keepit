@@ -24,7 +24,7 @@ import com.keepit.common.akka.SlowRunningExecutionContext
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
-  def register(doKeepAlive: Boolean = true): ServiceInstance
+  def register(): ServiceInstance
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
@@ -37,22 +37,25 @@ trait ServiceDiscovery {
   def amIUp: Boolean
 }
 
-@Singleton
-class ServiceDiscoveryImpl @Inject() (
+class ServiceDiscoveryImpl(
     zk: ZooKeeperClient,
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
     airbrake: Provider[AirbrakeNotifier],
     servicesToListenOn: Seq[ServiceType] =
-        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil)
+        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil,
+    doKeepAlive: Boolean = true)
   extends ServiceDiscovery with Logging {
 
+
+  @volatile private[this] var registered = false
+  @volatile private[this] var unregistered = false
+
+  private lazy val thisRemoteService = RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.STARTING, services.currentService) // keeping track of the status
   private var myInstance: Option[ServiceInstance] = None
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
-
-
 
   def thisInstance: Option[ServiceInstance] = myInstance
 
@@ -101,13 +104,14 @@ class ServiceDiscoveryImpl @Inject() (
 
   private def keepAlive() : Unit = {
     scheduler.scheduleOnce(2 minutes){
-      forceUpdate()
-      if (stillRegistered) {
-        keepAlive()
-      } else {
-        log.warn("Zookeeper seems to have lost me! Re-registering.")
-        register()
-        changeStatus(myHealthyStatus.get)
+      if (registered) {
+        forceUpdate()
+        if (stillRegistered) {
+          keepAlive()
+        } else {
+          log.warn("Zookeeper seems to have lost me! Re-registering.")
+          doRegister()
+        }
       }
     }
   }
@@ -129,25 +133,53 @@ class ServiceDiscoveryImpl @Inject() (
     }
   }
 
-  def register(doKeepAlive: Boolean = true): ServiceInstance = {
-    val myServiceType: ServiceType = services.currentService
-    log.info(s"registered clusters: $clusters, my service is $myServiceType")
-    val instanceInfo = amazonInstanceInfoProvider.get
-    val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.STARTING, myServiceType)
-    val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
-    myInstance = Some(myCluster.register(ServiceInstance(myNode, thisRemoteService, true)))
-    log.info(s"registered as ${myInstance.get}")
-    watchServices()
+  def register(): ServiceInstance = {
+    if (unregistered) throw new IllegalStateException("unable to register once unregistered")
+
+    registered = true
+    zk.onConnected{ () => doRegister() } // It is expected that zk is ready at this point and invokes doRegister immediately
     if (doKeepAlive) keepAlive()
     myInstance.get
   }
 
-  override def unRegister(): Unit = myInstance map {instance => zk.deleteNode(instance.node)}
+  private def doRegister(): Unit = {
+    if (registered) {
+      log.info(s"registered clusters: $clusters, my service is ${thisRemoteService.serviceType}, my instance is $myInstance")
 
-  def changeStatus(newStatus: ServiceStatus) : Unit = if(stillRegistered()) {
-    myInstance.map { instance =>
+      //if the instance already exist, unregister it
+      myInstance foreach { instance =>
+      try {
+          log.warn(s"deleting instance $instance from zookeeper before re-registering itself")
+          //remove the airbrake if we think its cool
+          airbrake.get.notify(s"deleting instance $instance from zookeeper before re-registering itself")
+          zk.deleteNode(instance.node)
+        } catch {
+          case e: Exception => airbrake.get.notify(e)
+        } finally {
+          myInstance = None
+        }
+      }
+
+      val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
+      myInstance = Some(ServiceInstance(myNode, thisRemoteService, true))
+      myCluster.register(myInstance.get)
+      log.info(s"registered as ${myInstance.get}")
+      watchServices()
+    }
+  }
+
+  override def unRegister(): Unit = {
+    registered = false
+    unregistered = true
+    myInstance foreach {instance => zk.deleteNode(instance.node)}
+    myInstance = None
+  }
+
+  def changeStatus(newStatus: ServiceStatus): Unit = if(stillRegistered()) {
+    myInstance foreach { instance =>
       log.info(s"Changing instance status to $newStatus")
-      instance.remoteService.status = newStatus
+      thisRemoteService.status = newStatus
+      instance.remoteService = thisRemoteService
       zk.set(instance.node, RemoteService.toJson(instance.remoteService))
     }
   }

@@ -2,12 +2,13 @@ package com.keepit.scraper
 
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{Provider, Provides, Singleton}
 import com.keepit.scraper.extractor.{ExtractorFactoryImpl, ExtractorFactory}
+import akka.actor.ActorSystem
 
 trait ScrapeProcessorModule extends ScalaModule
 
-case class ScrapeProcessorImplModule() extends ScrapeProcessorModule {
+case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
 
   def configure {
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
@@ -30,4 +31,12 @@ case class ScrapeProcessorImplModule() extends ScrapeProcessorModule {
       trustBlindly = true
     )
   }
+
+  @Singleton
+  @Provides
+  def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor]):SyncScrapeProcessor = {
+    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors * 32)
+  }
 }
+
+

@@ -56,6 +56,7 @@ class ExtBookmarksController @Inject() (
   userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier,
   kifiInstallationRepo: KifiInstallationRepo,
+  rawBookmarkFactory: RawBookmarkFactory,
   clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) {
 
@@ -148,7 +149,7 @@ class ExtBookmarksController @Inject() (
   def updateKeepInfo() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
     val url = (json \ "url").as[String]
-    val priv =  (json \ "private").asOpt[Boolean]
+    val privateKeep =  (json \ "private").asOpt[Boolean]
     val title = (json \ "title").asOpt[String]
 
     val bookmarkOpt = db.readOnly { implicit s =>
@@ -160,7 +161,7 @@ class ExtBookmarksController @Inject() (
       bookmark <- bookmarkOpt
       updatedBookmark <- {
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
-        bookmarksCommander.updateKeep(bookmark, priv, title)
+        bookmarksCommander.updateKeep(bookmark, privateKeep, title)
       }
     } yield Ok(Json.toJson(SendableBookmark fromBookmark updatedBookmark))
 
@@ -170,7 +171,6 @@ class ExtBookmarksController @Inject() (
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
   def addBookmarks() = AuthenticatedJsonAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
-    val tStart = currentDateTime
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body
@@ -187,9 +187,9 @@ class ExtBookmarksController @Inject() (
 
           val experiments = request.experiments
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internBookmarks(json \ "bookmarks", request.user, experiments, bookmarkSource, mutatePrivacy = true, installationId = installationId)
+          val bookmarks = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.user, experiments, bookmarkSource, mutatePrivacy = true, installationId = installationId)
 
-          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.initLoad) {
+          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.bookmarkImport) {
             // User selected to import Léo
             val tagName = db.readOnly { implicit session =>
               s"Imported from ${kifiInstallationRepo.get(request.kifiInstallationId.get).userAgent.name}"

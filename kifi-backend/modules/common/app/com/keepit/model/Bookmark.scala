@@ -5,6 +5,7 @@ import org.joda.time.DateTime
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
+import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -29,6 +30,8 @@ case class Bookmark(
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq]"
 
+  def clean(): Bookmark = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
@@ -44,7 +47,7 @@ case class Bookmark(
 
   def withUrl(url: String) = copy(url = url)
 
-  def withTitle(title: Option[String]) = copy(title = title)
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   def isActive: Boolean = state == BookmarkStates.ACTIVE
 }
@@ -67,6 +70,15 @@ object Bookmark {
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
     (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
   )(Bookmark.apply, unlift(Bookmark.unapply))
+}
+
+case class BookmarkUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
+
+object BookmarkUriAndTime {
+  implicit def bookmarkUriAndTimeFormat = (
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'createdAt).format(DateTimeJsonFormat)
+  )(BookmarkUriAndTime.apply, unlift(BookmarkUriAndTime.unapply))
 }
 
 case class BookmarkCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
@@ -104,16 +116,17 @@ case class BookmarkSource(value: String) {
 
 object BookmarkSource {
   val keeper = BookmarkSource("keeper")
-  val initLoad = BookmarkSource("bookmarkImport")
+  val bookmarkImport = BookmarkSource("bookmarkImport")
   val site = BookmarkSource("site")
   val mobile = BookmarkSource("mobile")
   val email = BookmarkSource("email")
   val unknown = BookmarkSource("unknown")
 
-  val valid = Set(keeper, initLoad, site, mobile, email)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email)
 
   def get(value: String): BookmarkSource = BookmarkSource(value.toLowerCase) match {
     case BookmarkSource("hover_keep") => keeper
+    case BookmarkSource("init_load") => bookmarkImport
     case source => source
   }
 }

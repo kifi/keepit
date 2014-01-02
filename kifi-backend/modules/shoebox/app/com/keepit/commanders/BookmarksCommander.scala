@@ -72,7 +72,8 @@ class BookmarksCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
-    keptAnalytics: KeepingAnalytics
+    keptAnalytics: KeepingAnalytics,
+    rawBookmarkFactory: RawBookmarkFactory
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -101,7 +102,7 @@ class BookmarksCommander @Inject() (
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internBookmarks(Json.toJson(keepInfos), user, experiments, source, true)
+    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), user, experiments, source, true)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -120,11 +121,9 @@ class BookmarksCommander @Inject() (
     val deactivatedBookmarks = db.readWrite { implicit s =>
       keepInfos.map { ki =>
         val url = ki.url
-        db.readWrite { implicit s =>
-          uriRepo.getByUri(url).flatMap { uri =>
-            bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
-              bookmarkRepo.save(b withActive false)
-            }
+        uriRepo.getByUri(url).flatMap { uri =>
+          bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
+            bookmarkRepo.save(b withActive false)
           }
         }
       }
@@ -183,7 +182,7 @@ class BookmarksCommander @Inject() (
   }
 
   def tagUrl(tag: Collection, json: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val bookmark = bookmarkInterner.internBookmarks(json, user, experiments, source, mutatePrivacy = false, installationId = kifiInstallationId)
+    val bookmark = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), user, experiments, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag, bookmark)
   }
 

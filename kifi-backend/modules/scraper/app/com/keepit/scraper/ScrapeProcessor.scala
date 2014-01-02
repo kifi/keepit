@@ -39,25 +39,18 @@ class ScrapeProcessorProvider @Inject() (
   syncScrapeProcessor:SyncScrapeProcessor
 ) extends Provider[ScrapeProcessor] with Logging {
 
-  lazy val plugin = if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor
-  log.info(s"[ScrapeProcessorProvider] created with: $scraperConfig")
+  lazy val processor = if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor // config-based toggle
+  log.info(s"[ScrapeProcessorProvider] created with config:$scraperConfig proc:$processor")
 
-  def get = plugin
+  def get = processor
 }
 
-class SyncScrapeProcessor @Inject() (
-  scraperConfig: ScraperConfig,
-  sysProvider:   Provider[ActorSystem],
-  procProvider:  Provider[SyncScraperActor]
-) extends ScrapeProcessor with Logging {
+class SyncScrapeProcessor @Inject() (config:ScraperConfig, sysProvider:Provider[ActorSystem], procProvider:Provider[SyncScraperActor], nrOfInstances:Int) extends ScrapeProcessor {
 
   lazy val system = sysProvider.get
-  lazy val actor = {
-    val nrOfInstances = if (Play.maybeApplication.isDefined && (!Play.isTest)) scraperConfig.numInstances else 1
-    system.actorOf(Props(procProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
-  }
+  lazy val actor = system.actorOf(Props(procProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
 
-  implicit val timeout = Timeout(scraperConfig.actorTimeout)
+  implicit val timeout = Timeout(config.actorTimeout)
 
   def fetchBasicArticle(url: String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     (actor ? FetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)).mapTo[Option[BasicArticle]]

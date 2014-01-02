@@ -7,6 +7,7 @@ import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import scala.Some
+import com.keepit.common.mail.ElectronicMail
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
@@ -64,6 +65,13 @@ class BookmarkRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.Nullable)//indexd
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
       userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
+  }
+
+  override def save(model: Bookmark)(implicit session: RWSession) = {
+    val newModel = model.copy(seq = sequence.incrementAndGet())
+    for (bid <- model.id; cid <- keepToCollectionRepo.getCollectionsForBookmark(bid))
+      collectionRepo.collectionChanged(cid)
+    super.save(newModel.clean())
   }
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark] =  {
@@ -157,13 +165,6 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
-
-  override def save(model: Bookmark)(implicit session: RWSession) = {
-    val newModel = model.copy(seq = sequence.incrementAndGet())
-    for (bid <- model.id; cid <- keepToCollectionRepo.getCollectionsForBookmark(bid))
-      collectionRepo.collectionChanged(cid)
-    super.save(newModel)
-  }
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = {
     val q = (for(b <- table if b.id === id) yield b)

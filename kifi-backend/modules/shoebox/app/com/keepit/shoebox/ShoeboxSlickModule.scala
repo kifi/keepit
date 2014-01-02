@@ -1,11 +1,8 @@
 package com.keepit.shoebox
 
-import com.keepit.common.db.slick._
 import scala.util._
-import scala.slick.lifted.DDL
 import scala.slick.session.{Database => SlickDatabase}
 
-import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick._

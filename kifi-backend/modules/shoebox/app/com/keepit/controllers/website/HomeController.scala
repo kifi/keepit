@@ -20,6 +20,9 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+import com.keepit.commanders.{UserCommander, InviteCommander}
+import com.keepit.common.db.ExternalId
+
 import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
@@ -38,8 +41,8 @@ class HomeController @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices,
   userCache: SocialUserInfoUserCache,
-  inviteCommander: InviteCommander,
-  userCommander: UserCommander)
+  userCommander: UserCommander,
+  inviteCommander: InviteCommander)
   extends WebsiteController(actionAuthenticator) with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -140,37 +143,25 @@ class HomeController @Inject() (
     Ok(views.html.website.install2(request.user))
   }
 
+  // todo: move this to UserController
   def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
-    userCache.remove(SocialUserInfoUserKey(request.userId))
-    val network = SocialNetworkType(networkString)
-    val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
-      socialUserRepo.getByUser(request.userId).partition(_.networkType == network)
-    }
-    if (otherNetworks.isEmpty) {
-      BadRequest("You must have at least one other network connected.")
-    } else if (thisNetwork.isEmpty || thisNetwork.head.networkType == SocialNetworks.FORTYTWO) {
-      BadRequest(s"You are not connected to ${network.displayName}.")
-    } else {
-      val sui = thisNetwork.head
-      socialGraphPlugin.asyncRevokePermissions(sui)
-      db.readWrite { implicit s =>
-        socialConnectionRepo.deactivateAllConnections(sui.id.get)
-        socialUserRepo.invalidateCache(sui)
-        socialUserRepo.save(sui.copy(credentials = None, userId = None))
-        socialUserRepo.getByUser(request.userId).map(socialUserRepo.invalidateCache)
+    val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
+    suiOpt match {
+      case None => code match {
+        case "no_other_connected_network" => BadRequest("You must have at least one other network connected.")
+        case "not_connected_to_network"   => BadRequest(s"You are not connected to ${networkString}.")
+        case _ => Status(INTERNAL_SERVER_ERROR)("0")
       }
-      userCache.remove(SocialUserInfoUserKey(request.userId))
-
-      val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
-      val identity = newLoginUser.credentials.get
-      Authenticator.create(identity).fold(
-        error => Status(INTERNAL_SERVER_ERROR)("0"),
-        authenticator => {
-          Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
-            .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> sui.userId.get.toString))
-            .withCookies(authenticator.toCookie)
-        }
-      )
+      case Some(newLoginUser) =>
+        val identity = newLoginUser.credentials.get
+        Authenticator.create(identity).fold(
+          error => Status(INTERNAL_SERVER_ERROR)("0"),
+          authenticator => {
+            Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
+              .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withCookies(authenticator.toCookie)
+          }
+        )
     }
   }
 

@@ -1,3 +1,4 @@
+/* global module: true, require: true */
 module.exports = function (grunt) {
 	'use strict';
 
@@ -129,7 +130,10 @@ module.exports = function (grunt) {
 				},
 				files: {
 					'static/css/landing.css': 'static/css/landing.less',
-					'static/css/about.css': 'static/css/about.less'
+					'static/css/about.css': 'static/css/about.less',
+					'static/css/privacy.css': 'static/css/privacy.less',
+					'static/css/auth-footer.css': 'static/css/auth-footer.less',
+					'css/onboarding.css': 'css/onboarding.less'
 				}
 			}
 		},
@@ -192,7 +196,7 @@ module.exports = function (grunt) {
 				tasks: 'default'
 			},
 			statics: {
-				files: ['static/css/*.less'],
+				files: ['css/*.less', 'static/css/*.less'],
 				tasks: 'less:statics'
 			}
 		}

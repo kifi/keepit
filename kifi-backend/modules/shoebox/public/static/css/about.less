@@ -1,5 +1,9 @@
 @import "lesshat";
 @import "common";
+@import "retina-1.1.0";
+
+@import "header";
+@import "footer";
 
 @green: #a0bf67;
 @gray: #737980;
@@ -7,111 +11,201 @@
 @blue2: #6fa6ef;
 @green2: #93c059;
 
-@import "header";
-@import "footer";
+@maxWidth: 730px;
+@bodyFontSize: 16px;
+
+body {
+	text-align: center;
+}
 
 .kifi-splash-bg {
+	position: relative;
 	background: #f6f6f6;
+}
+
+.kifi-splash-bg-image {
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin-right: 20%;
+	display: block;
+	width: 100%;
+	height: 100%;
+	.at2x('/assets/static/images/header2.png', auto, unit(465px / @bodyFontSize, em));
+	background-size: auto unit(465px / @bodyFontSize, em);
+	background-repeat: no-repeat;
+	background-position: bottom right;
+}
+
+@media screen and (max-width: 639px) {
+.kifi-splash-bg-image {
+	margin-right: 8%;
+	background-size: auto unit(365px / @bodyFontSize, em);
+}
 }
 
 .kifi-splash {
 	position: relative;
 	.centered-content;
-	padding-top: 200px;
-	padding-bottom: 300px;
+	.padding-top(200px);
+	.padding-bottom(300px);
+	.padding-lr(35px);
 
 	h2 {
-		font-size: 58px;
+		@fontSize: 58px;
+		.font-size(58px);
 		color: black;
-		letter-spacing: 2.5px;
+		.letter-spacing(2.5px, @fontSize);
 		margin: 0;
 	}
 
 	h3 {
-		font-size: 26px;
-		letter-spacing: 2px;
-		margin-top: 10px;
+		@fontSize: 26px;
+		.font-size(@fontSize);
+		.letter-spacing(2px, @fontSize);
+		.margin-top(10px, @fontSize);
 	}
 }
 
 .kifi-about-page {
 	position: relative;
-	padding: 0 35px;
-	margin: 150px auto 70px;
-	max-width: 730px;
+	.padding-lr(35px);
+	margin: 0 auto;
+	.margin-top(150px);
+	.margin-bottom(62px);
+	.max-width(@maxWidth);
 	text-align: left;
 
 	h2 {
-		font-size: 50px;
+		@fontSize: 50px;
+		.font-size(@fontSize);
+		font-weight: 100;
+		.margin-bottom(30px, @fontSize);
 		text-align: center;
 	}
 
 	p {
-		padding: 20px 0;
-		color: @gray;
-		font-size: 24px;
-		line-height: 42px;
-		font-weight: 100;
+		@fontSize: 24px;
+		.font-size(@fontSize);
+		font-weight: 300;
+		.line-height(42px, @fontSize);
+		.padding-tb(20px);
 		margin: 0;
+		color: @gray;
 	}
 
 	p:first-child:first-letter {
-		font-size: 48px;
+		.font-size(48px);
 		color: #fe9999;
 	}
+}
+
+.kifi-splash-term {
+	white-space: nowrap;
 }
 
 .kifi-image-what-is-kifi {
 	position: absolute;
 	top: -11px;
 	right: -8px;
-	width: 217px;
-	height: 79px;
-	background: #d4e4f9;
+	width: unit(217px / @bodyFontSize, em);
+	height: unit(79px / @bodyFontSize, em);
 	z-index: -1;
+	.at2x('/assets/static/images/topicons.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+}
+
+@media screen and (max-width: 639px) {
+.kifi-image-what-is-kifi {
+	top: 40px;
+	width: unit(2 / 3 * 217px / @bodyFontSize, em);
+	height: unit(2 / 3 * 79px / @bodyFontSize, em);
+}
 }
 
 .kifi-image-vision-behind-kifi {
 	position: absolute;
 	top: -60px;
 	right: -31px;
-	width: 139px;
-	height: 147px;
-	background: #d4e4f9;
+	width: unit(139px / @bodyFontSize, em);
+	height: unit(147px / @bodyFontSize, em);
 	z-index: -1;
+	.at2x('/assets/static/images/usericons.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+}
+
+@media screen and (max-width: 639px) {
+.kifi-image-vision-behind-kifi {
+	top: 25px;
+	width: unit(2 / 3 * 139px / @bodyFontSize, em);
+	height: unit(2 / 3 * 147px / @bodyFontSize, em);
+}
 }
 
 .kifi-about-page-more {
-	font-size: 26px;
-	font-weight: 100;
-	line-height: 42px;
+	@fontSize: 26px;
+	.font-size(@fontSize);
+	font-weight: 200;
+	.line-height(42px, @fontSize);
 	.header-font;
-	letter-spacing: 1px;
-	margin-top: 25px;
-	margin-left: 5px;
+	.letter-spacing(1px, @fontSize);
+	.margin-top(25px, @fontSize);
+	.margin-left(5px, @fontSize);
 
 	a {
-		margin-left: 10px;
+		.margin-left(10px, @fontSize);
+		font-weight: 300;
 		text-decoration: none;
 		color: @blue2;
+		white-space: nowrap;
 
 		.kifi-vision-behind-kifi & {
 			color: @green2;
+		}
+
+		&:hover {
+			.kifi-link-text {
+				.at2x('/assets/static/images/bluedots.png', auto, 2px);
+				background-size: auto 2px;
+				background-repeat: repeat-x;
+				background-position: 0 unit(35px / @fontSize, em);
+
+				&.kifi-join-kifi {
+					.at2x('/assets/static/images/greendots.png', auto, 2px);
+				}
+			}
 		}
 	}
 
 	.kifi-about-page-more-icon {
 		display: inline-block;
-		width: 30px;
-		height: 30px;
-		margin-right: 9px;
+		.size(30px, @fontSize);
+		.margin-right(9px, @fontSize);
 		vertical-align: text-bottom;
-		background: @blue2;
+		.at2x('/assets/static/images/play-small.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
+
+		&.kifi-join-kifi {
+			.at2x('/assets/static/images/plus.png', 100%, 100%);
+		}
 	}
 
 	.kifi-link-text {
+		display: inline-block;
+		.height(40px, @fontSize);
+
 		&:hover {
-			border-bottom: 2px dotted @blue2;
+			.at2x('/assets/static/images/bluedots.png', auto, 2px);
+			background-size: auto 2px;
+			background-repeat: repeat-x;
+			background-position: 0 unit(35px / @fontSize, em);
+
+			&.kifi-join-kifi {
+				.at2x('/assets/static/images/greendots.png', auto, 2px);
+			}
 		}
 
 		.kifi-vision-behind-kifi & {
@@ -120,53 +214,75 @@
 	}
 
 	.kifi-vision-behind-kifi & {
-		margin-top: 82px;
+		.margin-top(82px, @fontSize);
 	}
 }
 
 .kifi-available {
 	text-align: left;
-	padding: 26px 90px 46px;
+	.padding-top(26px);
+	.padding-lr(90px);
+	.padding-bottom(46px);
 	margin: 0 auto;
-	margin-bottom: 8px;
-	max-width: 645px;
+	.margin-bottom(8px);
+	.max-width(645px);
 	background: #fbfbfb;
 
 	h3 {
-		font-size: 24px;
-		line-height: 42px;
+		@fontSize: 24px;
+		.font-size(@fontSize);
+		.line-height(42px, @fontSize);
 		color: @gray;
-		letter-spacing: 2px;
+		.letter-spacing(1px, @fontSize);
+		color: @gray;
+		font-weight: 200;
 	}
 
 	.kifi-separator {
 		color: #fbd1d2;
-		margin: 0 9px;
+		.margin-lr(9px);
+		font-weight: 400;
 	}
 }
 
 .kifi-platform {
-	margin-top: 19px;
+	.margin-top(19px);
 	.header-font;
 }
 
 .kifi-platform-type {
-	font-size: 18px;
-	line-height: 24px;
+	@fontSize: 18px;
+	.font-size(@fontSize);
+	.line-height(24px, @fontSize);
 	color: @gray;
-	letter-spacing: 0.5px;
+	.letter-spacing(0.5px, @fontSize);
+	font-weight: 400;
 }
 
 .kifi-platform-vendors {
-	font-size: 16px;
-	font-weight: 100;
-	line-height: 24px;
+	@fontSize: 16px;
+	.font-size(@fontSize);
+	font-weight: 300;
+	.line-height(24px, @fontSize);
 	color: @gray;
-	letter-spacing: 0.5px;
+	.letter-spacing(0.5px, @fontSize);
+
+	a {
+		color: @gray;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
 }
 
+.kifi-content-divider-wrapper {
+	.max-width(@maxWidth);
+	.padding-lr(35px);
+	margin: 0 auto;
+}
 .kifi-content-divider {
-	max-width: 730px;
 	border: 2px solid #eaeaea;
 }
 
@@ -175,16 +291,17 @@
 }
 
 .kifi-learn-more {
+	@fontSize: 26px;
 	text-align: left;
-	font-size: 26px;
+	.font-size(@fontSize);
 	font-weight: 100;
-	line-height: 42px;
-	letter-spacing: 1.5px;
-	padding: 0;
+	.line-height(42px, @fontSize);
+	.letter-spacing(1.5px, @fontSize);
+	.padding-lr(35px, @fontSize);
 	margin: 0 auto;
-	margin-top: 53px;
-	margin-bottom: 135px;
-	max-width: 730px;
+	.margin-top(53px, @fontSize);
+	.margin-bottom(164px, @fontSize);
+	.max-width(@maxWidth, @fontSize);
 	list-style: none;
 	color: @green2;
 
@@ -192,19 +309,49 @@
 		color: @green2;
 		text-decoration: none;
 
-		border-bottom: 2px dotted @green2;
+		display: inline-block;
+		@height: 38px;
+		.height(@height, @fontSize);
+		.at2x('/assets/static/images/greendots.png', auto, 2px);
+		background-size: auto 2px;
+		background-repeat: repeat-x;
+		background-position: 0 unit(@height / @fontSize, em);
+		.margin-lr(-2px);
+		.padding-lr(2px);
+		.transition(background-color, color .3s ease);
+		border-bottom: 2px solid transparent;
+
+		&:hover {
+			border-color: @green;
+			background-image: none;
+		}
 	}
 
 	li {
-		margin-bottom: 28px;
+		.margin-bottom(28px, @fontSize);
 	}
-}
 
-.kifi-learn-more-icon {
-	display: inline-block;
-	width: 35px;
-	height: 35px;
-	margin-right: 37px;
-	vertical-align: text-bottom;
-	background: @green2;
+	.kifi-learn-more-icon {
+		display: inline-block;
+		.margin-right(34px, @fontSize);
+	}
+
+	.kifi-learn-more-icon-team {
+		position: relative;
+		top: -2px;
+		.width(35px, @fontSize);
+		.height(24px, @fontSize);
+		.at2x('/assets/static/images/friends.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
+		vertical-align: middle;
+	}
+
+	.kifi-learn-more-icon-tech {
+		.size(35px, @fontSize);
+		.at2x('/assets/static/images/computer.png', 100%, 100%);
+		background-size: 100%;
+		background-repeat: no-repeat;
+		vertical-align: text-bottom;
+	}
 }

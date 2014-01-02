@@ -42,7 +42,6 @@ object ExperimentType {
   val GMAIL_INVITE = ExperimentType("gmail_invite")
   val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
-  val INBOX = ExperimentType("inbox")
   val DEMO = ExperimentType("demo")
   val TSEARCH = ExperimentType("tsearch")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
@@ -59,7 +58,6 @@ object ExperimentType {
     case GMAIL_INVITE.value => GMAIL_INVITE
     case CAN_CONNECT.value => CAN_CONNECT
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
-    case INBOX.value => INBOX
     case DEMO.value => DEMO
     case TSEARCH.value => TSEARCH
     case EXTENSION_LOGGING.value => EXTENSION_LOGGING
