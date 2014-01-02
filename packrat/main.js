@@ -666,9 +666,6 @@ api.port.on({
   get_friends: function(_, respond) {
     respond(friends);
   },
-  get_networks: function(friendId, respond) {
-    socket.send(["get_networks", friendId], respond);
-  },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);

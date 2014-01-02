@@ -512,6 +512,7 @@ class ShoeboxController @Inject() (
     val uris = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
     }
+    //todo(eishay): need to have a dedicated serializer for those
     Ok(Json.toJson(uris))
   }
 

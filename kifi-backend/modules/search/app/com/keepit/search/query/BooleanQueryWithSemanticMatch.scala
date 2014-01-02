@@ -75,7 +75,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
     def optionalSemanticMatch = {
       val t = System.currentTimeMillis
       val res = Await.result(optionalSemanticMatchFuture, 100 milli)
-      log.info(s"\n=====\n waiting for semantic loss: ${System.currentTimeMillis() - t} milliseconds")
+      log.info(s"waiting for semantic loss: ${System.currentTimeMillis() - t} milliseconds")
       res
     }
     // each optional clause is associated with a probability. The probability indicates how well the semantic of the boolean query is preserved
@@ -99,7 +99,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
         analyzer.semanticLoss(optionalTerms.flatten.toSet)
       }
 
-      log.info("\n=====\nsemantic match: " + semanticMatch)
+      log.info("semantic match: " + semanticMatch)
 
       val optionalSemanticMatch: Array[Float] = {
         optionalWeights.map { w =>
