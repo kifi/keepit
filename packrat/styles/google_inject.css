@@ -29,6 +29,19 @@
   position: relative;
   bottom: 1px;
 }
+.kifi-res-bar-none:not(.kifi-showing),
+.kifi-res-bar-status-pre,
+.kifi-res-bar-status-post,
+.kifi-res-bar:not(:hover)>.kifi-res-bar-none.kifi-showing~.kifi-res-bar-status {
+  display: none;
+}
+.kifi-res-bar:hover>.kifi-res-bar-none.kifi-showing+.kifi-res-bar-status-pre,
+.kifi-res-bar:hover>.kifi-res-bar-none.kifi-showing~.kifi-res-bar-status-post {
+  display: inline;
+}
+.kifi-res-bar-none,
+.kifi-res-bar-status-pre,
+.kifi-res-bar-status-post,
 .kifi-res-bar-status {
   vertical-align: 1px;
 }
@@ -63,9 +76,6 @@
 .kifi-loading>.kifi-res-bar-status::after {
   content: 'Loading relevant keeps...';
 }
-.kifi-res-bar-status[data-n='0']::after {
-  content: 'No top keeps';
-}
 .kifi-res-bar-status[href][data-n]::after {
   content: 'Top keeps for you';
   margin-left: 3px;
@@ -73,12 +83,26 @@
 .kifi-res-bar-status[href][data-n='1']::after {
   content: 'Top keep for you';
 }
+.kifi-res-bar-status[href][data-n='0'][data-of]::after {
+  content: attr(data-of) ' matching keeps';
+  margin-left: 0;
+}
+.kifi-res-bar-status[href][data-n='0'][data-of='1']::after {
+  content: attr(data-of) ' matching keep';
+}
 .kifi-res-bar-status[href]:hover::after,
 .kifi-filter[href]:hover {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAEElEQVQIW2NgAIL8Ze//AwAGlAMEWWp0lgAAAABJRU5ErkJggg==);
   background-size: auto 1px;
   background-position: right bottom;
   background-repeat: repeat-x;
+}
+.kifi-res-bar-status-pre,
+.kifi-res-bar-status-post {
+  display: none;
+}
+.kifi-res-bar:hover>.kifi-res-bar-status[data-n='0'][data-of] {
+  display: inline;
 }
 .kifi-res-bar-arrow {
   position: absolute;

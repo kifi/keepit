@@ -27,6 +27,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
+  var $none = $res.find('.kifi-res-bar-none');
   var $status = $bar.find('.kifi-res-bar-status');
   var $arrow = $bar.find('.kifi-res-bar-arrow');
   attachKifiRes();
@@ -124,6 +125,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       }
       $bar.addClass('kifi-loading');
     }
+    $none.removeClass('kifi-showing');
     $status.removeAttr('href data-n');
     $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
@@ -162,12 +164,17 @@ if (searchUrlRe.test(document.URL)) !function() {
 
       if (!newFilter || newFilter.who === 'a') {
         var numTop = resp.numTop = resp.show && resp.hits.length || 0;
-        $status
-          .attr('data-n', numTop)
-          .attr('href', numTop ? 'javascript:' : null);
-
-        $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length})
-          .attr('data-of', insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal));
+        var allTotal = insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal);
+        if (!newFilter) {
+          $status
+            .attr('data-n', numTop)
+            .attr('href', 'javascript:');
+          if (!numTop) {
+            $status.attr('data-of', allTotal);
+            $none.addClass('kifi-showing');
+          }
+        }
+        $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length}).attr('data-of', allTotal);
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));
         $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal));
       }
@@ -490,6 +497,7 @@ if (searchUrlRe.test(document.URL)) !function() {
   function expandResults() {
     $res.find('.kifi-res-box').slideDown(200);
     $bar.removeClass('kifi-collapsed');
+    $none.removeClass('kifi-showing');
     $status.removeAttr('data-n');
     var onFirstShow = $res.data('onFirstShow');
     if (onFirstShow) {
