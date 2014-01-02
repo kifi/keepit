@@ -114,7 +114,7 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  private def newUserState: State[User] = if (Play.isDev) UserStates.ACTIVE else UserStates.PENDING
+  private def newUserState: State[User] = UserStates.ACTIVE // This is the default user state for new accounts
 
   private def createUser(identity: Identity, isComplete: Boolean)(implicit session: RWSession): User = {
     val u = userCommander.createUser(
