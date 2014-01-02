@@ -467,22 +467,13 @@ if (searchUrlRe.test(document.URL)) !function() {
       var j = $a.prevAll(".kifi-friend").length;
       var friend = response.hits[i].users[j];
       render("html/friend_card", {
-        friend: friend,
-        iconsUrl: api.url("images/social_icons.png")
-      }, function(html) {
-        var $el = $(html);
-        configureHover($el, {
+        friend: friend
+      }, function (html) {
+        configureHover(html, {
           position: {my: "center bottom-12", at: "center top", of: $a, collision: "none"},
           canLeaveFor: 600,
           hideAfter: 4000,
           click: "toggle"});
-        api.port.emit("get_networks", friend.id, function(networks) {
-          for (nw in networks) {
-            $el.find('.kifi-kcard-nw-' + nw)
-              .toggleClass('kifi-on', networks[nw].connected)
-              .attr('href', networks[nw].profileUrl || null);
-          }
-        });
       });
     }).hoverfu(".kifi-res-friends", function(configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;

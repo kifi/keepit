@@ -1,12 +1,12 @@
 .kifi-kcard {
   position: absolute;
-  min-width: 300px;
   background-color: #fff;
   color: #faf9f9;
-  box-shadow: 2px 5px 12px rgba(0,0,0,.3);
-  border: 1px solid #929496;
+  box-shadow: rgba(103,130,156,.35) 2px 3px;
+  border: 1px solid #b8c5d2;
+  border-radius: 3px;
+  padding: 1px;
   text-align: left;
-  line-height: normal;
   cursor: default;
   opacity: 0;
   -webkit-transform: translate(0, 3px);
@@ -21,89 +21,58 @@
   transform: none;
   transition-duration: 60ms;
 }
-.kifi-kcard::before,
-.kifi-kcard::after,
-.kifi-kcard-tri::before,
-.kifi-kcard-tri::after {
-  content: " ";
-  position: absolute;
-  top: 100%;
-  height: 0;
-  width: 0;
-  left: 50%;
-  border: solid transparent;
-}
-.kifi-kcard::before,
-.kifi-kcard-tri::before {
-  margin-left: -9px;
-  border-width: 9px;
-  border-top-color: inherit;
-}
-.kifi-kcard::after,
-.kifi-kcard-tri::after {
-  margin-left: -8px;
-  border-width: 8px;
-  border-top-color: #fff;
-}
-.kifi-kcard-tri {
-  position: absolute;
-  height: 0;
-  width: 0;
-  bottom: 0;
-  left: 50%;
-  border-color: inherit;
-}
 .kifi-kcard-top {
   display: table;
-  padding: 20px 14px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  max-width: 320px;
 }
 .kifi-kcard-pic {
   display: table-cell;
-  -moz-box-sizing: content-box;
-  box-sizing: content-box;
-  height: 100px;
-  width: 100px;
-  padding: 1px;
-  background-color: #fff;
-  border: 2px solid #dbdbdb;
-  border-radius: 5px;
-  float: left;
+  height: 72px;
+  width: 72px;
+  border-radius: 2px 0 0 2px;
 }
 .kifi-kcard-info {
   display: table-cell;
-  vertical-align: top;
-  padding-left: 14px;
+  vertical-align: middle;
+  padding: 0 14px;
   font-size: 12px;
   line-height: 13px;
   color: #808080;
 }
 .kifi-kcard-name {
   font-size: 16px;
-  color: #2d2d2d;
-  white-space: nowrap;
+  line-height: 18px;
+  color: #444;
+  margin-bottom: 4px;
 }
-.kifi-kcard-label {
-  margin: 15px 0 3px;
+.kifi-kcard-desc {
+  color: #929496;
 }
-.kifi-kcard-interests {
-  color: #aaa;
+.kifi-kcard-tri {
+  position: absolute;
+  height: 14px;
+  width: 28px;
+  bottom: -14px;
+  left: 50%;
+  margin-left: -14px;
+  overflow: hidden;
+  border-color: inherit;
 }
-.kifi-kcard-networks {
-  font-size: 0;
-  line-height: 0;
+.kifi-kcard-tri::after {
+  content: ' ';
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 7px;
+  top: -7px;
+  -webkit-transform: rotate(45deg);
+  transform: rotate(45deg);
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  box-shadow: rgba(103, 130, 156, .35) 2px 1px;
+  border: 1px solid;
+  border-color: inherit;
+  background-color: #fff;
 }
-.kifi-kcard-nw {
-  width: 17px;
-  height: 17px;
-  display: inline-block;
-  background-size: 68px !important;
-  margin-right: 2px;
-}
-.kifi-kcard-nw-facebook {background-position: 0 17px !important}
-.kifi-kcard-nw-facebook.kifi-on {background-position: 0 0 !important}
-.kifi-kcard-nw-linkedin {background-position: -17px 17px !important}
-.kifi-kcard-nw-linkedin.kifi-on {background-position: -17px 0 !important}
-.kifi-kcard-nw-twitter {background-position: -34px 17px !important}
-.kifi-kcard-nw-twitter.kifi-on {background-position: -34px 0 !important}
-.kifi-kcard-nw-pinterest {background-position: -51px 17px !important}
-.kifi-kcard-nw-pinterest.kifi-on {background-position: -51px 0 !important}
