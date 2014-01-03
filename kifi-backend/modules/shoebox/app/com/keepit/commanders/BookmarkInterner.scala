@@ -32,6 +32,8 @@ class BookmarkInterner @Inject() (
   airbrake: AirbrakeNotifier,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
+  rawBookmarkFactory: RawBookmarkFactory,
+  userValueRepo: UserValueRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -40,6 +42,7 @@ class BookmarkInterner @Inject() (
     ((rawBookmarks map { b => (b.url, b) } toMap).values.toSeq).toList
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
+
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
@@ -52,15 +55,31 @@ class BookmarkInterner @Inject() (
     val total = bookmarks.size
     val batchSize = 100
 
+    db.readWrite { implicit session =>
+      // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
+      // If it happens, the user will experience the % complete jumping around a bit until it's finished.
+      userValueRepo.setValue(user.id.get, "bookmark_import_last_start", clock.now.toString)
+      userValueRepo.setValue(user.id.get, "bookmark_import_done", "0")
+      userValueRepo.setValue(user.id.get, "bookmark_import_total", "0")
+    }
+
     val persistedBookmarksWithUris: List[InternedUriAndBookmark] = bookmarks.grouped(batchSize).map { bms =>
       val startTime = System.currentTimeMillis
       log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
       val persisted = db.readWrite(attempts = 2) { implicit session =>
         bms.map { bm => internUriAndBookmark(bm, user, experiments, source, mutatePrivacy) }.flatten
       }
-      log.info(s"[internBookmarks-$referenceId] Done with ${count.addAndGet(bms.size)}/$total. Took ${System.currentTimeMillis - startTime}ms")
+      val newCount = count.addAndGet(bms.size)
+      log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
+      db.readWrite { implicit session =>
+        userValueRepo.setValue(user.id.get, "bookmark_import_done", (newCount / total).toString)
+      }
       persisted
     }.flatten.toList
+
+    db.readWrite { implicit session =>
+      userValueRepo.clearValue(user.id.get, "bookmark_import_done")
+    }
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
     val newKeeps = persistedBookmarksWithUris collect {

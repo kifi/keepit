@@ -38,28 +38,23 @@ class UserIndexer(
 
   import UserIndexer._
 
-  val commitBatchSize = 50
-  val fetchSize = 250
+  override val commitBatchSize = 50
+  private val fetchSize = 250
 
-  def run(): Int = run(commitBatchSize, fetchSize)
-
-  def run(commitBatchSize: Int, fetchSize: Int): Int = {
+  def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
 
-    log.info("starting a new round of user indexing")
-
-    try {
-      val info = getUsersInfo(fetchSize)
-      log.info(s"${info.size} users to be indexed")
-      var cnt = successCount
-      indexDocuments(info.toIterator.map{x => buildIndexable(x.user, x.basicUser, x.emails, x.experiments)}, commitBatchSize)
-      log.info("this round of user indexing finished")
-      successCount - cnt
-    } catch {
-      case e: Throwable =>
-        log.error("error in indexing users", e)
-        throw e
+    var total = 0
+    var done = false
+    while (!done) {
+      total += doUpdate("UserIndex") {
+        val info = getUsersInfo(fetchSize)
+        log.info(s"${info.size} users to be indexed")
+        done = info.isEmpty
+        info.toIterator.map{ x => buildIndexable(x.user, x.basicUser, x.emails, x.experiments) }
+      }
     }
+    total
   }
 
   case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType])

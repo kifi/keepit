@@ -34,29 +34,34 @@ class ArticleIndexer @Inject() (
 
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
-  val commitBatchSize = 1000
-  val fetchSize = 2000
+  override val commitBatchSize = 1000
+  private val fetchSize = 2000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
     airbrake.notify(s"Error indexing article from normalized uri ${indexable.id}", e)
     super.onFailure(indexable, e)
   }
 
-  def run(): Int = run(commitBatchSize, fetchSize)
-
-  def run(commitBatchSize: Int, fetchSize: Int): Int = {
+  def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
 
-    log.info("starting a new indexing round")
-    try {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
-      var cnt = successCount
-      indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize)
-      successCount - cnt
-    } catch {
-      case ex: Throwable =>
-        log.error("error in indexing run", ex)
-        throw ex
+    var total = 0
+    var done = false
+    while (!done) {
+      total += doUpdate("ArticleIndex") {
+        val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
+        done = uris.isEmpty
+        uris.iterator.map(buildIndexable)
+      }
+    }
+    total
+  }
+  def update(fsize: Int): Int = updateLock.synchronized {
+    resetSequenceNumberIfReindex()
+
+    doUpdate("ArticleIndex") {
+      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
+      uris.iterator.map(buildIndexable)
     }
   }
 

@@ -331,7 +331,7 @@ function onAddTagResponse(result) {
       d = pageData[nUri],
       tag = result.response;
     if (addTag(tags, tag)) {
-        tagsById[tag.id] = tag;
+      tagsById[tag.id] = tag;
     }
     addTag(d.tags, tag);
     log('onAddTagResponse', tag, d.tags)();
@@ -1117,9 +1117,6 @@ function searchOnServer(request, respond) {
     resp.session = session;
     resp.admBaseUri = admBaseUri();
     resp.showScores = api.prefs.get('showScores');
-    resp.hits.forEach(function (hit) {
-      hit.uuid = resp.uuid;
-    });
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.othersTotal = resp.othersTotal || 0;
