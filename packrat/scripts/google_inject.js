@@ -136,7 +136,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst}, function results(resp) {
       if (q !== query || !areSameFilter(newFilter, filter)) {
-        log("[results] ignoring for query:", q, "filter:", f)();
+        log("[results] ignoring for query:", q, "filter:", newFilter)();
         return;
       } else if (!resp.session) {
         log("[results] no user info")();
@@ -504,8 +504,9 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   function attachResults() {
-    $res.find("#kifi-res-list,.kifi-res-end").remove();
+    $res.find('#kifi-res-list,.kifi-res-end').remove();
     $res.find('.kifi-res-box')
+      .finish().removeAttr('style')
       .append(render('html/search/google_hits', {
           results: response.hits,
           self: response.session.user,
@@ -514,8 +515,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           mayHaveMore: response.mayHaveMore
         }, {
           google_hit: 'google_hit'
-        }))
-      .css('display', '');
+        }));
     log('[attachResults] done')();
   }
 
