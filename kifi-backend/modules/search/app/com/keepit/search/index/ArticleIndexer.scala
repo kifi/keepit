@@ -21,7 +21,7 @@ import ArticleRecordSerializer._
 
 object ArticleIndexer {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE, REDIRECTED)
-  def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
+  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
 class ArticleIndexer @Inject() (
@@ -49,7 +49,7 @@ class ArticleIndexer @Inject() (
 
     log.info("starting a new indexing round")
     try {
-      val uris = Await.result(shoeboxClient.getIndexable(sequenceNumber.value, fetchSize), 180 seconds)
+      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
       var cnt = successCount
       indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize)
       successCount - cnt
@@ -62,10 +62,10 @@ class ArticleIndexer @Inject() (
 
   def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
     val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 30 seconds)
-    buildIndexable(uri)
+    buildIndexable(IndexableUri(uri))
   }
 
-  def buildIndexable(uri: NormalizedURI): ArticleIndexable = {
+  def buildIndexable(uri: IndexableUri): ArticleIndexable = {
     new ArticleIndexable(
       id = uri.id.get,
       sequenceNumber = uri.seq,
@@ -78,7 +78,7 @@ class ArticleIndexer @Inject() (
     override val id: Id[NormalizedURI],
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
-    val uri: NormalizedURI,
+    val uri: IndexableUri,
     articleStore: ArticleStore
   ) extends Indexable[NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
