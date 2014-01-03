@@ -30,9 +30,8 @@ import com.keepit.common.logging.Logging
 object ProximityQuery extends Logging {
 
   val maxLength = 64  // we use first 64 terms (enough?)
-  val gapPenalty = 0.05f
 
-  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f) = new ProximityQuery(terms, phrases, phraseBoost)
+  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[Int], Match)] = {
     val posNotInPhrase = (0 until termIds.length).toArray
@@ -52,7 +51,7 @@ object ProximityQuery extends Logging {
   }
 }
 
-class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float) extends Query {
+class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
 
@@ -77,6 +76,8 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   private[this] var value = 0.0f
 
+  val gapPenalty = query.gapPenalty
+
   private[this] val termIdMap = {
     var id = -1
     query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], Int]){ (m, term) =>
@@ -92,7 +93,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     if (query.phrases.isEmpty) None else Some(new PhraseMatcher(ProximityQuery.buildPhraseDict(termIds, query.phrases)))
   }
 
-  private[this] val maxRawScore = LocalAlignment(termIds, phraseMatcher, query.phraseBoost, ProximityQuery.gapPenalty).maxScore
+  private[this] val maxRawScore = LocalAlignment(termIds, phraseMatcher, query.phraseBoost, gapPenalty).maxScore
 
   def getCalibrationValue = value / maxRawScore
 
@@ -198,7 +199,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   }
   tps.foreach{ tp => pq.insertWithOverflow(tp) }
 
-  private[this] val localAlignment = LocalAlignment(termIds, phraseMatcher, phraseBoost, ProximityQuery.gapPenalty)
+  private[this] val localAlignment = LocalAlignment(termIds, phraseMatcher, phraseBoost, weight.gapPenalty)
 
   override def score(): Float = {
     // compute edit distance based proximity score
