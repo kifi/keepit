@@ -337,13 +337,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(bookmarks))
   }
 
-  def getBookmarksChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    val bookmarks = db.readOnly(2, Slave) { implicit session =>
-      bookmarkRepo.getBookmarksChanged(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(Json.toJson(bookmarks))
-  }
-
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
     val bookmark = db.readOnly { implicit session => //using cache
       bookmarkRepo.getByUriAndUser(uriId, userId)
@@ -404,13 +397,6 @@ class ShoeboxController @Inject() (
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
     }
     Ok(Json.toJson(users))
-  }
-
-  def getUserIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
-    val users = db.readOnly(2, Slave) { implicit s =>
-      userRepo.getUsersSince(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
   def getEmailAddressesForUsers() = Action(parse.json) { request =>
@@ -478,21 +464,8 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(exps))
   }
 
-  def getPhrasesChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    val phrases = db.readOnly(2, Slave) { implicit s =>
-      phraseRepo.getPhrasesChanged(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(Json.toJson(phrases))
-  }
-
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) })) //using cache
-  }
-
-  def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    Ok(Json.toJson(db.readOnly(2, Slave) { implicit s =>
-      collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize)
-    }))
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
@@ -505,14 +478,6 @@ class ShoeboxController @Inject() (
     val uris = db.readOnly(2, Slave) { implicit s =>
       keepToCollectionRepo.getUriIdsInCollection(collectionId)
     }
-    Ok(Json.toJson(uris))
-  }
-
-  def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
-    }
-    //todo(eishay): need to have a dedicated serializer for those
     Ok(Json.toJson(uris))
   }
 
