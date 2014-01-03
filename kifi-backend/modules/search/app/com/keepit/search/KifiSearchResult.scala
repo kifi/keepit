@@ -94,7 +94,7 @@ class ShardSearchResult(val json: JsValue) extends AnyVal {
   def friendsTotal: Int = (json \ "friendsTotal").as[Int]
   def othersTotal: Int = (json \ "othersTotal").as[Int]
   def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
-  def collections: Seq[ExternalId[Collection]] = (json \ "collections").as[JsArray].value.map(id => ExternalId[Collection](id.as[String]))
+  def collections: Seq[ExternalId[Collection]] = (json \ "tags").as[JsArray].value.map(id => ExternalId[Collection](id.as[String]))
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
   def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
@@ -117,7 +117,7 @@ object ShardSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "collections" -> JsArray(collections.map{ id => JsString(id.id) }),
+        "tags" -> JsArray(collections.map{ id => JsString(id.id) }),
         "svVariance" -> JsNumber(svVariance), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))
@@ -135,7 +135,7 @@ object ShardSearchResult extends Logging {
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
       "firendsStats" -> Json.toJson(FriendStats.empty),
-      "collections" -> JsArray(),
+      "tags" -> JsArray(),
       "svVariance" -> JsNumber(-1.0f), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
     )))
@@ -197,7 +197,7 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   def url: String = (json \ "url").as[String]
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
-  def collections: Option[Seq[ExternalId[Collection]]] = (json \ "collections").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
+  def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
   def bookmarkId: Option[ExternalId[Bookmark]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Bookmark])
 
   def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {
@@ -220,7 +220,7 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   }
 
   def addCollections(collections: Seq[ExternalId[Collection]]): BasicSearchHit = {
-    if (collections.isEmpty) this else new BasicSearchHit(json + ("collections" -> Json.toJson(collections.map(_.id))))
+    if (collections.isEmpty) this else new BasicSearchHit(json + ("tags" -> Json.toJson(collections.map(_.id))))
   }
 
   private def readMatches(matches: JsValue): Seq[(Int, Int)] = {

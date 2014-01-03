@@ -291,49 +291,55 @@ body {
 }
 
 .kifi-learn-more {
-	@fontSize: 26px;
-	text-align: left;
+	.header-font;
+	@fontSize: 22px;
 	.font-size(@fontSize);
-	font-weight: 100;
+	font-weight: 200;
 	.line-height(42px, @fontSize);
-	.letter-spacing(1.5px, @fontSize);
+	.letter-spacing(1px, @fontSize);
 	.padding-lr(35px, @fontSize);
 	margin: 0 auto;
 	.margin-top(53px, @fontSize);
 	.margin-bottom(164px, @fontSize);
 	.max-width(@maxWidth, @fontSize);
+	text-align: left;
 	list-style: none;
-	color: @green2;
+
+	.kifi-link-text {
+		display: inline-block;
+		.height(40px, @fontSize);
+	}
+
 
 	a {
-		color: @green2;
+		.margin-left(10px, @fontSize);
 		text-decoration: none;
+		color: @green2;
+		white-space: nowrap;
+		font-weight: 300;
 
-		display: inline-block;
 		@height: 38px;
 		.height(@height, @fontSize);
-		.at2x('/assets/static/images/greendots.png', auto, 2px);
-		background-size: auto 2px;
-		background-repeat: repeat-x;
-		background-position: 0 unit(@height / @fontSize, em);
-		.margin-lr(-2px);
-		.padding-lr(2px);
-		.transition(background-color, color .3s ease);
 		border-bottom: 2px solid transparent;
 
 		&:hover {
-			border-color: @green;
-			background-image: none;
+			.kifi-link-text {
+				.at2x('/assets/static/images/greendots.png', auto, 2px);
+				background-size: auto 2px;
+				background-repeat: repeat-x;
+				background-position: 0 unit(@height / @fontSize, em);
+			}
 		}
 	}
 
 	li {
 		.margin-bottom(28px, @fontSize);
+		.margin-left(9px, @fontSize);
 	}
 
 	.kifi-learn-more-icon {
 		display: inline-block;
-		.margin-right(34px, @fontSize);
+		.margin-right(9px, @fontSize);
 	}
 
 	.kifi-learn-more-icon-team {
@@ -348,6 +354,8 @@ body {
 	}
 
 	.kifi-learn-more-icon-tech {
+		position: relative;
+		top: 5px;
 		.size(35px, @fontSize);
 		.at2x('/assets/static/images/computer.png', 100%, 100%);
 		background-size: 100%;
