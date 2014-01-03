@@ -280,17 +280,18 @@ body {
 }
 
 .kifi-more-column {
-	float: left;
-	width: 50%;
+	.max-width(570px);
 	.box-sizing(border-box);
 	.padding-lr(30px);
 	.padding-bottom(80px);
+	margin: 0 auto;
 
 	h2 {
 		@fontSize: 35px;
 		margin: 0 auto;
 		.font-size(@fontSize);
 		.margin-bottom(40px, @fontSize);
+		.padding-lr(0, @fontSize);
 		.letter-spacing(2.5px, @fontSize);
 
 		a {
