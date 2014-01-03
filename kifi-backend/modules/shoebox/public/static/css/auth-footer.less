@@ -76,14 +76,27 @@
 	line-height: 1;
 	margin-left: 17px;
 	bottom: 0;
+	display: none;
+
+	html.signup-page & {
+		display: inline;
+	}
 }
 
 .kifi-header-signup {
 	display: none;
+
+	html.login-page & {
+		display: inline;
+	}
 }
 
 .kifi-header-login {
 	display: none;
+
+	html.signup-page & {
+		display: inline;
+	}
 }
 
 
