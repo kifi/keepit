@@ -272,6 +272,14 @@ abstract class Indexer[T](
     Map() ++ mutableMap
   }
 
+  def commitSequenceNumber: Option[SequenceNumber] = {
+    commitData.get(Indexer.CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong))
+  }
+
+  def committedAt: Option[String] = {
+    commitData.get(Indexer.CommitData.committedAt)
+  }
+
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher() {
