@@ -2254,8 +2254,6 @@ $(function () {
 				clearInviteFriends();
 			}
 
-			console.log(search, network, friends.length, limit);
-
 			if (friends.length < limit) {
 				moreFriends = false;
 
