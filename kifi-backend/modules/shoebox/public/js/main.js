@@ -2382,7 +2382,6 @@ $(function () {
 		$noResults.find('.refresh-friends').click(function () {
 			submitForm('/friends/invite/refresh');
 		});
-		$noResults.find('.tell-us').click(sendFeedback);
 	}
 
 	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
@@ -3846,22 +3845,6 @@ $(function () {
 		delete d.commit;
 	}
 
-	function sendFeedback() {
-		if (!window.UserVoice) {
-			window.UserVoice = [];
-			$.getScript('//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js');
-		}
-		UserVoice.push(['showLightbox', 'classic_widget', {
-			mode: 'full',
-			'primary_color': '#cc6d00',
-			'link_color': '#007dbf',
-			'default_mode': 'support',
-			'forum_id': 200379,
-			'custom_template_id': 3305
-		}]);
-	}
-
-	var $sendFeedback = $('.send-feedback').click(sendFeedback).filter('.top-right-nav>*');
 	var emailTmpl = Handlebars.compile($('#email-address').html());
 
 	function updateMe(data) {
@@ -4016,7 +3999,6 @@ $(function () {
 				});
 				$welcomeDialog.dialog('hide');
 				$welcomeDialog = null;
-				setTimeout($.fn.hoverfu.bind($sendFeedback, 'show'), 1000);
 			}).find('button').focus();
 		}
 	}
@@ -4034,14 +4016,6 @@ $(function () {
 	var friendCardTmpl = Tempo.prepare('fr-card-template');
 	$('#fr-card-template').remove();
 	$.getScript('assets/js/jquery-hoverfu.min.js').done(function () {
-		$sendFeedback.hoverfu(function (configure) {
-			configure({
-				position: {my: 'center-24 bottom-12', at: 'center top', of: this},
-				mustHoverFor: 400,
-				hideAfter: 1800,
-				click: 'hide'
-			});
-		});
 		$(document).hoverfu('.pic:not(.me)', function (configureHover) {
 			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
 			friendCardTmpl.into($temp).append({
