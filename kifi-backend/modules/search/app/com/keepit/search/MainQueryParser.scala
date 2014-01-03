@@ -44,6 +44,7 @@ class MainQueryParser(
   override val concatBoost: Float,
   homePageBoost: Float,
   override val useSemanticMatch: Boolean,
+  proximityGapPanelty: Float,
   phraseDetector: PhraseDetector,
   phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
   monitoredAwait: MonitoredAwait
@@ -90,9 +91,9 @@ class MainQueryParser(
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection")
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost))
-          proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost))
-          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost))
+          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty))
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost, proximityGapPanelty))
+          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost, proximityGapPanelty))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
