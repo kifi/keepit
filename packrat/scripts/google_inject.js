@@ -160,7 +160,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       var showAny = Boolean(resp.show && resp.hits.length && (!inDoc || !(tGoogleResultsShown >= tQuery)) || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
-      resp.hits.forEach(processHit);
+      resp.hits.forEach(processHit, resp);
 
       if (!newFilter || newFilter.who === 'a') {
         var numTop = resp.numTop = resp.show && resp.hits.length || 0;
@@ -530,7 +530,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       }, function onPrefetchResponse(resp) {
         if (response === origResp) {
           log("[onPrefetchResponse]", resp)();
-          resp.hits.forEach(processHit);
+          resp.hits.forEach(processHit, resp);
 
           response.nextHits = resp.hits;
           response.nextUUID = resp.uuid;
@@ -589,8 +589,8 @@ if (searchUrlRe.test(document.URL)) !function() {
     }
   }
 
-  function processHit(hit) {
-    var friendsToShow = 8;
+  function processHit(hit) { // this is response in which hit arrived
+    hit.uuid = this.uuid;
 
     hit.displayUrl = displayURLFormatter(hit.bookmark.url, (hit.bookmark.matches || {}).url);
     hit.displayTitle = boldSearchTerms(hit.bookmark.title, (hit.bookmark.matches || {}).title) || hit.displayUrl;
@@ -599,7 +599,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
     hit.displayUsers = who == "m" ? [] :
-      (ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) : hit.users).slice(0, friendsToShow);
+      (ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) : hit.users).slice(0, 8);
 
     var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     hit.whoKeptHtml = formatCountHtml(
