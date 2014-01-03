@@ -52,12 +52,12 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
-        val updates = indexer.run()
+        val updates = indexer.update()
         indexer.sequenceNumber.value === 5
 
         val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz"))
         client.saveEmails(EmailAddress(userId = newUsers(0).id.get, address = "abc@xyz.com"))
-        indexer.run()
+        indexer.update()
         indexer.sequenceNumber.value === 6
       }
     }
@@ -68,7 +68,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
-      indexer.run(100, 100)
+      indexer.update()
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
       val parser = new UserQueryParser(analyzer)
@@ -91,7 +91,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
-      indexer.run()
+      indexer.update()
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
       val parser = new UserQueryParser(analyzer)
@@ -107,7 +107,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
-        indexer.run()
+        indexer.update()
         indexer.numDocs === 5
 
         val searcher = new UserSearcher(indexer.getSearcher)
@@ -132,7 +132,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
-        indexer.run()
+        indexer.update()
         indexer.numDocs === 5
 
         val searcher = new UserSearcher(indexer.getSearcher)
@@ -161,11 +161,11 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = mkUserIndexer()
-        indexer.run()
+        indexer.update()
         indexer.numDocs === 5
 
         client.saveUsers(users(0).withState(UserStates.INACTIVE))
-        indexer.run()
+        indexer.update()
 
         val searcher = new UserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
@@ -182,7 +182,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
-        indexer.run()
+        indexer.update()
 
         val searcher = indexer.getSearcher
         val analyzer = DefaultAnalyzer.defaultAnalyzer
