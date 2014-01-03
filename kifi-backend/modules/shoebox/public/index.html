@@ -468,6 +468,11 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 							</div>
 							<div class="invite-friends" data-href="friends/invite">
 								<div class="antiscroll-inner">
+									<div class="invite-email" style="display: none">
+										<a class="invite-email-link" href="javascript:">
+											Invite '<span class="invite-email-address"></span>' to kifi
+										</a>
+									</div>
 									<ul>
 										<li class="invite-friend {{status}}" data-template data-value="{{value}}" data-status="{{status}}">
 										<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">
