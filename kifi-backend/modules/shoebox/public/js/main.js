@@ -2192,6 +2192,7 @@ $(function () {
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
+
 	var friendsTimeout;
 	function filterFriends() {
 		clearTimeout(friendsTimeout);
@@ -2289,6 +2290,12 @@ $(function () {
 
 			friendsShowing.push.apply(friendsShowing, friends);
 
+
+			var $inviteEmail = $nwFriends.find('.invite-email').hide();
+			if (network === 'email' && search) {
+				showInviteEmailAddress($inviteEmail, search, friends);
+			}
+
 			var $noResults = $nwFriends.find('.no-results').empty().hide();
 			if (network && !friendsShowing.length) {
 				showNoSearchInviteResults($noResults, search, network);
@@ -2352,6 +2359,24 @@ $(function () {
 		obj.description = description;
 	}
 
+	function hasFriendWithEmail(friends, email) {
+		return friends.some(function (f) {
+			return f.email === email;
+		});
+	}
+
+	function showInviteEmailAddress($inviteEmail, search, friends) {
+		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+[^.]$/.test(search) && !hasFriendWithEmail(friends, search)) {
+			$inviteEmail.show()
+				.find('.invite-email-link')
+				.off('click')
+				// '' is necessary as third parameter
+				.click(openInviteDialog.bind(null, 'email/' + search, ''))
+					.find('.invite-email-address')
+					.text(search);
+		}
+	}
+
 	function showNoSearchInviteResults($noResults, search, network) {
 		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 		$noResults.find('.refresh-friends').click(function () {
@@ -2409,10 +2434,14 @@ $(function () {
 					name = match[1];
 				}
 			}
-			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
-			$inviteMessageDialog.dialog('show');
+			openInviteDialog(fullSocialId, name);
 		}
 	});
+
+	function openInviteDialog(fullSocialId, name) {
+		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
+		$inviteMessageDialog.dialog('show');
+	}
 
 	var $unfriendDialog = $('.unfriend-dialog')
 	.detach()
@@ -3900,7 +3929,8 @@ $(function () {
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: refreshMe().promise().then(function (me) {
-			if (hasExperiment(me, 'onboarding', true)) {
+			console.log('me', me);
+			if (hasExperiment(me, 'gmail_invite', true)) {
 				$('.kifi-onboarding-li').show().click(showWelcome);
 			}
 			return me;
