@@ -142,4 +142,24 @@ object NormalizedURIStates extends States[NormalizedURI] {
   }
 }
 
+case class IndexableUri(
+   id: Option[Id[NormalizedURI]] = None,
+   title: Option[String] = None,
+   url: String,
+   restriction: Option[Restriction] = None,
+   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+   seq: SequenceNumber)
 
+object IndexableUri {
+
+  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(uri.id, uri.title, uri.url, uri.restriction, uri.state, uri.seq)
+
+  implicit def format = (
+    (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'restriction).formatNullable[Restriction] and
+    (__ \ 'state).format(State.format[NormalizedURI]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+  )(IndexableUri.apply, unlift(IndexableUri.unapply))
+}

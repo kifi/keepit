@@ -29,12 +29,6 @@
       "value": true
     },
     {
-      "title": "Maximum search results",
-      "type": "integer",
-      "name": "maxResults",
-      "value": 5
-    },
-    {
       "title": "Show search result scores",
       "type": "bool",
       "name": "showScores",

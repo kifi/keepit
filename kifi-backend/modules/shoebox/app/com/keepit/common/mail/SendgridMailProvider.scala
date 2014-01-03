@@ -3,8 +3,7 @@ package com.keepit.common.mail
 import com.keepit.common.logging.Logging
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.inject._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.strings._
 
 import java.util.Properties
@@ -15,17 +14,21 @@ import javax.mail.{Authenticator, PasswordAuthentication}
 
 import com.google.inject.{Inject, Singleton}
 
-import play.api.libs.json._
 
 import play.api.Play
 import play.api.Play.current
 import play.api.http.ContentTypes
+import com.keepit.heimdal._
+import play.api.libs.json.JsString
+import scala.Some
+import play.api.libs.json.JsObject
 
 @Singleton
 class SendgridMailProvider @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
-    airbrake: AirbrakeNotifier)
+    airbrake: AirbrakeNotifier,
+    heimdal: HeimdalServiceClient)
   extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
@@ -116,7 +119,7 @@ class SendgridMailProvider @Inject() (
         try {
           transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
           val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
-          log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
+          log.info("mail ${mail.externalId} sent with new Message-ID: $messageId")
           db.readWrite { implicit s =>
             mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
           }

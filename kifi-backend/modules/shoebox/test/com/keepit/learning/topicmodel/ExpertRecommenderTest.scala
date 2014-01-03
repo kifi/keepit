@@ -12,7 +12,7 @@ import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
-import scala.math.log
+import scala.math
 
 class ExpertRecommenderTest extends Specification with DbSetupHelper {
 
@@ -112,7 +112,7 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper {
     "compute score" in {
       withDb() { implicit injector =>
         def uriId(x: Int) = Id[NormalizedURI](x)
-        def log2(x: Double) = log(x)/log(2)
+        def log2(x: Double) = math.log(x)/math.log(2)
         val userId = Id[User](1)
         val topic = 1
         val userRelevantBookmarks = Map(1 -> List(uriId(1), uriId(2)), 2 -> List(uriId(3), uriId(4)))
@@ -127,7 +127,7 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper {
        withDb() { implicit injector =>
         val (users, uris) = setup()
         def userId(i: Int) = users(i).id.get
-        def log2(x: Double) = log(x)/log(2)
+        def log2(x: Double) = math.log(x)/math.log(2)
         val rcmder = new ExpertRecommender(db, uriTopicRepoA, userBookmarkClicksRepo, bookmarkRepo)
         rcmder.score(userId(0)) === Map(1 -> (log2(1 + 10 + 0.2 * 10 * 10).toFloat))
         rcmder.score(userId(1)) === Map(1 -> (log2(1 + 10 + 0.8 * 10 * 10).toFloat))
@@ -141,7 +141,7 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper {
          val rcmder = new ExpertRecommender(db, uriTopicRepoA, userBookmarkClicksRepo, bookmarkRepo)
          def userId(i: Int) = users(i).id.get   // clojure
          def uriId(i: Int) = uris(i).id.get
-         def log2(x: Double) = log(x)/log(2)
+         def log2(x: Double) = math.log(x)/math.log(2)
          // 5 hits, 3 from topic 1, 2 from topic 5. relevant users: 1, 2, 9, 10
          val urisAndKeepers = List((uriId(1), List(userId(0), userId(1))),
                                (uriId(2), List(userId(0), userId(1)) ),

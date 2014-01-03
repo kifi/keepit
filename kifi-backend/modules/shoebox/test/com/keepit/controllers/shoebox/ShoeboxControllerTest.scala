@@ -120,9 +120,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     "return phrases changed from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
-        val route = com.keepit.controllers.internal.routes.ShoeboxController.getPhrasesChanged(4, 2).toString
+        val route = com.keepit.controllers.internal.routes.ShoeboxDataPipeController.getPhrasesChanged(4, 2).toString
         route === "/internal/shoebox/database/getPhrasesChanged?seqNum=4&fetchSize=2"
-        val shoeboxController = inject[ShoeboxController]
+        val shoeboxController = inject[ShoeboxDataPipeController]
         val result = shoeboxController.getPhrasesChanged(4 ,2)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
