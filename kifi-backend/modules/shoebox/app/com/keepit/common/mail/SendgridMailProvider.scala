@@ -144,7 +144,7 @@ class SendgridMailProvider @Inject() (
       mail.fromName foreach { from => contextBuilder += ("fromName", from) }
       mail.messageId foreach { id => contextBuilder += ("messageId", id.id) }
       mail.senderUserId foreach { id => contextBuilder += ("senderUserId", id.id) }
-      mail.inReplyTo foreach { inReplyTwo => contextBuilder += ("inReplyTto", inReplyTwo.id) }
+      mail.inReplyTo foreach { inReplyTo => contextBuilder += ("inReplyTo", inReplyTo.id) }
       contextBuilder += ("from", mail.from.address)
       contextBuilder += ("to", mail.to.mkString(","))
       contextBuilder += ("cc", mail.cc.mkString(","))
