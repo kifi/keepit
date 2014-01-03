@@ -236,6 +236,22 @@ div.kifi-res-bar-menu-item {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAQAAAC45EetAAAAz0lEQVQoz2NgIAKUp5V/LC9lIEppTvm/8v9AWElYaRFU6f/y24SUlkMV/i9/V26CX2k1XOnrckOIEGO5JFalTXClL8t1IUJs5SuArqrFUNoBV/qsXBMmuAoq1IKkkLG8B670SbkaQuI+XLgDrnQSXOxBuRKydepAvTCpXqBCxvLpcP69cnl01ykB9cOkJ5fPgbNvlsti87d8+V24Ehi8hj2MQMplgeYgK71cLo4vAiSBZsGUnisXIRS1YkDzQErPlAsRk75Eyg+U7yznxyUPALfSrtHLaVWkAAAAAElFTkSuQmCC);
   }
 }
+.kifi-res-max-results {
+  position: relative;
+}
+.kifi-res-max-results::after {
+  content: ' ';
+  position: absolute;
+  top: 41px;
+  left: 0;
+  right: 0;
+  height: 82px;
+  z-index: -1;
+  transform: skewX(58deg);
+  -webkit-transform: skewX(58deg);
+  transform-origin: left top;
+  -webkit-transform-origin: left top;
+}
 .kifi-collapsed+.kifi-res-box,
 .kifi-preview+.kifi-res-box>.kifi-filters {
   display: none;
