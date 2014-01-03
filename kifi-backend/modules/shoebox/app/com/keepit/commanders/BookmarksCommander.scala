@@ -20,7 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.KestrelCombinator
 
-case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
+case class KeepInfo(id: Option[ExternalId[Bookmark]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
 case class FullKeepInfo(bookmark: Bookmark, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
 
@@ -72,6 +72,7 @@ class BookmarksCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
+    collectionCommander: CollectionCommander,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory
  ) extends Logging {
@@ -211,4 +212,91 @@ class BookmarksCommander @Inject() (
     }
   }
 
+
+  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: BookmarkSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
+    val keepsByUrl = bookmarkInterner.internRawBookmarks(
+      rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
+      userId,
+      mutatePrivacy = true,
+      installationId = None,
+      source = BookmarkSource.default
+    ).map(keep => keep.url -> keep).toMap
+
+    val keepsByTagName = keepsWithTags.flatMap { case (keepInfo, tags) =>
+      tags.map(tagName => (tagName, keepsByUrl(keepInfo.url)))
+    }.groupBy(_._1).mapValues(_.map(_._2))
+
+    val keepsByTag = keepsByTagName.map { case (tagName, keeps) =>
+      val tag = getOrCreateTag(userId, tagName)
+      addToCollection(tag, keeps)
+      tag -> keeps
+    }.toMap
+
+    keepsByTag
+  }
+
+  def setKeepOrdering(userId: Id[User], keeps: Seq[Bookmark], inBetween: Option[(Bookmark, Bookmark)] = None): Unit = {
+    require(keeps.forall(_.userId == userId), "Keeps to be moved do not belong to the expected user.")
+    inBetween match {
+      case Some((firstKeep, secondKeep)) =>
+        val Seq(lowerKeep, upperKeep) = Seq(firstKeep, secondKeep).sortBy(_.createdAt)
+        val interval = upperKeep.createdAt.getMillis - lowerKeep.createdAt.getMillis
+        val step = interval.toInt / (keeps.length + 1)
+        require(step > 0, "Cannot insert in between keeps that have been created at the same time.")
+        db.readWrite { implicit session =>
+          keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
+            bookmarkRepo.save(keep.copy(createdAt = lowerKeep.createdAt.plusMillis((i+1) * step)))
+          }
+        }
+
+      case None => db.readWrite { implicit session =>
+        keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
+          bookmarkRepo.save(keep.copy(createdAt = currentDateTime))
+        }
+      }
+    }
+  }
+
+  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
+    val contextBuilder = new HeimdalContextBuilder()
+    contextBuilder.data ++= context.data
+    contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
+    val keepsByTag = keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
+    val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
+    val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
+    db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
+    setKeepOrdering(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
+  }
 }
+
+object DefaultKeeps {
+  val orderedTags: Seq[String] = Seq(
+    "Recipe",
+    "Shopping Wishlist",
+    "Travel",
+    "Read Later",
+    "Funny",
+    "Example Keep",
+    "Kifi Support"
+  )
+
+  val orderedKeepsWithTags: Seq[(KeepInfo, Seq[String])] = {
+    val Seq(recipe, shopping, travel, later, funny, example, support) = orderedTags
+    Seq(
+      // Support Keeps
+      (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("How to Use Kifi"), url = "https://www.kifi.com/support", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Contact Us"), url = "", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support)),
+
+      // Example keeps
+      (KeepInfo(title = None, url = "http://www.simplyrecipes.com/recipes/bruschetta_with_tomato_and_basil/", isPrivate = true), Seq(example, recipe)),
+      (KeepInfo(title = None, url = "http://www.apple.com/ipad/", isPrivate = true), Seq(example, shopping)),
+      (KeepInfo(title = None, url = "http://www.fourseasons.com/borabora/", isPrivate = true), Seq(example, travel)),
+      (KeepInfo(title = None, url = "http://twistedsifter.com/2013/01/50-life-hacks-to-simplify-your-world/", isPrivate = true), Seq(example, later)),
+      (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny))
+    )
+  }
+}
+
+
