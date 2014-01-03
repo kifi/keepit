@@ -468,6 +468,10 @@ api.port.on({
     session.prefs.enterToSend = data;
     ajax("POST", "/ext/pref/enterToSend?enterToSend=" + data);
   },
+  set_max_results: function(n) {
+    session.prefs.maxResults = n;
+    ajax('POST', '/ext/pref/maxResults?n=' + n);
+  },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
   },
@@ -1083,28 +1087,6 @@ function tellVisibleTabsNoticeCountIfChanged() {
   });
 }
 
-
-var DEFAULT_RES = 5;
-var MAX_RES_FOR_NEW = 2;
-var TWO_WEEKS = 1000 * 60 * 60 * 24 * 7 * 2;
-function getSearchMaxResults(request) {
-  if (request.lastUUID) {
-    return DEFAULT_RES;
-  }
-
-  var pref = api.prefs.get("maxResults");
-  if (pref !== DEFAULT_RES) {
-    return pref;
-  }
-
-  var joined = session.joined;
-  if (joined && (Date.now() - joined) < TWO_WEEKS) {
-    return MAX_RES_FOR_NEW;
-  }
-
-  return DEFAULT_RES;
-}
-
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
@@ -1120,32 +1102,31 @@ function searchOnServer(request, respond) {
     delete searchFilterCache[request.query];
   }
 
-  var when, params = {
-      q: request.query,
-      f: request.filter && request.filter.who,
-      maxHits: getSearchMaxResults(request),
-      lastUUID: request.lastUUID,
-      context: request.context,
-      kifiVersion: api.version};
-  if (when = request.filter && request.filter.when) {
-    var d = new Date();
-    params.tz = d.toTimeString().substr(12, 5);
-    params.start = ymd(new Date(d - {t:0, y:1, w:7, m:30}[when] * 86400000));
-    if (when == "y") {
-      params.end = params.start;
-    }
-  }
+  var maxHits = 5;
+  var params = {
+    q: request.query,
+    f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
+    maxHits: maxHits,
+    lastUUID: request.lastUUID,
+    context: request.context,
+    kifiVersion: api.version};
 
   var respHandler = function(resp) {
-      log("[searchOnServer] response:", resp)();
-      resp.filter = request.filter;
-      resp.session = session;
-      resp.admBaseUri = admBaseUri();
-      resp.showScores = api.prefs.get("showScores");
-      resp.hits.forEach(function(hit){
-        hit.uuid = resp.uuid;
-      });
-      respond(resp);
+    log('[searchOnServer] response:', resp)();
+    resp.filter = request.filter;
+    resp.session = session;
+    resp.admBaseUri = admBaseUri();
+    resp.showScores = api.prefs.get('showScores');
+    resp.hits.forEach(function (hit) {
+      hit.uuid = resp.uuid;
+    });
+    resp.myTotal = resp.myTotal || 0;
+    resp.friendsTotal = resp.friendsTotal || 0;
+    resp.othersTotal = resp.othersTotal || 0;
+    if (resp.hits.length < maxHits && (params.context || params.f)) {
+      resp.mayHaveMore = false;
+    }
+    respond(resp);
   };
 
   if (session.experiments.indexOf('tsearch') < 0) {
@@ -1514,6 +1495,7 @@ api.on.beforeSearch.add(throttle(function () {
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
+  if (!session) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
