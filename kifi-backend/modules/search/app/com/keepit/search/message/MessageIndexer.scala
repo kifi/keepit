@@ -143,7 +143,7 @@ class MessageIndexer(
       while (!done) {
         total += doUpdate("MessageIndex") {
           val batch = Await.result(eliza.getThreadContentForIndexing(sequenceNumber.value, loadBatchSize), 60 seconds)
-          done = batch.isEmpty
+          done = batch.length<=1
           batch.iterator.map{ threadContent =>
             new MessageContentIndexable(
               data = threadContent,
