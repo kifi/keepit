@@ -67,6 +67,7 @@ class AdminSearchController @Inject() (
   }
 
   def blindTestVoted() = AdminHtmlAction{ request =>
+    log.info("search blind test: results voted")
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val id1 = body.get("configId1").get.toLong
     val id2 = body.get("configId2").get.toLong
@@ -83,9 +84,8 @@ class AdminSearchController @Inject() (
   }
 
   def blindTest() = AdminHtmlAction { request =>
-    request.body.asFormUrlEncoded.get
+    log.info("search blind test: fetching results")
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-    println("\n===\n" + body)
     val userId = body.get("userId").get.toLong
     val query = body.get("query").get
     val maxHits = body.get("maxHits").get.toInt

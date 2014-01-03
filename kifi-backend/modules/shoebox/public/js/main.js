@@ -2192,6 +2192,7 @@ $(function () {
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
+
 	var friendsTimeout;
 	function filterFriends() {
 		clearTimeout(friendsTimeout);
@@ -2289,6 +2290,12 @@ $(function () {
 
 			friendsShowing.push.apply(friendsShowing, friends);
 
+
+			var $inviteEmail = $nwFriends.find('.invite-email').hide();
+			if (network === 'email' && search) {
+				showInviteEmailAddress($inviteEmail, search, friends);
+			}
+
 			var $noResults = $nwFriends.find('.no-results').empty().hide();
 			if (network && !friendsShowing.length) {
 				showNoSearchInviteResults($noResults, search, network);
@@ -2352,6 +2359,24 @@ $(function () {
 		obj.description = description;
 	}
 
+	function hasFriendWithEmail(friends, email) {
+		return friends.some(function (f) {
+			return f.email === email;
+		});
+	}
+
+	function showInviteEmailAddress($inviteEmail, search, friends) {
+		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+[^.]$/.test(search) && !hasFriendWithEmail(friends, search)) {
+			$inviteEmail.show()
+				.find('.invite-email-link')
+				.off('click')
+				// '' is necessary as third parameter
+				.click(openInviteDialog.bind(null, 'email/' + search, ''))
+					.find('.invite-email-address')
+					.text(search);
+		}
+	}
+
 	function showNoSearchInviteResults($noResults, search, network) {
 		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
 		$noResults.find('.refresh-friends').click(function () {
@@ -2409,10 +2434,14 @@ $(function () {
 					name = match[1];
 				}
 			}
-			inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
-			$inviteMessageDialog.dialog('show');
+			openInviteDialog(fullSocialId, name);
 		}
 	});
+
+	function openInviteDialog(fullSocialId, name) {
+		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
+		$inviteMessageDialog.dialog('show');
+	}
 
 	var $unfriendDialog = $('.unfriend-dialog')
 	.detach()
@@ -3156,6 +3185,9 @@ $(function () {
 		case 'blog':
 			showBlog();
 			break;
+		case 'onboarding':
+			showWelcome();
+			break;
 		default:
 			return;
 		}
@@ -3196,6 +3228,9 @@ $(function () {
 			break;
 		case 'blog':
 			title = 'Updates and Features';
+			break;
+		case 'onboarding':
+			title = 'Welcome to kifi';
 			break;
 		}
 		if (clearTags) {
@@ -3883,9 +3918,23 @@ $(function () {
 		$a[0].href = n ? 'friends/requests' : 'friends';
 	}
 
+	function hasExperiment(me, name, noAdmin) {
+		var exp = me.experiments;
+		if (exp) {
+			return exp.indexOf(name) !== -1 || (!noAdmin && exp.indexOf('admin') !== -1);
+		}
+		return false;
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: refreshMe().promise(),
+		me: refreshMe().promise().then(function (me) {
+			console.log('me', me);
+			if (hasExperiment(me, 'gmail_invite', true)) {
+				$('.kifi-onboarding-li').show().click(showWelcome);
+			}
+			return me;
+		}),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
 		}).promise(),
@@ -4019,4 +4068,22 @@ $(function () {
 				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
+
+	/* Onboarding */
+
+	function showWelcome() {
+		$('body').append('<iframe class="kifi-onboarding-iframe" src="/onboarding.html" frameborder="0"></iframe>');
+	}
+
+	window.getMe = function() {
+		return promise.me.then(function (me) {
+			me.pic200 = formatPicUrl(me.id, me.pictureName, 200);
+			return me;
+		});
+	};
+
+	window.exitWelcome = function () {
+		$('.kifi-onboarding-iframe').remove();
+		navigate('');
+	};
 });

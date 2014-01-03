@@ -64,6 +64,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
+  def getIndexableUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]]
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
@@ -440,6 +441,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
     call(Shoebox.internal.getIndexable(seqNum, fetchSize)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
+    }
+  }
+
+  def getIndexableUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]] = {
+    call(Shoebox.internal.getIndexableUris(seqNum, fetchSize)).map { r =>
+      Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 

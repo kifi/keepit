@@ -1,3 +1,5 @@
+// @require scripts/snapshot.js
+
 function lookMouseDown(e) {
   'use strict';
   if (e.which != 1) return;
@@ -23,7 +25,9 @@ function lookMouseDown(e) {
       height: elRect.height + 4
     }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
   } else {
-    alert("Sorry, this reference is no longer valid on this page.");
+    api.require('scripts/look_link_broken.js', function () {
+      showBrokenLookLinkDialog();
+    });
   }
 
   function scrollTo(r) {  // TODO: factor out for reuse

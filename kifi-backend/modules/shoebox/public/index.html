@@ -468,6 +468,13 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 							</div>
 							<div class="invite-friends" data-href="friends/invite">
 								<div class="antiscroll-inner">
+									<div class="invite-email" style="display: none">
+										<div class="invite-email-box">
+											<a class="invite-email-link" href="javascript:">
+												Invite '<span class="invite-email-address"></span>' to kifi
+											</a>
+										</div>
+									</div>
 									<ul>
 										<li class="invite-friend {{status}}" data-template data-value="{{value}}" data-status="{{status}}">
 										<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">
@@ -582,6 +589,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 							<li class="install-kifi"><a href="/install">Install Kifi on this computer</a>
 							<li><a href="friends/invite">Invite your friends</a>
 							<li><script charset="ISO-8859-1" src="https://fast.wistia.com/static/popover-v1.js"></script><a href="javascript:" class="send-feedback">Send feedback</a>
+							<li class="kifi-onboarding-li"><a href="#">Onboarding</a></li>
 						</ul>
 						<h2>Get to Know Us</h2>
 						<ul class="about-us">

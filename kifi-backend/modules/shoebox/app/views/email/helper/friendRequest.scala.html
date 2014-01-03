@@ -1,0 +1,31 @@
+@(name: String, friendName: String)
+
+
+@kifiTemplate(title = "Kifi — Getting popular, huh?") {
+  @oneColumnRow {
+    Hey @name,<br><br>
+    @friendName wants to be your Kifi friend. Woo hoo.
+  }
+  @oneColumnRow {
+    <table class="six columns" align="left">
+        <tbody><tr>
+          <td>
+              <table class="button radius green">
+                <tbody><tr>
+                  <td class="cta-button">
+                    <a href="#"><img src="http://i.imgur.com/xRH8ayj.png" height=55 alt="">Confirm</a>
+                  </td>
+                </tr>
+              </tbody></table>
+
+          </td>
+          <td class="expander"></td>
+        </tr>
+      </tbody>
+    </table>
+  }
+  @oneColumnRow {
+    Have a great day,<br>
+    The Kifi team
+  }
+}

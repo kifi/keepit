@@ -28,7 +28,7 @@ case class Bookmark(
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] {
 
-  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq]"
+  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
   def clean(): Bookmark = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
