@@ -2370,7 +2370,8 @@ $(function () {
 			$inviteEmail.show()
 				.find('.invite-email-link')
 				.off('click')
-				.click(openInviteDialog.bind(null, 'email/' + search, search))
+				// '' is necessary as third parameter
+				.click(openInviteDialog.bind(null, 'email/' + search, ''))
 					.find('.invite-email-address')
 					.text(search);
 		}
