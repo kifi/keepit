@@ -2714,6 +2714,7 @@ $(function () {
 		hit.me = me;
 		hit.keepers = hit.users;
 		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+		hit.collections = hit.collections || hit.tags;
 		if (hit.collections) { prepKeepCollections(hit.collections); }
 	}
 
