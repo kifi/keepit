@@ -45,5 +45,4 @@ object SystemEventTypes {
   val KEPT = EventType("kept")
   val MESSAGED = EventType("messaged")
   val SEARCH_TEST_VOTED = EventType("search_test_voted")
-  val EMAIL_SENT = EventType("email_sent")
 }
