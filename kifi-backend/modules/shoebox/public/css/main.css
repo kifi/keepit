@@ -2544,7 +2544,8 @@ input.user-filter {
 .invite-email {
   background: #eff2f7;
   font-size: 16px;
-  padding: 20px 30px;
+  padding: 31px 30px;
+  margin-bottom: 12px;
   text-align: center;
 }
 
