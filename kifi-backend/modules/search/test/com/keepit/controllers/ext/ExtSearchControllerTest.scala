@@ -61,7 +61,7 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
                         {
                           "title":[[9,4]]
                         },
-                      "collections":
+                      "tags":
                         [
                           "c17da7ce-64bb-4c91-8832-1f1a6a88b7be",
                           "19ccb3db-4e18-4ade-91bd-1a98ef33aa63"
