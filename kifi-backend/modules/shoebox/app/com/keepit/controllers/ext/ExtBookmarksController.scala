@@ -187,7 +187,7 @@ class ExtBookmarksController @Inject() (
 
           val experiments = request.experiments
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.user, experiments, bookmarkSource, mutatePrivacy = true, installationId = installationId)
+          val bookmarks = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.user, bookmarkSource, mutatePrivacy = true, installationId = installationId)
 
           if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.bookmarkImport) {
             // User selected to import Léo
