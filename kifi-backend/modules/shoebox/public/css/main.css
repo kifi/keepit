@@ -2542,11 +2542,16 @@ input.user-filter {
 }
 
 .invite-email {
-  background: #eff2f7;
   font-size: 16px;
-  padding: 31px 30px;
   margin-bottom: 12px;
   text-align: center;
+}
+
+.invite-email-box {
+  display: inline-block;
+  background: #eff2f7;
+  padding: 31px 60px;
+  margin: 0 auto;
 }
 
 .invite-email a {
