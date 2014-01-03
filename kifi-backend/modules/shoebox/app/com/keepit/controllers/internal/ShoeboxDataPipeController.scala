@@ -24,8 +24,15 @@ class ShoeboxDataPipeController @Inject() (
     val uris = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
     }
-    //todo(eishay): need to have a dedicated serializer for those
     Ok(Json.toJson(uris))
+  }
+
+  def getIndexableUris(seqNum: Long, fetchSize: Int) = Action { request =>
+    val uris = db.readOnly(2, Slave) { implicit s =>
+      normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+    }
+    val indexables = uris map { u => IndexableUri(u) }
+    Ok(Json.toJson(indexables))
   }
 
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
