@@ -32,4 +32,3 @@ class RawBookmarkFactory @Inject() (
     RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph)
   }
 }
-
