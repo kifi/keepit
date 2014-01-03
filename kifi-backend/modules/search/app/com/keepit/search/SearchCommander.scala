@@ -75,7 +75,9 @@ class SearchCommanderImpl @Inject() (
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val (config, searchExperimentId) = predefinedConfig match {
       case None => searchConfigManager.getConfig(userId, query, noSearchExperiments)
-      case Some(conf) => (conf, None)
+      case Some(conf) =>
+        val default = searchConfigManager.defaultConfig
+        (new SearchConfig(default.params ++ conf.params), None)      // almost complete overwrite. But when search config parameter list changes, this prevents exception
     }
 
 
