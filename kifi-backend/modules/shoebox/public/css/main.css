@@ -3210,7 +3210,7 @@ body[data-view=search] .main-keeps {
   color: #fff;
   background: #67829c;
   padding: 7px 12px;
-  border: 1px solid #f4f6f9;
+  border: 1px solid transparent;
   border-radius: 9px;
   position: absolute;
   right: 16px;
