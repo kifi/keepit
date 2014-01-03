@@ -63,7 +63,6 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
-  changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
   friendRequestRepo: FriendRequestRepo,
@@ -492,18 +491,6 @@ class ShoeboxController @Inject() (
     db.readOnly { implicit s => //using cache
       Ok(Json.toJson(searchFriendRepo.getSearchFriends(userId).map(_.id)))
     }
-  }
-
-  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
-    val changes = db.readOnly(2, Slave) { implicit s =>
-      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
-        (change.oldUriId, normUriRepo.get(change.newUriId))
-      }
-    }
-    val jsChanges = changes.map{ case (id, uri) =>
-      JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
-    }
-    Ok(JsArray(jsChanges))
   }
 
   def clickAttribution() = SafeAsyncAction(parse.json) { request =>

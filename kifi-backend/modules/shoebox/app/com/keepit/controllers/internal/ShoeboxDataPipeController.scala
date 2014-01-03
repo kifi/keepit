@@ -2,14 +2,13 @@ package com.keepit.controllers.internal
 
 import com.keepit.common.db.slick.Database.Slave
 import com.keepit.common.db.SequenceNumber
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsNumber, JsObject, JsArray, Json}
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.mvc.Action
 import com.keepit.model._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
-import play.api.libs.json.JsArray
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -17,6 +16,7 @@ class ShoeboxDataPipeController @Inject() (
     normUriRepo: NormalizedURIRepo,
     collectionRepo: CollectionRepo,
     bookmarkRepo: BookmarkRepo,
+    changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo
   ) extends ShoeboxServiceController with Logging {
 
@@ -53,6 +53,18 @@ class ShoeboxDataPipeController @Inject() (
       userRepo.getUsersSince(SequenceNumber(seqNum), fetchSize)
     }
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
+  }
+
+  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
+    val changes = db.readOnly(2, Slave) { implicit s =>
+      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
+        (change.oldUriId, normUriRepo.get(change.newUriId))
+      }
+    }
+    val jsChanges = changes.map{ case (id, uri) =>
+      JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
+    }
+    Ok(JsArray(jsChanges))
   }
 
 }
