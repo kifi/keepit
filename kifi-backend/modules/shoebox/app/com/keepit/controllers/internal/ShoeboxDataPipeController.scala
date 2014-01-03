@@ -37,15 +37,6 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-
-  add this to routes and stuff!
-  def getIndexableUri(id: Long) = SafeAsyncAction {
-    val uri = db.readOnly { implicit s =>
-      normUriRepo.get(Id[NormalizedURI](id))//using cache
-    }
-    Ok(Json.toJson(IndexableUri(uri)))
-  }
-
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
     Ok(Json.toJson(db.readOnly(2, Slave) { implicit s =>
       collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize)
