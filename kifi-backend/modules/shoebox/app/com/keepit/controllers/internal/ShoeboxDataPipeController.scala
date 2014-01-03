@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.keepit.common.db.slick.Database.Slave
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id, SequenceNumber}
 import play.api.libs.json.{JsNumber, JsObject, JsArray, Json}
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
@@ -9,6 +9,8 @@ import play.api.mvc.Action
 import com.keepit.model._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
+import scala.concurrent.Future
+import com.keepit.common.routes.Shoebox
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -33,6 +35,15 @@ class ShoeboxDataPipeController @Inject() (
     }
     val indexables = uris map { u => IndexableUri(u) }
     Ok(Json.toJson(indexables))
+  }
+
+
+  add this to routes and stuff!
+  def getIndexableUri(id: Long) = SafeAsyncAction {
+    val uri = db.readOnly { implicit s =>
+      normUriRepo.get(Id[NormalizedURI](id))//using cache
+    }
+    Ok(Json.toJson(IndexableUri(uri)))
   }
 
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
