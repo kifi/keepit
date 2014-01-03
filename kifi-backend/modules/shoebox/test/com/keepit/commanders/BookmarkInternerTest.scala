@@ -24,7 +24,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val bookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
-          )), user, BookmarkSource.email, true)
+          )), user.id.get, BookmarkSource.email, true)
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
@@ -46,7 +46,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> false
-          ))), user, BookmarkSource.email, true)
+          ))), user.id.get, BookmarkSource.email, true)
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
@@ -71,7 +71,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> true
-          ))), user, BookmarkSource.email, true)
+          ))), user.id.get, BookmarkSource.email, true)
         db.readWrite { implicit db =>
           bookmarks.size === 2
           bookmarkRepo.all.size === 2
@@ -88,7 +88,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val initialBookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user, BookmarkSource.keeper, true)
+        ))), user.id.get, BookmarkSource.keeper, true)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
           bookmarkRepo.save(bookmarkRepo.getByUser(user.id.get).head.withActive(false))
@@ -96,7 +96,7 @@ class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector
         val bookmarks = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user, BookmarkSource.keeper, true)
+        ))), user.id.get, BookmarkSource.keeper, true)
         db.readOnly { implicit s =>
           bookmarks.size === 1
           bookmarkRepo.all.size === 1

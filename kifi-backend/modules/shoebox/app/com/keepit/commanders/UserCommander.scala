@@ -16,7 +16,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import scala.util.Try
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.heimdal._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.text.Normalizer
 import com.keepit.common.logging.Logging
@@ -84,6 +84,7 @@ class UserCommander @Inject() (
   friendRequestRepo: FriendRequestRepo,
   userCache: SocialUserInfoUserCache,
   socialGraphPlugin: SocialGraphPlugin,
+  bookmarkCommander: BookmarksCommander,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
   elizaServiceClient: ElizaServiceClient,
@@ -175,9 +176,7 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
-
-    // Here you can do things with default keeps / tags. See ExtBookmarksController / BookmarkInterner for examples.
-
+    bookmarkCommander.createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
     newUser
   }
 

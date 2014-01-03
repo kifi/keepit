@@ -120,6 +120,7 @@ object BookmarkSource {
   val site = BookmarkSource("site")
   val mobile = BookmarkSource("mobile")
   val email = BookmarkSource("email")
+  val default = BookmarkSource("default")
   val unknown = BookmarkSource("unknown")
 
   val valid = Set(keeper, bookmarkImport, site, mobile, email)
