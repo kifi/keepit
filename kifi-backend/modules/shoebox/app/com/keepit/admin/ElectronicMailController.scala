@@ -10,6 +10,7 @@ import views.html
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
+import play.api.mvc.Action
 
 class ElectronicMailController @Inject() (
   actionAuthenticator: ActionAuthenticator,

@@ -3,8 +3,7 @@
 <style>
 h1 { margin: 10px; font-size: 20px; }
 select { position: absolute; top: -35px; right: 0; display: none }
-fieldset,
-#session {
+fieldset {
   margin: 10px;
   border: 2px groove threedface;
   padding: 10px 12px 10px;
@@ -16,20 +15,6 @@ label>input[type=checkbox],
 label>input[type=radio],
 label>span {vertical-align: text-bottom}
 button {padding: 4px 10px; margin-top: 6px}
-#identity {padding-top: 50px; background-repeat: no-repeat; background-size: 50px}
-#identity,
-#log-out,
-#log-in {
-  display: none;
-}
-#session.valid #identity {
-  display: block;
-}
-#session.valid #log-out,
-#session.none #log-in {
-  display: inline;
-}
-#name {margin: 3px 0 10px}
 </style>
 
 <h1>Kifi Extension Options</h1>
@@ -39,17 +24,9 @@ button {padding: 4px 10px; margin-top: 6px}
     <option value="production">Production</option>
     <option value="development">Development</option>
   </select>
-  <label><input type="checkbox" name="show_slider"> <span>Show Slider Automatically</span></label><br>
-  <label><input type="text" name="max_results"> Max Search Results</label><br>
+  <label><input type="checkbox" name="show_keeper"> <span>Show Keeper Automatically</span></label><br>
   <label><input type="checkbox" name="show_scores"> <span>Show Search Result Scores</span></label><br>
 </fieldset>
-
-<div id="session">
-  <div id="identity"><div id="name"></div></div>
-  <a id="log-out" href="">Log out of Kifi</a>
-  <a id="log-in" href="">Log into Kifi</a>
-</div>
-<div id="fb-root"></div>
 
 <script src="scripts/lib/jquery.js"></script>
 <script src="options.js"></script>

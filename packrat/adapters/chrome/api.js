@@ -500,7 +500,7 @@ var api = function() {
         if (v != null) try {
           return JSON.parse(v);
         } catch (e) {}
-        return {showSlider: true, maxResults: 5, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
+        return {showSlider: true, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
       },
       set: function set(key, value) {
         if (typeof key === "object") {

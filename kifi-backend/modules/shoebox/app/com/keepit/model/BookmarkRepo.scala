@@ -57,7 +57,7 @@ class BookmarkRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)//indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def url =   column[String]("url", O.NotNull)//indexd
-    def bookmarkPath = column[String]("bookmark_path", O.NotNull)
+    def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable)//indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull)//indexd
     def source = column[BookmarkSource]("source", O.NotNull)

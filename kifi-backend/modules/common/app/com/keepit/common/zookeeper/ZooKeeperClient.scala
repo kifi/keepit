@@ -99,6 +99,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
     assignLatch.countDown()
     log.info(s"Attempting to connect to zookeeper servers $servers")
     connectionLatch.await()
+    onConnectedHandlers.foreach(execOnConnectedHandler(_))
   }
 
   def sessionEvent(assignLatch: CountDownLatch, connectionLatch : CountDownLatch, event : WatchedEvent) {
@@ -112,7 +113,6 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
           case e:Exception =>
             log.error("Exception during zookeeper connection established callback", e)
         }
-        onConnectedHandlers.foreach(execOnConnectedHandler(_))
         connectionLatch.countDown()
       }
       case KeeperState.Expired => {

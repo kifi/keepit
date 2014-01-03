@@ -3,13 +3,13 @@ package com.keepit.shoebox
 import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.db._
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
+import com.keepit.model.IndexableUri
 import com.keepit.model.User
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
@@ -382,6 +382,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val uris = allNormalizedURIs.values.filter(_.seq > SequenceNumber(seqNum)).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris)
+  }
+
+  def getIndexableUris(seqNum: Long, fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
+    val uris = allNormalizedURIs.values.filter(_.seq > SequenceNumber(seqNum)).toSeq.sortBy(_.seq)
+    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
+    Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {

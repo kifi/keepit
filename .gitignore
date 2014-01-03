@@ -136,3 +136,4 @@ target
 ###########
 node_modules
 kifi-backend/modules/common/.idea
+assets.tsv

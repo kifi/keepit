@@ -49,6 +49,7 @@ class ServiceDiscoveryImpl(
   extends ServiceDiscovery with Logging {
 
 
+  private[this] val registrationLock = new AnyRef
   @volatile private[this] var registered = false
   @volatile private[this] var unregistered = false
 
@@ -98,7 +99,7 @@ class ServiceDiscoveryImpl(
 
   override def myClusterSize: Int = myCluster.size
 
-  private def stillRegistered(): Boolean = myInstance forall {instance =>
+  private def stillRegistered(): Boolean = myInstance.exists{ instance =>
     myCluster.instanceForNode(instance.node).isDefined
   }
 
@@ -109,8 +110,12 @@ class ServiceDiscoveryImpl(
         if (stillRegistered) {
           keepAlive()
         } else {
-          log.warn("Zookeeper seems to have lost me! Re-registering.")
-          doRegister()
+          registrationLock.synchronized {
+            if (!stillRegistered) {
+              log.warn("Zookeeper seems to have lost me! Re-registering.")
+              doRegister()
+            }
+          }
         }
       }
     }
@@ -133,7 +138,7 @@ class ServiceDiscoveryImpl(
     }
   }
 
-  def register(): ServiceInstance = {
+  def register(): ServiceInstance = registrationLock.synchronized {
     if (unregistered) throw new IllegalStateException("unable to register once unregistered")
 
     registered = true
@@ -168,7 +173,7 @@ class ServiceDiscoveryImpl(
     }
   }
 
-  override def unRegister(): Unit = {
+  override def unRegister(): Unit = registrationLock.synchronized {
     registered = false
     unregistered = true
     myInstance foreach {instance => zk.deleteNode(instance.node)}
