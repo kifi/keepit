@@ -13,12 +13,15 @@ case class UserAgent(
   typeName: String,
   version: String) {
 
-  def isMobile(): Boolean = false
-  def isSupportedDesktop(): Boolean = UserAgent.SupportedDesktopBrowsers.contains(name)
+  lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily)
+  lazy val isSupportedDesktop: Boolean = {
+    !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
+  }
 }
 
 object UserAgent extends Logging {
 
+  val MobileOs = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   val SupportedDesktopBrowsers = Set("Chrome", "Firefox")
 
   private val MAX_USER_AGENT_LENGTH = 512
