@@ -30,7 +30,7 @@ class ExtPreferenceController @Inject() (
   normalizationService: NormalizationService)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  private case class UserPrefs(enterToSend: Boolean, maxResults: Int)
+  private case class UserPrefs(enterToSend: Boolean, showFindFriends: Boolean, maxResults: Int)
   private implicit val userPrefsFormat = Json.format[UserPrefs]
 
   private val crypt = new SimpleDESCrypt
@@ -55,6 +55,11 @@ class ExtPreferenceController @Inject() (
   def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
     Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+  }
+
+  def setShowFindFriends(show: Boolean) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
+    Ok(Json.toJson(loadUserPrefs(request.user.id.get)))
   }
 
   def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
@@ -93,6 +98,7 @@ class ExtPreferenceController @Inject() (
     db.readOnly { implicit s =>
       UserPrefs(
         enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true),
+        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(true),
         maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1)
       )
     }
