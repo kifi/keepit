@@ -1120,6 +1120,7 @@ function searchOnServer(request, respond) {
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.othersTotal = resp.othersTotal || 0;
+    resp.hits.forEach(processSearchHit);
     if (resp.hits.length < maxHits && (params.context || params.f)) {
       resp.mayHaveMore = false;
     }
@@ -1132,6 +1133,20 @@ function searchOnServer(request, respond) {
     ajax("api", "GET", "/tsearch", params, respHandler);
   }
   return true;
+}
+
+function processSearchHit(hit) {
+  if (hit.bookmark) {
+    var tags = hit.bookmark.tags || [];
+    for (var i = 0; i < tags.length; i++) {
+      var tag = tagsById && tagsById[tags[i]];
+      if (tag) {
+        tags[i] = tag.name;
+      } else {
+        tags.splice(i--, 1);
+      }
+    }
+  }
 }
 
 function ymd(d) {  // yyyy-mm-dd local date
