@@ -642,7 +642,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     hit.desc = formatDesc(hit.bookmark.url, (hit.bookmark.matches || {}).url);
     hit.displayTitle = boldSearchTerms(hit.bookmark.title, (hit.bookmark.matches || {}).title) || hit.desc;
     hit.scoreText = response.showScores === true ? String(Math.round(hit.score * 100) / 100) : '';
-    hit.tagsText = (hit.bookmark && hit.bookmark.tags || []).join(', ');
+    hit.tagsText = (hit.bookmark && hit.bookmark.tagNames || []).join(', ');
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
