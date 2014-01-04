@@ -263,5 +263,21 @@ class ProximityQueryTest extends Specification {
       ProximityQuery.buildPhraseDict(termIds, phrases4).toSet ===
         Set((Seq(0,1,2), PhraseMatch(0, 3)), (Seq(3,4,5), PhraseMatch(3, 3)), (Seq(6,1,2), PhraseMatch(6, 3)))
     }
+
+    "proximity threshold works" in {
+      var q = ProximityQuery(mkProxTerms(new Term("B", "abc"), new Term("B", "def")), gapPenalty = gapPenalty, threshold = 0.9f)
+      var weight = searcher.createNormalizedWeight(q)
+
+      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      val buf = new ArrayBuffer[(Int, Float)]()
+      var doc = scorer.nextDoc()
+      while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+        buf += ((doc, scorer.score()))
+        doc = scorer.nextDoc()
+      }
+      indexReader.numDocs() === 30
+      (buf.size < 10) === true
+
+    }
   }
 }

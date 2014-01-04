@@ -233,8 +233,10 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
 
   override def nextDoc(): Int = {
     var docIter = advance(0)
+    score()
     while(docIter < NO_MORE_DOCS && proximityScore < threshold) {
       docIter = advance(0)
+      score()
     }
     docIter
   }
