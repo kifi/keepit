@@ -117,13 +117,47 @@
 						<span class="check-all"></span>
 						<span class="subtitle-text" data-template data-has="query" data-n="{{numShown}}" style="display:none">
 							{% if numShown == 0 %}
-							Sorry, no results match
+								Sorry, no results found for <span class="result-query">{{query}}</span>
 							{% endif %}{% if numShown == 1 %}
-							Showing the only result for
+							1 result found
 							{% endif %}{% if numShown > 1 %}
-							Showing top {{numShown}} results for
+							Top {{numShown}} results
 							{% endif %}
-							<span class="result-query">{{query}}</span>
+							<ul class="search-filters" data-query="{{query}}">
+								<li>
+								{% if filter == 'm' %}
+								<span class="search-filter-selected">You ({{myTotal}})</span>
+								{% endif %}
+								{% if filter != 'm' && myTotal > 0 %}
+								<a class="search-filter-you" href="javascript:">You ({{myTotal}})</a>
+								{% endif %}
+								{% if filter != 'm' && myTotal <= 0 %}
+								You ({{myTotal}})
+								{% endif %}
+								</li>
+								<li>
+								{% if filter == 'f' %}
+								<span class="search-filter-selected">Friends ({{friendsTotal}})</span>
+								{% endif %}
+								{% if filter != 'f' && friendsTotal > 0 %}
+								<a class="search-filter-friends" href="javascript:">Friends ({{friendsTotal}})</a>
+								{% endif %}
+								{% if filter != 'f' && friendsTotal <= 0 %}
+								Friends ({{friendsTotal}})
+								{% endif %}
+								</li>
+								<li>
+								{% if filter == 'a' %}
+								<span class="search-filter-selected">All ({{othersTotal}})</span>
+								{% endif %}
+								{% if filter != 'a' && othersTotal > 0 %}
+								<a class="search-filter-all" href="javascript:">All ({{othersTotal}})</a>
+								{% endif %}
+								{% if filter != 'a' && othersTotal <= 0 %}
+								All ({{othersTotal}})
+								{% endif %}
+								</li>
+							</ul>
 						</span>
 						<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
 							{% if numShown == 0 %}

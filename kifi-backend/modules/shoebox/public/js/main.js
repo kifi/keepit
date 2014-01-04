@@ -132,8 +132,8 @@ $(function () {
 		var $text = $checkAll.next('.subtitle-text'), d = $text.data(), noun = searchResponse ? 'result' : 'Keep';
 		if (d.n) {
 			$checkAll.addClass('live');
-			d.leaveText = $text.text();
-			$text.text(($checkAll.hasClass('checked') ? 'Deselect ' : 'Select ') + (
+			d.leaveText = $text.html();
+			$text.html(($checkAll.hasClass('checked') ? 'Deselect ' : 'Select ') + (
 				d.n == 1 ? 'the ' + noun + ' below' :
 				d.n == 2 ? 'both ' + noun + 's below' :
 				'all ' + d.n + ' ' + noun + 's below'));
@@ -141,19 +141,20 @@ $(function () {
 	}, function () {
 		var $text = $(this).removeClass('live').next('.subtitle-text'), d = $text.data();
 		if (d.leaveText) {
-			$text.text(d.leaveText);
+			$text.html(d.leaveText);
 			delete d.leaveText;
 		}
 	});
+
 	function updateSubtitleTextForSelection(numSel) {
 		var $text = $checkAll.next('.subtitle-text'), d = $text.data();
 		if (numSel) {
 			if (!d.defText) {
-				d.defText = d.leaveText || $text.text();
+				d.defText = d.leaveText || $text.html();
 			}
-			$text.text(numSel + ' ' + (searchResponse ? 'result' : 'Keep') + (numSel === 1 ? '' : 's') + ' selected');
+			$text.html(numSel + ' ' + (searchResponse ? 'result' : 'Keep') + (numSel === 1 ? '' : 's') + ' selected');
 		} else {
-			$text.text(d.defText);
+			$text.html(d.defText);
 			delete d.defText;
 		}
 		delete d.leaveText;
@@ -308,11 +309,23 @@ $(function () {
 	var $keepSpinner = $('.keeps-loading');
 	var $loadMore = $('.keeps-load-more').click(function () {
 		if (searchResponse) {
-			doSearch();
-		} else {
+			doSearchTimeout();
+		}
+		else {
 			loadKeeps($myKeeps.data('collId'));
 		}
 	});
+
+	var searchId;
+	function doSearchTimeout() {
+		if (searchId) {
+			window.clearTimeout(searchId);
+		}
+		searchId = window.setTimeout(function () {
+			searchId = null;
+			doSearch(null, $query.data('filter'));
+		}, 200);
+	}
 
 	var me;
 	var myNetworks;
@@ -322,6 +335,9 @@ $(function () {
 	var searchResponse;
 	var searchTimeout;
 	var lastKeep;
+	var myTotal;
+	var friendsTotal;
+	var othersTotal;
 
 	function identity(a) {
 		return a;
@@ -2668,45 +2684,103 @@ $(function () {
 		}
 	}
 
-	function doSearch(q) {
+	function doSearch(q, filter, filterChange) {
+		filter = filter || 'a';
+
 		if (q) {
 			searchResponse = null;
-		} else {
+		}
+		else {
 			q = searchResponse.query;
 		}
-		log('[doSearch] ' + (searchResponse ? 'more ' : '') + 'q:', q);
+
+		var more = !!searchResponse;
+		log('[doSearch] ' + (more ? 'more ' : '') + 'q:', q, filter);
 		$('.left-col .active').removeClass('active');
 		$('body').attr('data-view', 'search');
+
 		if (!searchResponse) {
-			subtitleTmpl.render({searching: true});
+			subtitleTmpl.render({
+				searching: true
+			});
 			$checkAll.removeClass('live checked');
-			$myKeeps.detach().find('.keep').removeClass('selected detailed');
+			$myKeeps.detach()
+				.find('.keep').removeClass('selected detailed');
 			$fixedTitle.empty().removeData();
 		}
+
 		$keepSpinner.show();
 		$loadMore.addClass('hidden');
 
 		$query.attr('data-q', q);
-		if (!$query.val()) { $query.val(q).focus().closest($queryWrap).removeClass('empty'); }
-		var context = searchResponse && searchResponse.context;
-		$.getJSON(KF.xhrBaseSearch, {q: q, f: 'a', maxHits: 30, context: context}, function (data) {
+		$query.data('filter', filter);
+
+		if (!$query.val()) {
+			$query.val(q).focus()
+				.closest($queryWrap).removeClass('empty');
+		}
+
+		var context = searchResponse && searchResponse.context || void 0;
+
+		$.getJSON(KF.xhrBaseSearch, {
+			q: q,
+			f: filter,
+			maxHits: 30,
+			context: context
+		}, function (data) {
 			updateCollectionsIfAnyUnknown(data.hits);
+
 			$.when(promise.me, promise.collections).done(function () {
 				searchResponse = data;
 				var numShown = data.hits.length + (context ? $results.find('.keep').length : 0);
-				subtitleTmpl.render({numShown: numShown, query: data.query});
-				if (numShown) { $checkAll.addClass('live'); }
+
+				if (!(more || filterChange)) {
+					myTotal = data.myTotal;
+					friendsTotal = data.friendsTotal;
+					othersTotal = data.othersTotal;
+				}
+
+				if (!more) {
+					$mainKeeps.find('.antiscroll-inner').scrollTop(0);
+				}
+
+				subtitleTmpl.render({
+					filter: filter,
+					numShown: numShown,
+					query: data.query,
+					myTotal: myTotal || 0,
+					friendsTotal: friendsTotal || 0,
+					othersTotal: othersTotal || 0
+				});
+
+				if (numShown) {
+					$checkAll.addClass('live');
+				}
+
 				data.hits.forEach(prepHitForRender);
+
 				if (context) {
 					keepsTmpl.into($results[0]).append(data.hits);
-				} else {
+				}
+				else {
 					keepsTmpl.into($results[0]).render(data.hits);
 					hideKeepDetails();
 				}
+
 				$checkAll.removeClass('checked');
 			});
 		});
 	}
+
+	function onClickSearchFilter(filter, e) {
+		e.preventDefault();
+		var query = $(e.target).closest('.search-filters').data('query');
+		doSearch(query, filter, true);
+	}
+
+	$subtitle.on('click', '.search-filter-you', onClickSearchFilter.bind(null, 'm'));
+	$subtitle.on('click', '.search-filter-friends', onClickSearchFilter.bind(null, 'f'));
+	$subtitle.on('click', '.search-filter-all', onClickSearchFilter.bind(null, 'a'));
 
 	function prepHitForRender(hit) {
 		$.extend(hit, hit.bookmark);
@@ -3913,7 +3987,6 @@ $(function () {
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: refreshMe().promise().then(function (me) {
-			console.log('me', me);
 			if (hasExperiment(me, 'gmail_invite', true)) {
 				$('.kifi-onboarding-li').show().click(showWelcome);
 			}
