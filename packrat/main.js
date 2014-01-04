@@ -1136,14 +1136,13 @@ function searchOnServer(request, respond) {
 }
 
 function processSearchHit(hit) {
-  if (hit.bookmark) {
-    var tags = hit.bookmark.tags || [];
+  var tags = hit.bookmark && hit.bookmark.tags;
+  if (tags && tags.length) {
+    var tagNames = hit.bookmark.tagNames = [];
     for (var i = 0; i < tags.length; i++) {
       var tag = tagsById && tagsById[tags[i]];
       if (tag) {
-        tags[i] = tag.name;
-      } else {
-        tags.splice(i--, 1);
+        tagNames.push(tag.name);
       }
     }
   }
