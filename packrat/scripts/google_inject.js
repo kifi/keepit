@@ -357,6 +357,8 @@ if (searchUrlRe.test(document.URL)) !function() {
       icon: "facebook.png"
     }];
 
+  var strippedSchemeRe = /^https?:\/\//;
+  var domainTrailingSlashRe = /^([^\/]*)\/$/;
   function formatDesc(url, matches) {
     for (var i = 0; i < urlAutoFormatters.length; i++) {
       if (urlAutoFormatters[i].match.test(url)) {
@@ -365,10 +367,9 @@ if (searchUrlRe.test(document.URL)) !function() {
           urlAutoFormatters[i].desc;
       }
     }
-    var prefix = /^https?:\/\//;
-    var prefixLen = (url.match(prefix) || [''])[0].length;
-    url = url.replace(prefix, '');
-    matches = (matches || []).map(function (m) { return [m[0] - prefixLen, m[1]]; });
+    var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+    url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
+    matches = (matches || []).map(function (m) { return [m[0] - strippedSchemeLen, m[1]]; });
     return boldSearchTerms(url, matches);
   }
 
