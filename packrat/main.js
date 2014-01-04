@@ -466,7 +466,11 @@ api.port.on({
   },
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
-    ajax("POST", "/ext/pref/enterToSend?enterToSend=" + data);
+    ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
+  },
+  set_show_find_friends: function(show) {
+    session.prefs.showFindFriends = show;
+    ajax('POST', '/ext/pref/showFindFriends?show=' + show);
   },
   set_max_results: function(n) {
     session.prefs.maxResults = n;
