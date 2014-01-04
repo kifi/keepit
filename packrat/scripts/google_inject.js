@@ -185,11 +185,14 @@ if (searchUrlRe.test(document.URL)) !function() {
         resp.mayHaveMore = true;
       }
       attachResults();
-      if (inDoc) {
-        tKifiResultsShown = Date.now();
-      }
       $bar[0].className = 'kifi-res-bar' + (showPreview ? ' kifi-preview' : showAny ? '' : ' kifi-collapsed');
       $arrow[0].href = 'javascript:';
+      if (inDoc) {
+        tKifiResultsShown = Date.now();
+        if (showAny) {
+          $res.find('.kifi-res-sub').each(makeDescAndTagsFit);
+        }
+      }
       if (showAny) {
         onFirstShow();
       } else {
@@ -261,6 +264,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     if ((ires = ires || document.getElementById('ires'))) {
       if ($res[0].nextElementSibling !== ires) {
         $res.insertBefore(ires);
+        $res.find('.kifi-res-sub:not(.kifi-fitted)').each(makeDescAndTagsFit);
         if (bindResHandlers) {
           setTimeout(bindResHandlers);
           bindResHandlers = null;
@@ -325,48 +329,81 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   var urlAutoFormatters = [{
       match: /^https?:\/\/docs\.google\.com\//,
-      template: "A file in Google Docs",
+      desc: 'A file in Google Docs',
       icon: "gdocs.gif"
     }, {
       match: /^https?:\/\/drive\.google\.com\//,
-      template: "A folder in your Google Drive",
+      desc: 'A folder in your Google Drive',
       icon: "gdrive.png"
     }, {
       match: /^https?:\/\/www.dropbox\.com\/home/,
-      template: "A folder in your Dropbox",
+      desc: 'A folder in your Dropbox',
       icon: "dropbox.png"
     }, {
       match: /^https?:\/\/dl-web\.dropbox\.com\//,
-      template: "A file from Dropbox",
+      desc: 'A file from Dropbox',
       icon: "dropbox.png"
     }, {
       match: /^https?:\/\/www.dropbox\.com\/s\//,
-      template: "A shared file on Dropbox",
+      desc: 'A shared file on Dropbox',
       icon: "dropbox.png"
     }, {  // TODO: add support for Gmail labels like inbox/starred?
       match: /^https?:\/\/mail\.google\.com\/mail\/.*#.*\/[0-9a-f]{10,}$/,
-      template: "An email on Gmail",
+      desc: "An email on Gmail",
       icon: "gmail.png"
     }, {
       match: /^https?:\/\/www.facebook\.com\/messages\/\w[\w.-]{2,}$/,
-      template: "A conversation on Facebook",
+      desc: 'A conversation on Facebook',
       icon: "facebook.png"
     }];
 
-  function displayURLFormatter(url, matches) {
+  function formatDesc(url, matches) {
     for (var i = 0; i < urlAutoFormatters.length; i++) {
       if (urlAutoFormatters[i].match.test(url)) {
-        var iconUrl = api.url("images/results/" + urlAutoFormatters[i].icon);
-        return "<span class=formatted_site style='background:url(" + iconUrl + ") no-repeat;background-size:15px'></span>" +
-          urlAutoFormatters[i].template;
+        var iconUrl = api.url('images/results/' + urlAutoFormatters[i].icon);
+        return "<span class=kifi-res-type-icon style='background:url(" + iconUrl + ") no-repeat;background-size:15px'></span>" +
+          urlAutoFormatters[i].desc;
       }
     }
     var prefix = /^https?:\/\//;
     var prefixLen = (url.match(prefix) || [''])[0].length;
     url = url.replace(prefix, '');
-    url = url.length > 64 ? url.substr(0, 60) + "..." : url;
     matches = (matches || []).map(function (m) { return [m[0] - prefixLen, m[1]]; });
     return boldSearchTerms(url, matches);
+  }
+
+  var pathSegmentRe = /(?:\/\.\.\.)?\/[^\/?#]*[^\/?#.]\//;
+  function makeDescAndTagsFit() {  // this is a .kifi-res-sub
+    var targetWidth = this.parentNode.offsetWidth;
+    var actualWidth = this.offsetWidth;
+    log('[makeDescAndTagsFit]', actualWidth, targetWidth, this.textContent)();
+    if (!actualWidth || !targetWidth) {
+      return;
+    }
+    this.classList.add('kifi-fitted');
+    if (actualWidth <= targetWidth) {
+      return;
+    }
+    var tagsCell = this.lastElementChild;
+    var descCell = this.firstElementChild;
+    var tagsCellWidth = tagsCell.offsetWidth;
+    var descCellWidth = descCell.offsetWidth;
+    var descCellWidthTarget = targetWidth - tagsCellWidth;
+    for (var ch = descCell.firstElementChild.lastChild; ch; ch = ch.previousSibling) {
+      if (ch.nodeType === 3) {
+        var text = ch.textContent, text2;
+        while ((text2 = text.replace(pathSegmentRe, '/.../')) !== text) {
+          ch.textContent = text = text2;
+          descCellWidth = descCell.offsetWidth;
+          if (descCellWidth <= descCellWidthTarget) {
+            return;
+          }
+        }
+      }
+    }
+    descCell.style.width = descCellWidthTarget + 'px';
+    this.style.width = targetWidth + 'px';
+    this.style.tableLayout = 'fixed';
   }
 
   var bindResHandlers = function() {
@@ -486,10 +523,15 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   function expandResults() {
-    $res.find('.kifi-res-box').slideDown(200);
+    var $box = $res.find('.kifi-res-box').css({visibility: 'hidden', height: 0});
+
     $bar.removeClass('kifi-collapsed');
     $none.removeClass('kifi-showing');
     $status.removeAttr('data-n');
+
+    $box.find('.kifi-res-sub:not(.kifi-fitted)').each(makeDescAndTagsFit);
+    $box.css({visibility: '', height: '', display: 'none'}).slideDown(200);
+
     var onFirstShow = $res.data('onFirstShow');
     if (onFirstShow) {
       $res.removeData('onFirstShow');
@@ -574,7 +616,12 @@ if (searchUrlRe.test(document.URL)) !function() {
     for (var i = 0; i < hits.length; i++) {
       hitHtml.push(render("html/search/google_hit", $.extend({self: response.session.user, images: api.url("images")}, hits[i])));
     }
-    $(hitHtml.join("")).hide().appendTo($res.find('#kifi-res-list')).slideDown(200, function () {
+    $(hitHtml.join(''))
+    .css({visibility: 'hidden', height: 0, margin: 0})
+    .appendTo($res.find('#kifi-res-list'))
+    .find('.kifi-res-sub').each(makeDescAndTagsFit).end()
+    .css({visibility: '', height: '', margin: '', display: 'none'})
+    .slideDown(200, function () {
       this.style.overflow = '';  // slideDown clean-up
     });
     if (!response.filter || response.filter.who === 'a') {
@@ -592,9 +639,10 @@ if (searchUrlRe.test(document.URL)) !function() {
   function processHit(hit) { // this is response in which hit arrived
     hit.uuid = this.uuid;
 
-    hit.displayUrl = displayURLFormatter(hit.bookmark.url, (hit.bookmark.matches || {}).url);
-    hit.displayTitle = boldSearchTerms(hit.bookmark.title, (hit.bookmark.matches || {}).title) || hit.displayUrl;
-    hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
+    hit.desc = formatDesc(hit.bookmark.url, (hit.bookmark.matches || {}).url);
+    hit.displayTitle = boldSearchTerms(hit.bookmark.title, (hit.bookmark.matches || {}).title) || hit.desc;
+    hit.scoreText = response.showScores === true ? String(Math.round(hit.score * 100) / 100) : '';
+    hit.tagsText = (hit.bookmark && hit.bookmark.tags || []).join(', ');
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
