@@ -157,6 +157,11 @@ class AuthController @Inject() (
     request.request.headers.get(USER_AGENT) map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
+      if (agent.isMobile) {
+        log.info(s"placeholder for redirecting to mobile only page")
+      } else if (!agent.isSupportedDesktop) {
+        log.info(s"placeholder for redirecting to unsupported browsers page")
+      }
     }
     Ok(views.html.auth.auth("login"))
   })
