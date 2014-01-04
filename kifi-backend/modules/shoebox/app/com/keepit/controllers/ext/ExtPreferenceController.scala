@@ -13,7 +13,7 @@ import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.normalizer.NormalizationService
 import com.keepit.common.crypto.SimpleDESCrypt
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsNumber, JsObject, Json}
 
 import scala.math.{max, min}
 
@@ -54,17 +54,17 @@ class ExtPreferenceController @Inject() (
 
   def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
-    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+    Ok(JsNumber(0))
   }
 
   def setShowFindFriends(show: Boolean) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
-    Ok(Json.toJson(loadUserPrefs(request.user.id.get)))
+    Ok(JsNumber(0))
   }
 
   def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
-    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+    Ok(JsNumber(0))
   }
 
   def getPrefs() = AuthenticatedJsonAction { request =>
