@@ -10,6 +10,9 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import scala.xml._
 
 import com.ning.http.util.AsyncHttpProviderUtils
+import java.io.{FileOutputStream, File}
+import org.apache.commons.io.IOUtils
+import scala.util.Try
 
 
 case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
@@ -94,7 +97,16 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
     } catch {
       case e: Throwable =>
         log.error(s"bad res: $body")
-        throw new ClientResponseException(s"can't parse json on request ${request.httpUri} with charset [$charset], orig type is ${ahcResponse.getContentType}: $body ", e)
+        //The file name is constant, don't change it. We don't want repeating bad jsons to fill up our disk. As a result we store to disk only the latest bad json.
+        //Yes, this is not thread safe, but we can live with it.
+        val file: File = new File("bad-json.json")
+        val output = new FileOutputStream(file)
+        try {
+          IOUtils.write(bytes, output)
+        } finally {
+          Try(output.close())
+        }
+        throw new ClientResponseException(s"can't parse json on request ${request.httpUri} with charset [$charset], orig type is ${ahcResponse.getContentType} bytes are written to ${file.getAbsolutePath()}: $body ", e)
     }
   }
 
