@@ -32,6 +32,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark]
+  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -187,5 +188,9 @@ class BookmarkRepoImpl @Inject() (
       val latest = for { bookmark <- bookmarks if bookmark.updatedAt >= max } yield bookmark
       latest.sortBy(_.updatedAt desc).firstOption
     }
+  }
+
+  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean = {
+    (for(b <- table if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
   }
 }
