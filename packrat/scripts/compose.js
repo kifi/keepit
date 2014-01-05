@@ -44,7 +44,7 @@ function initCompose($c, enterToSend, opts) {
     }
   }).on('mousedown mouseup click', function () {
     var sel = window.getSelection(), r = getSelRange(sel);
-    if (r.startContainer === this.parentNode) {  // related to bugzil.la/904846
+    if (r && r.startContainer === this.parentNode) {  // related to bugzil.la/904846
       var r2 = document.createRange();
       r2.selectNodeContents(this);
       if (r.collapsed) {
@@ -226,9 +226,11 @@ function initCompose($c, enterToSend, opts) {
     var $alt = $('<span class=kifi-compose-tip-alt>')
       .text((enterToSend ? prefix : '') + tipTextNode.nodeValue.replace(prefix, ''))
       .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
-      .hover(
-        $.fn.addClass.bind($alt, 'kifi-hover'),
-        $.fn.removeClass.bind($alt, 'kifi-hover'));
+      .hover(function () {
+        this.classList.add('kifi-hover');
+      }, function () {
+        this.classList.remove('kifi-hover');
+      });
     var $menu = $('<span class=kifi-compose-tip-menu>').append($alt).insertAfter($tip);
     $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
     $alt.css('visibility', '').mouseup(hide.bind(null, true));

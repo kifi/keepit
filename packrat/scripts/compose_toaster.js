@@ -95,7 +95,8 @@ var toaster = (function () {
   function onShown(deferred, e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
       log('[toaster:onShown]')();
-      var $t = $(this).off('transitionend', onShown);
+      var $t = $(this).off('transitionend', onShown)
+        .css('overflow', 'visible'); // for enterToSend dropdown
       deferred.resolve($t.data('compose'));
       if (session.prefs.showFindFriends) {
         $toaster.find('.kifi-toast-find-friends').addClass('kifi-showing');
@@ -109,7 +110,7 @@ var toaster = (function () {
     pane.onHide.remove(hide);
     $(document).data('esc').remove(hide);
     hideFindFriends();
-    $toaster.on('transitionend', onHidden).addClass('kifi-down');
+    $toaster.css('overflow', '').on('transitionend', onHidden).addClass('kifi-down');
     $toaster = null;
     e && e.preventDefault();
   }
