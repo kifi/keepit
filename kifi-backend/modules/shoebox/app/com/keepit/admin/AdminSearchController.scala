@@ -91,6 +91,7 @@ class AdminSearchController @Inject() (
     val maxHits = body.get("maxHits").get.toInt
     val id1 = body.get("id1").get.toLong
     val id2 = body.get("id2").get.toLong
+    val shuffle = body.get("shuffle").get.toBoolean
 
     val (config1, config2) = db.readOnly{ implicit s =>
       (searchConfigRepo.get(Id[SearchConfigExperiment](id1)), searchConfigRepo.get(Id[SearchConfigExperiment](id2)))
@@ -105,10 +106,11 @@ class AdminSearchController @Inject() (
     val (hits1, hits2) = (hits(0).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) },
         hits(1).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) })
 
-    // random shuffle
-    val rv = if (rand.nextInt() % 2 == 0) {
+    val rv = if (shuffle && rand.nextInt() % 2 == 1) {
+      BlindTestReturn("OK", Some(ConfigIdAndHits(id2, hits2)), Some(ConfigIdAndHits(id1, hits1)))
+    } else {
       BlindTestReturn("OK", Some(ConfigIdAndHits(id1, hits1)), Some(ConfigIdAndHits(id2, hits2)))
-    } else BlindTestReturn("OK", Some(ConfigIdAndHits(id2, hits2)), Some(ConfigIdAndHits(id1, hits1)))
+    }
 
     Ok(Json.toJson(rv))
   }
@@ -116,6 +118,11 @@ class AdminSearchController @Inject() (
   def blindTestPage() = AdminHtmlAction { request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchBlindTest(configs))
+  }
+
+  def searchComparisonPage() = AdminHtmlAction { request =>
+    val configs = getConfigsForBlindTest
+    Ok(html.admin.adminSearchComparison(configs))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction { implicit request =>
