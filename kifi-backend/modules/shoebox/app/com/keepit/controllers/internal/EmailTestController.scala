@@ -39,7 +39,9 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
     "friendRequestAccepted" -> views.html.email.friendRequestAccepted("Stephen", "Tester", "MacTest", "http://lorempixel.com/200/200/cats", "http://lorempixel.com/200/200/people"),
     "friendRequestAcceptedInlined" -> views.html.email.friendRequestAcceptedInlined("Stephen", "Tester", "MacTest", "http://lorempixel.com/200/200/cats", "http://lorempixel.com/200/200/people"),
     "friendRequest" -> views.html.email.friendRequest("Stephen", "Tester MacTest", "http://lorempixel.com/200/200/cats"),
-    "friendRequestInlined" -> views.html.email.friendRequestInlined("Stephen", "Tester MacTest", "http://lorempixel.com/200/200/cats")
+    "friendRequestInlined" -> views.html.email.friendRequestInlined("Stephen", "Tester MacTest", "http://lorempixel.com/200/200/cats"),
+    "welcome" -> views.html.email.welcome("Stephen", "https://www.kifi.com"),
+    "welcomeInlined" -> views.html.email.welcomeInlined("Stephen", "https://www.kifi.com")
   )
 
   def testEmail(name: String) = sendableAction(name) {

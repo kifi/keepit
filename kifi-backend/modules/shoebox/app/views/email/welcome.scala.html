@@ -1,0 +1,146 @@
+@(name: String, confirmLink: String)
+
+@helper.kifiTemplate(title = "Kifi — Welcome") {
+
+  <table class="row" bgcolor="#f6f6f6" style="background-color:#f6f6f6; margin-top:-20px;">
+    <tr>
+      <td class="wrapper">
+        <table class="three columns">
+          <tr>
+            <td>
+              <!-- Padding  -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper">
+        <table class="six columns">
+          <tr>
+            <td>
+              <br>
+              <h3>Hey @name,</h3>
+              <h2>Welcome to Kifi!</h2> <br>
+              Confirm your account by clicking the its me button
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper last">
+        <table class="three columns">
+          <tr>
+            <td>
+              <!-- Padding  -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+
+  <table class="row" bgcolor="#f6f6f6" style="background-color:#f6f6f6;">
+    <tr>
+      <td class="wrapper">
+        <table class="three columns">
+          <tr>
+            <td>
+              <!-- Padding  -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper">
+        <table class="six columns">
+          <tr>
+            <td>
+                <a href="@confirmLink">
+                <table class="button radius green">
+                  <tr>
+                    <td class="cta-button">
+                      Yes, it's me
+                    </td>
+                  </tr>
+                </table>
+                </a>
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper last">
+        <table class="three columns">
+          <tr>
+            <td>
+              <!-- Padding  -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+  <table class="row" bgcolor="#f6f6f6" style="background-color:#f6f6f6;">
+    <tr>
+      <td class="wrapper">
+        <table class="three columns">
+          <tr>
+            <td>
+              <!-- Padding  -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper">
+        <table class="six columns">
+          <tr>
+            <td>
+              <small> Please make sure you confirm your account on your desktop and not from your phone </small>
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper last">
+        <table class="three columns">
+          <tr>
+            <td>
+              <!-- Padding  -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+  <table class="row" bgcolor="#f6f6f6" style="background-color:#f6f6f6;">
+    <tr>
+      <td class="wrapper last">
+        <table class="twelve columns">
+          <tr>
+            <td>
+              <img src="http://i.imgur.com/q0J9sGg.png" style="margin-top: -100px;"></img>
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+}
