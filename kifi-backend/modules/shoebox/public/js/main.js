@@ -2226,6 +2226,8 @@ $(function () {
 	var friendsShowing = [];
 	var moreFriends = true;
 	var invitesLeft;
+	var inviteEmailTemplate = Handlebars.compile($('#invite-email-tpl').html());
+
 	function prepInviteTab(moreToShow) {
 		log('[prepInviteTab]', moreToShow);
 		if (moreToShow && !moreFriends) {
@@ -2306,10 +2308,9 @@ $(function () {
 
 			friendsShowing.push.apply(friendsShowing, friends);
 
-
-			var $inviteEmail = $nwFriends.find('.invite-email').hide();
+			$nwFriends.find('.invite-email').remove();
 			if (network === 'email' && search) {
-				showInviteEmailAddress($inviteEmail, search, friends);
+				showInviteEmailAddress($nwFriends, search, friends);
 			}
 
 			var $noResults = $nwFriends.find('.no-results').empty().hide();
@@ -2381,15 +2382,17 @@ $(function () {
 		});
 	}
 
-	function showInviteEmailAddress($inviteEmail, search, friends) {
+	function showInviteEmailAddress($nwFriends, search, friends) {
 		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+[^.]$/.test(search) && !hasFriendWithEmail(friends, search)) {
-			$inviteEmail.show()
+			var $inviteEmail = $(inviteEmailTemplate({
+				email: search
+			})).appendTo($nwFriends.find('ul'))
 				.find('.invite-email-link')
-				.off('click')
 				// '' is necessary as third parameter
-				.click(openInviteDialog.bind(null, 'email/' + search, ''))
-					.find('.invite-email-address')
-					.text(search);
+				.click(function (e) {
+					var email = $(e.target).closest('.invite-email').data('email');
+					openInviteDialog('email/' + email, '');
+				});
 		}
 	}
 
