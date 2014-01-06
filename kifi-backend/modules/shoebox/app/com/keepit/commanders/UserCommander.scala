@@ -29,8 +29,6 @@ import scala.Some
 import com.keepit.social.UserIdentity
 import play.api.libs.json.JsObject
 import securesocial.core.{UserService, Registry, Identity}
-import play.api.Play.current
-import play.api.{Application, Play, Mode}
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -178,7 +176,6 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
-    if (Play.isDev) createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
     newUser
   }
 

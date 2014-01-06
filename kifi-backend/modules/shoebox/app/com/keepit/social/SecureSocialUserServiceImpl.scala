@@ -25,6 +25,7 @@ import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
+import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -121,6 +122,10 @@ class SecureSocialUserPluginImpl @Inject() (
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
+
+    // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
+    val isTestUser = identity.email.map(email => EmailAddress(userId = u.id.get, address = email).isTestEmail()) getOrElse false
+    if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
     u
   }
 
