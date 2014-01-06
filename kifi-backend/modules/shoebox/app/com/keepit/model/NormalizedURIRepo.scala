@@ -147,7 +147,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
+  /**
+   * Locking since there may be few calls coming at the same time from the client with the same url (e.g. get page info, and record visited).
+   * The lock is on the exact same url and using intern so we can have a globaly unique object of the url.
+   * Possible downside is that the permgen will fill up with these urls
+   */
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = url.intern().synchronized {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
         case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
