@@ -167,7 +167,7 @@ object Highlighter extends Logging {
     }
   }
 
-  private[this] val urlSpecialCharRegex = """[/\.:#&+~]""".r
+  private[this] val urlSpecialCharRegex = """[/\.:#&+~_]""".r
 
   def highlightURL(url: String, analyzer: Analyzer, field: String, terms: Set[String]): Seq[(Int, Int)] = {
     val text = urlSpecialCharRegex.replaceAllIn(url, " ")
