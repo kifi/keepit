@@ -31,3 +31,8 @@ case class ServiceInstance(node: Node, var remoteService: RemoteService, thisIns
 
   private def isAlmostUp: Boolean = remoteService.healthyStatus == ServiceStatus.UP && (remoteService.status == ServiceStatus.SICK || remoteService.status == ServiceStatus.SELFCHECK_FAIL)
 }
+
+
+object ServiceInstance {
+  def EMPTY = ServiceInstance(null, null, true)
+}
