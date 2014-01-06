@@ -179,7 +179,7 @@ class AdminAnalyticsController @Inject() (
   }
 
   def getEventDescriptors() = AdminHtmlAction { request =>
-    val eventCodes: Seq[TypeCode[HeimdalEvent]] = Seq(UserEvent, SystemEvent).map(_.typeCode)
+    val eventCodes: Seq[TypeCode[HeimdalEvent]] = Seq(UserEvent, SystemEvent, AnonymousEvent).map(_.typeCode)
     Async(
       Future.sequence(eventCodes.map { code =>
         heimdal.getEventDescriptors(code).map { descriptors =>
