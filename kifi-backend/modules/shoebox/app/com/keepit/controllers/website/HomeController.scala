@@ -54,6 +54,21 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
+  // Start post-launch stuff!
+  def newHome = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = newHomeNotAuthed(_))
+
+  private def newHomeNotAuthed(implicit request: Request[_]): Result = {
+    if (request.identityOpt.isDefined) {
+      // User needs to sign up or (social) finalize
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+    } else {
+      // TODO: Redirect to /login if the path is not /
+      // Non-user landing page
+      Ok(views.html.marketing.landing())
+    }
+  }
+  // End post-launch stuff!
+
   def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
 
   private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {

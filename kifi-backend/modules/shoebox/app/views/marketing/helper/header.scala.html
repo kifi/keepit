@@ -1,0 +1,43 @@
+@(headerType: String)
+
+@if(headerType == "none") {
+
+} else {
+@if(headerType == "grey") {
+<div class="kifi-header-bg">
+  <div class="kifi-header" data-track-source="header">
+    <div class="kifi-header-left">
+      <a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
+      <span class="kifi-header-caption">you are almost there</span>
+    </div>
+    <div class="kifi-header-right">
+      <span class="kifi-header-signup">
+        Not a member, yet? &nbsp;<a href="/signup">Sign Up</a>
+      </span>
+      <span class="kifi-header-login">
+        Already a member? &nbsp;<a href="/login">Log In</a>
+      </span>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+} else {
+<div class="kifi-header-bg">
+  <div class="kifi-header" data-track-source="header">
+    <a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
+    <a class="kifi-header-logo-white" href="/" data-track-action="clickLogo">Kifi</a>
+    <div class="kifi-header-right">
+      <div class="kifi-header-join-box">
+        <a class="kifi-header-join" href="/signup" data-track-action="clickJoinKifi">Join kifi now <span class="kifi-header-join-arrow"></span></a>
+      </div>
+      <a class="kifi-header-right-link kifi-header-signup" href="/signup" data-track-action="clickSignUp">Sign up</a>
+      <a class="kifi-header-right-link kifi-header-about" href="/about" data-track-action="clickAbout">About</a>
+      <span class="kifi-header-right-separator">|</span>
+      <a class="kifi-header-right-link kifi-header-home" href="/" data-track-action="clickHome">Home</a>
+      <a class="kifi-header-right-link kifi-header-login" href="/login" data-track-action="clickLogin">Log In</a>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+}
+}
