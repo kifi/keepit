@@ -1,12 +1,26 @@
 <li class="g">
   <div class="vsc">
     <h3 class="r"><a href="{{bookmark.url}}">{{{displayTitle}}}</a></h3>
-    <div class="vspib" aria-label="Result details" role="button" tabindex="0"></div>
     <div class="s">
-      <div class="f kv">
-        <cite class="kifi_resurl">{{displayScore}}{{{displayUrl}}}</cite>
+      {{#tagsText}}
+      <div class="kifi-res-sub">
+        <div class="kifi-res-sub-1">
+          <cite class="kifi-res-desc">{{{desc}}}</cite>
+        </div>
+        <div class="kifi-res-sub-2">
+          <div class="kifi-res-tags">{{tagsText}}</div>
+        </div>
       </div>
+      {{/tagsText}}
+      {{^tagsText}}
+      <div class="f kv">
+        <cite class="kifi-res-desc">{{{desc}}}</cite>
+      </div>
+      {{/tagsText}}
     </div>
+    {{#scoreText}}
+      <div class="kifi-res-score">{{scoreText}}</div>
+    {{/scoreText}}
   </div>
   <!--n-->
   <div class="kifi-who" data-url="{{bookmark.url}}">

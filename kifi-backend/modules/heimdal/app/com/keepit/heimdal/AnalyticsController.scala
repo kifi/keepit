@@ -26,10 +26,11 @@ import views.html
 class AnalyticsController @Inject() (
   userEventLoggingRepo: UserEventLoggingRepo,
   systemEventLoggingRepo: SystemEventLoggingRepo,
+  anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
   metricManager: MetricManager)
   extends HeimdalServiceController {
 
-  private def getRepo(repoEventTypeCode: String) = EventRepo.findByEventTypeCode(userEventLoggingRepo, systemEventLoggingRepo)(repoEventTypeCode).get
+  private def getRepo(repoEventTypeCode: String) = EventRepo.findByEventTypeCode(userEventLoggingRepo, systemEventLoggingRepo, anonymousEventLoggingRepo)(repoEventTypeCode).get
 
   val adhocHelp = """
     | Returns simple event statistics

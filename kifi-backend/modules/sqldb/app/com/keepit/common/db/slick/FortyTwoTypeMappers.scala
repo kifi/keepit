@@ -84,10 +84,6 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[NormalizedURI](profile)
   }
 
-  implicit object UserNotificationExternalIdTypeMapper extends BaseTypeMapper[ExternalId[UserNotification]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[UserNotification](profile)
-  }
-
   //Ids
   implicit object ABookInfoIdTypeMapper extends BaseTypeMapper[Id[ABookInfo]] {
     def apply(profile:BasicProfile) = new IdMapperDelegate[ABookInfo](profile)
@@ -149,10 +145,6 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[SearchConfigExperiment](profile)
   }
 
-  implicit object UserNotificationIdTypeMapper extends BaseTypeMapper[Id[UserNotification]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[UserNotification](profile)
-  }
-
   implicit object BookmarkIdTypeMapper extends BaseTypeMapper[Id[Bookmark]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Bookmark](profile)
   }
@@ -196,10 +188,6 @@ object FortyTwoTypeMappers {
 
   implicit object UserToDomainKindTypeMapper extends BaseTypeMapper[State[UserToDomainKind]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[UserToDomainKind](profile)
-  }
-
-  implicit object UserNotificationStateMapper extends BaseTypeMapper[State[UserNotification]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[UserNotification](profile)
   }
 
   //Other
@@ -315,14 +303,6 @@ object FortyTwoTypeMappers {
 
   implicit object OAuth2ProviderMapper extends BaseTypeMapper[OAuth2TokenIssuer] {
     def apply(profile: BasicProfile) = new OAuth2ProviderMapperDelegate(profile)
-  }
-
-  implicit object UserNotificationCategoryTypeMapper extends BaseTypeMapper[UserNotificationCategory] {
-    def apply(profile: BasicProfile) = new UserNotificationCategoryMapperDelegate(profile)
-  }
-
-  implicit object UserNotificationDetailsTypeMapper extends BaseTypeMapper[UserNotificationDetails] {
-    def apply(profile: BasicProfile) = new UserNotificationDetailsMapperDelegate(profile)
   }
 
   implicit object UserPictureSourceIdTypeMapper extends BaseTypeMapper[UserPictureSource] {
@@ -664,24 +644,6 @@ class OAuth2ProviderMapperDelegate(profile: BasicProfile) extends StringMapperDe
   def zero = OAuth2TokenIssuer("")
   def sourceToDest(value: OAuth2TokenIssuer) = value.name
   def safeDestToSource(str: String) = OAuth2TokenIssuer(str)
-}
-
-//************************************
-//       UserNotificationCategory -> String
-//************************************
-class UserNotificationCategoryMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserNotificationCategory](profile) {
-  def zero = UserNotificationCategory("")
-  def sourceToDest(value: UserNotificationCategory) = value.name
-  def safeDestToSource(str: String) = UserNotificationCategory(str)
-}
-
-//************************************
-//       UserNotificationDetails -> String
-//************************************
-class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserNotificationDetails](profile) {
-  def zero = UserNotificationDetails(Json.obj())
-  def sourceToDest(value: UserNotificationDetails) = Json.stringify(value.payload)
-  def safeDestToSource(str: String) = UserNotificationDetails(Json.parse(str).asInstanceOf[JsObject])
 }
 
 //************************************
