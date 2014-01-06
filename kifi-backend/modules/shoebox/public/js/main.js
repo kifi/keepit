@@ -132,7 +132,7 @@ $(function () {
 		var $text = $checkAll.next('.subtitle-text'), d = $text.data(), noun = searchResponse ? 'result' : 'Keep';
 		if (d.n) {
 			$checkAll.addClass('live');
-			d.leaveText = $text.html();
+			d.leaveHtml = $text.html();
 			$text.html(($checkAll.hasClass('checked') ? 'Deselect ' : 'Select ') + (
 				d.n == 1 ? 'the ' + noun + ' below' :
 				d.n == 2 ? 'both ' + noun + 's below' :
@@ -140,9 +140,9 @@ $(function () {
 		}
 	}, function () {
 		var $text = $(this).removeClass('live').next('.subtitle-text'), d = $text.data();
-		if (d.leaveText) {
-			$text.html(d.leaveText);
-			delete d.leaveText;
+		if (d.leaveHtml) {
+			$text.html(d.leaveHtml);
+			delete d.leaveHtml;
 		}
 	});
 
@@ -150,14 +150,14 @@ $(function () {
 		var $text = $checkAll.next('.subtitle-text'), d = $text.data();
 		if (numSel) {
 			if (!d.defText) {
-				d.defText = d.leaveText || $text.html();
+				d.defText = d.leaveHtml || $text.html();
 			}
 			$text.html(numSel + ' ' + (searchResponse ? 'result' : 'Keep') + (numSel === 1 ? '' : 's') + ' selected');
 		} else {
 			$text.html(d.defText);
 			delete d.defText;
 		}
-		delete d.leaveText;
+		delete d.leaveHtml;
 	}
 
 	$('.keep-colls,.keep-coll').removeText();
