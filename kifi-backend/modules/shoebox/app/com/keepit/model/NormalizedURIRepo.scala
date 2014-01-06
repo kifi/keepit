@@ -11,8 +11,7 @@ import org.joda.time.DateTime
 import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
-import com.google.common.collect.MapMaker
-import com.google.common.cache.{CacheLoader, CacheBuilder}
+import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -150,12 +149,22 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  private val urlLocks = new CacheBuilder().newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build(
-      new CacheLoader[String, Any]() {
-        def load(key: String): Any = new String(key)
-      });
+  /**
+   * if a stack trace will dump the lock we'll at least know what it belongs to
+   */
+  private def newUrlLock = (str: String) => new String(str)
 
-  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
+  /**
+   * We don't want to aggregate locks for ever, its no likely that a lock is still locked after one second
+   */
+  private val urlLocks = CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build(newUrlLock)
+
+  /**
+   * Locking since there may be few calls coming at the same time from the client with the same url (e.g. get page info, and record visited).
+   * The lock is on the exact same url and using intern so we can have a globaly unique object of the url.
+   * Possible downside is that the permgen will fill up with these urls
+   */
+  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
         case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri

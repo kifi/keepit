@@ -60,7 +60,8 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
       "org.imgscalr" % "imgscalr-lib" % "4.2",
-      "us.theatr" %% "akka-quartz" % "0.2.0_42.1"
+      "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
+      "org.feijoas" %% "mango" % "0.10"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
