@@ -29,7 +29,8 @@ import scala.Some
 import com.keepit.social.UserIdentity
 import play.api.libs.json.JsObject
 import securesocial.core.{UserService, Registry, Identity}
-
+import play.api.Play.current
+import play.api.{Application, Play, Mode}
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -177,11 +178,11 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
-    createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
+    if (Play.isDev) createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
     newUser
   }
 
-  private def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
+  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
     val contextBuilder = new HeimdalContextBuilder()
     contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
@@ -402,18 +403,18 @@ object DefaultKeeps {
   val orderedKeepsWithTags: Seq[(KeepInfo, Seq[String])] = {
     val Seq(recipe, shopping, travel, later, funny, example, support) = orderedTags
     Seq(
-      // Support Keeps
-      (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("How to Use Kifi"), url = "https://www.kifi.com/support", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("Contact Us"), url = "", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support)),
-
       // Example keeps
       (KeepInfo(title = None, url = "http://www.simplyrecipes.com/recipes/bruschetta_with_tomato_and_basil/", isPrivate = true), Seq(example, recipe)),
       (KeepInfo(title = None, url = "http://www.apple.com/ipad/", isPrivate = true), Seq(example, shopping)),
       (KeepInfo(title = None, url = "http://www.fourseasons.com/borabora/", isPrivate = true), Seq(example, travel)),
       (KeepInfo(title = None, url = "http://twistedsifter.com/2013/01/50-life-hacks-to-simplify-your-world/", isPrivate = true), Seq(example, later)),
-      (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny))
+      (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),
+
+      // Support Keeps
+      (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("How to Use Kifi"), url = "https://www.kifi.com/support", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Contact Us"), url = "https://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
     )
   }
 }
