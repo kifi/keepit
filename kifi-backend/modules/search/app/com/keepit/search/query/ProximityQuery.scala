@@ -239,6 +239,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
       docIter = advance(0)
       score()
     }
+    log.info(s"return doc id ${docIter}, proximityScore = $proximityScore")
     docIter
   }
 
