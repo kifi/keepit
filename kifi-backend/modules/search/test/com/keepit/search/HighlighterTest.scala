@@ -56,7 +56,7 @@ class HighlighterTest extends Specification {
     }
 
     "highlight terms in url" in {
-      val url = "http://www.scala-lang.org/api/current/index.html#package"
+      val url = "http://www.scala-lang.org/api/current_version/index.html#package"
 
       var highlights = Highlighter.highlightURL(url, analyzer, "f", Set("scala"))
 
@@ -72,6 +72,11 @@ class HighlighterTest extends Specification {
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("index")
+
+      highlights = Highlighter.highlightURL(url, analyzer, "f", Set("current"))
+
+      highlights.size === 1
+      highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("current")
     }
 
     "return an empty Seq if no match" in {
