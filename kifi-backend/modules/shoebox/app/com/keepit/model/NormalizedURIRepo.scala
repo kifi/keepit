@@ -11,6 +11,9 @@ import org.joda.time.DateTime
 import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
+import com.google.common.collect.MapMaker
+import com.google.common.cache.{CacheLoader, CacheBuilder}
+import java.util.concurrent.TimeUnit
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -146,6 +149,11 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       getByUriOrPrenormalize(url: String).left.toOption
     }
   }
+
+  private val urlLocks = new CacheBuilder().newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build(
+      new CacheLoader[String, Any]() {
+        def load(key: String): Any = new String(key)
+      });
 
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
