@@ -42,38 +42,38 @@ class HighlighterTest extends Specification {
       var highlights = Highlighter.highlight(text, analyzer, "f", Set("holiday"))
 
       highlights.size === 1
-      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
+      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays")
 
       highlights = Highlighter.highlight(text, analyzer, "f", Set("doc"))
 
       highlights.size === 1
-      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
+      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("doc")
 
       highlights = Highlighter.highlight(text, analyzer, "f", Set("holiday", "doc"))
 
-      highlights.size === 1
-      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays.doc")
+      highlights.size === 2
+      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays", "doc")
     }
 
     "highlight terms in url" in {
       val url = "http://www.scala-lang.org/api/current_version/index.html#package"
 
-      var highlights = Highlighter.highlightURL(url, analyzer, "f", Set("scala"))
+      var highlights = Highlighter.highlight(url, analyzer, "f", Set("scala"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("scala")
 
-      highlights = Highlighter.highlightURL(url, analyzer, "f", Set("api"))
+      highlights = Highlighter.highlight(url, analyzer, "f", Set("api"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("api")
 
-      highlights = Highlighter.highlightURL(url, analyzer, "f", Set("index"))
+      highlights = Highlighter.highlight(url, analyzer, "f", Set("index"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("index")
 
-      highlights = Highlighter.highlightURL(url, analyzer, "f", Set("current"))
+      highlights = Highlighter.highlight(url, analyzer, "f", Set("current"))
 
       highlights.size === 1
       highlights.map{ case (start, end) => url.substring(start, end) }.toSet === Set("current")
@@ -86,7 +86,7 @@ class HighlighterTest extends Specification {
 
       val url = "http://kifi.com"
 
-      Highlighter.highlightURL(text, analyzer, "f", Set("42go")) must beEmpty
+      Highlighter.highlight(text, analyzer, "f", Set("42go")) must beEmpty
     }
   }
 }
