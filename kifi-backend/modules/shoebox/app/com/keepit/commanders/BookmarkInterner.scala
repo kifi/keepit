@@ -41,15 +41,15 @@ class BookmarkInterner @Inject() (
   private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation] =
     ((rawBookmarks map { b => (b.url, b) } toMap).values.toSeq).toList
 
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
 
     val referenceId: UUID = UUID.randomUUID
-    log.info(s"[internRawBookmarks] user=(${user.id} ${user.firstName} ${user.lastName}) source=$source installId=$installationId value=$rawBookmarks $referenceId ")
+    log.info(s"[internRawBookmarks] user=$userId source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
     val deduped = deDuplicate(rawBookmarks)
 
     val bookmarks = deduped.sortWith { case (a, b) => a.url < b.url }
-    keepsAbuseMonitor.inspect(user.id.get, bookmarks.size)
+    keepsAbuseMonitor.inspect(userId, bookmarks.size)
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
     val count = new AtomicInteger(0)
     val total = bookmarks.size
@@ -58,43 +58,43 @@ class BookmarkInterner @Inject() (
     db.readWrite { implicit session =>
       // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
       // If it happens, the user will experience the % complete jumping around a bit until it's finished.
-      userValueRepo.setValue(user.id.get, "bookmark_import_last_start", clock.now.toString)
-      userValueRepo.setValue(user.id.get, "bookmark_import_done", "0")
-      userValueRepo.setValue(user.id.get, "bookmark_import_total", "0")
+      userValueRepo.setValue(userId, "bookmark_import_last_start", clock.now.toString)
+      userValueRepo.setValue(userId, "bookmark_import_done", "0")
+      userValueRepo.setValue(userId, "bookmark_import_total", "0")
     }
 
     val persistedBookmarksWithUris: List[InternedUriAndBookmark] = bookmarks.grouped(batchSize).map { bms =>
       val startTime = System.currentTimeMillis
       log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
       val persisted = db.readWrite(attempts = 2) { implicit session =>
-        bms.map { bm => internUriAndBookmark(bm, user, experiments, source, mutatePrivacy) }.flatten
+        bms.map { bm => internUriAndBookmark(bm, userId, source, mutatePrivacy) }.flatten
       }
       val newCount = count.addAndGet(bms.size)
       log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
       db.readWrite { implicit session =>
-        userValueRepo.setValue(user.id.get, "bookmark_import_done", (newCount / total).toString)
+        userValueRepo.setValue(userId, "bookmark_import_done", (newCount / total).toString)
       }
       persisted
     }.flatten.toList
 
     db.readWrite { implicit session =>
-      userValueRepo.clearValue(user.id.get, "bookmark_import_done")
+      userValueRepo.clearValue(userId, "bookmark_import_done")
     }
 
     log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
     val newKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndBookmark(bm, uri, isNewBookmark) if isNewBookmark => bm
     }
-    keptAnalytics.keptPages(user.id.get, newKeeps, context)
+    keptAnalytics.keptPages(userId, newKeeps, context)
 
     val persistedBookmarks = persistedBookmarksWithUris.map(_.bookmark)
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
   }
 
-  private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, mutatePrivacy: Boolean, experiments: Set[ExperimentType],
+  private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
+    bookmarkRepo.getByUriAndUser(uri.id.get, userId, excludeState = None) match {
       case Some(bookmark) =>
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(true).copy(createdAt = clock.now) } else keepWithPrivate
@@ -103,11 +103,11 @@ class BookmarkInterner @Inject() (
         (false, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+        (true, bookmarkRepo.save(BookmarkFactory(uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
     }
   }
 
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, user: User, experiments: Set[ExperimentType], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       val uri = {
         val initialURI = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
@@ -115,7 +115,7 @@ class BookmarkInterner @Inject() (
           uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
         else initialURI
       }
-      val (isNewKeep, bookmark) = internBookmark(uri, user, rawBookmark.isPrivate, mutatePrivacy, experiments, installationId, source, rawBookmark.title, rawBookmark.url)
+      val (isNewKeep, bookmark) = internBookmark(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
 
       if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
         Try(scraper.scheduleScrape(uri))
@@ -132,7 +132,7 @@ class BookmarkInterner @Inject() (
       //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
       airbrake.notify(AirbrakeError(
         exception = e,
-        message = Some(s"Exception while loading one of the bookmarks of user $user: ${e.getMessage} from: $rawBookmark source: $source")))
+        message = Some(s"Exception while loading one of the bookmarks of user $userId: ${e.getMessage} from: $rawBookmark source: $source")))
       None
   }
 }

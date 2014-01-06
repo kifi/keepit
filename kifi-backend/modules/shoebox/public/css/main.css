@@ -5267,3 +5267,29 @@ a.photo-dialog-submit:focus {
 	background: transparent;
 	z-index: 10000;
 }
+
+.search-filters {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+.search-filters li {
+	display: inline;
+	color: #cccccc;
+}
+
+.search-filters li:after {
+	content: '|';
+	color: #cccccc;
+	font-size: 0.9em;
+}
+
+.search-filters li:last-child:after {
+	display: none;
+	content: '';
+}
+
+.search-filter-selected {
+	color: #333333;
+}

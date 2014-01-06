@@ -120,9 +120,10 @@ object BookmarkSource {
   val site = BookmarkSource("site")
   val mobile = BookmarkSource("mobile")
   val email = BookmarkSource("email")
+  val default = BookmarkSource("default")
   val unknown = BookmarkSource("unknown")
 
-  val valid = Set(keeper, bookmarkImport, site, mobile, email)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email, default)
 
   def get(value: String): BookmarkSource = BookmarkSource(value.toLowerCase) match {
     case BookmarkSource("hover_keep") => keeper
