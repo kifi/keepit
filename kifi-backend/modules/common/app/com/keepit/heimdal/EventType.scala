@@ -42,7 +42,10 @@ object UserEventTypes {
 
 object SystemEventTypes {
   val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
+  val SEARCH_TEST_VOTED = EventType("search_test_voted")
+}
+
+object AnonymousEventTypes {
   val KEPT = EventType("kept")
   val MESSAGED = EventType("messaged")
-  val SEARCH_TEST_VOTED = EventType("search_test_voted")
 }
