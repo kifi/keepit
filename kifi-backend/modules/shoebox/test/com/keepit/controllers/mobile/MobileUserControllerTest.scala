@@ -32,11 +32,13 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val mobileControllerTestModules = Seq(
     FakeShoeboxServiceModule(),
+    FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     TestAnalyticsModule(),
