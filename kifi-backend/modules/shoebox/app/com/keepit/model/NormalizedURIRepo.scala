@@ -157,7 +157,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   /**
    * We don't want to aggregate locks for ever, its no likely that a lock is still locked after one second
    */
-  private val urlLocks = CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build(newUrlLock)
+  private val urlLocks = CacheBuilder.newBuilder().maximumSize(10000).weakKeys().expireAfterWrite(30, TimeUnit.MINUTES).build(newUrlLock)
 
   /**
    * Locking since there may be few calls coming at the same time from the client with the same url (e.g. get page info, and record visited).
