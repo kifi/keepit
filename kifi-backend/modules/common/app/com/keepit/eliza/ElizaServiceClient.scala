@@ -79,7 +79,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
-    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize)).map{ response =>
+    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), timeout=10000).map{ response =>
       val json = Json.parse(response.body).as[JsArray]
       json.value.map(_.as[ThreadContent])
     }

@@ -21,6 +21,7 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
     val concatBoost = config.asFloat("concatBoost")
     val homePageBoost = config.asFloat("homePageBoost")
     val useSemanticMatch = config.asBoolean("useSemanticMatch")
+    val proximityGapPenalty = config.asFloat("proximityGapPenalty")
 
     new MainQueryParser(
       lang,
@@ -33,6 +34,7 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
       concatBoost,
       homePageBoost,
       useSemanticMatch,
+      proximityGapPenalty,
       phraseDetector,
       phraseDetectionConsolidator,
       monitoredAwait

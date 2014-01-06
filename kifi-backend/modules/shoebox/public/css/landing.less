@@ -15,7 +15,7 @@ body {
 
 .kifi-video-bg {
 	background: #f6f6f6;
-	.at2x('/assets/static/images/headerv2.png', 983px, 542px);
+	.at2x('/assets/images/headerv2.png', 983px, 542px);
 	background-size: 983px 542px;
 	background-repeat: repeat;
 
@@ -73,12 +73,12 @@ body {
 	display: inline-block;
 	width: 148px;
 	height: 148px;
-	.at2x('/assets/static/images/play.png', 100%, 100%);
+	.at2x('/assets/images/play.png', 100%, 100%);
 	background-size: 100%;
 	background-repeat: no-repeat;
 
 	&:hover {
-		.at2x('/assets/static/images/playhover.png', 100%, 100%);
+		.at2x('/assets/images/playhover.png', 100%, 100%);
 	}
 }
 
@@ -96,7 +96,7 @@ body {
 	width: 142px;
 	height: 11px;
 	margin-top: 22px;
-	.at2x('/assets/static/images/playshadow.png', 100%, 100%);
+	.at2x('/assets/images/playshadow.png', 100%, 100%);
 	background-size: 100%;
 	background-repeat: no-repeat;
 
@@ -280,17 +280,18 @@ body {
 }
 
 .kifi-more-column {
-	float: left;
-	width: 50%;
+	.max-width(570px);
 	.box-sizing(border-box);
 	.padding-lr(30px);
 	.padding-bottom(80px);
+	margin: 0 auto;
 
 	h2 {
 		@fontSize: 35px;
 		margin: 0 auto;
 		.font-size(@fontSize);
 		.margin-bottom(40px, @fontSize);
+		.padding-lr(0, @fontSize);
 		.letter-spacing(2.5px, @fontSize);
 
 		a {

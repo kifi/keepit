@@ -13,7 +13,7 @@ import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.normalizer.NormalizationService
 import com.keepit.common.crypto.SimpleDESCrypt
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsNumber, JsObject, Json}
 
 import scala.math.{max, min}
 
@@ -30,7 +30,7 @@ class ExtPreferenceController @Inject() (
   normalizationService: NormalizationService)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  private case class UserPrefs(enterToSend: Boolean, maxResults: Int)
+  private case class UserPrefs(enterToSend: Boolean, showFindFriends: Boolean, maxResults: Int)
   private implicit val userPrefsFormat = Json.format[UserPrefs]
 
   private val crypt = new SimpleDESCrypt
@@ -54,12 +54,17 @@ class ExtPreferenceController @Inject() (
 
   def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
-    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+    Ok(JsNumber(0))
+  }
+
+  def setShowFindFriends(show: Boolean) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
+    Ok(JsNumber(0))
   }
 
   def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
-    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
+    Ok(JsNumber(0))
   }
 
   def getPrefs() = AuthenticatedJsonAction { request =>
@@ -93,6 +98,7 @@ class ExtPreferenceController @Inject() (
     db.readOnly { implicit s =>
       UserPrefs(
         enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true),
+        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(true),
         maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1)
       )
     }

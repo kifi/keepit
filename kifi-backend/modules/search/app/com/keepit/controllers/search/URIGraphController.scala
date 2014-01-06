@@ -65,8 +65,8 @@ class URIGraphController @Inject()(
     IndexInfo(
       name = name,
       numDocs = indexer.numDocs,
-      sequenceNumber = indexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
-      committedAt = indexer.commitData.get(CommitData.committedAt)
+      sequenceNumber = indexer.commitSequenceNumber,
+      committedAt = indexer.committedAt
     )
   }
 

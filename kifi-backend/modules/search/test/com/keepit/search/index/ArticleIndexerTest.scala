@@ -90,7 +90,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
       uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(INACTIVE)).head
 
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 0
 
       var currentSeqNum = indexer.sequenceNumber.value
@@ -98,7 +98,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
 
       indexer.sequenceNumber.value === currentSeqNum
-      indexer.run()
+      indexer.update()
       currentSeqNum += 1
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 1
@@ -107,7 +107,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
       uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
 
-      indexer.run()
+      indexer.update()
       currentSeqNum += 3
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 3
@@ -117,7 +117,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "search documents (hits in contents)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       indexer.search("alldocs").size === 3
 
@@ -135,7 +135,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "search documents (hits in titles)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       var res = indexer.search("title1")
       res.size === 1
@@ -151,7 +151,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "search documents (hits in contents and titles)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       var res = indexer.search("title1 alldocs")
       res.size === 3
@@ -167,7 +167,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "search documents using stemming" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       indexer.search("alldoc").size === 3
       indexer.search("title").size === 3
@@ -178,7 +178,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "limit the result by percentMatch" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
       res.size === 3
@@ -197,7 +197,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "limit the result by site" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       var res = indexer.search("alldocs")
       res.size === 3
@@ -228,7 +228,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "match on the URI" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       var res = indexer.search("keepit")
       res.size === 2
@@ -247,7 +247,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "be able to dump Lucene Document" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
 
       store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
 
@@ -256,11 +256,11 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "delete documents with inactive, active, unscrapable, oe scrape_wanted state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 3
 
       uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 2
       indexer.search("content1").size === 0
       indexer.search("content2").size === 1
@@ -269,7 +269,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
 
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 2
       indexer.search("content1").size === 1
       indexer.search("content2").size === 0
@@ -279,7 +279,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
       uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(UNSCRAPABLE)).head
 
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 2
       indexer.search("content1").size === 1
       indexer.search("content2").size === 1
@@ -289,7 +289,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
       uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
 
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 2
       indexer.search("content1").size === 0
       indexer.search("content2").size === 1
@@ -298,7 +298,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
 
     "retrieve article records from index" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
       import com.keepit.search.index.ArticleRecordSerializer._
-      indexer.run()
+      indexer.update()
       indexer.numDocs === 3
 
       val searcher = indexer.getSearcher

@@ -1,9 +1,7 @@
 package com.keepit.common
 
-import play.api.http.HeaderNames._
-import play.api.mvc.Request
+import play.api.http.HeaderNames.{USER_AGENT, REFERER}
 import play.api.mvc.RequestHeader
-import com.keepit.common.healthcheck.Healthcheck
 
 package object net {
 

@@ -126,7 +126,7 @@ class MessagingAnalytics @Inject() (
         // Anonymized event with page information
         anonymise(contextBuilder)
         bookmarkOption.map(_.url) orElse thread.url foreach contextBuilder.addUrlInfo
-        heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.MESSAGED, sentAt))
+        heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
       }
     }
   }

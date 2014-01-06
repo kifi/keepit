@@ -21,8 +21,15 @@
 
 	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
 	<link href="//fonts.googleapis.com/css?family=Raleway:100,200,300,400|Open+Sans:100,200,300,400" rel="stylesheet" type="text/css">
-	<link rel="stylesheet" href="/assets/static/css/normalize.css">
-	<link rel="stylesheet" href="/assets/stylesheets/privacy.css">
+	<link rel="stylesheet" href="/assets/css/normalize.css">
+	<link rel="stylesheet" href="/assets/css/privacy.css">
+
+  <script>
+    if (/^Mac/.test(navigator.platform)) document.documentElement.className += ' mac';
+    var kifiViewTracker = [];
+    (function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
+    mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
+  </script>
 
 </head>
 
@@ -211,7 +218,7 @@
 
   <p>You can choose to permanently remove all your information from Kifi and terminate your profile,
   through your profile settings on the Kifi website, in which case all information associated with you will be deleted.
-  To delete your Kifi user and information, contact <a href="mailto:support@kifi.com" target="_blank">support@kifi.com</a>.</p>
+  To delete your Kifi user and information, contact us <a href="http://support.kifi.com/customer/portal/emails/new" target="_blank">here</a>.</p>
 
   <h2 id="using-information">Using Your Information</h2>
 
@@ -280,8 +287,7 @@
 
   <h2 id="contact">How To Contact Us</h2>
 
-  <p>If you have any questions or concerns about this Privacy Policy or its implementation, please contact us at
-  <a href="mailto:privacy@kifi.com" target="_blank">privacy@kifi.com</a>.</p>
+  <p>If you have any questions or concerns about this Privacy Policy or its implementation, please contact us <a href="http://support.kifi.com/customer/portal/emails/new" target="_blank">here</a>.</p>
 
   <p class="last-updated">LAST UPDATED: November 25, 2013</p>
 
@@ -306,7 +312,7 @@
 			</li>
 			<li>
 				<span class="kifi-footer-menu-dot">&middot;</span>
-				<a href="/contact" data-track-action="clickContactUs">Contact Us</a>
+				<a href="http://support.kifi.com/customer/portal/emails/new" target="_blank" data-track-action="clickContactUs">Contact Us</a>
 			</li>
 		</ul>
 		<div class="kifi-footer-caption">
@@ -316,8 +322,8 @@
 		</div>
 	</div>
 
-	<script type="text/javascript" src="/assets/static/js/jquery.min.js"></script>
-	<script type="text/javascript" src="/assets/static/js/header.js"></script>
-	<script type="text/javascript" src="/assets/static/js/track-ext.js"></script>
+	<script type="text/javascript" src="/assets/js/jquery.min.js"></script>
+	<script type="text/javascript" src="/assets/js/header.js"></script>
+	<script type="text/javascript" src="/assets/js/track-ext.js"></script>
 </body>
 </html>

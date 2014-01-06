@@ -89,6 +89,7 @@ GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+POST    /ext/pref/showFindFriends   @com.keepit.controllers.ext.ExtPreferenceController.setShowFindFriends(show: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks          @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
@@ -267,7 +268,7 @@ GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminCo
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
-GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup
+GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates

@@ -26,7 +26,7 @@ private[user] class UserIndexerActor @Inject()(
 
   def receive = {
     case Update => try {
-      sender ! indexer.run
+      sender ! indexer.update()
     } catch {
       case e: Exception =>
         airbrake.notify("Error updating user index", e)

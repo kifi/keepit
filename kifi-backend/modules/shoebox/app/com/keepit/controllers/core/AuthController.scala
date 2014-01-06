@@ -13,9 +13,7 @@ import com.keepit.model._
 import com.keepit.social.SocialNetworkType
 
 import play.api.Play._
-import play.api.data.Forms._
-import play.api.data._
-import play.api.libs.json.{JsNumber, JsValue, Json}
+import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
 import securesocial.controllers.ProviderController
 import securesocial.core._
@@ -24,6 +22,7 @@ import play.api.Play
 import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
+import com.keepit.common.net.UserAgent
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -155,6 +154,15 @@ class AuthController @Inject() (
   def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
     Redirect("/")
   }, unauthenticatedAction = { request =>
+    request.request.headers.get(USER_AGENT) map { agentString =>
+      val agent = UserAgent.fromString(agentString)
+      log.info(s"trying to log in via $agent. orig string: $agentString")
+      if (agent.isMobile) {
+        log.info(s"placeholder for redirecting to mobile only page")
+      } else if (!agent.isSupportedDesktop) {
+        log.info(s"placeholder for redirecting to unsupported browsers page")
+      }
+    }
     Ok(views.html.auth.auth("login"))
   })
 
