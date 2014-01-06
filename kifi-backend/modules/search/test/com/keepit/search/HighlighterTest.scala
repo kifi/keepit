@@ -36,25 +36,6 @@ class HighlighterTest extends Specification {
       highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("dolphins")
     }
 
-    "highlight overlapping terms" in {
-      val text = "holidays.doc"
-
-      var highlights = Highlighter.highlight(text, analyzer, "f", Set("holiday"))
-
-      highlights.size === 1
-      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays")
-
-      highlights = Highlighter.highlight(text, analyzer, "f", Set("doc"))
-
-      highlights.size === 1
-      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("doc")
-
-      highlights = Highlighter.highlight(text, analyzer, "f", Set("holiday", "doc"))
-
-      highlights.size === 2
-      highlights.map{ case (start, end) => text.substring(start, end) }.toSet === Set("holidays", "doc")
-    }
-
     "highlight terms in url" in {
       val url = "http://www.scala-lang.org/api/current_version/index.html#package"
 
