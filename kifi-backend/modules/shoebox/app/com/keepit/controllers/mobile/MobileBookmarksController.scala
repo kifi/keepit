@@ -68,7 +68,7 @@ class MobileBookmarksController @Inject() (
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
       val source = BookmarkSource.mobile
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, source)
+      val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
       Ok(Json.obj(
         "keeps" -> keeps,
         "addedToCollection" -> addedToCollection
@@ -102,7 +102,7 @@ class MobileBookmarksController @Inject() (
   def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     db.readOnly { implicit s => collectionRepo.getOpt(id) } map { tag =>
-      bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.mobile, request.kifiInstallationId)
+      bookmarksCommander.tagUrl(tag, request.body, request.userId, BookmarkSource.mobile, request.kifiInstallationId)
       Ok(Json.toJson(SendableTag from tag))
     } getOrElse {
       BadRequest(Json.obj("error" -> "noSuchTag"))
