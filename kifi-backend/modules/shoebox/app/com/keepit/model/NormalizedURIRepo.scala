@@ -163,6 +163,8 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    * Locking since there may be few calls coming at the same time from the client with the same url (e.g. get page info, and record visited).
    * The lock is on the exact same url and using intern so we can have a globaly unique object of the url.
    * Possible downside is that the permgen will fill up with these urls
+   *
+   * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
