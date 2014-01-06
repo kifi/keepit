@@ -236,10 +236,8 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   override def advance(target: Int): Int = {
     var iter = goto(target)
     while(iter < NO_MORE_DOCS && proximityScore < threshold) {
-      log.info(s"proximity score for doc id ${iter} is $proximityScore, threshold = $threshold, doc skipped")
       iter = goto(target)
     }
-    log.info(s"return doc id ${iter}, proximityScore = $proximityScore")
     iter
   }
 
