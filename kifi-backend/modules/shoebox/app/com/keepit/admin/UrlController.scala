@@ -140,14 +140,13 @@ class UrlController @Inject() (
     }
   }
 
-  def orphanCleanup() = AdminHtmlAction { implicit request =>
+  def orphanCleanup(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
     Akka.future {
       db.readWrite { implicit session =>
-        orphanCleaner.cleanNormalizedURIs(false)
-        orphanCleaner.cleanScrapeInfo(false)
+        orphanCleaner.cleanNormalizedURIs(readOnly)
       }
     }
-    Redirect(routes.UrlController.documentIntegrity())
+    Ok
   }
 
   def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction { implicit request =>
