@@ -186,7 +186,7 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
   }
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float) extends Scorer(weight) {
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float) extends Scorer(weight) with Logging {
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
@@ -235,9 +235,11 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
     var docIter = advance(0)
     score()
     while(docIter < NO_MORE_DOCS && proximityScore < threshold) {
+      log.info(s"proximity score for doc id ${docIter} is $proximityScore, threshold = $threshold, doc skipped")
       docIter = advance(0)
       score()
     }
+    log.info(s"return doc id ${docIter}, proximityScore = $proximityScore")
     docIter
   }
 
