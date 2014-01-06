@@ -52,6 +52,15 @@ object SystemEvent extends Companion[SystemEvent] {
   implicit val typeCode = TypeCode("system")
 }
 
+case class AnonymousEvent(context: HeimdalContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
+  override def toString(): String = s"AnonymousEvent[type=${eventType.name},time=$time]"
+}
+
+object AnonymousEvent extends Companion[AnonymousEvent] {
+  implicit val format = Json.format[AnonymousEvent]
+  implicit val typeCode = TypeCode("anonymous")
+}
+
 case class EventDescriptor(
   name: EventType,
   description: Option[String] = None,
