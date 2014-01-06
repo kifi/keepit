@@ -97,6 +97,7 @@ a.kifi-compose-snapshot:active {
   cursor: default;
 }
 .kifi-compose-tip.kifi-active:hover,
+.kifi-compose-tip-alt:hover,
 .kifi-compose-tip-alt.kifi-hover {
   background-color: #fff;
   color: #000;

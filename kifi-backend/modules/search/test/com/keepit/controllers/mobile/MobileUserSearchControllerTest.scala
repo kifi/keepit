@@ -76,7 +76,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.run(100, 100)
+        indexer.update()
 
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.searchV1("woody", None, None, 3).toString
         path === "/m/1/search/users/search?query=woody&maxHits=3"
@@ -115,7 +115,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.run(100, 100)
+        indexer.update()
 
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("firstNa", None, 0, 10).toString
         path === "/m/1/search/users/page?query=firstNa&pageNum=0&pageSize=10"
@@ -167,7 +167,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.run(100, 100)
+        indexer.update()
 
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("woody@fox.com", None, 0, 10).toString
         path === "/m/1/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"

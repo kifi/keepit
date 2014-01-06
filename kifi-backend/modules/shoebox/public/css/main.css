@@ -3210,7 +3210,7 @@ body[data-view=search] .main-keeps {
   color: #fff;
   background: #67829c;
   padding: 7px 12px;
-  border: 1px solid #f4f6f9;
+  border: 1px solid transparent;
   border-radius: 9px;
   position: absolute;
   right: 16px;
@@ -3584,27 +3584,6 @@ body[data-view=search] .main-keeps {
 
 .top-right-nav>a[href]:focus {
   box-shadow: inset 0 0 0 2px #a0b1c2;
-}
-
-.top-right-nav>a.send-feedback {
-  background-color: #6fa5ef;
-  border-radius: 6px;
-  padding: 10px 20px;
-  margin-right: 6px;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  -webkit-transition: background-color .1s;
-  transition: background-color .1s;
-}
-
-.top-right-nav>a.send-feedback:hover {
-  background-color: #7faeef;
-}
-
-.top-right-nav>a.send-feedback:active {
-  background-color: #5f9cef;
-  -webkit-transition: none;
-  transition: none;
 }
 
 .splash,

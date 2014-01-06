@@ -78,7 +78,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.run(100, 100)
+        indexer.update()
 
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
         path === "/search/users/search?query=woody&maxHits=3"
@@ -117,7 +117,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.run(100, 100)
+        indexer.update()
 
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("firstNa", None, 0, 10).toString
         path === "/search/users/page?query=firstNa&pageNum=0&pageSize=10"
@@ -170,7 +170,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.run(100, 100)
+        indexer.update()
 
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).toString
         path === "/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
