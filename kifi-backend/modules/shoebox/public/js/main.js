@@ -2753,6 +2753,10 @@ $(function () {
 					othersTotal: othersTotal || 0
 				});
 
+				if (hasGmailInvite) {
+					$('.search-filters').show();
+				}
+
 				if (numShown) {
 					$checkAll.addClass('live');
 				}
@@ -3985,9 +3989,11 @@ $(function () {
 	}
 
 	// load data for persistent (view-independent) page UI
+	var hasGmailInvite = false;
 	var promise = {
 		me: refreshMe().promise().then(function (me) {
 			if (hasExperiment(me, 'gmail_invite', true)) {
+				hasGmailInvite = true;
 				$('.kifi-onboarding-li').show().click(showWelcome);
 			}
 			return me;
