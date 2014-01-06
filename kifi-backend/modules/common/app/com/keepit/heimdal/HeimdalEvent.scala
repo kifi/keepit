@@ -15,7 +15,7 @@ sealed trait HeimdalEvent {
 }
 
 object HeimdalEvent {
-  private val typeCodeMap = TypeCode.typeCodeMap[HeimdalEvent](UserEvent.typeCode, SystemEvent.typeCode)
+  private val typeCodeMap = TypeCode.typeCodeMap[HeimdalEvent](UserEvent.typeCode, SystemEvent.typeCode, AnonymousEvent.typeCode)
   def getTypeCode(code: String) = typeCodeMap(code.toLowerCase)
 
   implicit val format = new Format[HeimdalEvent] {
