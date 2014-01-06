@@ -1,7 +1,10 @@
 @(headerType: String)
 
+@if(headerType == "none") {
+
+} else {
 @if(headerType == "grey") {
-  <div class="kifi-header-bg">
+<div class="kifi-header-bg">
   <div class="kifi-header" data-track-source="header">
     <div class="kifi-header-left">
       <a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
@@ -36,4 +39,5 @@
     <div class="clear"></div>
   </div>
 </div>
+}
 }
