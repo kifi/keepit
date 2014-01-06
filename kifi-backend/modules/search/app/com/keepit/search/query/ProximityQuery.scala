@@ -231,19 +231,19 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
 
   override def docID(): Int = curDoc
 
-  override def nextDoc(): Int = {
-    var docIter = advance(0)
-    score()
-    while(docIter < NO_MORE_DOCS && proximityScore < threshold) {
-      log.info(s"proximity score for doc id ${docIter} is $proximityScore, threshold = $threshold, doc skipped")
-      docIter = advance(0)
-      score()
-    }
-    log.info(s"return doc id ${docIter}, proximityScore = $proximityScore")
-    docIter
-  }
+  override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
+    var iter = goto(target)
+    while(iter < NO_MORE_DOCS && proximityScore < threshold) {
+      log.info(s"proximity score for doc id ${iter} is $proximityScore, threshold = $threshold, doc skipped")
+      iter = goto(target)
+    }
+    log.info(s"return doc id ${iter}, proximityScore = $proximityScore")
+    iter
+  }
+
+  private def goto(target: Int): Int = {
     var top = pq.top
     val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
@@ -251,6 +251,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
       top = pq.updateTop()
     }
     curDoc = top.doc
+    score()       // score this doc. its proximity score need to be greater than the threshold
     curDoc
   }
 
