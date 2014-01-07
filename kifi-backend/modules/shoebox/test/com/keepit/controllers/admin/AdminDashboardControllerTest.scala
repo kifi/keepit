@@ -3,8 +3,8 @@ package com.keepit.controllers.admin
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
-import com.keepit.social.{SocialId, SocialNetworks}
+import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
+import com.keepit.social.{ProdShoeboxSecureSocialModule, SocialId, SocialNetworks}
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.model.ExperimentType.ADMIN
@@ -28,7 +28,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    TestShoeboxSecureSocialModule(),
+    ProdShoeboxSecureSocialModule(),
     FakeHttpClientModule(),
     ShoeboxFakeStoreModule(),
     FakeSocialGraphModule(),
