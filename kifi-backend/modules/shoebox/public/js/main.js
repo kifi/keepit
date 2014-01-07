@@ -4222,7 +4222,7 @@ $(function () {
 	/* Onboarding */
 
 	function showWelcome() {
-		$('body').append('<iframe class="kifi-onboarding-iframe" src="/onboarding.html" frameborder="0"></iframe>');
+		$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
 	}
 
 	window.getMe = function() {
