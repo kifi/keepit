@@ -382,7 +382,13 @@ var keeper = keeper || function () {  // idempotent for Chrome
   function keepPage(how) {
     log('[keepPage]', how)();
     updateKeptDom(how);
-    api.port.emit('keep', withUrls({title: document.title, how: how}));
+    var title = document.title.trim();
+    api.port.emit('keep', withUrls({title: title, how: how}));
+    if (!title && false) {  // TODO: finish the prompt
+      api.require('scripts/keep_name_prompt.js', function () {
+        promptForKeepName();
+      });
+    }
   }
 
   function unkeepPage() {
