@@ -1,0 +1,220 @@
+@import "lesshat";
+
+@bodyFontSize: 24px;
+@bodyFontSizeLarge: 30px;
+
+.font-size(@size, @baseSize: @bodyFontSize) {
+	font-size: unit(@size / @baseSize, em);
+}
+
+.line-height(@size, @baseSize: @bodyFontSize) {
+	line-height: unit(@size / @baseSize, em);
+}
+
+.letter-spacing(@size, @baseSize: @bodyFontSize) {
+	letter-spacing: unit(@size / @baseSize, em);
+}
+
+.top(@size, @baseSize: @bodyFontSize) {
+	top: unit(@size / @baseSize, em);
+}
+
+.right(@size, @baseSize: @bodyFontSize) {
+	right: unit(@size / @baseSize, em);
+}
+
+.bottom(@size, @baseSize: @bodyFontSize) {
+	bottom: unit(@size / @baseSize, em);
+}
+
+.left(@size, @baseSize: @bodyFontSize) {
+	left: unit(@size / @baseSize, em);
+}
+
+.width(@size, @baseSize: @bodyFontSize) {
+	width: unit(@size / @baseSize, em);
+}
+
+.height(@size, @baseSize: @bodyFontSize) {
+	height: unit(@size / @baseSize, em);
+}
+
+.size(@size, @baseSize: @bodyFontSize) {
+	width: unit(@size / @baseSize, em);
+	height: unit(@size / @baseSize, em);
+}
+
+.max-width(@size, @baseSize: @bodyFontSize) {
+	max-width: unit(@size / @baseSize, em);
+}
+
+.max-height(@size, @baseSize: @bodyFontSize) {
+	max-height: unit(@size / @baseSize, em);
+}
+
+.max-size(@size, @baseSize: @bodyFontSize) {
+	max-width: unit(@size / @baseSize, em);
+	max-height: unit(@size / @baseSize, em);
+}
+
+.border-top(@size, @baseSize: @bodyFontSize) {
+	border-top-width: unit(@size / @baseSize, em);
+}
+
+.border-right(@size, @baseSize: @bodyFontSize) {
+	border-right-width: unit(@size / @baseSize, em);
+}
+
+.border-bottom(@size, @baseSize: @bodyFontSize) {
+	border-bottom-width: unit(@size / @baseSize, em);
+}
+
+.border-left(@size, @baseSize: @bodyFontSize) {
+	border-left-width: unit(@size / @baseSize, em);
+}
+
+.padding-top(@size, @baseSize: @bodyFontSize) {
+	padding-top: unit(@size / @baseSize, em);
+}
+
+.padding-right(@size, @baseSize: @bodyFontSize) {
+	padding-right: unit(@size / @baseSize, em);
+}
+
+.padding-bottom(@size, @baseSize: @bodyFontSize) {
+	padding-bottom: unit(@size / @baseSize, em);
+}
+
+.padding-left(@size, @baseSize: @bodyFontSize) {
+	padding-left: unit(@size / @baseSize, em);
+}
+
+.padding-tb(@size, @baseSize: @bodyFontSize) {
+	padding-top: unit(@size / @baseSize, em);
+	padding-bottom: unit(@size / @baseSize, em);
+}
+
+.padding-lr(@size, @baseSize: @bodyFontSize) {
+	padding-left: unit(@size / @baseSize, em);
+	padding-right: unit(@size / @baseSize, em);
+}
+
+.padding(@size, @baseSize: @bodyFontSize) {
+	padding-top: unit(@size / @baseSize, em);
+	padding-bottom: unit(@size / @baseSize, em);
+	padding-left: unit(@size / @baseSize, em);
+	padding-right: unit(@size / @baseSize, em);
+}
+
+.margin-top(@size, @baseSize: @bodyFontSize) {
+	margin-top: unit(@size / @baseSize, em);
+}
+
+.margin-right(@size, @baseSize: @bodyFontSize) {
+	margin-right: unit(@size / @baseSize, em);
+}
+
+.margin-bottom(@size, @baseSize: @bodyFontSize) {
+	margin-bottom: unit(@size / @baseSize, em);
+}
+
+.margin-left(@size, @baseSize: @bodyFontSize) {
+	margin-left: unit(@size / @baseSize, em);
+}
+
+.margin-tb(@size, @baseSize: @bodyFontSize) {
+	margin-top: unit(@size / @baseSize, em);
+	margin-bottom: unit(@size / @baseSize, em);
+}
+
+.margin-lr(@size, @baseSize: @bodyFontSize) {
+	margin-left: unit(@size / @baseSize, em);
+	margin-right: unit(@size / @baseSize, em);
+}
+
+.margin(@size, @baseSize: @bodyFontSize) {
+	margin-top: unit(@size / @baseSize, em);
+	margin-bottom: unit(@size / @baseSize, em);
+	margin-left: unit(@size / @baseSize, em);
+	margin-right: unit(@size / @baseSize, em);
+}
+
+.clearfix() {
+	&:after {
+		content: ' ';
+		display: block;
+		clear: both;
+		font-size: 0;
+	}
+}
+
+.clear {
+	display: block;
+	clear: both;
+}
+
+.centered-content() {
+	max-width: 1349px;
+	margin: 0 auto;
+	.box-sizing(border-box);
+}
+
+.body-font() {
+	font-family: 'Open Sans', sans-serif;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+.header-font() {
+	font-family: 'Raleway', sans-serif;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+body {
+	position: relative;
+	font-size: @bodyFontSize;
+	margin: 0 auto;
+	font-weight: 300;
+	.body-font;
+}
+
+@media screen and (min-width: 800px) {
+body {
+	font-size: @bodyFontSizeLarge;
+}
+}
+
+.fancybox-wrap {
+	margin-top: -3%;
+	.transition(all .3s ease);
+}
+
+.wistia-fancybox #fancybox-overlay {
+    -webkit-animation: fadeIn 0.5s ease;
+       -moz-animation: fadeIn 0.5s ease;
+            animation: fadeIn 0.5s ease;
+}
+
+.wistia-fancybox .fancybox-close.fancybox-close {
+	.box-shadow(none);
+}
+
+.wistia-fancybox .fancybox-outer.fancybox-outer {
+	background: black;
+}
+
+@-webkit-keyframes fadeIn {
+    0%   {opacity: 0;}
+    100% {opacity: 0.8;}
+}
+
+@-moz-keyframes fadeIn {
+    0%   {opacity: 0;}
+    100% {opacity: 0.8;}
+}
+
+@keyframes fadeIn {
+    0%   {opacity: 0;}
+    100% {opacity: 0.8;}
+}
