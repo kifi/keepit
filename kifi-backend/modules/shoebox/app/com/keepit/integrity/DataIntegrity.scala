@@ -190,7 +190,7 @@ class OrphanCleaner @Inject() (
                   }
                 }
               case BookmarkStates.INACTIVE =>
-                if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE) {
+                if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE &&  u.state != NormalizedURIStates.REDIRECTED) {
                   if (!bookmarkRepo.exists(u.id.get)) {
                     numUrisChangedToActive += 1
                     if (!readOnly) {

@@ -116,16 +116,18 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           val nuri1 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPE_FAILED))
           val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.yahooo.com/", Some("Yahoo")).withState(NormalizedURIStates.ACTIVE))
           val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.altavista.com/", Some("AltaVista")).withState(NormalizedURIStates.INACTIVE))
+          val nuri4 = uriRepo.save(NormalizedURI.withHash("http://www.inktomi.com/", Some("Inktomi")).withState(NormalizedURIStates.REDIRECTED))
 
-          Seq(nuri0, nuri1, nuri2, nuri3)
+          Seq(nuri0, nuri1, nuri2, nuri3, nuri4)
         }
         val urls =  db.readWrite { implicit session =>
           val url0 = urlRepo.save(URLFactory("http://www.google.com/", uris(0).id.get))
           val url1 = urlRepo.save(URLFactory("http://www.bing.com/", uris(1).id.get))
           val url2 = urlRepo.save(URLFactory("http://www.yahooo.com/", uris(2).id.get))
           val url3 = urlRepo.save(URLFactory("http://www.altavista.com/", uris(3).id.get))
+          val url4 = urlRepo.save(URLFactory("http://www.inktomi.com/", uris(4).id.get))
 
-          Seq(url0, url1, url2, url3)
+          Seq(url0, url1, url2, url3, url4)
         }
 
         var bms = db.readWrite { implicit session =>
@@ -142,6 +144,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
         }
 
         // test: ACTIVE to SCRAPE_WANTED
@@ -157,6 +160,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPE_WANTED
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
         }
 
         // test: INACTIVE to SCRAPE_WANTED
@@ -172,6 +176,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPE_WANTED
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.SCRAPE_WANTED
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
         }
 
         // test: to ACTIVE
