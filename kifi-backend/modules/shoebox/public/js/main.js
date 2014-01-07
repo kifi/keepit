@@ -3359,9 +3359,6 @@ $(function () {
 		case 'blog':
 			showBlog();
 			break;
-		case 'onboarding':
-			showWelcome();
-			break;
 		default:
 			return;
 		}
@@ -3402,9 +3399,6 @@ $(function () {
 			break;
 		case 'blog':
 			title = 'Updates and Features';
-			break;
-		case 'onboarding':
-			title = 'Welcome to kifi';
 			break;
 		}
 		if (clearTags) {
@@ -4090,7 +4084,6 @@ $(function () {
 		me: refreshMe().promise().then(function (me) {
 			if (hasExperiment(me, 'gmail_invite', true)) {
 				hasGmailInvite = true;
-				$('.kifi-onboarding-li').show().click(showWelcome);
 			}
 			return me;
 		}),
@@ -4134,59 +4127,6 @@ $(function () {
 	// render initial view
 	$(window).trigger('statechange');
 
-	window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
-	window.addEventListener('message', function (event) {
-		if (event.origin === location.origin && event.data && event.data.bookmarkCount > 0) {
-			$('.welcome-dialog').dialog('hide');
-			showBookmarkImportDialog(event);
-		}
-	});
-
-	var $bookmarkImportDialog = $('.import-dialog').remove().show();
-
-	function showBookmarkImportDialog(event) {
-		$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
-		$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
-			$bookmarkImportDialog.dialog('hide');
-			$bookmarkImportDialog = null;
-			// don't open again!
-			event.source.postMessage('import_bookmarks_declined', event.origin);
-			welcomeUser();
-		}).on('click', 'button.do-import', function () {
-			$bookmarkImportDialog.find('.import-step-1').hide();
-			$bookmarkImportDialog.find('.import-step-2').show();
-			$bookmarkImportDialog.on('click', 'button', function () {
-				$bookmarkImportDialog.dialog('hide');
-				$bookmarkImportDialog = null;
-				window.location = "https://www.kifi.com/?m=2";
-				//welcomeUser();
-			});
-			event.source.postMessage('import_bookmarks', event.origin);
-		}).find('button').focus();
-	}
-
-	function welcomeUser() {
-		if ($bookmarkImportDialog && $bookmarkImportDialog.is(":visible")) return;
-		if ((!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") && $welcomeDialog) {
-			$welcomeDialog.dialog('show').on('click', 'button', function () {
-				$.postJson(xhrBase + '/user/prefs', {'site_welcomed': 'true'}, function (data) {
-					log('[prefs]', data);
-				});
-				$welcomeDialog.dialog('hide');
-				$welcomeDialog = null;
-			}).find('button').focus();
-		}
-	}
-
-	var $welcomeDialog = $('.welcome-dialog').remove().show();
-	$.when(promise.myPrefs).done(function () {
-		if (!myPrefs.site_welcomed || myPrefs.site_welcomed == "false") {
-			welcomeUser();
-		} else {
-			$welcomeDialog = null;
-		}
-	});
-
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template');
 	$('#fr-card-template').remove();
@@ -4221,10 +4161,41 @@ $(function () {
 
 	/* Onboarding */
 
-	function showWelcome() {
-		$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
-	}
+	$.when(promise.myPrefs, promise.me).done(function () {
+		if (hasExperiment(me, 'gmail_invite', true) && !myPrefs.onboarding_seen) {
+			$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
 
+			window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+			window.addEventListener('message', function (event) {
+				if (event.origin === location.origin && event.data && event.data.bookmarkCount > 0) {
+					showBookmarkImportDialog(event);
+				}
+			});
+
+			var $bookmarkImportDialog = $('.import-dialog').remove().show();
+
+			function showBookmarkImportDialog(event) {
+				$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
+				$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
+					$bookmarkImportDialog.dialog('hide');
+					$bookmarkImportDialog = null;
+					// don't open again!
+					event.source.postMessage('import_bookmarks_declined', event.origin);
+				}).on('click', 'button.do-import', function () {
+					$bookmarkImportDialog.find('.import-step-1').hide();
+					$bookmarkImportDialog.find('.import-step-2').show();
+					$bookmarkImportDialog.on('click', 'button', function () {
+						$bookmarkImportDialog.dialog('hide');
+						$bookmarkImportDialog = null;
+						window.location = "https://www.kifi.com/?m=2";
+					});
+					event.source.postMessage('import_bookmarks', event.origin);
+				}).find('button').focus();
+			}
+		}
+	});
+
+	// onboarding.js is using this function
 	window.getMe = function() {
 		return promise.me.then(function (me) {
 			me.pic200 = formatPicUrl(me.id, me.pictureName, 200);
@@ -4232,8 +4203,14 @@ $(function () {
 		});
 	};
 
-	window.exitWelcome = function () {
+	// onboarding.js is using this function
+	window.exitOnboarding = function () {
 		$('.kifi-onboarding-iframe').remove();
+		$.postJson(xhrBase + '/user/prefs', {
+			onboarding_seen: true
+		}, function (data) {
+			log('[prefs]', data);
+		});
 		navigate('');
 	};
 });
