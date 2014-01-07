@@ -417,26 +417,28 @@ class UserCommander @Inject() (
 
             SafeFuture{
               //sending 'friend request accepted' email && Notification
-              val requestingUser = userRepo.get(userId)
+              val respondingUser = userRepo.get(userId)
               val destinationEmail = emailRepo.getByUser(user.id.get)
+              val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"))
+              val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"))
               db.readWrite{ session =>
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
-                  from = EmailAddresses.INVITATION,
-                  fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName}"),
+                  from = EmailAddresses.NOTIFICATIONS,
+                  fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName} (via Kifi)"),
                   to = List(destinationEmail),
-                  subject = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!", //ZZZ plug into correct copy and template when ready
-                  htmlBody = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!",
-                  category = PostOffice.Categories.User.INVITATION)
+                  subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
+                  htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage).body,
+                  category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }
-              elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+              elizaServiceClient.sendGlobalNotification(
                 userIds = Set(user.id.get),
-                title = "Friend Reqeust",
-                body = s"${requestingUser.firstName} ${requestingUser.lastName} wants to be kifi friends with you!",
-                linkText = "Click to accept friend request",
-                linkUrl = "https://www.kifi.com/friends/requests",
-                imageUrl = requestingUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                linkText = "Invite more friends to kifi.",
+                linkUrl = "https://www.kifi.com/friends/invite",
+                imageUrl = respondingUserImage,
                 sticky = false
               )
             }
