@@ -244,9 +244,7 @@ GET    /tsearch                     @com.keepit.controllers.SearchProxyControlle
 ##########################################
 # External Services API
 ##########################################
-
-#todo(eishay): change routes and callback in sendgrid
-POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+POST    /app/sendgrid/webhook       @com.keepit.controllers.SendgridWebhook.parseEvent()
 
 ##########################################
 # Admin
