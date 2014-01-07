@@ -67,6 +67,7 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
         res
       } catch {
         case t: Throwable =>
+          t.printStackTrace()
           log.error("action fail!", t)
           throw t
       }

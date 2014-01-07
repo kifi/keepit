@@ -55,6 +55,13 @@ class HomeController @Inject() (
   }
 
   // Start post-launch stuff!
+
+  // temp! if I'm still here post-launch, sack whoever is responsible for things around here.
+  def newDesignCookie = Action { request =>
+    Ok.withCookies(Cookie("newdesign","yep"))
+  }
+
+
   def newHome = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = newHomeNotAuthed(_))
 
   private def newHomeNotAuthed(implicit request: Request[_]): Result = {
@@ -109,7 +116,11 @@ class HomeController @Inject() (
     } else {
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
-      Ok(views.html.auth.auth())
+      if(request.cookies.get("newdesign").isDefined) {
+        Ok(views.html.marketing.landing())
+      } else {
+        Ok(views.html.auth.auth())
+      }
     }
   }
 

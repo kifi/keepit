@@ -113,6 +113,7 @@ kifi.form = (function () {
       transitionTitle();
       $body.removeClass('finalizing');
       $.post($(this).data('cancelUri'));
+      $('.signup-1').show();
       setTimeout(function() {
         $signup2EmailForm.hide();
         $signup2SocialForm.hide();
@@ -120,6 +121,18 @@ kifi.form = (function () {
         $signup1Form.find('.form-email-addr').focus();
       }, ms);
     }
+  });
+
+  $('.cancel-signup a').on('mousedown click', function(e) {
+    e.preventDefault();
+    if ($('body').hasClass('finalizing')) {
+      $.post($(this).data('cancelUri'), function(e) {
+        window.location = "/";
+      });
+    } else {
+        window.location = "/";
+    }
+    return false;
   });
 
   var $signup1Form = $('.signup-1').submit(function (e) {
@@ -142,6 +155,7 @@ kifi.form = (function () {
           transitionTitle($signup2EmailForm.data('title'));
           $signup2EmailForm.css('display', 'block').layout();
           $('body').addClass('finalizing droppable');
+          $('.signup-1').hide();
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
       }).fail(function (xhr) {
