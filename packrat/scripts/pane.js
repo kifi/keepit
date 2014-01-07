@@ -132,7 +132,7 @@ var pane = pane || function () {  // idempotent for Chrome
       } else {
         keeper.onPaneChange(locator);
         $pane.insertBefore(tile);
-        $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
+        keeper.moveToBottom();
       }
       $pane.layout()
       .on("transitionend", function onPaneShown(e) {
