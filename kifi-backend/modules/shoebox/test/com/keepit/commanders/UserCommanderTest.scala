@@ -39,7 +39,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
       val email2 = emailRepo.save(EmailAddress(userId=user2.id.get, address="peteG@42go.com"))
       val email3 = emailRepo.save(EmailAddress(userId=user3.id.get, address="superreporter@42go.com"))
 
-      user1 = userRepo.save(user1.copy(primaryEmailId = Some(email1.id.get)))
+      user1 = userRepo.save(user1.copy(primaryEmailId = Some(email1.id.get), pictureName = Some("dfkjiyert")))
       user2 = userRepo.save(user2.copy(primaryEmailId = Some(email2.id.get)))
 
       connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get))
@@ -74,7 +74,25 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         //double seding protection
         userCommander.tellAllFriendsAboutNewUser(user1.id.get, Seq(user2.id.get))
         outbox.size === 2
-        //ZZZ make sure to test for correct content once that is available (i.e. html is done)
+
+        //content check
+        outbox(0).htmlBody.toString.containsSlice(s"${user1.firstName} ${user1.lastName} just joined Kifi") === true
+        outbox(1).htmlBody.toString.containsSlice(s"${user1.firstName} ${user1.lastName} just joined Kifi") === true
+
+        outbox(0).htmlBody.toString.containsSlice(user1.pictureName.get) === true
+        outbox(1).htmlBody.toString.containsSlice(user1.pictureName.get) === true
+
+        outbox(0).htmlBody.toString.containsSlice(user2.firstName) === true
+        outbox(1).htmlBody.toString.containsSlice(user3.firstName) === true
+
+        outbox(0).subject === s"${user1.firstName} ${user1.lastName} joined Kifi"
+        outbox(1).subject === s"${user1.firstName} ${user1.lastName} joined Kifi"
+
+        outbox(0).to.length === 1
+        outbox(1).to.length === 1
+
+        outbox(0).to(0).address === "peteG@42go.com"
+        outbox(1).to(0).address === "superreporter@42go.com"
       }
     }
 

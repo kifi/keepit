@@ -214,7 +214,7 @@ class UserCommander @Inject() (
             from = EmailAddresses.NOTIFICATIONS,
             fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
             to = List(id2Email(userId)),
-            subject = s"${newUser.firstName} ${newUser.lastName} joined KiFi",
+            subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
             htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl).body,
             category = PostOffice.Categories.User.NOTIFICATION)
           )
