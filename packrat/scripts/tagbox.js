@@ -403,7 +403,7 @@ this.tagbox = (function ($, win) {
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
-				.then(this.moveTileToBottom.bind(this))
+				.then(this.moveKeeperToBottom.bind(this))
 				.then(this.setLoaded.bind(this, false))
 				.then(this.focusInput.bind(this))
 				.then(this.updateScroll.bind(this))
@@ -727,22 +727,17 @@ this.tagbox = (function ($, win) {
 			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
-		moveTileToBottom: function (res) {
-			var tile = win.tile,
-				$tile = $(tile),
-				dy = window.innerHeight - tile.getBoundingClientRect().bottom;
-
-			if (!dy) {
+		moveKeeperToBottom: function (res) {
+			var $transitionEl = keeper.moveToBottom();
+			if (!$transitionEl) {
 				return res;
 			}
 
-			$tile.css('transform', 'translate(0,' + dy + 'px)');
-
 			var deferred = Q.defer();
 
-			$tile.on('transitionend', function onTransitionend(e) {
+			$transitionEl.on('transitionend', function onTransitionend(e) {
 				if (e.target === this) {
-					$tile.off('transitionend', onTransitionend);
+					$transitionEl.off('transitionend', onTransitionend);
 					deferred.resolve();
 				}
 			});
