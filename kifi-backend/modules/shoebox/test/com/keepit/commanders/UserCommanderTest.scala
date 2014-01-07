@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import org.specs2.mutable.Specification
 
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
 import com.keepit.model.{User, EmailAddressRepo, UserRepo, EmailAddress, UserConnectionRepo}
 import com.keepit.common.mail.{FakeMailModule, FakeOutbox}
 import com.keepit.abook.TestABookServiceClientModule
@@ -11,9 +11,11 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 
+import play.api.test.Helpers.running
+
 import com.google.inject.Injector
 
-class UserCommanderTest extends Specification with ShoeboxTestInjector {
+class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
 
   def setup()(implicit injector: Injector) = {
     val userRepo = inject[UserRepo]
@@ -60,7 +62,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
   "UserCommander" should {
 
     "notify friends of new joinee" in {
-      withDb(modules:_*) { implicit injector =>
+      running(new ShoeboxApplication(modules:_*)) {
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
@@ -97,7 +99,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "welcome a joinee" in {
-      withDb(modules:_*) { implicit injector =>
+      running(new ShoeboxApplication(modules:_*)) {
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
@@ -114,6 +116,10 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         outbox(0).to.length === 1
         outbox(0).to(0).address === "username@42go.com"
         outbox(0).subject === "Let's get started with Kifi"
+
+        println(outbox(0).htmlBody)
+        outbox(0).htmlBody.toString.containsSlice("www.kifi.com/unsubscribe/") === true
+
       }
     }
 

@@ -1,7 +1,7 @@
-@(name: String, friendName: String, friendImageUrl: String)
+@(name: String, friendName: String, friendImageUrl: String, unsubLink: String)
 
 
-@helper.kifiTemplate(title = "Kifi — Getting popular, huh?") {
+@helper.kifiTemplate(title = "Kifi — Getting popular, huh?", unsubLink=unsubLink) {
   @helper.oneColumnRow {
     Hey @name,<br><br>
     @friendName wants to be your Kifi friend. Woo hoo.

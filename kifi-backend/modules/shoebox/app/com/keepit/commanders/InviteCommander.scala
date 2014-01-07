@@ -61,7 +61,8 @@ class InviteCommander @Inject() (
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   clock: Clock,
-  s3ImageStore: S3ImageStore) extends Logging {
+  s3ImageStore: S3ImageStore,
+  emailOptOutCommander: EmailOptOutCommander) extends Logging {
 
   def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
@@ -200,6 +201,7 @@ class InviteCommander @Inject() (
 
     val message = inviteInfo.message getOrElse s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi"
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"))
+    val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(GenericEmailAddress(c.email)))}"
 
     val electronicMail = ElectronicMail(
       senderUserId = None,
@@ -207,7 +209,7 @@ class InviteCommander @Inject() (
       fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
       to = Seq(GenericEmailAddress(c.email)),
       subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
-      htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink).body,
+      htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
       category = PostOffice.Categories.User.INVITATION
     )
 

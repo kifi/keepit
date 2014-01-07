@@ -101,7 +101,8 @@ class UserCommander @Inject() (
   postOffice: LocalPostOffice,
   clock: Clock,
   elizaServiceClient: ElizaServiceClient,
-  s3ImageStore: S3ImageStore) extends Logging {
+  s3ImageStore: S3ImageStore,
+  emailOptOutCommander: EmailOptOutCommander) extends Logging {
 
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -207,6 +208,7 @@ class UserCommander @Inject() (
       }
       val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"))
       toNotify.foreach { userId =>
+        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
         db.readWrite{ implicit session =>
           val user = userRepo.get(userId)
           postOffice.sendMail(ElectronicMail(
@@ -215,7 +217,7 @@ class UserCommander @Inject() (
             fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
             to = List(id2Email(userId)),
             subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
-            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl).body,
+            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
             category = PostOffice.Categories.User.NOTIFICATION)
           )
         }
@@ -246,12 +248,14 @@ class UserCommander @Inject() (
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
 
+          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
+
           val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
             ("Kifi.com | Please confirm your email address",
               views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
             ("Let's get started with Kifi",
-              views.html.email.welcomeInlined(newUser.firstName, verifyUrl).body)
+              views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
@@ -265,12 +269,13 @@ class UserCommander @Inject() (
       } else {
         db.readWrite{ implicit session =>
           val emailAddr = emailRepo.getByUser(newUser.id.get)
+          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(emailAddr),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = "Let's get started with Kifi",
-            htmlBody = views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com").body
+            htmlBody = views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body
           )
           postOffice.sendMail(mail)
         }
@@ -421,6 +426,7 @@ class UserCommander @Inject() (
               val destinationEmail = emailRepo.getByUser(user.id.get)
               val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"))
               val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"))
+              val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
               db.readWrite{ session =>
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
@@ -428,7 +434,7 @@ class UserCommander @Inject() (
                   fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName} (via Kifi)"),
                   to = List(destinationEmail),
                   subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
-                  htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage).body,
+                  htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }
@@ -453,6 +459,7 @@ class UserCommander @Inject() (
               val requestingUser = userRepo.get(userId)
               val destinationEmail = emailRepo.getByUser(user.id.get)
               val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"))
+              val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
               db.readWrite{ session =>
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
@@ -460,7 +467,7 @@ class UserCommander @Inject() (
                   fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName} (via Kifi)"),
                   to = List(destinationEmail),
                   subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
-                  htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage).body,
+                  htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body,
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }

@@ -1,7 +1,7 @@
-@(firstName: String, lastName: String, imageUrl: String, message: String, acceptLink: String)
+@(firstName: String, lastName: String, imageUrl: String, message: String, acceptLink: String, unsubLink: String)
 
 
-@helper.kifiTemplate(title = firstName + " invites you to Kifi") {
+@helper.kifiTemplate(title = "Kifi - " + firstName + " invites you to Kifi", unsubLink=unsubLink) {
   <table class="row">
   <tr>
 
