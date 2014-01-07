@@ -17,7 +17,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getChanged(sequenceNumber: SequenceNumber, includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
@@ -61,8 +61,8 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (if (limit >= 0) q.take(limit) else q).list
   }
 
-  def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
-    val q = (for (f <- table if (f.seq > sequenceNumber && f.state === NormalizedURIStates.SCRAPED)) yield f).sortBy(_.seq)
+  def getChanged(sequenceNumber: SequenceNumber, states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+    val q = (for (f <- table if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
   }
 
