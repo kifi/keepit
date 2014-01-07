@@ -165,7 +165,8 @@ class ServiceDiscoveryImpl(
           airbrake.get.notify(s"deleting instance $instance from zookeeper before re-registering itself")
           zk.deleteNode(instance.node)
         } catch {
-          case e: Exception => airbrake.get.notify(e)
+          case e: Exception =>
+            log.info("trying to delete node on re-registration, safe to ignore", e)
         } finally {
           myInstance = None
         }
