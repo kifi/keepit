@@ -343,12 +343,17 @@ class UserController @Inject() (
        Json.obj("experiments" -> experiments.map(_.value)))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed")
+  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")
 
   def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(db.readOnly { implicit s =>
       JsObject(SitePrefNames.toSeq.map { name =>
-        name -> userValueRepo.getValue(request.userId, name).map(JsString).getOrElse(JsNull)
+        name -> userValueRepo.getValue(request.userId, name).map(value => {
+          if (value == "false") JsBoolean(false)
+          else if (value == "true") JsBoolean(true)
+          else if (value == "null") JsNull
+          else JsString(value)
+        }).getOrElse(JsNull)
       })
     })
   }

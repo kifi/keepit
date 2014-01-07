@@ -168,7 +168,6 @@ GET     /blog                       @com.keepit.controllers.website.HomeControll
 
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
-GET     /reddit                     @com.keepit.controllers.website.HomeController.redditPreview
 GET     /terms2                      @com.keepit.controllers.website.HomeController.termsOfService
 GET     /privacy2                    @com.keepit.controllers.website.HomeController.privacyPolicy
 
