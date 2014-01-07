@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.api
 
 import com.google.inject.Inject
 import play.api.mvc.Action
@@ -11,7 +11,7 @@ import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
  * https://sendgrid.com/app/appSettings/type/eventnotify/id/15
  * http://sendgrid.com/docs/API_Reference/Webhooks/parse.html
  */
-class SendgridWebhook  @Inject() (
+class SendgridController  @Inject() (
   actionAuthenticator:ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) with Logging {
 

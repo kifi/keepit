@@ -244,7 +244,7 @@ GET    /tsearch                     @com.keepit.controllers.SearchProxyControlle
 ##########################################
 # External Services API
 ##########################################
-POST    /app/sendgrid/webhook       @com.keepit.controllers.SendgridWebhook.parseEvent()
+POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()
 GET     /api/desk/isLoggedIn        @com.keepit.controllers.api.DeskController.isLoggedIn
 
 ##########################################
