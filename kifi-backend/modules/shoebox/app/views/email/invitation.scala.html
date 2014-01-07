@@ -1,4 +1,4 @@
-@(firstName: String, lastName: String, imageUrl: String)
+@(firstName: String, lastName: String, imageUrl: String, message: String, acceptLink: String)
 
 
 @helper.kifiTemplate(title = firstName + " invites you to Kifi") {
@@ -23,7 +23,7 @@
           <td>
             <!-- Greeting -->
             <br>
-            @firstName @lastName is waiting for you to join Kifi
+            @message
           </td>
           <td class="expander"></td>
         </tr>
@@ -56,7 +56,7 @@
             <table class="button radius green">
               <tbody><tr>
                   <td class="cta-button">
-                    <a href="https://www.kifi.com">Accept @{firstName}s invitation</a>
+                    <a href="@acceptLink">Accept @{firstName}s invitation</a>
 
                   </td>
               </tr></tbody>

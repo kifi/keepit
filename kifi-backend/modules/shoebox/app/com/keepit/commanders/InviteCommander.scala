@@ -24,6 +24,8 @@ import com.keepit.model.SocialConnection
 import scala.Some
 import com.keepit.model.Invitation
 import play.api.mvc.Result
+import com.keepit.common.store.S3ImageStore
+
 
 case class FullSocialId(network:String, id:String)
 object FullSocialId {
@@ -58,7 +60,8 @@ class InviteCommander @Inject() (
   linkedIn: LinkedInSocialGraph,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
-  clock: Clock) extends Logging {
+  clock: Clock,
+  s3ImageStore: S3ImageStore) extends Logging {
 
   def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
@@ -192,19 +195,22 @@ class InviteCommander @Inject() (
 
   }
 
-  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
-    val path = routes.InviteController.acceptInvite(invite.externalId).url //ZZZ correct template here with custom content
-    val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
+  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {  //ZZZ correct template here with custom content
+    val acceptLink = url + routes.InviteController.acceptInvite(invite.externalId).url
+
+    val message = inviteInfo.message getOrElse s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi"
+    val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"))
+
     val electronicMail = ElectronicMail(
       senderUserId = None,
       from = EmailAddresses.INVITATION,
-      fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} via Kifi"),
-      to = List(new EmailAddressHolder {
-        override val address = c.email
-      }),
-      subject = inviteInfo.subject.getOrElse("Join me on the Kifi.com Private Beta"),
-      htmlBody = messageWithUrl,
-      category = PostOffice.Categories.User.INVITATION)
+      fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
+      to = Seq(GenericEmailAddress(c.email)),
+      subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
+      htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink).body,
+      category = PostOffice.Categories.User.INVITATION
+    )
+
     postOffice.sendMail(electronicMail)
     log.info(s"[inviteConnection-email] sent invitation to $c")
   }
