@@ -6,11 +6,15 @@
 	top: 0;
 	width: 100%;
 	z-index: 1;
-	.transition(all 0.3s ease);
+	.transition(background 0.3s ease);
 
 	html.scroll & {
 		background: #a2c5f4;
 		background: rgba(162, 197, 244, 0.77);
+	}
+
+	html.terms &, html.privacy & {
+		position: relative;
 	}
 }
 
@@ -22,7 +26,7 @@
 	margin: 0 auto;
 	.box-sizing(border-box);
 	.centered-content;
-	.transition(padding 0.3s ease);
+	//.transition(padding 0.3s ease);
 	white-space: nowrap;
 }
 
@@ -37,7 +41,7 @@
 	.at2x('/assets/images/logo-keepfind.png', 100%, 100%);
 	background-size: 100%;
 	background-repeat: no-repeat;
-	.transition(all 0.3s ease);
+	.transition(top 0.3s ease);
 
 	html.scroll & {
 		.top(-100px);
@@ -57,7 +61,7 @@
 	background-size: 100%;
 	background-repeat: no-repeat;
 	.opacity(0);
-	.transition(all 0.3s ease);
+	.transition(top 0.3s ease);
 
 	html.scroll & {
 		.top(25px);
@@ -74,7 +78,6 @@
 	.line-height(37px, @rightFontSize);
 	margin: 0;
 	.margin-tb(@rightFontSize, @rightFontSize);
-	.transition(all 0.3s ease);
 
 	html.scroll & {
 		margin: 0;
@@ -103,7 +106,6 @@
 	.margin-right(13px, @rightFontSize);
 	background: white;
 	white-space: nowrap;
-	.transition(all 0.1s ease);
 
 	&:hover {
 		text-decoration: none;
@@ -140,7 +142,7 @@
 
 .kifi-header-home,
 .kifi-header-login {
-	.transition(all 0.3s ease);
+	.transition(color 0.3s ease);
 
 	html.scroll & {
 		color: white;
@@ -183,11 +185,14 @@
 	.padding-bottom(28px, @rightFontSize);
 	.border-radius(0 0 26px 26px);
 	.box-shadow(0 2px 0 3px rgba(0, 0, 0, 0.1));
-	.transition(top 0.3s ease);
 
 	html.scroll & {
 		top: 0;
 	}
+}
+
+.kifi-header-join-transition {
+	.transition(top 0.3s ease);
 }
 
 .kifi-header-join {

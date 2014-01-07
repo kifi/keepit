@@ -162,7 +162,7 @@ $(function () {
 
 	$('.keep-colls,.keep-coll').removeText();
 	var $fixedTitle = $('.keep-group-title-fixed');
-	var $myKeeps = $('#my-keeps'), $results = $('#search-results'), keepsTmpl = Tempo.prepare($myKeeps)
+	var $myKeeps = $('#my-keeps'), $results = $('#search-results'), keepsTmpl = Tempo.prepare($myKeeps, {escape: false})
 	.when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function (ev) {
 		var $keep = $(ev.element).draggable(draggableKeepOpts);
 		$keep.find('.pic').each(function () {
@@ -2208,6 +2208,7 @@ $(function () {
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
+	var noResultsTmplEmail = Handlebars.compile($('#no-results-template-email').html());
 
 	var friendsTimeout;
 	function filterFriends() {
@@ -2226,6 +2227,14 @@ $(function () {
 	var friendsShowing = [];
 	var moreFriends = true;
 	var invitesLeft;
+	var inviteEmailTemplate = Handlebars.compile($('#invite-email-tpl').html());
+
+	function alignInviteFriends() {
+		var $ul = $('.invite-friends > * > ul');
+		$ul.toggleClass('center', $ul.children().length === 1);
+	}
+
+
 	function prepInviteTab(moreToShow) {
 		log('[prepInviteTab]', moreToShow);
 		if (moreToShow && !moreFriends) {
@@ -2293,23 +2302,25 @@ $(function () {
 
 						friendsShowing.push.apply(friendsShowing, friends);
 
+						$nwFriends.find('.invite-email').remove();
+						showInviteEmailAddress($nwFriends, search, friends);
+
 						var $noResults = $nwFriends.find('.no-results').empty().hide();
 						if (!friendsShowing.length) {
 							showNoSearchInviteResults($noResults, search, network);
 						}
 
 						nwFriendsTmpl.append(friends);
-
+						alignInviteFriends();
 					});
 				}
 			}
 
 			friendsShowing.push.apply(friendsShowing, friends);
 
-
-			var $inviteEmail = $nwFriends.find('.invite-email').hide();
-			if (network === 'email' && search) {
-				showInviteEmailAddress($inviteEmail, search, friends);
+			$nwFriends.find('.invite-email').remove();
+			if ((!network || network === 'email') && search) {
+				showInviteEmailAddress($nwFriends, search, friends);
 			}
 
 			var $noResults = $nwFriends.find('.no-results').empty().hide();
@@ -2318,6 +2329,7 @@ $(function () {
 			}
 
 			nwFriendsTmpl.append(friends);
+			alignInviteFriends();
 		})
 		.always(function () {
 			$nwFriendsLoading.hide();
@@ -2381,20 +2393,30 @@ $(function () {
 		});
 	}
 
-	function showInviteEmailAddress($inviteEmail, search, friends) {
-		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+[^.]$/.test(search) && !hasFriendWithEmail(friends, search)) {
-			$inviteEmail.show()
+	function showInviteEmailAddress($nwFriends, search, friends) {
+		if (/^[^@]+@[^@]+$/.test(search) && !hasFriendWithEmail(friends, search)) {
+			var $inviteEmail = $(inviteEmailTemplate({
+				email: search
+			})).appendTo($nwFriends.find('ul'))
 				.find('.invite-email-link')
-				.off('click')
 				// '' is necessary as third parameter
-				.click(openInviteDialog.bind(null, 'email/' + search, ''))
-					.find('.invite-email-address')
-					.text(search);
+				.click(function (e) {
+					var email = $(e.target).closest('.invite-email').data('email');
+					openInviteDialog('email/' + email, '');
+				});
 		}
 	}
 
 	function showNoSearchInviteResults($noResults, search, network) {
-		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
+		var html;
+		if (network === 'email') {
+			html = noResultsTmplEmail({ filter: search, network: network });
+		}
+		else {
+			html = noResultsTmpl({ filter: search, network: network });
+		}
+
+		$noResults.html(html).show();
 		$noResults.find('.refresh-friends').click(function () {
 			submitForm('/friends/invite/refresh');
 		});
@@ -2787,18 +2809,92 @@ $(function () {
 	$subtitle.on('click', '.search-filter-all', onClickSearchFilter.bind(null, 'a'));
 
 	function prepHitForRender(hit) {
+		var matches = hit.bookmark.matches || {};
 		$.extend(hit, hit.bookmark);
+
+		hit.titleHtml = hit.title ?
+			boldSearchTerms(hit.title, matches.title) :
+			formatTitleFromUrl(hit.url, matches.url);
+		hit.descHtml = formatDesc(hit.url, matches.url);
 		hit.me = me;
 		hit.keepers = hit.users;
 		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
 		hit.collections = hit.collections || hit.tags;
-		if (hit.collections) { prepKeepCollections(hit.collections); }
+		if (hit.collections) {
+			prepKeepCollections(hit.collections);
+		}
 	}
 
 	function prepKeepForRender(keep) {
+		keep.titleHtml = keep.title || formatTitleFromUrl(keep.url);
+		keep.descHtml = formatDesc(keep.url);
 		keep.isMyBookmark = true;
 		keep.me = me;
 		prepKeepCollections(keep.collections);
+	}
+
+	var aUrlParser = document.createElement('a');
+	var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
+	var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
+	var fileNameToSpaceRe = /[\/._-]/g;
+	function formatTitleFromUrl(url, matches) {
+		aUrlParser.href = url;
+
+		var domain = aUrlParser.hostname;
+		var domainIdx = url.indexOf(domain);
+		var domainMatch = domain.match(secLevDomainRe);
+		if (domainMatch) {
+			domainIdx += domainMatch.index;
+			domain = domainMatch[0];
+		}
+
+		var fileName = aUrlParser.pathname;
+		var fileNameIdx = url.indexOf(fileName, domainIdx + domain.length);
+		var fileNameMatch = fileName.match(fileNameRe);
+		if (fileNameMatch) {
+			fileNameIdx += fileNameMatch.index;
+			fileName = fileNameMatch[0];
+		}
+		fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight();
+
+		for (var i = matches && matches.length; i--;) {
+			var match = matches[i];
+			var start = match[0], len = match[1];
+			if (start >= fileNameIdx && start < fileNameIdx + fileName.length) {
+				fileName = bolded(fileName, start - fileNameIdx, len);
+			} else if (start >= domainIdx && start < domainIdx + domain.length) {
+				domain = bolded(domain, start - domainIdx, len);
+			}
+		}
+		fileName = fileName.trimLeft();
+
+		return domain + (fileName ? ' · ' + fileName : '');
+	}
+
+	var strippedSchemeRe = /^https?:\/\//;
+	var domainTrailingSlashRe = /^([^\/]*)\/$/;
+	function formatDesc(url, matches) {
+		var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+		url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
+		for (var i = matches && matches.length; i--;) {
+			matches[i][0] -= strippedSchemeLen;
+		}
+		return boldSearchTerms(url, matches);
+	}
+
+	function boldSearchTerms(text, matches) {
+		for (var i = matches && matches.length; i--;) {
+			var match = matches[i];
+			var start = match[0];
+			if (start >= 0) {
+				text = bolded(text, start, match[1]);
+			}
+		}
+		return text;
+	}
+
+	function bolded(text, start, len) {
+		return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
 	}
 
 	function prepKeepCollections(colls) {

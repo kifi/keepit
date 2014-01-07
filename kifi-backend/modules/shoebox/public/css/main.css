@@ -2043,6 +2043,10 @@ input.user-filter {
   display: none;
 }
 
+.invite-friends > div > ul.center {
+	text-align: center;
+}
+
 .friends-importing {
   position: relative;
   font-size: 22px;
@@ -2439,7 +2443,8 @@ input.user-filter {
 }
 
 .invite-friend,
-.found-user {
+.found-user,
+.invite-email {
   display: block;
   background-color: #eff2f7;
   padding: 10px;
@@ -2448,6 +2453,7 @@ input.user-filter {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   position: relative;
+  text-align: left;
 }
 
 .invite-friend::after,
@@ -2543,20 +2549,13 @@ input.user-filter {
 
 .invite-email {
   font-size: 16px;
-  margin-bottom: 12px;
   text-align: center;
-}
-
-.invite-email-box {
-  display: inline-block;
-  background: #eff2f7;
-  padding: 31px 60px;
-  margin: 0 auto;
 }
 
 .invite-email a {
   color: #abafb6;
   text-decoration: underline;
+  line-height: 64px;
 }
 
 .invite-status {
@@ -2669,18 +2668,8 @@ a.invite-button {
 }
 
 @media screen and (min-width: 1140px) {
-  .invite-friend {
-    display: inline-block;
-    vertical-align: top;
-    width: 48%;
-    width: -webkit-calc(50% - 6px);
-    width: calc(50% - 6px);
-  }
-
-  .invite-friend:nth-child(even) {
-    margin-left: 12px;
-  }
-
+  .invite-friend,
+  .invite-email,
   .found-user {
     display: inline-block;
     vertical-align: top;
@@ -2689,6 +2678,7 @@ a.invite-button {
     width: calc(50% - 6px);
   }
 
+  .invite-friend:nth-child(even),
   .found-user:nth-child(even) {
     margin-left: 12px;
   }
@@ -2920,6 +2910,13 @@ button.more-invites {
 .no-results>ol>li {
   color: #929292;
   margin: 10px 25px;
+}
+
+.no-results-reminder {
+	position: relative;
+	text-align: center;
+	top: -44px;
+	font-size: 17px;
 }
 
 .friend-reqs-status {

@@ -27,7 +27,7 @@
 
 		@for(config <- configs){
 			<tr>
-				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" checked = "@{configs.size == 2}">
+				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" @if(configs.size == 2) {checked}>
 				<td>@config.id.get</td>
 				<td>@config.description</td>
 			</tr>
@@ -79,7 +79,7 @@
 
 				$.post(
 					'@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
-					{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val(), id1: selected[0], id2: selected[1]},
+					{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val(), id1: selected[0], id2: selected[1], shuffle: "true"},
 					function(data) {
 
 		      	$("#result").empty();

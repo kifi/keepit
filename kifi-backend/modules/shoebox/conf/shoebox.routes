@@ -144,6 +144,12 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 # Website
 ##########################################
 
+#### NEW ENDPOINTS
+GET     /beta                       @com.keepit.controllers.website.HomeController.newHome
+GET     /about                      @com.keepit.controllers.website.HomeController.about
+GET     /terms                      @com.keepit.controllers.website.HomeController.newTerms
+GET     /privacy                    @com.keepit.controllers.website.HomeController.newPrivacy
+####
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
 GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
@@ -162,8 +168,8 @@ GET     /blog                       @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /reddit                     @com.keepit.controllers.website.HomeController.redditPreview
-GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
-GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
+GET     /terms2                      @com.keepit.controllers.website.HomeController.termsOfService
+GET     /privacy2                    @com.keepit.controllers.website.HomeController.privacyPolicy
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
@@ -238,9 +244,7 @@ GET    /tsearch                     @com.keepit.controllers.SearchProxyControlle
 ##########################################
 # External Services API
 ##########################################
-
-#todo(eishay): change routes and callback in sendgrid
-POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+POST    /app/sendgrid/webhook       @com.keepit.controllers.SendgridWebhook.parseEvent()
 
 ##########################################
 # Admin
@@ -362,6 +366,7 @@ GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
 POST    /admin/search/blindTestVoted     @com.keepit.controllers.admin.AdminSearchController.blindTestVoted
 GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
+GET     /admin/search/compare     @com.keepit.controllers.admin.AdminSearchController.searchComparisonPage
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
@@ -453,7 +458,6 @@ GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.in
 GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
 GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.internal.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.internal.ShoeboxController.saveBookmark
-GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.internal.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
@@ -498,6 +502,9 @@ GET      /internal/shoebox/database/userValue         @com.keepit.controllers.in
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: String)
 GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.internal.ShoeboxController.getUserSegment(userId: Id[User])
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
+
+GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
+
 
 
 ->  / common.Routes

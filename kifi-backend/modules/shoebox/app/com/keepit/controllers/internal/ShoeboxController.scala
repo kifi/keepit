@@ -46,7 +46,6 @@ class ShoeboxController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
-  commentRecipientRepo: CommentRecipientRepo,
   normUriRepo: NormalizedURIRepo,
   normalizationServiceProvider:Provider[NormalizationService],
   urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -367,13 +366,6 @@ class ShoeboxController @Inject() (
     }
     log.info(s"[saveBookmark] saved=$saved")
     Ok(Json.toJson(saved))
-  }
-
-  def getCommentRecipientIds(commentId: Id[Comment]) = Action { request =>
-    val commentRecipientIds = db.readOnly(2, Slave) { implicit session =>
-      commentRecipientRepo.getByComment(commentId).filter(_.state == CommentRecipientStates.ACTIVE).flatMap(_.userId.map(_.id))
-    }
-    Ok(Json.toJson(commentRecipientIds))
   }
 
   def getUsers(ids: String) = Action { request =>

@@ -1,0 +1,40 @@
+@(footerType: String)
+
+@if(footerType == "minimalist") {
+<div class="kifi-footer kifi-auth" data-track-source="footer">
+  <div class="kifi-footer-caption">
+    <span class="kifi-copyright">&copy; 2013 | All Rights Reserved</span>
+    <span class="kifi-footer-caption-separator">&middot;</span>
+    <span class="kifi-footer-made-with">Made with <span class="kifi-love-icon"></span> in Mountain View</span>
+  </div>
+</div>
+} else {
+<div class="kifi-footer" data-track-source="footer">
+  <ul class="kifi-footer-menu">
+    <li>
+      <a href="/about" data-track-action="clickAbout">About</a>
+    </li>
+    <li>
+      <span class="kifi-footer-menu-dot">&middot;</span>
+      <a href="http://support.kifi.com" data-track-action="clickSupport">Support</a>
+    </li>
+    <li>
+      <span class="kifi-footer-menu-dot">&middot;</span>
+      <a href="/terms" data-track-action="clickTermsOfService">Terms of Service</a>
+    </li>
+    <li>
+      <span class="kifi-footer-menu-dot">&middot;</span>
+      <a href="/privacy" data-track-action="clickPrivacyPolicy">Privacy</a>
+    </li>
+    <li>
+      <span class="kifi-footer-menu-dot">&middot;</span>
+      <a href="http://support.kifi.com/customer/portal/emails/new" target="_blank" data-track-action="clickContactUs">Contact Us</a>
+    </li>
+  </ul>
+  <div class="kifi-footer-caption">
+    <span class="kifi-copyright">&copy; 2013 | All Rights Reserved</span>
+    <span class="kifi-footer-caption-separator">&middot;</span>
+    <span class="kifi-footer-made-with">Made with <span class="kifi-love-icon"></span> in Mountain View</span>
+  </div>
+</div>
+}

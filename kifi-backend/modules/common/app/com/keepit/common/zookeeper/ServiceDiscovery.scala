@@ -43,11 +43,14 @@ class ServiceDiscoveryImpl(
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
     airbrake: Provider[AirbrakeNotifier],
+    disableRegistration: Boolean = sys.props.getOrElse("service.register.disable", "false").toBoolean, // todo: inject config
     servicesToListenOn: Seq[ServiceType] =
         ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil,
     doKeepAlive: Boolean = true)
   extends ServiceDiscovery with Logging {
 
+
+  if (disableRegistration) log.warn("[ServiceDiscovery] registration DISABLED")
 
   private[this] val registrationLock = new AnyRef
   @volatile private[this] var registered = false
@@ -74,7 +77,8 @@ class ServiceDiscoveryImpl(
 
   def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
 
-  def isLeader: Boolean = {
+  def isLeader: Boolean = if (disableRegistration) false
+  else {
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
@@ -103,7 +107,7 @@ class ServiceDiscoveryImpl(
     myCluster.instanceForNode(instance.node).isDefined
   }
 
-  private def keepAlive() : Unit = {
+  private def keepAlive() : Unit = if (!disableRegistration) {
     scheduler.scheduleOnce(2 minutes){
       if (registered) {
         forceUpdate()
@@ -138,7 +142,8 @@ class ServiceDiscoveryImpl(
     }
   }
 
-  def register(): ServiceInstance = registrationLock.synchronized {
+  def register(): ServiceInstance = if (disableRegistration) ServiceInstance.EMPTY
+  else registrationLock.synchronized {
     if (unregistered) throw new IllegalStateException("unable to register once unregistered")
 
     registered = true
@@ -147,7 +152,8 @@ class ServiceDiscoveryImpl(
     myInstance.get
   }
 
-  private def doRegister(): Unit = {
+
+  private def doRegister(): Unit = if (!disableRegistration) {
     if (registered) {
       log.info(s"registered clusters: $clusters, my service is ${thisRemoteService.serviceType}, my instance is $myInstance")
 
@@ -159,7 +165,8 @@ class ServiceDiscoveryImpl(
           airbrake.get.notify(s"deleting instance $instance from zookeeper before re-registering itself")
           zk.deleteNode(instance.node)
         } catch {
-          case e: Exception => airbrake.get.notify(e)
+          case e: Exception =>
+            log.info("trying to delete node on re-registration, safe to ignore", e)
         } finally {
           myInstance = None
         }
@@ -173,14 +180,14 @@ class ServiceDiscoveryImpl(
     }
   }
 
-  override def unRegister(): Unit = registrationLock.synchronized {
+  override def unRegister(): Unit = if (!disableRegistration) registrationLock.synchronized {
     registered = false
     unregistered = true
     myInstance foreach {instance => zk.deleteNode(instance.node)}
     myInstance = None
   }
 
-  def changeStatus(newStatus: ServiceStatus): Unit = if(stillRegistered()) {
+  def changeStatus(newStatus: ServiceStatus): Unit = if (!disableRegistration) if(stillRegistered()) {
     myInstance foreach { instance =>
       log.info(s"Changing instance status to $newStatus")
       thisRemoteService.status = newStatus

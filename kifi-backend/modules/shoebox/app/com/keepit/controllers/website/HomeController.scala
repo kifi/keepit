@@ -54,6 +54,36 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
+  // Start post-launch stuff!
+  def newHome = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = newHomeNotAuthed(_))
+
+  private def newHomeNotAuthed(implicit request: Request[_]): Result = {
+    if (request.identityOpt.isDefined) {
+      // User needs to sign up or (social) finalize
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+    } else {
+      // TODO: Redirect to /login if the path is not /
+      // Non-user landing page
+      Ok(views.html.marketing.landing())
+    }
+  }
+
+  def about = HtmlAction(true)(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
+  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.about(isLoggedIn))
+  }
+
+  def newTerms = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.terms(isLoggedIn))
+  }
+
+  def newPrivacy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.privacy(isLoggedIn))
+  }
+  // End post-launch stuff!
+
   def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
 
   private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {
