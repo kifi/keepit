@@ -90,7 +90,7 @@ class MainQueryParser(
         }
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
-          val phrases = monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection")
+          val phrases = if (phrasesFuture != null ) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold))

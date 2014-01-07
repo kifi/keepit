@@ -356,7 +356,7 @@ class UserController @Inject() (
   def savePrefs() = AuthenticatedJsonToJsonAction { request =>
     val o = request.request.body.as[JsObject]
     if (o.keys.subsetOf(SitePrefNames)) {
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         o.fields.foreach { case (name, value) =>
           if (value == JsNull || value.isInstanceOf[JsUndefined]) {
             userValueRepo.clearValue(request.userId, name)
