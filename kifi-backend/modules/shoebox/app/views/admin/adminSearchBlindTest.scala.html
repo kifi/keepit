@@ -27,7 +27,7 @@
 
 		@for(config <- configs){
 			<tr>
-				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" checked = "@{configs.size == 2}">
+				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" @if(configs.size == 2) {checked}>
 				<td>@config.id.get</td>
 				<td>@config.description</td>
 			</tr>
