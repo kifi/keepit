@@ -1,10 +1,7 @@
 package com.keepit.common.controller
 
-import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck._
 import com.google.inject.{Singleton, Provides}
-import scala.collection.mutable
-import org.apache.zookeeper.CreateMode
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.slick._
 import com.keepit.model._
