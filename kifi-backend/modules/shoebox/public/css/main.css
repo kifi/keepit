@@ -2043,6 +2043,10 @@ input.user-filter {
   display: none;
 }
 
+.invite-friends > div > ul.center {
+	text-align: center;
+}
+
 .friends-importing {
   position: relative;
   font-size: 22px;
@@ -2449,6 +2453,7 @@ input.user-filter {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   position: relative;
+  text-align: left;
 }
 
 .invite-friend::after,
@@ -2905,6 +2910,13 @@ button.more-invites {
 .no-results>ol>li {
   color: #929292;
   margin: 10px 25px;
+}
+
+.no-results-reminder {
+	position: relative;
+	text-align: center;
+	top: -44px;
+	font-size: 17px;
 }
 
 .friend-reqs-status {

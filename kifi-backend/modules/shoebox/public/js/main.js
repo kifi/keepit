@@ -2208,6 +2208,7 @@ $(function () {
 	});
 	var $nwFriendsLoading = $('.invite-friends-loading');
 	var noResultsTmpl = Handlebars.compile($('#no-results-template').html());
+	var noResultsTmplEmail = Handlebars.compile($('#no-results-template-email').html());
 
 	var friendsTimeout;
 	function filterFriends() {
@@ -2227,6 +2228,12 @@ $(function () {
 	var moreFriends = true;
 	var invitesLeft;
 	var inviteEmailTemplate = Handlebars.compile($('#invite-email-tpl').html());
+
+	function alignInviteFriends() {
+		var $ul = $('.invite-friends > * > ul');
+		$ul.toggleClass('center', $ul.children().length === 1);
+	}
+
 
 	function prepInviteTab(moreToShow) {
 		log('[prepInviteTab]', moreToShow);
@@ -2295,13 +2302,16 @@ $(function () {
 
 						friendsShowing.push.apply(friendsShowing, friends);
 
+						$nwFriends.find('.invite-email').remove();
+						showInviteEmailAddress($nwFriends, search, friends);
+
 						var $noResults = $nwFriends.find('.no-results').empty().hide();
 						if (!friendsShowing.length) {
 							showNoSearchInviteResults($noResults, search, network);
 						}
 
 						nwFriendsTmpl.append(friends);
-
+						alignInviteFriends();
 					});
 				}
 			}
@@ -2309,7 +2319,7 @@ $(function () {
 			friendsShowing.push.apply(friendsShowing, friends);
 
 			$nwFriends.find('.invite-email').remove();
-			if (network === 'email' && search) {
+			if ((!network || network === 'email') && search) {
 				showInviteEmailAddress($nwFriends, search, friends);
 			}
 
@@ -2319,6 +2329,7 @@ $(function () {
 			}
 
 			nwFriendsTmpl.append(friends);
+			alignInviteFriends();
 		})
 		.always(function () {
 			$nwFriendsLoading.hide();
@@ -2383,7 +2394,7 @@ $(function () {
 	}
 
 	function showInviteEmailAddress($nwFriends, search, friends) {
-		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+[^.]$/.test(search) && !hasFriendWithEmail(friends, search)) {
+		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+$/.test(search) && !hasFriendWithEmail(friends, search)) {
 			var $inviteEmail = $(inviteEmailTemplate({
 				email: search
 			})).appendTo($nwFriends.find('ul'))
@@ -2397,7 +2408,15 @@ $(function () {
 	}
 
 	function showNoSearchInviteResults($noResults, search, network) {
-		$noResults.html(noResultsTmpl({ filter: search, network: network })).show();
+		var html;
+		if (network === 'email') {
+			html = noResultsTmplEmail({ filter: search, network: network });
+		}
+		else {
+			html = noResultsTmpl({ filter: search, network: network });
+		}
+
+		$noResults.html(html).show();
 		$noResults.find('.refresh-friends').click(function () {
 			submitForm('/friends/invite/refresh');
 		});
