@@ -519,6 +519,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
     appendTo: function(parent) {
       $slider.appendTo(parent);
     },
+    moveToBottom: function () {
+      var dy = window.innerHeight - tile.getBoundingClientRect().bottom;
+      if (dy) {
+        return $(tile).css('transform', 'translate(0,' + dy + 'px)');
+      }
+    },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
       var $tile = $(tile).hoverfu(function (configureHover) {
