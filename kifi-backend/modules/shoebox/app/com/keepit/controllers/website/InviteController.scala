@@ -154,7 +154,7 @@ class InviteController @Inject() (db: Database,
                   Ok(views.html.auth.auth(
                     "signup",
                     titleText = s"$inviter sent you an invite to Kifi",
-                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, email, just anything - then quickly find it on top of search results, along with relevant pages that $inviter's friends kept, too.  Join $inviter on Kifi to search like normal and find like never before.",
+                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results.  Join $inviter on Kifi to search like normal and find like never before.",
                     inviteVideo = true
                   )).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>
