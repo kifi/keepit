@@ -24,7 +24,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       anonymise(contextBuilder)
       contextBuilder += ("oldTagName", oldTag.name)
       contextBuilder += ("tagName", newTag.name)
-      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, renamedAt))
+      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, renamedAt))
     }
   }
 
@@ -41,7 +41,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       // Anonymized event with tag information
       anonymise(contextBuilder)
       contextBuilder += ("tagName", newTag.name)
-      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, createdAt))
+      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, createdAt))
     }
   }
 
@@ -76,7 +76,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
         // Anonymized event with page information
         anonymise(contextBuilder)
         contextBuilder.addUrlInfo(bookmark.url)
-        heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, keptAt))
+        heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, keptAt))
       }
       val kept = keeps.length
       val keptPrivate = keeps.count(_.isPrivate)
@@ -141,7 +141,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     if (contextBuilder.data.contains("updatedPrivacy")) {
       anonymise(contextBuilder)
       contextBuilder.addUrlInfo(updatedKeep.url)
-      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, updatedKeep.updatedAt))
+      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, updatedKeep.updatedAt))
     }
 
   }
@@ -166,7 +166,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       anonymise(contextBuilder)
       contextBuilder.addUrlInfo(keep.url)
       contextBuilder += ("tagName", tag.name)
-      heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.KEPT, changedAt))
+      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, changedAt))
     }
   }
 

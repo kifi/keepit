@@ -22,9 +22,10 @@ import play.api.libs.json._
 import com.keepit.common.store.S3ScreenshotStore
 import play.api.mvc.Action
 import com.keepit.social.BasicUser
-import scala.Some
+import scala.util.Try
 import com.keepit.model.KeepToCollection
 import play.api.libs.json.JsObject
+import org.joda.time.Seconds
 
 class BookmarksController @Inject() (
     db: Database,
@@ -38,6 +39,8 @@ class BookmarksController @Inject() (
     collectionCommander: CollectionCommander,
     bookmarksCommander: BookmarksCommander,
     val searchClient: SearchServiceClient,
+    userValueRepo: UserValueRepo,
+    clock: Clock,
     heimdalContextBuilder: HeimdalContextBuilderFactory
   )
   extends WebsiteController(actionAuthenticator) {
@@ -72,7 +75,7 @@ class BookmarksController @Inject() (
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
         val source = BookmarkSource.site
         implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.user, request.experiments, source)
+        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
         log.info(s"kept ${keeps.size} new keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
@@ -227,5 +230,18 @@ class BookmarksController @Inject() (
     Ok(Json.obj(
       "mutualKeeps" -> db.readOnly { implicit s => bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
     ))
+  }
+
+  def importStatus() = AuthenticatedJsonAction { request =>
+    val (lastStartOpt, doneOpt, totalOpt) = db.readOnly { implicit session =>
+      val lastStartOpt = userValueRepo.getValue(request.user.id.get, "bookmark_import_last_start")
+      val done = userValueRepo.getValue(request.user.id.get, "bookmark_import_done")
+      val total = userValueRepo.getValue(request.user.id.get, "bookmark_import_total")
+      val lastStart = lastStartOpt.map { lastStart =>
+        Seconds.secondsBetween(parseStandardTime(lastStart), clock.now).getSeconds
+      }
+      (lastStart, Try(done.map(_.toInt)).toOption.flatten, Try(total.map(_.toInt)).toOption.flatten)
+    }
+    Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStartOpt))
   }
 }

@@ -99,7 +99,7 @@ class ServiceDiscoveryImpl(
 
   override def myClusterSize: Int = myCluster.size
 
-  private def stillRegistered(): Boolean = myInstance forall {instance =>
+  private def stillRegistered(): Boolean = myInstance.exists{ instance =>
     myCluster.instanceForNode(instance.node).isDefined
   }
 

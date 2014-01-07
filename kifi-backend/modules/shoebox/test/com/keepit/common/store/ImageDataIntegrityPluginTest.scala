@@ -16,6 +16,8 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeAirbrakeNotifier}
 import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 
 class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
@@ -31,6 +33,8 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
     "verify all pictures" in {
       running(new ShoeboxApplication(
         FakeAirbrakeModule(),
+        TestSearchServiceClientModule(),
+        FakeScrapeSchedulerModule(),
         imageDataIntegrityTestPluginModule,
         TestActorSystemModule(Some(system)),
         TestShoeboxSecureSocialModule(),

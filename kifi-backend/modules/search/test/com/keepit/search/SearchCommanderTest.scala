@@ -40,14 +40,14 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
   "SearchCommander" should {
     "generate results the incorrect json format" in {
       running(application) {
-        val (users, uris) = initData(numUsers = 3, numUris = 9)
-        val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)))
+        val (users, uris) = initData(numUsers = 4, numUris = 9)
+        val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)), uris(2) -> Seq(users(2)), uris(3) -> Seq(users(3)))
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
         graph.update() === users.size
-        indexer.run() === uris.size
+        indexer.update() === uris.size
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
 
@@ -82,7 +82,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
 
         res.myTotal === 1
         res.friendsTotal === 1
-        res.othersTotal === 7
+        res.othersTotal === 2
 
         val expected = List(
           Json.parse(s"""

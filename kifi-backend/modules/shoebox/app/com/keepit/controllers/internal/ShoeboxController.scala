@@ -63,7 +63,6 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
-  changedUriRepo: ChangedURIRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
   friendRequestRepo: FriendRequestRepo,
@@ -103,7 +102,7 @@ class ShoeboxController @Inject() (
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>
-        db.readWrite { implicit session =>
+        db.readWrite(attempts = 3) { implicit session =>
           postOffice.sendMail(mail)
         }
         Ok("true")
@@ -120,7 +119,7 @@ class ShoeboxController @Inject() (
 
     val addrs = db.readOnly(2, Slave) { implicit session => emailAddressRepo.getAllByUser(userId) }
     for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
-      db.readWrite{ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
+      db.readWrite(attempts = 3){ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
     }
     Ok("true")
   }
@@ -135,7 +134,7 @@ class ShoeboxController @Inject() (
   def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
-    val saved = db.readWrite { implicit s =>
+    val saved = db.readWrite(attempts = 3) { implicit s =>
       normUriRepo.save(normalizedUri)
     }
     log.info(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
@@ -210,7 +209,7 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    val toBeRedirected = db.readWrite { implicit session =>
+    val toBeRedirected = db.readWrite(attempts = 3) { implicit session =>
       for {
         candidateUri <- normUriRepo.getByUri(redirect.newDestination)
         normalization <- candidateUri.normalization
@@ -296,7 +295,7 @@ class ShoeboxController @Inject() (
   def internNormalizedURI() = SafeAsyncAction(parse.json) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
-    val uriId = db.readWrite(attempts=2) { implicit s =>  //using cache
+    val uriId = db.readWrite(attempts = 2) { implicit s =>  //using cache
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     Ok(Json.toJson(uriId))
@@ -311,7 +310,7 @@ class ShoeboxController @Inject() (
       scrapeInfoRepo.getByUriId(uri.id.get)
     }
     val info = infoOpt.getOrElse {
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get))
       }
     }
@@ -323,9 +322,9 @@ class ShoeboxController @Inject() (
     val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[ScrapeInfo]
-    val saved = db.readWrite( { implicit s =>
+    val saved = db.readWrite(attempts = 3) { implicit s =>
       scrapeInfoRepo.save(info)
-    })
+    }
     log.info(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok(Json.toJson(saved))
   }
@@ -333,13 +332,6 @@ class ShoeboxController @Inject() (
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly(2, Slave) { implicit session => //no cache used
       bookmarkRepo.getByUser(userId)
-    }
-    Ok(Json.toJson(bookmarks))
-  }
-
-  def getBookmarksChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    val bookmarks = db.readOnly(2, Slave) { implicit session =>
-      bookmarkRepo.getBookmarksChanged(SequenceNumber(seqNum), fetchSize)
     }
     Ok(Json.toJson(bookmarks))
   }
@@ -370,7 +362,7 @@ class ShoeboxController @Inject() (
 
   def saveBookmark() = Action(parse.json) { request =>
     val bookmark = request.body.as[Bookmark]
-    val saved = db.readWrite { implicit session =>
+    val saved = db.readWrite(attempts = 3) { implicit session =>
       bookmarkRepo.save(bookmark)
     }
     log.info(s"[saveBookmark] saved=$saved")
@@ -404,13 +396,6 @@ class ShoeboxController @Inject() (
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
     }
     Ok(Json.toJson(users))
-  }
-
-  def getUserIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
-    val users = db.readOnly(2, Slave) { implicit s =>
-      userRepo.getUsersSince(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
   def getEmailAddressesForUsers() = Action(parse.json) { request =>
@@ -457,7 +442,7 @@ class ShoeboxController @Inject() (
 
   def saveExperiment = Action(parse.json) { request =>
     val exp = Json.fromJson[SearchConfigExperiment](request.body).get
-    val saved = db.readWrite { implicit s => searchConfigExperimentRepo.save(exp) }
+    val saved = db.readWrite(attempts = 3) { implicit s => searchConfigExperimentRepo.save(exp) }
     Ok(Json.toJson(saved))
   }
 
@@ -478,21 +463,8 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(exps))
   }
 
-  def getPhrasesChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    val phrases = db.readOnly(2, Slave) { implicit s =>
-      phraseRepo.getPhrasesChanged(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(Json.toJson(phrases))
-  }
-
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) })) //using cache
-  }
-
-  def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    Ok(Json.toJson(db.readOnly(2, Slave) { implicit s =>
-      collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize)
-    }))
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
@@ -508,13 +480,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
-  def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
-    }
-    Ok(Json.toJson(uris))
-  }
-
   def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
     val res = db.readOnly { implicit session => //using cache
       sessionRepo.getOpt(sessionId)
@@ -526,18 +491,6 @@ class ShoeboxController @Inject() (
     db.readOnly { implicit s => //using cache
       Ok(Json.toJson(searchFriendRepo.getSearchFriends(userId).map(_.id)))
     }
-  }
-
-  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
-    val changes = db.readOnly(2, Slave) { implicit s =>
-      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
-        (change.oldUriId, normUriRepo.get(change.newUriId))
-      }
-    }
-    val jsChanges = changes.map{ case (id, uri) =>
-      JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
-    }
-    Ok(JsArray(jsChanges))
   }
 
   def clickAttribution() = SafeAsyncAction(parse.json) { request =>
@@ -561,7 +514,7 @@ class ShoeboxController @Inject() (
 
   def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.json) { request =>
     val value = request.body.as[String]
-    db.readWrite { implicit session => userValueRepo.setValue(userId, key, value) }
+    db.readWrite(attempts = 3) { implicit session => userValueRepo.setValue(userId, key, value) }
     Ok
   }
 

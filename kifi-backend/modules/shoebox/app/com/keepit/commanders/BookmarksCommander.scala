@@ -20,7 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.KestrelCombinator
 
-case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
+case class KeepInfo(id: Option[ExternalId[Bookmark]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
 case class FullKeepInfo(bookmark: Bookmark, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
 
@@ -99,14 +99,14 @@ class BookmarksCommander @Inject() (
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, user: User, experiments: Set[ExperimentType], source: BookmarkSource)(implicit context: HeimdalContext):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), user, experiments, source, true)
+    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
-      case Right(name) => Some(getOrCreateTag(user.id.get, name))
+      case Right(name) => Some(getOrCreateTag(userId, name))
     } map { coll =>
       addToCollection(coll, keeps).size
     }
@@ -181,8 +181,8 @@ class BookmarksCommander @Inject() (
     }
   }
 
-  def tagUrl(tag: Collection, json: JsValue, user: User, experiments: Set[ExperimentType], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val bookmark = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), user, experiments, source, mutatePrivacy = false, installationId = kifiInstallationId)
+  def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
+    val bookmark = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag, bookmark)
   }
 
@@ -211,4 +211,48 @@ class BookmarksCommander @Inject() (
     }
   }
 
+
+  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: BookmarkSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
+    val keepsByUrl = bookmarkInterner.internRawBookmarks(
+      rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
+      userId,
+      mutatePrivacy = true,
+      installationId = None,
+      source = BookmarkSource.default
+    ).map(keep => keep.url -> keep).toMap
+
+    val keepsByTagName = keepsWithTags.flatMap { case (keepInfo, tags) =>
+      tags.map(tagName => (tagName, keepsByUrl(keepInfo.url)))
+    }.groupBy(_._1).mapValues(_.map(_._2))
+
+    val keepsByTag = keepsByTagName.map { case (tagName, keeps) =>
+      val tag = getOrCreateTag(userId, tagName)
+      addToCollection(tag, keeps)
+      tag -> keeps
+    }.toMap
+
+    keepsByTag
+  }
+
+  def setKeepOrdering(userId: Id[User], keeps: Seq[Bookmark], inBetween: Option[(Bookmark, Bookmark)] = None): Unit = {
+    require(keeps.forall(_.userId == userId), "Keeps to be moved do not belong to the expected user.")
+    inBetween match {
+      case Some((firstKeep, secondKeep)) =>
+        val Seq(lowerKeep, upperKeep) = Seq(firstKeep, secondKeep).sortBy(_.createdAt)
+        val interval = upperKeep.createdAt.getMillis - lowerKeep.createdAt.getMillis
+        val step = interval.toInt / (keeps.length + 1)
+        require(step > 0, "Cannot insert in between keeps that have been created at the same time.")
+        db.readWrite { implicit session =>
+          keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
+            bookmarkRepo.save(keep.copy(createdAt = lowerKeep.createdAt.plusMillis((i+1) * step)))
+          }
+        }
+
+      case None => db.readWrite { implicit session =>
+        keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
+          bookmarkRepo.save(keep.copy(createdAt = currentDateTime))
+        }
+      }
+    }
+  }
 }

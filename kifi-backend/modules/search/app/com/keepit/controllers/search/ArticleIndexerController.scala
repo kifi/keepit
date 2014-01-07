@@ -21,7 +21,7 @@ class ArticleIndexerController @Inject()(
   extends SearchServiceController {
 
   def index() = Action { implicit request =>
-    val cnt = indexerPlugin.index()
+    val cnt = indexerPlugin.update()
     Ok(JsObject(Seq("articles" -> JsNumber(cnt))))
   }
 
@@ -34,8 +34,8 @@ class ArticleIndexerController @Inject()(
     Ok(Json.toJson(IndexInfo(
       name = "ArticleIndex",
       numDocs = indexer.numDocs,
-      sequenceNumber = indexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
-      committedAt = indexer.commitData.get(CommitData.committedAt)
+      sequenceNumber = indexer.commitSequenceNumber,
+      committedAt = indexer.committedAt
     )))
   }
 

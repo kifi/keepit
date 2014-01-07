@@ -9,6 +9,7 @@ object URI extends Logging {
 
   def parse(uriString: String): Try[URI] = Try {
     val raw = uriString.trim
+    if (raw.isEmpty) throw new Exception("empty uri string")
     val uri = URIParser.parseAll(URIParser.uri, raw).get
 
     apply(Option(raw), uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment)

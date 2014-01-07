@@ -17,6 +17,7 @@ import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, Heim
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal._
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -30,8 +31,11 @@ import scala.concurrent.Future
 import scala.util.Try
 import scala.Some
 
-import securesocial.core.{Identity, UserService, Registry, SocialUser}
 
+
+
+
+import securesocial.core.{Identity, UserService, Registry, SocialUser}
 
 
 
@@ -88,6 +92,8 @@ class UserCommander @Inject() (
   friendRequestRepo: FriendRequestRepo,
   userCache: SocialUserInfoUserCache,
   socialGraphPlugin: SocialGraphPlugin,
+  bookmarkCommander: BookmarksCommander,
+  collectionCommander: CollectionCommander,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
@@ -170,8 +176,8 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User])(implicit session: RWSession) = {
-    val newUser = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
+  def createUser(firstName: String, lastName: String, state: State[User]) = {
+    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
       val contextBuilder = eventContextBuilder()
       contextBuilder += ("action", "registered")
@@ -182,10 +188,6 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
-    session.conn.commit()
-
-    // Here you can do things with default keeps / tags. See ExtBookmarksController / BookmarkInterner for examples.
-
     newUser
   }
 
@@ -271,6 +273,17 @@ class UserCommander @Inject() (
         }
       }
     }
+  }
+
+  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
+    val contextBuilder = new HeimdalContextBuilder()
+    contextBuilder.data ++= context.data
+    contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
+    val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
+    val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
+    db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
+    bookmarkCommander.setKeepOrdering(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
   }
 
   def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
@@ -521,4 +534,34 @@ class UserCommander @Inject() (
     }
   }
 
+}
+
+object DefaultKeeps {
+  val orderedTags: Seq[String] = Seq(
+    "Recipe",
+    "Shopping Wishlist",
+    "Travel",
+    "Read Later",
+    "Funny",
+    "Example Keep",
+    "Kifi Support"
+  )
+
+  val orderedKeepsWithTags: Seq[(KeepInfo, Seq[String])] = {
+    val Seq(recipe, shopping, travel, later, funny, example, support) = orderedTags
+    Seq(
+      // Example keeps
+      (KeepInfo(title = None, url = "http://www.simplyrecipes.com/recipes/bruschetta_with_tomato_and_basil/", isPrivate = true), Seq(example, recipe)),
+      (KeepInfo(title = None, url = "http://www.apple.com/ipad/", isPrivate = true), Seq(example, shopping)),
+      (KeepInfo(title = None, url = "http://www.fourseasons.com/borabora/", isPrivate = true), Seq(example, travel)),
+      (KeepInfo(title = None, url = "http://twistedsifter.com/2013/01/50-life-hacks-to-simplify-your-world/", isPrivate = true), Seq(example, later)),
+      (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),
+
+      // Support Keeps
+      (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("How to Use Kifi"), url = "https://www.kifi.com/support", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Contact Us"), url = "https://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
+    )
+  }
 }

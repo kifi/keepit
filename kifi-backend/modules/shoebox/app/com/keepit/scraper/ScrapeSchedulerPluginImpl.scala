@@ -60,13 +60,17 @@ private[scraper] class ScrapeScheduler @Inject() (
     }
     Statsd.gauge("scraper.scheduler.uris.count", tasks.length)
     val ts = System.currentTimeMillis
-    tasks map { case (uri, info, proxyOpt) =>
-      db.readWrite { implicit s =>
-        val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: batch
-        ScrapeRequest(uri, savedInfo, proxyOpt)
+    tasks foreach { case (uri, info, proxyOpt) =>
+      val request = db.readWrite { implicit s =>
+        if (uri.state == NormalizedURIStates.ACTIVE || uri.state == NormalizedURIStates.INACTIVE) {
+          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE)) // no need to scrape
+          None
+        } else {
+          val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: batch
+          Some(ScrapeRequest(uri, savedInfo, proxyOpt))
+        }
       }
-    } map { sr =>
-      scraperServiceClient.scheduleScrapeWithRequest(sr)
+      request foreach { req => scraperServiceClient.scheduleScrapeWithRequest(req) }
     }
     log.info(s"[schedule] submitted ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }

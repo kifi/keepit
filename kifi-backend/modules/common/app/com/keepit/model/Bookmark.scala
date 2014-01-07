@@ -28,7 +28,7 @@ case class Bookmark(
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] {
 
-  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq]"
+  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
   def clean(): Bookmark = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -120,9 +120,10 @@ object BookmarkSource {
   val site = BookmarkSource("site")
   val mobile = BookmarkSource("mobile")
   val email = BookmarkSource("email")
+  val default = BookmarkSource("default")
   val unknown = BookmarkSource("unknown")
 
-  val valid = Set(keeper, bookmarkImport, site, mobile, email)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email, default)
 
   def get(value: String): BookmarkSource = BookmarkSource(value.toLowerCase) match {
     case BookmarkSource("hover_keep") => keeper

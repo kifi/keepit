@@ -12,12 +12,16 @@ import play.api.libs.json.JsValue
 import com.google.inject.Inject
 import play.api.libs.json.JsArray
 
-class EventTrackingController @Inject() (userEventLoggingRepo: UserEventLoggingRepo, systemEventLoggingRepo: SystemEventLoggingRepo) extends HeimdalServiceController {
+class EventTrackingController @Inject() (
+  userEventLoggingRepo: UserEventLoggingRepo,
+  systemEventLoggingRepo: SystemEventLoggingRepo,
+  anonymousEventLoggingRepo: AnonymousEventLoggingRepo) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue) = {
     eventJs.as[HeimdalEvent] match {
       case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
       case userEvent: UserEvent => userEventLoggingRepo.persist(userEvent)
+      case anonymousEvent: AnonymousEvent => anonymousEventLoggingRepo.persist(anonymousEvent)
     }
   }
 

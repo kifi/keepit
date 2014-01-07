@@ -1,0 +1,225 @@
+@green: #a0bf67;
+@import "retina-1.1.0";
+
+.kifi-header-bg {
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 1;
+	.transition(background 0.3s ease);
+
+	html.scroll & {
+		background: #a2c5f4;
+		background: rgba(162, 197, 244, 0.77);
+	}
+}
+
+.kifi-header {
+	position: relative;
+	max-width: 1349px;
+	.padding-tb(26px);
+	.padding-lr(65px);
+	margin: 0 auto;
+	.box-sizing(border-box);
+	.centered-content;
+	//.transition(padding 0.3s ease);
+	white-space: nowrap;
+}
+
+.kifi-header-logo {
+	position: absolute;
+	display: inline-block;
+	.top(26px);
+	.left(65px);
+	.width(102px);
+	.height(83px);
+	color: transparent;
+	.at2x('/assets/images/logo-keepfind.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+	.transition(top 0.3s ease);
+
+	html.scroll & {
+		.top(-100px);
+		.opacity(0);
+	}
+}
+
+.kifi-header-logo-white {
+	position: absolute;
+	display: inline-block;
+	.top(-100px);
+	.left(65px);
+	.width(65px);
+	.height(38px);
+	color: transparent;
+	.at2x('/assets/images/logoscroll.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+	.opacity(0);
+	.transition(top 0.3s ease);
+
+	html.scroll & {
+		.top(25px);
+		.opacity(1);
+	}
+}
+
+@rightFontSize: 18px;
+
+.kifi-header-right {
+	display: inline-block;
+	float: right;
+	.font-size(@rightFontSize);
+	.line-height(37px, @rightFontSize);
+	margin: 0;
+	.margin-tb(@rightFontSize, @rightFontSize);
+
+	html.scroll & {
+		margin: 0;
+	}
+}
+
+.kifi-header-right-link {
+	display: inline-block;
+	text-decoration: none;
+	color: black;
+	font-weight: 300;
+	padding: 0;
+	.padding-lr(8px, @rightFontSize);
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
+.kifi-header-signup {
+	font-weight: 500;
+	padding: 0;
+	.padding-lr(53px, @rightFontSize);
+	border: 2px solid @green;
+	.border-radius(21px);
+	.margin-right(13px, @rightFontSize);
+	background: white;
+	white-space: nowrap;
+	.transition(background,color 0.1s ease);
+
+	&:hover {
+		text-decoration: none;
+		background: @green;
+		color: white;
+	}
+}
+
+.kifi-header-about {
+	html.about & {
+		display: none;
+	}
+
+	html.scroll & {
+		display: none;
+	}
+}
+
+.kifi-header-right-separator {
+	color: @green;
+
+	html.about & {
+		display: none;
+	}
+
+	html.about.guest & {
+		display: inline;
+	}
+
+	html.scroll.scroll & {
+		display: none;
+	}
+}
+
+.kifi-header-home,
+.kifi-header-login {
+	.transition(color 0.3s ease);
+
+	html.scroll & {
+		color: white;
+		font-weight: 600;
+		.letter-spacing(1px);
+	}
+}
+
+.kifi-header-join-box,
+.kifi-header-signup,
+.kifi-header-login {
+	display: none;
+
+	html.guest & {
+		display: inline-block;
+	}
+}
+
+.kifi-header-signup {
+	html.scroll & {
+		display: none;
+	}
+}
+
+.kifi-header-home {
+	html.guest & {
+		display: none;
+	}
+}
+
+.kifi-header-join-box {
+	position: absolute;
+	.top(-100px);
+	.right(140px);
+	background: white;
+	border: 3px solid #b6d1f4;
+	border-top: 0;
+	.padding-top(17px, @rightFontSize);
+	.padding-lr(35px, @rightFontSize);
+	.padding-bottom(28px, @rightFontSize);
+	.border-radius(0 0 26px 26px);
+	.box-shadow(0 2px 0 3px rgba(0, 0, 0, 0.1));
+	.transition(top 0.3s ease);
+
+	html.scroll & {
+		top: 0;
+	}
+}
+
+.kifi-header-join {
+	position: relative;
+	display: block;
+	@fontSize: 16px;
+	.font-size(@fontSize, @rightFontSize);
+	font-weight: 600;
+	.padding-tb(3px, @fontSize);
+	.padding-lr(36px, @fontSize);
+	color: white;
+	background: #a0bf67;
+	text-transform: uppercase;
+	text-decoration: none;
+	.border-radius(unit(20px / @fontSize, em));
+
+	&:hover {
+		background: tint(#a0bf67, 15%);
+	}
+
+	&:active {
+		background: shade(#a0bf67, 15%);
+	}
+}
+
+.kifi-header-join-arrow {
+	position: absolute;
+	.top(14px);
+	.right(21px);
+	display: inline-block;
+	.width(8px);
+	.height(15px);
+	.at2x('/assets/images/arrowright.png', 100%, 100%);
+	background-size: 100%;
+	vertical-align: middle;
+}

@@ -9,6 +9,9 @@
     preview: {
       selector: '.keep'
     },
+    tellUs: {
+      selector: '.tell-us'
+    },
     sendFeedback: {
       selector: '.send-feedback'
     },

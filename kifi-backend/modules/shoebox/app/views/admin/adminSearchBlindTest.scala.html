@@ -12,6 +12,8 @@
 	  </div>
 	</form>
 
+	<br><br>
+
 
 	<table id = "configs" class = "center">
 		<thead>
@@ -22,9 +24,10 @@
 			</tr>
 		</thead>
 
+
 		@for(config <- configs){
 			<tr>
-				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get">
+				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" checked = "@{configs.size == 2}">
 				<td>@config.id.get</td>
 				<td>@config.description</td>
 			</tr>
@@ -35,16 +38,27 @@
 	<form id = "vote" class = "center">
 		<div>
 			<div>which search result is better? </div>
-			<input type="radio" name="win" value="config1">config 1<br>
-			<input type="radio" name="win" value="config2">config 2<br>
-			<input type="radio" name="win" value="equallyGood">equally good<br>
-			<input type="radio" name="win" value="equallyBad">equally bad<br>
-			<button type="submit">submit</button>
+			<input type="radio" name="win" value="config1"> left
+			<input type="radio" name="win" value="config2"> right
+			<input type="radio" name="win" value="equallyGood"> equally good
+			<input type="radio" name="win" value="equallyBad"> equally bad
+			<button type="submit"> submit </button>
 		</div>
 	</form>
 	<p id = "result" class = "center"></p><br>
-	<p id = "hits1" name = "configId" class = "center" value = "1"></p><br><br>
-	<p id = "hits2" name = "configId" class = "center" value = "2"></p>
+
+
+	<table id = "hitsTable" class = "center">
+		<tr>
+			<th> left </th>
+			<th> right </th>
+		</tr>
+
+		<tr>
+			<td id = "tablehits1" name = "configId" class = "center" value = "1">result1</td>
+			<td id = "tablehits2" name = "configId" class = "center" value = "1">result2</td>
+		<tr>
+	</table>
 
 
 	<script type="text/javascript">
@@ -52,6 +66,7 @@
 	$(document).ready(function(){
 
 		$("#vote").hide()
+		$("#hitsTable").hide()
 
 		$("#queryForm").submit(function(event) {
 			event.preventDefault();
@@ -64,12 +79,13 @@
 
 				$.post(
 					'@com.keepit.controllers.admin.routes.AdminSearchController.blindTest',
-					{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val(), id1: selected[0], id2: selected[1]},
+					{userId: $("#userId").val(), query: $("#queryText").val(), maxHits: $("#maxHits").val(), id1: selected[0], id2: selected[1], shuffle: "true"},
 					function(data) {
 
 		      	$("#result").empty();
-		      	$("#hits1").empty();
-		      	$("#hits2").empty();
+		      	$("#tablehits1").empty();
+		      	$("#tablehits2").empty();
+		      	$("#hitsTable").show()
 
 		      	var msg = data.msg
 
@@ -81,22 +97,22 @@
 		      		var id1 = data.result1.id
 		      		var id2 = data.result2.id
 
-		      		$("#hits1").attr("value", id1)
-		      		$("#hits2").attr("value", id2)
+		      		$("#tablehits1").attr("value", id1)
+		      		$("#tablehits2").attr("value", id2)
 
-		      		$("#hits1").append("<div><strong>" + hits1.length + " hits from config 1:" + "</strong></div>")
-		      		$("#hits2").append("<div><strong>" + hits2.length + " hits from config 2:" + "</strong></div>")
+		      		$("#tablehits1").append("<div><strong>" + hits1.length + " hits" + "</strong></div>")
+		      		$("#tablehits2").append("<div><strong>" + hits2.length + " hits" + "</strong></div>")
 
 		      		for(var i = 0 ; i < hits1.length; i++){
 		      			var item = hits1[i]
-		      			$("#hits1").append("<div>" + item.title + "</div>");
-		      		  $("#hits1").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+		      			$("#tablehits1").append("<div>" + item.title + "</div>");
+		      		  $("#tablehits1").append("<div><a href = " + "\""  + item.url + "\">" + item.url + "</a></div><br>");
 		      		}
 
 		      		for(var i = 0 ; i < hits2.length; i++){
 		      			var item = hits2[i]
-		      			$("#hits2").append("<div>" + item.title + "</div>");
-		      		  $("#hits2").append("<div><a href = " + item.url + "/a>" + item.url + "</div><br>");
+		      			$("#tablehits2").append("<div>" + item.title + "</div>");
+		      		  $("#tablehits2").append("<div><a href = " + "\""  + item.url + "\">" + item.url + "</a></div><br>");
 		      		}
 
 		      		$("#vote").show()
@@ -121,8 +137,8 @@
 				alert("please check one radio button")
 			} else {
 				var voted = checked.val()
-				var id1 = $("#hits1").attr("value")
-				var id2 = $("#hits2").attr("value")
+				var id1 = $("#tablehits1").attr("value")
+				var id2 = $("#tablehits2").attr("value")
 				var data = null
 				if (voted == "config1") data = {configId1: id1, configId2: id2, vote: id1}
 				else if (voted == "config2") data = {configId1: id1, configId2: id2, vote: id2}
@@ -131,9 +147,9 @@
 
 
 	 			$("#vote").hide()
-	 			$("#result").empty().append("Thanks. Vote was submitted!");
-		    $("#hits1").empty();
-		    $("#hits2").empty();
+	 			$('input[name="win"]').attr("checked", false)
+	 			$("#result").empty().append("Thanks. Vote was submitted!")
+		    $("#hitsTable").hide()
 
 				$.post('@com.keepit.controllers.admin.routes.AdminSearchController.blindTestVoted', data)
 			}

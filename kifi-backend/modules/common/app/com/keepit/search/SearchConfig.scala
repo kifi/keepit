@@ -46,7 +46,9 @@ object SearchConfig {
       "showExperts" -> "false",
       "forbidEmptyFriendlyHits" -> "true",
       "useNonPersonalizedContextVector" -> "false",
-      "useSemanticMatch" -> "false"
+      "useSemanticMatch" -> "false",
+      "proximityGapPenalty" -> "0.05",
+      "proximityThreshold" -> "0.0"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -78,7 +80,9 @@ object SearchConfig {
       "showExperts" -> "suggest experts when search returns hits",
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector",
-      "useSemanticMatch" -> "use semantic boolean query"
+      "useSemanticMatch" -> "use semantic boolean query",
+      "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
+      "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)

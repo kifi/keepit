@@ -78,7 +78,7 @@ class ExtBookmarksController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
-        bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.keeper, request.kifiInstallationId)
+        bookmarksCommander.tagUrl(tag, request.body, request.userId, BookmarkSource.keeper, request.kifiInstallationId)
         Ok(Json.toJson(SendableTag from tag))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
@@ -90,7 +90,7 @@ class ExtBookmarksController @Inject() (
     val name = (request.body \ "name").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    bookmarksCommander.tagUrl(tag, request.body, request.user, request.experiments, BookmarkSource.keeper, request.kifiInstallationId)
+    bookmarksCommander.tagUrl(tag, request.body, request.userId, BookmarkSource.keeper, request.kifiInstallationId)
     Ok(Json.toJson(SendableTag from tag))
   }
 
@@ -185,9 +185,8 @@ class ExtBookmarksController @Inject() (
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
 
-          val experiments = request.experiments
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.user, experiments, bookmarkSource, mutatePrivacy = true, installationId = installationId)
+          val bookmarks = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = installationId)
 
           if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.bookmarkImport) {
             // User selected to import Léo
