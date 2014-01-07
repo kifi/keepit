@@ -432,7 +432,7 @@ class UserCommander @Inject() (
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }
-              elizaServiceClient.sendGlobalNotification(
+              elizaServiceClient.sendGlobalNotification( //DIS
                 userIds = Set(user.id.get),
                 title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
                 body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
@@ -450,26 +450,27 @@ class UserCommander @Inject() (
 
             SafeFuture{
               //sending 'friend request' email && Notification
-              val respondingUser = userRepo.get(userId)
+              val requestingUser = userRepo.get(userId)
               val destinationEmail = emailRepo.getByUser(user.id.get)
+              val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"))
               db.readWrite{ session =>
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
-                  from = EmailAddresses.INVITATION,
-                  fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName}"),
+                  from = EmailAddresses.NOTIFICATIONS,
+                  fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName} (via Kifi)"),
                   to = List(destinationEmail),
-                  subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!", //ZZZ plug into correct copy and template when ready
-                  htmlBody = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                  category = PostOffice.Categories.User.INVITATION)
+                  subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
+                  htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage).body,
+                  category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }
-              elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+              elizaServiceClient.sendGlobalNotification( //DIS
                 userIds = Set(user.id.get),
-                title = "Friend Reqeust",
-                body = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                linkText = "Click to see friends",
-                linkUrl = "https://www.kifi.com/friends",
-                imageUrl = respondingUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
+                body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
+                linkText = s"Respond to ${requestingUser.firstName}'s friend request",
+                linkUrl = "https://kifi.com/friends/requests",
+                imageUrl = requestingUserImage,
                 sticky = false
               )
             }
