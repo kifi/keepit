@@ -113,6 +113,7 @@ kifi.form = (function () {
       transitionTitle();
       $body.removeClass('finalizing');
       $.post($(this).data('cancelUri'));
+      $('.signup-1').show();
       setTimeout(function() {
         $signup2EmailForm.hide();
         $signup2SocialForm.hide();
