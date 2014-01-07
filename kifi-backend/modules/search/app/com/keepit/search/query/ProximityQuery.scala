@@ -31,7 +31,7 @@ object ProximityQuery extends Logging {
 
   val maxLength = 64  // we use first 64 terms (enough?)
 
-  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float, threshold: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty, threshold)
+  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float, threshold: Float, powerFactor: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty, threshold, powerFactor: Float)
 
   def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[Int], Match)] = {
     val posNotInPhrase = (0 until termIds.length).toArray
@@ -51,7 +51,7 @@ object ProximityQuery extends Logging {
   }
 }
 
-class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float, val threshold: Float) extends Query {
+class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float, val threshold: Float, val powerFactor: Float) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
 
@@ -121,12 +121,22 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription(s"proximity(${termsString + phrases}), product of:")
       val proxScore = sc.score
+
       result.setValue(proxScore)
       result.setMatch(true)
-      result.addDetail(new Explanation(proxScore/value, s"proximity score. threshold = $threshold"))
+
+      result.setDescription(s"proximity(${termsString + phrases}), product of:")
+      val powerExpl = new ComplexExplanation()
+      powerExpl.setDescription(s"proximity score. threshold = $threshold")
+      powerExpl.setValue(proxScore/value)
+      result.addDetail(powerExpl)
       result.addDetail(new Explanation(value, "weight value"))
+
+      powerExpl.setMatch(true)
+      powerExpl.addDetail(new Explanation(pow(proxScore, 1.0/query.powerFactor).toFloat, "proximity score without power"))
+      powerExpl.addDetail(new Explanation(query.powerFactor, "power factor"))
+
     } else {
       result.setDescription(s"proximity(${termsString + phrases}), doesn't match id ${doc}")
       result.setValue(0)
@@ -146,7 +156,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       }
     }
 
-    if (buf.isEmpty) null else new ProximityScorer(this, buf.toArray, termIds, phraseMatcher, query.phraseBoost, threshold)
+    if (buf.isEmpty) null else new ProximityScorer(this, buf.toArray, termIds, phraseMatcher, query.phraseBoost, threshold, query.powerFactor)
   }
 }
 
@@ -186,7 +196,7 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
   }
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float) extends Scorer(weight) with Logging {
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float, powerFactor: Float) extends Scorer(weight) with Logging {
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
@@ -224,6 +234,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
       localAlignment.end()
 
       proximityScore = weightVal * localAlignment.score
+      proximityScore = pow(proximityScore, powerFactor).toFloat       // for title field, powerfactor = 1. For content field, this could be greater than 1. Loose match in content field gets more penalty.
       scoredDoc = doc
     }
     proximityScore

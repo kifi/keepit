@@ -42,7 +42,6 @@ class BookmarkInterner @Inject() (
     ((rawBookmarks map { b => (b.url, b) } toMap).values.toSeq).toList
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Seq[Bookmark] = {
-
     val referenceId: UUID = UUID.randomUUID
     log.info(s"[internRawBookmarks] user=$userId source=$source installId=$installationId value=$rawBookmarks $referenceId ")
     val parseStart = System.currentTimeMillis()
@@ -53,7 +52,7 @@ class BookmarkInterner @Inject() (
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
     val count = new AtomicInteger(0)
     val total = bookmarks.size
-    val batchSize = 100
+    val batchSize = 50
 
     db.readWrite { implicit session =>
       // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
@@ -66,9 +65,7 @@ class BookmarkInterner @Inject() (
     val persistedBookmarksWithUris: List[InternedUriAndBookmark] = bookmarks.grouped(batchSize).map { bms =>
       val startTime = System.currentTimeMillis
       log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
-      val persisted = db.readWrite(attempts = 2) { implicit session =>
-        bms.map { bm => internUriAndBookmark(bm, userId, source, mutatePrivacy) }.flatten
-      }
+      val persisted = internUriAndBookmarkBatch(bms, userId, source, mutatePrivacy, total, count)
       val newCount = count.addAndGet(bms.size)
       log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
       db.readWrite { implicit session =>
@@ -90,6 +87,19 @@ class BookmarkInterner @Inject() (
     val persistedBookmarks = persistedBookmarksWithUris.map(_.bookmark)
     log.info(s"[internBookmarks-$referenceId] Done!")
     persistedBookmarks
+  }
+
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, total: Int, count: AtomicInteger) = {
+    val persisted = try {
+      db.readWrite(attempts = 3) { implicit session =>
+        bms.map { bm => internUriAndBookmark(bm, userId, source, mutatePrivacy) }.flatten
+      }
+    } catch {
+      case e: Exception =>
+        airbrake.notify(s"failed to persist a batch of ${bms.size} of $total so far ${count.get} raw bookmarks of user $userId from $source: ${bms map {b => b.url} mkString ","}", e)
+        Seq()
+    }
+    persisted
   }
 
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,

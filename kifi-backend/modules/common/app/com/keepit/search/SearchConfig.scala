@@ -48,7 +48,8 @@ object SearchConfig {
       "useNonPersonalizedContextVector" -> "false",
       "useSemanticMatch" -> "false",
       "proximityGapPenalty" -> "0.05",
-      "proximityThreshold" -> "0.0"
+      "proximityThreshold" -> "0.0",
+      "proximityPowerFactor" -> "1.0"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -82,7 +83,8 @@ object SearchConfig {
       "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector",
       "useSemanticMatch" -> "use semantic boolean query",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
-      "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit"
+      "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit",
+      "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches"
     )
 
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
