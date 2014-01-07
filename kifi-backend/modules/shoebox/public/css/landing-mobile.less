@@ -83,6 +83,7 @@
 }
 
 .kifi-coming-soon {
+	position: relative;
 	background: #424242;
 	color: white;
 	text-align: center;
@@ -94,6 +95,17 @@
 		font-weight: 400;
 		line-height: 1.2;
 		margin: 0;
+	}
+
+	.kifi-arrow-down {
+		position: absolute;
+		display: block;
+		@h: 9px;
+		bottom: -@h;
+		left: 39px;
+		width: 19px;
+		height: @h;
+		background-color: #424242;
 	}
 }
 
@@ -138,7 +150,8 @@
 
 .kifi-waiting-input-box {
 	position: relative;
-	.margin-lr(28px);
+	.padding-lr(28px);
+	margin: 0 auto;
 	.max-width(500px);
 }
 
@@ -163,6 +176,20 @@
 	padding: 50px;
 	color: white;
 	background-color: #93c059;
+	
+	h2 {
+		@fs: 36px / 2;
+		.font-size(@fs);
+		font-weight: 600;
+		text-transform: uppercase;
+		margin: 0;
+	}
+
+	p {
+		@fs: 34px / 2;
+		.font-size(@fs);
+		margin: 0;
+	}
 }
 
 .kifi-watch-video {
