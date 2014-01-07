@@ -195,7 +195,7 @@ class InviteCommander @Inject() (
 
   }
 
-  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {  //ZZZ correct template here with custom content
+  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
     val acceptLink = url + routes.InviteController.acceptInvite(invite.externalId).url
 
     val message = inviteInfo.message getOrElse s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi"
