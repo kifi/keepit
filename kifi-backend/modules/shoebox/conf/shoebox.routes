@@ -367,6 +367,7 @@ GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
 POST    /admin/search/blindTestVoted     @com.keepit.controllers.admin.AdminSearchController.blindTestVoted
 GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
+GET     /admin/search/compare     @com.keepit.controllers.admin.AdminSearchController.searchComparisonPage
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
@@ -503,6 +504,9 @@ GET      /internal/shoebox/database/userValue         @com.keepit.controllers.in
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: String)
 GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.internal.ShoeboxController.getUserSegment(userId: Id[User])
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
+
+GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
+
 
 
 ->  / common.Routes

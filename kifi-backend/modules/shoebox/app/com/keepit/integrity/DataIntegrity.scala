@@ -51,33 +51,78 @@ private[integrity] class DataIntegrityActor @Inject() (
 @Singleton
 class OrphanCleaner @Inject() (
     db: Database,
-    urlRepo: URLRepo,
+    changedURIRepo: ChangedURIRepo,
     nuriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
     airbrake: AirbrakeNotifier
 ) extends Logging {
-log.info("created")
+  log.info("created")
+
+  private[this] var changedUriSequenceNumber = SequenceNumber.MinValue
   private[this] var bookmarkSequenceNumber = SequenceNumber.MinValue
   private[this] val lock = new AnyRef
 
-  def cleanNormalizedURIs(readOnly: Boolean = true) = lock.synchronized {
+  def cleanNormalizedURIs(readOnly: Boolean = true): Unit = lock.synchronized {
+    cleanNormalizedURIsByChangedURIs(readOnly)
+    cleanNormalizedURIsByBookmarks(readOnly)
+  }
+
+  private def getNormalizedURI(id: Id[NormalizedURI])(implicit session: RSession): Option[NormalizedURI] = {
+    try { Some(nuriRepo.get(id)) } catch { case e: Throwable => None }
+  }
+
+  private[integrity] def cleanNormalizedURIsByChangedURIs(readOnly: Boolean = true): Unit = {
+    var numChangedUrisProcessed = 0
+    var numUrisChangedToActive = 0
+
+    var seq = changedUriSequenceNumber
+    var done = false
+    log.info("start processing ChangedURIs")
+    while (!done) {
+      db.readWrite{ implicit s =>
+        val changedURIs = changedURIRepo.getChangesSince(seq, 100) // get applied changes
+        done = changedURIs.isEmpty
+        changedURIs.foreach{ changedUri =>
+          getNormalizedURI(changedUri.oldUriId).map{ uri =>
+            if (uri.state == NormalizedURIStates.SCRAPED || uri.state == NormalizedURIStates.SCRAPE_FAILED) {
+              if (!bookmarkRepo.exists(uri.id.get)) {
+                numUrisChangedToActive += 1
+                if (!readOnly) {
+                  nuriRepo.save(uri.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
+                }
+              }
+            }
+          }
+          numChangedUrisProcessed += 1
+          seq = changedUri.seq
+          if (!readOnly) changedUriSequenceNumber = seq // update high watermark
+        }
+      }
+    }
+
+    if (readOnly) {
+      log.info(s"${numChangedUrisProcessed} ChangedURIs processed. Would have changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
+    } else {
+      log.info(s"${numChangedUrisProcessed} ChangedURIs processed. Changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
+    }
+  }
+
+  private[integrity] def cleanNormalizedURIsByBookmarks(readOnly: Boolean = true): Unit = {
     var numBookmarksProcessed = 0
     var numUrisChangedToActive = 0
     var numUrisChangedToScrapeWanted = 0
 
     var seq = bookmarkSequenceNumber
     var done = false
+    log.info("start processing Bookmarks")
     while (!done) {
       db.readWrite{ implicit s =>
         val bookmarks = bookmarkRepo.getBookmarksChanged(seq, 100)
         done = bookmarks.isEmpty
         bookmarks.foreach{ bookmark =>
-          val uri = try {
-            Some(nuriRepo.get(bookmark.uriId))
-          } catch { case e: Throwable =>
-            airbrake.notify("error getting NormalizedURI in OrphanCleaner", e)
-            None
-          }
+          val uri = getNormalizedURI(bookmark.uriId)
+          if (!uri.isDefined) airbrake.notify("error getting NormalizedURI in OrphanCleaner")
+
           uri.foreach{ u =>
             bookmark.state match {
               case BookmarkStates.ACTIVE =>

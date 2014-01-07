@@ -52,7 +52,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-        val (user1, user2, uri, url) = db.readWrite {implicit s =>
+        val (user1, uri) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName="Shanee", lastName="Smith", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           val user2 = userRepo.save(User(firstName="Shachaf", lastName="Smith", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
 
@@ -62,7 +62,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
 
           val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id,
             uriId = uri.id.get, source = BookmarkSource.keeper, createdAt = t1.plusMinutes(3)))
-          val bookmark2 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url.url, urlId = url.id,
+          bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url.url, urlId = url.id,
             uriId = uri.id.get, source = BookmarkSource.bookmarkImport, createdAt = t2.plusDays(1)))
 
           val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1, externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
@@ -71,7 +71,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll2.id.get))
 
-          (user1, user2, uri, url)
+          (user1, uri)
         }
 
         db.readOnly {implicit s =>
@@ -84,7 +84,6 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
         }
 
         inject[FakeActionAuthenticator].setUser(user1)
-        val mobileController = inject[MobilePageController]
         //this is a POST result
         val jsonParam = Json.parse("""{"url": "http://www.google.com"}""")
         val request = FakeRequest("POST", path).withJsonBody(jsonParam)

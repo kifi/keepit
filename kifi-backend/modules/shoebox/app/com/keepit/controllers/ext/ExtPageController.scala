@@ -30,6 +30,7 @@ class ExtPageController @Inject() (
 
   def getPageDetails() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
+    if (url.isEmpty) throw new Exception(s"empty url for json ${request.body} for user ${request.user}")
     val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
     Ok(Json.toJson(info))
   }

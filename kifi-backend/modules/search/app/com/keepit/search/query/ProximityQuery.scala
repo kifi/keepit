@@ -186,7 +186,7 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
   }
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float) extends Scorer(weight) {
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float) extends Scorer(weight) with Logging {
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
@@ -231,17 +231,17 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
 
   override def docID(): Int = curDoc
 
-  override def nextDoc(): Int = {
-    var docIter = advance(0)
-    score()
-    while(docIter < NO_MORE_DOCS && proximityScore < threshold) {
-      docIter = advance(0)
-      score()
-    }
-    docIter
-  }
+  override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
+    var iter = goto(target)
+    while(iter < NO_MORE_DOCS && proximityScore < threshold) {
+      iter = goto(target)
+    }
+    iter
+  }
+
+  private def goto(target: Int): Int = {
     var top = pq.top
     val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
@@ -249,6 +249,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
       top = pq.updateTop()
     }
     curDoc = top.doc
+    score()       // score this doc. its proximity score need to be greater than the threshold
     curDoc
   }
 

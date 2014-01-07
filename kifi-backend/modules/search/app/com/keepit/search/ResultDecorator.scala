@@ -71,7 +71,7 @@ object ResultDecorator extends Logging {
 
   private def highlight(h: BasicSearchHit, analyzer: Analyzer, terms: Set[String]): BasicSearchHit = {
     val titleMatches = h.title.map(t => Highlighter.highlight(t, analyzer, "", terms))
-    val urlMatches = Some(Highlighter.highlightURL(h.url, analyzer, "", terms))
+    val urlMatches = Some(Highlighter.highlight(h.url, analyzer, "", terms))
     h.addMatches(titleMatches, urlMatches)
   }
 
@@ -94,6 +94,8 @@ object ResultDecorator extends Logging {
 
 object Highlighter extends Logging {
 
+  private[this] val specialCharRegex = """[/\.:#&+~_]""".r
+
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
   def getQueryTerms(queryText: String, analyzer: Analyzer): Set[String] = {
@@ -115,7 +117,8 @@ object Highlighter extends Logging {
     }
   }
 
-  def highlight(text: String, analyzer: Analyzer, field: String, terms: Set[String]): Seq[(Int, Int)] = {
+  def highlight(rawText: String, analyzer: Analyzer, field: String, terms: Set[String]): Seq[(Int, Int)] = {
+    val text = specialCharRegex.replaceAllIn(rawText, " ")
     var positions: SortedMap[Int, Int] = SortedMap.empty[Int, Int]
     val ts = analyzer.tokenStream(field, new StringReader(text))
     if (ts.hasAttribute(classOf[OffsetAttribute]) && ts.hasAttribute(classOf[CharTermAttribute])) {
@@ -156,22 +159,6 @@ object Highlighter extends Logging {
       if (ts.hasAttribute(classOf[CharTermAttribute])) log.error("char term attribute not found")
       emptyMatches
     }
-  }
-
-  def highlightURL(url: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
-    terms match {
-      case Some(terms) => highlightURL(url, analyzer, field, terms)
-      case _ =>
-        log.error("no term specified")
-        emptyMatches
-    }
-  }
-
-  private[this] val urlSpecialCharRegex = """[/\.:#&+~_]""".r
-
-  def highlightURL(url: String, analyzer: Analyzer, field: String, terms: Set[String]): Seq[(Int, Int)] = {
-    val text = urlSpecialCharRegex.replaceAllIn(url, " ")
-    highlight(text, analyzer, field, terms)
   }
 }
 

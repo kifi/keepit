@@ -38,6 +38,7 @@ class PageCommander @Inject() (
     searchClient: SearchServiceClient) extends Logging {
 
   def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
+    if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
     val (nUriStr, nUri, domain, bookmark, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
       val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {

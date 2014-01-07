@@ -33,6 +33,7 @@ case class NormalizedURI (
   redirect: Option[Id[NormalizedURI]] = None,
   redirectTime: Option[DateTime] = None
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
+
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
   def withState(state: State[NormalizedURI]) = copy(state = state)
@@ -42,10 +43,13 @@ case class NormalizedURI (
   }
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
-  def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+  def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen)))
 }
 
 object NormalizedURI {
+
+  val TitleMaxLen = 2040
+
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and

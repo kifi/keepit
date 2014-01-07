@@ -56,11 +56,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(startMessage)
 
-    val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
-    log.info(s"Amazon up! $amazonInstanceInfo")
-    val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.register()
-    serviceDiscovery.forceUpdate()
+    val disableRegistration = sys.props.getOrElse("service.register.disable", "false").toBoolean // directly use sys.props to be consistent; uptake injected config later
+    val serviceDiscoveryOpt:Option[ServiceDiscovery] = if (disableRegistration) None else {
+      val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
+      log.info(s"Amazon up! $amazonInstanceInfo")
+      val serviceDiscovery = injector.instance[ServiceDiscovery]
+      serviceDiscovery.register()
+      serviceDiscovery.forceUpdate()
+      Some(serviceDiscovery)
+    }
 
     injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
@@ -69,11 +73,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
     }
-    val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), Duration.Inf)
-    if (!selfCheckPassed) {
-      log.error("STARTUP SELF CHECK FAILED!")
+
+    serviceDiscoveryOpt map { serviceDiscovery =>
+      val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), Duration.Inf)
+      if (!selfCheckPassed) {
+        log.error("STARTUP SELF CHECK FAILED!")
+      }
+      serviceDiscovery.forceUpdate()
     }
-    serviceDiscovery.forceUpdate()
 
     injector.instance[MemoryUsageMonitor].start()
   }
