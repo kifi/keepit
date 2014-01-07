@@ -8,7 +8,7 @@
 
 	function updateFooter() {
 		$('.kifi-footer').css({
-			position: $win.height() <= $main.outerHeight() + $footer.outerHeight() + 5 ? 'static' : 'fixed'
+			position: $win.height() <= $main.prop('scrollHeight') + $footer.outerHeight() + 5 ? 'static' : 'fixed'
 		});
 	}
 

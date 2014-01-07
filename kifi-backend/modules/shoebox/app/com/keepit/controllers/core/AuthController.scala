@@ -163,7 +163,7 @@ class AuthController @Inject() (
         log.info(s"placeholder for redirecting to unsupported browsers page")
       }
     }
-    Ok(views.html.auth.auth("login"))
+    Ok(views.html.auth.authGrey("login"))
   })
 
   // Finalize account
@@ -193,7 +193,7 @@ class AuthController @Inject() (
         // User exists, is incomplete
         val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
         val picture = identityPicture(identity)
-        Ok(views.html.auth.auth(
+        Ok(views.html.auth.authGrey(
           view = "signup2Email",
           emailAddress = identity.email.getOrElse(""),
           picturePath = picture,
@@ -218,7 +218,7 @@ class AuthController @Inject() (
         ))
       case (None, Some(identity)) =>
         // No user exists, has social network identity, must finalize
-        Ok(views.html.auth.auth(
+        Ok(views.html.auth.authGrey(
           view = "signup2Social",
           firstName = User.sanitizeName(identity.firstName),
           lastName = User.sanitizeName(identity.lastName),
@@ -227,7 +227,7 @@ class AuthController @Inject() (
           network = Some(SocialNetworkType(identity.identityId.providerId))
         ))
       case (None, None) =>
-        Ok(views.html.auth.auth("signup"))
+        Ok(views.html.auth.authGrey("signup"))
     }
   }
 
