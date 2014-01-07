@@ -8,6 +8,7 @@
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
+// @require scripts/title_from_url.js
 // @require scripts/html/search/google.js
 // @require scripts/html/search/google_hits.js
 // @require scripts/html/search/google_hit.js
@@ -327,44 +328,6 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   /*******************************************************/
 
-  var aUrlParser = document.createElement('a');
-  var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
-  var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
-  var fileNameToSpaceRe = /[\/._-]/g;
-  function formatTitleFromUrl(url, matches) {
-    aUrlParser.href = url;
-
-    var domain = aUrlParser.hostname;
-    var domainIdx = url.indexOf(domain);
-    var domainMatch = domain.match(secLevDomainRe);
-    if (domainMatch) {
-      domainIdx += domainMatch.index;
-      domain = domainMatch[0];
-    }
-
-    var fileName = aUrlParser.pathname;
-    var fileNameIdx = url.indexOf(fileName, domainIdx + domain.length);
-    var fileNameMatch = fileName.match(fileNameRe);
-    if (fileNameMatch) {
-      fileNameIdx += fileNameMatch.index;
-      fileName = fileNameMatch[0];
-    }
-    fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight();
-
-    for (var i = matches && matches.length; i--;) {
-      var match = matches[i];
-      var start = match[0], len = match[1];
-      if (start >= fileNameIdx && start < fileNameIdx + fileName.length) {
-        fileName = bolded(fileName, start - fileNameIdx, len);
-      } else if (start >= domainIdx && start < domainIdx + domain.length) {
-        domain = bolded(domain, start - domainIdx, len);
-      }
-    }
-    fileName = fileName.trimLeft();
-
-    return domain + (fileName ? ' · ' + fileName : '');
-  }
-
   var urlAutoFormatters = [{
       match: /^https?:\/\/docs\.google\.com\//,
       desc: 'A file in Google Docs',
@@ -683,7 +646,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
     hit.titleHtml = hit.bookmark.title ?
       boldSearchTerms(hit.bookmark.title, matches.title) :
-      formatTitleFromUrl(hit.bookmark.url, matches.url);
+      formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
     hit.scoreText = response.showScores === true ? String(Math.round(hit.score * 100) / 100) : '';
     hit.tagsText = (hit.bookmark.tagNames || []).join(', ');
