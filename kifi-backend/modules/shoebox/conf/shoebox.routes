@@ -145,6 +145,7 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 ##########################################
 
 #### NEW ENDPOINTS
+GET     /newdesign                  @com.keepit.controllers.website.HomeController.newDesignCookie
 GET     /beta                       @com.keepit.controllers.website.HomeController.newHome
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /terms                      @com.keepit.controllers.website.HomeController.newTerms
@@ -244,7 +245,8 @@ GET    /tsearch                     @com.keepit.controllers.SearchProxyControlle
 ##########################################
 # External Services API
 ##########################################
-POST    /app/sendgrid/webhook       @com.keepit.controllers.SendgridWebhook.parseEvent()
+POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()
+GET     /api/desk/isLoggedIn        @com.keepit.controllers.api.DeskController.isLoggedIn
 
 ##########################################
 # Admin
@@ -273,6 +275,7 @@ GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminCo
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
+GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates

@@ -415,12 +415,12 @@ a.video-frame {
   color: #515151;
   padding-bottom: 20px;
 }
-.signup-2 {
+.signup-1 {
   display: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+}
+.signup-2 {
+  padding-top: 20px;
+  display: none;
   text-align: center;
   padding-bottom: 10px;
 }
@@ -624,6 +624,9 @@ a.video-frame {
   -o-transition: opacity 0.144s linear, visibility 0s 0.24s, -o-transform 0.24s ease-in-out;
   -ms-transition: opacity 0.144s linear, visibility 0s 0.24s, -ms-transform 0.24s ease-in-out;
   transition: opacity 0.144s linear, visibility 0s 0.24s, transform 0.24s ease-in-out;
+}
+.finalizing .cancel-signup {
+  display: inline;
 }
 .finalizing .page-title.obsolete {
   opacity: 0;
