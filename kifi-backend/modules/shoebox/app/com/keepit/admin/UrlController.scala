@@ -143,7 +143,15 @@ class UrlController @Inject() (
   def orphanCleanup(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
     Akka.future {
       db.readWrite { implicit session =>
-        orphanCleaner.cleanNormalizedURIs(readOnly)
+        orphanCleaner.clean(readOnly)
+      }
+    }
+    Ok
+  }
+  def orphanCleanupFull(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
+    Akka.future {
+      db.readWrite { implicit session =>
+        orphanCleaner.fullClean(readOnly)
       }
     }
     Ok

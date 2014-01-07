@@ -46,6 +46,7 @@ class MainQueryParser(
   override val useSemanticMatch: Boolean,
   proximityGapPanelty: Float,
   proximityThreshold: Float,
+  proximityPowerFactor: Float,
   phraseDetector: PhraseDetector,
   phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
   monitoredAwait: MonitoredAwait
@@ -92,9 +93,9 @@ class MainQueryParser(
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = if (phrasesFuture != null ) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold))
-          proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold))
-          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold))
+          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, proximityPowerFactor))
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, 1f))
+          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, 1f))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
@@ -141,13 +142,7 @@ class MainQueryParser(
         val tPhraseDetection = System.currentTimeMillis
         val p = phraseDetector.detectAll(phStemmedTerms)
         phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
-
-        if (p.size > 0) p else {
-          val tNlpPhraseDetection = System.currentTimeMillis
-          val nlpPhrases = NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
-          nlpPhraseDetectionTime = System.currentTimeMillis - tNlpPhraseDetection
-          nlpPhrases
-        }
+        p
       }
     }
   }

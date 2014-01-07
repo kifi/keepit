@@ -26,6 +26,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
+import com.keepit.abook.EmailParserUtils
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -93,16 +94,22 @@ class SecureSocialUserPluginImpl @Inject() (
     socialUser
   }
 
-  private def updateExperimentIfTestUser(userId: Id[User]): Unit = db.readWrite { implicit session =>
-    val isTestUser = emailRepo.getAllByUser(userId).exists(_.isTestEmail())
-    if (isTestUser) {
-      val markedAsFake = userExperimentRepo.hasExperiment(userId, ExperimentType.FAKE)
-      if (markedAsFake)
-        log.info(s"test user $userId is already marked as FAKE")
+  private def updateExperimentIfTestUser(userId: Id[User]): Unit = db.readWrite { implicit rw =>
+    @inline def setExp(exp: ExperimentType) {
+      val marked = userExperimentRepo.hasExperiment(userId, exp)
+      if (marked)
+        log.info(s"test user $userId is already marked as $exp")
       else {
-        log.info(s"setting test user $userId as FAKE")
-        db.readWrite { implicit session => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = ExperimentType.FAKE)) }
+        log.info(s"setting test user $userId as $exp")
+        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = exp))        
       }
+    }
+
+    val emailAddresses = emailRepo.getAllByUser(userId)
+    for (e <- emailAddresses filter (_.isTestEmail()) headOption) {
+      setExp(ExperimentType.FAKE)
+      if (e.isAutoGenEmail())
+        setExp(ExperimentType.AUTO_GEN)
     }
   }
 
@@ -113,7 +120,7 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  private def newUserState: State[User] = if (Play.isDev) UserStates.ACTIVE else UserStates.PENDING
+  private def newUserState: State[User] = UserStates.ACTIVE // This is the default user state for new accounts
 
   private def createUser(identity: Identity, isComplete: Boolean): User = {
     val u = userCommander.createUser(
@@ -124,7 +131,7 @@ class SecureSocialUserPluginImpl @Inject() (
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
 
     // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
-    val isTestUser = identity.email.map(email => EmailAddress(userId = u.id.get, address = email).isTestEmail()) getOrElse false
+    val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
     if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
     u
   }
