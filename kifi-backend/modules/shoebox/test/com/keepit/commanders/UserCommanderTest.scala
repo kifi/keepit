@@ -9,6 +9,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 import com.google.inject.Injector
 
@@ -45,14 +46,21 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
       (user1, user2, user3)
     }
 
-
-
   }
+
+  val modules = Seq(
+    FakeMailModule(),
+    TestABookServiceClientModule(),
+    FakeSocialGraphModule(),
+    FakeSearchServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    ShoeboxFakeStoreModule()
+  )
 
   "UserCommander" should {
 
     "notify friends of new joinee" in {
-      withDb(FakeMailModule(),TestABookServiceClientModule(), FakeSocialGraphModule(), FakeSearchServiceClientModule(), FakeScrapeSchedulerModule()) { implicit injector =>
+      withDb(modules:_*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
@@ -71,7 +79,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "welcome a joinee" in {
-      withDb(FakeMailModule(),TestABookServiceClientModule(), FakeSocialGraphModule(), FakeSearchServiceClientModule(), FakeScrapeSchedulerModule()) { implicit injector =>
+      withDb(modules:_*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
