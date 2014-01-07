@@ -222,15 +222,15 @@ class UserCommander @Inject() (
 
       }
 
-      elizaServiceClient.sendGlobalNotification( //DIS
-        userIds = toNotify,
-        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
-        linkText = "Invite more friends to Kifi.",
-        linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = imageUrl,
-        sticky = false
-      )
+      // elizaServiceClient.sendGlobalNotification( //ZZZ reenable post front end sync
+      //   userIds = toNotify,
+      //   title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+      //   body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+      //   linkText = "Invite more friends to Kifi.",
+      //   linkUrl = "https://www.kifi.com/friends/invite",
+      //   imageUrl = imageUrl,
+      //   sticky = false
+      // )
     }
   }
 
@@ -432,15 +432,15 @@ class UserCommander @Inject() (
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }
-              elizaServiceClient.sendGlobalNotification( //DIS
-                userIds = Set(user.id.get),
-                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                linkText = "Invite more friends to kifi.",
-                linkUrl = "https://www.kifi.com/friends/invite",
-                imageUrl = respondingUserImage,
-                sticky = false
-              )
+              // elizaServiceClient.sendGlobalNotification( //ZZZ reenable post front end sync
+              //   userIds = Set(user.id.get),
+              //   title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+              //   body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+              //   linkText = "Invite more friends to kifi.",
+              //   linkUrl = "https://www.kifi.com/friends/invite",
+              //   imageUrl = respondingUserImage,
+              //   sticky = false
+              // )
             }
 
 
@@ -464,15 +464,15 @@ class UserCommander @Inject() (
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
               }
-              elizaServiceClient.sendGlobalNotification( //DIS
-                userIds = Set(user.id.get),
-                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
-                body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-                linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-                linkUrl = "https://kifi.com/friends/requests",
-                imageUrl = requestingUserImage,
-                sticky = false
-              )
+              // elizaServiceClient.sendGlobalNotification( //ZZZ reenable post front end sync
+              //   userIds = Set(user.id.get),
+              //   title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
+              //   body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
+              //   linkText = s"Respond to ${requestingUser.firstName}'s friend request",
+              //   linkUrl = "https://kifi.com/friends/requests",
+              //   imageUrl = requestingUserImage,
+              //   sticky = false
+              // )
             }
 
             (true, "sentRequest")
