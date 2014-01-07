@@ -35,6 +35,7 @@ object ExperimentType {
   )
 
   val ADMIN = ExperimentType("admin")
+  val AUTO_GEN = ExperimentType("autogen")
   val FAKE = ExperimentType("fake")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
   val NOT_SENSITIVE = ExperimentType("not sensitive")
@@ -51,6 +52,7 @@ object ExperimentType {
 
   def get(str: String): ExperimentType = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
+    case AUTO_GEN.value => AUTO_GEN
     case FAKE.value => FAKE
     case NOT_SENSITIVE.value => NOT_SENSITIVE
     case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
@@ -64,7 +66,8 @@ object ExperimentType {
   }
 
   def getUserStatus(experiments: Set[ExperimentType]): String =
-    if (experiments.contains(FAKE)) FAKE.value
+    if (experiments.contains(AUTO_GEN)) AUTO_GEN.value
+    else if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
 }

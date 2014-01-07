@@ -17,10 +17,12 @@ import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
+import com.keepit.common.integration.ReaperModule
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,
   val mailModule: MailModule,
+  val reaperModule: ReaperModule,
   val storeModule: ShoeboxDevStoreModule,
 
   // Shoebox Functional Modules

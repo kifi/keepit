@@ -10,10 +10,12 @@ import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
+import com.keepit.common.integration.DevReaperModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
   mailModule = DevMailModule(),
+  reaperModule = DevReaperModule(),
   storeModule = ShoeboxDevStoreModule(),
 
   // Shoebox Functional Modules

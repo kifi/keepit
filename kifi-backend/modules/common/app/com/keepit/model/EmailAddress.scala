@@ -7,7 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.mail.EmailAddressHolder
-import com.keepit.abook.EmailParser
+import com.keepit.abook.{EmailParserUtils, EmailParser}
 
 case class EmailAddress (
   id: Option[Id[EmailAddress]] = None,
@@ -28,20 +28,9 @@ case class EmailAddress (
     lastVerificationSent = Some(now),
     verificationCode = Some(new BigInteger(128, EmailAddressObject.random).toString(36)))
   def verified: Boolean = state == EmailAddressStates.VERIFIED
-  def parse = EmailParser.parseAll(EmailParser.email, address)
-  def parseOpt = if (parse.successful) Some(parse.get) else None
-  def isTestEmail(): Boolean = {
-    (for {
-      email <- parseOpt
-      tag <- email.local.tag
-    } yield email.domain == "42go.com" && (tag.t.startsWith("test") || tag.t.startsWith("autogen"))) getOrElse false
-  }
-  def isAutoGenEmail(): Boolean = {
-    (for {
-      email <- parseOpt
-      tag <- email.local.tag
-    } yield email.domain == "42go.com" && tag.t.startsWith("autogen")) getOrElse false
-  }
+  def isTestEmail() = EmailParserUtils.isTestEmail(address)
+  def isFakeEmail() = EmailParserUtils.isFakeEmail(address) // +test
+  def isAutoGenEmail() = EmailParserUtils.isAutoGenEmail(address)  // +autogen
 }
 
 object EmailAddressObject {
