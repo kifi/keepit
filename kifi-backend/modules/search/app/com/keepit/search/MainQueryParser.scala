@@ -141,13 +141,7 @@ class MainQueryParser(
         val tPhraseDetection = System.currentTimeMillis
         val p = phraseDetector.detectAll(phStemmedTerms)
         phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
-
-        if (p.size > 0) p else {
-          val tNlpPhraseDetection = System.currentTimeMillis
-          val nlpPhrases = NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer, lang)
-          nlpPhraseDetectionTime = System.currentTimeMillis - tNlpPhraseDetection
-          nlpPhrases
-        }
+        p
       }
     }
   }
