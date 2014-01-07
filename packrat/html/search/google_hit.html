@@ -1,11 +1,11 @@
 <li class="g">
   <div class="vsc">
-    <h3 class="r"><a href="{{bookmark.url}}">{{{displayTitle}}}</a></h3>
+    <h3 class="r"><a href="{{bookmark.url}}">{{{titleHtml}}}</a></h3>
     <div class="s">
       {{#tagsText}}
       <div class="kifi-res-sub">
         <div class="kifi-res-sub-1">
-          <cite class="kifi-res-desc">{{{desc}}}</cite>
+          <cite class="kifi-res-desc">{{{descHtml}}}</cite>
         </div>
         <div class="kifi-res-sub-2">
           <div class="kifi-res-tags">{{tagsText}}</div>
@@ -14,7 +14,7 @@
       {{/tagsText}}
       {{^tagsText}}
       <div class="f kv">
-        <cite class="kifi-res-desc">{{{desc}}}</cite>
+        <cite class="kifi-res-desc">{{{descHtml}}}</cite>
       </div>
       {{/tagsText}}
     </div>
