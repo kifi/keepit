@@ -64,7 +64,9 @@ private[integration] class AutogenAcctReaperActor @Inject() (
           socialUserInfoRepo.getByUser(exp.userId) map { sui =>
             socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE))
           }
-          emailAddressRepo.save(emailAddressRepo.getByUser(exp.userId).withState(EmailAddressStates.INACTIVE))
+          emailAddressRepo.getAllByUser(exp.userId) foreach { emailAddr =>
+            emailAddressRepo.save(emailAddr.withState(EmailAddressStates.INACTIVE))
+          }
           // skip UserCred/UserExp for now; delete later
         }
       }
