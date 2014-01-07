@@ -146,6 +146,9 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 
 #### NEW ENDPOINTS
 GET     /beta                       @com.keepit.controllers.website.HomeController.newHome
+GET     /about                      @com.keepit.controllers.website.HomeController.about
+GET     /terms                      @com.keepit.controllers.website.HomeController.newTerms
+GET     /privacy                    @com.keepit.controllers.website.HomeController.newPrivacy
 ####
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
@@ -165,8 +168,8 @@ GET     /blog                       @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /reddit                     @com.keepit.controllers.website.HomeController.redditPreview
-GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
-GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
+GET     /terms2                      @com.keepit.controllers.website.HomeController.termsOfService
+GET     /privacy2                    @com.keepit.controllers.website.HomeController.privacyPolicy
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection

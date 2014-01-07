@@ -67,6 +67,21 @@ class HomeController @Inject() (
       Ok(views.html.marketing.landing())
     }
   }
+
+  def about = HtmlAction(true)(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
+  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.about(isLoggedIn))
+  }
+
+  def newTerms = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.terms(isLoggedIn))
+  }
+
+  def newPrivacy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.privacy(isLoggedIn))
+  }
   // End post-launch stuff!
 
   def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
