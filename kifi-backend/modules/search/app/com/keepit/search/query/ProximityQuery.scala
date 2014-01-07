@@ -121,12 +121,22 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription(s"proximity(${termsString + phrases}), product of:")
       val proxScore = sc.score
+
       result.setValue(proxScore)
       result.setMatch(true)
-      result.addDetail(new Explanation(proxScore/value, s"proximity score. threshold = $threshold"))
+
+      result.setDescription(s"proximity(${termsString + phrases}), product of:")
+      val powerExpl = new ComplexExplanation()
+      powerExpl.setDescription(s"proximity score. threshold = $threshold")
+      powerExpl.setValue(proxScore/value)
+      result.addDetail(powerExpl)
       result.addDetail(new Explanation(value, "weight value"))
+
+      powerExpl.setMatch(true)
+      powerExpl.addDetail(new Explanation(pow(proxScore, 1.0/query.powerFactor).toFloat, "proximity score without power"))
+      powerExpl.addDetail(new Explanation(query.powerFactor, "power factor"))
+
     } else {
       result.setDescription(s"proximity(${termsString + phrases}), doesn't match id ${doc}")
       result.setValue(0)
