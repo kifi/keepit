@@ -56,8 +56,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   document.addEventListener('click', onClick, true);
   function onClick(e) {
-    var target = e.target;
-    if ($slider && !(paneShowing() || $slider[0].contains(target) || isInsideTagbox(target))) {
+    if ($slider && $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root *')) {
       hideSlider('clickout');
     }
   }
@@ -70,10 +69,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('click', onClick, true);
   });
-
-  function paneShowing() {
-    return window.pane && pane.showing();
-  }
 
   function createSlider(locator) {
     var kept = tile && tile.dataset.kept;
@@ -90,10 +85,15 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }));
     // attach event bindings
     var data = $slider.data();
-    $slider.mouseout(function (e) {
+    data.stickiness = 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
+    $slider
+    .mouseover(function () {
+      idleTimer.kill();
+    })
+    .mouseout(function (e) {
       if (data.dragTimer) {
         startDrag(data);
-      } else if (!paneShowing() && !data.dragStarting && !data.$dragGlass) {
+      } else if (!data.stickiness && !data.dragStarting && !data.$dragGlass) {
         if (e.relatedTarget) {
           if (!this.contains(e.relatedTarget)) {
             log('[slider.mouseout] hiding')();
@@ -111,7 +111,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       }
     }).mousedown(function (e) {
-      if (e.which !== 1 || paneShowing() || $(e.target).closest('.kifi-tip').length) return;
+      if (e.which !== 1 || data.stickiness || $(e.target).is('.kifi-tip *')) return;
       e.preventDefault();  // prevents selection and selection scrolling
       data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
       data.mousedownEvent = e.originalEvent;
@@ -141,6 +141,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
     }).hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
+      if (data.stickiness) return;
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
@@ -190,6 +191,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('mouseout', '.kifi-keep-btn,.kifi-kept-btn', function () {
       this.classList.remove('kifi-hoverless');
     }).hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
+      if (data.stickiness) return;
       var $a = $(this);
       var $card = $(this).closest('.kifi-keep-card');
       var kept = !$card.hasClass('kifi-unkept');
@@ -214,6 +216,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('click', '.kifi-kept-lock', function (e) {
       if (e.target === this) toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
     }).hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
+      if (data.stickiness) return;
       var btn = this;
       var kept = this.classList.contains('kifi-kept-tag');
       render('html/keeper/titled_tip', {
@@ -229,17 +232,15 @@ var keeper = keeper || function () {  // idempotent for Chrome
         });
       });
     }).on('click', '.kifi-keep-tag,.kifi-kept-tag', function (e) {
-      if (e.originalEvent.tagboxClosed) {
-        log('[tagbox:closed] ignore click event')();
+      if (e.originalEvent.closedTagbox) {
         return;
       }
-
       if (this.classList.contains('kifi-keep-tag')) {
         keepPage('public');
       }
-
       api.require('scripts/tagbox.js', function () {
-        log('require:tagbox')();
+        tagbox.onShow.add(beginStickyTime);
+        tagbox.onHide.add(endStickyTime);
         tagbox.toggle($slider, 'click:tagIcon');
       });
     }).hoverfu('.kifi-keeper-x', function (configureHover) {
@@ -250,6 +251,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('click', '.kifi-keeper-x', function () {
       pane.hide(true);
     }).hoverfu('.kifi-dock-btn', function(configureHover) {
+      if (data.stickiness) return;
       var $a = $(this);
       var tip = {
         i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br>New ones are highlighted.'],
@@ -298,23 +300,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function isTagboxActive() {
-    var tagbox = window.tagbox;
-    return tagbox && tagbox.active;
-  }
-
-  function isInsideTagbox(el) {
-    var tagbox = window.tagbox;
-    return tagbox && tagbox.contains(el);
-  }
-
   // trigger is for the event log (e.g. 'key', 'icon')
   function hideSlider(trigger) {
     log('[hideSlider]', trigger)();
-    if (trigger !== 'clickout' && isTagboxActive()) {
-      log('[hideSlider] tagbox is active. cancel hide')();
-      return;
-    }
     idleTimer.kill();
     $slider.addClass('kifi-hiding')
     .off('transitionend')
@@ -432,6 +420,26 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
+  function beginStickyTime() {
+    if ($slider) {
+      $slider.data().stickiness |= 1;
+    }
+  }
+
+  function endStickyTime() {
+    if ($slider) {
+      var stickiness = $slider.data().stickiness &= ~1;
+      if (!stickiness) {
+        document.addEventListener('mousemove', function f(e) {
+          this.removeEventListener('mousemove', f, true);
+          if ($slider && !$slider.data().stickiness && !$slider[0].contains(e.target)) {
+            hideSlider('mouseout');
+          }
+        }, true);
+      }
+    }
+  }
+
   function formatCountHtml(kept, numFriends, numOthers) {
     return [
         kept ? 'You' : null,
@@ -494,7 +502,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         if (trigger === 'tile') {
           showSlider(trigger);
           growSlider('', 'kifi-wide');
-        } else if (!lastShownAt) { // auto-show only if not already shown
+        } else if ((trigger === 'auto' || trigger === 'scroll') && !lastShownAt) { // auto-show only if not already shown
           showSlider(trigger);
           growSlider('kifi-tiny', 'kifi-auto');
           idleTimer.start(5000);
@@ -540,8 +548,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (locator) {
         $slider.find('.kifi-dock-' + locator.split('/')[1]).addClass('kifi-at');
         idleTimer.kill();
+        $slider.data().stickiness |= 2;
       } else {  // dislodge from pane and prepare for x transition
         $slider.prependTo(tile).layout();
+        $slider.data().stickiness &= ~2;
       }
     }};
 }();
