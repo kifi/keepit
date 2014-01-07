@@ -28,6 +28,7 @@ object PostOffice {
       val INVITATION = ElectronicMailCategory("invitation")
       val EMAIL_CONFIRMATION = ElectronicMailCategory("email_confirmation")
       val RESET_PASSWORD = ElectronicMailCategory("reset_password")
+      val NOTIFICATION = ElectronicMailCategory("notification")
       val all = Set(MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD)
     }
 

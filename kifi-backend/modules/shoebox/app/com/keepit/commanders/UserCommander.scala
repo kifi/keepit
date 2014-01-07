@@ -4,6 +4,7 @@ package com.keepit.commanders
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses, EmailAddressHolder}
 import com.keepit.common.social.BasicUserRepo
@@ -99,7 +100,8 @@ class UserCommander @Inject() (
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
-  elizaServiceClient: ElizaServiceClient) extends Logging {
+  elizaServiceClient: ElizaServiceClient,
+  s3ImageStore: S3ImageStore) extends Logging {
 
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -197,34 +199,36 @@ class UserCommander @Inject() (
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
       val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
         val newUser = userRepo.get(newUserId)
-        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients //ZZZ does this include social connections
+        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
         val id2Email = toNotify.map { userId =>
           (userId, emailRepo.getByUser(userId))
         }.toMap
         (newUser, toNotify, id2Email)
       }
-      toNotify.foreach { userId => //ZZZ update content here to the correct content
+      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"))
+      toNotify.foreach { userId =>
         db.readWrite{ implicit session =>
+          val user = userRepo.get(userId)
           postOffice.sendMail(ElectronicMail(
             senderUserId = None,
-            from = EmailAddresses.CONGRATS,
-            fromName = Some("KiFi Team"),
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
             to = List(id2Email(userId)),
-            subject = s"${newUser.firstName} ${newUser.lastName} joined KiFi!",
-            htmlBody = views.html.email.invitationFriendJoined(newUser).body,
-            category = PostOffice.Categories.User.INVITATION)
+            subject = s"${newUser.firstName} ${newUser.lastName} joined KiFi",
+            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl).body,
+            category = PostOffice.Categories.User.NOTIFICATION)
           )
         }
 
       }
 
-      elizaServiceClient.sendGlobalNotification( //ZZZ update this with correct copy, etc.
+      elizaServiceClient.sendGlobalNotification( //DIS
         userIds = toNotify,
-        title = "A New Kifi Friend!",
-        body = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
-        linkText = "Click to see friends",
-        linkUrl = "https://www.kifi.com/friends",
-        imageUrl = newUser.pictureName.getOrElse("http://www.42go.com/images/favicon.png"), //needs path?
+        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+        linkText = "Invite more friends to Kifi.",
+        linkUrl = "https://www.kifi.com/friends/invite",
+        imageUrl = imageUrl,
         sticky = false
       )
     }
@@ -242,7 +246,7 @@ class UserCommander @Inject() (
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
 
-          val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
+          val (subj, body) = if (newUser.state != UserStates.ACTIVE) { //ZZZ is this logic the right way
             ("Kifi.com | Please confirm your email address",
               views.html.email.verifyEmail(newUser.firstName, verifyUrl).body) //ZZZ make this the new template when ready. Remember newIdentity
           } else {
@@ -267,7 +271,6 @@ class UserCommander @Inject() (
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = "Welcome to Kifi!", //ZZZ add new copy
             htmlBody = views.html.email.verifyAndWelcomeEmail(newUser, "http://www.kifi.com").body //ZZZ make this the new template when ready
-            //ZZZ should we have a text only body as well?
           )
           postOffice.sendMail(mail)
         }

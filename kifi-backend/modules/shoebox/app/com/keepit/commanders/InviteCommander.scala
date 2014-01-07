@@ -193,7 +193,7 @@ class InviteCommander @Inject() (
   }
 
   def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
-    val path = routes.InviteController.acceptInvite(invite.externalId).url
+    val path = routes.InviteController.acceptInvite(invite.externalId).url //ZZZ correct template here with custom content
     val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
     val electronicMail = ElectronicMail(
       senderUserId = None,
