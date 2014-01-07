@@ -23,6 +23,7 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
     val useSemanticMatch = config.asBoolean("useSemanticMatch")
     val proximityGapPenalty = config.asFloat("proximityGapPenalty")
     val proximityThreshold = config.asFloat("proximityThreshold")
+    val proximityPowerFactor = config.asFloat("proximityPowerFactor")
 
     new MainQueryParser(
       lang,
@@ -37,6 +38,7 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
       useSemanticMatch,
       proximityGapPenalty,
       proximityThreshold,
+      proximityPowerFactor,
       phraseDetector,
       phraseDetectionConsolidator,
       monitoredAwait
