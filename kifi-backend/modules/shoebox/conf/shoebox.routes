@@ -145,6 +145,7 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 ##########################################
 
 #### NEW ENDPOINTS
+GET     /newdesign                  @com.keepit.controllers.website.HomeController.newDesignCookie
 GET     /beta                       @com.keepit.controllers.website.HomeController.newHome
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /terms                      @com.keepit.controllers.website.HomeController.newTerms
