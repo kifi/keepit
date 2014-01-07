@@ -246,12 +246,12 @@ class UserCommander @Inject() (
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
 
-          val (subj, body) = if (newUser.state != UserStates.ACTIVE) { //ZZZ is this logic the right way
+          val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
             ("Kifi.com | Please confirm your email address",
-              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body) //ZZZ make this the new template when ready. Remember newIdentity
+              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
-            ("Welcome to Kifi! Please confirm your email address",
-              views.html.email.verifyAndWelcomeEmail(newUser, verifyUrl).body) //ZZZ make this the new template when ready
+            ("Let's get started with Kifi",
+              views.html.email.welcomeInlined(newUser.firstName, verifyUrl).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
@@ -269,8 +269,8 @@ class UserCommander @Inject() (
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(emailAddr),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
-            subject = "Welcome to Kifi!", //ZZZ add new copy
-            htmlBody = views.html.email.verifyAndWelcomeEmail(newUser, "http://www.kifi.com").body //ZZZ make this the new template when ready
+            subject = "Let's get started with Kifi",
+            htmlBody = views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com").body
           )
           postOffice.sendMail(mail)
         }

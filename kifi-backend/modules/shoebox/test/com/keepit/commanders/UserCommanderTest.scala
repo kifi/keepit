@@ -108,7 +108,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         //double seding protection
         userCommander.sendWelcomeEmail(user1)
         outbox.size===1
-         //ZZZ make sure to test for correct content once that is available (i.e. html is done)
+
+        //content check
+        outbox(0).htmlBody.toString.containsSlice("Hey " + user1.firstName + ",") === true
+        outbox(0).to.length === 1
+        outbox(0).to(0).address === "username@42go.com"
+        outbox(0).subject === "Let's get started with Kifi"
       }
     }
 
