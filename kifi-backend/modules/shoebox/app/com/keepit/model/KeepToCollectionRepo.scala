@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import scala.slick.lifted.Query
-
 import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick._
@@ -11,6 +10,7 @@ import com.keepit.common.time._
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]]
+  def getCollectionsForBookmarkByState(bookmarkId: Id[Bookmark], state: State[KeepToCollection])(implicit session: RSession): Seq[Id[Collection]]
   def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[BookmarkUriAndTime]
   def getByBookmark(keepId: Id[Bookmark],
@@ -59,6 +59,13 @@ class KeepToCollectionRepoImpl @Inject() (
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]] =
     collectionsForBookmarkCache.getOrElse(CollectionsForBookmarkKey(bookmarkId)) {
       (for (c <- table if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
+      yield c.collectionId).list
+    }
+
+  def getCollectionsForBookmarkByState(bookmarkId: Id[Bookmark], state: State[KeepToCollection])(implicit session: RSession): Seq[Id[Collection]] =
+      {
+    println(s"\n==\n get col for bmid: ${bookmarkId}, state = " + state)
+      (for (c <- table if c.bookmarkId === bookmarkId && c.state === state)
       yield c.collectionId).list
     }
 
