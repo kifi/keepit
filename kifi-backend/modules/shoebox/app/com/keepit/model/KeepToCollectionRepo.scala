@@ -63,8 +63,7 @@ class KeepToCollectionRepoImpl @Inject() (
     }
 
   def getCollectionsForBookmarkByState(bookmarkId: Id[Bookmark], state: State[KeepToCollection])(implicit session: RSession): Seq[Id[Collection]] =
-      {
-    println(s"\n==\n get col for bmid: ${bookmarkId}, state = " + state)
+    {
       (for (c <- table if c.bookmarkId === bookmarkId && c.state === state)
       yield c.collectionId).list
     }
