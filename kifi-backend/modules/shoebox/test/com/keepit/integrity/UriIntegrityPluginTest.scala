@@ -187,11 +187,11 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1better.id.get, collectionId = c1.id.get))
             keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c1.id.get))
 
-            (Array(uri0, uri1, uri2), Array(uri0better, uri1better, uri2better), Array(url0, url1, url2), Array(bm0, bm1, bm2), Array(bm0better, bm1better, bm2better))
+            (Array(uri0, uri1, uri2), Array(uri0better, uri1better, uri2better), Array(bm0, bm1, bm2), Array(bm0better, bm1better, bm2better))
           }
         }
 
-        val (uris, betterUris, _, bms, betterBms) = setup()
+        val (uris, betterUris, bms, betterBms) = setup()
 
         db.readOnly{ implicit s =>
           keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 1
@@ -208,8 +208,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.handleChangedUri(URIMigration(uris(2).id.get, betterUris(2).id.get))
 
         plugin.batchURIMigration()
-
-        Thread.sleep(1000)
 
         db.readOnly{ implicit s =>
           keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 0
