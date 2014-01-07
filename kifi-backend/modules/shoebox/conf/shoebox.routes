@@ -244,9 +244,7 @@ GET    /tsearch                     @com.keepit.controllers.SearchProxyControlle
 ##########################################
 # External Services API
 ##########################################
-
-#todo(eishay): change routes and callback in sendgrid
-POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+POST    /app/sendgrid/webhook       @com.keepit.controllers.SendgridWebhook.parseEvent()
 
 ##########################################
 # Admin
@@ -459,7 +457,6 @@ GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.in
 GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
 GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.internal.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.internal.ShoeboxController.saveBookmark
-GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.internal.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
