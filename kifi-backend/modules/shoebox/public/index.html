@@ -201,18 +201,18 @@
 								<div class="keep-checkbox"></div>
 							</div>
 							<div class="keep-title long-text">
-								<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
+								<a href="{{url | escape}}" target="_blank" title="{{titleHtml | escape | replace '</?b>', ''}}">{{titleHtml}}</a>
 							</div>
-							<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
+							<div class="keep-url long-text" title="{{url | escape}}">{{descHtml}}</div>
 							<div class="keep-colls">
 								<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
-									<a class="keep-coll-a" href="tag/{{id}}">{{name}}</a>
+									<a class="keep-coll-a" href="tag/{{id}}">{{name | escape}}</a>
 								</span>
 							</div>
 							<div class="keep-who">
 								<a class="pic me" title="You! You look great!"
 									data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
-								<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
+								<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName | escape}} {{lastName | escape}}" data-id="{{id}}"
 									data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
 								{% if !keepers.length && others %}
 								<span class="others"></span>
