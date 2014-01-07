@@ -15,15 +15,16 @@ sealed trait HeimdalEvent {
 }
 
 object HeimdalEvent {
-  private val typeCodeMap = TypeCode.typeCodeMap[HeimdalEvent](UserEvent.typeCode, SystemEvent.typeCode)
+  private val typeCodeMap = TypeCode.typeCodeMap[HeimdalEvent](UserEvent.typeCode, SystemEvent.typeCode, AnonymousEvent.typeCode)
   def getTypeCode(code: String) = typeCodeMap(code.toLowerCase)
 
   implicit val format = new Format[HeimdalEvent] {
     def writes(event: HeimdalEvent) = event match {
       case e: UserEvent => Companion.writes(e)
       case e: SystemEvent => Companion.writes(e)
+      case e: AnonymousEvent => Companion.writes(e)
     }
-    private val readsFunc = Companion.reads(UserEvent, SystemEvent) // optimization
+    private val readsFunc = Companion.reads(UserEvent, SystemEvent, AnonymousEvent) // optimization
     def reads(json: JsValue) = readsFunc(json)
   }
 }
@@ -50,6 +51,15 @@ case class SystemEvent(context: HeimdalContext, eventType: EventType, time: Date
 object SystemEvent extends Companion[SystemEvent] {
   implicit val format = Json.format[SystemEvent]
   implicit val typeCode = TypeCode("system")
+}
+
+case class AnonymousEvent(context: HeimdalContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
+  override def toString(): String = s"AnonymousEvent[type=${eventType.name},time=$time]"
+}
+
+object AnonymousEvent extends Companion[AnonymousEvent] {
+  implicit val format = Json.format[AnonymousEvent]
+  implicit val typeCode = TypeCode("anonymous")
 }
 
 case class EventDescriptor(

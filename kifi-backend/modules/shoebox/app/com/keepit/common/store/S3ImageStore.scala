@@ -3,7 +3,7 @@ package com.keepit.common.store
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.util.{Try, Success, Failure}
+import scala.util.Try
 import org.joda.time.Weeks
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
@@ -14,20 +14,19 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.time.parseStandardTime
 import com.keepit.model._
 import play.api.libs.ws.WS
 import com.keepit.social.SocialNetworks
 import com.keepit.common.net.URI
-import scala.util.Failure
-import scala.Some
-import scala.util.Success
-import java.io.{InputStream, ByteArrayOutputStream, ByteArrayInputStream, File}
+import java.io._
 import javax.imageio.ImageIO
 import org.apache.commons.lang3.RandomStringUtils
 import java.awt.image.BufferedImage
-import com.keepit.common.KestrelCombinator
 import play.api.libs.json.Json
+import scala.util.Failure
+import scala.util.Success
+import com.keepit.model.UserPictureSource
+import java.awt.Color
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
@@ -139,6 +138,7 @@ class S3ImageStoreImpl @Inject() (
     if (config.isLocal) {
       Promise.successful(Seq()).future
     } else {
+      // todo: Grab largest image social network allows, do resizing ourselves (the same way we do for uploaded images)
       val future = Future.sequence(for {
         sizeName <- S3UserPictureConfig.ImageSizes.map(_.toString) :+ "original"
         userId <- sui.userId
@@ -223,8 +223,28 @@ class S3ImageStoreImpl @Inject() (
     }
   }
 
+  private def forceRGB(image: BufferedImage): BufferedImage = {
+    // This forces an image to use RGB and to use white as the transparency color if the source image supports it
+    // However, this can still fail on different color modes, especially from images explicitly saved as CMYK from
+    // Adobe software. The true solution is to use a full featured image processor, like imagemagick.
+    val imageRGB = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
+    val g = imageRGB.createGraphics()
+    g.setColor(Color.WHITE)
+    g.fillRect(0,0,image.getWidth,image.getHeight)
+    g.drawRenderedImage(image, null)
+    g.dispose()
+    imageRGB
+  }
+  def readImage(file: File): BufferedImage = {
+    forceRGB(ImageIO.read(file))
+  }
+  def readImage(is: InputStream): BufferedImage = {
+    forceRGB(ImageIO.read(is))
+  }
+
   def uploadTemporaryPicture(file: File): Try[(String, String)] = Try {
-      val bufImage = ImageIO.read(file)
+
+      val bufImage = readImage(file)
 
       val os = new ByteArrayOutputStream()
       ImageIO.write(bufImage, "jpeg", os)
@@ -266,7 +286,7 @@ class S3ImageStoreImpl @Inject() (
   }
   private def getImage(token: String) = Try {
     val obj = s3Client.getObject(config.bucketName, tempPath(token))
-    ImageIO.read(obj.getObjectContent)
+    readImage(obj.getObjectContent)
   }
   private def uploadUserImage(userExtId: ExternalId[User], filename: String, imageSizeName: String, is: ByteArrayInputStream, contentLength: Int) = Try {
     val key = keyByExternalId(imageSizeName, userExtId, filename)

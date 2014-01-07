@@ -20,7 +20,7 @@ import com.keepit.common.service.{ServiceStatus, FortyTwoServices}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.search.phrasedetector.PhraseIndexer
 
-case object Index
+case object Update
 case object BackUp
 
 private[index] class ArticleIndexerActor @Inject() (
@@ -29,12 +29,8 @@ private[index] class ArticleIndexerActor @Inject() (
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case Index => try {
-        val articlesIndexed = articleIndexer.run()
-        if (articlesIndexed >= articleIndexer.commitBatchSize) {
-          self.forward(Index)
-        }
-        sender ! articlesIndexed
+    case Update => try {
+        sender ! articleIndexer.update()
       } catch {
         case e: Exception =>
           airbrake.notify("Error indexing articles", e)
@@ -46,7 +42,7 @@ private[index] class ArticleIndexerActor @Inject() (
 }
 
 trait ArticleIndexerPlugin extends SchedulingPlugin {
-  def index(): Int
+  def update(): Int
   def reindex()
 }
 
@@ -63,7 +59,7 @@ class ArticleIndexerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
-    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Index)
+    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Update)
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
       scheduleTask(actor.system, 30 minutes, 2 hours, actor.ref, BackUp)
     }
@@ -73,13 +69,13 @@ class ArticleIndexerPluginImpl @Inject() (
     articleIndexer.close()
   }
 
-  override def index(): Int = {
-    val future = actor.ref.ask(Index)(1 minutes).mapTo[Int]
+  override def update(): Int = {
+    val future = actor.ref.ask(Update)(1 minutes).mapTo[Int]
     Await.result(future, 1 minutes)
   }
 
   override def reindex() {
     articleIndexer.reindex()
-    actor.ref ! Index
+    actor.ref ! Update
   }
 }

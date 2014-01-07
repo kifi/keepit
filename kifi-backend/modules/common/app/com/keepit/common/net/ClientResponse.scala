@@ -10,6 +10,9 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import scala.xml._
 
 import com.ning.http.util.AsyncHttpProviderUtils
+import java.io.{FileOutputStream, File}
+import org.apache.commons.io.IOUtils
+import scala.util.Try
 
 
 case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
@@ -40,21 +43,24 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   private var _parsingTime: Option[Long] = None
   override def parsingTime = _parsingTime
 
-  lazy val body: String = {
-    val startTime = System.currentTimeMillis
-    val ahcResponse = res.ahcResponse
+  lazy val ahcResponse = res.ahcResponse
 
-    //+ the following is copied from play.api.libs.ws.WS
-    // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
-    // explicitly set, while Plays default encoding is UTF-8.  So, use UTF-8 if charset is not explicitly
-    // set and content type is not text/*, otherwise default to ISO-8859-1
+  // the following is copied from play.api.libs.ws.WS
+  // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
+  // explicitly set, while Plays default encoding is UTF-8.  So, use UTF-8 if charset is not explicitly
+  // set and content type is not text/*, otherwise default to ISO-8859-1
+  lazy val charset = {
     val contentType = Option(ahcResponse.getContentType).getOrElse("application/octet-stream")
-    val charset = Option(AsyncHttpProviderUtils.parseCharset(contentType)).getOrElse {
+    Option(AsyncHttpProviderUtils.parseCharset(contentType)).getOrElse {
       if (contentType.startsWith("text/"))
         AsyncHttpProviderUtils.DEFAULT_CHARSET
       else
         "utf-8"
     }
+  }
+
+  lazy val body: String = {
+    val startTime = System.currentTimeMillis
     val str = new String(bytes, charset)
     //if the parser already worked on json or xml we don't recalculate the time as its more likely that the request for the body is for logging now
     if (_parsingTime.isEmpty) _parsingTime = Some(System.currentTimeMillis - startTime)
@@ -68,6 +74,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
         url.contains("/getEContacts") ||
         url.contains("/getContacts") ||
         url.contains("/internal/shoebox/database/getIndexable") ||
+        url.contains("/internal/shoebox/database/getUriIdsInCollection") ||
         url.contains("graph.facebook.com/")) {
       5000//ms
     } else {
@@ -90,7 +97,16 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
     } catch {
       case e: Throwable =>
         log.error(s"bad res: $body")
-        throw new ClientResponseException(s"can't parse json $body on request ${request.httpUri}", e)
+        //The file name is constant, don't change it. We don't want repeating bad jsons to fill up our disk. As a result we store to disk only the latest bad json.
+        //Yes, this is not thread safe, but we can live with it.
+        val file: File = new File("bad-json.json")
+        val output = new FileOutputStream(file)
+        try {
+          IOUtils.write(bytes, output)
+        } finally {
+          Try(output.close())
+        }
+        throw new ClientResponseException(s"can't parse json on request ${request.httpUri} with charset [$charset], orig type is ${ahcResponse.getContentType} bytes are written to ${file.getAbsolutePath()}: $body ", e)
     }
   }
 

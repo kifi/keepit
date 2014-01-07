@@ -33,6 +33,7 @@ case class NormalizedURI (
   redirect: Option[Id[NormalizedURI]] = None,
   redirectTime: Option[DateTime] = None
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
+
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
   def withState(state: State[NormalizedURI]) = copy(state = state)
@@ -42,10 +43,13 @@ case class NormalizedURI (
   }
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
-  def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+  def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen)))
 }
 
 object NormalizedURI {
+
+  val TitleMaxLen = 2040
+
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -142,4 +146,24 @@ object NormalizedURIStates extends States[NormalizedURI] {
   }
 }
 
+case class IndexableUri(
+   id: Option[Id[NormalizedURI]] = None,
+   title: Option[String] = None,
+   url: String,
+   restriction: Option[Restriction] = None,
+   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+   seq: SequenceNumber)
 
+object IndexableUri {
+
+  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(uri.id, uri.title, uri.url, uri.restriction, uri.state, uri.seq)
+
+  implicit def format = (
+    (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'restriction).formatNullable[Restriction] and
+    (__ \ 'state).format(State.format[NormalizedURI]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+  )(IndexableUri.apply, unlift(IndexableUri.unapply))
+}

@@ -20,12 +20,25 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
+  def requiredModules = Seq(
+    TestSearchServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    TestShoeboxSecureSocialModule(),
+    FakeHttpClientModule(),
+    ShoeboxFakeStoreModule(),
+    FakeSocialGraphModule(),
+    FakeAirbrakeModule(),
+    TestHeimdalServiceClientModule()
+  )
+
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule(), FakeAirbrakeModule(), TestHeimdalServiceClientModule())) {
+      running(new ShoeboxApplication(requiredModules: _*)) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)

@@ -1875,7 +1875,11 @@ td.profile-email-separator {
   text-align: center;
   position: absolute;
   top: -10px;
-  padding: 0px 4px;
+  padding: 0px 4.7px;
+  min-width: 16px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
   right: -6px;
 }
 
@@ -2037,6 +2041,10 @@ input.user-filter {
 
 .invite-friends-importing {
   display: none;
+}
+
+.invite-friends > div > ul.center {
+	text-align: center;
 }
 
 .friends-importing {
@@ -2234,10 +2242,10 @@ input.user-filter {
 }
 
 .requested>*>.friend-status::before {
-  background-position: -90px;
-  width: 20px;
+  background-position: -111px;
+  width: 18px;
   position: relative;
-  left: 2px;
+  left: 1px;
 }
 
 .friend-action-desc {
@@ -2435,7 +2443,8 @@ input.user-filter {
 }
 
 .invite-friend,
-.found-user {
+.found-user,
+.invite-email {
   display: block;
   background-color: #eff2f7;
   padding: 10px;
@@ -2444,6 +2453,7 @@ input.user-filter {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   position: relative;
+  text-align: left;
 }
 
 .invite-friend::after,
@@ -2537,6 +2547,17 @@ input.user-filter {
   background-position: -79px top;
 }
 
+.invite-email {
+  font-size: 16px;
+  text-align: center;
+}
+
+.invite-email a {
+  color: #abafb6;
+  text-decoration: underline;
+  line-height: 64px;
+}
+
 .invite-status {
   font-size: 13px;
   font-weight: 300;
@@ -2610,9 +2631,9 @@ input.user-filter {
 }
 
 .found-user.requested .connect-button::before {
-  background-position: -90px 0;
-  width: 20px;
-  left: 2px;
+  background-position: -111px 0;
+  width: 18px;
+  left: 1px;
 }
 
 .found-user.friend .connect-button:hover,
@@ -2647,18 +2668,8 @@ a.invite-button {
 }
 
 @media screen and (min-width: 1140px) {
-  .invite-friend {
-    display: inline-block;
-    vertical-align: top;
-    width: 48%;
-    width: -webkit-calc(50% - 6px);
-    width: calc(50% - 6px);
-  }
-
-  .invite-friend:nth-child(even) {
-    margin-left: 12px;
-  }
-
+  .invite-friend,
+  .invite-email,
   .found-user {
     display: inline-block;
     vertical-align: top;
@@ -2667,6 +2678,7 @@ a.invite-button {
     width: calc(50% - 6px);
   }
 
+  .invite-friend:nth-child(even),
   .found-user:nth-child(even) {
     margin-left: 12px;
   }
@@ -2898,6 +2910,13 @@ button.more-invites {
 .no-results>ol>li {
   color: #929292;
   margin: 10px 25px;
+}
+
+.no-results-reminder {
+	position: relative;
+	text-align: center;
+	top: -44px;
+	font-size: 17px;
 }
 
 .friend-reqs-status {
@@ -3188,7 +3207,7 @@ body[data-view=search] .main-keeps {
   color: #fff;
   background: #67829c;
   padding: 7px 12px;
-  border: 1px solid #f4f6f9;
+  border: 1px solid transparent;
   border-radius: 9px;
   position: absolute;
   right: 16px;
@@ -3562,27 +3581,6 @@ body[data-view=search] .main-keeps {
 
 .top-right-nav>a[href]:focus {
   box-shadow: inset 0 0 0 2px #a0b1c2;
-}
-
-.top-right-nav>a.send-feedback {
-  background-color: #6fa5ef;
-  border-radius: 6px;
-  padding: 10px 20px;
-  margin-right: 6px;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  -webkit-transition: background-color .1s;
-  transition: background-color .1s;
-}
-
-.top-right-nav>a.send-feedback:hover {
-  background-color: #7faeef;
-}
-
-.top-right-nav>a.send-feedback:active {
-  background-color: #5f9cef;
-  -webkit-transition: none;
-  transition: none;
 }
 
 .splash,
@@ -5252,3 +5250,43 @@ a.photo-dialog-submit:focus {
   clear: both;
 }
 
+.kifi-onboarding-li {
+	display: none;
+}
+
+.kifi-onboarding-iframe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	margin: 0 auto;
+	width: 100%;
+	height: 100%;
+	background: transparent;
+	z-index: 10000;
+}
+
+.search-filters {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+.search-filters li {
+	display: inline;
+	color: #cccccc;
+}
+
+.search-filters li:after {
+	content: '|';
+	color: #cccccc;
+	font-size: 0.9em;
+}
+
+.search-filters li:last-child:after {
+	display: none;
+	content: '';
+}
+
+.search-filter-selected {
+	color: #333333;
+}

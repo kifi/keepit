@@ -15,7 +15,8 @@ import com.keepit.search.index.{Indexable, Indexer}
 import com.keepit.search.index.Searcher
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
+import com.keepit.common.concurrent.ExecutionContext.immediate
 
 object CollectionFields {
   val userField = "coll_usr"
@@ -46,10 +47,9 @@ class CollectionIndexer(
 
   import CollectionFields._
 
-  private[this] val commitBatchSize = 100
-  private[this] val fetchSize = commitBatchSize * 3
+  override val commitBatchSize = 100
+  private val fetchSize = 100
 
-  private[this] val updateLock = new AnyRef
   private[this] var searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
 
   def getSearchers: (Searcher, Searcher) = searchers
@@ -71,52 +71,44 @@ class CollectionIndexer(
     var total = 0
     var done = false
     while (!done) {
-      total += update {
-        val collections = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
+      var collections: Seq[Collection] = Seq()
+      total += doUpdate("CollectionIndex") {
+        collections = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
         done = collections.isEmpty
-        collections
+        collections.iterator.map(buildIndexable)
       }
+      collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
+      // update searchers together to get a consistent view of indexes
+      searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
     }
     total
   }
 
   def update(userId: Id[User]): Int = updateLock.synchronized {
     deleteDocuments(new Term(userField, userId.toString), doCommit = false)
-    update {
-      Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
+    var collections: Seq[Collection] = Seq()
+    val cnt = doUpdate("CollectionIndex") {
+      collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
+      collections.iterator.map(buildIndexable)
     }
-  }
-
-  private def update(collectionsChanged: => Seq[Collection]): Int = {
-    log.info("updating Collection")
-    try {
-      val cnt = successCount
-      val changed = collectionsChanged
-      indexDocuments(changed.iterator.map(buildIndexable), commitBatchSize)
-      collectionNameIndexer.update(changed, new CollectionSearcher(getSearcher))
-      // update searchers together to get a consistent view of indexes
-      searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
-      successCount - cnt
-    } catch { case e: Throwable =>
-      log.error("error in Collection update", e)
-      throw e
-    }
-
+    collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
+    // update searchers together to get a consistent view of indexes
+    searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
+    cnt
   }
 
   def buildIndexable(collection: Collection): CollectionIndexable = {
     val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
-      Await.result(shoeboxClient.getBookmarksInCollection(collection.id.get), 180 seconds)
+      Await.result(shoeboxClient.getUriIdsInCollection(collection.id.get), 180 seconds)
     } else {
-      Seq.empty[Bookmark]
+      Seq.empty[BookmarkUriAndTime]
     }
-
     new CollectionIndexable(
       id = collection.id.get,
       sequenceNumber = collection.seq,
       isDeleted = bookmarks.isEmpty,
       collection = collection,
-      bookmarks = bookmarks)
+      normalizedUris = bookmarks)
   }
 
   class CollectionIndexable(
@@ -124,13 +116,13 @@ class CollectionIndexer(
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
     val collection: Collection,
-    val bookmarks: Seq[Bookmark]
+    val normalizedUris: Seq[BookmarkUriAndTime]
   ) extends Indexable[Collection] {
 
     override def buildDocument = {
       val doc = super.buildDocument
 
-      val collListBytes = URIList.toByteArray(bookmarks)
+      val collListBytes = URIList.toByteArray(normalizedUris)
       val collListField = buildURIListField(uriListField, collListBytes)
       val collList = URIList(collListBytes)
       doc.add(collListField)

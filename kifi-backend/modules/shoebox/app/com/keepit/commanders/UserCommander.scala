@@ -10,20 +10,25 @@ import com.keepit.abook.ABookServiceClient
 import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.{UserIdentity, SocialNetworks, BasicUser}
-import scala.concurrent.{Await, Future}
+import com.keepit.social._
+import scala.concurrent.Future
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
-import scala.util.{Failure, Success, Try}
-import scala.Some
+import scala.util.Try
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.heimdal._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{Identity, UserService, Registry}
 import java.text.Normalizer
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.ElizaServiceClient
-
+import play.api.libs.json.JsSuccess
+import com.keepit.model.SocialConnection
+import play.api.libs.json.JsString
+import com.keepit.model.SocialUserInfoUserKey
+import scala.Some
+import com.keepit.social.UserIdentity
+import play.api.libs.json.JsObject
+import securesocial.core.{UserService, Registry, Identity}
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -76,6 +81,10 @@ class UserCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   invitationRepo: InvitationRepo,
   friendRequestRepo: FriendRequestRepo,
+  userCache: SocialUserInfoUserCache,
+  socialGraphPlugin: SocialGraphPlugin,
+  bookmarkCommander: BookmarksCommander,
+  collectionCommander: CollectionCommander,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdalServiceClient: HeimdalServiceClient,
   elizaServiceClient: ElizaServiceClient,
@@ -155,8 +164,8 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User])(implicit session: RWSession) = {
-    val newUser = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
+  def createUser(firstName: String, lastName: String, state: State[User]) = {
+    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
       val contextBuilder = eventContextBuilder()
       contextBuilder += ("action", "registered")
@@ -167,11 +176,18 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
-    session.conn.commit()
-
-    // Here you can do things with default keeps / tags. See ExtBookmarksController / BookmarkInterner for examples.
-
     newUser
+  }
+
+  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
+    val contextBuilder = new HeimdalContextBuilder()
+    contextBuilder.data ++= context.data
+    contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
+    val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
+    val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
+    db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
+    bookmarkCommander.setKeepOrdering(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
   }
 
   def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
@@ -343,5 +359,59 @@ class UserCommander @Inject() (
     }
   }
 
+  def disconnect(userId:Id[User], networkString: String):(Option[SocialUserInfo], String) = {
+    userCache.remove(SocialUserInfoUserKey(userId))
+    val network = SocialNetworkType(networkString)
+    val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
+      socialUserInfoRepo.getByUser(userId).partition(_.networkType == network)
+    }
+    if (otherNetworks.isEmpty) {
+      (None, "no_other_connected_network")
+    } else if (thisNetwork.isEmpty || thisNetwork.head.networkType == SocialNetworks.FORTYTWO) {
+      (None, "not_connected_to_network")
+    } else {
+      val sui = thisNetwork.head
+      socialGraphPlugin.asyncRevokePermissions(sui)
+      db.readWrite { implicit s =>
+        socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserInfoRepo.invalidateCache(sui)
+        socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
+        socialUserInfoRepo.getByUser(userId).map(socialUserInfoRepo.invalidateCache)
+      }
+      userCache.remove(SocialUserInfoUserKey(userId))
+      val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
+      (Some(newLoginUser), "disconnected")
+    }
+  }
 
+}
+
+object DefaultKeeps {
+  val orderedTags: Seq[String] = Seq(
+    "Recipe",
+    "Shopping Wishlist",
+    "Travel",
+    "Read Later",
+    "Funny",
+    "Example Keep",
+    "Kifi Support"
+  )
+
+  val orderedKeepsWithTags: Seq[(KeepInfo, Seq[String])] = {
+    val Seq(recipe, shopping, travel, later, funny, example, support) = orderedTags
+    Seq(
+      // Example keeps
+      (KeepInfo(title = None, url = "http://www.simplyrecipes.com/recipes/bruschetta_with_tomato_and_basil/", isPrivate = true), Seq(example, recipe)),
+      (KeepInfo(title = None, url = "http://www.apple.com/ipad/", isPrivate = true), Seq(example, shopping)),
+      (KeepInfo(title = None, url = "http://www.fourseasons.com/borabora/", isPrivate = true), Seq(example, travel)),
+      (KeepInfo(title = None, url = "http://twistedsifter.com/2013/01/50-life-hacks-to-simplify-your-world/", isPrivate = true), Seq(example, later)),
+      (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),
+
+      // Support Keeps
+      (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("How to Use Kifi"), url = "https://www.kifi.com/support", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Contact Us"), url = "https://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
+    )
+  }
 }

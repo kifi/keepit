@@ -59,10 +59,12 @@ trait ShoeboxServiceClient extends ServiceClient {
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
+  def getUriIdsInCollection(id: Id[Collection]): Future[Seq[BookmarkUriAndTime]]
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
+  def getIndexableUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]]
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
@@ -368,6 +370,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[BookmarkUriAndTime]] = {
+    call(Shoebox.internal.getUriIdsInCollection(collectionId)) map { r =>
+      Json.fromJson[Seq[BookmarkUriAndTime]](r.json).get
+    }
+  }
+
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     cacheProvider.activeSearchConfigExperimentsCache.getOrElseFuture(ActiveExperimentsKey) {
       call(Shoebox.internal.getActiveExperiments).map { r =>
@@ -426,6 +434,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
     call(Shoebox.internal.getIndexable(seqNum, fetchSize)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
+    }
+  }
+
+  def getIndexableUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]] = {
+    call(Shoebox.internal.getIndexableUris(seqNum, fetchSize)).map { r =>
+      Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 

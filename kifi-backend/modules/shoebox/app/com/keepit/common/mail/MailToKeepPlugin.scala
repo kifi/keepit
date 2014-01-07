@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.commanders.BookmarkInterner
+import com.keepit.commanders.{RawBookmarkRepresentation, BookmarkInterner}
 import com.keepit.model.{BookmarkSource, EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -102,10 +102,9 @@ class MailToKeepActor @Inject() (
               case (Some(user), uris) =>
                 for (uri <- uris) {
                   implicit val context = HeimdalContext.empty
-                  val bookmark = bookmarkInterner.internBookmarks(Json.obj(
-                    "url" -> uri.toString,
-                    "isPrivate" -> (keepType == KeepType.Private)
-                  ), user, Set(), BookmarkSource.email, mutatePrivacy = true).head
+                  val bookmark = bookmarkInterner.internRawBookmarks(
+                    Seq(RawBookmarkRepresentation(url = uri.toString, isPrivate = (keepType == KeepType.Private))),
+                    user.id.get, BookmarkSource.email, mutatePrivacy = true).head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
                   sendReply(
                     message = message,

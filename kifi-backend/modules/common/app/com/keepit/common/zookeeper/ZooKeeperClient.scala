@@ -27,6 +27,8 @@ case class Node(name: String) {
 
 @ImplementedBy(classOf[ZooKeeperClientImpl])
 trait ZooKeeperClient {
+  def onConnected(handler: ()=>Unit): Unit
+
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit): Unit
   def watchChildren(path: Path, updateChildren : Seq[Node] => Unit): Unit
   def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit
@@ -53,8 +55,24 @@ trait ZooKeeperClient {
  */
 class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
                       watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
-  @volatile private var zk : ZooKeeper = null
+  @volatile private[this] var zk : ZooKeeper = null
+  @volatile private[this] var onConnectedHandlers: List[()=>Unit] = Nil
+
   connect()
+
+  def onConnected(handler: ()=>Unit): Unit = {
+    onConnectedHandlers = handler::onConnectedHandlers
+    if (zk != null && zk.getState() == ZooKeeper.States.CONNECTED) execOnConnectedHandler(handler) // if already connected, execute the handler immediately
+  }
+
+  private def execOnConnectedHandler(handler: ()=>Unit): Unit = {
+    try {
+      handler()
+    } catch {
+    case e:Exception =>
+      log.error("Exception during execution of an onConnected handler", e)
+    }
+  }
 
   def getHandle() : ZooKeeper = zk
 
@@ -81,6 +99,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
     assignLatch.countDown()
     log.info(s"Attempting to connect to zookeeper servers $servers")
     connectionLatch.await()
+    onConnectedHandlers.foreach(execOnConnectedHandler(_))
   }
 
   def sessionEvent(assignLatch: CountDownLatch, connectionLatch : CountDownLatch, event : WatchedEvent) {
@@ -224,7 +243,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
 
     case class ChildWatcher(node: Node) extends Watcher {
       def process(event: WatchedEvent) : Unit = watchedChildren.synchronized{
-        watchedChildren -= node 
+        watchedChildren -= node
         val children = zk.getChildren(path.name, false).asScala.map(Node(_))
         updateChildren(children)
         doWatchChildren(children)
@@ -237,7 +256,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
         if (event.getType==EventType.NodeDeleted){
           updateChildren(List())
           zk.exists(path.name, new ParentWatcher())
-        } else { //otherwise, recreate watch on self and on new children  
+        } else { //otherwise, recreate watch on self and on new children
           val children = zk.getChildren(path.name, new ParentWatcher()).asScala.map(Node(_))
           updateChildren(children)
           doWatchChildren(children)
@@ -247,7 +266,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
 
     def doWatchChildren(nodes: Seq[Node]) : Unit = watchedChildren.synchronized {
       nodes.filterNot(watchedChildren.contains _).foreach{ node =>
-        try { 
+        try {
           zk.getData(path.name + "/" + node.name, ChildWatcher(node), new Stat())
           watchedChildren += node
         } catch {
@@ -266,7 +285,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
     } catch {
       case e :KeeperException => zk.exists(path.name, new ParentWatcher())
     }
-  
+
   }
 
 

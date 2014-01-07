@@ -409,12 +409,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var $pic = $(this);
       var friend = keepers.filter(hasId($pic.data('id')))[0];
       render('html/friend_card', {
-        friend: friend,
-        iconsUrl: api.url('images/social_icons.png'),
-        includeTri: true
+        friend: friend
       }, function (html) {
-        var $card = $(html);
-        configureHover($card, {
+        configureHover(html, {
           mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: 'toggle', parent: $pic,
           position: {my: 'center bottom-13', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
             var xTC = o.target.left + .5 * o.target.width;
@@ -426,13 +423,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
             }
             o.element.element.css(pos);
           }}});
-        api.port.emit('get_networks', friend.id, function (networks) {
-          for (nw in networks) {
-            $card.find('.kifi-kcard-nw-' + nw)
-              .toggleClass('kifi-on', networks[nw].connected)
-              .attr('href', networks[nw].profileUrl || null);
-          }
-        });
       });
     });
   }

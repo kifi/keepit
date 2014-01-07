@@ -61,6 +61,8 @@ abstract class Indexer[T](
 
   def this(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
 
+  val commitBatchSize = 1000
+
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
   private[this] val indexWriterLock = new AnyRef
 
@@ -104,6 +106,8 @@ abstract class Indexer[T](
 
   def getSearcher = searcher
 
+  protected val updateLock = new AnyRef
+
   private[this] var _sequenceNumber =
     SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
@@ -119,6 +123,19 @@ abstract class Indexer[T](
     if (resetSequenceNumber) {
       resetSequenceNumber = false
       sequenceNumber = SequenceNumber.MinValue
+    }
+  }
+
+  protected def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T]]): Int = {
+    try {
+      log.info(s"updating $name")
+      val indexables = changedIndexables
+      val cnt = successCount
+      indexDocuments(indexables, commitBatchSize)
+      successCount - cnt
+    } catch { case ex: Throwable =>
+      log.error(s"error in $name update", ex)
+      throw ex
     }
   }
 
@@ -160,43 +177,41 @@ abstract class Indexer[T](
             case None => false
           }
         }.map{ indexable =>
-          val document = try {
-            Some(indexable.buildDocument)
-          } catch {
-            case e: Throwable =>
-              onFailure(indexable, e)
-              None
-          }
-          document.foreach{ doc =>
-            try {
-              if (indexable.isDeleted) {
-                indexWriter.deleteDocuments(indexable.idTerm)
-              } else {
-                indexWriter.updateDocument(indexable.idTerm, doc)
+          try {
+            if (indexable.isDeleted) {
+              indexWriter.deleteDocuments(indexable.idTerm)
+            } else {
+              val document = try {
+                Some(indexable.buildDocument)
+              } catch {
+                case e: Throwable =>
+                  onFailure(indexable, e)
+                  None
               }
-              onSuccess(indexable)
-              successful += indexable
-              if (maxSequenceNumber < indexable.sequenceNumber)
-                maxSequenceNumber = indexable.sequenceNumber
-              log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
-            } catch {
-              case e: CorruptIndexException => {
-                log.error("fatal indexing error", e)
-                throw e
-              }
-              case e: OutOfMemoryError => {
-                log.error("fatal indexing error", e)
-                throw e
-              }
-              case e: IOException => {
-                log.error("fatal indexing error", e)
-                throw e
-              }
-              case e: Throwable =>
-                val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
-                log.error(msg, e)
-                onFailure(indexable, e)
+              document.foreach{ doc => indexWriter.updateDocument(indexable.idTerm, doc) }
             }
+            onSuccess(indexable)
+            successful += indexable
+            if (maxSequenceNumber < indexable.sequenceNumber)
+              maxSequenceNumber = indexable.sequenceNumber
+            log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
+          } catch {
+            case e: CorruptIndexException => {
+              log.error("fatal indexing error", e)
+              throw e
+            }
+            case e: OutOfMemoryError => {
+              log.error("fatal indexing error", e)
+              throw e
+            }
+            case e: IOException => {
+              log.error("fatal indexing error", e)
+              throw e
+            }
+            case e: Throwable =>
+            val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
+            log.error(msg, e)
+            onFailure(indexable, e)
           }
         }
         commit(maxSequenceNumber)
@@ -255,6 +270,14 @@ abstract class Indexer[T](
     val mutableMap = indexCommit.getUserData()
     log.info("commit data =" + mutableMap)
     Map() ++ mutableMap
+  }
+
+  def commitSequenceNumber: Option[SequenceNumber] = {
+    commitData.get(Indexer.CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong))
+  }
+
+  def committedAt: Option[String] = {
+    commitData.get(Indexer.CommitData.committedAt)
   }
 
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc

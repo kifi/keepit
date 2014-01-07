@@ -9,45 +9,10 @@ $(function() {
     chrome.runtime.reload();
   });
 
-  $("[name=show_slider]").prop("checked", api.prefs.get("showSlider")).click(function() {
+  $("[name=show_keeper]").prop("checked", api.prefs.get("showSlider")).click(function() {
     api.prefs.set("showSlider", this.checked);
-  });
-  $("[name=max_results]").val(api.prefs.get("maxResults")).data("val", api.prefs.get("maxResults"))
-  .on("input", function() {
-    var n = +this.value.trim();
-    if (n) {
-      n = Math.round(Math.max(1, Math.min(9, n)));
-      api.prefs.set("maxResults", n);
-      $(this).data("val", n);
-    }
-  }).blur(function() {
-    this.value = $(this).data("val");
   });
   $("[name=show_scores]").prop("checked", api.prefs.get("showScores")).click(function() {
     api.prefs.set("showScores", this.checked);
   });
-
-  $("#log-out").click(function(e) {
-    e.preventDefault();
-    main.deauthenticate();
-    showUser();
-  });
-  $("#log-in").click(function(e) {
-    e.preventDefault();
-    main.authenticate(showUser);
-  });
-
-  function showUser() {
-    var user = (main.session || {}).user;
-    console.log("[showUser] user:", user);
-    if (user) {
-      var cdnBase = env == "development" ?
-        "dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
-        "djty7jcqog9qu.cloudfront.net";
-      $("#name").text(user.firstName + ' ' + user.lastName);
-      $("#identity").css("backgroundImage", "url(http://" + cdnBase + "/users/" + user.id + "/pics/100/" + user.pictureName + ")");
-    }
-    $("#session").attr("class", user ? "valid" : "none");
-  }
-  showUser();
 });
