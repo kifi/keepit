@@ -10,7 +10,6 @@ import com.keepit.common.time._
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]]
-  def getCollectionsForBookmarkByState(bookmarkId: Id[Bookmark], state: State[KeepToCollection])(implicit session: RSession): Seq[Id[Collection]]
   def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[BookmarkUriAndTime]
   def getByBookmark(keepId: Id[Bookmark],
@@ -59,12 +58,6 @@ class KeepToCollectionRepoImpl @Inject() (
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]] =
     collectionsForBookmarkCache.getOrElse(CollectionsForBookmarkKey(bookmarkId)) {
       (for (c <- table if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
-      yield c.collectionId).list
-    }
-
-  def getCollectionsForBookmarkByState(bookmarkId: Id[Bookmark], state: State[KeepToCollection])(implicit session: RSession): Seq[Id[Collection]] =
-    {
-      (for (c <- table if c.bookmarkId === bookmarkId && c.state === state)
       yield c.collectionId).list
     }
 
