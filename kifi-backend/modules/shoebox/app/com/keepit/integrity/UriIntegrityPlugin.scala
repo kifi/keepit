@@ -66,7 +66,20 @@ class UriIntegrityActor @Inject()(
         val diff = co1 -- co2
         keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
           if (inter.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-          if (diff.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
+
+          if (diff.contains(ktc.collectionId)) {
+            val hidden = keepToCollectionRepo.getCollectionsForBookmarkByState(newBm.id.get, KeepToCollectionStates.INACTIVE)
+            if (!hidden.contains(ktc.collectionId)) {
+              keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
+            } else {
+              val inactiveKtc = keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId)
+              inactiveKtc foreach { inactiveKtc =>
+                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+                keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+              }
+            }
+          }
+
         }
       }
     }
