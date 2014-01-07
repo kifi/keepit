@@ -102,7 +102,6 @@
 	.margin-right(13px, @rightFontSize);
 	background: white;
 	white-space: nowrap;
-	.transition(background,color 0.1s ease);
 
 	&:hover {
 		text-decoration: none;
@@ -182,11 +181,14 @@
 	.padding-bottom(28px, @rightFontSize);
 	.border-radius(0 0 26px 26px);
 	.box-shadow(0 2px 0 3px rgba(0, 0, 0, 0.1));
-	.transition(top 0.3s ease);
 
 	html.scroll & {
 		top: 0;
 	}
+}
+
+.kifi-header-join-transition {
+	.transition(top 0.3s ease);
 }
 
 .kifi-header-join {
