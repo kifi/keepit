@@ -2394,7 +2394,7 @@ $(function () {
 	}
 
 	function showInviteEmailAddress($nwFriends, search, friends) {
-		if (hasExperiment(me, 'gmail_invite', true) && /^[^@]+@[^@]+$/.test(search) && !hasFriendWithEmail(friends, search)) {
+		if (/^[^@]+@[^@]+$/.test(search) && !hasFriendWithEmail(friends, search)) {
 			var $inviteEmail = $(inviteEmailTemplate({
 				email: search
 			})).appendTo($nwFriends.find('ul'))
