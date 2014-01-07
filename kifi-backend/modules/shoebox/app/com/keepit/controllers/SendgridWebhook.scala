@@ -16,7 +16,7 @@ class SendgridWebhook  @Inject() (
     extends WebsiteController(actionAuthenticator) with Logging {
 
   def parseEvent() = Action(parse.json) { request =>
-    log.info(s"got a new event from sendgrid: ${request.body.toString()}")
+    log.info(s"got a new event from sendgrid: ${request.body.toString()} with headers: ${request.headers.toMap}")
     Ok
   }
 }
