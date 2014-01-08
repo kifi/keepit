@@ -92,7 +92,7 @@ class SecureSocialUserPluginImpl @Inject() (
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
       socialGraphPlugin.asyncFetch(socialUserInfo)
     log.info(s"[save] persisting $socialUser into $socialUserInfo")
-    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
+    SafeFuture { socialUserInfo.userId.foreach(updateExperimentIfTestUser) }
     socialUser
   }
 
