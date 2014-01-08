@@ -236,7 +236,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = Future {
     val guardKey = "welcomeEmailSent"
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
