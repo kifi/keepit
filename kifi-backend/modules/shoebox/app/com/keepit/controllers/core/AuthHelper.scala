@@ -35,6 +35,7 @@ import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
