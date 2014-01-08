@@ -6,12 +6,12 @@ import com.keepit.model.User
 
 class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter) {
 
-  val (myUriEdgeAccessor, friendsUriEdgeAccessors, myUris, friendlyUris, relevantFriendEdgeSet, socialGraphInfoTime) = {
+  val (myUriEdgeAccessor, friendsUriEdgeAccessors, mySearchUris, friendSearchUris, relevantFriendEdgeSet, socialGraphInfoTime) = {
     val startTime: Long = System.currentTimeMillis
 
     // initialize user's social graph info
     val myUriEdges = uriGraphSearcher.myUriEdgeSet
-    val myUris =
+    val mySearchUris =
       filter.timeRange match {
         case Some(timeRange) =>
           filter.collections match {
@@ -44,28 +44,24 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
         (friendEdgeSet, friendEdgeSet)
       }
     }
-    val friendUris = if (filter.includeFriends) {
-      filter.timeRange match {
-        case Some(timeRange) =>
-          filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
-            s ++ friendsUriEdgeSets(f.id).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
-          }
-        case _ =>
-          filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
-            s ++ friendsUriEdgeSets(f.id).destIdLongSet
-          }
-      }
-    } else {
-      Set.empty[Long]
+    val friendSearchUris = filter.collections match {
+      case Some(colls) =>
+        Set.empty[Long]
+      case _ =>
+        filter.timeRange match {
+          case Some(timeRange) =>
+            filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
+              s ++ friendsUriEdgeSets(f.id).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+            }
+          case _ =>
+            filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
+              s ++ friendsUriEdgeSets(f.id).destIdLongSet
+            }
+        }
     }
 
-    val friendlyUris = {
-      if (filter.includeMine) friendUris ++ myUris
-      else if (filter.includeShared) friendUris
-      else friendUris -- myUris // friends only
-    }
     val time: Long = System.currentTimeMillis - startTime
 
-    (myUriEdges.accessor, friendsUriEdgeSets.mapValues{ _.accessor }, myUris, friendlyUris, relevantFriendEdgeSet, time)
+    (myUriEdges.accessor, friendsUriEdgeSets.mapValues{ _.accessor }, mySearchUris, friendSearchUris, relevantFriendEdgeSet, time)
   }
 }
