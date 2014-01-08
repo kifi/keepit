@@ -13,7 +13,8 @@ import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.normalizer.NormalizationService
 import com.keepit.common.crypto.SimpleDESCrypt
 
-import play.api.libs.json.{JsNumber, JsObject, Json}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{__, JsNumber, JsObject, Json}
 
 import scala.math.{max, min}
 
@@ -30,8 +31,20 @@ class ExtPreferenceController @Inject() (
   normalizationService: NormalizationService)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  private case class UserPrefs(enterToSend: Boolean, showFindFriends: Boolean, maxResults: Int)
-  private implicit val userPrefsFormat = Json.format[UserPrefs]
+  private case class UserPrefs(
+    enterToSend: Boolean,
+    maxResults: Int,
+    showKeeperIntro: Boolean,
+    showSearchIntro: Boolean,
+    showFindFriends: Boolean)
+
+  private implicit val userPrefsFormat = (
+      (__ \ 'enterToSend).write[Boolean] and
+      (__ \ 'maxResults).write[Int] and
+      (__ \ 'showKeeperIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'showSearchIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'showFindFriends).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
+    )(unlift(UserPrefs.unapply))
 
   private val crypt = new SimpleDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
@@ -57,13 +70,23 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
-  def setShowFindFriends(show: Boolean) = AuthenticatedJsonAction { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
+  def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
     Ok(JsNumber(0))
   }
 
-  def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
+  def setShowKeeperIntro(show: Boolean) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_keeper_intro", show.toString))
+    Ok(JsNumber(0))
+  }
+
+  def setShowSearchIntro(show: Boolean) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_search_intro", show.toString))
+    Ok(JsNumber(0))
+  }
+
+  def setShowFindFriends(show: Boolean) = AuthenticatedJsonAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
     Ok(JsNumber(0))
   }
 
@@ -98,9 +121,10 @@ class ExtPreferenceController @Inject() (
     db.readOnly { implicit s =>
       UserPrefs(
         enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true),
-        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(true),
-        maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1)
-      )
+        maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1),
+        showKeeperIntro = userValueRepo.getValue(userId, "ext_show_keeper_intro").map(_.toBoolean).getOrElse(false),
+        showSearchIntro = userValueRepo.getValue(userId, "ext_show_search_intro").map(_.toBoolean).getOrElse(false),
+        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(false))
     }
   }
 }
