@@ -5308,20 +5308,22 @@ a.photo-dialog-submit:focus {
 }
 
 .footer {
-	position: absolute;
-	bottom: 0;
+	margin-top: 40px;
+	display: inline-block;
 	font-size: 14px;
-	letter-spacing: 1px;
-	width: 100%;
+	-webkit-font-smoothing: antialiased;
+	border-top: 1px solid #dbdee3;
+	padding: 22px 0;
 	color: #99a3b3;
-	background-color: #eff2f7;
-	padding-top: 26px;
-	padding-bottom: 112px;
-	text-align: center;
 }
 
 .footer a {
 	color: #99a3b3;
+}
+
+.footer-sep {
+	color: #dbdee3;
+	padding: 0 2px;
 }
 
 .footer > div:first-child {
