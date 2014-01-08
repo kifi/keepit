@@ -37,7 +37,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
       airbrakeSender.sendDeployment(formatter.deploymentMessage)
     case AirbrakeErrorNotice(error, selfError) =>
       try {
-        if (error.panic) pagerDutySender.openIncident(error.message.getOrElse(error.exception.toString), error.exception)
+        if (error.panic) pagerDutySender.openIncident(error.message.getOrElse(error.exception.toString), error.exception, Some(error.signature.value))
         val xml = formatter.format(error)
         airbrakeSender.sendError(xml)
         println(xml)
@@ -102,12 +102,13 @@ class AirbrakeSender @Inject() (
 class PagerDutySender @Inject() (httpClient: HttpClient) {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  def openIncident(description: String, exception: Throwable): Unit = {
+  def openIncident(description: String, exception: Throwable, signature: Option[String]=None): Unit = {
+    val incidentKey : String = signature.getOrElse(description.take(1000))
     val payload = Json.obj(
       "service_key"  -> "7785f2cc14ec44e49ae3bb8186400cc7",
       "event_type"   -> "trigger",
       "description"  -> description.take(1000),
-      "incident_key" -> description.take(1000),
+      "incident_key" -> incidentKey,
       "details"      -> Json.obj(
         "exceptionInfo" -> exception.getMessage(),
         "moreInfo"      -> "See Airbrake/Healthcheck for more."
