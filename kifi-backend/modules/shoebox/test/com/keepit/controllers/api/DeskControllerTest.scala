@@ -19,6 +19,8 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 
 class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
 
+  args(skipAll = true) // eishay / andrew fixme
+
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
