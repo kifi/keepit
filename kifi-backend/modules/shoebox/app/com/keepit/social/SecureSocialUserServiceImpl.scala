@@ -27,6 +27,8 @@ import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.abook.EmailParserUtils
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -101,7 +103,7 @@ class SecureSocialUserPluginImpl @Inject() (
         log.info(s"test user $userId is already marked as $exp")
       else {
         log.info(s"setting test user $userId as $exp")
-        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = exp))        
+        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = exp))
       }
     }
 
@@ -131,8 +133,10 @@ class SecureSocialUserPluginImpl @Inject() (
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
 
     // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
-    val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
-    if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
+    SafeFuture {
+      val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
+      if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
+    }
     u
   }
 
