@@ -85,7 +85,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }));
 
     var data = $slider.data();
-    data.stickiness = 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
+    data.stickiness = locator ? 2 : 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
     function isSticky() {
       return data.stickiness > 0;
     }

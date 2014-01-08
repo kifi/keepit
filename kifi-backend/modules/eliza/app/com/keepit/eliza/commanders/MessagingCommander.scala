@@ -768,15 +768,9 @@ class MessagingCommander @Inject() (
     }
   }
 
-
-  def setNotificationRead(userId: Id[User], threadId: Id[MessageThread]): Unit = {
-    db.readWrite(attempts=2) {implicit session => userThreadRepo.markRead(userId, Some(threadId))}
-  }
-
-
   def setAllNotificationsRead(userId: Id[User]): Unit = {
     log.info(s"Setting all Notifications as read for user $userId.")
-    db.readWrite(attempts=2) {implicit session => userThreadRepo.markRead(userId)}
+    db.readWrite(attempts=2) {implicit session => userThreadRepo.markAllRead(userId)}
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
