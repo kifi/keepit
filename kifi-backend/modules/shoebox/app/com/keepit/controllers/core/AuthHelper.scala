@@ -331,7 +331,7 @@ class AuthHelper @Inject() (
 
         verification match {
           case (true, _) if user.state == UserStates.PENDING =>
-            Redirect("/?m=1")
+            Redirect(s"/?m=3&email=${address.address}")
           case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
             // first time being used, not logged in OR logged in as correct user
             authenticateUser(user.id.get,
@@ -341,7 +341,7 @@ class AuthHelper @Inject() (
                   // user has no installations
                   Redirect("/install")
                 } else {
-                  Redirect("/profile?m=1")
+                  Redirect(s"/?m=3&email=${address.address}")
                 }
                 resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)

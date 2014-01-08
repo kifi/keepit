@@ -13,7 +13,7 @@ import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.social.{FakeShoeboxSecureSocialModule, SocialNetworks, SocialId}
+import com.keepit.social.{SocialNetworks, SocialId}
 import SocialNetworks._
 import securesocial.core._
 import play.api.Play

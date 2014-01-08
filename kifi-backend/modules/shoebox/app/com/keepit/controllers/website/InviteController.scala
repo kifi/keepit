@@ -150,10 +150,11 @@ class InviteController @Inject() (db: Database,
               }
               nameOpt.map {
                 case Some(name) =>
+                  val inviter = inviterUserOpt.get.firstName
                   Ok(views.html.auth.auth(
                     "signup",
-                    titleText = s"${name}, join ${inviterUserOpt.get.firstName} on Kifi!",
-                    titleDesc = s"Kifi is in beta and accepting users on invitations only. Click here to accept ${inviterUserOpt.get.firstName}'s invite.",
+                    titleText = s"$inviter sent you an invite to Kifi",
+                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results.  Join $inviter on Kifi to search like normal and find like never before.",
                     inviteVideo = true
                   )).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>

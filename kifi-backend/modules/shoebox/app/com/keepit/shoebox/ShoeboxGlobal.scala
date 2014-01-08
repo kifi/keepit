@@ -15,6 +15,7 @@ import com.keepit.social.SocialGraphPlugin
 import com.keepit.controllers.internal.ExpertRecommenderController
 import com.keepit.learning.topicmodel.TopicModelSwitcherPlugin
 import com.keepit.integrity.{UriIntegrityPlugin, DataIntegrityPlugin}
+import com.keepit.common.integration.AutogenReaperPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -34,6 +35,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[SocialGraphPlugin].enabled)
     require(injector.instance[SocialGraphRefresher].enabled)
     require(injector.instance[MailSenderPlugin].enabled)
+    require(injector.instance[AutogenReaperPlugin].enabled)
     injector.instance[MailSenderPlugin].processOutbox()
     require(injector.instance[MailToKeepPlugin].enabled)
     require(injector.instance[HealthcheckPlugin].enabled)

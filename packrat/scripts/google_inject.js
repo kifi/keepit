@@ -8,6 +8,7 @@
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
+// @require scripts/title_from_url.js
 // @require scripts/html/search/google.js
 // @require scripts/html/search/google_hits.js
 // @require scripts/html/search/google_hit.js
@@ -369,7 +370,9 @@ if (searchUrlRe.test(document.URL)) !function() {
     }
     var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
     url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
-    matches = (matches || []).map(function (m) { return [m[0] - strippedSchemeLen, m[1]]; });
+    for (var i = matches && matches.length; i--;) {
+      matches[i][0] -= strippedSchemeLen;
+    }
     return boldSearchTerms(url, matches);
   }
 
@@ -639,11 +642,14 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function processHit(hit) { // this is response in which hit arrived
     hit.uuid = this.uuid;
+    var matches = hit.bookmark.matches || {};
 
-    hit.desc = formatDesc(hit.bookmark.url, (hit.bookmark.matches || {}).url);
-    hit.displayTitle = boldSearchTerms(hit.bookmark.title, (hit.bookmark.matches || {}).title) || hit.desc;
+    hit.titleHtml = hit.bookmark.title ?
+      boldSearchTerms(hit.bookmark.title, matches.title) :
+      formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
+    hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
     hit.scoreText = response.showScores === true ? String(Math.round(hit.score * 100) / 100) : '';
-    hit.tagsText = (hit.bookmark && hit.bookmark.tagNames || []).join(', ');
+    hit.tagsText = (hit.bookmark.tagNames || []).join(', ');
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
@@ -676,10 +682,18 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   function boldSearchTerms(text, matches) {
-    return (matches || []).reduceRight(function (text, match) {
-      var start = match[0], len = match[1];
-      return start < 0 ? text : text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
-    }, text || "");
+    for (var i = matches && matches.length; i--;) {
+      var match = matches[i];
+      var start = match[0];
+      if (start >= 0) {
+        text = bolded(text, start, match[1]);
+      }
+    }
+    return text;
+  }
+
+  function bolded(text, start, len) {
+    return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
   }
 
   function areSameFilter(f1, f2) {

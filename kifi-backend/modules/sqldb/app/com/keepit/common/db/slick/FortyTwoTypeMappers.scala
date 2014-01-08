@@ -101,10 +101,6 @@ object FortyTwoTypeMappers {
     def apply(profile:BasicProfile) = new IdMapperDelegate[UserPicture](profile)
   }
 
-  implicit object CommentIdTypeMapper extends BaseTypeMapper[Id[Comment]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Comment](profile)
-  }
-
   implicit object SocialUserInfoIdTypeMapper extends BaseTypeMapper[Id[SocialUserInfo]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo](profile)
   }
@@ -168,10 +164,6 @@ object FortyTwoTypeMappers {
 
   implicit object ExperimentTypeTypeMapper extends BaseTypeMapper[ExperimentType] {
     def apply(profile: BasicProfile) = new ExperimentTypeMapperDelegate(profile)
-  }
-
-  implicit object CommentPermissionTypeStateTypeMapper extends BaseTypeMapper[State[CommentPermission]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[CommentPermission](profile)
   }
 
   implicit object DomainTagStateTypeMapper extends BaseTypeMapper[State[DomainTag]] {

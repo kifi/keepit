@@ -4,6 +4,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
 // @require scripts/util.js
+// @require scripts/listen.js
 // @require scripts/kifi_util.js
 // @require scripts/scorefilter.js
 // @require scripts/html/keeper/tagbox.js
@@ -187,6 +188,7 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		init: function (trigger) {
+			log('init', trigger);
 			this.active = true;
 			this.initTagBox();
 			this.initSuggest();
@@ -196,8 +198,7 @@ this.tagbox = (function ($, win) {
 			this.initClearAll();
 			this.initTags();
 			this.initScroll();
-
-			log('init', trigger);
+			this.onShow.dispatch();
 		},
 
 		/**
@@ -209,7 +210,7 @@ this.tagbox = (function ($, win) {
 
 			function onClick(e) {
 				if (!this.contains(e.target)) {
-					e.tagboxClosed = true;
+					e.closedTagbox = true;
 					/*
           e.preventDefault();
           e.stopPropagation();
@@ -402,7 +403,7 @@ this.tagbox = (function ($, win) {
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.updateSuggestion.bind(this))
-				.then(this.moveTileToBottom.bind(this))
+				.then(this.moveKeeperToBottom.bind(this))
 				.then(this.setLoaded.bind(this, false))
 				.then(this.focusInput.bind(this))
 				.then(this.updateScroll.bind(this))
@@ -451,6 +452,7 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		destroy: function (trigger) {
+			log('destroy', trigger);
 			if (this.active) {
 				this.active = false;
 
@@ -484,7 +486,7 @@ this.tagbox = (function ($, win) {
 				this.tagsBeingCreated = {};
 				this.busyTags = {};
 
-				log('destroy', trigger);
+				this.onHide.dispatch();
 			}
 		},
 
@@ -725,22 +727,17 @@ this.tagbox = (function ($, win) {
 			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
-		moveTileToBottom: function (res) {
-			var tile = win.tile,
-				$tile = $(tile),
-				dy = window.innerHeight - tile.getBoundingClientRect().bottom;
-
-			if (!dy) {
+		moveKeeperToBottom: function (res) {
+			var $transitionEl = keeper.moveToBottom();
+			if (!$transitionEl) {
 				return res;
 			}
 
-			$tile.css('transform', 'translate(0,' + dy + 'px)');
-
 			var deferred = Q.defer();
 
-			$tile.on('transitionend', function onTransitionend(e) {
+			$transitionEl.on('transitionend', function onTransitionend(e) {
 				if (e.target === this) {
-					$tile.off('transitionend', onTransitionend);
+					$transitionEl.off('transitionend', onTransitionend);
 					deferred.resolve();
 				}
 			});
@@ -1627,6 +1624,9 @@ this.tagbox = (function ($, win) {
 				this.show($slider, trigger);
 			}
 		},
+
+		onShow: new Listeners,
+		onHide: new Listeners,
 
 		//
 		// HELPER FUNCTIONS

@@ -1,0 +1,207 @@
+@import "lesshat";
+@import "common-mobile";
+@import "retina-1.1.0";
+
+@phcolor: #c4c4c4;
+::-webkit-input-placeholder {
+   color: @phcolor;
+}
+
+:-moz-placeholder { /* Firefox 18- */
+   color: @phcolor;
+}
+
+::-moz-placeholder { /* Firefox 19+ */
+   color: @phcolor;
+}
+
+:-ms-input-placeholder {
+   color: @phcolor;
+}
+
+.kifi-header {
+	background-color: white;
+	.padding-tb(13.5px);
+	.padding-lr(28px);
+}
+
+.clear {
+	clear: both;
+}
+
+.kifi-header-logo {
+	display: inline-block;
+	.width(58px);
+	.height(33px);
+	.margin-right(6px / 2);
+	background: gray;
+	color: transparent;
+	vertical-align: bottom;
+}
+
+.kifi-header-text {
+	position: relative;
+	@fs: 32px / 2;
+	.font-size(@fs);
+	.top(5px, @fs);
+	color: #424242;
+	vertical-align: bottom;
+}
+
+.kifi-footer {
+	background: #424242;
+	color: white;
+	text-align: center;
+}
+
+@ffs: 24px / 2;
+.kifi-footer-menu {
+	list-style: none;
+	.font-size(@ffs);
+	font-weight: 600;
+	letter-spacing: .75px;
+	.padding(19.5px, @ffs);
+	margin: 0;
+	text-transform: uppercase;
+
+	li {
+		display: inline;
+	}
+
+	a {
+		color: white;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+}
+
+.kifi-footer-menu-dot {
+	.padding-lr(4px, @ffs);
+}
+
+.kifi-coming-soon {
+	position: relative;
+	background: #424242;
+	color: white;
+	text-align: center;
+	.padding-top(20px);
+	.padding-bottom(35px);
+
+	h1 {
+		.font-size(40px / 2);
+		font-weight: 400;
+		line-height: 1.2;
+		margin: 0;
+	}
+
+	.kifi-arrow-down {
+		position: absolute;
+		display: block;
+		@h: 9px;
+		bottom: -@h;
+		left: 39px;
+		width: 19px;
+		height: @h;
+		background-color: #424242;
+	}
+}
+
+@dateFs: 150px / 2;
+.kifi-countdown-numbers {
+	position: relative;
+	.font-size(@dateFs);
+	.margin-top(10px, @dateFs);
+	font-weight: 300;
+	line-height: 1;
+}
+
+.kifi-time {
+	color: #4b4b4b;
+}
+
+.kifi-date {
+	position: absolute;
+	top: 0;
+	width: 100%;
+	color: #c4c4c4;
+	//.letter-spacing(-10px, @dateFs);
+}
+
+.kifi-date-left {
+	position: relative;
+	@fs: 28px / 2;
+	.font-size(@fs);
+	.top(-5px, @fs);
+	.letter-spacing(-0.5px, @fs);
+	font-weight: 400;
+	color: #c4c4c4;
+}
+
+.kifi-waiting-text {
+	@fs: 30px / 2;
+	.font-size(@fs);
+	font-weight: 600;
+	color: white;
+	.margin-top(12px, @fs);
+}
+
+.kifi-waiting-input-box {
+	position: relative;
+	.padding-lr(28px);
+	margin: 0 auto;
+	.max-width(500px);
+}
+
+.kifi-waiting-email {
+	display: block;
+	@fs: 30px / 2;
+	.font-size(@fs);
+	font-weight: 300;
+	width: 100%;
+	.padding-tb(12px, @fs);
+	.padding-lr(15px, @fs);
+	border: 0;
+	border-radius: 2px;
+	margin: 0;
+	.margin-top(11px, @fs);
+	text-align: left;
+	.letter-spacing(0.75px, @fs);
+	.box-sizing(border-box);
+}
+
+.kifi-good-news {
+	padding: 50px;
+	color: white;
+	background-color: #93c059;
+	
+	h2 {
+		@fs: 36px / 2;
+		.font-size(@fs);
+		font-weight: 600;
+		text-transform: uppercase;
+		margin: 0;
+	}
+
+	p {
+		@fs: 34px / 2;
+		.font-size(@fs);
+		margin: 0;
+	}
+}
+
+.kifi-watch-video {
+	padding: 80px;
+	color: #424242;
+	background-color: #f6f6f6;
+	text-align: center;
+}
+
+.kifi-desktop {
+	padding: 30px;
+	color: white;
+	background-color: #93c059;
+	text-align: center;
+}

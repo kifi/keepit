@@ -1,6 +1,9 @@
-package com.keepit.social
+package com.keepit.common.social
 
+import com.keepit.social.{ProdShoeboxSecureSocialModule, ShoeboxSecureSocialModule, SecureSocialUserService}
 import securesocial.core.UserService
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
 
 case class FakeShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
   override def configure(): Unit = {
@@ -9,3 +12,4 @@ case class FakeShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
     require(UserService.delegate.isDefined)
   }
 }
+

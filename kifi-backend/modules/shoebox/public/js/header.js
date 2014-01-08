@@ -13,6 +13,8 @@
 			// for tracking purpose
 			var source = scrolling ? 'scrollingHeader' : 'header';
 			$('.kifi-header').data('trackSource', source);
+
+			$('.kifi-header-join-box').addClass('kifi-header-join-transition');
 		});
 	});
 

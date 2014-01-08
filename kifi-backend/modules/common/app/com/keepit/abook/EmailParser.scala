@@ -4,9 +4,9 @@ import com.keepit.common.net.Host
 import scala.util.parsing.combinator.RegexParsers
 
 case class Email(local:LocalPart, host:Host) {
-  val DOT = "."
-  override val toString = s"$local@${host.domain.mkString(DOT).trim}"
-  def toStrictString = s"${local.toStrictString}@${host.domain.mkString(DOT).trim}"
+  val domain = host.domain.mkString(".").trim
+  override val toString = s"$local@$domain"
+  def toStrictString = s"${local.toStrictString}@$domain"
   def toDbgString = s"[Email(${local.toDbgString} host=${host})]"
   override def hashCode = toString.hashCode
   override def equals(o: Any) = {
@@ -21,9 +21,17 @@ case class Email(local:LocalPart, host:Host) {
       case _ => false
     }
   }
+
+  def isKifi = (domain == Email.KIFI_DOMAIN)
+  def isTest = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.AUTOGEN)))
+  def isFake = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.TEST)))
+  def isAutoGen = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.AUTOGEN)))
 }
 
 object Email {
+
+  val KIFI_DOMAIN = "42go.com" // todo: kifi.com
+
   def apply(s:String) = {
     EmailParser.parse[Email](EmailParser.email, s).getOrElse(throw new IllegalArgumentException(s"Cannot parse $s"))
   }
@@ -35,6 +43,11 @@ case class EComment(c:String) {
 case class ETag(t:String) {
   override val toString = s"+$t"
 }
+object ETag {
+  val TEST    = "test"
+  val AUTOGEN = "autogen"
+}
+
 case class LocalPart(p:Option[EComment], s:String, tag:Option[ETag], t:Option[EComment]) {
   val localName = s.trim.toLowerCase  // mysql is case-insensitive
   override val toString = tag match { // todo: revisit default for tag handling
@@ -64,4 +77,19 @@ object EmailParser extends RegexParsers { // rudimentary; also see @URIParser
   }
   def domainPart:Parser[String] = """[^~/?#@:\.]+""".r ^^ (_.toLowerCase)
   // todo: quotes, dots, nameprep
+
+  implicit class Wrapper(val res:ParseResult[Email]) extends AnyVal {
+    def asOpt:Option[Email] = if (res.successful) Some(res.get) else None
+  }
+}
+
+object EmailParserUtils {
+
+  def parseOpt(s:String):Option[Email] = EmailParser.parseAll(EmailParser.email, s).asOpt
+
+  def isKifiEmail(s:String) = parseOpt(s) exists { _.isKifi }
+  def isTestEmail(s:String) = parseOpt(s) exists { _.isTest }
+  def isFakeEmail(s:String) = parseOpt(s) exists { _.isFake }
+  def isAutoGenEmail(s:String) = parseOpt(s) exists { _.isAutoGen }
+
 }

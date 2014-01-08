@@ -30,10 +30,10 @@ case class FakeActionAuthenticatorModule() extends ScalaModule {
 }
 
 case class FakeIdentity(user: User) extends Identity {
-  def identityId: IdentityId = ???
+  def identityId: IdentityId = IdentityId("const_fake_id", "some_network")
   def firstName: String = user.firstName
   def lastName: String = user.lastName
-  def fullName: String = ???
+  def fullName: String = s"$firstName $lastName"
   def email: Option[String] = None
   def avatarUrl: Option[String] = None
   def authMethod: AuthenticationMethod = ???
@@ -67,6 +67,7 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
         res
       } catch {
         case t: Throwable =>
+          t.printStackTrace()
           log.error("action fail!", t)
           throw t
       }

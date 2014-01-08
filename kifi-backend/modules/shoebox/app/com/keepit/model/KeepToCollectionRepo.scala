@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import scala.slick.lifted.Query
-
 import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick._

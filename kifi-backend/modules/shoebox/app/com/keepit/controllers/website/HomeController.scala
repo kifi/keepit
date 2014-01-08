@@ -58,6 +58,13 @@ class HomeController @Inject() (
   }
 
   // Start post-launch stuff!
+
+  // temp! if I'm still here post-launch, sack whoever is responsible for things around here.
+  def newDesignCookie = Action { request =>
+    Ok.withCookies(Cookie("newdesign","yep"))
+  }
+
+
   def newHome = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = newHomeNotAuthed(_))
 
   private def newHomeNotAuthed(implicit request: Request[_]): Result = {
@@ -69,6 +76,21 @@ class HomeController @Inject() (
       // Non-user landing page
       Ok(views.html.marketing.landing())
     }
+  }
+
+  def about = HtmlAction(true)(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
+  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.about(isLoggedIn))
+  }
+
+  def newTerms = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.terms(isLoggedIn))
+  }
+
+  def newPrivacy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.privacy(isLoggedIn))
   }
   // End post-launch stuff!
 
@@ -97,7 +119,11 @@ class HomeController @Inject() (
     } else {
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
-      Ok(views.html.auth.auth())
+      if(request.cookies.get("newdesign").isDefined) {
+        Ok(views.html.marketing.landing())
+      } else {
+        Ok(views.html.auth.auth())
+      }
     }
   }
 
@@ -155,7 +181,7 @@ class HomeController @Inject() (
       }
     }
     setHasSeenInstall()
-    Ok(views.html.website.install2(request.user))
+    Ok(views.html.website.install(request.user))
   }
 
   // todo: move this to UserController
@@ -180,12 +206,8 @@ class HomeController @Inject() (
     }
   }
 
-  def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.website.gettingStarted2(request.user))
-  }
-
-  def redditPreview = Action { implicit request =>
-    Ok(views.html.website.redditPreview())
+  def gettingStarted = Action { request =>
+    Redirect("/")
   }
 
   def termsOfService = Action { implicit request =>

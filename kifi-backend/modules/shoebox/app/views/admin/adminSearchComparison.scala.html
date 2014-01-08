@@ -27,7 +27,7 @@
 
 		@for(config <- configs){
 			<tr>
-				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" checked = "@{configs.size == 2}">
+				<td><input type="checkbox" class="checkbox" name = "selectedConfigs" value ="@config.id.get" @if(configs.size == 2) {checked}>
 				<td>@config.id.get</td>
 				<td>@config.description</td>
 			</tr>
@@ -88,8 +88,8 @@
 		      		$("#tablehits1").attr("value", id1)
 		      		$("#tablehits2").attr("value", id2)
 
-		      		$("#tablehits1").append("<div><strong>" + hits1.length + " hits from config id" + id1 + "</strong></div>")
-		      		$("#tablehits2").append("<div><strong>" + hits2.length + " hits from config id" + id2 + "</strong></div>")
+		      		$("#tablehits1").append("<div><strong>" + hits1.length + " hits from config id " + id1 + "</strong></div>")
+		      		$("#tablehits2").append("<div><strong>" + hits2.length + " hits from config id " + id2 + "</strong></div>")
 
 		      		for(var i = 0 ; i < hits1.length; i++){
 		      			var item = hits1[i]

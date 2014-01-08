@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.healthcheck._
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
+import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
 import com.keepit.social.{SocialId, SocialNetworks}
 import SocialNetworks.FACEBOOK
 import com.keepit.model.SocialUserInfo
@@ -42,7 +42,7 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
   }
 
   def requiredModules = Seq(
-    TestShoeboxSecureSocialModule(),
+    FakeShoeboxSecureSocialModule(),
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),

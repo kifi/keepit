@@ -116,5 +116,110 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
       }
     }
+
+    "hanlde collections correctly when migrating bookmarks" in {
+
+      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+        val db = inject[Database]
+        val urlRepo = inject[URLRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        val scrapeInfoRepo = inject[ScrapeInfoRepo]
+        val collectionRepo = inject[CollectionRepo]
+        val keepToCollectionRepo = inject[KeepToCollectionRepo]
+        val bmRepo = inject[BookmarkRepo]
+        val plugin = inject[UriIntegrityPlugin]
+        plugin.onStart()
+
+        def setup() = {
+          db.readWrite { implicit session =>
+
+            /*
+             * one user. 3 urls. each url has two versions of normalized uri, one of the two is better.
+             *
+             * keepToCollections:
+             *  (c0, bm0), going to be inactive
+             *  (c0, bm0better), will be untouched,
+             *  (c0, b1), will be inactive,
+             *  (c0, b2), will be inactive
+             *  (c0, b2better, inactive), will be active
+             *  (c1, b1better), will be untouched
+             *  (c2, b2better), will be untouched,
+             *  (c0, b1better) will be created
+             *
+             * */
+
+            val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
+
+            val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+            val uri0better = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
+
+            val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/drive", Some("Google")))
+            val uri1better = uriRepo.save(NormalizedURI.withHash("http://google.com/drive", Some("Google")))
+
+            val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/mail", Some("Google")))
+            val uri2better = uriRepo.save(NormalizedURI.withHash("http://google.com/mail", Some("Google")))
+
+            val url0 = urlRepo.save(URLFactory("http://www.google.com/", uri0.id.get))
+            val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
+            val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
+
+            val hover = BookmarkSource.keeper
+            val bm0 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = uri0.id.get, source = hover))
+            val bm0better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = uri0better.id.get, source = hover))
+
+            val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id,  uriId = uri1.id.get, source = hover))
+            val bm1better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id,  uriId = uri1better.id.get, source = hover))
+
+            val bm2 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id,  uriId = uri2.id.get, source = hover))
+            val bm2better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id,  uriId = uri2better.id.get, source = hover))
+
+            val c0 = collectionRepo.save(Collection(userId = user.id.get, name = "google"))
+            val c1 = collectionRepo.save(Collection(userId = user.id.get, name = "googleBetter"))
+
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm0.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm0better.id.get, collectionId = c0.id.get))
+
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1.id.get, collectionId = c0.id.get))
+
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c0.id.get, state = KeepToCollectionStates.INACTIVE))
+
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1better.id.get, collectionId = c1.id.get))
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c1.id.get))
+
+            (Array(uri0, uri1, uri2), Array(uri0better, uri1better, uri2better), Array(bm0, bm1, bm2), Array(bm0better, bm1better, bm2better))
+          }
+        }
+
+        val (uris, betterUris, bms, betterBms) = setup()
+
+        db.readOnly{ implicit s =>
+          keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 1
+          keepToCollectionRepo.getByBookmark(bms(1).id.get).size === 1
+          keepToCollectionRepo.getByBookmark(bms(2).id.get).size === 1
+
+          keepToCollectionRepo.getByBookmark(betterBms(0).id.get).size === 1
+          keepToCollectionRepo.getByBookmark(betterBms(1).id.get).size === 1
+          keepToCollectionRepo.getByBookmark(betterBms(2).id.get).size === 1
+        }
+
+        plugin.handleChangedUri(URIMigration(uris(0).id.get, betterUris(0).id.get))
+        plugin.handleChangedUri(URIMigration(uris(1).id.get, betterUris(1).id.get))
+        plugin.handleChangedUri(URIMigration(uris(2).id.get, betterUris(2).id.get))
+
+        plugin.batchURIMigration()
+
+        db.readOnly{ implicit s =>
+          keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 0
+          keepToCollectionRepo.getByBookmark(bms(1).id.get).size === 0
+          keepToCollectionRepo.getByBookmark(bms(2).id.get).size === 0
+          keepToCollectionRepo.getByBookmark(betterBms(0).id.get).size === 1
+          keepToCollectionRepo.getByBookmark(betterBms(1).id.get).size === 2
+          keepToCollectionRepo.getByBookmark(betterBms(2).id.get).size === 2
+        }
+
+      }
+
+    }
   }
 }
