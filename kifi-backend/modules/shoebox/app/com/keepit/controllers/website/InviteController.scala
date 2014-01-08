@@ -153,8 +153,8 @@ class InviteController @Inject() (db: Database,
                   val inviter = inviterUserOpt.get.firstName
                   Ok(views.html.auth.auth(
                     "signup",
-                    titleText = s"$inviter sent you an invite to Kifi",
-                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results.  Join $inviter on Kifi to search like normal and find like never before.",
+                    titleText = s"$inviter sent you an invite to kifi",
+                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results.",
                     inviteVideo = true
                   )).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>

@@ -83,9 +83,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'boxOpen': /^\/messages(?:$|:)/.test(locator),
       'isTagged': tags.length
     }));
-    // attach event bindings
+
     var data = $slider.data();
     data.stickiness = 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
+    function isSticky() {
+      return data.stickiness > 0;
+    }
+
+    // attach event bindings
     $slider
     .mouseover(function () {
       idleTimer.kill();
@@ -141,7 +146,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
     }).hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
-      if (data.stickiness) return;
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
@@ -153,6 +157,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
             includeTri: true
           }, function (html) {
             configureHover(hoverfuFriends($(html), o.keepers), {
+              suppressed: isSticky,
               mustHoverFor: 700,
               canLeaveFor: 800,
               hideAfter: 4000,
@@ -181,6 +186,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
               'Keeping this page helps you<br>easily find it later.'
           }, function (html) {
             configureHover(html, {
+              suppressed: isSticky,
               mustHoverFor: 700,
               hideAfter: 4000,
               click: 'hide',
@@ -191,7 +197,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('mouseout', '.kifi-keep-btn,.kifi-kept-btn', function () {
       this.classList.remove('kifi-hoverless');
     }).hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
-      if (data.stickiness) return;
       var $a = $(this);
       var $card = $(this).closest('.kifi-keep-card');
       var kept = !$card.hasClass('kifi-unkept');
@@ -206,6 +211,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         'This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.';
       render('html/keeper/titled_tip', {title: title, html: html}, function (html) {
         configureHover(html, {
+          suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
@@ -216,7 +222,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('click', '.kifi-kept-lock', function (e) {
       if (e.target === this) toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
     }).hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
-      if (data.stickiness) return;
       var btn = this;
       var kept = this.classList.contains('kifi-kept-tag');
       render('html/keeper/titled_tip', {
@@ -225,6 +230,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         html: 'You can tag a keep to<br>make it easier to find.'
       }, function (html) {
         configureHover(html, {
+          suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
@@ -236,7 +242,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         return;
       }
       if (this.classList.contains('kifi-keep-tag')) {
-        keepPage('public');
+        keepPage('public', true);
       }
       api.require('scripts/tagbox.js', function () {
         tagbox.onShow.add(beginStickyTime);
@@ -251,7 +257,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('click', '.kifi-keeper-x', function () {
       pane.hide(true);
     }).hoverfu('.kifi-dock-btn', function(configureHover) {
-      if (data.stickiness) return;
       var $a = $(this);
       var tip = {
         i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br>New ones are highlighted.'],
@@ -260,6 +265,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
         configureHover(html, {
+          suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
@@ -367,14 +373,20 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     }};
 
-  function keepPage(how) {
+  function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how)();
     updateKeptDom(how);
     var title = document.title.trim();
     api.port.emit('keep', withUrls({title: title, how: how}));
-    if (!title && false) {  // TODO: finish the prompt
+    if (!title && !suppressNamePrompt) {
+      beginStickyTime();
       api.require('scripts/keep_name_prompt.js', function () {
-        promptForKeepName();
+        keeper.moveToBottom(function () {
+          promptForKeepName($slider, function () {
+            endStickyTime();
+            keeper.moveBackFromBottom();
+          });
+        });
       });
     }
   }
@@ -519,11 +531,25 @@ var keeper = keeper || function () {  // idempotent for Chrome
     appendTo: function(parent) {
       $slider.appendTo(parent);
     },
-    moveToBottom: function () {
+    moveToBottom: function (callback) {
       var dy = window.innerHeight - tile.getBoundingClientRect().bottom;
       if (dy) {
-        return $(tile).css('transform', 'translate(0,' + dy + 'px)');
+        var $tile = $(tile);
+        if (callback) {
+          $tile.on('transitionend', function end(e) {
+            if (e.target === this) {
+              $tile.off('transitionend', end);
+              callback();
+            }
+          })
+        }
+        $tile.css('transform', 'translate(0,' + dy + 'px)');
+      } else if (callback) {
+        callback();
       }
+    },
+    moveBackFromBottom: function () {
+      $(tile).css('transform', '');
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;

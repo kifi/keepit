@@ -4,8 +4,9 @@ import com.google.inject.Inject
 import play.api.mvc.Action
 import com.keepit.common.logging.Logging
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
-import play.api.libs.json.Json
-import com.keepit.commanders.SendgridEvent
+import play.api.libs.json.{JsError, JsSuccess, Json}
+import com.keepit.commanders.{SendgridCommander, SendgridEvent}
+import scala.Exception
 
 /**
  * see:
@@ -14,13 +15,21 @@ import com.keepit.commanders.SendgridEvent
  * http://sendgrid.com/docs/API_Reference/Webhooks/parse.html
  */
 class SendgridController  @Inject() (
-  actionAuthenticator:ActionAuthenticator)
+  actionAuthenticator:ActionAuthenticator,
+  sendgridCommander: SendgridCommander)
     extends WebsiteController(actionAuthenticator) with Logging {
 
   def parseEvent() = Action(parse.json) { request =>
-    val events: Seq[SendgridEvent] = Json.fromJson[Seq[SendgridEvent]](request.body).get
+    val events: Seq[SendgridEvent] = try {
+      val json = request.body
+      Json.fromJson[Seq[SendgridEvent]](json) match {
+        case JsSuccess(e, _) => e
+        case JsError(errors) => throw new Exception(s"can't parse json: ${request.body.toString()} because ${errors mkString ","}")
+      }
+    }
     log.info(s"got a new event from sendgrid: ${request.body.toString()} with headers: ${request.headers.toMap}")
     log.info(s"there are ${events.size} events in the batch")
+    sendgridCommander.processNewEvents(events)
     Ok
   }
 }

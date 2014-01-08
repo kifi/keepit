@@ -128,7 +128,7 @@
     clearTimeout(data.show);
     delete data.show;
     var $h = data.$h;
-    if (!$h || data.showing || isFadingOut(data)) return;
+    if (!$h || data.showing || isFadingOut(data) || data.opts.suppressed && data.opts.suppressed()) return;
     attach($h, data.opts);
     $h[0].offsetHeight;  // force layout
     $h.addClass('kifi-showing');

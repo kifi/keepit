@@ -492,10 +492,16 @@
 									<div class="dialog-header">Your Kifi invite to {{label}}</div>
 									<a href="javascript:" class="invite-cancel">×</a>
 									<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
-									<input class="invite-subject" type="text" name="subject" value="Join me on the Kifi.com Private Beta">
+									<input class="invite-subject" type="text" name="subject" value="Join me on kifi">
 									<textarea class="invite-message" name="message">Hi{% if label %} {{label | replace ' .*', '' }}{% endif %},
 
-I would like to invite you to the private beta of Kifi.com.</textarea>
+Please accept my invitation to kifi.
+
+What is kifi and why should I join?
+Kifi (short for keep it find it) allows you to easily keep and tag anything you find online - an article, video, picture, email, anything - then quickly find it on top of your favorite search engine results, together with relevant pages that your friends kept, too.
+
+Kifi also lets you message your friends about what you keep and find alongside any webpage, to get their opinion or gain from their expertise.
+</textarea>
 									<p>An invitation link will be attached to this message.</p>
 									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
 								</form>
@@ -751,7 +757,7 @@ I would like to invite you to the private beta of Kifi.com.</textarea>
 				<p>Thanks for validating your e-mail, <span class="email-verified-user-name"></span>!</p>
 				<p>Your email address, <span class="email-verified-user-email"></span>, is now confirmed.</p>
 			</div>
-			<button>Contiune</button>
+			<button>Continue</button>
 		</div>
 	</div>
 

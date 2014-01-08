@@ -12,8 +12,8 @@
   box-sizing: content-box;
   text-align: center;
   font-family: Arial, sans-serif;
-  transition: -webkit-transform 90ms ease-in-out;
-  transition: transform 90ms ease-in-out;
+  transition: -webkit-transform .12s ease-in-out;
+  transition: transform .12s ease-in-out;
   -webkit-perspective: 200px;
   perspective: 200px;
 }

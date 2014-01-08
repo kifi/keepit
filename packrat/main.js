@@ -436,12 +436,15 @@ api.port.on({
   },
   set_private: function(data, _, tab) {
     log("[setPrivate]", data)();
-    ajax("POST", "/bookmarks/private", data, function(o) {
+    ajax('POST', '/bookmarks/update', data, function (o) {
       log("[setPrivate] response:", o)();
     });
     forEachTabAt(tab.url, tab.nUri, function(tab) {
       api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
     });
+  },
+  set_title: function(data, respond) {
+    ajax('POST', '/bookmarks/update', data, respond.bind(null, true), respond.bind(null, false));
   },
   keeper_shown: function(_, __, tab) {
     (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
