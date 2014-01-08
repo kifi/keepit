@@ -405,8 +405,62 @@ a.video-frame {
   height: 40px;
   line-height: 40px;
   text-align: center;
+  outline: none;
   -webkit-font-smoothing: antialiased;
 }
+.form-submit:active {
+  outline: none;
+}
+.form-submit:focus {
+  outline: none;
+}
+
+.form-submit-sexy {
+  position: relative;
+}
+.form-submit-sexy.done::after {
+  opacity: 1;
+  -webkit-transform: none;
+  transform: none;
+  transition: opacity .16s linear, -webkit-transform .16s ease-in-out;
+  transition: opacity .16s linear, transform .16s ease-in-out;
+}
+.form-submit-sexy .progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: #7EAF3C;
+  border-radius: 3px;
+}
+.form-submit-sexy.alt-blue {
+  background: #6fa6ef;
+}
+.form-submit-sexy.alt-blue .progress {
+  background: #558FDF;
+}
+.form-submit-sexy .done>.progress {
+  width: 100% !important;
+  transition: width .16s ease-in-out;
+}
+.form-submit-sexy .fail>.progress {
+  background: #b00;
+  width: 0 !important;
+  transition: width .24s ease-in-out;
+}
+.form-submit-sexy .text {
+  display: inline-block;
+  position: relative;
+}
+.done>.text {
+  opacity: 0;
+  -webkit-transform: translate(60px);
+  transform: translate(60px);
+  transition: opacity .16s linear, -webkit-transform .16s ease-in-out;
+  transition: opacity .16s linear, transform .16s ease-in-out;
+}
+
 .terms {
   text-align: center;
   font-weight: 300;
