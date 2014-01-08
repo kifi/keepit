@@ -34,6 +34,8 @@ import com.keepit.social.SocialId
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -153,7 +155,7 @@ class AuthHelper @Inject() (
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
-      userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr)))
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr))) }
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -161,7 +163,7 @@ class AuthHelper @Inject() (
         }
         userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
-      userCommander.sendWelcomeEmail(user, withVerification=false)
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=false) }
     }
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/install")

@@ -74,7 +74,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 			this.initEvents();
 			this.initScroll();
-			this.initInput();
 		},
 
 		/**
@@ -136,73 +135,71 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		/**
-		 * Focuses dialog input for adding new people to the conversation.
+		 * Constructs and initializes (if not already done) and then asynchronously focuses a tokenInput
+		 * with autocomplete feature for searching and adding people to the conversation.
 		 */
-		focusInput: function () {
+		initAndAsyncFocusInput: function () {
+			var $input = this.$input;
+			if (!$input) {
+				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput({}, {
+					// The delay, in milliseconds, between the user finishing typing and the search being performed. default: 300
+					searchDelay: 0,
+
+					// The minimum number of characters the user must enter before a search is performed.
+					minChars: 1,
+
+					placeholder: 'Type a name...',
+					hintText: '',
+					noResultsText: '',
+					searchingText: '',
+					animateDropdown: false,
+					resultsLimit: 4,
+					preventDuplicates: true,
+					allowTabOut: true,
+					tokenValue: 'id',
+					theme: 'Kifi',
+					classes: {
+						tokenList: 'kifi-ti-list',
+						token: 'kifi-ti-token',
+						tokenReadOnly: 'kifi-ti-token-readonly',
+						tokenDelete: 'kifi-ti-token-delete',
+						selectedToken: 'kifi-ti-token-selected',
+						highlightedToken: 'kifi-ti-token-highlighted',
+						dropdown: 'kifi-root kifi-ti-dropdown',
+						dropdownItem: 'kifi-ti-dropdown-item',
+						dropdownItem2: 'kifi-ti-dropdown-item',
+						selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
+						inputToken: 'kifi-ti-token-input',
+						focused: 'kifi-ti-focused',
+						disabled: 'kifi-ti-disabled'
+					},
+					zindex: 999999999992,
+					resultsFormatter: function (f) {
+						return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
+							Mustache.escape(f.name) + '</li>';
+					},
+					onAdd: function () {
+						this.getAddDialog().addClass('kifi-non-empty');
+					}.bind(this),
+					onDelete: function () {
+						if (!$input.tokenInput('get').length) {
+							this.getAddDialog().removeClass('kifi-non-empty');
+						}
+					}.bind(this)
+				});
+
+				api.port.emit('get_friends', function (friends) {
+					friends.forEach(function (f) {
+						f.name = f.firstName + ' ' + f.lastName;
+					});
+					$input.data('settings').local_data = friends;
+					$input.data('friends', friends);
+				});
+			}
+
 			setTimeout(function () {
 				this.get$TokenInput().focus();
 			}.bind(this));
-		},
-
-		/**
-		 * Constructs and initializes a tokenInput with autocomplete feature
-		 * for searching and adding people to the conversation.
-		 */
-		initInput: function () {
-			var $input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput({}, {
-				// The delay, in milliseconds, between the user finishing typing and the search being performed. default: 300
-				searchDelay: 0,
-
-				// The minimum number of characters the user must enter before a search is performed.
-				minChars: 1,
-
-				placeholder: 'Type a name...',
-				hintText: '',
-				noResultsText: '',
-				searchingText: '',
-				animateDropdown: false,
-				resultsLimit: 4,
-				preventDuplicates: true,
-				allowTabOut: true,
-				tokenValue: 'id',
-				theme: 'Kifi',
-				classes: {
-					tokenList: 'kifi-ti-list',
-					token: 'kifi-ti-token',
-					tokenReadOnly: 'kifi-ti-token-readonly',
-					tokenDelete: 'kifi-ti-token-delete',
-					selectedToken: 'kifi-ti-token-selected',
-					highlightedToken: 'kifi-ti-token-highlighted',
-					dropdown: 'kifi-root kifi-ti-dropdown',
-					dropdownItem: 'kifi-ti-dropdown-item',
-					dropdownItem2: 'kifi-ti-dropdown-item',
-					selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
-					inputToken: 'kifi-ti-token-input',
-					focused: 'kifi-ti-focused',
-					disabled: 'kifi-ti-disabled'
-				},
-				zindex: 999999999992,
-				resultsFormatter: function (f) {
-					return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
-						Mustache.escape(f.name) + '</li>';
-				},
-				onAdd: function () {
-					this.getAddDialog().addClass('kifi-non-empty');
-				}.bind(this),
-				onDelete: function () {
-					if (!$input.tokenInput('get').length) {
-						this.getAddDialog().removeClass('kifi-non-empty');
-					}
-				}.bind(this)
-			});
-
-			api.port.emit('get_friends', function (friends) {
-				friends.forEach(function (f) {
-					f.name = f.firstName + ' ' + f.lastName;
-				});
-				$input.data('settings').local_data = friends;
-				$input.data('friends', friends);
-			});
 		},
 
 		// socket.send(["add_participants_to_thread","e45841fb-b7de-498f-97af-9f1ab17ef9a9",["df7ba036-700c-4f5d-84d1-313b5bf312b6"]])
@@ -471,7 +468,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		showAddDialog: function () {
 			this.get$('.kifi-message-add-participant').toggleClass('kifi-active', true);
 			this.toggleClass('kifi-dialog-opened', true);
-			this.focusInput();
+			this.initAndAsyncFocusInput();
 			this.parent.hideOptions();
 		},
 

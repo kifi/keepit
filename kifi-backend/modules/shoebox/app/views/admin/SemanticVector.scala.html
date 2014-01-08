@@ -29,6 +29,16 @@
 
   <br><br><br>
 
+  <div>Enter a query, see how much semantic is kept if one word is missing.</div>
+  <form id = "loss">
+    <div>
+      <input id = "lossQuery" type = "text" value = "">
+      <button type = "submit">submit</button>
+    </div>
+  </form>
+  <p id = "lossInfo"></p>
+
+  <br><br><br>
 
   <div><strong>Similarity Analysis</strong></div>
   <div>Check semantic similarity of words or phrases</div>
@@ -47,6 +57,7 @@
    </form>
    <p id = "similarScore"></p>
 
+   <br><br><br>
 
    <div><strong>Semantic Vector Visualization</strong></div>
   <div>Compare semantic vectors of two words or phrases</div>
@@ -75,6 +86,18 @@
       ).done(done).fail(fail);
 
         function done(data) { $("#result").empty().prepend(data) }
+        function fail() { alert("bad") }
+    })
+
+    // semantic loss
+
+    $("#loss").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminSemanticVectorController.semanticLoss',
+        {query: $("#query").val()}
+      ).done(done).fail(fail);
+
+        function done(data) { $("#lossInfo").empty().prepend(data) }
         function fail() { alert("bad") }
     })
 
