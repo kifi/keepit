@@ -422,12 +422,13 @@ class UserCommander @Inject() (
 
             SafeFuture{
               //sending 'friend request accepted' email && Notification
-              val respondingUser = userRepo.get(userId)
-              val destinationEmail = emailRepo.getByUser(user.id.get)
-              val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"))
-              val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"))
-              val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
               db.readWrite{ session =>
+                val respondingUser = userRepo.get(userId)(session)
+                val destinationEmail = emailRepo.getByUser(user.id.get)(session)
+                val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"))
+                val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"))
+                val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
+
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
                   from = EmailAddresses.NOTIFICATIONS,
@@ -456,11 +457,11 @@ class UserCommander @Inject() (
 
             SafeFuture{
               //sending 'friend request' email && Notification
-              val requestingUser = userRepo.get(userId)
-              val destinationEmail = emailRepo.getByUser(user.id.get)
-              val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"))
-              val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
               db.readWrite{ session =>
+                val requestingUser = userRepo.get(userId)(session)
+                val destinationEmail = emailRepo.getByUser(user.id.get)(session)
+                val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"))
+                val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
                   from = EmailAddresses.NOTIFICATIONS,
