@@ -2697,7 +2697,7 @@ a.invite-button {
   height: 100%;
   top: 0;
   left: 0;
-  background: rgba(227, 224, 226, 0.8);
+  background: rgba(0,40,90,0.3);
   -webkit-transition: opacity .3s linear;
   transition: opacity .3s linear;
 }
