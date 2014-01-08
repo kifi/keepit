@@ -1,18 +1,33 @@
 package com.keepit.commanders
 
-class SendgridCommander {
+import com.google.inject.Inject
+import com.keepit.common.mail.{LocalPostOffice, PostOffice, EmailAddresses, ElectronicMail}
+import com.keepit.common.db.slick.Database
+
+class SendgridCommander @Inject() (
+  db: Database,
+  postOffice: LocalPostOffice
+  ) {
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
-    val persisted = persist(events)
-    sendToHeimdal(persisted)
+    events foreach emailAlert
   }
 
-  private def persist(events: Seq[SendgridEvent]): Seq[SendgridEvent] = {
-    events
+  private val alertEventTypes = Set("dropped", "bounce", "spamreport")
+
+  private def emailAlert(event: SendgridEvent) {
+    event.event foreach { eventType =>
+      if (alertEventTypes.contains(eventType)) {
+        db.readWrite{ implicit s =>
+          postOffice.sendMail(
+            ElectronicMail(
+              from = EmailAddresses.ENG,
+              to = List(EmailAddresses.EISHAY),
+              subject = s"Sendgrid event [$eventType]",
+              htmlBody = s"Got event:<br/>\n $event",
+              category = PostOffice.Categories.System.ADMIN))
+        }
+      }
+    }
   }
-
-  private def sendToHeimdal(events: Seq[SendgridEvent]): Unit = {
-
-  }
-
 }

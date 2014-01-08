@@ -6,7 +6,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import com.keepit.commanders.{SendgridCommander, SendgridEvent}
-import java.lang.Exception
 import scala.Exception
 
 /**
