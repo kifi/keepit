@@ -145,11 +145,13 @@ kifi.form = (function () {
 
     var progressTimeout;
     function updateProgress(frac) {
-      this.style.width = Math.min(frac * 100, 100) + '%';
-      if (frac < 1) {
-        var delta = Math.min(.01 * (.9 - frac), 0.005);
-        if (delta > 0.0001) {
-          progressTimeout = setTimeout(updateProgress.bind(this, frac + delta), 10);
+      if (this) {
+        this.style.width = Math.min(frac * 100, 100) + '%';
+        if (frac < 1) {
+          var delta = Math.min(.01 * (.9 - frac), 0.005);
+          if (delta > 0.0001) {
+            progressTimeout = setTimeout(updateProgress.bind(this, frac + delta), 10);
+          }
         }
       }
     }

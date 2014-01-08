@@ -108,16 +108,16 @@ class AdminBookmarksController @Inject() (
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
     def bookmarksInfos() = {
-      future { time(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE, false, Set(BookmarkStates.INACTIVE)) } } } flatMap { bookmarks =>
-        val usersFuture = future { time("load user") { db.readOnly { implicit s =>
+      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE, false, Set(BookmarkStates.INACTIVE)) } } } flatMap { bookmarks =>
+        val usersFuture = future { timing("load user") { db.readOnly { implicit s =>
           bookmarks map (_.userId) map { id =>
             userMap.getOrElseUpdate(id, userRepo.get(id))
           }
         }}}
-        val urisFuture = future { time("load uris") { db.readOnly { implicit s =>
+        val urisFuture = future { timing("load uris") { db.readOnly { implicit s =>
           bookmarks map (_.uriId) map uriRepo.get
         }}}
-        val scrapesFuture = future { time("load scrape info") { db.readOnly { implicit s =>
+        val scrapesFuture = future { timing("load scrape info") { db.readOnly { implicit s =>
           bookmarks map (_.uriId) map scrapeRepo.getByUriId
         }}}
 
@@ -132,7 +132,7 @@ class AdminBookmarksController @Inject() (
     val bookmarkTotalCountFuture = searchServiceClient.uriGraphIndexInfo() map { infos =>
       (infos find (_.name == "BookmarkStore")).get.numDocs
     }
-    val bookmarkTodayCountFuture = future { time("load bookmarks counts from today") { db.readOnly { implicit s =>
+    val bookmarkTodayCountFuture = future { timing("load bookmarks counts from today") { db.readOnly { implicit s =>
       val imported = bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
       val others = bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now())
       (others, imported)
@@ -141,7 +141,7 @@ class AdminBookmarksController @Inject() (
 
     Async {
       for {
-        bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
+        bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
         count <- bookmarkTotalCountFuture
         todayCount <- bookmarkTodayCountFuture
       } yield {

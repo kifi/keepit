@@ -29,8 +29,6 @@ import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.abook.EmailParserUtils
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.akka.SafeFuture
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -47,7 +45,7 @@ class SecureSocialUserPluginImpl @Inject() (
   clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
 
-  private def reportExceptionsAndTime[T](tag: String)(f: => T): T = time(tag) {
+  private def reportExceptionsAndTime[T](tag: String)(f: => T): T = timing(tag) {
     try f catch { case ex: Throwable =>
       airbrake.notify(ex)
       throw ex
@@ -95,11 +93,11 @@ class SecureSocialUserPluginImpl @Inject() (
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
       socialGraphPlugin.asyncFetch(socialUserInfo)
     log.info(s"[save] persisting $socialUser into $socialUserInfo")
-    SafeFuture { socialUserInfo.userId.foreach(updateExperimentIfTestUser) }
+    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
     socialUser
   }
 
-  private def updateExperimentIfTestUser(userId: Id[User]): Unit = time(s"updateExperimentIfTestUser $userId") {
+  private def updateExperimentIfTestUser(userId: Id[User]): Unit = timing(s"updateExperimentIfTestUser $userId") {
     db.readWrite { implicit rw =>
       @inline def setExp(exp: ExperimentType) {
         val marked = userExperimentRepo.hasExperiment(userId, exp)
@@ -129,7 +127,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def newUserState: State[User] = UserStates.ACTIVE // This is the default user state for new accounts
 
-  private def createUser(identity: Identity, isComplete: Boolean): User = time(s"create user ${identity.identityId}") {
+  private def createUser(identity: Identity, isComplete: Boolean): User = timing(s"create user ${identity.identityId}") {
     val u = userCommander.createUser(
       firstName = identity.firstName,
       lastName = identity.lastName,
@@ -138,10 +136,8 @@ class SecureSocialUserPluginImpl @Inject() (
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
 
     // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
-    SafeFuture {
-      val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
-      if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
-    }
+    val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
+    if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
     u
   }
 
@@ -152,7 +148,7 @@ class SecureSocialUserPluginImpl @Inject() (
     } else None
   }
 
-  private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = time(s"saveVerifiedEmail $userId") {
+  private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
     for (email <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
       val emailAddress = emailRepo.getByAddressOpt(address = email) match {
         case Some(e) if e.state == EmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
@@ -169,7 +165,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def internUser(
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
-    userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean): SocialUserInfo = time(s"intern user $socialId") {
+    userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
 
     log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
@@ -305,7 +301,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   app: Application)
   extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging  {
 
-  private def reportExceptionsAndTime[T](tag: String)(f: => T): Either[Error, T] = time(tag) {
+  private def reportExceptionsAndTime[T](tag: String)(f: => T): Either[Error, T] = timing(tag) {
     try Right(f) catch { case ex: Throwable =>
       airbrake.notify(ex)
       log.error("error while using secure social plugin", ex)
@@ -313,13 +309,11 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     }
   }
 
-  private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = time(s"sessionFromAuthenticator ${authenticator.identityId.userId}") {
+  private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = timing(s"sessionFromAuthenticator ${authenticator.identityId.userId}") {
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
     log.info(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
-    val userId = db.readOnly(Database.Slave) { implicit s =>
-      socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
-    }
+    val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }                           // another dependency on socialUserInfo
     UserSession(
       userId = userId,
       externalId = ExternalId[UserSession](authenticator.id),
@@ -329,7 +323,6 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
       state = if (authenticator.isValid) UserSessionStates.ACTIVE else UserSessionStates.INACTIVE
     )
   }
-
   private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
     id = session.externalId.id,
     identityId = IdentityId(session.socialId.id, session.provider.name),
@@ -338,30 +331,38 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     expirationDate = session.expires
   )
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
-    val sessionFromCookie = sessionFromAuthenticator(authenticator)
-    val session = internSession(sessionFromCookie)
-    authenticatorFromSession(session)
+  private def needsUpdate(oldSession: UserSession, newSession: UserSession): Boolean = {
+    // We only want to save if we actually changed something. SecureSocial likes to "touch" the session to update the
+    // last used time, but we're not using that right now. If we eventually do want to keep track of the last used
+    // time, we should try to avoid writing to the database every time.
+    oldSession.copy(
+      updatedAt = newSession.updatedAt,
+      createdAt = newSession.createdAt,
+      id = newSession.id) != newSession
   }
 
-  private def internSession(newSession: UserSession): UserSession = {
-    db.readOnly { implicit s => //from cache
-      sessionRepo.getOpt(newSession.externalId)
-    } getOrElse db.readWrite { implicit s =>
-      val sessionFromCookie = sessionRepo.save(newSession)
-      log.info(s"[save] newSession=$sessionFromCookie")
-      sessionFromCookie
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
+    val newSession = sessionFromAuthenticator(authenticator)
+    log.info(s"[save] authenticator=$authenticator newSession=$newSession")
+    authenticatorFromSession {
+      val oldSessionOpt = db.readOnly { implicit s => sessionRepo.getOpt(newSession.externalId) }
+      if (oldSessionOpt.exists(!needsUpdate(_, newSession))) {
+        oldSessionOpt.get
+      } else {
+        db.readWrite { implicit s =>
+          sessionRepo.save(newSession.copy(
+            id = oldSessionOpt.map(_.id.get),
+            createdAt = oldSessionOpt.map(_.createdAt).getOrElse(newSession.createdAt)
+          ))
+        }
+      }
     }
   }
-
   def find(id: String): Either[Error, Option[Authenticator]] = reportExceptionsAndTime(s"find $id") {
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
     } catch {
-      case ex: Throwable =>
-        //todo(eishay) kill this ugly code and just convert the string to external id
-        airbrake.notify(s"error parsing $id", ex)
-        None
+      case ex: Throwable => None
     }
 
     val res = externalIdOpt flatMap { externalId =>
@@ -377,7 +378,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     log.info(s"[find] id=$id res=$res")
     res
   }
-
+  
   def delete(id: String): Either[Error, Unit] = reportExceptionsAndTime(s"delete $id") {
     db.readWrite { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>

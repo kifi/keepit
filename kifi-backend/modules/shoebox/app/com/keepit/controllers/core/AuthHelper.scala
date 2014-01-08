@@ -36,6 +36,7 @@ import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.performance._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -66,7 +67,7 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(emailAddress: String): Option[(Boolean, SocialUserInfo)] = time("existing user") {
+  private def checkForExistingUser(emailAddress: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnly { implicit s =>
       socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(emailAddress).map {
@@ -81,7 +82,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = {
+  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = timing(s"[handleEmailPasswordSuccess($emailAddress)]") {
     require(AuthHelper.validatePwd(password), "invalid password")
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
@@ -91,7 +92,8 @@ class AuthHelper @Inject() (
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
         val identity = sui.credentials.get
-        if (hasher.matches(identity.passwordInfo.get, new String(password))) { // char[] -> string due to SecureSocial
+        val matches = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.matches(identity.passwordInfo.get, new String(password)) }
+        if (matches) {
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator => {
@@ -115,7 +117,7 @@ class AuthHelper @Inject() (
           Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
         }
     } getOrElse {
-      val pInfo = hasher.hash(new String(password)) // see SecureSocial
+      val pInfo = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.hash(new String(password)) } // see SecureSocial
       val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
       Authenticator.create(newIdentity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -152,7 +154,7 @@ class AuthHelper @Inject() (
 
   private val url = current.configuration.getString("application.baseUrl").get
 
-  def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
+  def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr))) }
