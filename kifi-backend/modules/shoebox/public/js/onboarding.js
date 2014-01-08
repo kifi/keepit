@@ -144,7 +144,7 @@
 		$('.kifi-onboarding-shade, .kifi-onboarding-modal').removeClass('visible');
 		win.setTimeout(function () {
 			$('.kifi-onboarding-shade, .kifi-onboarding-modal').remove();
-			win.parent.exitWelcome();
+			win.parent.exitOnboarding();
 		}, 300);
 	}
 

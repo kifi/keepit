@@ -352,7 +352,24 @@ var util = this.util = (function () {
 			return function (el) {
 				return el ? (el.nodeName || '') + normalizeClass(el.className) : '';
 			};
-		})()
+		})(),
+
+		deparam: function (search) {
+			if (search) {
+				try {
+					return JSON.parse(
+						'{"' + search.replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}',
+						function (key, val) {
+							return key === '' ? val : decodeURIComponent(val);
+						}
+					);
+				}
+				catch (e) {
+				}
+			}
+			return {};
+		}
+
 
 	};
 
