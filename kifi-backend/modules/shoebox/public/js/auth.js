@@ -142,7 +142,6 @@ kifi.form = (function () {
 
     $button.css('cursor', 'default');
     updateProgress.call($progress[0], 0);
-
     var progressTimeout;
     function updateProgress(frac) {
       this.style.width = Math.min(frac * 100, 100) + '%';
