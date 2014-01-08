@@ -3,30 +3,30 @@ package com.keepit.commanders
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
+import com.keepit.common.db.ExternalId
+import com.keepit.common.mail.ElectronicMail
 
 case class SendgridEvent(
   email: Option[String],
-  sgEventId: Option[String],
-  sgMessageId: Option[String],
+  mailId: Option[ExternalId[ElectronicMail]],
   timestamp: Long,
+  reason: Option[String],
   smtpId: Option[String],
   event: Option[String],
-  category: Seq[String],
   id: Option[String],
-  purchase: Option[String],
-  uid: Option[String])
+  useragent: Option[String],
+  response: Option[String])
 
 object SendgridEvent {
   implicit val sendgridEventReads = (
     (__ \ 'email).readNullable[String] and
-    (__ \ 'sg_event_id).readNullable[String] and
-    (__ \ 'sg_message_id).readNullable[String] and
+    (__ \ 'mail_id).readNullable[ExternalId[ElectronicMail]] and
     (__ \ 'timestamp).read[Long] and
+    (__ \ 'reason).readNullable[String] and
     (__ \ "smtp-id").readNullable[String] and
     (__ \ 'event).readNullable[String] and
-    (__ \ 'category).read[Seq[String]] and
     (__ \ 'id).readNullable[String] and
-    (__ \ 'purchase).readNullable[String] and
-    (__ \ 'uid).readNullable[String]
+    (__ \ 'useragent).readNullable[String] and
+    (__ \ 'response).readNullable[String]
     )(SendgridEvent.apply _)
 }
