@@ -2471,12 +2471,12 @@ $(function () {
 					name = match[1];
 				}
 			}
-			openInviteDialog(fullSocialId, name);
+			openInviteDialog(fullSocialId, name, /^linkedin/.test(fullSocialId) );
 		}
 	});
 
-	function openInviteDialog(fullSocialId, name) {
-		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
+	function openInviteDialog(fullSocialId, name, longForm) {
+		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm || false});
 		$inviteMessageDialog.dialog('show');
 	}
 
