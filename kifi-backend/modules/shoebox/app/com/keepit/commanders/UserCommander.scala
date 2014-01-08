@@ -206,7 +206,7 @@ class UserCommander @Inject() (
         }.toMap
         (newUser, toNotify, id2Email)
       }
-      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"))
+      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
       toNotify.foreach { userId =>
         val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
         db.readWrite{ implicit session =>
@@ -425,8 +425,8 @@ class UserCommander @Inject() (
               db.readWrite{ session =>
                 val respondingUser = userRepo.get(userId)(session)
                 val destinationEmail = emailRepo.getByUser(user.id.get)(session)
-                val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"))
-                val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"))
+                val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"), Some("https"))
+                val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"), Some("https"))
                 val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
 
                 postOffice.sendMail(ElectronicMail(
@@ -460,7 +460,7 @@ class UserCommander @Inject() (
               db.readWrite{ session =>
                 val requestingUser = userRepo.get(userId)(session)
                 val destinationEmail = emailRepo.getByUser(user.id.get)(session)
-                val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"))
+                val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
                 val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
                 postOffice.sendMail(ElectronicMail(
                   senderUserId = None,
