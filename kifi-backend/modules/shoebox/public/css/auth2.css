@@ -440,11 +440,11 @@ a.video-frame {
 .form-submit-sexy.alt-blue .progress {
   background: #558FDF;
 }
-.form-submit-sexy .done>.progress {
+.form-submit-sexy .submit-done>.progress {
   width: 100% !important;
   transition: width .16s ease-in-out;
 }
-.form-submit-sexy .fail>.progress {
+.form-submit-sexy .submit-fail>.progress {
   background: #b00;
   width: 0 !important;
   transition: width .24s ease-in-out;
@@ -452,13 +452,6 @@ a.video-frame {
 .form-submit-sexy .text {
   display: inline-block;
   position: relative;
-}
-.done>.text {
-  opacity: 0;
-  -webkit-transform: translate(60px);
-  transform: translate(60px);
-  transition: opacity .16s linear, -webkit-transform .16s ease-in-out;
-  transition: opacity .16s linear, transform .16s ease-in-out;
 }
 
 .terms {

@@ -140,7 +140,7 @@ kifi.form = (function () {
     var $progress = $button.find('.progress');
     var $text = $button.find('.text');
 
-    $button.css('cursor', 'default');
+    $button.prop('disabled', true);
     updateProgress.call($progress[0], 0);
 
     var progressTimeout;
@@ -160,12 +160,11 @@ kifi.form = (function () {
       },
       fail: function() {
         clearTimeout(progressTimeout), progressTimeout = null;
-        updateProgress.call($progress[0], 0);
-        clearTimeout(progressTimeout), progressTimeout = null;
+        $progress.css('width', 0);
         $button.one('transitionend', function () {
           $progress.css('width', 0);
           $button.removeClass('submit-fail');
-          $button.css('cursor', 'pointer');
+          $button.prop('disabled', false);
         }).addClass('submit-fail');
       },
       success: function() {
@@ -177,7 +176,7 @@ kifi.form = (function () {
 
   var $signup1Form = $('.signup-1').submit(function (e) {
     var $form = $(this);
-    var animated = animateButton($form.find('.form-submit-sexy'));
+    var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
     if (promise && promise.state() === 'pending') {
       return false;
@@ -192,8 +191,8 @@ kifi.form = (function () {
         email: email,
         password: password
       }).done(function (data) {
-        animated.update(1);
-        animated.success();
+        animation.update(1);
+        animation.success();
         if (!navigate(data)) {
           transitionTitle($signup2EmailForm.data('title'));
           $signup2EmailForm.css('display', 'block').layout();
@@ -202,14 +201,14 @@ kifi.form = (function () {
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
       }).fail(function (xhr) {
-        animated.fail();
+        animation.fail();
         var o = xhr.responseJSON;
         if (o && o.error === 'user_exists_failed_auth') {
           kifi.form.showError($password, 'Account exists, incorrect password');
         }
       }));
     } else {
-      animated.fail();
+      animation.fail();
     }
     return false;
   });
@@ -235,7 +234,7 @@ kifi.form = (function () {
 
   var $signup2EmailForm = $('.signup-2-email').submit(function (e) {
     var $form = $(this);
-    var animated = animateButton($form.find('.form-submit-sexy'));
+    var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
     if (promise && promise.state() === 'pending') {
       return false;
@@ -246,7 +245,7 @@ kifi.form = (function () {
     if (first && last) {
       var pic = $photo.data();
       $form.data('promise', $.when(pic.uploadPromise).always(function (upload) {
-          animated.update(50)
+          animation.update(50)
          $form.data('promise', $.postJson($form.attr('action'), {
           firstName: first,
           lastName: last,
@@ -258,21 +257,21 @@ kifi.form = (function () {
           cropSize: pic.size
         })
         .fail(function() {
-          animated.fail();
+          animation.fail();
         })
         .done(function() {
-          animated.success();
+          animation.success();
         })
         .done(navigate));
       }));
     } else {
-      animated.fail();
+      animation.fail();
     }
     return false;
   });
   var $signup2SocialForm = $('.signup-2-social').submit(function (e) {
     var $form = $(this);
-    var animated = animateButton($form.find('.form-submit-sexy'));
+    var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
     if (promise && promise.state() === 'pending') {
       return false;
@@ -289,11 +288,11 @@ kifi.form = (function () {
         password: password
       })
       .done(function() {
-        animated.success();
+        animation.success();
       })
       .done(navigate)
       .fail(function (xhr) {
-        animated.fail();
+        animation.fail();
         var o = xhr.responseJSON;
         if (o && o.error === 'known_email_address') {
           $form.data('email', email);
@@ -304,7 +303,7 @@ kifi.form = (function () {
         }
       }));
     } else {
-      animated.fail();
+      animation.fail();
     }
     return false;
   }).on('click', '.social-change-email', function (e) {
