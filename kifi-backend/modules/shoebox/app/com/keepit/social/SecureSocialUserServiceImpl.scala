@@ -29,6 +29,8 @@ import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.abook.EmailParserUtils
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.akka.SafeFuture
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -93,7 +95,7 @@ class SecureSocialUserPluginImpl @Inject() (
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
       socialGraphPlugin.asyncFetch(socialUserInfo)
     log.info(s"[save] persisting $socialUser into $socialUserInfo")
-    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
+    SafeFuture { socialUserInfo.userId.foreach(updateExperimentIfTestUser) }
     socialUser
   }
 
@@ -136,8 +138,10 @@ class SecureSocialUserPluginImpl @Inject() (
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
 
     // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
-    val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
-    if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
+    SafeFuture {
+      val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
+      if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
+    }
     u
   }
 
@@ -313,7 +317,9 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
     log.info(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
-    val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }                           // another dependency on socialUserInfo
+    val userId = db.readOnly(Database.Slave) { implicit s =>
+      socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
+    }
     UserSession(
       userId = userId,
       externalId = ExternalId[UserSession](authenticator.id),
@@ -323,6 +329,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
       state = if (authenticator.isValid) UserSessionStates.ACTIVE else UserSessionStates.INACTIVE
     )
   }
+
   private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
     id = session.externalId.id,
     identityId = IdentityId(session.socialId.id, session.provider.name),
@@ -331,38 +338,30 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     expirationDate = session.expires
   )
 
-  private def needsUpdate(oldSession: UserSession, newSession: UserSession): Boolean = {
-    // We only want to save if we actually changed something. SecureSocial likes to "touch" the session to update the
-    // last used time, but we're not using that right now. If we eventually do want to keep track of the last used
-    // time, we should try to avoid writing to the database every time.
-    oldSession.copy(
-      updatedAt = newSession.updatedAt,
-      createdAt = newSession.createdAt,
-      id = newSession.id) != newSession
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
+    val sessionFromCookie = sessionFromAuthenticator(authenticator)
+    val session = internSession(sessionFromCookie)
+    authenticatorFromSession(session)
   }
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
-    val newSession = sessionFromAuthenticator(authenticator)
-    log.info(s"[save] authenticator=$authenticator newSession=$newSession")
-    authenticatorFromSession {
-      val oldSessionOpt = db.readOnly { implicit s => sessionRepo.getOpt(newSession.externalId) }
-      if (oldSessionOpt.exists(!needsUpdate(_, newSession))) {
-        oldSessionOpt.get
-      } else {
-        db.readWrite { implicit s =>
-          sessionRepo.save(newSession.copy(
-            id = oldSessionOpt.map(_.id.get),
-            createdAt = oldSessionOpt.map(_.createdAt).getOrElse(newSession.createdAt)
-          ))
-        }
-      }
+  private def internSession(newSession: UserSession): UserSession = {
+    db.readOnly { implicit s => //from cache
+      sessionRepo.getOpt(newSession.externalId)
+    } getOrElse db.readWrite { implicit s =>
+      val sessionFromCookie = sessionRepo.save(newSession)
+      log.info(s"[save] newSession=$sessionFromCookie")
+      sessionFromCookie
     }
   }
-  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptionsAndTime(s"fine $id") {
+
+  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptionsAndTime(s"find $id") {
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
     } catch {
-      case ex: Throwable => None
+      case ex: Throwable =>
+        //todo(eishay) kill this ugly code and just convert the string to external id
+        airbrake.notify(s"error parsing $id", ex)
+        None
     }
 
     val res = externalIdOpt flatMap { externalId =>
@@ -378,7 +377,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     log.info(s"[find] id=$id res=$res")
     res
   }
-  
+
   def delete(id: String): Either[Error, Unit] = reportExceptionsAndTime(s"delete $id") {
     db.readWrite { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
