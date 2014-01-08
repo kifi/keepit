@@ -212,6 +212,7 @@ class HomeController @Inject() (
     }
   }
 
+  // Do not remove until a while past Jan 7 2014. The extension sends users to this URL after installation.
   def gettingStarted = Action { request =>
     Redirect("/")
   }
