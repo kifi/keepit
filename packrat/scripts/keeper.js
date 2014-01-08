@@ -152,6 +152,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
             captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps),
             includeTri: true
           }, function (html) {
+            if (data.stickiness) return;
             configureHover(hoverfuFriends($(html), o.keepers), {
               mustHoverFor: 700,
               canLeaveFor: 800,
@@ -180,6 +181,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
             html: o.kept ? 'Un-keeping this page will<br>remove it from your keeps.' :
               'Keeping this page helps you<br>easily find it later.'
           }, function (html) {
+            if (data.stickiness) return;
             configureHover(html, {
               mustHoverFor: 700,
               hideAfter: 4000,
@@ -205,6 +207,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         'This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it.' :
         'This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.';
       render('html/keeper/titled_tip', {title: title, html: html}, function (html) {
+        if (data.stickiness) return;
         configureHover(html, {
           mustHoverFor: 700,
           hideAfter: 4000,
@@ -224,6 +227,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         title: 'Tags', //'Tags (' + CO_KEY + '+Shift+A)', TODO: key binding
         html: 'You can tag a keep to<br>make it easier to find.'
       }, function (html) {
+        if (data.stickiness) return;
         configureHover(html, {
           mustHoverFor: 700,
           hideAfter: 4000,
@@ -236,7 +240,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         return;
       }
       if (this.classList.contains('kifi-keep-tag')) {
-        keepPage('public');
+        keepPage('public', true);
       }
       api.require('scripts/tagbox.js', function () {
         tagbox.onShow.add(beginStickyTime);
@@ -258,6 +262,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br>and start a discussion.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
+        if (data.stickiness) return;
         var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
         configureHover(html, {
           mustHoverFor: 700,
@@ -367,14 +372,20 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     }};
 
-  function keepPage(how) {
+  function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how)();
     updateKeptDom(how);
     var title = document.title.trim();
     api.port.emit('keep', withUrls({title: title, how: how}));
-    if (!title && false) {  // TODO: finish the prompt
+    if (!title && !suppressNamePrompt) {
+      beginStickyTime();
       api.require('scripts/keep_name_prompt.js', function () {
-        promptForKeepName();
+        keeper.moveToBottom(function () {
+          promptForKeepName($slider, function () {
+            endStickyTime();
+            keeper.moveBackFromBottom();
+          });
+        });
       });
     }
   }
@@ -519,11 +530,25 @@ var keeper = keeper || function () {  // idempotent for Chrome
     appendTo: function(parent) {
       $slider.appendTo(parent);
     },
-    moveToBottom: function () {
+    moveToBottom: function (callback) {
       var dy = window.innerHeight - tile.getBoundingClientRect().bottom;
       if (dy) {
-        return $(tile).css('transform', 'translate(0,' + dy + 'px)');
+        var $tile = $(tile);
+        if (callback) {
+          $tile.on('transitionend', function end(e) {
+            if (e.target === this) {
+              $tile.off('transitionend', end);
+              callback();
+            }
+          })
+        }
+        $tile.css('transform', 'translate(0,' + dy + 'px)');
+      } else if (callback) {
+        callback();
       }
+    },
+    moveBackFromBottom: function () {
+      $(tile).css('transform', '');
     },
     showKeepers: function (keepers, otherKeeps) {
       if (lastShownAt) return;
