@@ -40,10 +40,11 @@ section > h3 {
   content: 'Firefox';
 }
 .install-title {
-  margin: 1em 0;
+  margin: 1em auto;
   line-height: 40px;
   font-size: 26px;
   color: #6fa6ef;
+  width: 340px;
 }
 .install-button,
 .browser-button {

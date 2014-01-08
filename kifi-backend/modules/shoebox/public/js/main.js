@@ -3322,6 +3322,9 @@ $(function () {
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function (e) {
 		hideUndo();
+		// Joon: This is where we get the URL param. You may want to handle this case separately, or inside of showNotification()
+		// There will also be a uri parameter called 'email' that will be the email address. Watch out for XSS.
+		// When the user verifies their email, the url will look like /?m=3&email=joon@42go.com
 		showNotification(getUriParam('m'));
 		var state = History.getState();
 		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');

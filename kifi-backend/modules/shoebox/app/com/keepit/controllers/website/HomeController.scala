@@ -187,7 +187,7 @@ class HomeController @Inject() (
       }
     }
     setHasSeenInstall()
-    Ok(views.html.website.install2(request.user))
+    Ok(views.html.website.install(request.user))
   }
 
   // todo: move this to UserController

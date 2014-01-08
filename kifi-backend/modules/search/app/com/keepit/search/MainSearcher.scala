@@ -128,7 +128,7 @@ class MainSearcher(
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.myUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.mySearchUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
@@ -154,7 +154,8 @@ class MainSearcher(
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
-      val friendlyUris = socialGraphInfo.friendlyUris
+      val mySearchUris = socialGraphInfo.mySearchUris
+      val friendSearchUris = socialGraphInfo.friendSearchUris
 
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
@@ -176,13 +177,11 @@ class MainSearcher(
           if (!idFilter.contains(id)) {
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
-            if (friendlyUris.contains(id)) {
-              if (myUriEdgeAccessor.seek(id)) {
-                myHits.insert(id, luceneScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
-              } else {
-                if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false, false)
-              }
-            } else if (filter.includeOthers) {
+            if (myUriEdgeAccessor.seek(id) && mySearchUris.contains(id)) {
+              myHits.insert(id, luceneScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
+            } else if (friendSearchUris.contains(id)) {
+              if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false, false)
+            } else {
               if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false, false)
             }
           }
@@ -225,7 +224,7 @@ class MainSearcher(
     var numCollectStats = 20
 
     val usefulPages = browsingFilter
-    if (myHits.size > 0) {
+    if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.forall{ case (hit, rank) =>
 
         val h = hit.hit
@@ -295,46 +294,45 @@ class MainSearcher(
 
     var onlyContainsOthersHits = false
 
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      if ( !forbidEmptyFriendlyHits || (forbidEmptyFriendlyHits && hits.size == 0) || !filter.isDefault || !isInitialSearch){
-        val othersThreshold = othersHighScore * tailCutting
-        val othersNorm = max(highScore, othersHighScore)
-        val queue = createQueue(numHitsToReturn - hits.size)
-        if (hits.size == 0) onlyContainsOthersHits = true
-        var rank = 0 // compute the rank on the fly (there may be hits not kept public)
-        othersHits.toSortedList.forall{ hit =>
-          val h = hit.hit
-          val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-          if (score > othersThreshold) {
-            h.bookmarkCount = getPublicBookmarkCount(h.id)
-            if (h.bookmarkCount > 0) {
-              val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
-              val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
-              queue.insert(newScore, scoring, h)
-              rank += 1
-            } else {
-              // no one publicly kept this page.
-              // we don't include this in the result to avoid a security/privacy issue caused by a user mistake that
-              // he kept a sensitive page by mistake and switch it to private.
-              // decrement the count.
-              othersTotal -= 1
-            }
-            true
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
+        (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
+      val othersThreshold = othersHighScore * tailCutting
+      val othersNorm = max(highScore, othersHighScore)
+      val queue = createQueue(numHitsToReturn - hits.size)
+      if (hits.size == 0) onlyContainsOthersHits = true
+      var rank = 0 // compute the rank on the fly (there may be hits not kept public)
+      othersHits.toSortedList.forall{ hit =>
+        val h = hit.hit
+        val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+        if (score > othersThreshold) {
+          h.bookmarkCount = getPublicBookmarkCount(h.id)
+          if (h.bookmarkCount > 0) {
+            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+            val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
+            queue.insert(newScore, scoring, h)
+            rank += 1
           } else {
-            false
-          }
-        }
-        queue.foreach{ h => hits.insert(h) }
-      } else if (hits.size == (myTotal + friendsTotal)) {
-        // make sure there is at least one public keep in others
-        othersHits.toSortedList.exists{ hit =>
-          val h = hit.hit
-          if (getPublicBookmarkCount(h.id) > 0) {
-            true
-          } else {
+            // no one publicly kept this page.
+            // we don't include this in the result to avoid a security/privacy issue caused by a user mistake that
+            // he kept a sensitive page by mistake and switch it to private.
+            // decrement the count.
             othersTotal -= 1
-            false
           }
+          true
+        } else {
+          false
+        }
+      }
+      queue.foreach{ h => hits.insert(h) }
+    } else {
+      // make sure there is at least one public keep in others
+      othersHits.toSortedList.exists{ hit =>
+        val h = hit.hit
+        if (getPublicBookmarkCount(h.id) > 0) {
+          true
+        } else {
+          othersTotal -= 1
+          false
         }
       }
     }
