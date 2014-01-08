@@ -23,6 +23,7 @@ import org.apache.lucene.util.Bits
 import org.apache.lucene.util.Bits.MatchNoBits
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.PersonalizedSearcher
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 
@@ -95,7 +96,10 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
       }
 
       val semanticMatch: Map[String, Float] = {
-        val analyzer = new SemanticContextAnalyzer(searcher.asInstanceOf[Searcher], null, null)
+        val ps = searcher.asInstanceOf[PersonalizedSearcher]
+        val nonPs = Searcher(ps.indexReader.inner)
+        val analyzer = new SemanticContextAnalyzer(nonPs, null, null)     // this uses global semantic vector instead of personal ones.
+        //val analyzer = new SemanticContextAnalyzer(searcher.asInstanceOf[Searcher], null, null)
         analyzer.semanticLoss(optionalTerms.flatten.toSet)
       }
 
