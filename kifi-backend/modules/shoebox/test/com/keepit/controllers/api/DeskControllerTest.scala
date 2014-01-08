@@ -16,10 +16,10 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.TestSearchServiceClientModule
 import play.api.libs.json.JsObject
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import scala.reflect.internal.util.FakePos
+import com.keepit.common.mail.FakeMailModule
 
 class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
-
-  args(skipAll = true) // eishay / andrew fixme
 
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
@@ -28,6 +28,7 @@ class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
+    FakeMailModule(),
     TestHeimdalServiceClientModule()
   )
 

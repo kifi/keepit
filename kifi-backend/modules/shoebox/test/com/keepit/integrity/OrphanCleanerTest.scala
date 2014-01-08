@@ -187,19 +187,8 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
-          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
-        }
-        // test: to ACTIVE
-        db.readWrite { implicit session =>
-          bms.foreach{ bm => bmRepo.save(bm.copy(state = BookmarkStates.INACTIVE)) }
-        }
-        cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
-          uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
-          uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
-          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPE_WANTED
+          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.SCRAPE_WANTED
         }
 
         // test: to ACTIVE (first two uris are kept by other)
