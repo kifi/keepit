@@ -209,13 +209,7 @@ module.exports = function (grunt) {
 	});
 
 	// Default Task
-	grunt.registerTask('default', ['jshint']);
-
-	// Release Task
-	grunt.registerTask('build', ['jshint', 'uglify', 'imagemin']);
-
-	// Release Task
-	grunt.registerTask('release', ['jshint', 'requirejs', 'imagemin']);
+	grunt.registerTask('default', ['less']);
 
 	/*
         Notes:
