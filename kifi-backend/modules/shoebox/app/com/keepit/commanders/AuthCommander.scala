@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-import _root_.java.io.File
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
@@ -22,7 +21,8 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.controllers.core.AuthHelper
-import scala.util.{Failure, Success}
+import scala.concurrent.future
+import com.keepit.common.akka.SafeFuture
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
@@ -184,7 +184,7 @@ class AuthCommander @Inject()(
     val email = identity.email.get
     val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
-    inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt)
+    SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
     val user = db.readOnly(userRepo.get(userId)(_))
 
