@@ -33,7 +33,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getThreads(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
-  def markRead(user: Id[User], thread: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
+  def markAllRead(user: Id[User])(implicit session: RWSession) : Unit
 
   def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
@@ -210,12 +210,8 @@ class UserThreadRepoImpl @Inject() (
     save(userThread)
   }
 
-  def markRead(user: Id[User], threadOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit = {
-    threadOpt.map{ thread =>
-      (for (row <- table if row.user === user && row.thread === thread) yield row.unread ~ row.updatedAt).update((false, clock.now()))
-    } getOrElse {
-      (for (row <- table if row.user === user) yield row.unread ~ row.updatedAt).update((false, clock.now()))
-    }
+  def markAllRead(user: Id[User])(implicit session: RWSession) : Unit = {
+    (for (row <- table if row.user === user) yield row.unread ~ row.updatedAt).update((false, clock.now()))
   }
 
   def markAllReadAtOrBefore(userId: Id[User], timeCutoff: DateTime)(implicit session: RWSession) : Unit = {
