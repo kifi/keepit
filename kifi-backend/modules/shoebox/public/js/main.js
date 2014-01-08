@@ -4276,6 +4276,8 @@ $(function () {
 
 		var $bookmarkImportDialog = $('.import-dialog').remove().show();
 
+		//if (KF.dev) { showBookmarkImportDialog({ data: { bookmarkCount: 2 } }); }
+
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
