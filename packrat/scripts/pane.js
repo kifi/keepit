@@ -74,11 +74,22 @@ var pane = pane || function () {  // idempotent for Chrome
       panes[name].switchTo(locator);
       deferred.resolve();
     } else {
+      if (!paneHistory) {
+        paneHistory = [locator];
+      } else if (back) {
+        paneHistory.shift();
+        paneHistory[0] = locator;  // in case paneHistory was empty
+      } else {
+        paneHistory.unshift(locator);
+      }
       (createPaneParams[name] || function (cb) {cb({})})(function (params) {
-        params.redirected = redirected;
-        showPaneContinued(locator, back, name, params);
-        deferred.resolve();
+        if (paneHistory[0] === locator) {
+          params.redirected = redirected;
+          showPaneContinued(locator, back, name, params);
+          deferred.resolve();
+        }
       }, locator, paramsArg);
+      deferred.resolve();
     }
     return deferred.promise;
   }
@@ -104,17 +115,10 @@ var pane = pane || function () {  // idempotent for Chrome
         $cubby.css("overflow", "");
         window.dispatchEvent(new Event("resize"));  // for other page scripts
       });
-      if (back) {
-        paneHistory.shift();
-        paneHistory[0] = locator;  // usually unnecessary (already the same)
-      } else {
-        paneHistory.unshift(locator);
-      }
       api.port.emit("pane", {old: $pane[0].dataset.locator, new: locator});
       $pane[0].dataset.locator = locator;
       populatePane($new, name, locator);
     } else {
-      paneHistory = [locator];
       $('html').addClass('kifi-pane-parent');
       $pane = $(render('html/keeper/pane',
         $.extend(params, {
