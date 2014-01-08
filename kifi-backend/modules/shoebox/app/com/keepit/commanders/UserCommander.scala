@@ -409,8 +409,8 @@ object DefaultKeeps {
 
       // Support Keeps
       (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("How to Use Kifi"), url = "https://www.kifi.com/support", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("Contact Us"), url = "https://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("How to Use Kifi"), url = "http://support.kifi.com/", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("Contact Us"), url = "http://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
       (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
     )
   }
