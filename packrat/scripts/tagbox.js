@@ -459,7 +459,7 @@ this.tagbox = (function ($, win) {
 				if (win.pane) {
 					win.pane.unshade();
 				}
-				$(win.tile).css('transform', '');
+				win.keeper.moveBackFromBottom();
 
 				$(win).off('resize.kifi-tagbox-suggest', this.winResizeListener);
 
@@ -727,21 +727,9 @@ this.tagbox = (function ($, win) {
 			return $tagbox && $tagbox.toggleClass(classname, !! add);
 		},
 
-		moveKeeperToBottom: function (res) {
-			var $transitionEl = keeper.moveToBottom();
-			if (!$transitionEl) {
-				return res;
-			}
-
+		moveKeeperToBottom: function () {
 			var deferred = Q.defer();
-
-			$transitionEl.on('transitionend', function onTransitionend(e) {
-				if (e.target === this) {
-					$transitionEl.off('transitionend', onTransitionend);
-					deferred.resolve();
-				}
-			});
-
+			win.keeper.moveToBottom(deferred.resolve.bind(deferred));
 			return deferred.promise;
 		},
 
