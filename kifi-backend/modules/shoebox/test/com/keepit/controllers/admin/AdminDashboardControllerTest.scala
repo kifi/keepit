@@ -13,6 +13,7 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.common.mail.TestMailModule
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -33,7 +34,8 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     ShoeboxFakeStoreModule(),
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    TestMailModule()
   )
 
   "AdminDashboardController" should {

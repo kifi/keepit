@@ -7,6 +7,7 @@ import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.commanders.EmailOptOutCommander
 import com.google.inject.Inject
 import com.keepit.common.mail.{PostOffice, GenericEmailAddress, EmailAddressHolder}
 import scala.util.{Success, Try, Failure}
@@ -18,11 +19,13 @@ import com.keepit.common.KestrelCombinator
 class EmailOptOutController @Inject() (
   db: Database,
   actionAuthenticator: ActionAuthenticator,
-  emailOptOutRepo: EmailOptOutRepo)
+  emailOptOutRepo: EmailOptOutRepo,
+  commander: EmailOptOutCommander)
   extends WebsiteController(actionAuthenticator) {
 
+
   def optOut(optOutToken: String) = Action { implicit request =>
-    val email = getEmailFromOptOutToken(optOutToken)
+    val email = commander.getEmailFromOptOutToken(optOutToken)
 
     email match {
       case Success(addr) =>
@@ -44,7 +47,7 @@ class EmailOptOutController @Inject() (
     )
   )
   def optOutAction(optOutToken: String) = Action { implicit request =>
-    val email = getEmailFromOptOutToken(optOutToken)
+    val email = commander.getEmailFromOptOutToken(optOutToken)
 
     email.map { emailAddress =>
       optOutForm.bindFromRequest.fold(
@@ -67,16 +70,8 @@ class EmailOptOutController @Inject() (
 
   // for development only
   def getToken(email: String) = Action {
-    Ok(generateOptOutToken(GenericEmailAddress(email)))
+    Ok(commander.generateOptOutToken(GenericEmailAddress(email)))
   }
 
-  private val crypt = new SimpleDESCrypt
-  private val key = crypt.stringToKey(current.configuration.getString("optout.secret").get)
 
-  def generateOptOutToken(emailAddress: EmailAddressHolder) = {
-    crypt.crypt(key, emailAddress.address)
-  }
-  def getEmailFromOptOutToken(optOutToken: String): Try[EmailAddressHolder] = {
-    crypt.decrypt(key, optOutToken).map(GenericEmailAddress(_))
-  }
 }

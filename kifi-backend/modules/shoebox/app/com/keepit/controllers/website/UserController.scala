@@ -12,6 +12,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.model._
+import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.{Await, Future}

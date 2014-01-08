@@ -1,6 +1,6 @@
-@(name: String, confirmLink: String)
+@(name: String, confirmLink: String, unsubLink: String)
 
-@helper.kifiTemplate(title = "Kifi — Welcome") {
+@helper.kifiTemplate(title = "Kifi — Welcome", unsubLink=unsubLink) {
 
   <table class="row" bgcolor="#f6f6f6" style="background-color:#f6f6f6; margin-top:-20px;">
     <tr>
@@ -22,7 +22,7 @@
               <br>
               <h3>Hey @name,</h3>
               <h2>Welcome to Kifi!</h2> <br>
-              Confirm your account by clicking the its me button
+              Confirm your account by clicking the "Yes it's me" button
             </td>
             <td class="expander"></td>
           </tr>
@@ -107,7 +107,9 @@
         <table class="six columns">
           <tr>
             <td>
-              <small> Please make sure you confirm your account on your desktop and not from your phone </small>
+              <center>
+                <small> Please click from your computer, not phone </small>
+              </center>
             </td>
             <td class="expander"></td>
           </tr>
@@ -134,7 +136,7 @@
         <table class="twelve columns">
           <tr>
             <td>
-              <img src="http://i.imgur.com/q0J9sGg.png" style="margin-top: -100px;"></img>
+              <img src="https://djty7jcqog9qu.cloudfront.net/assets/welcome-email-banner.png" style="margin-top: -100px;"></img>
             </td>
             <td class="expander"></td>
           </tr>
