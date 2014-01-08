@@ -21,8 +21,8 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.controllers.core.AuthHelper
-import scala.concurrent.future
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
