@@ -1,7 +1,7 @@
-@(name: String, first: String, last: String, imageUrl: String)
+@(name: String, first: String, last: String, imageUrl: String, unsubLink: String)
 
 
-@helper.kifiTemplate(title = "Kifi - your Kifi network just got bigger") {
+@helper.kifiTemplate(title = "Kifi - your Kifi network just got bigger", unsubLink=unsubLink) {
 
   <table class="row">
     <tr>
@@ -23,9 +23,9 @@
               Hey @name, <br><br>
               @first @last just joined Kifi. <br><br>
 
-              <font color="#80B0F1">So, what does it mean?</font>
+              <font color="#A3C879">So, what does it mean?</font>
               <ul>
-                <li> @{first}s keeps will enhance your Kfi results </li>
+                <li> @{first}'s keeps will enhance your Kifi results </li>
                 <li> You can start a conversation with @first on any page </li>
               </ul>
 

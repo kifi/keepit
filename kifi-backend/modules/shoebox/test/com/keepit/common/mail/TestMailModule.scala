@@ -28,6 +28,7 @@ class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
   def size = mails.size
   def head = mails.head
   def apply(i: Int) = mails(i)
+  def all = mails.toVector
 }
 
 class FakeMailProvider(emails: FakeOutbox) extends MailProvider {

@@ -12,8 +12,8 @@ import play.api.libs.functional.syntax._
 import org.joda.time.DateTime
 
 
-sealed trait ThreadContentUpdateMode 
-case object DIFF extends ThreadContentUpdateMode //ZZZ not supported yet
+sealed trait ThreadContentUpdateMode
+case object DIFF extends ThreadContentUpdateMode //not supported yet
 case object FULL extends ThreadContentUpdateMode
 
 object ThreadContentUpdateMode {
@@ -45,7 +45,7 @@ case class ThreadContent(
   pageTitleOpt: Option[String],
   digest: String,
   content: Seq[String],
-  participantIds: Seq[Id[User]] 
+  participantIds: Seq[Id[User]]
 )
 
 object ThreadContent {
@@ -58,7 +58,7 @@ object ThreadContent {
     (__ \ 'seq).format[SequenceNumber] and
     (__ \ 'participants).format[Seq[BasicUser]] and
     (__ \ 'updatedAt).format[DateTime] and
-    (__ \ 'url).format[String] and 
+    (__ \ 'url).format[String] and
     (__ \ 'threadExternalId).format[String] and
     (__ \ 'pageTitleOpt).formatNullable[String] and
     (__ \ 'digest).format[String] and

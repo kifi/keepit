@@ -4166,12 +4166,23 @@ $(function () {
 
 	/* Email Verified */
 	var emailVerifiedPending = false;
+	var emailVerifiedView = false;
+	var emailVerifiedViewDone = false;
 	function checkEmailVerified() {
+		if (emailVerifiedView) {
+			return;
+		}
+		emailVerifiedView = true;
+
 		var params = util.deparam((location.search || '').substring(1));
 		if (params.m === '3' && params.email) {
 			emailVerifiedPending = true;
 			promise.me.done(function() {
 				emailVerifiedPending = false;
+				if (emailVerifiedViewDone) {
+					return;
+				}
+				emailVerifiedViewDone = true;
 				showEmailVerfied(me.firstName || me.lastName || '', params.email, function () {
 					if (!$('html').data('kifi-ext')) {
 						// no extension installed
@@ -4207,11 +4218,19 @@ $(function () {
 	}
 
 	/* Onboarding */
+	var onboardingViewed = false;
 	function initOnboarding() {
 		if (emailVerifiedPending) {
 			return;
 		}
+		if (onboardingViewed) {
+			return;
+		}
 		promise.myPrefs.done(function () {
+			if (onboardingViewed) {
+				return;
+			}
+			onboardingViewed = true;
 			if (!myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false') {
 				$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
 			}
@@ -4241,7 +4260,12 @@ $(function () {
 	};
 
 	/* Bookmark Import */
+	var bookmarkImported = false;
 	function initBookmarkImport() {
+		if (bookmarkImported) {
+			return;
+		}
+		bookmarkImported = true;
 		log('[initBookmarkImport]');
 		window.addEventListener('message', function (event) {
 			if (event.origin === location.origin && event.data && event.data.bookmarkCount > 0) {

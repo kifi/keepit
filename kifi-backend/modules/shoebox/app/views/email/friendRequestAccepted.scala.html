@@ -1,8 +1,8 @@
-@(yourFirstName: String, otherFirstName: String, otherLastName: String, yourImageUrl: String, otherImageUrl: String)
+@(yourFirstName: String, otherFirstName: String, otherLastName: String, yourImageUrl: String, otherImageUrl: String, unsubLink: String)
 
 
 
-@helper.kifiTemplate(title = "Kifi - Congratulations!") {
+@helper.kifiTemplate(title = "Kifi - Congratulations!", unsubLink=unsubLink) {
   @helper.oneColumnRow{
     Hi @yourFirstName, <br><br>
     @otherFirstName @otherLastName accepted your Kifi friend request. <br><br>
@@ -86,7 +86,7 @@
   @helper.oneColumnRow{
     <br>
     Have a great day, <br>
-    The Kifi Team
+    The Kifi team
   }
 
 }
