@@ -22,6 +22,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.controllers.core.AuthHelper
 import scala.concurrent.future
+import com.keepit.common.akka.SafeFuture
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
@@ -183,7 +184,7 @@ class AuthCommander @Inject()(
     val email = identity.email.get
     val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
-    future { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
+    SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
     val user = db.readOnly(userRepo.get(userId)(_))
 

@@ -41,4 +41,10 @@ class SemanticVectorController @Inject()(articleIndexer: ArticleIndexer) extends
     val rv = queries.map{ q => s.getSemanticVector(q).toBinary }
     Ok(Json.toJson(rv))
   }
+
+  def semanticLoss(queryText: String) = Action { request =>
+    val s = new SemanticContextAnalyzer(searcher, analyzer, stemAnalyzer)
+    val scores = s.semanticLoss(queryText)
+    Ok(Json.toJson(scores))
+  }
 }

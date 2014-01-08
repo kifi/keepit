@@ -78,6 +78,11 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
     searcher.getSemanticVector(terms)
   }
 
+  def semanticLoss(query: String): Map[String, Float] = {
+    val terms = getTerms(query, stem = true)
+    semanticLoss(terms)
+  }
+
   def semanticLoss(terms: Set[Term]): Map[String, Float] = {
     val svTerms = terms.map{ t => new Term("sv", t.text) }
     val completeSketch = searcher.getSemanticVectorSketch(svTerms)
