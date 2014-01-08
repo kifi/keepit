@@ -4166,7 +4166,13 @@ $(function () {
 
 	/* Email Verified */
 	var emailVerifiedPending = false;
+	var emailVerifiedView = false;
 	function checkEmailVerified() {
+		if (emailVerifiedView) {
+			return;
+		}
+		emailVerifiedView = true;
+
 		var params = util.deparam((location.search || '').substring(1));
 		if (params.m === '3' && params.email) {
 			emailVerifiedPending = true;
@@ -4207,10 +4213,15 @@ $(function () {
 	}
 
 	/* Onboarding */
+	var onboardingViewed = false;
 	function initOnboarding() {
 		if (emailVerifiedPending) {
 			return;
 		}
+		if (onboardingViewed) {
+			return;
+		}
+		onboardingViewed = true;
 		promise.myPrefs.done(function () {
 			if (!myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false') {
 				$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
@@ -4241,7 +4252,12 @@ $(function () {
 	};
 
 	/* Bookmark Import */
+	var bookmarkImported = false;
 	function initBookmarkImport() {
+		if (bookmarkImported) {
+			return;
+		}
+		bookmarkImported = true;
 		log('[initBookmarkImport]');
 		window.addEventListener('message', function (event) {
 			if (event.origin === location.origin && event.data && event.data.bookmarkCount > 0) {
