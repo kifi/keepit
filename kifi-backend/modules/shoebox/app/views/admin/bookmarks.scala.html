@@ -96,6 +96,9 @@
           case "mobile" => {
             <span class="label label-success">Mobile</span>
           }
+          case s => {
+            <span class="label label-info">@s.toLowerCase</span>
+          }
         }}
       </td>
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
