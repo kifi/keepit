@@ -23,6 +23,7 @@ import play.api.libs.json.JsObject
 import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail.TestMailModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 
@@ -35,7 +36,8 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    TestMailModule()
   )
 
   "ExtAuthController" should {

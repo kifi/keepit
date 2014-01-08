@@ -1,7 +1,7 @@
-@(firstName: String, lastName: String, imageUrl: String)
+@(firstName: String, lastName: String, imageUrl: String, message: String, acceptLink: String, unsubLink: String)
 
 
-@helper.kifiTemplate(title = firstName + " invites you to Kifi") {
+@helper.kifiTemplate(title = "Kifi - " + firstName + " invites you to Kifi", unsubLink=unsubLink) {
   <table class="row">
   <tr>
 
@@ -23,7 +23,7 @@
           <td>
             <!-- Greeting -->
             <br>
-            @firstName @lastName is waiting for you to join Kifi
+            @message
           </td>
           <td class="expander"></td>
         </tr>
@@ -56,7 +56,7 @@
             <table class="button radius green">
               <tbody><tr>
                   <td class="cta-button">
-                    <a href="https://www.kifi.com">Accept @{firstName}s invitation</a>
+                    <a href="@acceptLink">Accept @{firstName}'s invitation</a>
 
                   </td>
               </tr></tbody>
@@ -103,16 +103,16 @@
           <td>
             <!-- Body -->
             <br>
-            <font color="#2ba6cb">What is Kifi and Why should I join?</font> <br><br>
+            <font color="#A3C879">What is Kifi and Why should I join?</font> <br><br>
 
-            Kifi (short for keep it find it) allows you to easily keep and tag anything you find online - an article, video, picture, email, anything - then quickly find it on top of your favorite search engine results., together with relevant pages that your friends kept, too. <br><br>
+            Kifi (short for keep it find it) allows you to easily keep and tag anything you find online - an article, video, picture, email, anything - then quickly find it on top of your favorite search engine results, together with relevant pages that your friends kept, too. <br><br>
 
             Kifi also lets you message your friends about what you keep and find alongside any webpage, to get their opinion and gain from their expertise. <br><br>
 
-            <a href="https://www.kifi.com">Join Kifi</a> <br><br>
+            <a href="https://www.kifi.com"><u>Join Kifi</u></a> <br><br>
 
             Kifi is available for desktop only on chrome and firefox. <br>
-            Safari, Internet Explorer and Mobile are coming soon.
+            Safari, Internet Explorer and mobile are coming soon!
           </td>
           <td class="expander"></td>
         </tr>

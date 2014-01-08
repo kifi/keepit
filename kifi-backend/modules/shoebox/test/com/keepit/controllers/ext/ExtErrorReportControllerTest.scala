@@ -18,6 +18,7 @@ import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail.TestMailModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 
@@ -48,7 +49,8 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    TestMailModule()
   )
 
   "ExtAuthController" should {
