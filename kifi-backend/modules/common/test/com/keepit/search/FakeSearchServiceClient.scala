@@ -93,4 +93,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = ???
 
   override def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = ???
+
+  override def semanticLoss(query: String): Future[Map[String, Float]] = ???
 }

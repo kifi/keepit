@@ -48,6 +48,14 @@ class AdminSemanticVectorController @Inject()(
     Ok(msg)
   }
 
+  def semanticLoss() = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val query = body.get("query").get
+    val score = Await.result(searchClient.semanticLoss(query), 5 seconds)
+    val msg = score.map{ x => x._1 + " ---> " + x._2}.mkString("\n")
+    Ok(msg.replaceAll("\n","\n<br>"))
+  }
+
   def index() = AdminHtmlAction { implicit request =>
     Ok(html.admin.SemanticVector())
   }
