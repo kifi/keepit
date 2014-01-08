@@ -365,6 +365,33 @@ class AdminUserController @Inject() (
     }
   }
 
+  def userValue(userId: Id[User]) = AdminJsonAction { implicit request =>
+    val req = request.body.asJson.map { json =>
+      ((json \ "name").asOpt[String], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
+        case (Some(name), Some(value), None) =>
+          Some(db.readWrite { implicit session => // set it
+            userValueRepo.setValue(userId, name, value)
+          })
+        case (Some(name), _, Some(c)) => // clear it
+          Some(db.readWrite { implicit session =>
+            userValueRepo.clearValue(userId, name).toString
+          })
+        case (Some(name), _, _) => // get it
+          db.readOnly { implicit session =>
+            userValueRepo.getValue(userId, name)
+          }
+        case _=>
+          None.asInstanceOf[Option[String]]
+      }
+    }.flatten
+
+    req.map { result =>
+      Ok(Json.obj("success" -> result))
+    }.getOrElse {
+      BadRequest(Json.obj("didyoudoit" -> "noididnt"))
+    }
+  }
+
   def changeState(userId: Id[User], state: String) = AdminJsonAction { request =>
     val userState = state match {
       case UserStates.ACTIVE.value => UserStates.ACTIVE
