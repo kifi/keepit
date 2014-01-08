@@ -83,9 +83,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'boxOpen': /^\/messages(?:$|:)/.test(locator),
       'isTagged': tags.length
     }));
-    // attach event bindings
+
     var data = $slider.data();
     data.stickiness = 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
+    function isSticky() {
+      return data.stickiness > 0;
+    }
+
+    // attach event bindings
     $slider
     .mouseover(function () {
       idleTimer.kill();
@@ -141,7 +146,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
     }).hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
-      if (data.stickiness) return;
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
@@ -152,8 +156,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
             captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps),
             includeTri: true
           }, function (html) {
-            if (data.stickiness) return;
             configureHover(hoverfuFriends($(html), o.keepers), {
+              suppressed: isSticky,
               mustHoverFor: 700,
               canLeaveFor: 800,
               hideAfter: 4000,
@@ -181,8 +185,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
             html: o.kept ? 'Un-keeping this page will<br>remove it from your keeps.' :
               'Keeping this page helps you<br>easily find it later.'
           }, function (html) {
-            if (data.stickiness) return;
             configureHover(html, {
+              suppressed: isSticky,
               mustHoverFor: 700,
               hideAfter: 4000,
               click: 'hide',
@@ -193,7 +197,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('mouseout', '.kifi-keep-btn,.kifi-kept-btn', function () {
       this.classList.remove('kifi-hoverless');
     }).hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
-      if (data.stickiness) return;
       var $a = $(this);
       var $card = $(this).closest('.kifi-keep-card');
       var kept = !$card.hasClass('kifi-unkept');
@@ -207,8 +210,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
         'This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it.' :
         'This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.';
       render('html/keeper/titled_tip', {title: title, html: html}, function (html) {
-        if (data.stickiness) return;
         configureHover(html, {
+          suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
@@ -219,7 +222,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('click', '.kifi-kept-lock', function (e) {
       if (e.target === this) toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
     }).hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
-      if (data.stickiness) return;
       var btn = this;
       var kept = this.classList.contains('kifi-kept-tag');
       render('html/keeper/titled_tip', {
@@ -227,8 +229,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
         title: 'Tags', //'Tags (' + CO_KEY + '+Shift+A)', TODO: key binding
         html: 'You can tag a keep to<br>make it easier to find.'
       }, function (html) {
-        if (data.stickiness) return;
         configureHover(html, {
+          suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
@@ -255,16 +257,15 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).on('click', '.kifi-keeper-x', function () {
       pane.hide(true);
     }).hoverfu('.kifi-dock-btn', function(configureHover) {
-      if (data.stickiness) return;
       var $a = $(this);
       var tip = {
         i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br>New ones are highlighted.'],
         c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br>and start a discussion.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
-        if (data.stickiness) return;
         var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
         configureHover(html, {
+          suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
