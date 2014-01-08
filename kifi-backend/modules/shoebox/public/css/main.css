@@ -5246,3 +5246,68 @@ a.photo-dialog-submit:focus {
 .search-filter-selected {
 	color: #333333;
 }
+
+/* Email Verified Dialog */
+.email-verified-dialog .dialog-content {
+  margin-top: -262px;
+  margin-left: -337px;
+  width: 675px;
+  height: 400px;
+  color: #66829b;
+  line-height: 1.5;
+}
+.email-verified-dialog .dialog-title {
+  color: #515051;
+  background: url(../img/kifi-logo-color.png) 30px 50% / 32px no-repeat;
+  font-size: 0;
+  background-color: #eff2f7;
+  line-height: 50px;
+  margin-bottom: 30px;
+}
+.email-verified-dialog .dialog-body {
+  width: 500px;
+  margin: 20px auto;
+  color: #333;
+}
+.email-verified-dialog h1 {
+  margin: 0 0 30px;
+  font-size: 28px;
+  font-weight: 300;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+.email-verified-dialog p {
+  color: #333;
+  font-size: 18px;
+}
+.email-verified-dialog button {
+  position: absolute;
+  bottom: 35px;
+  right: 5px;
+  left: 50%;
+  width: 200px;
+  margin-left: -100px;
+  height: 58px;
+  line-height: 58px;
+  padding: 0;
+  background-color: #6fa5ef;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 17px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  -webkit-transition: background-color .1s;
+  transition: background-color .1s;
+}
+.email-verified-dialog button:hover {
+	background-color: #7faeef
+}
+.email-verified-dialog button:active {
+	background-color: #5f9cef;
+	-webkit-transition: none;
+	transition: none
+}
+

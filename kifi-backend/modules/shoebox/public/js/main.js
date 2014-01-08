@@ -4189,6 +4189,23 @@ $(function () {
 		initBookmarkImport();
 	};
 
+	/* Email Verified */
+	if (KF.dev) {
+		window.showEmailVerfied = showEmailVerfied;
+	}
+	function showEmailVerfied(name, email) {
+		var $dialog = $('.email-verified-dialog')
+			.remove()
+			.show()
+			.find('.email-verified-user-name').text(name).end()
+			.find('.email-verified-user-email').text(email).end()
+			.dialog('show')
+			.on('click', 'button', function () {
+				$dialog.dialog('hide');
+				$dialog = null;
+			});
+	}
+
 	/* Bookmark Import */
 	function initBookmarkImport() {
 		log('[initBookmarkImport]');
@@ -4200,6 +4217,16 @@ $(function () {
 		window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
 		var $bookmarkImportDialog = $('.import-dialog').remove().show();
+
+		if (KF.dev) {
+			window.showBookmarkImportDialog = function() {
+				showBookmarkImportDialog({
+					data: {
+						bookmarkCount: 1
+					}
+				});
+			};
+		}
 
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
