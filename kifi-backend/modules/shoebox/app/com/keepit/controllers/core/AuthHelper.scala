@@ -175,7 +175,7 @@ class AuthHelper @Inject() (
       }
     }
 
-    val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/")
+    val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/install")
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
