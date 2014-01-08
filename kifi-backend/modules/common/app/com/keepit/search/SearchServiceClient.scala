@@ -75,6 +75,7 @@ trait SearchServiceClient extends ServiceClient {
   def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
   def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
   def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
+  def semanticLoss(query: String): Future[Map[String, Float]]
 }
 
 class SearchServiceClientImpl(
@@ -270,4 +271,11 @@ class SearchServiceClientImpl(
       Json.fromJson[Seq[String]](r.json).get
     }
   }
+
+  def semanticLoss(query: String): Future[Map[String, Float]] = {
+    call(Search.internal.semanticLoss(query)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
 }
