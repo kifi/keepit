@@ -1,40 +1,63 @@
 @(user: User)
 
-@views.html.website.helper.main(title = "Getting started with KiFi", scripts = Seq("website/install"), hiddenElements = Seq("inviteFriends"), head = Html("""
-  <link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">
-""")) {
-  <div class="user_avatar">
-  <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
-  </div>
-
-  <section class="content clearfix">
-    <header class="content_header">
-        <!--<div class="watch_video">
-          <span>Watch a video</span>
-            <div class="video_thumb">
-              <img src="@routes.Assets.at("images/video_thumb.jpg")" width="138" height="85">
-                <div class="play_video" data-popup="video"></div>
-            </div>
-        </div>-->
-
-        <h2>Yay @user.firstName, you’re in!</h2>
-        <h3>Welcome to the KiFi Private Beta</h3>
-    </header>
-
-    <h2 id="install_extensions_title" class="blue text_center">Start using KiFi by installing<br>the browser extension</h2>
-
-    <div class="install_extensions clearfix">
-      <div class="container">
-        <span class="btn blue " id="chrome-install">Install Google Chrome Extension</span>
-        <span class="btn blue " id="firefox-install">Install Firefox Extension</span>
-      </div>
-      <p class="small">We currently support Google Chrome and Firefox, and are adding other browsers soon.</p>
-    </div>
-    <div id="other-install">
-      <h3>We currently support the latest versions of <a href="https://www.google.com/intl/en/chrome/browser/">Google Chrome</a> and <a href="http://www.mozilla.org/en-US/firefox/new/">Firefox</a>, and are working hard to add other browsers.</h3>
-    </div>
-    <div id="old-install">
-      <h3>It appears that you're running an old version of your browser. Grab the latest version of <a href="https://www.google.com/intl/en/chrome/browser/">Google Chrome</a> or <a href="http://www.mozilla.org/en-US/firefox/new/">Firefox</a> to use KiFi.</h3>
-    </div>
-  </section>
+@styles = {
+<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">
+<link rel="stylesheet" href="/assets/css/auth2.css">
+<link rel="stylesheet" href="/assets/css/auth-footer.css">
+<link rel="stylesheet" href="/assets/css/install.css">
 }
+
+@headScripts = {
+<script>
+!function (el) {
+  if (el.dataset && el.dataset.kifiExt) {
+    redirect();
+  } else if (el.addEventListener) {
+    document.addEventListener('kifi:installed', redirect);
+  }
+  function redirect() {
+    window.location.href = '@com.keepit.controllers.website.routes.HomeController.home';
+  }
+}(document.documentElement);
+!function (el) {
+  var isChrome = window.chrome && chrome.webstore && chrome.webstore.install;
+  var isFirefox = !isChrome && ('MozBoxSizing' in el.style) || ~navigator.userAgent.indexOf('Firefox');
+  var majorVersion = +(navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [,999])[1];
+  var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
+  el.className += (supported ? ' supported ' : ' unsupported ') + (isChrome ? 'chrome' : isFirefox ? 'firefox' : 'other');
+}(document.documentElement);
+</script>
+}
+
+@content = {
+<main>
+  <h1 class="main-logo">kifi</h1>
+  <section>
+    <div class="install">
+      <p class="install-title">Install the browser extension to start using kifi</p>
+      <a class="install-button" href="javascript:">Install <span class="browser-name"></span> Extension</a>
+    </div>
+    <div class="install-old">
+      <p class="install-title">You’re running an old version of <span class="browser-name"></span></p>
+      <p class="browser-newer">Please update your browser and then come back to install the kifi browser extension</p>
+      <a class="browser-button chrome" href="https://www.google.com/chrome">Get Chrome</a>
+      <a class="browser-button firefox" href="https://www.mozilla.org/firefox">Get Firefox</a>
+    </div>
+    <div class="install-other">
+      <p class="install-title">This browser does not support kifi</p>
+      <p class="browser-newer">Please come back with one of the browsers below to install the kifi browser extension</p>
+      <a class="browser-button chrome" href="https://www.google.com/chrome">Get Chrome</a>
+      <a class="browser-button firefox" href="https://www.mozilla.org/firefox">Get Firefox</a>
+    </div>
+
+  </section>
+</main>
+}
+
+
+@scripts = {
+<script src="/assets/js/install.js"></script>
+<script src="/assets/js/auth-footer.js"></script>
+}
+
+@views.html.marketing.helper.page(title = "kifi • Install", headScripts = headScripts, styles = styles, content = content, scripts = scripts, dataTrack="terms", isLoggedIn = false, headerType = "grey", footerType = "minimalist")
