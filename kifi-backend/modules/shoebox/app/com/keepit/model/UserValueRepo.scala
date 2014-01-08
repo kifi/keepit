@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{LargeString, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import scala.Some
 
 @ImplementedBy(classOf[UserValueRepoImpl])
@@ -63,11 +63,12 @@ class UserValueRepoImpl @Inject() (
   }
 
   def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean = {
-    val res = (for (v <- table if v.userId === userId && v.name === name) yield v.state).update(UserValueStates.INACTIVE) > 0
-    if (res) {
+    val changed = (for (v <- table if v.userId === userId && v.name === name && v.state =!= UserValueStates.INACTIVE) yield v.state ~ v.updatedAt)
+      .update((UserValueStates.INACTIVE, clock.now())) > 0
+    if (changed) {
       valueCache.remove(UserValueKey(userId, name))
     }
-    res
+    changed
   }
 
 }
