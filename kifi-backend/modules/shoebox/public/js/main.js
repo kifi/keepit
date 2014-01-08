@@ -3326,6 +3326,7 @@ $(function () {
 		// There will also be a uri parameter called 'email' that will be the email address. Watch out for XSS.
 		// When the user verifies their email, the url will look like /?m=3&email=joon@42go.com
 		showNotification(getUriParam('m'));
+		checkEmailVerified();
 		var state = History.getState();
 		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
 		var parts = hash.split('/');
@@ -4084,10 +4085,11 @@ $(function () {
 	// load data for persistent (view-independent) page UI
 	var hasGmailInvite = false;
 	var promise = {
-		me: refreshMe().promise().then(function (me) {
+		me: refreshMe().promise().done(function (me) {
 			if (hasExperiment(me, 'gmail_invite', true)) {
 				hasGmailInvite = true;
 			}
+			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
 			return me;
 		}),
 		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
@@ -4162,20 +4164,66 @@ $(function () {
 		}
 	});
 
-	/* Onboarding */
-
-	$.when(promise.myPrefs).done(function () {
-		if (KF.dev || (!myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false')) {
-			$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
+	/* Email Verified */
+	var emailVerifiedPending = false;
+	function checkEmailVerified() {
+		var params = util.deparam((location.search || '').substring(1));
+		if (params.m === '3' && params.email) {
+			emailVerifiedPending = true;
+			promise.me.done(function() {
+				emailVerifiedPending = false;
+				showEmailVerfied(me.firstName || me.lastName || '', params.email, function () {
+					if (!$('html').data('kifi-ext')) {
+						// no extension installed
+						window.location = '/install';
+					}
+					else {
+						initOnboarding();
+					}
+				});
+			});
 		}
 		else {
-			initBookmarkImport();
+			initOnboarding();
 		}
-	});
+	}
+
+	function showEmailVerfied(name, email, callback) {
+		var $dialog = $('.email-verified-dialog')
+			.remove()
+			.show()
+			.find('.email-verified-user-name').text(name).end()
+			.find('.email-verified-user-email').text(email).end()
+			.dialog('show')
+			.on('click', 'button', function () {
+				$dialog.dialog('hide');
+				$dialog = null;
+			})
+			.on('dialog.hide', function () {
+				if (callback) {
+					callback();
+				}
+			});
+	}
+
+	/* Onboarding */
+	function initOnboarding() {
+		if (emailVerifiedPending) {
+			return;
+		}
+		promise.myPrefs.done(function () {
+			if (!myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false') {
+				$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
+			}
+			else {
+				initBookmarkImport();
+			}
+		});
+	}
 
 	// onboarding.js is using this function
 	window.getMe = function() {
-		return promise.me.then(function (me) {
+		return promise.me.done(function (me) {
 			me.pic200 = formatPicUrl(me.id, me.pictureName, 200);
 			return me;
 		});
@@ -4192,23 +4240,6 @@ $(function () {
 		initBookmarkImport();
 	};
 
-	/* Email Verified */
-	if (KF.dev) {
-		window.showEmailVerfied = showEmailVerfied;
-	}
-	function showEmailVerfied(name, email) {
-		var $dialog = $('.email-verified-dialog')
-			.remove()
-			.show()
-			.find('.email-verified-user-name').text(name).end()
-			.find('.email-verified-user-email').text(email).end()
-			.dialog('show')
-			.on('click', 'button', function () {
-				$dialog.dialog('hide');
-				$dialog = null;
-			});
-	}
-
 	/* Bookmark Import */
 	function initBookmarkImport() {
 		log('[initBookmarkImport]');
@@ -4220,16 +4251,6 @@ $(function () {
 		window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
 		var $bookmarkImportDialog = $('.import-dialog').remove().show();
-
-		if (KF.dev) {
-			window.showBookmarkImportDialog = function() {
-				showBookmarkImportDialog({
-					data: {
-						bookmarkCount: 1
-					}
-				});
-			};
-		}
 
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
