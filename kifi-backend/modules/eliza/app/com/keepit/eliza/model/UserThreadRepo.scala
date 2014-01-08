@@ -81,7 +81,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
-  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msg: Message)(implicit session: RWSession): Unit
+  def markRead(userId: Id[User], threadId: Id[MessageThread], msg: Message)(implicit session: RWSession): Unit
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread]
 
@@ -89,7 +89,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
 
-  def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit
+  def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean
 
   def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit
 
@@ -432,7 +432,9 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user === userId && row.thread === threadId) yield row).first
   }
 
-  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], message: Message)(implicit session: RWSession): Unit = {
+  def markRead(userId: Id[User], threadId: Id[MessageThread], message: Message)(implicit session: RWSession): Unit = {
+    // Potentially updating lastMsgFromOther (and notificationUpdatedAt for consistency) b/c notification JSON may not have been persisted yet.
+    // Note that this method works properly even if the message is from this user. TODO: Rename lastMsgFromOther => lastMsgId ?
     Query(table).filter(row => (row.user===userId && row.thread===threadId) && (row.lastMsgFromOther.isNull || row.lastMsgFromOther <= message.id.get))
       .map(row => row.lastMsgFromOther ~ row.unread ~ row.notificationUpdatedAt ~ row.updatedAt)
       .update((message.id.get, false, message.createdAt, clock.now()))
@@ -456,8 +458,8 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user === userId && row.thread === threadId) yield row.unread ~ row.updatedAt).update((true, clock.now()))
+  def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean = {
+    (for (row <- table if row.user === userId && row.thread === threadId && !row.unread) yield row.unread ~ row.updatedAt).update((true, clock.now())) > 0
   }
 
   def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession) : Unit = {

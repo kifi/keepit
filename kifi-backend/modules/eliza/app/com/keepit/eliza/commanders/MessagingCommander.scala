@@ -733,7 +733,6 @@ class MessagingCommander @Inject() (
   }
 
   def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
-
     if (m.user.isEmpty) {
       val modifiedMessage = m.auxData match {
         case Some(auxData) =>
@@ -765,6 +764,36 @@ class MessagingCommander @Inject() (
       modifiedMessage
     } else {
       Promise.successful(m).future
+    }
+  }
+
+  def setRead(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
+    val (message: Message, thread: MessageThread) = db.readOnly { implicit session =>
+      val message = messageRepo.get(msgExtId)
+      (message, threadRepo.get(message.thread))
+    }
+    db.readWrite(attempts=2) { implicit session =>
+      userThreadRepo.markRead(userId, thread.id.get, message)
+    }
+    messagingAnalytics.clearedNotification(userId, message, thread, context)
+
+    val nUrl: String = thread.nUrl.getOrElse("")
+    notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, thread.externalId.id, message.createdAt, msgExtId.id))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
+  }
+
+  def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
+    val (message: Message, thread: MessageThread) = db.readOnly { implicit session =>
+      val message = messageRepo.get(msgExtId)
+      (message, threadRepo.get(message.thread))
+    }
+    val changed: Boolean = db.readWrite(attempts=2) { implicit session =>
+      userThreadRepo.markUnread(userId, thread.id.get)
+    }
+    if (changed) {
+      val nUrl: String = thread.nUrl.getOrElse("")
+      notificationRouter.sendToUser(userId, Json.arr("message_unread", nUrl, thread.externalId.id, message.createdAt, msgExtId.id))
+      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
     }
   }
 
@@ -970,32 +999,6 @@ class MessagingCommander @Inject() (
   }
 
   def connectedSockets: Int = notificationRouter.connectedSockets
-
-  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
-    val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
-    val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
-    val nUrl: String = thread.nUrl.getOrElse("")
-    if (message.from.isEmpty || message.from.get != userId) {
-      db.readWrite(attempts=2) { implicit session =>
-        userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message)
-      }
-
-      messagingAnalytics.clearedNotification(userId, message, thread, context)
-      notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
-      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
-    }
-  }
-
-  def setNotificationUnread(userId: Id[User], threadExtId: ExternalId[MessageThread]) : Unit = {
-    val thread = db.readOnly{ implicit session =>
-      threadRepo.get(threadExtId)
-    }
-    db.readWrite{ implicit session =>
-      userThreadRepo.markUnread(userId, thread.id.get)
-    }
-    notificationRouter.sendToUser(userId, Json.arr("set_notification_unread", threadExtId.id))
-    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
-  }
 
   def sendMessageAction(title: Option[String], text: String,
       userExtRecipients: Seq[ExternalId[User]],
