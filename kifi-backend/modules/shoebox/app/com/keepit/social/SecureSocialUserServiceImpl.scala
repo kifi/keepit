@@ -336,7 +336,6 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
 
   def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
     val sessionFromCookie = sessionFromAuthenticator(authenticator)
-    log.info(s"[save] authenticator=$authenticator newSession=$sessionFromCookie")
     val session = internSession(sessionFromCookie)
     authenticatorFromSession(session)
   }
@@ -345,7 +344,9 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     db.readOnly { implicit s => //from cache
       sessionRepo.getOpt(newSession.externalId)
     } getOrElse db.readWrite { implicit s =>
-      sessionRepo.save(newSession)
+      val sessionFromCookie = sessionRepo.save(newSession)
+      log.info(s"[save] newSession=$sessionFromCookie")
+      sessionFromCookie
     }
   }
 
