@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.index
 
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
@@ -11,7 +11,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
-import com.keepit.search.spellcheck.{SpellCorrector, SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
+import com.keepit.search.spellcheck.{SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
 import com.keepit.inject.AppScoped
 import java.io.File
 import com.keepit.common.logging.Logging
@@ -24,6 +24,9 @@ import org.apache.commons.io.FileUtils
 import com.keepit.search.article.ArticleIndexerPluginImpl
 import com.keepit.search.article.ArticleIndexerPlugin
 import com.keepit.search.article.ArticleIndexer
+import com.google.inject.ImplementedBy
+import com.google.inject.Inject
+import com.keepit.search.ArticleStore
 
 trait IndexModule extends ScalaModule with Logging {
 
