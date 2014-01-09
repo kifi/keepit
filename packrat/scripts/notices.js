@@ -164,7 +164,7 @@ panes.notices = function () {
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
-      var nPicsMax = 4;
+      var nPicsMax = notice.isSent ? 4 : 3;
       notice.picturedParticipants = nParticipants <= nPicsMax ?
         notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
         participants.slice(0, nPicsMax);
