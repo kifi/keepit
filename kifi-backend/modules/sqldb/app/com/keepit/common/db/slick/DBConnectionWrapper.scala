@@ -19,7 +19,7 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock) extends
     conn.prepareCall(sql)
   }
   def nativeSQL(sql: String): String = {
-    dbLog.info(s"t:${clock.now}\ttype:USE_PRP_STMT\tsql:$sql")
+    dbLog.info(s"t:${clock.now}\ttype:NATIVE_SQL\tsql:$sql")
     conn.nativeSQL(sql)
   }
   def setAutoCommit(autoCommit: Boolean): Unit = conn.setAutoCommit(autoCommit)
