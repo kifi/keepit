@@ -3,7 +3,7 @@ package com.keepit.controllers.search
 import com.keepit.search.index.ArticleIndexer
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.search.query.SemanticContextAnalyzer
+import com.keepit.search.semantic.SemanticContextAnalyzer
 import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.index.Term
 import play.api.mvc.Action

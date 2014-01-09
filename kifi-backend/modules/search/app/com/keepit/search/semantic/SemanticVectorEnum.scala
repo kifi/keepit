@@ -1,10 +1,10 @@
-package com.keepit.search
+package com.keepit.search.semantic
 
 import com.keepit.common.logging.Logging
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.util.BytesRef
-import org.apache.lucene.util.Bits
+import com.keepit.search.SemanticVector
 
 class SemanticVectorEnum(inner: DocsAndPositionsEnum) extends DocIdSetIterator with Logging {
 

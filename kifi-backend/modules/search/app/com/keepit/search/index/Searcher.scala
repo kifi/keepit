@@ -3,7 +3,7 @@ package com.keepit.search.index
 import com.keepit.search.SemanticVector
 import com.keepit.search.SemanticVector.Sketch
 import com.keepit.search.SemanticVectorComposer
-import com.keepit.search.SemanticVectorEnum
+import com.keepit.search.semantic.SemanticVectorEnum
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
