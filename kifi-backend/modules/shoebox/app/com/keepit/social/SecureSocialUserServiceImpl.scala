@@ -30,6 +30,7 @@ import com.keepit.commanders.UserCommander
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.abook.EmailParserUtils
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
