@@ -151,9 +151,6 @@ class InviteCommander @Inject() (
                 heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, invite.createdAt))
               }
             }
-            if (invite.senderUserId.isEmpty) {
-              notifyAdminsAboutNewSignupRequest(userId, su.fullName)
-            }
           }
         }
       }
@@ -181,19 +178,6 @@ class InviteCommander @Inject() (
 
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
-  }
-
-  private def notifyAdminsAboutNewSignupRequest(userId: Id[User], name: String)(implicit session: RWSession) = {
-    postOffice.sendMail(ElectronicMail(
-      senderUserId = None,
-      from = EmailAddresses.NOTIFICATIONS,
-      fromName = Some("Invitations"),
-      to = List(EmailAddresses.INVITATION),
-      subject = s"""${name} wants to be let in!""",
-      htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${userId}">${name}</a> wants to be let in!\n<br/>
-                           Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
-      category = PostOffice.Categories.System.ADMIN))
-
   }
 
   def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
