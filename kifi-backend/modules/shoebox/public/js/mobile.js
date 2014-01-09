@@ -58,9 +58,24 @@
 			data[field.name] = field.value;
 		});
 		$.post('/waitlist', data)
-		.done(function (extId) {
-			$('body').addClass('submitted');
+		.complete(function (extId) {
+			$('.kifi-added-email').text(data.email);
+			$('html').addClass('submitted');
 			$('input[name=extId]').val(1);
+		});
+	});
+
+	$('.kifi-change-email').on('click', function (e) {
+		e.preventDefault();
+		$('html').removeClass('submitted');
+	});
+
+	var THRESHOLD = 50;
+
+	$(win).scroll(function () {
+		win.setTimeout(function () {
+			var scrolling = $(this).scrollTop() > THRESHOLD;
+			$('html').toggleClass('scroll', scrolling);
 		});
 	});
 	

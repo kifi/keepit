@@ -24,10 +24,23 @@
 	font-weight: @phfw;
 }
 
+body {
+	padding-top: 60px;
+}
+
 .kifi-header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
 	font-size: 0;
 	padding: 13.5px 28px;
 	background-color: white;
+	z-index: 10;
+
+	html.scroll & {
+		.box-shadow(0 0 3px 0 rgba(0,0,0,0.15));
+	}
 }
 
 .clear {
@@ -205,6 +218,55 @@
 	@fs: 30px / 2;
 	.margin-top(16px, @fs);
 	border-color: #85b34b;
+}
+
+.kifi-add-form,
+.kifi-add-form-2 {
+	html.submitted & {
+		display: none;
+	}
+}
+
+.kifi-added,
+.kifi-added-2 {
+	display: none;
+	margin: 0 auto;
+	text-align: right;
+
+	html.submitted & {
+		display: inline-block;
+	}
+}
+
+.kifi-added {
+	margin-top: 13px;
+	font-size: 26px / 2;
+
+	h1 {
+		font-size: 56px / 2;
+		line-height: 1;
+		color: #93c059;
+	}
+
+	.kifi-added-email {
+		font-weight: 400;
+		line-height: normal;
+		margin-top: 5px;
+		color: #c4c4c4;
+	}
+
+	.kifi-change-email {
+		display: inline-block;
+		font-weight: 400;
+		line-height: normal;
+		margin-top: 6px;
+		color: #93c059;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
 }
 
 .kifi-good-news {

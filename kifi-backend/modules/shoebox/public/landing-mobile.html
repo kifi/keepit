@@ -46,7 +46,7 @@
 					</div>
 					<div class="kifi-date-left">days left</div>
 				</div>
-				<form method="POST" action="/waitlist">
+				<form class="kifi-add-form" method="POST" action="/waitlist">
 					<input type="hidden" name="feature" value="mobile_app">
 					<input type="hidden" name="extId" value="">
 					<div class="kifi-waiting-list">
@@ -57,6 +57,11 @@
 					</div>
 					<button class="hidden" type="submit"></button>
 				</form>
+				<div class="kifi-added">
+					<h1>You are on the list</h1>
+					<div class="kifi-added-email"></div>
+					<a class="kifi-change-email" href="javascript:">Change email</a>
+				</div>
 				<span class="kifi-arrow-down"><span class="kifi-arrow-cover"></span></span>
 			</div>
 			<div class="kifi-good-news">
@@ -69,7 +74,8 @@
 				<h2>Search like normal<br>
 				Find like never before</h1>
 				<div class="kifi-watch-bg">
-					<a href="javascript:" class="kifi-play"></a>
+					<a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still kifi-play" data-track-action="playVideo">
+					</a>
 				</div>
 			</div>
 			<div class="kifi-desktop">
@@ -78,7 +84,7 @@
 					Send me instructions<br>
 					to get kifi on my desktop
 				</div>
-				<form method="POST" action="/waitlist">
+				<form class="kifi-add-form-2" method="POST" action="/waitlist">
 					<input type="hidden" name="feature" value="mobile_app">
 					<input type="hidden" name="extId" value="">
 					<div class="kifi-waiting-input-box">
@@ -86,6 +92,11 @@
 					</div>
 					<button type="submit" class="kifi-desktop-button">Send Instructions</button>
 				</form>
+				<div class="kifi-added-2">
+					<h1>Instructions sent to:</h1>
+					<div class="kifi-added-email"></div>
+					<a class="kifi-change-email" href="javascript:">Send to another email</a>
+				</div>
 			</div>
 		</div>
 
