@@ -38,6 +38,7 @@ import scala.concurrent.duration._
 import scala.concurrent.future
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
+import com.keepit.search.semantic.SemanticVariance
 
 
 class MainSearcher(
