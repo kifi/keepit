@@ -1,6 +1,6 @@
 package com.keepit.common.db.slick
 
-import java.sql.{ PreparedStatement, Connection }
+import java.sql.{PreparedStatement, Connection}
 import scala.collection.mutable
 import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.concurrent._
@@ -73,17 +73,25 @@ object DBSession {
     }
 
     private val statementCache = new mutable.HashMap[String, PreparedStatement]
-    def getPreparedStatement(statement: String): PreparedStatement =
-      statementCache.getOrElseUpdate(statement, this.conn.prepareStatement(statement))
+    def getPreparedStatement(statement: String): PreparedStatement = {
+      if(true) throw new Exception("meeeeee")
+      val preparedStatement = statementCache.getOrElseUpdate(statement, {
+        val newPreparedStatement = this.conn.prepareStatement(statement)
+        println(s"t:${clock.now}\ttype:NEW_PRP_STMT\tcacheSize:${statementCache.size}\tVALUE:$statement")
+        newPreparedStatement
+      })
+      println(s"t:${clock.now}\ttype:USE_PRP_STMT\tVALUE:$statement")
+      preparedStatement
+    }
 
     override def forParameters(rsType: ResultSetType = resultSetType, rsConcurrency: ResultSetConcurrency = resultSetConcurrency,
-      rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
+      rsHoldability: ResultSetHoldability = resultSetHoldability) = _session.forParameters(rsType, rsConcurrency, rsHoldability)
   }
 
   abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
   class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
   class RWSession(rwSession: => Session) extends RSession("RW", Database.Master, rwSession) //RWSession is always reading from master
 
-  implicit def roToSession(roSession: ROSession): Session = roSession.session
-  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
+  implicit def roToSession(roSession: ROSession): Session = roSession
+  implicit def rwToSession(rwSession: RWSession): Session = rwSession
 }

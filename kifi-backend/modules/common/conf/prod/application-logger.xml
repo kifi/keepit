@@ -14,7 +14,7 @@
 
   <!-- Disable if you want to see the access log in the console -->
   <logger name="com.keepit.access" level="OFF"/>
-  <logger name="com.keepit.db" level="OFF"/>
+  <logger name="com.keepit.db" level="DEBUG"/>
   <logger name="com.keepit.cache" level="OFF"/>
 
   <root level="ERROR">
