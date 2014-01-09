@@ -317,7 +317,9 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
     log.info(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
-    val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }                           // another dependency on socialUserInfo
+    val userId = db.readOnly {
+      implicit s => socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
+    }
     UserSession(
       userId = userId,
       externalId = ExternalId[UserSession](authenticator.id),
@@ -335,7 +337,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     expirationDate = session.expires
   )
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save authenticator ${authenticator.identityId.userId}") {
     val sessionFromCookie = sessionFromAuthenticator(authenticator)
     val session = internSession(sessionFromCookie)
     authenticatorFromSession(session)
