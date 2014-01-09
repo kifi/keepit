@@ -19,6 +19,10 @@ import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.search.result.ShardSearchResult
+import com.keepit.search.result.ResultDecorator
+import com.keepit.search.result.DecoratedResult
+import com.keepit.search.result.ResultUtil
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {

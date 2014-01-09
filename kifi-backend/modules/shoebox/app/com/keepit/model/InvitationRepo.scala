@@ -14,8 +14,9 @@ trait InvitationRepo extends Repo[Invitation] with ExternalIdColumnFunction[Invi
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
                      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
-  def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation]
+  def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
   def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
+  def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
 }
 
 @Singleton
@@ -79,13 +80,16 @@ class InvitationRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
     (for(b <- table if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
 
-  def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation] = {
-    (for(b <- table if b.recipientSocialUserId === socialUserInfoId) yield b).take(1).firstOption
+  def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation] = {
+    (for(b <- table if b.recipientSocialUserId === socialUserInfoId) yield b).list
   }
 
   def getBySenderIdAndRecipientEContactId(senderId: Id[User], econtactId: Id[EContact])(implicit session: RSession): Option[Invitation] = {
     (for(b <- table if b.senderUserId === senderId && b.recipientEContactId === econtactId) yield b).firstOption
   }
 
+  def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation] = {
+    (for(b <- table if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
+  }
 }
 

@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net._
 
 import play.api.Mode._
+import play.api.libs.json.Json
 
 import akka.actor._
 
@@ -23,7 +24,8 @@ object AirbrakeDeploymentNotice
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
     airbrakeSender: AirbrakeSender,
     healthcheck: HealthcheckPlugin,
-    formatter: AirbrakeFormatter)
+    formatter: AirbrakeFormatter,
+    pagerDutySender: PagerDutySender)
   extends AlertingActor with Logging {
 
   def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeErrorNotice(error(reason, message), true)
@@ -35,12 +37,14 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
       airbrakeSender.sendDeployment(formatter.deploymentMessage)
     case AirbrakeErrorNotice(error, selfError) =>
       try {
+        if (error.panic) pagerDutySender.openIncident(error.message.getOrElse(error.exception.toString), error.exception, Some(error.signature.value))
         val xml = formatter.format(error)
         airbrakeSender.sendError(xml)
         println(xml)
       } catch {
         case e: Throwable =>
           log.error(s"can't format or send error $error")
+          pagerDutySender.openIncident("Airbrake Error!", e)
           if (!selfError) throw e
           else {
             System.err.println(s"Airbrake Notifier exception: ${e.toString}")
@@ -95,12 +99,39 @@ class AirbrakeSender @Inject() (
     }
 }
 
+class PagerDutySender @Inject() (httpClient: HttpClient) {
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+  def openIncident(description: String, exception: Throwable, signature: Option[String]=None): Unit = {
+    val incidentKey : String = signature.getOrElse(description.take(1000))
+    val payload = Json.obj(
+      "service_key"  -> "7785f2cc14ec44e49ae3bb8186400cc7",
+      "event_type"   -> "trigger",
+      "description"  -> description.take(1000),
+      "incident_key" -> incidentKey,
+      "details"      -> Json.obj(
+        "exceptionInfo" -> exception.getMessage(),
+        "moreInfo"      -> "See Airbrake/Healthcheck for more."
+      )
+    )
+    httpClient.postFuture(DirectUrl("https://events.pagerduty.com/generic/2010-04-15/create_event.json"), payload)
+  }
+
+
+}
+
 trait AirbrakeNotifier {
   def reportDeployment(): Unit
+
   def notify(error: AirbrakeError): AirbrakeError
   def notify(errorException: Throwable): AirbrakeError
   def notify(errorMessage: String, errorException: Throwable): AirbrakeError
   def notify(errorMessage: String): AirbrakeError
+
+  def panic(error: AirbrakeError): AirbrakeError
+  def panic(errorException: Throwable): AirbrakeError
+  def panic(errorMessage: String, errorException: Throwable): AirbrakeError
+  def panic(errorMessage: String): AirbrakeError
 }
 
 // apiKey is per service type (showbox, search etc)
@@ -120,5 +151,16 @@ class AirbrakeNotifierImpl (
     log.error(error.toString())
     error
   }
+
+  def panic(errorException: Throwable): AirbrakeError = panic(AirbrakeError(exception = errorException))
+
+  def panic(errorMessage: String, errorException: Throwable): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException))
+
+  def panic(errorMessage: String): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage)))
+
+  def panic(error: AirbrakeError): AirbrakeError = {
+    notify(error.copy(panic=true))
+  }
+
 }
 

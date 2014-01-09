@@ -128,7 +128,7 @@ var toaster = (function () {
     hide();
     api.port.emit(
       'send_message',
-      withUrls({title: document.title, text: text, recipients: recipients.map(idOf)}),
+      withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf)}),
       function (resp) {
         log('[sendMessage] resp:', resp)();
         pane.show({

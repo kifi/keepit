@@ -1,16 +1,23 @@
 package com.keepit.search.query
 
-import org.specs2.mutable.Specification
-import com.keepit.common.db.Id
-import org.apache.lucene.index.IndexWriterConfig
-import com.keepit.search.index._
 import java.io.StringReader
-import com.keepit.common.db.SequenceNumber
-import org.apache.lucene.util.Version
-import org.apache.lucene.search.TermQuery
+
+import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.util.Version
+import org.specs2.mutable.Specification
+
+import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
+import com.keepit.search.PersonalizedSearcher
 import com.keepit.search.SemanticVectorBuilder
-import scala.Some
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.IndexDirectory
+import com.keepit.search.index.Indexable
+import com.keepit.search.index.Indexer
+import com.keepit.search.index.VolatileIndexDirectoryImpl
+
 
 class TextQueryTest extends Specification {
 

@@ -181,6 +181,8 @@ GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteContro
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 
+POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
+
 ##########################################
 # Web API
 ##########################################

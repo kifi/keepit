@@ -8,6 +8,7 @@
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/formatting.js
+// @require scripts/title_from_url.js
 // @require scripts/prevent_ancestor_scroll.js
 
 // There are several kinds of events that the notifications pane must handle:
@@ -154,7 +155,7 @@ panes.notices = function () {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
-      notice.title = notice.title || notice.url.replace(/^https?:\/\//, '');
+      notice.title = notice.title || formatTitleFromUrl(notice.url);
       var participants = notice.participants;
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
@@ -163,7 +164,7 @@ panes.notices = function () {
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
-      var nPicsMax = 4;
+      var nPicsMax = notice.isSent ? 4 : 3;
       notice.picturedParticipants = nParticipants <= nPicsMax ?
         notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
         participants.slice(0, nPicsMax);

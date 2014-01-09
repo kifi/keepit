@@ -4,6 +4,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/mustache.js
 // @require scripts/formatting.js
+// @require scripts/title_from_url.js
 // @require scripts/render.js
 // @require scripts/html/notify_box.js
 
@@ -23,7 +24,7 @@ var notifier = function () {
           title: o.author.firstName + ' ' + o.author.lastName,
           subtitle: 'Sent you a new Kifi Message',
           contentHtml: o.text,
-          link: o.title,
+          link: o.title || formatTitleFromUrl(o.url),
           image: cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName,
           sticky: false,
           showForMs: 60000,

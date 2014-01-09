@@ -28,7 +28,7 @@ class AutogenReaperPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
-      val (initDelay, freq) = if (Play.isDev) (1 minute, 1 minute) else (5 minutes, 1 hour)
+      val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 1 hour)
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
       scheduleTask(actor.system, initDelay, freq, actor.ref, Reap)
     }
@@ -68,6 +68,9 @@ private[integration] class AutogenAcctReaperActor @Inject() (
             emailAddressRepo.save(emailAddr.withState(EmailAddressStates.INACTIVE))
           }
           // skip UserCred/UserExp for now; delete later
+        }
+        userExperimentRepo.getByType(ExperimentType.AUTO_GEN) foreach { exp => // mark as inactive for now; delete later
+          userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
         }
       }
     case m => throw new UnsupportedActorMessage(m)

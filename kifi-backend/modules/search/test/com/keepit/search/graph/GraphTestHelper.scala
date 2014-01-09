@@ -106,8 +106,8 @@ trait GraphTestHelper extends ApplicationInjector {
     fakeShoeboxServiceClient.getCollection(collection.id.get)
   }
 
-  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphIndexer = {
+    val bookmarkStore = new BookmarkStore(bookmarkStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 

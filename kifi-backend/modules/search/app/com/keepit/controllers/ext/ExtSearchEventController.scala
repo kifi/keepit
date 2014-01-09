@@ -31,6 +31,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.search.tracker.BrowsingHistoryTracker
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
+import com.keepit.search.result._
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
