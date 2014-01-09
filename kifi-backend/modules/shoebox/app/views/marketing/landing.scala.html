@@ -10,6 +10,7 @@
         <div class="kifi-video-play-box">
           <a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still" data-track-action="playVideo">
             <div class="kifi-video-play"></div>
+            <div class="kifi-video-play-hover"></div>
           </a>
           <div class="kifi-video-caption">Watch a quick introduction to kifi</div>
           <div class="kifi-video-play-shadow"></div>
@@ -49,10 +50,9 @@
     </div>
     <div class="kifi-two-more-things-bg">
       <div id="two-more-things" class="kifi-two-more-things">
-        <h2>Oh, one more thing…</h2>
         <div class="kifi-more-column kifi-kifi-com">
           <h2>Organize your keeps and
-            friends list on kifi.com</h2>
+            friends list on <span class="kifi-fake-link">kifi.com</span></h2>
           <img class="kifi-image-laptop" alt="kifi.com" src="/assets/images/flatmacBook.png">
           <h3>Search, find, tag and preview your keeps.
             You can also invite and manage your
@@ -62,15 +62,10 @@
     </div>
   </div>
 }
+@earlyScripts = {
+  <script type="text/javascript" src="//fast.wistia.com/assets/external/popover-v1.js"></script>
+}
 @scripts = {
   <script type="text/javascript" src="/assets/js/header.js"></script>
-  <script>
-  !function(d, t) {
-    var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
-    g.async = true;
-    g.src = '//fast.wistia.com/assets/external/popover-v1.js';
-    s.parentNode.insertBefore(g, s);
-  }(document, 'script');
-  </script>
 }
-@views.html.marketing.helper.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", isLoggedIn = false)
+@views.html.marketing.helper.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", earlyScripts = earlyScripts, isLoggedIn = false)

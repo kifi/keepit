@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
-import com.keepit.search.MainQueryParserFactory
+import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.search.phrasedetector._
 import com.keepit.test._
 import com.keepit.inject._

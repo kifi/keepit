@@ -134,6 +134,7 @@ module.exports = function (grunt) {
 					'css/landing.css': 'css/landing.less',
 					'css/about.css': 'css/about.less',
 					'css/privacy.css': 'css/privacy.less',
+					'css/auth.css': 'css/auth.less',
 					'css/auth-footer.css': 'css/auth-footer.less',
 					'css/onboarding.css': 'css/onboarding.less',
 					'css/landing-mobile.css': 'css/landing-mobile.less'

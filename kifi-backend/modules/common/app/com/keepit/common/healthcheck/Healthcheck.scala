@@ -210,7 +210,7 @@ class HealthcheckPluginImpl @Inject() (
     email
   }
 
-  val sleep = sys.props.getOrElse("healthcheck.startup.sleep", "30").toInt // seconds
+  val sleep = sys.props.getOrElse("healthcheck.startup.sleep", "45").toInt // seconds
 
   override def warmUp(benchmarkRunner: BenchmarkRunner) : Unit = {
     log.info(s"going to sleep for $sleep seconds to make sure all plugins are ready to go")

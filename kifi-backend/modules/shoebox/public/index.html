@@ -487,6 +487,7 @@
 									<button class="more-invites">I need more invites</button>
 								</div>
 							</div>
+
 							<div class="dialog invite-message-dialog" style="display:none">
 								<form method="POST" action="/invite" class="dialog-content" data-template>
 									<div class="dialog-header">Your Kifi invite to {{label}}</div>
@@ -496,16 +497,18 @@
 									<textarea class="invite-message" name="message">Hi{% if label %} {{label | replace ' .*', '' }}{% endif %},
 
 Please accept my invitation to kifi.
-
+{% if longForm %}
 What is kifi and why should I join?
 Kifi (short for keep it find it) allows you to easily keep and tag anything you find online - an article, video, picture, email, anything - then quickly find it on top of your favorite search engine results, together with relevant pages that your friends kept, too.
 
 Kifi also lets you message your friends about what you keep and find alongside any webpage, to get their opinion or gain from their expertise.
+{% endif %}
 </textarea>
 									<p>An invitation link will be attached to this message.</p>
 									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
 								</form>
 							</div>
+
 							<div class="invite-friends" data-href="friends/invite">
 								<div class="antiscroll-inner">
 									<ul>
@@ -767,7 +770,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 				</ul>
 			</div>
 			<a href="javascript:" class="cancel-import">Cancel</a>
-			<button class="do-import"><strong>Yes</strong> - Import</button>
+			<button class="do-import" tabindex="-1"><strong>Yes</strong> - Import</button>
 		</div>
 		<div class="dialog-content import-step-2" style="display:none">
 			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>

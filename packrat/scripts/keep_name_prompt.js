@@ -94,8 +94,9 @@ var promptForKeepName = (function () {
   function updateProgress(frac) {
     log('[updateProgress]', frac)();
     this.style.width = Math.min(frac * 100, 100) + '%';
-    if (frac < 1) {
-      progressTimeout = setTimeout(updateProgress.bind(this, frac + .06 * (.9 - frac)), 10);
+    var fracLeft = .9 - frac;
+    if (fracLeft > .0001) {
+      progressTimeout = setTimeout(updateProgress.bind(this, frac + .06 * fracLeft), 10);
     }
   }
 }());

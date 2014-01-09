@@ -21,7 +21,7 @@ package object performance {
     }
   }
 
-  def time[A](tag: String)(f: => A): A = {
+  def timing[A](tag: String)(f: => A): A = {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()

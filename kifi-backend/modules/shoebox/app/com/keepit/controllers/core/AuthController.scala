@@ -23,6 +23,7 @@ import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.net.UserAgent
+import com.keepit.common.performance._
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -56,7 +57,8 @@ class AuthController @Inject() (
 
   def loginSocial(provider: String) = ProviderController.authenticate(provider)
   def logInWithUserPass(link: String) = Action { implicit request =>
-    ProviderController.authenticate("userpass")(request) match {
+    val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
+    authRes match {
       case res: SimpleResult[_] if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
@@ -106,7 +108,8 @@ class AuthController @Inject() (
   })
 
   def signup(provider: String) = Action { implicit request =>
-    ProviderController.authenticate(provider)(request) match {
+    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider)(request) }
+    authRes match {
       case res: SimpleResult[_] =>
         authHelper.authHandler(request, res) { (_, sess:Session) =>
           // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?

@@ -21,6 +21,7 @@ import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
 import com.keepit.search.graph.CollectionIndexer
 import com.keepit.search.user.UserIndexer
+import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient}
 import com.keepit.test._
 import akka.actor.ActorSystem

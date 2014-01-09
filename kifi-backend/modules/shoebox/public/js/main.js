@@ -2471,12 +2471,12 @@ $(function () {
 					name = match[1];
 				}
 			}
-			openInviteDialog(fullSocialId, name);
+			openInviteDialog(fullSocialId, name, /^linkedin/.test(fullSocialId) );
 		}
 	});
 
-	function openInviteDialog(fullSocialId, name) {
-		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
+	function openInviteDialog(fullSocialId, name, longForm) {
+		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm || false});
 		$inviteMessageDialog.dialog('show');
 	}
 
@@ -4275,6 +4275,8 @@ $(function () {
 		window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
 		var $bookmarkImportDialog = $('.import-dialog').remove().show();
+
+		//if (KF.dev) { showBookmarkImportDialog({ data: { bookmarkCount: 2 } }); }
 
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
