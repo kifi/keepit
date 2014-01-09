@@ -1,9 +1,9 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
 import org.specs2.mutable._
 import scala.util.Random
-import java.util.Arrays
 import com.keepit.search.tracker.MultiHashFilterBuilder
+import com.keepit.search.MultiHashFilter
 
 class MultiHashFilterBuilderTest extends Specification {
 
