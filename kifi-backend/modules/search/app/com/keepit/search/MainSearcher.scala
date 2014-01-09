@@ -43,6 +43,10 @@ import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.article.ArticleVisibility
+import com.keepit.search.result.ShardSearchResult
+import com.keepit.search.result.DetailedSearchHit
+import com.keepit.search.result.BasicSearchHit
+import com.keepit.search.result.FriendStats
 
 
 class MainSearcher(
