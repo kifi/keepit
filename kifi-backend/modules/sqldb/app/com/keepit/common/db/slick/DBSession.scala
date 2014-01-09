@@ -31,7 +31,7 @@ object DBSession {
     }
 
     private val dbLog = Logger("com.keepit.db")
-    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock)
+    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave)
     def metaData = session.metaData
     def capabilities = session.capabilities
     override def resultSetType = session.resultSetType
@@ -41,7 +41,7 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\ttype:SESSION\tduration:${time}\tname:$name\ttype:$masterSlave")
+      dbLog.info(s"t:${clock.now}\ttype:SESSION\tduration:${time}\tname:$name\tdb:$masterSlave")
     }
 
     def rollback() { doRollback = true }
