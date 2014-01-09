@@ -10,7 +10,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
-import com.keepit.search.SemanticVectorBuilder
+import com.keepit.search.semantic.SemanticVectorBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig

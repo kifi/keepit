@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.search.result.KifiSearchHit
 
 case class SearchEngine(name: String) {
   override def toString = name

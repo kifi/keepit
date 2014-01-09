@@ -12,6 +12,7 @@ import org.apache.lucene.index.Term
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.search.Searcher
 import play.modules.statsd.api.Statsd
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.store.IOContext

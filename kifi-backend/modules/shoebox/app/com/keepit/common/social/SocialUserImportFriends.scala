@@ -34,25 +34,35 @@ class SocialUserImportFriends @Inject() (
     deduped
   }
 
-  def importFriends(friendsWithRawJson: Seq[(SocialUserInfo, JsValue)]): Seq[SocialUserRawInfo] = {
+  def importFriends(socialUserInfo: SocialUserInfo, friendsWithRawJson: Seq[(SocialUserInfo, JsValue)]): Seq[SocialUserRawInfo] = {
     val socialUserInfosNeedToUpdate: Seq[SocialUserInfoWithJsValue] = db.readOnly { implicit s =>
       friendsWithRawJson flatMap { case (f, json) => getIfUpdateNeeded(f) map { u => SocialUserInfoWithJsValue(u, json) } }
     }
     val dedupedToPersist = dedup(socialUserInfosNeedToUpdate)
-    val socialUserInfos: Seq[SocialUserInfoWithJsValue] = dedupedToPersist.grouped(10).toSeq.flatMap { friendsWithJson =>
+    val groupCount = math.max(10, math.min(500, socialUserInfosNeedToUpdate.length / 5))
+    log.info(s"Importing ${socialUserInfo.userId} (${socialUserInfo.fullName})'s friends. Using batch size of $groupCount")
+    val socialUserInfos = dedupedToPersist.grouped(groupCount).toSeq.flatMap { friendsWithJson =>
       try {
         db.readWrite { implicit s =>
-          friendsWithJson.map { case u => u.copy(userInfo = repo.save(u.userInfo)) }
+          friendsWithJson.map { case u =>
+            try {
+              Some(u.copy(userInfo = repo.save(u.userInfo)))
+            } catch {
+              case e: Exception =>
+                airbrake.notify(s"Error persisting single social user info for userId ${socialUserInfo.userId} (${socialUserInfo.fullName})", e)
+                None
+            }
+          }
         }
       } catch {
         case e: Exception =>
-          airbrake.notify(s"Error persisting a social user info. Killed a batch of ${friendsWithJson.size} saves out of ${dedupedToPersist.size} to save. " +
+          airbrake.notify(s"Error persisting a social user info for userId ${socialUserInfo.userId} (${socialUserInfo.fullName}). Killed a batch of ${friendsWithJson.size} saves out of ${dedupedToPersist.size} to save. " +
             s"Overall in this batch are ${friendsWithRawJson.size} friendsWithRawJson", e)
           Nil
       }
-    }
+    }.flatten
 
-    val socialUserRawInfos = socialUserInfos map { u => createSocialUserRawInfo(u.userInfo, u.json) }
+    val socialUserRawInfos = socialUserInfos.map { u => createSocialUserRawInfo(u.userInfo, u.json) }
 
     socialUserRawInfos foreach { info =>
       log.info(s"Adding user ${info.fullName} (${info.socialUserInfoId.get}) to S3")

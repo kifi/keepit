@@ -483,6 +483,10 @@ api.port.on({
     session.prefs.showKeeperIntro = show;
     ajax('POST', '/ext/pref/showKeeperIntro?show=' + show);
   },
+  set_show_search_intro: function(show) {
+    session.prefs.showSearchIntro = show;
+    ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
+  },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
   },

@@ -1,6 +1,6 @@
 package com.keepit.common.db.slick
 
-import java.sql.{ PreparedStatement, Connection }
+import java.sql._
 import scala.collection.mutable
 import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.concurrent._
@@ -8,6 +8,7 @@ import scala.util.Try
 
 import play.api.Logger
 import com.keepit.common.time._
+import scala.Some
 
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
@@ -29,19 +30,18 @@ object DBSession {
       transaction.get.future
     }
 
-    def conn: Connection = session.conn
+    private val dbLog = Logger("com.keepit.db")
+    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave)
     def metaData = session.metaData
     def capabilities = session.capabilities
     override def resultSetType = session.resultSetType
     override def resultSetConcurrency = session.resultSetConcurrency
     override def resultSetHoldability = session.resultSetHoldability
 
-    private val dbLog = Logger("com.keepit.db")
-
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\ttype:SESSION\tduration:${time}\tname:$name\ttype:$masterSlave")
+      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
     }
 
     def rollback() { doRollback = true }
@@ -73,17 +73,24 @@ object DBSession {
     }
 
     private val statementCache = new mutable.HashMap[String, PreparedStatement]
-    def getPreparedStatement(statement: String): PreparedStatement =
-      statementCache.getOrElseUpdate(statement, this.conn.prepareStatement(statement))
+    def getPreparedStatement(statement: String): PreparedStatement = {
+      val preparedStatement = statementCache.getOrElseUpdate(statement, {
+        val newPreparedStatement = this.conn.prepareStatement(statement)
+        newPreparedStatement
+      })
+      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tstatement:$statement")
+      preparedStatement
+    }
 
     override def forParameters(rsType: ResultSetType = resultSetType, rsConcurrency: ResultSetConcurrency = resultSetConcurrency,
-      rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
+      rsHoldability: ResultSetHoldability = resultSetHoldability) =
+        _session.forParameters(rsType, rsConcurrency, rsHoldability)
   }
 
   abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
   class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
   class RWSession(rwSession: => Session) extends RSession("RW", Database.Master, rwSession) //RWSession is always reading from master
 
-  implicit def roToSession(roSession: ROSession): Session = roSession.session
-  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
+  implicit def roToSession(roSession: ROSession): Session = roSession
+  implicit def rwToSession(rwSession: RWSession): Session = rwSession
 }

@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.result
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
@@ -6,6 +6,8 @@ import com.keepit.model.User
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.IdMapper
 import play.api.libs.json._
+import scala.math.BigDecimal.double2bigDecimal
+import scala.math.BigDecimal.long2bigDecimal
 
 object FriendStats extends Logging {
   def apply(idSet: Set[Id[User]]) = {

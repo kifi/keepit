@@ -17,6 +17,7 @@ import scala.util.Try
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
 import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient}
+import com.google.inject.Singleton
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -72,7 +73,7 @@ private[social] class SocialGraphActor @Inject() (
             socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
             val friends = rawInfo.jsons flatMap graph.extractFriends
-            socialUserImportFriends.importFriends(friends)
+            socialUserImportFriends.importFriends(socialUserInfo, friends)
             val connections = socialUserCreateConnections.createConnections(
               socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
@@ -110,6 +111,7 @@ private[social] class SocialGraphActor @Inject() (
   }
 }
 
+@Singleton
 class SocialGraphPluginImpl @Inject() (
   graphs: Set[SocialGraph],
   actor: ActorInstance[SocialGraphActor],

@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search._
-import com.keepit.search.index.{MutableHit, HitQueue}
+import com.keepit.search.{MutableHit, SearcherHitQueue}
 import org.apache.commons.math3.linear.{EigenDecomposition, Array2DRowRealMatrix}
 import play.api.mvc.Action
 import scala.collection.mutable.ArrayBuffer
@@ -26,6 +26,7 @@ import com.keepit.search.LangDetector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.semantic.SemanticVector
 import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult

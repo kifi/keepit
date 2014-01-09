@@ -9,7 +9,7 @@ import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachedIndex
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.IdMapper
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil

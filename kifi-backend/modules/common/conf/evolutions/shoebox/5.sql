@@ -10,16 +10,16 @@ CREATE TABLE social_user_info (
 
     user_id bigint(20),
     full_name varchar(512) NOT NULL,
-    social_id varchar(32) NOT NULL,
+    social_id varchar(120) NOT NULL,
     network_type varchar(32) NOT NULL,
     credentials varchar(2048),
-    
+
     KEY (social_id, network_type),
     KEY (user_id),
     PRIMARY KEY (id),
-    
-    CONSTRAINT social_user_info_f_user FOREIGN KEY (user_id) REFERENCES user(id), 
-    CONSTRAINT social_user_info_u_social_id_natwork_type UNIQUE KEY (social_id, network_type) 
+
+    CONSTRAINT social_user_info_f_user FOREIGN KEY (user_id) REFERENCES user(id),
+    CONSTRAINT social_user_info_u_social_id_natwork_type UNIQUE KEY (social_id, network_type)
 );
 
 alter table user

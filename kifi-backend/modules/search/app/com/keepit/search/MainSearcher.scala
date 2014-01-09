@@ -16,13 +16,12 @@ import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
-import com.keepit.search.index.Searcher
-import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
 import com.keepit.search.query.parser.{MainQueryParser, MainQueryParserFactory}
+import com.keepit.search.semantic.SemanticVector
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
@@ -43,6 +42,10 @@ import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.article.ArticleVisibility
+import com.keepit.search.result.ShardSearchResult
+import com.keepit.search.result.DetailedSearchHit
+import com.keepit.search.result.BasicSearchHit
+import com.keepit.search.result.FriendStats
 
 
 class MainSearcher(
