@@ -27,7 +27,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   //used to identify instance of applciation. used to debug intest mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
-  println(s"########## starting FortyTwoGlobal $globalId")
+  log.debug(s"########## starting FortyTwoGlobal $globalId")
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)

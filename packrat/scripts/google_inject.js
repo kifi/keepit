@@ -158,8 +158,8 @@ if (searchUrlRe.test(document.URL)) !function() {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.show && resp.hits.length && (!inDoc || !(tGoogleResultsShown >= tQuery)) || newFilter);
-      var showPreview = Boolean(showAny && !newFilter);
+      var showPreview = Boolean(resp.show && resp.hits.length && !(inDoc && tGoogleResultsShown >= tQuery));
+      var showAny = Boolean(showPreview || newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit, resp);
 
@@ -199,14 +199,25 @@ if (searchUrlRe.test(document.URL)) !function() {
       } else {
         $res.data('onFirstShow', onFirstShow);
       }
-
       function onFirstShow() {
         resp.expanded = true;
         if (!resp.nextHits) {
           prefetchMore();
         }
       }
+
+      if (showPreview && isFirst && resp.session.prefs.showSearchIntro && document.hasFocus()) {
+        setTimeout(api.require.bind(api, 'scripts/search_intro.js', function () {
+          if (tQuery === t1) {
+            searchIntro.show($res);
+          }
+        }), 2000);
+      }
     });
+
+    if (window.searchIntro) {
+      searchIntro.hide();
+    }
   }
 
   function parseQuery(hash) {

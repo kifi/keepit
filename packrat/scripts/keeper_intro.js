@@ -28,7 +28,7 @@ api.port.emit('session', function (sess) {
   function hide(e) {
     document.removeEventListener('keydown', onKeyDown, true);
     tile.removeEventListener('mouseover', hide, true);
-    window.hideKeeperIntro = api.noop;
+    window.hideKeeperIntro = null;
     if ($intro) {
       $intro.on('transitionend', $.fn.remove.bind($intro, null)).removeClass('kifi-showing');
       $intro = null;

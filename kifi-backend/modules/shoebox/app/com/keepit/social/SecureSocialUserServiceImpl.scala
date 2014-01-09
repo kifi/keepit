@@ -364,8 +364,13 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
       Some(ExternalId[UserSession](id))
     } catch {
       case ex: Throwable =>
-        //todo(eishay) kill this ugly code and just convert the string to external id
-        airbrake.notify(s"error parsing external id[$id]", ex)
+        /**
+         * We sometime get an empty string instead of an id.
+         * Not sure how we got to it, probably an empty cookie or expired session.
+         * For now it seems to be harmless since we create a new session from scratch.
+         * Not worth investigating more since we want to kill secure social soon.
+         */
+        log.warn(s"error parsing external id[$id]", ex)
         None
     }
 

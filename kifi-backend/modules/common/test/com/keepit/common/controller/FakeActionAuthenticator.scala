@@ -15,8 +15,8 @@ import securesocial.core._
 
 import net.codingwell.scalaguice.ScalaModule
 
-case class FakeActionAuthenticatorModule() extends ScalaModule {
-  println(">>>>>using new FakeActionAuthenticatorModule")
+case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
+  log.debug("using new FakeActionAuthenticatorModule")
   def configure(): Unit = {}
 
   @Singleton
@@ -43,7 +43,7 @@ case class FakeIdentity(user: User) extends Identity {
 }
 
 class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with Logging {
-  println(">>>>>using new FakeActionAuthenticator")
+  log.debug("using new FakeActionAuthenticator")
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
@@ -51,7 +51,7 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
   def setUser(user: User, experiments: Set[ExperimentType] = Set[ExperimentType]()): FakeActionAuthenticator = {
     fixedUser = Some(user)
     fixedExperiments = experiments
-    println(s">>>>using fixed user: $user")
+    log.debug("using fixed user: $user")
     this
   }
 
@@ -61,9 +61,9 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
     onUnauthenticated: Request[T] => Result): Action[T] = Action(bodyParser) { request =>
       try {
         val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
-        println(s">>>>running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
+        log.debug("running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
         val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
-        println(s">>>>executed action with res: $res")
+        log.debug("executed action with res: $res")
         res
       } catch {
         case t: Throwable =>

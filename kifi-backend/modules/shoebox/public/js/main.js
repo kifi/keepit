@@ -3320,11 +3320,10 @@ $(function () {
 	var inPageNavRe = /^(?:$|[a-z0-9]+(?:$|\/))/i;
 
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
+	History.setTitle(History.getState());
+
 	$(window).on('statechange anchorchange', function (e) {
 		hideUndo();
-		// Joon: This is where we get the URL param. You may want to handle this case separately, or inside of showNotification()
-		// There will also be a uri parameter called 'email' that will be the email address. Watch out for XSS.
-		// When the user verifies their email, the url will look like /?m=3&email=joon@42go.com
 		showNotification(getUriParam('m'));
 		checkEmailVerified();
 		var state = History.getState();
@@ -3408,7 +3407,12 @@ $(function () {
 		if (clearTags) {
 			clearTagInput();
 		}
-		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
+		if (!title || title == '') {
+			title = "Kifi";
+		} else {
+			title = 'Kifi • ' + title;
+		}
+		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, title, uri);
 	}
 
 	function queryFromUri(uri) {
