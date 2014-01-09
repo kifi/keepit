@@ -32,7 +32,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", kifi)
-      contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
+      contextBuilder += ("category", NotificationCategory.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageId", message.externalId.id)
@@ -48,7 +48,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", push)
-      contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
+      contextBuilder += ("category", NotificationCategory.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("threadId", notification.id.id)
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
@@ -56,13 +56,12 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread, category: NotificationCategory = NotificationCategory.Global.ANNOUNCEMENT): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
-      contextBuilder += ("channel", kifi)
-      contextBuilder += ("category", category.category)
+      contextBuilder += ("channel", NotificationCategory.GLOBAL.category)
       contextBuilder += ("global", true)
       contextBuilder += ("messageId", message.externalId.id)
       contextBuilder += ("threadId", thread.externalId.id)

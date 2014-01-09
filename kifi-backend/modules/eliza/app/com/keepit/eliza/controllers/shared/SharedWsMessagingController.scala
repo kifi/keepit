@@ -213,7 +213,7 @@ class SharedWsMessagingController @Inject() (
       val msgExtId = ExternalId[Message](messageId)
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", false)
-      contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
+      contextBuilder += ("category", NotificationCategory.MESSAGE.category) // TODO: Get category from json
       implicit val context = contextBuilder.build
       messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)
@@ -222,7 +222,7 @@ class SharedWsMessagingController @Inject() (
       val msgExtId = ExternalId[Message](messageId)
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", true)
-      contextBuilder += ("category", NotificationCategory.Global.ANNOUNCEMENT.category)
+      contextBuilder += ("category", NotificationCategory.GLOBAL.category)
       implicit val context = contextBuilder.build
       messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)

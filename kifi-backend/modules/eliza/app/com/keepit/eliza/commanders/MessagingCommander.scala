@@ -163,7 +163,7 @@ class MessagingCommander @Inject() (
             "time"     -> message.createdAt,
             "thread"   -> message.threadExtId.id,
             "unread"   -> true,
-            "category" -> "global",
+            "category" -> NotificationCategory.GLOBAL.category,
             "title"    -> title,
             "bodyHtml" -> body,
             "linkText" -> linkText,
@@ -227,7 +227,7 @@ class MessagingCommander @Inject() (
       "participants"  -> messageWithBasicUser.participants,
       "locator"       -> locator,
       "unread"        -> unread,
-      "category"      -> "message",
+      "category"      -> NotificationCategory.MESSAGE.category,
       "firstAuthor"   -> originalAuthorIdx,
       "authors"       -> numAuthors, //number of people who have sent messages in this conversation
       "messages"      -> numMessages, //total number of messages in this conversation
@@ -680,7 +680,7 @@ class MessagingCommander @Inject() (
             "participants" -> participants,
             "locator"      -> ("/messages/" + thread.externalId),
             "unread"       -> true,
-            "category"     -> "message"
+            "category"     -> NotificationCategory.MESSAGE.category
           )
           db.readWrite { implicit session =>
             // todo: Add adding non-users

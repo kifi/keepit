@@ -25,6 +25,7 @@ object SocialNetworkType {
 object SocialNetworks {
   val SUPPORTED = Seq(FACEBOOK, LINKEDIN)
   val ALL = Seq(FACEBOOK, LINKEDIN, FORTYTWO)
+  val REFRESHING = Seq(FACEBOOK, LINKEDIN)
   case object LINKEDIN extends SocialNetworkType("linkedin", "LinkedIn", "linkedin")
   case object FACEBOOK extends SocialNetworkType("facebook", "Facebook", "facebook")
   case object FORTYTWO extends SocialNetworkType("fortytwo", "FortyTwo", "userpass") // hack -- userpass is overloaded with secure social provider -- should be separated

@@ -1,6 +1,5 @@
 package com.keepit.controllers.ext
 
-
 import com.keepit.test.{SearchApplication, SearchApplicationInjector}
 import org.specs2.mutable._
 import com.keepit.model._
@@ -18,8 +17,8 @@ import akka.actor.ActorSystem
 import com.keepit.search._
 import com.keepit.search.index.{IndexStore, VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
 import com.keepit.social.BasicUser
+import com.keepit.search.sharding.Shard
 import com.keepit.search.index.IndexModule
-
 
 class ExtSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -100,12 +99,12 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
 }
 
 case class FixedResultIndexModule() extends IndexModule {
-  var volatileDirMap = Map.empty[String, IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
+  var volatileDirMap = Map.empty[(String, Shard), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(dir: String, indexStore: IndexStore): IndexDirectory = {
-    volatileDirMap.getOrElse(dir, {
+  protected def getIndexDirectory(configName: String, shard: Shard, indexStore: IndexStore): IndexDirectory = {
+    volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectoryImpl()
-      volatileDirMap += dir -> newdir
+      volatileDirMap += (configName, shard) -> newdir
       newdir
     })
   }
