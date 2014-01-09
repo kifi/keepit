@@ -25,6 +25,7 @@ import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.index.Searcher
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
+import com.keepit.search.semantic.SemanticContextAnalyzer
 
 
 class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery with Logging{

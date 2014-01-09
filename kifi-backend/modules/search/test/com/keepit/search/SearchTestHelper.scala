@@ -28,6 +28,11 @@ import akka.actor.ActorSystem
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import scala.concurrent.duration._
+import com.keepit.search.tracker.BrowsingHistoryTracker
+import com.keepit.search.tracker.ClickHistoryTracker
+import com.keepit.search.tracker.ResultClickTracker
+import com.keepit.search.tracker.ProbablisticLRU
+import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 
 trait SearchTestHepler { self: SearchApplicationInjector =>
 

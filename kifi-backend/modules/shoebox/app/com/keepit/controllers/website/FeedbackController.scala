@@ -17,39 +17,14 @@ import com.keepit.common.store.S3ImageStore
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
-class FeedbackController @Inject() (
-  db: Database,
-  actionAuthenticator: ActionAuthenticator,
-  emailAddressRepo: EmailAddressRepo,
-  s3ImageStore: S3ImageStore,
-  userVoiceTokenGenerator: UserVoiceTokenGenerator)
+class FeedbackController @Inject() (actionAuthenticator: ActionAuthenticator)
   extends WebsiteController(actionAuthenticator) {
   
-  def feedbackForm = HtmlAction(true)(authenticatedAction = { request =>
-    val email = db.readOnly(emailAddressRepo.getAllByUser(request.user.id.get)(_)).last.address
-    val picUrlFut = s3ImageStore.getPictureUrl(50, request.user)
+  def feedbackForm = Action {
+    Redirect("http://support.kifi.com")
+  }
 
-    Async {
-      picUrlFut map { avatar =>
-        val ssoToken = userVoiceTokenGenerator.createSSOToken(request.user.id.get.id.toString, s"${request.user.firstName} ${request.user.lastName}", email, avatar)
-        Ok(views.html.website.feedback(Some(ssoToken.value)))
-      }
-    }
-  }, unauthenticatedAction = { request =>
-    Ok(views.html.website.feedback(None))
-  })
-
-  def feedback = HtmlAction(true)(authenticatedAction = { request =>
-    val email = db.readOnly(emailAddressRepo.getAllByUser(request.user.id.get)(_)).last.address
-    val avatarFut = s3ImageStore.getPictureUrl(50, request.user)
-
-    Async {
-      avatarFut map { avatar =>
-        val ssoToken = userVoiceTokenGenerator.createSSOToken(request.user.id.get.id.toString, s"${request.user.firstName} ${request.user.lastName}", email, avatar)
-        Redirect("http://kifi.uservoice.com?sso=" + ssoToken.value)
-      }
-    }
-  }, unauthenticatedAction = { request =>
-    Redirect("http://kifi.uservoice.com")
-  })
+  def feedback = Action {
+    Redirect("http://support.kifi.com")
+  }
 }

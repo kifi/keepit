@@ -13,10 +13,12 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
+  def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser]
 }
 
 @Singleton
@@ -24,8 +26,10 @@ class SocialUserInfoRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     val userCache: SocialUserInfoUserCache,
+    val socialUserCache: SocialUserCache,
     val countCache: SocialUserInfoCountCache,
-    val networkCache: SocialUserInfoNetworkCache)
+    val networkCache: SocialUserInfoNetworkCache,
+    val socialUserNetworkCache: SocialUserNetworkCache)
   extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
 
   import DBSession._
@@ -46,8 +50,12 @@ class SocialUserInfoRepoImpl @Inject() (
   }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = {
-    socialUser.userId map {userId => userCache.remove(SocialUserInfoUserKey(userId))}
+    socialUser.userId map { userId =>
+      userCache.remove(SocialUserInfoUserKey(userId))
+      socialUserCache.remove(SocialUserKey(userId))
+    }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
+    socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUser
   }
 
@@ -60,6 +68,11 @@ class SocialUserInfoRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
     userCache.getOrElse(SocialUserInfoUserKey(userId)) {
       (for(f <- table if f.userId === userId) yield f).list
+    }
+
+  def getSocialUserByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUser] =
+    socialUserCache.getOrElse(SocialUserKey(userId)) {
+      (for(f <- table if f.userId === userId) yield f).list.map(_.credentials).flatten.toSeq
     }
 
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
@@ -82,6 +95,11 @@ class SocialUserInfoRepoImpl @Inject() (
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
       (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption
+    }
+
+  def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser] =
+    socialUserNetworkCache.getOrElseOpt(SocialUserNetworkKey(networkType, id)) {
+      (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
     }
 
 }

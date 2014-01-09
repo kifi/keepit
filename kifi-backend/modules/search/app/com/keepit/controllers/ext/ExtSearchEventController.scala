@@ -10,8 +10,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.ExperimentType
 import com.keepit.model.{User, NormalizedURI}
-import com.keepit.search.ClickedURI
-import com.keepit.search.BrowsedURI
+import com.keepit.search.tracker.ClickedURI
+import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.{Host, URI}
@@ -23,11 +23,14 @@ import com.keepit.common.healthcheck.Healthcheck.EMAIL
 import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail}
 import play.api.libs.json._
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.search.ClickedURI
+import com.keepit.search.tracker.ClickedURI
 import scala.Some
-import com.keepit.search.BrowsedURI
+import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.tracker.BrowsingHistoryTracker
+import com.keepit.search.tracker.ClickHistoryTracker
+import com.keepit.search.tracker.ResultClickTracker
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,

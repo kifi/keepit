@@ -1,16 +1,13 @@
-package com.keepit.search
+package com.keepit.search.semantic
 
 import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.search.index.Searcher
-import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.query.IdSetFilter
-import com.keepit.search.query.QueryUtil
-import com.keepit.search.query.SemanticVectorExtractorQuery
 import com.keepit.search.query.SemanticVectorExtractorScorer
 import com.keepit.search.query.TextQuery
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Query
+import com.keepit.search.SemanticVector
+import com.keepit.search.SemanticVectorComposer
 
 object SemanticVariance {
   /**

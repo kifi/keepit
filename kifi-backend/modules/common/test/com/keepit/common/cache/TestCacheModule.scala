@@ -52,6 +52,11 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
 
   @Singleton
   @Provides
+  def socialUserUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoNetworkCache(stats, accessLog, (outerRepo, 30 days))
 

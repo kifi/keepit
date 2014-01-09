@@ -128,6 +128,7 @@ section.main {
   background-color: #67829c;
   text-align: center;
   padding-top: 18px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   position: relative;
@@ -400,9 +401,9 @@ a.my-settings-wrapper {
   background-repeat: no-repeat;
   background-size: auto 16px;
   padding-left: 22px;
-  box-sizing: border-box;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
+  box-sizing: border-box;
   padding-right: 23px;
 }
 
@@ -722,6 +723,7 @@ input.query {
   font-weight: 300;
   width: 100%;
   height: 48px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
@@ -762,6 +764,7 @@ input.query::-ms-clear {
   width: 100%;
   padding-top: 13px;
   text-align: center;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   -webkit-transition: left .15s .07s;
@@ -816,8 +819,9 @@ input.query::-ms-clear {
 .main-head {
   padding: 13px 20px 0;
   height: 73px;
-  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
+  box-sizing: border-box;
   position: relative;
 }
 
@@ -1050,6 +1054,8 @@ input.profile-input-input {
   color: #818691;
   background-color: #e2edfb;
   padding: 6px 7px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
   transition: all .3s ease;
 }
@@ -1388,6 +1394,8 @@ input.profile-email-address-add-input {
   color: #818691;
   background-color: #e2edfb;
   padding: 6px 7px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
   transition: all .3s ease;
 }
@@ -1907,6 +1915,7 @@ td.profile-email-separator {
 input.friends-filter,
 input.invite-filter,
 input.user-filter {
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   border: 1px solid #c5d0da;
@@ -2097,6 +2106,7 @@ input.user-filter {
   bottom: 0;
   overflow-x: hidden;
   padding-right: 20px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -2171,6 +2181,7 @@ input.user-filter {
   background-color: #d7e8b1;
   vertical-align: top;
   text-align: center;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -2452,6 +2463,7 @@ input.user-filter {
   padding: 10px;
   border: 1px solid transparent;
   margin-bottom: 12px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   position: relative;
@@ -2720,6 +2732,7 @@ a.invite-button {
   -moz-box-shadow: 12px 12px 0 rgba(0,40,90,0.2);
   box-shadow: 12px 12px 0 rgba(0,40,90,0.2);
   font-size: 14px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -2943,6 +2956,7 @@ button.more-invites {
   min-width: 270px;
   background-color: #eff2f7;
   padding: 10px 16px 13px 10px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -3007,6 +3021,7 @@ a.friend-req-n[href] {
   width: 17px;
   background: url(../img/check.png) 99px/12px 8px no-repeat #fff;
   border: 1px solid #e3e6ee;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -3058,8 +3073,9 @@ body[data-view=search] .main-keeps {
   width: 100%;
   overflow-x: hidden;
   padding: 0 19px 0 18px;
-  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .main-keeps>.antiscroll-scrollbar {
@@ -3102,6 +3118,7 @@ body[data-view=search] .main-keeps {
   padding-left: 30px;
   border-top: 1px solid #f9f9f9;
   position: relative;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -3498,6 +3515,7 @@ body[data-view=search] .main-keeps {
   width: 100%;
   height: 100%;
   padding-top: 70px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -3511,6 +3529,7 @@ body[data-view=search] .main-keeps {
   width: 80%;
   max-width: 660px;
   text-align: left;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   padding: 0 0 20px 128px;
@@ -3566,6 +3585,7 @@ body[data-view=search] .main-keeps {
   background-color: #67829c;
   text-align: right;
   font-size: 14px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -3610,57 +3630,93 @@ body[data-view=search] .main-keeps {
 }
 
 .splash {
+  font-size: 14px;
   background-color: #fff;
+  -webkit-font-smoothing: antialiased;
 }
 
-.splash>.antiscroll-inner {
+.splash .antiscroll-inner {
   padding: 6px 0 0 36px;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
 
 .splash h2 {
   margin: 30px 0 6px;
-  font-size: 19px;
+  font-size: 20px;
+  font-weight: 400;
   line-height: 36px;
-  color: #67829c;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
+  color: #556179;
 }
 
 .splash ul {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 15px;
   line-height: 46px;
-  -webkit-font-smoothing: antialiased;
 }
 
-.splash ul>li>a {
+.splash-list>li>a {
   display: inline-block;
   color: #556179;
   margin-left: -10px;
   padding: 0 24px 0 10px;
 }
 
-.splash ul>li>a[href]:hover {
+.splash-list>li>a[href]:hover {
   background-color: #f7fafe;
 }
 
-.splash ul>li>a[href]:active {
+.splash-list>li>a[href]:active {
   background-color: #eff2f7;
 }
 
-.splash ul>li>a::before {
-  content: " ";
+.splash-list .kifi-icon {
   display: inline-block;
   width: 30px;
-  height: 24px;
   vertical-align: -6px;
   font-size: 0;
   margin-right: 16px;
-  background: url(../img/splash.png) 0 0/30px auto;
+  background-repeat: no-repeat;
+  vertical-align: middle;
+}
+
+.kifi-icon-tutorial {
+  background-image: url(../img/playbtnicon.png);
+  background-size: 24px 24px;
+  height: 24px;
+}
+
+.kifi-icon-install {
+  background-image: url(../img/installicon.png);
+  background-size: 22px 28px;
+  height: 28px;
+}
+
+.kifi-icon-friends {
+  background-image: url(../img/splash.png);
+  background-position: 0 -48px;
+  background-size: 30px auto;
+  height: 24px;
+}
+
+.kifi-icon-support {
+  background-image: url(../img/supporticon.png);
+  background-size: 24px 24px;
+  height: 24px;
+}
+
+.kifi-icon-contact {
+  background-image: url(../img/contacticon.png);
+  background-size: 23px 18px;
+  height: 18px;
+}
+
+.kifi-icon-blog {
+  background-image: url(../img/blogicon.png);
+  background-size: 25px 19px;
+  height: 19px;
 }
 
 .about-kifi>li:nth-child(2)>a::before {
@@ -3778,6 +3834,7 @@ a.page-url[href]:hover {
   padding-top: 47%;
   color: inherit;
   cursor: pointer;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -3972,6 +4029,7 @@ a.page-priv[href] {
   font-size: 13px;
   line-height: 30px;
   width: 50%;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   text-align: center;
@@ -4289,6 +4347,7 @@ input.page-coll-input {
   padding: 0 16px;
   height: 24px;
   vertical-align: top;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   color: inherit;
@@ -4309,6 +4368,7 @@ input.page-coll-input {
   width: 100%;
   border: 1px solid #cdd6e0;
   border-top: none;
+  -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   background-color: #fff;
@@ -4776,10 +4836,6 @@ a.friend-nw-google[href] {
     background-image: url(../img/tag-icon-small.2x.png);
   }
 
-  .splash ul>li>a::before {
-    background-image: url(../img/splash.2x.png);
-  }
-
   .page-how-3.page-how-3::before,
   [data-kept^=p]>*>.page-keep[href]::before,
   .page-priv[href]::before {
@@ -4834,6 +4890,30 @@ a.friend-nw-google[href] {
 
   .profile-email-addresses.opened .profile-email-addresses-arrow {
     background-image: url(../img/arrow-gray-down.2x.png);
+  }
+
+  .kifi-icon-tutorial {
+    background-image: url(../img/playbtnicon@2x.png);
+  }
+
+  .kifi-icon-install {
+    background-image: url(../img/installicon@2x.png);
+  }
+
+  .kifi-icon-friends {
+    background-image: url(../img/splash.2x.png);
+  }
+
+  .kifi-icon-support {
+    background-image: url(../img/supporticon@2x.png);
+  }
+
+  .kifi-icon-contact {
+    background-image: url(../img/contacticon@2x.png);
+  }
+
+  .kifi-icon-blog {
+    background-image: url(../img/blogicon@2x.png);
   }
 }
 
@@ -5209,10 +5289,6 @@ a.photo-dialog-submit:focus {
   clear: both;
 }
 
-.kifi-onboarding-li {
-	display: none;
-}
-
 .kifi-onboarding-iframe {
 	position: fixed;
 	top: 0;
@@ -5314,3 +5390,24 @@ a.photo-dialog-submit:focus {
 	transition: none
 }
 
+.footer {
+	margin-top: 40px;
+	display: inline-block;
+	font-size: 14px;
+	border-top: 1px solid #dbdee3;
+	padding: 22px 0;
+	color: #99a3b3;
+}
+
+.footer a {
+	color: #99a3b3;
+}
+
+.footer-sep {
+	color: #dbdee3;
+	padding: 0 2px;
+}
+
+.footer > div:first-child {
+	margin-bottom: 8px;
+}

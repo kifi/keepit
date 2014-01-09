@@ -83,7 +83,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = timing(s"[handleEmailPasswordSuccess($emailAddress)]") {
+  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
     require(AuthHelper.validatePwd(password), "invalid password")
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)

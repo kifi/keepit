@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
 import com.keepit.common.db.Id
 import com.keepit.search.index.DefaultAnalyzer
@@ -7,6 +7,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import scala.math._
 import scala.util.Random
+import com.keepit.search.tracker.ProbablisticLRU
 
 
 abstract class ResultClickBoosts {
