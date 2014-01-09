@@ -11,8 +11,6 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import java.io.StringReader
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.Lang
-import com.keepit.search.SemanticVector
-import com.keepit.search.SemanticVectorComposer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 
 

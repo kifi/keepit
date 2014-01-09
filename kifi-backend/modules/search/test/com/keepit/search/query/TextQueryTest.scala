@@ -11,7 +11,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.PersonalizedSearcher
-import com.keepit.search.SemanticVectorBuilder
+import com.keepit.search.semantic.SemanticVectorBuilder
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexable

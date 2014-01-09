@@ -14,6 +14,8 @@ import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Await
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.index.WrappedIndexReader
+import com.keepit.search.semantic._
+
 
 
 object PersonalizedSearcher {

@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index._
 import com.keepit.search.PersonalizedSearcher
-import com.keepit.search.SemanticVectorBuilder
+import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
 import scala.Some
 

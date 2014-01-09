@@ -26,6 +26,7 @@ import com.keepit.search.LangDetector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.semantic.SemanticVector
 import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
