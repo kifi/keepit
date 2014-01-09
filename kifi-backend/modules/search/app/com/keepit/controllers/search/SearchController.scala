@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search._
-import com.keepit.search.index.{MutableHit, HitQueue}
+import com.keepit.search.index.{MutableHit, SearcherHitQueue}
 import org.apache.commons.math3.linear.{EigenDecomposition, Array2DRowRealMatrix}
 import play.api.mvc.Action
 import scala.collection.mutable.ArrayBuffer

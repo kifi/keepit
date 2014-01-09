@@ -23,7 +23,7 @@ import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.keepit.search.SearchConfig
 import com.google.inject.Singleton
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.Hit
+import com.keepit.search.index.SearcherHit
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.phrasedetector.FakePhraseIndexer
 
@@ -73,13 +73,13 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     val searchConfig = SearchConfig.defaultConfig.apply("siteBoost" -> "1.0")
 
     class Searchable(indexer: ArticleIndexer) {
-      def search(queryString: String, percentMatch: Float = 0.0f): Seq[Hit] = {
+      def search(queryString: String, percentMatch: Float = 0.0f): Seq[SearcherHit] = {
         val parser = parserFactory(Lang("en"), searchConfig)
         parser.setPercentMatch(percentMatch)
         val searcher = indexer.getSearcher.withSemanticContext
         parser.parse(queryString, None) match {
           case Some(query) => searcher.search(query)
-          case None => Seq.empty[Hit]
+          case None => Seq.empty[SearcherHit]
         }
       }
     }

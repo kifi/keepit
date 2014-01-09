@@ -41,14 +41,14 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
   private[this] var sketchMap = Map.empty[Term, Sketch]
 
   // search: hits are ordered by score
-  def search(query: Query): Seq[Hit] = {
-    val hitBuf = new ArrayBuffer[Hit]()
+  def search(query: Query): Seq[SearcherHit] = {
+    val hitBuf = new ArrayBuffer[SearcherHit]()
     doSearch(query){ (scorer, reader) =>
       val idMapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
         var score = scorer.score()
-        hitBuf += Hit(idMapper.getId(doc), score)
+        hitBuf += SearcherHit(idMapper.getId(doc), score)
         doc = scorer.nextDoc()
       }
     }
@@ -248,7 +248,7 @@ class MutableHit(var id: Long, var score: Float) {
   }
 }
 
-class HitQueue(sz: Int) extends PriorityQueue[MutableHit](sz) {
+class SearcherHitQueue(sz: Int) extends PriorityQueue[MutableHit](sz) {
   override def lessThan(a: MutableHit, b: MutableHit) = (a.score < b.score || (a.score == b.score && a.id < b.id))
 
   var overflow: MutableHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
@@ -260,7 +260,7 @@ class HitQueue(sz: Int) extends PriorityQueue[MutableHit](sz) {
     overflow = insertWithOverflow(overflow)
   }
 
-  // the following method is destructive. after the call HitQueue is unusable
+  // the following method is destructive. after the call SearcherHitQueue is unusable
   def toList: List[MutableHit] = {
     var res: List[MutableHit] = Nil
     var i = size()
@@ -272,5 +272,5 @@ class HitQueue(sz: Int) extends PriorityQueue[MutableHit](sz) {
   }
 }
 
-case class Hit(id: Long, score: Float)
+case class SearcherHit(id: Long, score: Float)
 
