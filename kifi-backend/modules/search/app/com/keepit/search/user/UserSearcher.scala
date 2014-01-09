@@ -8,7 +8,7 @@ import org.apache.lucene.util.PriorityQueue
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.search.IdFilterCompressor
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.social.BasicUser
 
 

@@ -23,7 +23,7 @@ import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.keepit.search.SearchConfig
 import com.google.inject.Singleton
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.SearcherHit
+import com.keepit.search.SearcherHit
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.phrasedetector.FakePhraseIndexer
 

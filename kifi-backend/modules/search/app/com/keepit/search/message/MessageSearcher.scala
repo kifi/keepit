@@ -2,7 +2,7 @@ package com.keepit.search.message
 
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.common.strings.UTF8
 

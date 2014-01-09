@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.model.{NormalizedURI, User, Collection}
 import com.keepit.search.graph.CollectionFields._
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.AtomicReader

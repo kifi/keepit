@@ -16,7 +16,6 @@ import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
-import com.keepit.search.index.Searcher
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil

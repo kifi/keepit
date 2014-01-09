@@ -2,7 +2,7 @@ package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.SemanticVector
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.search.semantic.SemanticVectorEnum
 import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader

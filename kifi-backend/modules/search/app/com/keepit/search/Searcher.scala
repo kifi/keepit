@@ -1,8 +1,7 @@
-package com.keepit.search.index
+package com.keepit.search
 
-import com.keepit.search.SemanticVector
+
 import com.keepit.search.SemanticVector.Sketch
-import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.semantic.SemanticVectorEnum
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
@@ -22,6 +21,7 @@ import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.index._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
