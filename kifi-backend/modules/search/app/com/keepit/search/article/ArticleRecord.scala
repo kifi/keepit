@@ -1,6 +1,5 @@
-package com.keepit.search.index
+package com.keepit.search.article
 
-import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import org.apache.lucene.store.InputStreamDataInput

@@ -21,6 +21,9 @@ import com.keepit.search.user.UserIndexerPluginImpl
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import org.apache.commons.io.FileUtils
+import com.keepit.search.article.ArticleIndexerPluginImpl
+import com.keepit.search.article.ArticleIndexerPlugin
+import com.keepit.search.article.ArticleIndexer
 
 trait IndexModule extends ScalaModule with Logging {
 

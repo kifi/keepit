@@ -1,8 +1,9 @@
-package com.keepit.search.index
+package com.keepit.search.article
 
 import org.apache.lucene.index.Term
 import com.keepit.search.query.QueryUtil
 import org.apache.lucene.search.DocIdSetIterator
+import com.keepit.search.index.WrappedSubReader
 
 object ArticleVisibility {
   private[this] val fieldName = "visibility"

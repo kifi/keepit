@@ -6,8 +6,7 @@ import play.api.test.Helpers._
 import scala.math._
 import java.util.Random
 import com.keepit.inject._
-import com.keepit.search.tracker.ProbablisticLRU
-import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
+
 
 class ProbablisticLRUTest extends Specification {
   val rand = new Random(123456789L)

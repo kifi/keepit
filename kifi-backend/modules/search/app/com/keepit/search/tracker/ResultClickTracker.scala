@@ -7,7 +7,6 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import scala.math._
 import scala.util.Random
-import com.keepit.search.tracker.ProbablisticLRU
 
 
 abstract class ResultClickBoosts {

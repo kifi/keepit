@@ -5,7 +5,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
-import com.keepit.search.index.BackUp
+import com.keepit.search.article.BackUp
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceStatus
 

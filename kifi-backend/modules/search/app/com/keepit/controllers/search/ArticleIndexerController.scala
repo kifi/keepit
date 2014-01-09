@@ -4,8 +4,8 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.search.index.ArticleIndexerPlugin
+import com.keepit.search.article.ArticleIndexer
+import com.keepit.search.article.ArticleIndexerPlugin
 import com.keepit.search.index.Indexer.CommitData
 import com.keepit.search.phrasedetector.PhraseIndexer
 import org.apache.lucene.document.Document

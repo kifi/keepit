@@ -5,7 +5,7 @@ import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
 import com.keepit.search.message.MessageIndexerPlugin
 import com.keepit.search.graph.URIGraphPlugin
-import com.keepit.search.index.ArticleIndexerPlugin
+import com.keepit.search.article.ArticleIndexerPlugin
 import play.api.Mode._
 import play.api._
 import com.keepit.search.nlp.NlpParser

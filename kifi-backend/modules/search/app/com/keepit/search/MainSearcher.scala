@@ -14,8 +14,8 @@ import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
-import com.keepit.search.index.ArticleRecord
-import com.keepit.search.index.ArticleVisibility
+import com.keepit.search.article.ArticleRecord
+import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.search.spellcheck.SpellCorrector
@@ -42,6 +42,7 @@ import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
+import com.keepit.search.article.ArticleVisibility
 
 
 class MainSearcher(
@@ -464,7 +465,7 @@ class MainSearcher(
   }
 
   def getArticleRecord(uriId: Id[NormalizedURI]): Option[ArticleRecord] = {
-    import com.keepit.search.index.ArticleRecordSerializer._
+    import com.keepit.search.article.ArticleRecordSerializer._
     articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uriId.id)
   }
 
