@@ -1,6 +1,7 @@
 package com.keepit.search.graph
 
-import com.keepit.search.index.{Searcher, WrappedIndexReader, WrappedSubReader}
+import com.keepit.search.index.{WrappedIndexReader, WrappedSubReader}
+import com.keepit.search.Searcher
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._

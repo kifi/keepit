@@ -13,8 +13,6 @@ import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Await
 import com.keepit.search.tracker.ClickedURI
-import com.keepit.search.index.SearchSemanticContext
-import com.keepit.search.index.Searcher
 import com.keepit.search.index.WrappedIndexReader
 
 

@@ -9,6 +9,7 @@ import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
+import com.keepit.search.Searcher
 import com.keepit.search.index._
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField

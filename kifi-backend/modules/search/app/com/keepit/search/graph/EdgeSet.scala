@@ -3,7 +3,7 @@ package com.keepit.search.graph
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.IdMapper
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
