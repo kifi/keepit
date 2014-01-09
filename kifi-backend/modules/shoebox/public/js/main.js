@@ -3477,8 +3477,13 @@ $(function () {
 	var mainScroller = $mainKeeps.data('antiscroll');
 	$(window).resize(mainScroller.refresh.bind(mainScroller));
 
-	var splashScroller = $('.splash').antiscroll({x: false, width: '100%'}).data('antiscroll');
+	var $splash = $('.splash');
+	var splashScroller = $splash.antiscroll({x: false, width: '100%'}).data('antiscroll');
 	$(window).resize(splashScroller.refresh.bind(splashScroller));
+
+	$splash.on('click', '.kifi-tutorial', function () {
+		initOnboarding(true);
+	});
 
 	var $queryWrap = $('.query-wrap');
 	$queryWrap.focusin($.fn.addClass.bind($queryWrap, 'focus'));
@@ -4219,19 +4224,16 @@ $(function () {
 
 	/* Onboarding */
 	var onboardingViewed = false;
-	function initOnboarding() {
-		if (emailVerifiedPending) {
-			return;
-		}
-		if (onboardingViewed) {
+	function initOnboarding(force) {
+		if (!force && (emailVerifiedPending || onboardingViewed)) {
 			return;
 		}
 		promise.myPrefs.done(function () {
-			if (onboardingViewed) {
+			if (!force && onboardingViewed) {
 				return;
 			}
 			onboardingViewed = true;
-			if (!myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false') {
+			if (force || !myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false') {
 				$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
 			}
 			else {
