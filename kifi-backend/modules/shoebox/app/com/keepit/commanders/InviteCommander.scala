@@ -23,10 +23,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.SocialConnection
 import scala.Some
 import com.keepit.model.Invitation
-import play.api.mvc.Result
 import com.keepit.common.store.S3ImageStore
-import org.joda.time.DateTime
-
 
 case class FullSocialId(network:String, id:String)
 object FullSocialId {
