@@ -108,8 +108,8 @@ abstract class Indexer[T](
 
   protected val updateLock = new AnyRef
 
-  private[this] var _sequenceNumber =
-    SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
+  private[this] var _sequenceNumber = SequenceNumber(initialSequenceNumberValue)
+  def initialSequenceNumberValue: Long = (commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
   def sequenceNumber = _sequenceNumber
 
@@ -126,7 +126,7 @@ abstract class Indexer[T](
     }
   }
 
-  protected def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T]]): Int = {
+  def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T]]): Int = {
     try {
       log.info(s"updating $name")
       val indexables = changedIndexables

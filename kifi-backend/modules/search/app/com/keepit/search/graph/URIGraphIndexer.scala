@@ -18,6 +18,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Success, Try}
+import scala.math._
 
 object URIGraphFields {
   val userField = "usr"
@@ -48,8 +49,21 @@ class URIGraphIndexer(
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
+  import URIGraphIndexer.URIGraphIndexable
+
   override val commitBatchSize = 500
   private val fetchSize = commitBatchSize
+
+  override def initialSequenceNumberValue: Long = {
+    val uriGraphSeq = commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong
+    val bookmarkStoreSeq = bookmarkStore.initialSequenceNumberValue
+    if (uriGraphSeq > bookmarkStoreSeq) {
+      log.warn(s"bookmarkStore is behind. restarting from the bookmarkStore's sequence number: ${uriGraphSeq} -> ${bookmarkStoreSeq}")
+      bookmarkStoreSeq
+    } else {
+      uriGraphSeq
+    }
+  }
 
   private[this] var searchers = (this.getSearcher, bookmarkStore.getSearcher)
 
@@ -63,11 +77,6 @@ class URIGraphIndexer(
 
   def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-
-    if (sequenceNumber.value > bookmarkStore.sequenceNumber.value) {
-      log.warn(s"bookmarkStore is behind. restarting from the bookmarkStore's sequence number: ${sequenceNumber} -> ${bookmarkStore.sequenceNumber}")
-      sequenceNumber = bookmarkStore.sequenceNumber
-    }
 
     var total = 0
     var done = false
@@ -92,7 +101,7 @@ class URIGraphIndexer(
     cnt
   }
 
-  private def toIndexables(bookmarks: Seq[Bookmark]): Iterator[Indexable[User]] = {
+  def toIndexables(bookmarks: Seq[Bookmark]): Iterator[Indexable[User]] = {
     bookmarkStore.update(bookmarks)
 
     val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
@@ -117,6 +126,9 @@ class URIGraphIndexer(
       isDeleted = false,
       bookmarks = bookmarks)
   }
+}
+
+object URIGraphIndexer {
 
   class URIGraphIndexable(
     override val id: Id[User],
