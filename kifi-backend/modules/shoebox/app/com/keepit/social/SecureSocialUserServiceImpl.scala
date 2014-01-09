@@ -365,7 +365,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     } catch {
       case ex: Throwable =>
         //todo(eishay) kill this ugly code and just convert the string to external id
-        airbrake.notify(s"error parsing $id", ex)
+        airbrake.notify(s"error parsing external id[$id]", ex)
         None
     }
 
