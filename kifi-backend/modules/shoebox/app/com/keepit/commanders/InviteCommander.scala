@@ -23,9 +23,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.SocialConnection
 import scala.Some
 import com.keepit.model.Invitation
-import play.api.mvc.Result
 import com.keepit.common.store.S3ImageStore
-
 
 case class FullSocialId(network:String, id:String)
 object FullSocialId {
@@ -83,11 +81,12 @@ class InviteCommander @Inject() (
         }.toOption
       }
 
-      val existingInvites = userSocialAccounts.map { su =>
-        invitationRepo.getByRecipientSocialUserId(su.id.get).map { inv =>
-          su -> inv
-        }
-      }.flatten.toSet.++(cookieInvite)
+      val otherInvites = for {
+        su <- userSocialAccounts
+        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get)
+      } yield (su, invite)
+
+      val existingInvites = otherInvites.toSet ++ cookieInvite.map(Set(_)).getOrElse(Set.empty)
 
       if (existingInvites.isEmpty) {
         userSocialAccounts.find(_.networkType == SocialNetworks.FORTYTWO).map { su =>
@@ -105,7 +104,6 @@ class InviteCommander @Inject() (
   }
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    val acceptedAt = clock.now
     val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (_, in) =>
       Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(in.state)
     }
@@ -123,34 +121,8 @@ class InviteCommander @Inject() (
         Try {
           connectInvitedUsers(userId, invite)
           if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-            invite.senderUserId.foreach { senderId =>
-              SafeFuture {
-                val contextBuilder = new HeimdalContextBuilder
-                contextBuilder += ("socialNetwork", su.networkType.toString)
-                contextBuilder += ("inviteId", invite.externalId.id)
-                invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
-                invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
-
-                if (invId == Some(invite.externalId)) {
-                  // Credit the sender of the accepted invite
-                  contextBuilder += ("action", "accepted")
-                  contextBuilder += ("recipientId", userId.toString)
-                  heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, acceptedAt))
-
-                  // Include "future" acceptance in past event
-                  contextBuilder.data.remove("recipientId")
-                  contextBuilder.data.remove("action")
-                  contextBuilder += ("toBeAccepted", acceptedAt)
-                  contextBuilder
-                }
-
-                // Backfill the history of the new user with all the invitations he/she received
-                contextBuilder += ("action", "wasInvited")
-                contextBuilder += ("senderId", senderId.id)
-                heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, invite.createdAt))
-              }
-            }
+            val acceptedInvite = invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+            reportReceivedInvitation(userId, su.networkType, acceptedInvite, invId == Some(invite.externalId))
           }
         }
       }
@@ -305,5 +277,33 @@ class InviteCommander @Inject() (
     }
   }
 
+  def reportReceivedInvitation(receiverId: Id[User], socialNetwork: SocialNetworkType, invite: Invitation, actuallyAccepted: Boolean): Unit =
+    invite.senderUserId.foreach { senderId =>
+      SafeFuture {
+        val contextBuilder = new HeimdalContextBuilder
+        contextBuilder += ("socialNetwork", socialNetwork.toString)
+        contextBuilder += ("inviteId", invite.externalId.id)
+        invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
+        invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
 
+        if (actuallyAccepted) {
+          val acceptedAt = invite.updatedAt
+          // Credit the sender of the accepted invite
+          contextBuilder += ("action", "accepted")
+          contextBuilder += ("recipientId", receiverId.toString)
+          heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, acceptedAt))
+
+          // Include "future" acceptance in past event
+          contextBuilder.data.remove("recipientId")
+          contextBuilder.data.remove("action")
+          contextBuilder += ("toBeAccepted", acceptedAt)
+          contextBuilder
+        }
+
+        // Backfill the history of the new user with all the invitations he/she received
+        contextBuilder += ("action", "wasInvited")
+        contextBuilder += ("senderId", senderId.id)
+        heimdal.trackEvent(UserEvent(receiverId, contextBuilder.build, UserEventTypes.JOINED, invite.createdAt))
+      }
+    }
 }
