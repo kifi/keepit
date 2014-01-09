@@ -1,4 +1,4 @@
-package com.keepit.search.index
+package com.keepit.search
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
@@ -12,8 +12,10 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Await
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.tracker.ClickedURI
+import com.keepit.search.index.SearchSemanticContext
+import com.keepit.search.index.Searcher
+import com.keepit.search.index.WrappedIndexReader
 
 
 object PersonalizedSearcher {

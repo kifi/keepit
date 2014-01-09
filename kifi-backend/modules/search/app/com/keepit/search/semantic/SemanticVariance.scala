@@ -1,6 +1,6 @@
 package com.keepit.search.semantic
 
-import com.keepit.search.index.PersonalizedSearcher
+import com.keepit.search.PersonalizedSearcher
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.SemanticVectorExtractorScorer
 import com.keepit.search.query.TextQuery
