@@ -13,6 +13,7 @@ import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.search.tracker.ClickedURI
 
 
 object PersonalizedSearcher {

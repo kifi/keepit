@@ -8,6 +8,7 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.store.SearchDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
+import com.keepit.search.tracker.DevTrackingModule
 
 case class SearchDevModule() extends SearchModule(
 
