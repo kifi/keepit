@@ -130,7 +130,19 @@ kifi.form = (function () {
         window.location = "/";
       });
     } else {
-        window.location = "/";
+      window.location = "/";
+    }
+    return false;
+  });
+
+  $('.cancel-signup-login').on('mousedown click', function(e) {
+    e.preventDefault();
+    if ($('body').hasClass('finalizing')) {
+      $.post($(this).data('cancelUri'), function(e) {
+        window.location = "/login";
+      });
+    } else {
+      window.location = "/login";
     }
     return false;
   });
