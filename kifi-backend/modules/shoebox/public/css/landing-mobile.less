@@ -3,20 +3,25 @@
 @import "retina-1.1.0";
 
 @phcolor: #c4c4c4;
+@phfw: 300;
 ::-webkit-input-placeholder {
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 :-moz-placeholder { /* Firefox 18- */
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 ::-moz-placeholder { /* Firefox 19+ */
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 :-ms-input-placeholder {
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 .kifi-header {
@@ -82,6 +87,16 @@
 	.padding-lr(4px, @ffs);
 }
 
+.kifi-arrow-down {
+	position: absolute;
+	display: block;
+	@h: 9px;
+	bottom: -@h;
+	width: 19px;
+	height: @h;
+	z-index: 1;
+}
+
 .kifi-coming-soon {
 	position: relative;
 	background: #424242;
@@ -98,13 +113,7 @@
 	}
 
 	.kifi-arrow-down {
-		position: absolute;
-		display: block;
-		@h: 9px;
-		bottom: -@h;
-		left: 39px;
-		width: 19px;
-		height: @h;
+		.left(32px);
 		background-color: #424242;
 	}
 }
@@ -155,25 +164,27 @@
 	.max-width(500px);
 }
 
-.kifi-waiting-email {
+.kifi-waiting-email,
+.kifi-desktop-email {
 	display: block;
 	@fs: 30px / 2;
 	.font-size(@fs);
-	font-weight: 300;
+	font-weight: 400;
 	width: 100%;
 	.padding-tb(12px, @fs);
 	.padding-lr(15px, @fs);
-	border: 0;
+	border: 2px solid transparent;
 	border-radius: 2px;
 	margin: 0;
 	.margin-top(11px, @fs);
 	text-align: left;
-	.letter-spacing(0.75px, @fs);
+	.letter-spacing(0.65px, @fs);
 	.box-sizing(border-box);
 }
 
 .kifi-good-news {
-	padding: 50px;
+	position: relative;
+	padding: 22px 28px;
 	color: white;
 	background-color: #93c059;
 	
@@ -190,18 +201,83 @@
 		.font-size(@fs);
 		margin: 0;
 	}
+
+	.kifi-arrow-down {
+		.left(32px);
+		background-color: #93c059;
+	}
 }
 
 .kifi-watch-video {
-	padding: 80px;
 	color: #424242;
 	background-color: #f6f6f6;
 	text-align: center;
+	.padding-top(36px);
+	.padding-lr(20px);
+	.padding-bottom(94px);
+	
+	h2 {
+		@fs: 48px / 2;
+		.font-size(@fs);
+		font-weight: 300;
+		line-height: 1.22;
+		margin: 0;
+	}
+}
+
+.kifi-play {
+	position: relative;
+	display: inline-block;
+	@size: 95px;
+	width: @size;
+	height: @size;
+	margin: 0 auto;
+	margin-top: 28px;
+	.at2x('/assets/img/mobile/playbuttoniphone.png');
+	background-size: @size @size;
+	background-repeat: no-repeat;
+	z-index: 1;
+}
+
+.kifi-watch-bg {
+
 }
 
 .kifi-desktop {
-	padding: 30px;
+	position: relative;
 	color: white;
 	background-color: #93c059;
 	text-align: center;
+}
+
+.kifi-desktop-img {
+	position: relative;
+	@w: 258px;
+	@h: 152px;
+	display: inline-block;
+	margin: 0 auto;
+	.margin-top(-23px);
+	width: @w;
+	height: @h;
+	.at2x('/assets/img/mobile/flatmacbookiphone.png');
+	background-size: @w @h;
+	background-repeat: no-repeat;
+	z-index: 1;
+}
+
+.kifi-desktop-text {
+	@fs: 34px / 2;
+	.font-size(@fs);
+	font-weight: 400;
+	line-height: 1.45;
+	.margin-top(9px, @fs);
+}
+
+.kifi-desktop-email {
+}
+
+.kifi-desktop-button {
+	.margin-top(20px);
+	color: white;
+	background-color: transparent;
 }
