@@ -9,6 +9,7 @@ import play.api.test.Helpers._
 import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import com.keepit.search.result.Highlighter
 
 class HighlighterTest extends Specification {
 

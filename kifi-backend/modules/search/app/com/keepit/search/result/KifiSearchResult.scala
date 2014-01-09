@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.result
 
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model._
@@ -6,6 +6,13 @@ import com.keepit.social.BasicUser
 import play.api.libs.json._
 import com.keepit.common.logging.Logging
 import com.keepit.serializer.TraversableFormat
+import com.keepit.search.ArticleSearchResult
+import com.keepit.search.Scoring
+import com.keepit.search.SearchConfigExperiment
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import scala.math.BigDecimal.double2bigDecimal
+import scala.math.BigDecimal.int2bigDecimal
+import scala.math.BigDecimal.long2bigDecimal
 
 class KifiSearchResult(val json: JsObject) extends AnyVal {
 }

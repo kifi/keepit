@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.result
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
@@ -14,13 +14,17 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.index.Term
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Promise
-import scala.concurrent.{Future, promise}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import java.io.StringReader
 import play.api.libs.json._
+import com.keepit.search.ArticleSearchResult
+import com.keepit.search.Lang
+import com.keepit.search.SearchConfigExperiment
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 
 object ResultDecorator extends Logging {
 
