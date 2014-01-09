@@ -25,6 +25,11 @@ trait Repo[M <: Model[M]] {
   def invalidateCache(model: M)(implicit session: RSession): M
 }
 
+trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
+  def deleteCache(model: M): M
+  def delete(model: M)(implicit session:RWSession):Int
+}
+
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
   def get(id: ExternalId[M])(implicit session: RSession): M
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
@@ -136,6 +141,20 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     }
 
     def externalId = column[ExternalId[M]]("external_id", O.NotNull)
+  }
+}
+
+trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M] =>
+  import db.Driver.Implicit._
+
+  def delete(model: M)(implicit session: RWSession) = {
+    val startTime = System.currentTimeMillis()
+    val target = (for(t <- table if t.id === model.id.get) yield t)
+    val count = target.delete
+    deleteCache(model)
+    val time = System.currentTimeMillis - startTime
+    dbLog.info(s"t:${clock.now}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    count
   }
 }
 

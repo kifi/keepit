@@ -12,6 +12,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.{Play, Plugin}
 import play.api.Play.current
+import scala.collection.mutable
+import com.keepit.common.db.Id
 
 trait AutogenReaperPlugin extends Plugin {
   def reap()
@@ -56,7 +58,12 @@ private[integration] class AutogenAcctReaperActor @Inject() (
         // a variant of this could live in UserCommander
         val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
         log.info(s"[reap] got (${generated.length}) to be reaped: ${generated.mkString(",")}")
+        implicit val userOrd = new Ordering[Id[User]] {
+          def compare(x: Id[User], y: Id[User]): Int = x.id compare y.id
+        }
+        val userIds = new mutable.TreeSet[Id[User]]
         generated foreach { exp =>
+          userIds += exp.userId
           val user = userRepo.get(exp.userId)
           log.info(s"[reap] processing $user")
           userSessionRepo.invalidateByUser(exp.userId)
@@ -69,8 +76,12 @@ private[integration] class AutogenAcctReaperActor @Inject() (
           }
           // skip UserCred/UserExp for now; delete later
         }
-        userExperimentRepo.getByType(ExperimentType.AUTO_GEN) foreach { exp => // mark as inactive for now; delete later
-          userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
+        log.info(s"[reap] got (${userIds.size}) users")
+        for (id <- userIds) {
+          userExperimentRepo.getAllUserExperiments(id) foreach { exp =>
+            val count = userExperimentRepo.delete(exp)
+            log.info(s"[reap] userExp ($exp) DELETE result:$count")
+          }
         }
       }
     case m => throw new UnsupportedActorMessage(m)
