@@ -272,13 +272,8 @@ class InviteCommander @Inject() (
     db.readWrite(attempts = 2) {
       implicit rw =>
         val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
-        invitationRepo.getByRecipientSocialUserId(socialUserInfo.id.get) match {
-          case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE =>
-            if (currInvite.senderUserId == userId) { // todo: removeme
-              cb(socialUserInfo, currInvite)
-            } else {
-              InviteStatus(false, None, "invite_not_sent")
-            }
+        invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserInfo.id.get) match {
+          case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE => cb(socialUserInfo, currInvite)
           case inactiveOpt =>
             val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20) // todo: removeme
             val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
