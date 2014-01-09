@@ -1,12 +1,16 @@
-package com.keepit.search
+package com.keepit.search.query.parser
 
+import scala.concurrent.duration.DurationInt
+
+import com.google.inject.Inject
+import com.google.inject.Singleton
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.Lang
+import com.keepit.search.SearchConfig
 import com.keepit.search.index.DefaultAnalyzer
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
-import scala.concurrent.duration._
+import com.keepit.search.phrasedetector.PhraseDetector
+
 
 @Singleton
 class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitoredAwait: MonitoredAwait) {
