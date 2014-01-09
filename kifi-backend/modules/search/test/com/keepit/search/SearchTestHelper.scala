@@ -15,7 +15,9 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.graph.CollectionNameIndexer
-import com.keepit.search.index.{FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.phrasedetector.FakePhraseIndexer
+import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
@@ -28,6 +30,11 @@ import akka.actor.ActorSystem
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import scala.concurrent.duration._
+import com.keepit.search.tracker.BrowsingHistoryTracker
+import com.keepit.search.tracker.ClickHistoryTracker
+import com.keepit.search.tracker.ResultClickTracker
+import com.keepit.search.tracker.ProbablisticLRU
+import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 
 trait SearchTestHepler { self: SearchApplicationInjector =>
 

@@ -1,10 +1,6 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
-import com.keepit.common.db.Id
-import com.keepit.common.cache.{ProbablisticLRUChunkCache, ProbablisticLRUChunkKey}
 import com.keepit.common.logging.Logging
-
-
 import scala.math._
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -12,13 +8,12 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel.MapMode
 import java.nio.ByteBuffer
-import java.nio.IntBuffer
 import java.nio.MappedByteBuffer
 import java.util.concurrent.atomic.AtomicLong
 import java.util.Random
-
 import com.google.inject.Inject
-import com.amazonaws.services.s3.AmazonS3
+import com.keepit.search.ProbablisticLRUStore
+import com.keepit.search.FullFilterChunkId
 
 case class ProbablisticLRUName(name: String)
 

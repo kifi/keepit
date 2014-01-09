@@ -2,8 +2,7 @@ package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.ArticleStore
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.search.index.Indexer
+import com.keepit.search.article.ArticleIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._

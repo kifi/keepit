@@ -4,7 +4,9 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.graph.CollectionNameIndexer
-import index.{FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
+import com.keepit.search.index.DefaultAnalyzer
+
+import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._

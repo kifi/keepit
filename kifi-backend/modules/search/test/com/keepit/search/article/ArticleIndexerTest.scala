@@ -1,4 +1,4 @@
-package com.keepit.search.index
+package com.keepit.search.article
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
@@ -14,8 +14,6 @@ import com.keepit.search.phrasedetector._
 import com.keepit.test._
 import com.keepit.inject._
 import org.specs2.mutable._
-import play.api.Play.current
-import org.apache.lucene.store.RAMDirectory
 import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
@@ -23,6 +21,11 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.keepit.search.SearchConfig
+import com.google.inject.Singleton
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.Hit
+import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.phrasedetector.FakePhraseIndexer
 
 class ArticleIndexerTest extends Specification with ApplicationInjector {
 
@@ -297,9 +300,9 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     })
 
     "retrieve article records from index" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      import com.keepit.search.index.ArticleRecordSerializer._
       indexer.update()
       indexer.numDocs === 3
+      import com.keepit.search.article.ArticleRecordSerializer._
 
       val searcher = indexer.getSearcher
       Seq(uri1, uri2, uri3).map{ uri =>

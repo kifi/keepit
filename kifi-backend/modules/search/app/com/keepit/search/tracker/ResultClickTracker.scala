@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
 import com.keepit.common.db.Id
 import com.keepit.search.index.DefaultAnalyzer

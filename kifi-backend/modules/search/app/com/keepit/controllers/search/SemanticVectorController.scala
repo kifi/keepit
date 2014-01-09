@@ -1,6 +1,6 @@
 package com.keepit.controllers.search
 
-import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.article.ArticleIndexer
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.search.semantic.SemanticContextAnalyzer

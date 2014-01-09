@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.semantic
 
 import org.specs2.mutable.Specification
 import com.keepit.common.db.Id
@@ -10,7 +10,7 @@ import org.apache.lucene.util.Version
 import com.keepit.search.query.TextQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
-import com.keepit.search.semantic.SemanticVariance
+import com.keepit.search.SemanticVectorBuilder
 
 class SemanticVarianceTest extends Specification {
 

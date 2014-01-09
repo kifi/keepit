@@ -26,6 +26,9 @@ import com.keepit.search.sharding.ActiveShardsSpecParser
 import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ShardedArticleIndexer
 import com.keepit.search.sharding.ShardedURIGraphIndexer
+import com.keepit.search.article.ArticleIndexerPluginImpl
+import com.keepit.search.article.ArticleIndexerPlugin
+import com.keepit.search.article.ArticleIndexer
 
 trait IndexModule extends ScalaModule with Logging {
 

@@ -15,7 +15,7 @@ import akka.pattern.ask
 import akka.util.Timeout.durationToTimeout
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.search.index.BackUp
+import com.keepit.search.article.BackUp
 
 private[user] case object Update
 

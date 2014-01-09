@@ -22,10 +22,10 @@
 		(function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
 		mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
 	</script>
-	<link rel="stylesheet" href="assets/css/jquery-ui.min.css">
-	<link rel="stylesheet" href="assets/js/fancybox/jquery.fancybox.css">
-	<link rel="stylesheet" href="assets/css/main.css">
-	<link rel="shortcut icon" type="image/png" href="assets/images/kifi-favi-50.png">
+	<link rel="stylesheet" href="/assets/css/jquery-ui.min.css">
+	<link rel="stylesheet" href="/assets/js/fancybox/jquery.fancybox.css">
+	<link rel="stylesheet" href="/assets/css/main.css">
+	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
 </head>
 <body>
 	<!--[if lt IE 9]>
@@ -255,7 +255,7 @@
 							</li>
 						</ol>
 						<div class="keep-group-title-fixed"></div>
-						<img class="keeps-loading" src="assets/img/wait.gif">
+						<img class="keeps-loading" src="/assets/img/wait.gif">
 						<a class="keeps-load-more hidden" href="javascript:">Show more</a>
 					</div>
 				</div>
@@ -435,8 +435,8 @@
 						<div class="above-friends-list">
 							<input class="friends-filter" type="text" placeholder="Type a name of a Kifi friend">
 						</div>
-						<img class="image-preload" src="assets/img/friend-actions.png">
-						<img class="image-preload" src="assets/img/friend-actions.2x.png">
+						<img class="image-preload" src="/assets/img/friend-actions.png">
+						<img class="image-preload" src="/assets/img/friend-actions.2x.png">
 						<div id="friends-list">
 							<ul class="antiscroll-inner">
 								<li class="friend {{state}}" data-template>
@@ -457,7 +457,7 @@
 									</div>
 								</li>
 							</ul>
-							<img class="friends-loading" src="assets/img/wait.gif">
+							<img class="friends-loading" src="/assets/img/wait.gif">
 						</div>
 					</div>
 					<div class="friends-page" data-href="friends/invite">
@@ -519,7 +519,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 										<a class="invite-button" href="javascript:">Invite</a>
 										</li>
 									</ul>
-									<img class="invite-friends-loading" src="assets/img/wait.gif">
+									<img class="invite-friends-loading" src="/assets/img/wait.gif">
 									<div class="no-results"></div>
 								</div>
 							</div>
@@ -531,8 +531,8 @@ Kifi also lets you message your friends about what you keep and find alongside a
 								<input class="user-filter" type="text" placeholder="Type a name or email">
 							</div>
 							<div class="search-users-help">
-								<img class="search-users-arrow" src="assets/img/carrot-top-left.2x.png">
-								<img class="search-users-icon" src="assets/img/search-kifi-friends.2x.png">
+								<img class="search-users-arrow" src="/assets/img/carrot-top-left.2x.png">
+								<img class="search-users-icon" src="/assets/img/search-kifi-friends.2x.png">
 								<span>Quickly find Kifi users you may know by typing their name or email</span>
 							</div>
 							<div class="found-user-list">
@@ -547,7 +547,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 										<a class="connect-button" href="javascript:">Connect</a>
 										</li>
 									</ul>
-									<img class="found-user-list-loading" src="assets/img/wait.gif">
+									<img class="found-user-list-loading" src="/assets/img/wait.gif">
 									<div class="no-results" style="display:none">
 										<h2>We couldn’t find any users matching ‘<span class="no-result-filter"></span>’</h2>
 									</div>
@@ -587,7 +587,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 								</li>
 							</ul>
 						</div>
-						<img class="friend-reqs-loading" src="assets/img/wait.gif">
+						<img class="friend-reqs-loading" src="/assets/img/wait.gif">
 					</div>
 				</div>
 
@@ -604,7 +604,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 								{{content}}
 							</article>
 						</div>
-						<img class="blog-loading" src="assets/img/wait.gif">
+						<img class="blog-loading" src="/assets/img/wait.gif">
 					</div>
 				</div>
 			</div>
@@ -618,23 +618,30 @@ Kifi also lets you message your friends about what you keep and find alongside a
 
 				<div class="splash">
 					<div class="antiscroll-inner">
-						<h2>Kifi Beta - News & Tools</h2>
-						<ul class="about-kifi">
-							<li><a href="blog" class="updates-features">Kifi Updates</a></li>
-							<li class="install-kifi"><a href="/install">Install Kifi on this computer</a></li>
-							<li><a href="friends/invite">Invite your friends</a></li>
-							<li><a href="http://support.kifi.com/customer/portal/emails/new" class="send-feedback">Send feedback</a></li>
-							<li class="kifi-onboarding-li"><a href="#">Tutorial</a></li>
+						<h2>Getting Started with kifi</h2>
+						<ul class="about-kifi splash-list">
+							<li><a class="kifi-tutorial" href="#"><span class="kifi-icon kifi-icon-tutorial"></span>View tutorial</a></li>
+							<li class="install-kifi"><a href="/install"><span class="kifi-icon kifi-icon-install"></span>Install the extension</a></li>
+							<li><a href="friends/invite"><span class="kifi-icon kifi-icon-friends"></span>Find friends</a></li>
 						</ul>
-						<h2>Get to Know Us</h2>
-						<ul class="about-us">
-							<li><a href="http://www.42go.com/team.html" class="view-team">The Team</a></li>
-							<li><a href="http://eng.42go.com" class="view-eng-blog">Engineering Blog</a></li>
-							<li><a href="http://support.kifi.com/customer/portal/emails/new" class="contact-us">Contact Us</a></li>
-							<li><a href="http://www.42go.com/join_us.html" class="join-us">Jobs</a></li>
+						<h2>kifi Supports and Updates</h2>
+						<ul class="about-us splash-list">
+							<li><a href="http://support.kifi.com" class="support-center"><span class="kifi-icon kifi-icon-support"></span>Support center</a></li>
+							<li><a href="http://support.kifi.com/customer/portal/emails/new" class="contact-us"><span class="kifi-icon kifi-icon-contact"></span>Contact us</a></li>
+							<li><a href="http://blog.kifi.com" class="updates-features"><span class="kifi-icon kifi-icon-blog"></span>kifi blog</a></li>
 						</ul>
+						<div class="footer">
+							<a href="/privacy">Privacy</a>
+							<span class="footer-sep">|</span>
+							<a href="/terms">Terms</a>
+							<span class="footer-sep">|</span>
+							<a href="/about">About kifi</a>
+							<span class="footer-sep">|</span>
+							<a href="http://www.42go.com">About FortyTwo</a></li>
+						</div>
 					</div>
 				</div>
+
 
 				<div class="detail"><div data-template data-kept="{{howKept}}">
 						<a class="page-x" href="javascript:"></a>
@@ -829,7 +836,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 			<span class="friends-importing-logo"></span>
 			<div>Importing your {{friends}}</div>
 			<div>from {{network}}</div>
-			<img class="keeps-loading" src="assets/img/wait.gif">
+			<img class="keeps-loading" src="/assets/img/wait.gif">
 			{{#if progress}}
 			<div class="friends-importing-progress">{{progress}} {{friends}} imported</div>
 			{{/if}}
@@ -956,21 +963,21 @@ Kifi also lets you message your friends about what you keep and find alongside a
 	</div>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-	<script>window.$||document.write('<script src=assets/js/jquery.min.js><\/script>');if(location.port&&location.port!=9000)window.History={options:{html4Mode:true}};</script>
-	<script src="assets/js/handlebars.min.js"></script>
-	<script src="assets/js/jquery.history.min.js"></script>
-	<script src="assets/js/jquery.timeago.min.js"></script>
-	<script src="assets/js/jquery-ui.min.js"></script>
-	<script src="assets/js/jquery.mousewheel.min.js"></script>
-	<script src="assets/js/antiscroll.min.js"></script>
-	<script src="assets/js/tempo.min.js"></script>
-	<script src="assets/js/util.js"></script>
-	<script src="assets/js/scorefilter.js"></script>
-	<script src="assets/js/jquery-ui-slider.min.js"></script>
-	<script src="assets/js/kifi.js"></script>
-	<script src="assets/js/main.js"></script>
-	<script src="assets/js/track.js" async defer></script>
-	<script src="assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
+	<script>window.$||document.write('<script src=/assets/js/jquery.min.js><\/script>');if(location.port&&location.port!=9000)window.History={options:{html4Mode:true}};</script>
+	<script src="/assets/js/handlebars.min.js"></script>
+	<script src="/assets/js/jquery.history.min.js"></script>
+	<script src="/assets/js/jquery.timeago.min.js"></script>
+	<script src="/assets/js/jquery-ui.min.js"></script>
+	<script src="/assets/js/jquery.mousewheel.min.js"></script>
+	<script src="/assets/js/antiscroll.min.js"></script>
+	<script src="/assets/js/tempo.min.js"></script>
+	<script src="/assets/js/util.js"></script>
+	<script src="/assets/js/scorefilter.js"></script>
+	<script src="/assets/js/jquery-ui-slider.min.js"></script>
+	<script src="/assets/js/kifi.js"></script>
+	<script src="/assets/js/main.js"></script>
+	<script src="/assets/js/track.js" async defer></script>
+	<script src="/assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>
 		var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
 		!function(d, t) {

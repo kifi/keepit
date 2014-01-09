@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcherWithUser
-import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.article.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -24,6 +24,11 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import com.keepit.search.semantic.SemanticVectorSearcher
+import com.keepit.search.tracker.BrowsingHistoryTracker
+import com.keepit.search.tracker.BrowsedURI
+import com.keepit.search.tracker.ClickedURI
+import com.keepit.search.tracker.ClickHistoryTracker
+import com.keepit.search.tracker.ResultClickTracker
 
 @Singleton
 class MainSearcherFactory @Inject() (

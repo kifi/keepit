@@ -1,4 +1,4 @@
-package com.keepit.search.index
+package com.keepit.search.article
 
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -18,7 +18,13 @@ import com.google.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Success
-import ArticleRecordSerializer._
+import com.keepit.search.article.ArticleRecordSerializer._
+import com.keepit.search.index.IndexDirectory
+import com.keepit.search.index.Indexer
+import com.keepit.search.index.IndexWarmer
+import com.keepit.search.index.Indexable
+import com.keepit.search.index.DefaultAnalyzer
+
 
 class ArticleIndexer @Inject() (
     indexDirectory: IndexDirectory,

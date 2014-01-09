@@ -5,6 +5,7 @@ import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, Search
 import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
+import com.keepit.search.tracker.ProdTrackingModule
 
 case class SearchProdModule() extends SearchModule(
   // Common Functional Modules

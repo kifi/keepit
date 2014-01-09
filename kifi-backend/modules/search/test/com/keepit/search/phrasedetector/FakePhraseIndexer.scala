@@ -1,15 +1,15 @@
-package com.keepit.search.index
+package com.keepit.search.phrasedetector
 
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-
 import net.codingwell.scalaguice.ScalaModule
-
 import com.keepit.common.db.Id
 import com.keepit.model.Phrase
-import com.keepit.search.phrasedetector.{PhraseIndexable, PhraseIndexer}
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.VolatileIndexDirectoryImpl
 
-class FakePhraseIndexer extends PhraseIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
+class FakePhraseIndexer extends PhraseIndexer(new VolatileIndexDirectoryImpl,
+    new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
   def update() = 0
   def getCommitBatchSize() = 0
 }
