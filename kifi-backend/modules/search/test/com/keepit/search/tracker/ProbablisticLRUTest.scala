@@ -1,14 +1,10 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
 import java.util.Random
-import java.nio.ByteBuffer
-import java.io.File
 import com.keepit.inject._
 import com.keepit.search.tracker.ProbablisticLRU
 import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
