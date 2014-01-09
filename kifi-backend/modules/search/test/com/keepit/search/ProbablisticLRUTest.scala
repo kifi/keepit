@@ -10,6 +10,8 @@ import java.util.Random
 import java.nio.ByteBuffer
 import java.io.File
 import com.keepit.inject._
+import com.keepit.search.tracker.ProbablisticLRU
+import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 
 class ProbablisticLRUTest extends Specification {
   val rand = new Random(123456789L)

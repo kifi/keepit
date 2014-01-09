@@ -1,6 +1,8 @@
 package com.keepit.search.query
 
-import com.keepit.search.{BrowsedURI, MultiHashFilter, ResultClickBoosts}
+import com.keepit.search.{MultiHashFilter}
+import com.keepit.search.tracker.ResultClickBoosts
+import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.index.IdMapper
 import org.apache.lucene.index.AtomicReaderContext

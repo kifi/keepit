@@ -15,7 +15,8 @@ import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.{DevTrackingModule, DevIndexModule}
+import com.keepit.search.{DevIndexModule}
+import com.keepit.search.tracker.DevTrackingModule
 import com.keepit.common.store.SearchDevStoreModule
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
