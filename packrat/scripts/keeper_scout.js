@@ -39,6 +39,9 @@ var tile = tile || function() {  // idempotent for Chrome
       api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
         if (!o.hide) {
           tile.style.display = "";
+          if (session && session.prefs.showKeeperIntro && !/\.(?:kifi|google)\./.test(location.hostname) && document.hasFocus()) {
+            setTimeout(api.require.bind(api, 'scripts/keeper_intro.js', api.noop), 5000);
+          }
         }
         tile.offsetHeight;
         tileCard.classList.remove("kifi-0s");
@@ -144,9 +147,12 @@ var tile = tile || function() {  // idempotent for Chrome
     } else {
       var args = Array.prototype.slice.call(arguments, 2);
       api.require('scripts/' + name + '.js', function() {
-        if (onScroll && name !== 'showKeepers') {
+        if (onScroll && methodName !== 'showKeepers') {
           document.removeEventListener('scroll', onScroll);
           onScroll = null;
+        }
+        if (window.hideKeeperIntro) {
+          hideKeeperIntro();
         }
         var o = window[name];
         o[methodName].apply(o, args);
