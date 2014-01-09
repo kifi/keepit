@@ -11,8 +11,9 @@ import com.keepit.common.db.TestDbInfo
 import com.google.inject.{Injector, Module}
 import scala.slick.session.ResultSetConcurrency
 import java.sql.{Driver, DriverManager}
+import com.keepit.common.logging.Logging
 
-trait DbInjectionHelper { self: InjectorProvider =>
+trait DbInjectionHelper extends Logging { self: InjectorProvider =>
 
   def db(implicit injector: Injector) = inject[Database]
 
@@ -55,7 +56,7 @@ trait DbInjectionHelper { self: InjectorProvider =>
   }
 
   def executeSequenceinit(db: H2, sequence: String): Unit = {
-    println(s"initiating sequence [$sequence]")
+    log.debug(s"initiating sequence [$sequence]")
     readWrite(db) { implicit session =>
       try {
         val statment = s"CREATE SEQUENCE IF NOT EXISTS $sequence;"
@@ -71,7 +72,7 @@ trait DbInjectionHelper { self: InjectorProvider =>
   }
 
   def executeTableDDL(db: H2, table: TableWithDDL): Unit = {
-    println(s"initiating table [${table.tableName}]")
+    log.debug(s"initiating table [${table.tableName}]")
     readWrite(db) { implicit session =>
       try {
         val ddl = table.ddl
