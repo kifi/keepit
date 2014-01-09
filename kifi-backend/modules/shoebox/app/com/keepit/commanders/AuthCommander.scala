@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-import _root_.java.io.File
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
@@ -11,18 +10,19 @@ import com.keepit.common.mail._
 import com.keepit.common.db.{ExternalId, Id}
 import securesocial.core._
 import com.keepit.social._
-import securesocial.core.providers.utils.GravatarHelper
+import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
 import securesocial.core.IdentityId
-import scala.Some
 import securesocial.core.PasswordInfo
 import com.keepit.social.UserIdentity
 import com.keepit.social.SocialId
-import com.keepit.common._
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.controllers.core.AuthHelper
-import scala.util.{Failure, Success}
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common._
+import com.keepit.common.performance.timing
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
@@ -99,7 +99,7 @@ class AuthCommander @Inject()(
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
                                email: String, passwordInfo: PasswordInfo,
-                               firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
+                               firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = timing(s"[saveUserPasswordIdentity($userIdOpt, $email)]") {
     log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
     val lName = User.sanitizeName(lastName)
@@ -150,10 +150,13 @@ class AuthCommander @Inject()(
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
+  def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = timing(s"[finalizeSocialAccount($userIdOpt)]") {
     log.info(s"[finalizeSocialAccount] sfi=$sfi userId=$userIdOpt identity=$identityOpt extId=$inviteExtIdOpt")
     require(AuthHelper.validatePwd(sfi.password), "invalid password")
-    val pInfo = Registry.hashers.currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
+    val currentHasher = Registry.hashers.currentHasher
+    val pInfo = timing(s"[finalizeSocialAccount] hash") {
+      currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
+    }
 
     val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,
       email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
@@ -172,7 +175,7 @@ class AuthCommander @Inject()(
     (user, emailPassIdentity)
   }
 
-  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = {
+  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = timing(s"[finalizeEmailPasswordAcct($userId)]") {
     require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
@@ -184,7 +187,7 @@ class AuthCommander @Inject()(
     val email = identity.email.get
     val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
-    inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt)
+    SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
     val user = db.readOnly(userRepo.get(userId)(_))
 

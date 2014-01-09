@@ -82,6 +82,11 @@ body {
 	}
 }
 
+.kifi-video-play-hover {
+	display: none;
+	.at2x('/assets/images/playhover.png', 100%, 100%);
+}
+
 .kifi-video-caption {
 	position: relative;
 	.font-size(16px);
@@ -264,8 +269,7 @@ body {
 
 .kifi-two-more-things {
 	position: relative;
-	.padding-top(136px);
-	.padding-bottom(112px);
+	.padding-tb(80px);
 	.centered-content;
 
 	h2 {
@@ -283,7 +287,6 @@ body {
 	.max-width(570px);
 	.box-sizing(border-box);
 	.padding-lr(30px);
-	.padding-bottom(80px);
 	margin: 0 auto;
 
 	h2 {
@@ -301,7 +304,7 @@ body {
 	}
 
 	h3 {
-		@fontSize: 22px;
+		@fontSize: 24px;
 		margin: 0 auto;
 		.font-size(@fontSize);
 		.margin-top(50px, @fontSize);
@@ -388,4 +391,8 @@ body {
 
 .kifi-mobile-links {
 	.padding-left(22px);
+}
+
+.kifi-fake-link {
+	color: #5b96e5;
 }

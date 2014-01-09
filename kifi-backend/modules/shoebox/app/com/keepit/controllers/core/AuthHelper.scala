@@ -1,6 +1,6 @@
 package com.keepit.controllers.core
 
-import _root_.java.io.File
+import com.keepit.common.performance._
 import com.google.inject.Inject
 import play.api.mvc._
 import play.api.http.{Status, HeaderNames}
@@ -34,6 +34,9 @@ import com.keepit.social.SocialId
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.performance._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -64,10 +67,8 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress:String, password:Array[Char])(implicit request:Request[_]) = {
-    require(AuthHelper.validatePwd(password), "invalid password")
-    val hasher = Registry.hashers.currentHasher
-    val tupleOpt: Option[(Boolean, SocialUserInfo)] = db.readOnly { implicit s =>
+  private def checkForExistingUser(emailAddress: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
+    db.readOnly { implicit s =>
       socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(emailAddress).map {
           case emailAddr if emailAddr.state == EmailAddressStates.VERIFIED =>
@@ -79,13 +80,20 @@ class AuthHelper @Inject() (
         None
       }
     }
+  }
+
+  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = timing(s"[handleEmailPasswordSuccess($emailAddress)]") {
+    require(AuthHelper.validatePwd(password), "invalid password")
+    val hasher = Registry.hashers.currentHasher
+    val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
     val res: PlainResult = tupleOpt collect {
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
         val identity = sui.credentials.get
-        if (hasher.matches(identity.passwordInfo.get, new String(password))) { // char[] -> string due to SecureSocial
+        val matches = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.matches(identity.passwordInfo.get, new String(password)) }
+        if (matches) {
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator => {
@@ -109,7 +117,7 @@ class AuthHelper @Inject() (
           Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
         }
     } getOrElse {
-      val pInfo = hasher.hash(new String(password)) // see SecureSocial
+      val pInfo = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.hash(new String(password)) } // see SecureSocial
       val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
       Authenticator.create(newIdentity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -130,24 +138,26 @@ class AuthHelper @Inject() (
       ((email, pwd) => EmailPassword(email, pwd.toCharArray))
       ((ep:EmailPassword) => Some(ep.email, new String(ep.password)))
   )
-  def userPasswordSignupAction(implicit request: Request[JsValue]) = {
-    // For email login, a (emailString, password) is tied to a user. This email string
-    // has no direct connection to a user's actual active email address. So, we need to
-    // keep in mind that whenever the user supplies an email address, it may or may not
-    // be related to what's their (emailString, password) login combination.
 
-    emailPasswordForm.bindFromRequest.fold(
-      hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
-      success = { case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress, password) }
-    )
-  }
+  /**
+   * For email login, a (emailString, password) is tied to a user. This email string
+   * has no direct connection to a user's actual active email address. So, we need to
+   * keep in mind that whenever the user supplies an email address, it may or may not
+   * be related to what's their (emailString, password) login combination.
+   */
+  def userPasswordSignupAction(implicit request: Request[JsValue]) = emailPasswordForm.bindFromRequest.fold(
+    hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
+    success = {
+      case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress, password)
+    }
+  )
 
   private val url = current.configuration.getString("application.baseUrl").get
 
-  def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = {
+  def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
-      userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr)))
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr))) }
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -155,7 +165,7 @@ class AuthHelper @Inject() (
         }
         userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
-      userCommander.sendWelcomeEmail(user, withVerification=false)
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=false) }
     }
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey).getOrElse("/install")

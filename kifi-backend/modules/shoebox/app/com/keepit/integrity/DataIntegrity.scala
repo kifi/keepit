@@ -41,11 +41,9 @@ private[integrity] class DataIntegrityActor @Inject() (
 
   def receive() = {
     case CleanOrphans =>
-      // This cleans up cases when we have a normalizedUri, but no Url. This *only* happens when we renormalize, so does not need to happen every night.
-      //orphanCleaner.cleanNormalizedURIs(false)
+      orphanCleaner.clean(false)
     case Cron =>
-      if (currentDateTime.hourOfDay().get() == 21) // 9pm PST
-        self ! CleanOrphans
+      self ! CleanOrphans
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -66,11 +64,6 @@ class OrphanCleaner @Inject() (
     override val namespace = "OrphanCleaner"
   }
 
-  private[this] val renormalizedURLSeqKey = new ConfigKey("RenormalizedURLSeq")
-  private[this] val changedURISeqKey = new ConfigKey("ChangedURISeq")
-  private[this] val bookmarkSeqKey = new ConfigKey("BookmarkSeq")
-  private[this] val normalizedURISeqKey = new ConfigKey("NormalizedURISeq")
-
   private def getSequenceNumber(key: ConfigKey): SequenceNumber = centralConfig(key).map(SequenceNumber(_)).getOrElse(SequenceNumber.MinValue)
 
   private[this] val lock = new AnyRef
@@ -89,7 +82,27 @@ class OrphanCleaner @Inject() (
     try { Some(nuriRepo.get(id)) } catch { case e: Throwable => None }
   }
 
+  private def tryMakeActive(id: Id[NormalizedURI], readOnly: Boolean)(implicit session: RWSession): Boolean = {
+    getNormalizedURI(id) match {
+      case Some(uri) => return tryMakeActive(uri, readOnly)
+      case None => false
+    }
+  }
+
+  private def tryMakeActive(uri: NormalizedURI, readOnly: Boolean)(implicit session: RWSession): Boolean = {
+    if (uri.state == NormalizedURIStates.SCRAPED || uri.state == NormalizedURIStates.SCRAPE_FAILED) {
+      if (!bookmarkRepo.exists(uri.id.get)) {
+        if (!readOnly) {
+          nuriRepo.save(uri.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
+        }
+        return true
+      }
+    }
+    false
+  }
+
   private[integrity] def cleanNormalizedURIsByRenormalizedURL(readOnly: Boolean = true): Unit = {
+    val renormalizedURLSeqKey = new ConfigKey("RenormalizedURLSeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var seq = getSequenceNumber(renormalizedURLSeqKey)
@@ -102,16 +115,7 @@ class OrphanCleaner @Inject() (
 
       db.readWrite{ implicit s =>
         renormalizedURLs.foreach{ renormalizedURL =>
-          getNormalizedURI(renormalizedURL.oldUriId).map{ uri =>
-            if (uri.state == NormalizedURIStates.SCRAPED || uri.state == NormalizedURIStates.SCRAPE_FAILED) {
-              if (!bookmarkRepo.exists(uri.id.get)) {
-                numUrisChangedToActive += 1
-                if (!readOnly) {
-                  nuriRepo.save(uri.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
-                }
-              }
-            }
-          }
+          if (tryMakeActive(renormalizedURL.oldUriId, readOnly)) numUrisChangedToActive += 1
           numProcessed += 1
           seq = renormalizedURL.seq
         }
@@ -127,6 +131,7 @@ class OrphanCleaner @Inject() (
   }
 
   private[integrity] def cleanNormalizedURIsByChangedURIs(readOnly: Boolean = true): Unit = {
+    val changedURISeqKey = new ConfigKey("ChangedURISeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var seq = getSequenceNumber(changedURISeqKey)
@@ -139,16 +144,7 @@ class OrphanCleaner @Inject() (
 
       db.readWrite{ implicit s =>
         changedURIs.foreach{ changedUri =>
-          getNormalizedURI(changedUri.oldUriId).map{ uri =>
-            if (uri.state == NormalizedURIStates.SCRAPED || uri.state == NormalizedURIStates.SCRAPE_FAILED) {
-              if (!bookmarkRepo.exists(uri.id.get)) {
-                numUrisChangedToActive += 1
-                if (!readOnly) {
-                  nuriRepo.save(uri.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
-                }
-              }
-            }
-          }
+          if (tryMakeActive(changedUri.oldUriId, readOnly)) numUrisChangedToActive += 1
           numProcessed += 1
           seq = changedUri.seq
         }
@@ -164,6 +160,7 @@ class OrphanCleaner @Inject() (
   }
 
   private[integrity] def cleanNormalizedURIsByBookmarks(readOnly: Boolean = true): Unit = {
+    val bookmarkSeqKey = new ConfigKey("BookmarkSeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var numUrisChangedToScrapeWanted = 0
@@ -190,14 +187,7 @@ class OrphanCleaner @Inject() (
                   }
                 }
               case BookmarkStates.INACTIVE =>
-                if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE &&  u.state != NormalizedURIStates.REDIRECTED) {
-                  if (!bookmarkRepo.exists(u.id.get)) {
-                    numUrisChangedToActive += 1
-                    if (!readOnly) {
-                      nuriRepo.save(u.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
-                    }
-                  }
-                }
+                if (tryMakeActive(u, readOnly)) numUrisChangedToActive += 1
             }
           }
           numProcessed += 1
@@ -216,6 +206,7 @@ class OrphanCleaner @Inject() (
 
 
   private[integrity] def cleanNormalizedURIsByNormalizedURIs(readOnly: Boolean = true): Unit = {
+    val normalizedURISeqKey = new ConfigKey("NormalizedURISeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var seq = getSequenceNumber(normalizedURISeqKey)
@@ -228,14 +219,7 @@ class OrphanCleaner @Inject() (
 
       db.readWrite{ implicit s =>
         normalizedURIs.foreach{ uri =>
-          if (uri.state == NormalizedURIStates.SCRAPED || uri.state == NormalizedURIStates.SCRAPE_FAILED) {
-            if (!bookmarkRepo.exists(uri.id.get)) {
-              numUrisChangedToActive += 1
-              if (!readOnly) {
-                nuriRepo.save(uri.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
-              }
-            }
-          }
+          if (tryMakeActive(uri.id.get, readOnly)) numUrisChangedToActive += 1
           numProcessed += 1
           seq = uri.seq
         }

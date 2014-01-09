@@ -1,37 +1,30 @@
-package com.keepit.search
+package com.keepit.search.query.parser
 
-import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
-import com.keepit.search.graph.CollectionSearcherWithUser
-import com.keepit.search.query.parser.QueryParser
-import com.keepit.search.query.parser.DefaultSyntax
-import com.keepit.search.query.parser.PercentMatch
-import com.keepit.search.query.parser.QueryExpansion
-import com.keepit.search.query.parser.QueryParserException
-import com.keepit.search.query.ExistenceBoostQuery
-import com.keepit.search.query.MultiplicativeBoostQuery
-import com.keepit.search.query.NamedQueryContext
-import com.keepit.search.query.NamedQuery
-import com.keepit.search.query.ProximityQuery
-import com.keepit.search.query.QueryUtil._
-import com.keepit.search.query.SemanticVectorQuery
-import com.keepit.search.query.SiteQuery
-import com.keepit.search.query.TextQuery
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.BooleanClause.Occur._
-import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import scala.collection.mutable.ArrayBuffer
-import scala.concurrent._
-import scala.concurrent.duration._
+
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.service.RequestConsolidator
+import com.keepit.search.Lang
+import com.keepit.search.graph.CollectionSearcherWithUser
+import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.query.ExistenceBoostQuery
+import com.keepit.search.query.MultiplicativeBoostQuery
+import com.keepit.search.query.ProximityQuery
+import com.keepit.search.query.TextQuery
+
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+
 
 class MainQueryParser(
   lang: Lang,

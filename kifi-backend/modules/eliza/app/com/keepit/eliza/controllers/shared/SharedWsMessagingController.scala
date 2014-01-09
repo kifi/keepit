@@ -206,13 +206,16 @@ class SharedWsMessagingController @Inject() (
     // },
     // end of inbox notification/thread handlers
 
+    "set_message_unread" -> { case JsString(messageId) +: _ =>
+      messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
+    },
     "set_message_read" -> { case JsString(messageId) +: _ =>
       val msgExtId = ExternalId[Message](messageId)
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", false)
       contextBuilder += ("category", NotificationCategory.Personal.MESSAGE.category)
       implicit val context = contextBuilder.build
-      messagingCommander.setNotificationReadForMessage(socket.userId, msgExtId)
+      messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>  // TODO: deprecate this handler in favor of "set_message_read" (identical code)
@@ -221,7 +224,7 @@ class SharedWsMessagingController @Inject() (
       contextBuilder += ("global", true)
       contextBuilder += ("category", NotificationCategory.Global.ANNOUNCEMENT.category)
       implicit val context = contextBuilder.build
-      messagingCommander.setNotificationReadForMessage(socket.userId, msgExtId)
+      messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)
     },
     "mute_thread" -> { case JsString(jsThreadId) +: _ =>
@@ -231,9 +234,6 @@ class SharedWsMessagingController @Inject() (
     "unmute_thread" -> { case JsString(jsThreadId) +: _ =>
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
       messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
-    },
-    "set_notfication_unread" -> { case JsString(threadId) +: _ =>
-      messagingCommander.setNotificationUnread(socket.userId, ExternalId[MessageThread](threadId))
     },
     "eip" -> { case JsString(eip) +: _ =>
       socket.ip = crypt.decrypt(ipkey, eip).toOption

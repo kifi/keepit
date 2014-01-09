@@ -1,4 +1,4 @@
-@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", isLoggedIn: Boolean)
+@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", earlyScripts: Html = Html(""), isLoggedIn: Boolean)
 
 <!DOCTYPE html>
 <html class="@if(!isLoggedIn){guest }@htmlClass"@if(dataTrack!=""){ data-track-type="@dataTrack"}>
@@ -43,6 +43,7 @@
   @content
 
   @footer(footerType)
+  @earlyScripts
   <script type="text/javascript" src="/assets/js/jquery.min.js"></script>
   <script type="text/javascript" src="/assets/js/track-ext.js"></script>
   @scripts

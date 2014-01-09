@@ -487,6 +487,7 @@
 									<button class="more-invites">I need more invites</button>
 								</div>
 							</div>
+
 							<div class="dialog invite-message-dialog" style="display:none">
 								<form method="POST" action="/invite" class="dialog-content" data-template>
 									<div class="dialog-header">Your Kifi invite to {{label}}</div>
@@ -496,16 +497,18 @@
 									<textarea class="invite-message" name="message">Hi{% if label %} {{label | replace ' .*', '' }}{% endif %},
 
 Please accept my invitation to kifi.
-
+{% if longForm %}
 What is kifi and why should I join?
 Kifi (short for keep it find it) allows you to easily keep and tag anything you find online - an article, video, picture, email, anything - then quickly find it on top of your favorite search engine results, together with relevant pages that your friends kept, too.
 
 Kifi also lets you message your friends about what you keep and find alongside any webpage, to get their opinion or gain from their expertise.
+{% endif %}
 </textarea>
 									<p>An invitation link will be attached to this message.</p>
 									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
 								</form>
 							</div>
+
 							<div class="invite-friends" data-href="friends/invite">
 								<div class="antiscroll-inner">
 									<ul>
@@ -623,18 +626,18 @@ Kifi also lets you message your friends about what you keep and find alongside a
 						</ul>
 						<h2>kifi Supports and Updates</h2>
 						<ul class="about-us splash-list">
-							<li><a href="http://support.kifi.com" class="support-center" target="_blank">Support center</a></li>
-							<li><a href="http://support.kifi.com/customer/portal/emails/new" target="_blank" class="contact-us">Contact us</a></li>
-							<li><a href="http://blog.kifi.com" class="updates-features" target="_blank">kifi blog</a></li>
+							<li><a href="http://support.kifi.com" class="support-center">Support center</a></li>
+							<li><a href="http://support.kifi.com/customer/portal/emails/new" class="contact-us">Contact us</a></li>
+							<li><a href="http://blog.kifi.com" class="updates-features">kifi blog</a></li>
 						</ul>
 						<div class="footer">
-							<a href="/terms" target="_blank">Terms</a>
+							<a href="/terms">Terms</a>
 							<span class="footer-sep">|</span>
-							<a href="/privacy" target="_blank">Privacy</a>
+							<a href="/privacy">Privacy</a>
 							<span class="footer-sep">|</span>
-							<a href="/about" target="_blank">About kifi</a>
+							<a href="/about">About kifi</a>
 							<span class="footer-sep">|</span>
-							<a href="http://www.42go.com" target="_blank">About FortyTwo</a></li>
+							<a href="http://www.42go.com">About FortyTwo</a></li>
 						</div>
 					</div>
 				</div>
@@ -774,7 +777,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 				</ul>
 			</div>
 			<a href="javascript:" class="cancel-import">Cancel</a>
-			<button class="do-import"><strong>Yes</strong> - Import</button>
+			<button class="do-import" tabindex="-1"><strong>Yes</strong> - Import</button>
 		</div>
 		<div class="dialog-content import-step-2" style="display:none">
 			<div class="dialog-title">kifi<span class="import-dialog-x">✕</span></div>
@@ -798,7 +801,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 			<li>Your friends list might not be up to date. <a href="javascript:" class="refresh-friends">Try refreshing your friends list.</a></li>
 			<li>Some of your friends might have privacy settings that prevent us from showing them.
 				You can still tell them to visit <a href="https://www.kifi.com/">kifi.com</a> and sign up.</li>
-			<li>If you tried the above and think this might be our mistake, please <a href="http://support.kifi.com/customer/portal/emails/new" target="_blank" class="tell-us">tell us</a>.</li>
+			<li>If you tried the above and think this might be our mistake, please <a href="http://support.kifi.com/customer/portal/emails/new" class="tell-us">tell us</a>.</li>
 		</ol>
 	</script>
 
@@ -810,7 +813,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 			<li>Your friends list might not be up to date. <a href="javascript:" class="refresh-friends">Try refreshing your friends list.</a></li>
 			<li>Some of your friends might have privacy settings that prevent us from showing them.
 				You can still tell them to visit <a href="https://www.kifi.com/">kifi.com</a> and sign up.</li>
-			<li>If you tried the above and think this might be our mistake, please <a href="http://support.kifi.com/customer/portal/emails/new" target="_blank" class="tell-us">tell us</a>.</li>
+			<li>If you tried the above and think this might be our mistake, please <a href="http://support.kifi.com/customer/portal/emails/new" class="tell-us">tell us</a>.</li>
 		</ol>
 	</script>
 

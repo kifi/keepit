@@ -2471,12 +2471,12 @@ $(function () {
 					name = match[1];
 				}
 			}
-			openInviteDialog(fullSocialId, name);
+			openInviteDialog(fullSocialId, name, /^linkedin/.test(fullSocialId) );
 		}
 	});
 
-	function openInviteDialog(fullSocialId, name) {
-		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name});
+	function openInviteDialog(fullSocialId, name, longForm) {
+		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm || false});
 		$inviteMessageDialog.dialog('show');
 	}
 
@@ -4167,6 +4167,7 @@ $(function () {
 	/* Email Verified */
 	var emailVerifiedPending = false;
 	var emailVerifiedView = false;
+	var emailVerifiedViewDone = false;
 	function checkEmailVerified() {
 		if (emailVerifiedView) {
 			return;
@@ -4178,6 +4179,10 @@ $(function () {
 			emailVerifiedPending = true;
 			promise.me.done(function() {
 				emailVerifiedPending = false;
+				if (emailVerifiedViewDone) {
+					return;
+				}
+				emailVerifiedViewDone = true;
 				showEmailVerfied(me.firstName || me.lastName || '', params.email, function () {
 					if (!$('html').data('kifi-ext')) {
 						// no extension installed
@@ -4221,8 +4226,11 @@ $(function () {
 		if (onboardingViewed) {
 			return;
 		}
-		onboardingViewed = true;
 		promise.myPrefs.done(function () {
+			if (onboardingViewed) {
+				return;
+			}
+			onboardingViewed = true;
 			if (!myPrefs.onboarding_seen || myPrefs.onboarding_seen === 'false') {
 				$('body').append('<iframe class="kifi-onboarding-iframe" src="/assets/onboarding.html" frameborder="0"></iframe>');
 			}
@@ -4267,6 +4275,8 @@ $(function () {
 		window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
 		var $bookmarkImportDialog = $('.import-dialog').remove().show();
+
+		//if (KF.dev) { showBookmarkImportDialog({ data: { bookmarkCount: 2 } }); }
 
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);

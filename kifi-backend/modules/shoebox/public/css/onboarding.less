@@ -35,12 +35,13 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background: @blueGray;
+	background: #b3bfce;
+	background: rgba(0,40,90,0.3);
 	.opacity(0);
 	.transition(all 0.3s ease);
 
 	&.visible {
-		.opacity(.8);
+		.opacity(1);
 	}
 }
 
@@ -50,17 +51,16 @@
 	position: relative;
 	font-size: @fontSize;
 	width: 90%;
-	height: 85%;
+	height: 653 * @factor;
 	min-width: 440 / @fontFactor * @factor;
 	max-width: 1130 * @factor;
-	max-height: 653 * @factor;
 	margin: 0 auto;
 	margin-top: 5%;
 	border: 2px solid @blueGray;
 	.border-radius(5px);
 	color: #979a9e;
 	background: #f9fafb;
-	.box-shadow(6 * @factor 9 * @factor 0 rgba(103, 130, 156, 0.41));
+	.box-shadow(9 * @factor 9 * @factor 0 rgba(0,40,90,0.2));
 	.body-font;
 	text-align: center;
 	.opacity(0);

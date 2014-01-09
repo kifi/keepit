@@ -85,7 +85,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }));
 
     var data = $slider.data();
-    data.stickiness = 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
+    data.stickiness = locator ? 2 : 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
     function isSticky() {
       return data.stickiness > 0;
     }
@@ -377,6 +377,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
     log('[keepPage]', how)();
     updateKeptDom(how);
     var title = document.title.trim();
+    if (title && isImageWithSrc(document.body.firstElementChild, document.URL)) {
+      title = '';  // discard browser-generated title for image file
+    }
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
       beginStickyTime();
@@ -450,6 +453,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }, true);
       }
     }
+  }
+
+  function isImageWithSrc(el, uri) {
+    return el && el.tagName === 'IMG' && el.src === uri;
   }
 
   function formatCountHtml(kept, numFriends, numOthers) {

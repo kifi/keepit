@@ -4,11 +4,15 @@ import com.keepit.common.logging.Logging
 import play.modules.statsd.api.Statsd
 
 package object performance {
-  class Stopwatch(tag: String) extends Logging {
+
+  case class Stopwatch(tag: String) extends Logging {
     var startTime = System.nanoTime()
     var elapsedTime: Long = 0
 
-    def stop(): Long = { elapsedTime = System.nanoTime - startTime; elapsedTime }
+    def stop(): Long = {
+      elapsedTime = System.nanoTime - startTime
+      elapsedTime
+    }
 
     override def toString = s"[$tag] elapsed milliseconds: ${(elapsedTime/1000000d)}"
 
@@ -17,13 +21,14 @@ package object performance {
     }
   }
 
-  def time[A](tag: String)(f: => A): A = {
+  def timing[A](tag: String)(f: => A): A = {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()
     sw.logTime()
     res
   }
+
   def timeWithStatsd[A](tag: String, statsdTag: String)(f: => A): A = {
     val sw = new Stopwatch(tag)
     val res = f
