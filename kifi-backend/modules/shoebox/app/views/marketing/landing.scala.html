@@ -62,8 +62,7 @@
     </div>
   </div>
 }
-@scripts = {
-  <script type="text/javascript" src="/assets/js/header.js"></script>
+@earlyScripts = {
   <script>
   !function(d, t) {
     var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
@@ -73,4 +72,7 @@
   }(document, 'script');
   </script>
 }
-@views.html.marketing.helper.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", isLoggedIn = false)
+@scripts = {
+  <script type="text/javascript" src="/assets/js/header.js"></script>
+}
+@views.html.marketing.helper.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", earlyScripts = earlyScripts, isLoggedIn = false)
