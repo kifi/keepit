@@ -40,4 +40,11 @@ class FakeAirbrakeNotifier() extends AirbrakeNotifier {
     errors = error :: errors
     error
   }
+  def panic(errorException: Throwable): AirbrakeError = {println(errorException.toString); notify(AirbrakeError(errorException).copy(panic=true))}
+  def panic(errorMessage: String): AirbrakeError = {println(errorMessage); notify(AirbrakeError(message = Some(errorMessage)).copy(panic=true))}
+  def panic(errorMessage: String, errorException: Throwable): AirbrakeError = {println(errorMessage); notify(AirbrakeError(message = Some(errorMessage), exception = errorException).copy(panic=true))}
+  def panic(error: AirbrakeError): AirbrakeError = {
+    errors = error.copy(panic=true) :: errors
+    error
+  }
 }

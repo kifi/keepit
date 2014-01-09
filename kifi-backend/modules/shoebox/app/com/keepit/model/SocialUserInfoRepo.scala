@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time._
 import securesocial.core.SocialUser
 import org.joda.time.DateTime
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
@@ -89,7 +89,7 @@ class SocialUserInfoRepoImpl @Inject() (
   }
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
-    (for(f <- table if f.userId.isNotNull && f.credentials.isNotNull &&
+    (for(f <- table if f.userId.isNotNull && f.credentials.isNotNull && f.networkType.inSet(SocialNetworks.REFRESHING) &&
       (f.lastGraphRefresh.isNull || f.lastGraphRefresh < currentDateTime.minusDays(15))) yield f).list
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =

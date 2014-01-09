@@ -94,7 +94,7 @@ var tile = tile || function() {  // idempotent for Chrome
           api.port.emit("unkeep", withUrls({}));
           tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
         } else {
-          api.port.emit("keep", withUrls({title: document.title, how: "public"}));
+          api.port.emit("keep", withUrls({title: authoredTitle(), how: "public"}));
           if (tile) tile.dataset.kept = "public";
         }
         e.preventDefault();
@@ -272,4 +272,15 @@ function withUrls(o) {
   if (cUrl && cUrl !== o.url) o.canonical = cUrl;
   if (gUrl && gUrl !== o.url && gUrl !== cUrl) o.og = gUrl;
   return o;
+}
+
+function authoredTitle() {
+  var title = document.title.trim();
+  if (title) {
+    var el = document.body.firstElementChild;
+    if (el && el.tagName === 'IMG' && el.src === document.URL) {
+      title = '';  // discard browser-generated title for image file
+    }
+  }
+  return title;
 }
