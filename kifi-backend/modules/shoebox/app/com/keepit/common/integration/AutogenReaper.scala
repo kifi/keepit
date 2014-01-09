@@ -67,6 +67,7 @@ private[integration] class AutogenAcctReaperActor @Inject() (
           emailAddressRepo.getAllByUser(exp.userId) foreach { emailAddr =>
             emailAddressRepo.save(emailAddr.withState(EmailAddressStates.INACTIVE))
           }
+          userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE)) // todo: delete
           // skip UserCred/UserExp for now; delete later
         }
       }
