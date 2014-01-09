@@ -41,30 +41,41 @@
 					will be ready Feburary 1st</h1>
 				<div class="kifi-countdown">
 					<div class="kifi-countdown-numbers">
-						<div class="kifi-time">23:34:13</div>
-						<div class="kifi-date">15</div>
+						<div class="kifi-time">00:00:00</div>
+						<div class="kifi-date">0</div>
 					</div>
 					<div class="kifi-date-left">days left</div>
 				</div>
-				<div class="kifi-waiting-list">
-					<div class="kifi-waiting-text">Add me to the waiting list</div>
-					<div class="kifi-waiting-input-box">
-						<input class="kifi-waiting-email" type="text" name="email" placeholder="Enter your email here">
+				<form class="kifi-add-form" method="POST" action="/waitlist">
+					<input type="hidden" name="feature" value="mobile_app">
+					<input type="hidden" name="extId" value="">
+					<div class="kifi-waiting-list">
+						<div class="kifi-waiting-text">Add me to the waitlist</div>
+						<div class="kifi-waiting-input-box">
+							<input class="kifi-waiting-email" type="email" name="email" placeholder="Enter your email here">
+						</div>
 					</div>
+					<button class="hidden" type="submit"></button>
+				</form>
+				<div class="kifi-added">
+					<h1>You are on the list</h1>
+					<div class="kifi-added-email"></div>
+					<a class="kifi-change-email" href="javascript:">Change email</a>
 				</div>
-				<span class="kifi-arrow-down"></span>
+				<span class="kifi-arrow-down"><span class="kifi-arrow-cover"></span></span>
 			</div>
 			<div class="kifi-good-news">
 				<h2>The good news is ...</h1>
 				<p>Your kifi for desktop is live<br>
 				on Chrome and Firefox.</p>
-				<span class="kifi-arrow-down"></span>
+				<span class="kifi-arrow-down"><span class="kifi-arrow-cover"></span></span>
 			</div>
 			<div class="kifi-watch-video">
 				<h2>Search like normal<br>
 				Find like never before</h1>
 				<div class="kifi-watch-bg">
-					<div class="kifi-play"></div>
+					<a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still kifi-play" data-track-action="playVideo">
+					</a>
 				</div>
 			</div>
 			<div class="kifi-desktop">
@@ -73,8 +84,19 @@
 					Send me instructions<br>
 					to get kifi on my desktop
 				</div>
-				<input class="kifi-desktop-email" type="text" name="email" placeholder="Enter your email here">
-				<button class="kifi-desktop-button">Send Instructions</button>
+				<form class="kifi-add-form-2" method="POST" action="/waitlist">
+					<input type="hidden" name="feature" value="mobile_app">
+					<input type="hidden" name="extId" value="">
+					<div class="kifi-waiting-input-box">
+						<input class="kifi-desktop-email" type="email" name="email" placeholder="Enter your email here">
+					</div>
+					<button type="submit" class="kifi-desktop-button">Send Instructions</button>
+				</form>
+				<div class="kifi-added-2">
+					<h1>Instructions sent to:</h1>
+					<div class="kifi-added-email"></div>
+					<a class="kifi-change-email" href="javascript:">Send to another email</a>
+				</div>
 			</div>
 		</div>
 
@@ -97,7 +119,7 @@
 		<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js"></script>
 		<script type="text/javascript" src="/assets/js/retina-1.1.0.js"></script>
 		<script type="text/javascript" src="/assets/js/jquery.min.js"></script>
-		<script type="text/javascript" src="/assets/js/header.js"></script>
+		<script type="text/javascript" src="/assets/js/mobile.js"></script>
 		<script type="text/javascript" src="/assets/js/track-ext.js"></script>
 	</body>
 </html>

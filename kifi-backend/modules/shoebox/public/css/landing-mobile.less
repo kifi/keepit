@@ -3,26 +3,44 @@
 @import "retina-1.1.0";
 
 @phcolor: #c4c4c4;
+@phfw: 300;
 ::-webkit-input-placeholder {
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 :-moz-placeholder { /* Firefox 18- */
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 ::-moz-placeholder { /* Firefox 19+ */
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
 }
 
 :-ms-input-placeholder {
-   color: @phcolor;
+	color: @phcolor;
+	font-weight: @phfw;
+}
+
+body {
+	padding-top: 60px;
 }
 
 .kifi-header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	font-size: 0;
+	padding: 13.5px 28px;
 	background-color: white;
-	.padding-tb(13.5px);
-	.padding-lr(28px);
+	z-index: 10;
+
+	html.scroll & {
+		.box-shadow(0 0 3px 0 rgba(0,0,0,0.15));
+	}
 }
 
 .clear {
@@ -31,19 +49,21 @@
 
 .kifi-header-logo {
 	display: inline-block;
-	.width(58px);
-	.height(33px);
-	.margin-right(6px / 2);
-	background: gray;
+	font-size: 0;
+	width: 58px;
+	height: 33px;
+	margin-right: 8px;
 	color: transparent;
 	vertical-align: bottom;
+	.at2x('/assets/img/mobile/kifilogo.png', 100%, 100%);
+	background-repeat: no-repeat;
+	background-position: 0 0;
 }
 
 .kifi-header-text {
 	position: relative;
-	@fs: 32px / 2;
-	.font-size(@fs);
-	.top(5px, @fs);
+	font-size: 16px;
+	top: 5px;
 	color: #424242;
 	vertical-align: bottom;
 }
@@ -57,10 +77,10 @@
 @ffs: 24px / 2;
 .kifi-footer-menu {
 	list-style: none;
-	.font-size(@ffs);
+	font-size: @ffs;
 	font-weight: 600;
 	letter-spacing: .75px;
-	.padding(19.5px, @ffs);
+	padding: 19.5px;
 	margin: 0;
 	text-transform: uppercase;
 
@@ -79,12 +99,35 @@
 }
 
 .kifi-footer-menu-dot {
-	.padding-lr(4px, @ffs);
+	padding: 0 4px;
 }
+
+.kifi-arrow-down {
+	position: absolute;
+	display: block;
+	@h: 13px;
+	bottom: -@h + 4px;
+	width: 25px;
+	height: @h;
+	z-index: 1;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+	background-size: 100%;
+}
+
+.kifi-arrow-cover {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 4px;
+}
+
 
 .kifi-coming-soon {
 	position: relative;
-	background: #424242;
+	@bg: #424242;
+	background: @bg;
 	color: white;
 	text-align: center;
 	.padding-top(20px);
@@ -98,14 +141,12 @@
 	}
 
 	.kifi-arrow-down {
-		position: absolute;
-		display: block;
-		@h: 9px;
-		bottom: -@h;
-		left: 39px;
-		width: 19px;
-		height: @h;
-		background-color: #424242;
+		.left(36px);
+		.at2x('/assets/img/mobile/blackcaret.png', 100%, 100%);
+	}
+
+	.kifi-arrow-cover {
+		background: @bg;
 	}
 }
 
@@ -152,30 +193,88 @@
 	position: relative;
 	.padding-lr(28px);
 	margin: 0 auto;
-	.max-width(500px);
+	.max-width(360px);
 }
 
-.kifi-waiting-email {
+.kifi-waiting-email,
+.kifi-desktop-email {
 	display: block;
 	@fs: 30px / 2;
 	.font-size(@fs);
-	font-weight: 300;
+	font-weight: 400;
 	width: 100%;
 	.padding-tb(12px, @fs);
 	.padding-lr(15px, @fs);
-	border: 0;
-	border-radius: 2px;
+	border: 2px solid transparent;
+	.border-radius(2px);
 	margin: 0;
 	.margin-top(11px, @fs);
 	text-align: left;
-	.letter-spacing(0.75px, @fs);
+	.letter-spacing(0.65px, @fs);
 	.box-sizing(border-box);
 }
 
+.kifi-desktop-email {
+	@fs: 30px / 2;
+	.margin-top(16px, @fs);
+	border-color: #85b34b;
+}
+
+.kifi-add-form,
+.kifi-add-form-2 {
+	html.submitted & {
+		display: none;
+	}
+}
+
+.kifi-added,
+.kifi-added-2 {
+	display: none;
+	margin: 0 auto;
+	text-align: right;
+
+	html.submitted & {
+		display: inline-block;
+	}
+}
+
+.kifi-added {
+	margin-top: 13px;
+	font-size: 26px / 2;
+
+	h1 {
+		font-size: 56px / 2;
+		line-height: 1;
+		color: #93c059;
+	}
+
+	.kifi-added-email {
+		font-weight: 400;
+		line-height: normal;
+		margin-top: 5px;
+		color: #c4c4c4;
+	}
+
+	.kifi-change-email {
+		display: inline-block;
+		font-weight: 400;
+		line-height: normal;
+		margin-top: 6px;
+		color: #93c059;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+}
+
 .kifi-good-news {
-	padding: 50px;
+	position: relative;
+	padding: 22px 28px 24px;
 	color: white;
-	background-color: #93c059;
+	@bg: #93c059;
+	background-color: @bg;
 	
 	h2 {
 		@fs: 36px / 2;
@@ -190,18 +289,134 @@
 		.font-size(@fs);
 		margin: 0;
 	}
+
+	.kifi-arrow-down {
+		.left(28px);
+		.at2x('/assets/img/mobile/greencaret.png', 100%, 100%);
+	}
+
+	.kifi-arrow-cover {
+		background: @bg;
+	}
 }
 
 .kifi-watch-video {
-	padding: 80px;
 	color: #424242;
 	background-color: #f6f6f6;
 	text-align: center;
+	.padding-top(36px);
+	.padding-lr(20px);
+	.padding-bottom(94px);
+	
+	h2 {
+		@fs: 48px / 2;
+		.font-size(@fs);
+		font-weight: 300;
+		line-height: 1.22;
+		margin: 0;
+	}
+}
+
+.kifi-play {
+	position: relative;
+	display: inline-block;
+	@size: 95px;
+	width: @size;
+	height: @size;
+	margin: 0 auto;
+	margin-top: 28px;
+	.at2x('/assets/img/mobile/playbuttoniphone.png', 100%, 100%);
+	background-size: @size @size;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+}
+
+.kifi-watch-bg {
+
 }
 
 .kifi-desktop {
-	padding: 30px;
+	position: relative;
+	.padding-bottom(41px);
 	color: white;
 	background-color: #93c059;
 	text-align: center;
+}
+
+.kifi-desktop-img {
+	position: relative;
+	@w: 258px;
+	@h: 152px;
+	display: inline-block;
+	margin: 0 auto;
+	.margin-top(-23px);
+	width: @w;
+	height: @h;
+	.at2x('/assets/img/mobile/flatmacbookiphone.png', 100%, 100%);
+	background-size: @w @h;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+}
+
+.kifi-desktop-text {
+	@fs: 34px / 2;
+	.font-size(@fs);
+	font-weight: 400;
+	line-height: 1.45;
+	.margin-top(9px, @fs);
+}
+
+.kifi-desktop-button {
+	@fs: 32px / 2;
+	font-size: @fs;
+	font-weight: 200;
+	letter-spacing: 1px;
+	.margin-top(20px, @fs);
+	.padding-tb(13px, @fs);
+	.padding-lr(26px, @fs);
+	border: 1px solid #4f8ad9;
+	.border-radius(2px);
+	color: white;
+	@bg: #6fa6ef;
+	background-color: @bg;
+
+	&:hover {
+		background-color: tint(@bg, 5%);
+	}
+
+	&:active {
+		background-color: shade(@bg, 5%);
+	}
+}
+
+.kifi-added-2 {
+	font-size: 26px / 2;
+	margin-top: 17px;
+	margin-bottom: 20px;
+
+	h1 {
+		font-size: 56px / 2;
+		font-weight: 300;
+		margin: 0;
+	}
+
+	.kifi-added-email {
+		margin-top: 10px;
+		color: white;
+	}
+
+	.kifi-change-email {
+		display: inline-block;
+		margin-top: 13px;
+		color: white;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+}
+
+.hidden {
+	display: none;
 }
