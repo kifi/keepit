@@ -335,38 +335,30 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     expirationDate = session.expires
   )
 
-  private def needsUpdate(oldSession: UserSession, newSession: UserSession): Boolean = {
-    // We only want to save if we actually changed something. SecureSocial likes to "touch" the session to update the
-    // last used time, but we're not using that right now. If we eventually do want to keep track of the last used
-    // time, we should try to avoid writing to the database every time.
-    oldSession.copy(
-      updatedAt = newSession.updatedAt,
-      createdAt = newSession.createdAt,
-      id = newSession.id) != newSession
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
+    val sessionFromCookie = sessionFromAuthenticator(authenticator)
+    val session = internSession(sessionFromCookie)
+    authenticatorFromSession(session)
   }
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save ${authenticator.identityId.userId}") {
-    val newSession = sessionFromAuthenticator(authenticator)
-    log.info(s"[save] authenticator=$authenticator newSession=$newSession")
-    authenticatorFromSession {
-      val oldSessionOpt = db.readOnly { implicit s => sessionRepo.getOpt(newSession.externalId) }
-      if (oldSessionOpt.exists(!needsUpdate(_, newSession))) {
-        oldSessionOpt.get
-      } else {
-        db.readWrite { implicit s =>
-          sessionRepo.save(newSession.copy(
-            id = oldSessionOpt.map(_.id.get),
-            createdAt = oldSessionOpt.map(_.createdAt).getOrElse(newSession.createdAt)
-          ))
-        }
-      }
+  private def internSession(newSession: UserSession): UserSession = {
+    db.readOnly { implicit s => //from cache
+      sessionRepo.getOpt(newSession.externalId)
+    } getOrElse db.readWrite { implicit s =>
+      val sessionFromCookie = sessionRepo.save(newSession)
+      log.info(s"[save] newSession=$sessionFromCookie")
+      sessionFromCookie
     }
   }
+
   def find(id: String): Either[Error, Option[Authenticator]] = reportExceptionsAndTime(s"find authenticator $id") {
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
     } catch {
-      case ex: Throwable => None
+      case ex: Throwable =>
+        //todo(eishay) kill this ugly code and just convert the string to external id
+        airbrake.notify(s"error parsing $id", ex)
+        None
     }
 
     val res = externalIdOpt flatMap { externalId =>
