@@ -23,6 +23,7 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common._
 import com.keepit.common.performance.timing
+import scala.concurrent.Future
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
@@ -161,7 +162,7 @@ class AuthCommander @Inject()(
     val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,
       email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
-    inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt)
+    SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
     val user = db.readOnly { implicit session =>
       userRepo.get(userId)
@@ -175,31 +176,39 @@ class AuthCommander @Inject()(
     (user, emailPassIdentity)
   }
 
-  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = timing(s"[finalizeEmailPasswordAcct($userId)]") {
+  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]): Future[(User, String, Identity)] = {
     require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
-    val identity = db.readOnly { implicit session =>
-      socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
-    } getOrElse (identityOpt.get)
+    val resultFuture = SafeFuture {
+      val identity = db.readOnly { implicit session =>
+        socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
+      } getOrElse (identityOpt.get)
 
-    val passwordInfo = identity.passwordInfo.get
-    val email = identity.email.get
-    val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
+      val passwordInfo = identity.passwordInfo.get
+      val email = identity.email.get
+      val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
+      val user = db.readOnly(userRepo.get(userId)(_))
+      (user, email, newIdentity)
+    }
+
+    val imageFuture = SafeFuture {
+      val user = db.readOnly(userRepo.get(userId)(_))
+      val cropAttributes = parseCropForm(efi.picHeight, efi.picWidth, efi.cropX, efi.cropY, efi.cropSize) tap (r => log.info(s"Cropped attributes for ${userId}: " + r))
+      efi.picToken.map { token =>
+        s3ImageStore.copyTempFileToUserPic(userId, externalUserId, token, cropAttributes)
+      }.orElse {
+        s3ImageStore.getPictureUrl(None, user, "0")
+        None
+      }
+    }
 
     SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
-    val user = db.readOnly(userRepo.get(userId)(_))
-
-    val cropAttributes = parseCropForm(efi.picHeight, efi.picWidth, efi.cropX, efi.cropY, efi.cropSize) tap (r => log.info(s"Cropped attributes for ${userId}: " + r))
-    efi.picToken.map { token =>
-      s3ImageStore.copyTempFileToUserPic(userId, externalUserId, token, cropAttributes)
-    }.orElse {
-      s3ImageStore.getPictureUrl(None, user, "0")
-      None
-    }
-
-    (user, email, newIdentity)
+    for {
+      image <- imageFuture
+      result <- resultFuture
+    } yield result
   }
 
 }
