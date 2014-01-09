@@ -190,6 +190,14 @@ class UserCommander @Inject() (
       // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
+    SafeFuture {
+      db.readWrite { implicit session =>
+        userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
+        userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
+        userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
+      }
+      Unit
+    }
     newUser
   }
 
