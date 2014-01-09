@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
 import com.keepit.common.db.Id
 import com.keepit.model._
@@ -9,6 +9,8 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
+import com.keepit.search.MultiHashFilter
+
 
 case class BrowsedURI(id: Id[NormalizedURI])
 case class BrowsingHistoryBuilder (tableSize: Int, numHashFuncs: Int, minHits: Int) extends MultiHashFilterBuilder[BrowsedURI]

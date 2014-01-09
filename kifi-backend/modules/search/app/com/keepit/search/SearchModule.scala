@@ -8,6 +8,7 @@ import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
+import com.keepit.search.tracker.TrackingModule
 
 abstract class SearchModule(
 

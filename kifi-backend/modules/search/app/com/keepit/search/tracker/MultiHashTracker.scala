@@ -1,7 +1,8 @@
-package com.keepit.search
+package com.keepit.search.tracker
 
 import com.keepit.common.store.ObjectStore
 import com.keepit.serializer.{SerializerException, BinaryFormat}
+import com.keepit.search.MultiHashFilter
 
 trait MultiHashTracker[O, E] {
   def add(owner: O, events: E*): MultiHashFilter[E]

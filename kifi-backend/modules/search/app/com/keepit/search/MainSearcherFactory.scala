@@ -19,11 +19,16 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
 import com.keepit.search.query.parser.MainQueryParserFactory
-
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
+import com.keepit.search.semantic.SemanticVectorSearcher
+import com.keepit.search.tracker.BrowsingHistoryTracker
+import com.keepit.search.tracker.BrowsedURI
+import com.keepit.search.tracker.ClickedURI
+import com.keepit.search.tracker.ClickHistoryTracker
+import com.keepit.search.tracker.ResultClickTracker
 
 @Singleton
 class MainSearcherFactory @Inject() (

@@ -1,9 +1,13 @@
-package com.keepit.common.cache
+package com.keepit.search.tracker
 
 import com.keepit.common.logging.AccessLog
 import com.keepit.search.{FullFilterChunkId}
 import com.keepit.serializer.ArrayBinaryFormat
 import scala.concurrent.duration._
+import com.keepit.common.cache.BinaryCacheImpl
+import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.cache.FortyTwoCachePlugin
+import com.keepit.common.cache.Key
 
 case class ProbablisticLRUChunkKey(id: FullFilterChunkId) extends Key[Array[Int]] {
   override val version = 1

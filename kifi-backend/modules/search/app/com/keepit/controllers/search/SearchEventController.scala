@@ -8,10 +8,13 @@ import com.keepit.search._
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.heimdal.{SearchEngine, SearchAnalytics}
-import com.keepit.search.BrowsedURI
-import com.keepit.search.ClickedURI
+import com.keepit.search.tracker.BrowsedURI
+import com.keepit.search.tracker.ClickedURI
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.search.tracker.BrowsingHistoryTracker
+import com.keepit.search.tracker.ClickHistoryTracker
+import com.keepit.search.tracker.ResultClickTracker
 
 class SearchEventController @Inject() (
   clickHistoryTracker: ClickHistoryTracker,

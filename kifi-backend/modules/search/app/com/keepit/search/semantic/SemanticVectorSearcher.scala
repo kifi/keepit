@@ -1,18 +1,19 @@
-package com.keepit.search
+package com.keepit.search.semantic
 
 import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Searcher
 import com.keepit.search.graph.URIGraphSearcher
-import com.keepit.search.query.IdSetFilter
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import java.io.StringReader
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.HashMap
+import com.keepit.search.Lang
+import com.keepit.search.SemanticVector
+import com.keepit.search.SemanticVectorComposer
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 
 
 class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) {

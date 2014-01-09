@@ -38,6 +38,10 @@ import scala.concurrent.duration._
 import scala.concurrent.future
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
+import com.keepit.search.semantic.SemanticVariance
+import com.keepit.search.tracker.BrowsedURI
+import com.keepit.search.tracker.ClickedURI
+import com.keepit.search.tracker.ResultClickBoosts
 
 
 class MainSearcher(
