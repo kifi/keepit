@@ -1,14 +1,16 @@
-package com.keepit.search
+package com.keepit.search.semantic
 
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.util.BytesRef
 import scala.util.Random
 import scala.util.Sorting
 import scala.math._
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 
 class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
 

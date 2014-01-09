@@ -4,7 +4,6 @@ import com.keepit.common.logging.Logging
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.util.BytesRef
-import com.keepit.search.SemanticVector
 
 class SemanticVectorEnum(inner: DocsAndPositionsEnum) extends DocIdSetIterator with Logging {
 

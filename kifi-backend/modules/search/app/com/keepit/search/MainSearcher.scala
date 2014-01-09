@@ -21,6 +21,7 @@ import com.keepit.search.query.HotDocSetFilter
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
 import com.keepit.search.query.parser.{MainQueryParser, MainQueryParserFactory}
+import com.keepit.search.semantic.SemanticVector
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query

@@ -6,8 +6,6 @@ import com.keepit.search.query.SemanticVectorExtractorScorer
 import com.keepit.search.query.TextQuery
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import com.keepit.search.SemanticVector
-import com.keepit.search.SemanticVectorComposer
 
 object SemanticVariance {
   /**

@@ -1,8 +1,9 @@
 package com.keepit.search
 
 
-import com.keepit.search.SemanticVector.Sketch
-import com.keepit.search.semantic.SemanticVectorEnum
+import com.keepit.search.semantic._
+import com.keepit.search.semantic.SemanticVector.Sketch
+
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
