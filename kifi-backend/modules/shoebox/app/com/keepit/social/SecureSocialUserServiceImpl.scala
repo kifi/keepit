@@ -29,6 +29,7 @@ import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.abook.EmailParserUtils
+import com.keepit.common.akka.SafeFuture
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -93,7 +94,7 @@ class SecureSocialUserPluginImpl @Inject() (
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
       socialGraphPlugin.asyncFetch(socialUserInfo)
     log.info(s"[save] persisting $socialUser into $socialUserInfo")
-    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
+    SafeFuture { socialUserInfo.userId.foreach(updateExperimentIfTestUser) }
     socialUser
   }
 
@@ -136,8 +137,10 @@ class SecureSocialUserPluginImpl @Inject() (
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
 
     // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
-    val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
-    if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
+    SafeFuture {
+      val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
+      if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
+    }
     u
   }
 
@@ -378,7 +381,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     log.info(s"[find] id=$id res=$res")
     res
   }
-  
+
   def delete(id: String): Either[Error, Unit] = reportExceptionsAndTime(s"delete $id") {
     db.readWrite { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
