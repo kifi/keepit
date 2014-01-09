@@ -32,9 +32,19 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
     "give Kifi user's connections (min set)" in {
       running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
 
+        val socialUser = inject[Database].readWrite { implicit s =>
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
+            fullName = "Andrew Conner",
+            socialId = SocialId("71105121"),
+            networkType = SocialNetworks.FACEBOOK
+          ).withUser(u))
+          su
+        }
+
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json)).size)
+          println(inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size)
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -96,9 +106,19 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
     "give Kifi user's connections (min set) w/o non active connections" in {
       running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
 
-      def loadJsonImportFriends(filename: String): Unit = {
+        val socialUser = inject[Database].readWrite { implicit s =>
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
+            fullName = "Andrew Conner",
+            socialId = SocialId("71105121"),
+            networkType = SocialNetworks.FACEBOOK
+          ).withUser(u))
+          su
+        }
+
+        def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json)).size)
+          println(inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size)
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -166,11 +186,21 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
     "give Kifi user's connections (min set) with pagination" in {
       running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
 
-      def loadJsonImportFriends(filenames: Seq[String]): Unit = {
+        val socialUser = inject[Database].readWrite { implicit s =>
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
+            fullName = "Andrew Conner",
+            socialId = SocialId("71105121"),
+            networkType = SocialNetworks.FACEBOOK
+          ).withUser(u))
+          su
+        }
+
+        def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>
             Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
           }
-          println(inject[SocialUserImportFriends].importFriends(jsons flatMap extractFacebookFriendInfo).size)
+          println(inject[SocialUserImportFriends].importFriends(socialUser, jsons flatMap extractFacebookFriendInfo).size)
         }
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
