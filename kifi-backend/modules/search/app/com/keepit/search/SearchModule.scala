@@ -9,6 +9,7 @@ import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
 import com.keepit.search.tracker.TrackingModule
+import com.keepit.search.index.IndexModule
 
 abstract class SearchModule(
 

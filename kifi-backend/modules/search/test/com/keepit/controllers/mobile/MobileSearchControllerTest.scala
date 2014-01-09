@@ -18,6 +18,7 @@ import akka.actor.ActorSystem
 import com.keepit.search._
 import com.keepit.search.index.{IndexStore, VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
 import com.keepit.social.BasicUser
+import com.keepit.search.index.IndexModule
 
 
 class MobileSearchControllerTest extends Specification with SearchApplicationInjector {

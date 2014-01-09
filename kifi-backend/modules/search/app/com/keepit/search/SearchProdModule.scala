@@ -6,6 +6,7 @@ import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
 import com.keepit.search.tracker.ProdTrackingModule
+import com.keepit.search.index.ProdIndexModule
 
 case class SearchProdModule() extends SearchModule(
   // Common Functional Modules

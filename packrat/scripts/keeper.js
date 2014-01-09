@@ -376,10 +376,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
   function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how)();
     updateKeptDom(how);
-    var title = document.title.trim();
-    if (title && isImageWithSrc(document.body.firstElementChild, document.URL)) {
-      title = '';  // discard browser-generated title for image file
-    }
+    var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
       beginStickyTime();
@@ -453,10 +450,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }, true);
       }
     }
-  }
-
-  function isImageWithSrc(el, uri) {
-    return el && el.tagName === 'IMG' && el.src === uri;
   }
 
   function formatCountHtml(kept, numFriends, numOthers) {
