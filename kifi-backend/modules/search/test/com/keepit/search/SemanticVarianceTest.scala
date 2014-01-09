@@ -10,6 +10,7 @@ import org.apache.lucene.util.Version
 import com.keepit.search.query.TextQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
+import com.keepit.search.semantic.SemanticVariance
 
 class SemanticVarianceTest extends Specification {
 
