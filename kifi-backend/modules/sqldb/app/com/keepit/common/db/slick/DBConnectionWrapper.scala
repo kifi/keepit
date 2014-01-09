@@ -9,7 +9,10 @@ import java.util.concurrent.Executor
 import com.keepit.common.time._
 
 class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock) extends Connection {
-  def createStatement(): Statement = conn.createStatement()
+  def createStatement(): Statement = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_EMPTY_STMT")
+    conn.createStatement()
+  }
   def prepareStatement(sql: String): PreparedStatement = {
     dbLog.info(s"t:${clock.now}\ttype:USE_PRP_STMT\tsql:$sql")
     conn.prepareStatement(sql)
@@ -25,7 +28,10 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock) extends
   def setAutoCommit(autoCommit: Boolean): Unit = conn.setAutoCommit(autoCommit)
   def getAutoCommit: Boolean = conn.getAutoCommit
   def commit(): Unit = conn.commit()
-  def rollback(): Unit = conn.rollback()
+  def rollback(): Unit = {
+    dbLog.info(s"t:${clock.now}\ttype:ROLLBACK")
+    conn.rollback()
+  }
   def close(): Unit = conn.close()
   def isClosed: Boolean = conn.isClosed
   def getMetaData: DatabaseMetaData = conn.getMetaData
@@ -37,7 +43,10 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock) extends
   def getTransactionIsolation: Int = conn.getTransactionIsolation
   def getWarnings: SQLWarning = conn.getWarnings
   def clearWarnings(): Unit = conn.clearWarnings()
-  def createStatement(resultSetType: Int, resultSetConcurrency: Int): Statement = conn.createStatement(resultSetType, resultSetConcurrency)
+  def createStatement(resultSetType: Int, resultSetConcurrency: Int): Statement = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_EMPTY_STMT")
+    conn.createStatement(resultSetType, resultSetConcurrency)
+  }
   def prepareStatement(sql: String, resultSetType: Int, resultSetConcurrency: Int): PreparedStatement = {
     dbLog.info(s"t:${clock.now}\ttype:USE_PRP_STMT\tsql:$sql")
     conn.prepareStatement(sql, resultSetType, resultSetConcurrency)
@@ -52,9 +61,15 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock) extends
   def getHoldability: Int = conn.getHoldability
   def setSavepoint(): Savepoint = conn.setSavepoint()
   def setSavepoint(name: String): Savepoint = conn.setSavepoint(name)
-  def rollback(savepoint: Savepoint): Unit = conn.rollback(savepoint)
+  def rollback(savepoint: Savepoint): Unit = {
+    dbLog.info(s"t:${clock.now}\ttype:ROLLBACK")
+    conn.rollback(savepoint)
+  }
   def releaseSavepoint(savepoint: Savepoint): Unit = conn.releaseSavepoint(savepoint)
-  def createStatement(resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int): Statement = conn.createStatement(resultSetType, resultSetConcurrency, resultSetHoldability)
+  def createStatement(resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int): Statement = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_EMPTY_STMT")
+    conn.createStatement(resultSetType, resultSetConcurrency, resultSetHoldability)
+  }
   def prepareStatement(sql: String, resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int): PreparedStatement = {
     dbLog.info(s"t:${clock.now}\ttype:USE_PRP_STMT\tsql:$sql")
     conn.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability)
@@ -75,21 +90,42 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock) extends
     dbLog.info(s"t:${clock.now}\ttype:USE_PRP_STMT\tsql:$sql")
     conn.prepareStatement(sql, columnNames)
   }
-  def createClob(): Clob = conn.createClob()
-  def createBlob(): Blob = conn.createBlob()
-  def createNClob(): NClob = conn.createNClob()
-  def createSQLXML(): SQLXML = conn.createSQLXML()
+  def createClob(): Clob = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_CLOB")
+    conn.createClob()
+  }
+  def createBlob(): Blob = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_BLOB")
+    conn.createBlob()
+  }
+  def createNClob(): NClob = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_NLOB")
+    conn.createNClob()
+  }
+  def createSQLXML(): SQLXML = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_SQLXML") //NOOOOOOOOOOOOOOOOOOOOOO!!!
+    conn.createSQLXML()
+  }
   def isValid(timeout: Int): Boolean = conn.isValid(timeout)
   def setClientInfo(name: String, value: String): Unit = conn.setClientInfo(name, value)
   def setClientInfo(properties: Properties): Unit = conn.setClientInfo(properties)
   def getClientInfo(name: String): String = conn.getClientInfo(name)
   def getClientInfo: Properties = conn.getClientInfo
-  def createArrayOf(typeName: String, elements: Array[AnyRef]): sql.Array = conn.createArrayOf(typeName, elements)
-  def createStruct(typeName: String, attributes: Array[AnyRef]): Struct = conn.createStruct(typeName, attributes)
+  def createArrayOf(typeName: String, elements: Array[AnyRef]): sql.Array = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_ARRAY")
+    conn.createArrayOf(typeName, elements)
+  }
+  def createStruct(typeName: String, attributes: Array[AnyRef]): Struct = {
+    dbLog.info(s"t:${clock.now}\ttype:CREATE_STRUCT")
+    conn.createStruct(typeName, attributes)
+  }
   def setSchema(schema: String): Unit = conn.setSchema(schema)
   def getSchema: String = conn.getSchema
   def abort(executor: Executor): Unit = conn.abort(executor)
-  def setNetworkTimeout(executor: Executor, milliseconds: Int): Unit = conn.setNetworkTimeout(executor, milliseconds)
+  def setNetworkTimeout(executor: Executor, milliseconds: Int): Unit = {
+    dbLog.info(s"t:${clock.now}\ttype:SET_TIMEOUT\tvalue:$milliseconds")
+    conn.setNetworkTimeout(executor, milliseconds)
+  }
   def getNetworkTimeout: Int = conn.getNetworkTimeout
   def unwrap[T](iface: Class[T]): T = conn.unwrap(iface)
   def isWrapperFor(iface: Class[_]): Boolean = conn.isWrapperFor(iface)
