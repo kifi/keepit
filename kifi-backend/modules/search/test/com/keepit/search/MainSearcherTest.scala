@@ -4,7 +4,6 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.graph.CollectionNameIndexer
-import index.{FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
@@ -18,6 +17,9 @@ import scala.math._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.service.FortyTwoServices
 import org.apache.lucene.index.IndexWriterConfig
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.article.ArticleIndexer
+
 import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
 import org.apache.lucene.util.Version
 import com.keepit.search.graph.CollectionIndexer

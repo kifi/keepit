@@ -14,7 +14,7 @@ import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.keepit.search.index.BackUp
+import com.keepit.search.article.BackUp
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
 

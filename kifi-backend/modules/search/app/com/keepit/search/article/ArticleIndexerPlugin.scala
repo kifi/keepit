@@ -1,4 +1,4 @@
-package com.keepit.search.index
+package com.keepit.search.article
 
 import akka.actor._
 import akka.pattern.ask
@@ -18,12 +18,11 @@ import scala.concurrent.duration._
 import org.h2.tools.Backup
 import com.keepit.common.service.{ServiceStatus, FortyTwoServices}
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.search.phrasedetector.PhraseIndexer
 
 case object Update
 case object BackUp
 
-private[index] class ArticleIndexerActor @Inject() (
+private[article] class ArticleIndexerActor @Inject() (
     airbrake: AirbrakeNotifier,
     articleIndexer: ArticleIndexer)
   extends FortyTwoActor(airbrake) with Logging {
