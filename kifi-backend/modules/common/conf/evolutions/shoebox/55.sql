@@ -6,7 +6,7 @@ CREATE TABLE user_session (
     id BIGINT(20) NOT NULL AUTO_INCREMENT,
     external_id VARCHAR(36) NOT NULL,
     user_id BIGINT(20),
-    social_id VARCHAR(36) NOT NULL,
+    social_id VARCHAR(120) NOT NULL,
     provider VARCHAR(36) NOT NULL,
     expires DATETIME NOT NULL,
     state VARCHAR(20) NOT NULL,
