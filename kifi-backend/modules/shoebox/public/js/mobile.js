@@ -60,6 +60,7 @@
 		$.post('/waitlist', data)
 		.complete(function (extId) {
 			$('.kifi-added-email').text(data.email);
+			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
 			$('input[name=extId]').val(1);
 		});
