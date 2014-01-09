@@ -37,6 +37,7 @@ import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
+import scala.concurrent.Future
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -216,14 +217,19 @@ class AuthHelper @Inject() (
     "cropY" -> optional(number),
     "cropSize" -> optional(number)
   )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
-  def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Result = {
+  def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Result = Async {
     userPassFinalizeAccountForm.bindFromRequest.fold(
-    formWithErrors => Forbidden(Json.obj("error" -> "user_exists_failed_auth")),
-    { case efi:EmailPassFinalizeInfo =>
-      val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-      val (user, email, newIdentity) = authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt)
-      finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
-    })
+      formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
+      { case efi:EmailPassFinalizeInfo =>
+        val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+        val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
+        authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map { case (user, email, newIdentity) =>
+          sw.stop()
+          sw.logTime()
+          finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
+        }
+      }
+    )
   }
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
