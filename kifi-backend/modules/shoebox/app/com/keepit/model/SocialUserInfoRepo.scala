@@ -71,7 +71,7 @@ class SocialUserInfoRepoImpl @Inject() (
     }
 
   def getSocialUserByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUser] =
-    userCache.getOrElse(SocialUserKey(userId)) {
+    socialUserCache.getOrElse(SocialUserKey(userId)) {
       (for(f <- table if f.userId === userId) yield f).list.map(_.credentials).flatten.toSeq
     }
 

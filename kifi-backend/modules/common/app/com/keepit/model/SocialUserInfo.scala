@@ -8,6 +8,7 @@ import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, Primiti
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.serializer.SocialUserSerializer.userSerializer
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
