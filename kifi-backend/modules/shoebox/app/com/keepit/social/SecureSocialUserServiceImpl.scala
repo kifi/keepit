@@ -350,7 +350,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     }
   }
 
-  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptionsAndTime(s"find $id") {
+  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptionsAndTime(s"find authenticator$id") {
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
     } catch {
