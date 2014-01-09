@@ -75,19 +75,23 @@ class AdminInvitationController @Inject() (
   }
 
   def rejectUser(id: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
-    val result = db.readWrite { implicit session =>
+    val rejectedUser = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
-        val invite = invitationRepo.getByRecipientSocialUserId(id).getOrElse(invitationRepo.save(Invitation(
-          createdAt = user.createdAt,
-          senderUserId = None,
-          recipientSocialUserId = socialUser.id
-        )))
-        (user, invitationRepo.save(invite.withState(InvitationStates.ADMIN_REJECTED)))
+        val invites = invitationRepo.getByRecipientSocialUserId(id) match {
+          case Seq() => Seq(Invitation(
+                createdAt = user.createdAt,
+                senderUserId = None,
+                recipientSocialUserId = socialUser.id
+              ))
+          case invites => invites
+        }
+        invites.foreach(invite => invitationRepo.save(invite.withState(InvitationStates.ADMIN_REJECTED)))
+        user
       }
     }
 
-    if (result.isDefined) {
+    if (rejectedUser.isDefined) {
       Redirect(routes.AdminInvitationController.displayInvitations())
     } else {
       Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")
