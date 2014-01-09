@@ -30,7 +30,7 @@ class FeatureWaitlistRepo @Inject() (val db: DataBaseComponent, val clock: Clock
   override val table = new RepoTable[FeatureWaitlistEntry](db, "feature_waitlist") with ExternalIdColumn[FeatureWaitlistEntry] {
     def email = column[String]("email", O.NotNull)
     def feature = column[String]("feature", O.NotNull)
-    def userAgent = column[String]("userAgent", O.NotNull)
+    def userAgent = column[String]("user_agent", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ email ~ feature ~ userAgent <> (FeatureWaitlistEntry.apply _, FeatureWaitlistEntry.unapply _)
   }
 
