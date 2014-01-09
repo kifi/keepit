@@ -163,11 +163,7 @@ class AuthController @Inject() (
         log.info(s"placeholder for redirecting to unsupported browsers page")
       }
     }
-    if(request.cookies.get("newdesign").isDefined) {
-      Ok(views.html.auth.authGrey("login"))
-    } else {
-      Ok(views.html.auth.auth("login"))
-    }
+    Ok(views.html.auth.authGrey("login"))
   })
 
   // Finalize account
@@ -198,23 +194,13 @@ class AuthController @Inject() (
         val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
         val picture = identityPicture(identity)
 
-        if(request.cookies.get("newdesign").isDefined) {
-          Ok(views.html.auth.authGrey(
-            view = "signup2Email",
-            emailAddress = identity.email.getOrElse(""),
-            picturePath = picture,
-            firstName = firstName,
-            lastName = lastName
-          ))
-        } else {
-          Ok(views.html.auth.auth(
-            view = "signup2Email",
-            emailAddress = identity.email.getOrElse(""),
-            picturePath = picture,
-            firstName = firstName,
-            lastName = lastName
-          ))
-        }
+        Ok(views.html.auth.authGrey(
+          view = "signup2Email",
+          emailAddress = identity.email.getOrElse(""),
+          picturePath = picture,
+          firstName = firstName,
+          lastName = lastName
+        ))
       case (Some(user), None) =>
         // User but no identity. Huh?
         // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
@@ -233,32 +219,16 @@ class AuthController @Inject() (
         ))
       case (None, Some(identity)) =>
         // No user exists, has social network identity, must finalize
-
-        if(request.cookies.get("newdesign").isDefined) {
-          Ok(views.html.auth.authGrey(
-            view = "signup2Social",
-            firstName = User.sanitizeName(identity.firstName),
-            lastName = User.sanitizeName(identity.lastName),
-            emailAddress = identity.email.getOrElse(""),
-            picturePath = identityPicture(identity),
-            network = Some(SocialNetworkType(identity.identityId.providerId))
-          ))
-        } else {
-          Ok(views.html.auth.auth(
-            view = "signup2Social",
-            firstName = User.sanitizeName(identity.firstName),
-            lastName = User.sanitizeName(identity.lastName),
-            emailAddress = identity.email.getOrElse(""),
-            picturePath = identityPicture(identity),
-            network = Some(SocialNetworkType(identity.identityId.providerId))
-          ))
-        }
+        Ok(views.html.auth.authGrey(
+          view = "signup2Social",
+          firstName = User.sanitizeName(identity.firstName),
+          lastName = User.sanitizeName(identity.lastName),
+          emailAddress = identity.email.getOrElse(""),
+          picturePath = identityPicture(identity),
+          network = Some(SocialNetworkType(identity.identityId.providerId))
+        ))
       case (None, None) =>
-        if(request.cookies.get("newdesign").isDefined) {
-          Ok(views.html.auth.authGrey("signup"))
-        } else {
-          Ok(views.html.auth.auth("signup"))
-        }
+        Ok(views.html.auth.authGrey("signup"))
     }
   }
 
