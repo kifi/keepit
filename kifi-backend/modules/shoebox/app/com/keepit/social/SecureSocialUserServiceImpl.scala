@@ -343,10 +343,16 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     authenticatorFromSession(session)
   }
 
-  private def internSession(newSession: UserSession): UserSession = {
+  private def internSession(newSession: UserSession): UserSession = loadSession(newSession) getOrElse persistSession(newSession)
+
+  private def loadSession(newSession: UserSession): Option[UserSession] = timing(s"loadSession ${newSession.socialId}") {
     db.readOnly { implicit s => //from cache
       sessionRepo.getOpt(newSession.externalId)
-    } getOrElse db.readWrite { implicit s =>
+    }
+  }
+
+  private def persistSession(newSession: UserSession): UserSession = timing(s"persistSession ${newSession.socialId}") {
+    db.readWrite { implicit s =>
       val sessionFromCookie = sessionRepo.save(newSession)
       log.info(s"[save] newSession=$sessionFromCookie")
       sessionFromCookie
