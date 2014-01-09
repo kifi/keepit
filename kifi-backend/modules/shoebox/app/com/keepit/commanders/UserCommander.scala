@@ -364,12 +364,15 @@ class UserCommander @Inject() (
       }
     }
 
-    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) =
+    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) = {
+      log.info(s"getWithInviteStatus social connection info: $sci")
       sci -> sci.userId.map(_ => "joined").getOrElse {
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
           case inv if inv.state != InvitationStates.INACTIVE => "invited"
         } getOrElse ""
       }
+    }
+
 
     def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
       if (sui.networkType == SocialNetworks.FORTYTWO) Nil
