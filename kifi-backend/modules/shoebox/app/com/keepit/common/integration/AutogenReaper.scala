@@ -67,8 +67,10 @@ private[integration] class AutogenAcctReaperActor @Inject() (
           emailAddressRepo.getAllByUser(exp.userId) foreach { emailAddr =>
             emailAddressRepo.save(emailAddr.withState(EmailAddressStates.INACTIVE))
           }
-          userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE)) // todo: delete
           // skip UserCred/UserExp for now; delete later
+        }
+        userExperimentRepo.getByType(ExperimentType.AUTO_GEN) foreach { exp => // mark as inactive for now; delete later
+          userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
         }
       }
     case m => throw new UnsupportedActorMessage(m)
