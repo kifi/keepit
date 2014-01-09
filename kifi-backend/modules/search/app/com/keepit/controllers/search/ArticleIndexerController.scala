@@ -15,7 +15,6 @@ import views.html
 import com.keepit.search.IndexInfo
 
 class ArticleIndexerController @Inject()(
-    indexer: ArticleIndexer,
     phraseIndexer: PhraseIndexer,
     indexerPlugin: ArticleIndexerPlugin)
   extends SearchServiceController {
@@ -33,18 +32,18 @@ class ArticleIndexerController @Inject()(
   def indexInfo = Action { implicit request =>
     Ok(Json.toJson(IndexInfo(
       name = "ArticleIndex",
-      numDocs = indexer.numDocs,
-      sequenceNumber = indexer.commitSequenceNumber,
-      committedAt = indexer.committedAt
+      numDocs = indexerPlugin.numDocs,
+      sequenceNumber = Some(indexerPlugin.commitSequenceNumber),
+      committedAt = indexerPlugin.committedAt
     )))
   }
 
   def getSequenceNumber = Action { implicit request =>
-    Ok(JsObject(Seq("sequenceNumber" -> JsNumber(indexer.sequenceNumber.value))))
+    Ok(JsObject(Seq("sequenceNumber" -> JsNumber(indexerPlugin.sequenceNumber.value))))
   }
 
   def refreshSearcher = Action { implicit request =>
-    indexer.refreshSearcher()
+    indexerPlugin.refreshSearcher()
     Ok("searcher refreshed")
   }
 
@@ -54,6 +53,7 @@ class ArticleIndexerController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>
+    val indexer = indexerPlugin.getIndexerFor(id.id)
     try {
       val doc = indexer.buildIndexable(id).buildDocument
       Ok(html.admin.luceneDocDump("Article", doc, indexer))

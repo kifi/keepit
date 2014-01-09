@@ -29,10 +29,12 @@ import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
+import com.keepit.search.sharding.Shard
+import com.keepit.search.sharding.ShardedArticleIndexer
 
 @Singleton
 class MainSearcherFactory @Inject() (
-    articleIndexer: ArticleIndexer,
+    shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
     uriGraph: URIGraph,
     parserFactory: MainQueryParserFactory,
@@ -53,6 +55,7 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
 
   def apply(
+    shard: Shard,
     userId: Id[User],
     queryString: String,
     lang: Lang,
@@ -61,7 +64,7 @@ class MainSearcherFactory @Inject() (
     config: SearchConfig
   ) = {
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
-    val articleSearcher = articleIndexer.getSearcher
+    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
@@ -142,14 +145,14 @@ class MainSearcherFactory @Inject() (
     }
   }
 
-  def bookmarkSearcher(userId: Id[User]) = {
-    val articleSearcher = articleIndexer.getSearcher
+  def bookmarkSearcher(shard: Shard, userId: Id[User]) = {
+    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphSearcher = uriGraph.getURIGraphSearcher(userId)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
-  def semanticVectorSearcher() = {
-    val articleSearcher = articleIndexer.getSearcher
+  def semanticVectorSearcher(shard: Shard) = {
+    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphSearcher = uriGraph.getURIGraphSearcher()
     new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
   }

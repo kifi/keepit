@@ -8,9 +8,11 @@ import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.index.Term
 import play.api.mvc.Action
 import play.api.libs.json._
+import com.keepit.search.sharding.ActiveShards
+import com.keepit.search.sharding.ShardedArticleIndexer
 
-class SemanticVectorController @Inject()(articleIndexer: ArticleIndexer) extends SearchServiceController {
-  val searcher = articleIndexer.getSearcher
+class SemanticVectorController @Inject()(shards: ActiveShards, shardedArticleIndexer: ShardedArticleIndexer) extends SearchServiceController {
+  val searcher = shardedArticleIndexer.getIndexer(shards.shards.head).getSearcher // TODO: support sharding
   val analyzer = DefaultAnalyzer.defaultAnalyzer
   val stemAnalyzer = DefaultAnalyzer.forParsingWithStemmer
 

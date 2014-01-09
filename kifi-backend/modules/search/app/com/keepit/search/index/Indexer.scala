@@ -272,8 +272,8 @@ abstract class Indexer[T](
     Map() ++ mutableMap
   }
 
-  def commitSequenceNumber: Option[SequenceNumber] = {
-    commitData.get(Indexer.CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong))
+  def commitSequenceNumber: SequenceNumber = {
+    SequenceNumber(commitData.get(Indexer.CommitData.sequenceNumber).map(v => v.toLong).getOrElse(-1L))
   }
 
   def committedAt: Option[String] = {

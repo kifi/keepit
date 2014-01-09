@@ -26,11 +26,12 @@ class ShardedURIGraphIndexer(
       indexShards.foldLeft(bookmarks){ case (toBeIndexed, (shard, indexer)) =>
         val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
 
-        total += indexer.doUpdate("URIGraph${shard.indexNameSuffix}"){
+        total += indexer.doUpdate(s"URIGraph${shard.indexNameSuffix}"){
           indexer.toIndexables(bookmarks)
         }
         rest
       }
+      if (!done) sequenceNumber = bookmarks.last.seq
     }
     total
   }
