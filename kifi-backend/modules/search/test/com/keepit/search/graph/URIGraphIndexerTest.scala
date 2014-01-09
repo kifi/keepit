@@ -24,14 +24,15 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
 
-        val dir = new VolatileIndexDirectoryImpl()
-        val indexer = mkURIGraphIndexer(dir)
+        val bookmarkStoreDir = new VolatileIndexDirectoryImpl()
+        val uriGraphDir = new VolatileIndexDirectoryImpl()
+        val indexer = mkURIGraphIndexer(uriGraphDir, bookmarkStoreDir)
         indexer.update() === users.size
         indexer.sequenceNumber.value === bookmarks.size
         indexer.numDocs === users.size
         indexer.close()
 
-        val indexer2 = mkURIGraphIndexer(dir)
+        val indexer2 = mkURIGraphIndexer(uriGraphDir, bookmarkStoreDir)
         indexer2.sequenceNumber.value === bookmarks.size
       }
     }

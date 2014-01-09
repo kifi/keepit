@@ -2,6 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
@@ -9,20 +10,15 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
+import com.keepit.search.SemanticVectorBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
-import com.keepit.search.SemanticVectorBuilder
 import com.google.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Success
 import ArticleRecordSerializer._
-
-object ArticleIndexer {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE, REDIRECTED)
-  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
-}
 
 class ArticleIndexer @Inject() (
     indexDirectory: IndexDirectory,
@@ -31,6 +27,8 @@ class ArticleIndexer @Inject() (
     airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
+
+  import ArticleIndexer.ArticleIndexable
 
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
@@ -78,6 +76,11 @@ class ArticleIndexer @Inject() (
       uri = uri,
       articleStore = articleStore)
   }
+}
+
+object ArticleIndexer extends Logging {
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE, REDIRECTED)
+  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
 
   class ArticleIndexable(
     override val id: Id[NormalizedURI],
