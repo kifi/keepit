@@ -16,12 +16,12 @@ abstract class AbstractModuleAccessor extends ScalaModule {
 trait ConfigurationModule extends AbstractModuleAccessor with Logging {
 
   final def configure() {
-    log.info(s"Configuring ${this}")
+    log.debug(s"Configuring ${this}")
     for (field <- getClass.getMethods if classOf[ScalaModule] isAssignableFrom field.getReturnType) {
       val startTime = System.currentTimeMillis
       val module = field.invoke(this).asInstanceOf[ScalaModule]
       install0(module)
-      log.info(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis-startTime}ms")
+      log.debug(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis-startTime}ms")
     }
   }
 }
