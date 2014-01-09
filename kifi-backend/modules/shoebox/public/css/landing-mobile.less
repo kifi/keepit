@@ -209,7 +209,7 @@
 
 .kifi-good-news {
 	position: relative;
-	padding: 22px 28px;
+	padding: 22px 28px 24px;
 	color: white;
 	@bg: #93c059;
 	background-color: @bg;
@@ -267,7 +267,6 @@
 	background-size: @size @size;
 	background-repeat: no-repeat;
 	background-position: 0 0;
-	z-index: 1;
 }
 
 .kifi-watch-bg {
@@ -295,7 +294,6 @@
 	background-size: @w @h;
 	background-repeat: no-repeat;
 	background-position: 0 0;
-	z-index: 1;
 }
 
 .kifi-desktop-text {
@@ -327,4 +325,8 @@
 	&:active {
 		background-color: shade(@bg, 5%);
 	}
+}
+
+.hidden {
+	display: none;
 }
