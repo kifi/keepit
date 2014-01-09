@@ -22,7 +22,7 @@ import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.Bits.MatchNoBits
 import org.apache.lucene.util.PriorityQueue
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.search.semantic.SemanticContextAnalyzer

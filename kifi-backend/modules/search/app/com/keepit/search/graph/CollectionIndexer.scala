@@ -12,7 +12,7 @@ import com.keepit.model.CollectionStates._
 import com.keepit.search.index._
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.{Indexable, Indexer}
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}
