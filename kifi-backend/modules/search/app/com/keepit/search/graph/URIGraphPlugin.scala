@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import com.keepit.common.actor.ActorInstance
 import scala.concurrent.duration._
-import com.keepit.search.IndexerPluginMessages._
+import com.keepit.search.index.IndexerPluginMessages._
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
 
