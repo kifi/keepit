@@ -165,7 +165,7 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def socialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserConnectionsCache(stats, accessLog, (outerRepo, 6 hours))
+    new SocialUserConnectionsCache(stats, accessLog, (outerRepo, 1 hour))
 
   @Singleton
   @Provides
