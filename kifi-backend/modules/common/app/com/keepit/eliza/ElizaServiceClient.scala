@@ -26,7 +26,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) : Unit
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -64,7 +64,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) : Unit = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj(
       "userIds"   -> userIds.toSeq,
@@ -73,7 +73,8 @@ class ElizaServiceClientImpl @Inject() (
       "linkText"  -> linkText,
       "linkUrl"   -> linkUrl,
       "imageUrl"  -> imageUrl,
-      "sticky"    -> sticky
+      "sticky"    -> sticky,
+      "category"  -> categoryOverride
     )
     call(Eliza.internal.sendGlobalNotification, payload)
   }
@@ -106,7 +107,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
     p.future
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) : Unit = {}
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) : Unit = {}
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())
