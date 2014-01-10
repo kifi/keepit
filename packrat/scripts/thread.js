@@ -24,19 +24,19 @@ panes.thread = function () {
       updateAll(o.id, o.messages, o.userId);
     }};
 
-  var $holder = $(), buffer = {};
+  var $holder = $();
   return {
     render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
-      var $who = $paneBox.find('.kifi-thread-who');  // TODO: uncomment code below once header is pre-rendered again
+      var $who = $paneBox.find('.kifi-thread-who');  // uncomment code below once header is pre-rendered again
       var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
+      api.port.on(handlers);  // important to subscribe to 'message' before requesting thread
       api.port.emit('thread', threadId, function (th) {
         renderThread($paneBox, $tall, $who, th.id, th.messages, session);
-        api.port.emit('participants', th.id, function (participants) {
-          window.messageHeader.init($who.find('.kifi-message-header'), th.id, participants);
-        });
-        api.port.on(handlers);
+        var lastMsg = th.messages[th.messages.length - 1];
+        messageHeader.init($who.find('.kifi-message-header'), th.id, lastMsg.participants);
+        emitRendered(threadId, lastMsg);
       });
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
@@ -99,19 +99,6 @@ panes.thread = function () {
     } else {
       $paneBox.on('kifi:shown', compose.focus);
     }
-
-    // It's important that we check the buffer after rendering the messages, to avoid creating a window
-    // of time during which we might miss an incoming message on this thread.
-    if (buffer.threadId === threadId && !messages.some(function (m) {return m.id === buffer.message.id})) {
-      log('[render] appending buffered message', buffer.message.id)();
-      messages.push(buffer.message);
-      var $m = renderMessage(buffer.message, session.user.id);
-      $holder.append($m).scrollToBottom();
-    }
-
-    if (messages.length) {
-      emitRendered(threadId, messages[messages.length - 1]);
-    }
   }
 
   function update(threadId, message, userId) {
@@ -126,9 +113,6 @@ panes.thread = function () {
         $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
       }
       emitRendered(threadId, message);
-    } else {
-      buffer.threadId = threadId;
-      buffer.message = message;
     }
   }
 
