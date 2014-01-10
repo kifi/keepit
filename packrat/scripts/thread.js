@@ -110,7 +110,7 @@ panes.thread = function () {
     }
 
     if (messages.length) {
-      emitRead(threadId, messages[messages.length - 1], true);
+      emitRendered(threadId, messages[messages.length - 1]);
     }
   }
 
@@ -125,7 +125,7 @@ panes.thread = function () {
         var $m = renderMessage(message, userId);
         $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
       }
-      emitRead(threadId, message);
+      emitRendered(threadId, message);
     } else {
       buffer.threadId = threadId;
       buffer.message = message;
@@ -138,7 +138,7 @@ panes.thread = function () {
         return renderMessage(m, userId)[0];
       });
       $holder.find('.kifi-message-sent').remove().end().append(els).scrollToBottom();
-      emitRead(threadId, messages[messages.length - 1]);
+      emitRendered(threadId, messages[messages.length - 1]);
     }
   }
 
@@ -210,7 +210,7 @@ panes.thread = function () {
   }
 
 
-  function emitRead(threadId, m, forceSend) {
-    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt, forceSend: forceSend});
+  function emitRendered(threadId, m) {
+    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});
   }
 }();
