@@ -56,6 +56,7 @@ body {
 	color: transparent;
 	vertical-align: bottom;
 	.at2x('/assets/img/mobile/kifilogo.png', 100%, 100%);
+	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
 }
@@ -154,6 +155,7 @@ body {
 	.kifi-arrow-down {
 		.left(36px);
 		.at2x('/assets/img/mobile/blackcaret.png', 100%, 100%);
+		background-size: 100%;
 	}
 
 	.kifi-arrow-cover {
@@ -190,6 +192,26 @@ body {
 	.letter-spacing(-0.5px, @fs);
 	font-weight: 400;
 	color: #c4c4c4;
+}
+
+.kifi-not-ready {
+	padding-bottom: 8px;
+
+	html.iphone & {
+		display: none;
+	}
+}
+
+.kifi-lab-img {
+	@size: 74px;
+	width: @size;
+	height: @size;
+	margin: 0 auto;
+	margin-top: 24px;
+	.at2x('/assets/img/mobile/beakeriphone.png', 100%, 100%);
+	background-size: 100%;
+	background-repeat: no-repeat;
+	background-position: 0 0;
 }
 
 .kifi-waiting-text {
@@ -315,6 +337,7 @@ body {
 	.kifi-arrow-down {
 		.left(28px);
 		.at2x('/assets/img/mobile/greencaret.png', 100%, 100%);
+		background-size: 100%;
 	}
 
 	.kifi-arrow-cover {
@@ -377,6 +400,7 @@ body {
 	margin: 0 auto;
 	margin-top: 28px;
 	.at2x('/assets/img/mobile/playbuttoniphone.png', 100%, 100%);
+	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
 }
@@ -388,6 +412,7 @@ body {
 	height: @size;
 	margin-top: 17px;
 	.at2x('/assets/img/mobile/playbuttonipad.png', 100%, 100%);
+	background-size: 100%;
 	background-repeat: no-repeat;
 }
 }
@@ -414,6 +439,7 @@ body {
 	width: @w;
 	height: @h;
 	.at2x('/assets/img/mobile/flatmacbookiphone.png', 100%, 100%);
+	background-size: 100%;
 	background-size: @w @h;
 	background-repeat: no-repeat;
 	background-position: 0 0;
@@ -480,6 +506,14 @@ body {
 
 .hidden {
 	display: none;
+}
+
+.iphone-only {
+	display: none;
+
+	html.iphone & {
+		display: block;
+	}
 }
 
 @media screen and (max-width: 799px) {
