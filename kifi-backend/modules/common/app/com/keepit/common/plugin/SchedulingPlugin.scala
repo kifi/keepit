@@ -62,14 +62,14 @@ trait SchedulingPlugin extends Plugin with Logging {
       _cancellables :+= new NamedCancellable(once, taskName)
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
-  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
-    val taskName = s"send message $message to actor $receiver"
+  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any, desc:Option[String] = None): Unit = {
+    val taskName = desc getOrElse s"send message $message to actor $receiver"
     log.info(s"Scheduling $taskName")
     scheduleTask(system, initialDelay, frequency, taskName) { receiver ! message }
   }
 
   def cancelTasks() = {
-    log.info("Cancelling scheduled tasks")
+    log.info(s"Cancelling scheduled (${_cancellables.length}) tasks: ${_cancellables.mkString(",")}")
     for (task <- _cancellables) {
       task.cancel()
       log.info(s"[cancelTask] task:${task.name}) isCancelled:${task.isCancelled}")

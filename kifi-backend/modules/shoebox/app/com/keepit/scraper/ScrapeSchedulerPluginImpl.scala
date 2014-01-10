@@ -93,7 +93,11 @@ class ScrapeSchedulerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
-    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape)
+    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape, Some("ScrapeScheduler.ScheduleScrape"))
+  }
+  override def onStop() {
+    log.info(s"[onStop] ScrapeScheduler stopped")
+    super.onStop()
   }
 
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {

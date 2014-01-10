@@ -20,7 +20,7 @@ trait AutogenReaperPlugin extends Plugin {
 }
 
 class AutogenReaperPluginImpl @Inject() (
-  actor: ActorInstance[AutogenAcctReaperActor],
+  actor: ActorInstance[AutogenReaper],
   val schedulingProperties: SchedulingProperties //only on leader
 ) extends Logging with AutogenReaperPlugin with SchedulingPlugin {
 
@@ -32,8 +32,12 @@ class AutogenReaperPluginImpl @Inject() (
     for (app <- Play.maybeApplication) {
       val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 15 minutes)
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
-      scheduleTask(actor.system, initDelay, freq, actor.ref, Reap)
+      scheduleTask(actor.system, initDelay, freq, actor.ref, Reap, Some("AutogenReaper.Reap"))
     }
+  }
+  override def onStop() {
+    log.info(s"[AutogenReaperPlugin] stopped")
+    super.onStop
   }
 
   override def reap() { actor.ref ! Reap }
@@ -41,7 +45,7 @@ class AutogenReaperPluginImpl @Inject() (
 
 private[integration] case class Reap()
 
-private[integration] class AutogenAcctReaperActor @Inject() (
+private[integration] class AutogenReaper @Inject() (
   db: Database,
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
