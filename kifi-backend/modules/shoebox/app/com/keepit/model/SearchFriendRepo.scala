@@ -38,9 +38,8 @@ class SearchFriendRepoImpl @Inject() (
     def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt <> (SearchFriend, SearchFriend.unapply _)
   }
 
-  override def invalidateCache(model: SearchFriend)(implicit session: RSession) = {
+  override def invalidateCache(model: SearchFriend)(implicit session: RSession): Unit = {
     searchFriendsCache.remove(SearchFriendsKey(model.userId))
-    model
   }
 
   def getSearchFriends(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {

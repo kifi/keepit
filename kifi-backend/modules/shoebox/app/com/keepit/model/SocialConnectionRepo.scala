@@ -90,7 +90,7 @@ class SocialConnectionRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ socialUser1 ~ socialUser2 ~ state <> (SocialConnection, SocialConnection.unapply _)
   }
 
-  override def invalidateCache(conn: SocialConnection)(implicit session: RSession): SocialConnection = {
+  override def invalidateCache(conn: SocialConnection)(implicit session: RSession): Unit = {
     socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser1))
     socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser2))
     super.invalidateCache(conn)

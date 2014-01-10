@@ -49,14 +49,13 @@ class SocialUserInfoRepoImpl @Inject() (
       networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo.apply _, SocialUserInfo.unapply _)
   }
 
-  override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = {
+  override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
     socialUser.userId map { userId =>
       userCache.remove(SocialUserInfoUserKey(userId))
       socialUserCache.remove(SocialUserKey(userId))
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
-    socialUser
   }
 
   override def count(implicit session: RSession): Int = {
