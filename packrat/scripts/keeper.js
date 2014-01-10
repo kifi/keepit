@@ -56,7 +56,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   document.addEventListener('click', onClick, true);
   function onClick(e) {
-    if ($slider && $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root *')) {
+    if ($slider && $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root,.kifi-root *')) {
       hideSlider('clickout');
     }
   }
@@ -116,7 +116,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       }
     }).mousedown(function (e) {
-      if (e.which !== 1 || data.stickiness || $(e.target).is('.kifi-tip *')) return;
+      if (e.which !== 1 || data.stickiness || $(e.target).is('.kifi-tip,.kifi-tip *')) return;
       e.preventDefault();  // prevents selection and selection scrolling
       data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
       data.mousedownEvent = e.originalEvent;
@@ -149,34 +149,18 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
-          render('html/keeper/keepers', {
-            tipClass: 'kifi-keepers-tip',
-            keepers: pick(o.keepers, 8),
+          render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
+            cssClass: 'kifi-keepers-hover',
             linkKeepers: true,
-            captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps),
-            includeTri: true
-          }, function (html) {
+            kept: o.kept
+          }), function (html) {
             configureHover(hoverfuFriends($(html), o.keepers), {
               suppressed: isSticky,
-              mustHoverFor: 700,
+              mustHoverFor: 100,
               canLeaveFor: 800,
               hideAfter: 4000,
               click: 'hide',
-              parent: btn,
-              position: {my: 'center bottom-13', at: 'center top', of: btn, collision: 'fit', using: function (pos, o) {
-                var dw = o.element.width - o.target.width;
-                if (dw > 0) {
-                  pos.left = 'auto';
-                  pos.right = 0;
-                  o.element.element.find('.kifi-tip-tri')
-                    .css({left: 'auto', right: Math.round(.5 * o.target.width)});
-                } else {
-                  pos.left -= o.target.left;
-                }
-                pos.top = 'auto';
-                pos.bottom = '100%';
-                o.element.element.css(pos);
-              }}
+              parent: btn
             });
           });
         } else {
@@ -410,14 +394,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   function hoverfuFriends($tip, keepers) {
-    return $tip.hoverfu('.kifi-keepers-keeper', function (configureHover) {
+    return $tip.hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
       var friend = keepers.filter(hasId($pic.data('id')))[0];
       render('html/friend_card', {
         friend: friend
       }, function (html) {
         configureHover(html, {
-          mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: 'toggle', parent: $pic,
+          mustHoverFor: 100, hideAfter: 4000, click: 'toggle', parent: $tip,
           position: {my: 'center bottom-13', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
             var xTC = o.target.left + .5 * o.target.width;
             var xEC = o.element.left + .5 * o.element.width;
@@ -452,17 +436,20 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }
   }
 
-  function formatCountHtml(kept, numFriends, numOthers) {
-    return [
-        kept ? 'You' : null,
-        numFriends ? plural(numFriends, 'friend') : null,
-        numOthers ? plural(numOthers, 'other') : null]
-      .filter(function (v) {return v})
-      .join(' + ');
-  }
-
-  function plural(n, term) {
-    return n + ' ' + term + (n == 1 ? '' : 's');
+  function setKeepersAndCounts(keepers, numOthers, o) {
+    var n = keepers.length;
+    o.numFriends = n;
+    o.numOthers = numOthers;
+    o.numSquares = n === 5 || n === 7 ? n - 1 : Math.min(8, n);
+    o.keepers = pick(keepers, n === 5 || n === 7 ? n - 2 : (n > 8 ? 7 : n));
+    o.numMore = n - o.keepers.length;
+    if (n <= 3) {
+      o.keepers[n-1].big = true;
+      if (n === 2) {
+        o.keepers[0].big = true;
+      }
+    }
+    return o;
   }
 
   function pick(arr, n) {
@@ -555,21 +542,16 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (lastShownAt) return;
       var $tile = $(tile).hoverfu(function (configureHover) {
         // TODO: preload friend pictures
-        render('html/keeper/keepers', {
-          tipClass: 'kifi-keepers-promo',
-          keepers: pick(keepers, 8),
-          captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
-        }, function (html) {
+        render('html/keeper/keepers', setKeepersAndCounts(keepers, otherKeeps, {
+          cssClass: 'kifi-keepers-promo' + ($tile.has('.kifi-count') ? ' kifi-above-count' : '')
+        }), function (html) {
           var $tip = $(html).on('transitionend', function unhoverfu(e) {
             if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
               $tip.off('transitionend', unhoverfu);
               $tile.hoverfu('destroy');
             }
           });
-          var px = $tile.find('.kifi-count').length ? 23 : 16;
-          configureHover($tip, {
-            position: {my: 'right bottom-' + px, at: 'right top', of: $tile.find('.kifi-tile-card'), collision: 'none'},
-            insertBefore: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
+          configureHover($tip, {insertBefore: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
         });
       });
       $tile.hoverfu('show');
