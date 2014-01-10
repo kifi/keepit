@@ -88,6 +88,17 @@
   overflow: hidden;
 }
 
+#kifi-notify-notice-wrapper .kifi-notify-triggered {
+  margin-top: 8px;
+  display: block;
+  font-size: 13px;
+  font-style: normal;
+  color: #fff;
+  padding-right: 8px;
+  word-break: normal;
+  overflow: hidden;
+}
+
 #kifi-notify-notice-wrapper .kifi-notify-image {
 	float: left;
   width: 42px;

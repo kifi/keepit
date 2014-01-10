@@ -9,6 +9,8 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
+import com.keepit.search.graph.collection._
+import com.keepit.search.graph.bookmark._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig

@@ -445,10 +445,11 @@ class AdminUserController @Inject() (
       "url" -> optional(text),
       "image" -> text,
       "sticky" -> optional(text),
-      "users" -> optional(text)
+      "users" -> optional(text),
+      "category" -> optional(text)
     ))
 
-    val (title, bodyHtml, linkText, url, image, sticky, whichUsers) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, categoryOverride) = notifyForm.bindFromRequest.get
 
     val usersOpt : Option[Seq[Id[User]]] = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
     val isSticky : Boolean = sticky.map(_ => true).getOrElse(false)
@@ -456,12 +457,12 @@ class AdminUserController @Inject() (
     log.info("Sending global notification via Eliza!")
     usersOpt.map {
       users =>
-        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)
+        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, categoryOverride)
     } getOrElse {
       val users = db.readOnly {
         implicit session => userRepo.getAllIds()
       } //Note: Need to revisit when we have >50k users.
-      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky)
+      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, categoryOverride)
     }
 
 

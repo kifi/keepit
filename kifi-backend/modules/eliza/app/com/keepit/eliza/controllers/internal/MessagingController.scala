@@ -76,15 +76,16 @@ class MessagingController @Inject() (
     SafeFuture {
       val data : JsObject = request.body.asInstanceOf[JsObject]
 
-      val userIds  : Set[Id[User]] =  (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet
-      val title    : String        =  (data \ "title").as[String]
-      val body     : String        =  (data \ "body").as[String]
-      val linkText : String        =  (data \ "linkText").as[String]
-      val linkUrl  : String        =  (data \ "linkUrl").as[String]
-      val imageUrl : String        =  (data \ "imageUrl").as[String]
-      val sticky   : Boolean       =  (data \ "sticky").as[Boolean]
+      val userIds  : Set[Id[User]]  =  (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet
+      val title    : String         =  (data \ "title").as[String]
+      val body     : String         =  (data \ "body").as[String]
+      val linkText : String         =  (data \ "linkText").as[String]
+      val linkUrl  : String         =  (data \ "linkUrl").as[String]
+      val imageUrl : String         =  (data \ "imageUrl").as[String]
+      val sticky   : Boolean        =  (data \ "sticky").as[Boolean]
+      val category : Option[String] =  (data \ "category").asOpt[String]
 
-      messagingCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky)
+      messagingCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category)
 
     }
     Status(ACCEPTED)

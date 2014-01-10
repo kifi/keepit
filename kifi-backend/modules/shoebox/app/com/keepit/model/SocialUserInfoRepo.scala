@@ -8,10 +8,11 @@ import com.keepit.common.time._
 import securesocial.core.SocialUser
 import org.joda.time.DateTime
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
+import scala.reflect.ClassTag
 
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
-trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
+trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
@@ -30,7 +31,7 @@ class SocialUserInfoRepoImpl @Inject() (
     val countCache: SocialUserInfoCountCache,
     val networkCache: SocialUserInfoNetworkCache,
     val socialUserNetworkCache: SocialUserNetworkCache)
-  extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
+  extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SocialUserInfoRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -49,7 +50,9 @@ class SocialUserInfoRepoImpl @Inject() (
       networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo.apply _, SocialUserInfo.unapply _)
   }
 
-  override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
+  override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
+
+  def deleteCache(socialUser: SocialUserInfo):Unit = {
     socialUser.userId map { userId =>
       userCache.remove(SocialUserInfoUserKey(userId))
       socialUserCache.remove(SocialUserKey(userId))

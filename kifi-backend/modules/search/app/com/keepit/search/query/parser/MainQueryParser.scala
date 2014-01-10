@@ -15,7 +15,7 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.search.Lang
-import com.keepit.search.graph.CollectionSearcherWithUser
+import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.query.ExistenceBoostQuery
 import com.keepit.search.query.MultiplicativeBoostQuery

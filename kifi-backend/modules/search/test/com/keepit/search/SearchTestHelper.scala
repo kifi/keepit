@@ -12,16 +12,15 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.graph.BookmarkStore
+import com.keepit.search.graph.bookmark._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
-import com.keepit.search.graph.CollectionNameIndexer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.FakePhraseIndexer
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
-import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
-import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.{URIGraphImpl}
+import com.keepit.search.graph.collection._
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient}

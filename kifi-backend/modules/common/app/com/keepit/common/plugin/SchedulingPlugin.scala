@@ -23,14 +23,21 @@ class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: 
   def enabledOnlyForLeader: Boolean = enabled && serviceDiscovery.isLeader()
 }
 
+case class NamedCancellable(underlying:Cancellable, taskName:String) extends Cancellable {
+  def name() = taskName
+  def cancel() = underlying.cancel
+  def isCancelled: Boolean = underlying.isCancelled
+  override def toString(): String = name()
+}
+
 trait SchedulerPlugin extends Plugin with Logging {
 
   def scheduling: SchedulingProperties
 
-  private var _cancellables: Seq[Cancellable] = Seq()
+  private var _cancellables: Seq[NamedCancellable] = Seq()
 
   private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { f }
+    _cancellables :+= NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
 
   def cronTaskOnLeader(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
     val taskName = s"cron message $message to actor $receiver on leader only"
@@ -86,7 +93,10 @@ trait SchedulerPlugin extends Plugin with Logging {
 
   def cancelTasks() = {
     log.info("Cancelling scheduled tasks")
-    _cancellables.map(_.cancel())
+    for (task <- _cancellables) {
+      task.cancel()
+      log.info(s"[cancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+    }
   }
 
   override def onStop() {

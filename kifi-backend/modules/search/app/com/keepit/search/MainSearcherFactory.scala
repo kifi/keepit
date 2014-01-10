@@ -1,8 +1,8 @@
 package com.keepit.search
 
-import com.keepit.search.graph.CollectionSearcherWithUser
+import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphSearcherWithUser
+import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck.AirbrakeNotifier

@@ -1,9 +1,8 @@
 package com.keepit.search
 
 import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.graph.BookmarkStore
+import com.keepit.search.graph.bookmark._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
-import com.keepit.search.graph.CollectionNameIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
@@ -20,9 +19,9 @@ import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.article.ArticleIndexer
 
-import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
+import com.keepit.search.graph.{URIGraphImpl}
 import org.apache.lucene.util.Version
-import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.collection._
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Promise
 import scala.Some

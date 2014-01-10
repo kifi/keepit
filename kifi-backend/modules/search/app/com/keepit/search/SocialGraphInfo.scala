@@ -3,6 +3,8 @@ package com.keepit.search
 import com.keepit.search.graph._
 import com.keepit.common.db.Id
 import com.keepit.model.User
+import com.keepit.search.graph.collection.CollectionSearcherWithUser
+import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 
 class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter) {
 
