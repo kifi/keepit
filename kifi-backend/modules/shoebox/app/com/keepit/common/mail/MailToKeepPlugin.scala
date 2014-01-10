@@ -11,7 +11,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.commanders.{RawBookmarkRepresentation, BookmarkInterner}
 import com.keepit.model.{BookmarkSource, EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
@@ -19,9 +19,8 @@ import com.keepit.common.service.FortyTwoServices
 
 import javax.mail.Message.RecipientType
 import javax.mail._
-import javax.mail.internet.{InternetAddress, MimeMultipart}
+import javax.mail.internet.InternetAddress
 import javax.mail.search._
-import play.api.libs.json.Json
 import play.api.Plugin
 import com.keepit.heimdal.HeimdalContext
 
@@ -203,8 +202,8 @@ trait MailToKeepPlugin extends Plugin {
 
 class MailToKeepPluginImpl @Inject()(
   actor: ActorInstance[MailToKeepActor],
-  val schedulingProperties: SchedulingProperties //only on leader
-) extends MailToKeepPlugin with SchedulingPlugin {
+  val scheduling: SchedulingProperties //only on leader
+) extends MailToKeepPlugin with SchedulerPlugin {
 
   override def enabled: Boolean = true
 
@@ -212,7 +211,7 @@ class MailToKeepPluginImpl @Inject()(
     actor.ref ! FetchNewKeeps
   }
   override def onStart() {
-    scheduleTask(actor.system, 10 seconds, 1 minute, actor.ref, FetchNewKeeps)
+    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minute, actor.ref, FetchNewKeeps)
   }
 }
 

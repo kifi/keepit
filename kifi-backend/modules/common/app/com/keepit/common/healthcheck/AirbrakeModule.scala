@@ -4,10 +4,8 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Provides
 import com.keepit.inject.AppScoped
-import java.net.InetAddress
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.net._
 import play.api.Play
 import play.api.Mode.Mode

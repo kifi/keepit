@@ -2,11 +2,12 @@ package com.keepit.common.actor
 
 import akka.actor.{Cancellable, Scheduler, ActorSystem}
 import com.google.inject.Provides
-import com.keepit.common.plugin.SchedulingEnabled
+import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
 import com.keepit.inject.AppScoped
 import play.api.Play.current
 import scala.concurrent.future
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
 
@@ -20,7 +21,8 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
   }
 
   @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
+  def globalSchedulingEnabled(serviceDiscovery: ServiceDiscovery): SchedulingProperties =
+    new SchedulingPropertiesImpl(serviceDiscovery, true)
 
   @Provides
   @AppScoped
@@ -36,7 +38,11 @@ case class StandaloneTestActorSystemModule(implicit system: ActorSystem) extends
   }
 
   @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
+  def globalSchedulingEnabled: SchedulingProperties =
+    new SchedulingProperties {
+      def enabled = false
+      def enabledOnlyForLeader = false
+    }
 }
 
 class FakeScheduler extends Scheduler {
