@@ -2,6 +2,11 @@
 @import "common-mobile";
 @import "retina-1.1.0";
 
+@phone: ~"(max-width: 767px)";
+@tablet: ~"(min-width: 768px)";
+@retina: ~"(-webkit-min-device-pixel-ratio: 1.5), (min--moz-device-pixel-ratio: 1.5), (-o-min-device-pixel-ratio: 3/2), (min-device-pixel-ratio: 1.5), (min-resolution: 144dpi), (min-resolution: 1.5dppx)";
+@retinaTablet: ~"(min-width: 768px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 768px) and (min--moz-device-pixel-ratio: 1.5), (min-width: 768px) and (-o-min-device-pixel-ratio: 3/2), (min-width: 768px) and (min-device-pixel-ratio: 1.5), (min-width: 768px) and (min-resolution: 144dpi), (min-width: 768px) and (min-resolution: 1.5dppx)";
+
 @phcolor: #c4c4c4;
 @phfw: 300;
 ::-webkit-input-placeholder {
@@ -55,9 +60,14 @@ body {
 	margin-right: 8px;
 	color: transparent;
 	vertical-align: bottom;
-	.at2x('/assets/img/mobile/kifilogo.png', 100%, 100%);
+	background-image: url(/assets/img/mobile/kifilogo.png);
+	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+
+	@media @retina {
+		background-image: url(/assets/img/mobile/kifilogo@2x.png);
+	}
 }
 
 .kifi-header-text {
@@ -113,6 +123,12 @@ body {
 	background-repeat: no-repeat;
 	background-position: 0 0;
 	background-size: 100%;
+
+	@media @tablet {
+		left: 50% !important;
+		margin-left: -25px / 2;
+		bottom: -13px;
+	}
 }
 
 .kifi-arrow-cover {
@@ -121,17 +137,10 @@ body {
 	left: 0;
 	width: 100%;
 	height: 4px;
-}
 
-@media screen and (min-width: 800px) {
-.kifi-arrow-down {
-	left: 50% !important;
-	margin-left: -25px / 2;
-	bottom: -13px;
-}
-.kifi-arrow-cover {
-	display: none;
-}
+	@media @tablet {
+		display: none;
+	}
 }
 
 
@@ -145,19 +154,46 @@ body {
 	.padding-bottom(35px);
 
 	h1 {
-		.font-size(40px / 2);
+		font-size: 40px / 2;
 		font-weight: 400;
 		line-height: 1.2;
 		margin: 0;
+		@media @tablet {
+			font-size: 30px;
+		}
 	}
 
 	.kifi-arrow-down {
 		.left(36px);
-		.at2x('/assets/img/mobile/blackcaret.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/blackcaret.png);
+		background-size: 100%;
+
+		@media @retina {
+			background-image: url(/assets/img/mobile/blackcaret@2x.png);
+		}
 	}
 
 	.kifi-arrow-cover {
 		background: @bg;
+	}
+
+	@media @tablet {
+		padding-top: 66px;
+		padding-bottom: 61px;
+
+		.kifi-add-form,
+		.kifi-added {
+			margin-left: -234px;
+		}
+		.kifi-add-form,
+		.kifi-added {
+			html.iphone & {
+				margin-left: 0;
+			}
+		}
+		.kifi-added {
+			margin-top: 11px;
+		}
 	}
 }
 
@@ -192,9 +228,56 @@ body {
 	color: #c4c4c4;
 }
 
+.kifi-not-ready {
+	padding-bottom: 8px;
+
+	html.iphone & {
+		display: none;
+	}
+
+	@media @tablet {
+		h1 {
+			margin-left: -234px;
+		}
+	}
+}
+
+.kifi-lab-img {
+	@size: 74px;
+	width: @size;
+	height: @size;
+	margin: 0 auto;
+	margin-top: 24px;
+	background-image: url(/assets/img/mobile/beakeriphone.png);
+	background-size: 100%;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+
+	@media @retina {
+		background-image: url(/assets/img/mobile/beakeriphone@2x.png);
+	}
+
+	@media @tablet {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		@size: 164px;
+		width: @size;
+		height: @size;
+		margin-left: 95px;
+		margin-top: -@size / 2 + 4px;
+		background-image: url(/assets/img/mobile/beakeripad.png);
+
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/beakeripad@2x.png);
+	}
+}
+
 .kifi-waiting-text {
 	@fs: 30px / 2;
-	.font-size(@fs);
+	font-size: @fs;
 	font-weight: 600;
 	color: white;
 	.margin-top(12px, @fs);
@@ -204,7 +287,7 @@ body {
 	position: relative;
 	.padding-lr(28px);
 	margin: 0 auto;
-	.max-width(360px);
+	max-width: 264px;
 }
 
 .kifi-waiting-email,
@@ -297,12 +380,25 @@ body {
 		font-weight: 600;
 		text-transform: uppercase;
 		margin: 0;
+
+		@media @tablet {
+			@fs: 56px / 2;
+			font-size: @fs;
+			font-weight: 600;
+			margin-top: 25px;
+		}
 	}
 
 	p {
 		@fs: 34px / 2;
 		font-size: @fs;
 		margin: 0;
+
+		@media @tablet {
+			@fs: 46px / 2;
+			font-size: @fs;
+			margin-top: -6px;
+		}
 	}
 
 	.what-is-kifi {
@@ -314,41 +410,31 @@ body {
 
 	.kifi-arrow-down {
 		.left(28px);
-		.at2x('/assets/img/mobile/greencaret.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/greencaret.png);
+		background-size: 100%;
+
+		@media @retina {
+			background-image: url(/assets/img/mobile/greencaret@2x.png);
+		}
 	}
 
 	.kifi-arrow-cover {
 		background: @bg;
 	}
-}
 
-@media screen and (min-width: 800px) {
-.kifi-good-news {
-	text-align: center;
-	padding-bottom: 21px;
-	
-	h2 {
-		@fs: 56px / 2;
-		font-size: @fs;
-		font-weight: 600;
-		margin-top: 25px;
+	@media @tablet {
+		text-align: center;
+		padding-bottom: 21px;
 	}
-
-	p {
-		@fs: 46px / 2;
-		font-size: @fs;
-		margin-top: -6px;
-	}
-}
 }
 
 .kifi-watch-video {
 	color: #424242;
 	background-color: #f6f6f6;
 	text-align: center;
-	.padding-top(36px);
-	.padding-lr(20px);
-	.padding-bottom(94px);
+	padding-top: 36px;
+	padding-lr: 20px;
+	padding-bottom: 94px;
 	
 	h2 {
 		@fs: 48px / 2;
@@ -357,14 +443,18 @@ body {
 		line-height: 1.22;
 		margin: 0;
 	}
-}
 
-@media screen and (min-width: 800px) {
-	.kifi-watch-video {
-		.at2x('/assets/img/mobile/header2.png', auto, 77.5%);
+	@media @tablet {
+		padding-top: 52px;
+		padding-bottom: 63px;
+		background-image: url(/assets/img/mobile/header2.png);
 		background-size: auto 77.5%;
 		background-repeat: no-repeat;
 		background-position: bottom right 83px;
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/header2@2x.png);
 	}
 }
 
@@ -376,32 +466,46 @@ body {
 	height: @size;
 	margin: 0 auto;
 	margin-top: 28px;
-	.at2x('/assets/img/mobile/playbuttoniphone.png', 100%, 100%);
+	background-image: url(/assets/img/mobile/playbuttoniphone.png);
+	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
-}
 
-@media screen and (min-width: 800px) {
-.kifi-play {
-	@size: 130px;
-	width: @size;
-	height: @size;
-	margin-top: 17px;
-	.at2x('/assets/img/mobile/playbuttonipad.png', 100%, 100%);
-	background-repeat: no-repeat;
-}
-}
+	@media @retina {
+		background-image: url(/assets/img/mobile/playbuttoniphone@2x.png);
+	}
 
-.kifi-watch-bg {
+	@media @tablet {
+		@size: 130px;
+		width: @size;
+		height: @size;
+		margin-top: 17px;
+		background-image: url(/assets/img/mobile/playbuttonipad.png);
+		background-size: 100%;
+		background-repeat: no-repeat;
+	}
 
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/playbuttonipad@2x.png);
+	}
 }
 
 .kifi-desktop {
 	position: relative;
-	.padding-bottom(41px);
+	padding-bottom: 41px;
 	color: white;
 	background-color: #93c059;
 	text-align: center;
+
+	@media @tablet {
+		padding-bottom: 82px;
+	}
+
+	html.submitted & {
+		@media @tablet {
+			padding-bottom: 39px;
+		}
+	}
 }
 
 .kifi-desktop-img {
@@ -413,18 +517,57 @@ body {
 	.margin-top(-23px);
 	width: @w;
 	height: @h;
-	.at2x('/assets/img/mobile/flatmacbookiphone.png', 100%, 100%);
-	background-size: @w @h;
+	background-image: url(/assets/img/mobile/flatmacbookiphone.png);
+	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+
+	@media @retina {
+		background-image: url(/assets/img/mobile/flatmacbookiphone@2x.png);
+	}
+
+	@media @tablet {
+		@w: 321px;
+		@h: 186px;
+		width: @w;
+		height: @h;
+		margin-left: -381px;
+		margin-top: -72px;
+		background-image: url(/assets/img/mobile/flatmacbookipad.png);
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/flatmacbookipad@2x.png);
+	}
 }
 
 .kifi-desktop-text {
 	@fs: 34px / 2;
-	.font-size(@fs);
+	font-size: @fs;
 	font-weight: 400;
 	line-height: 1.45;
 	.margin-top(9px, @fs);
+
+	@media @tablet {
+		@fs: 46px / 2;
+		font-size: @fs;
+		margin-top: -95px;
+		margin-left: 268px;
+		margin-bottom: 24px;
+		line-height: 1.2;
+	}
+}
+
+.kifi-desktop {
+	.kifi-waiting-input-box {
+		@media @tablet {
+			display: inline-block;
+			padding: 0;
+			width: 268px;
+			margin-left: -56px;
+			margin-right: 3px;
+		}
+	}
 }
 
 .kifi-desktop-button {
@@ -433,7 +576,7 @@ body {
 	font-weight: 200;
 	letter-spacing: 1px;
 	.margin-top(20px, @fs);
-	.padding-tb(13px, @fs);
+	.padding-tb(12px, @fs);
 	.padding-lr(26px, @fs);
 	border: 1px solid #4f8ad9;
 	.border-radius(2px);
@@ -455,20 +598,35 @@ body {
 	margin-top: 17px;
 	margin-bottom: 20px;
 
+	@media @tablet {
+		text-align: center;
+		margin-top: 10px;
+		margin-bottom: 0;
+	}
+
 	h1 {
 		font-size: 56px / 2;
 		font-weight: 300;
 		margin: 0;
+
+		@media @tablet {
+			font-weight: 400;
+		}
 	}
 
 	.kifi-added-email {
 		margin-top: 10px;
 		color: white;
+
+		@media @tablet {
+			font-size: 36px / 2;
+			margin-top: 5px;
+		}
 	}
 
 	.kifi-change-email {
 		display: inline-block;
-		margin-top: 13px;
+		margin-top: 11px;
 		color: white;
 		text-decoration: none;
 
@@ -482,13 +640,21 @@ body {
 	display: none;
 }
 
-@media screen and (max-width: 799px) {
+.iphone-only {
+	display: none;
+
+	html.iphone & {
+		display: block;
+	}
+}
+
+@media @phone {
 	.tablet-only {
 		display: none !important;
 	}
 }
 
-@media screen and (min-width: 800px) {
+@media @tablet {
 	.phone-only {
 		display: none !important;
 	}
