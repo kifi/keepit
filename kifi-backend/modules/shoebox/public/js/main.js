@@ -2707,7 +2707,7 @@ $(function () {
 	}
 
 	function doSearch(q, filter, filterChange) {
-		filter = filter || 'a';
+		filter = filter || 'm';
 
 		if (q) {
 			searchResponse = null;
