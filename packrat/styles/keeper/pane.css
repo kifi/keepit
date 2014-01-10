@@ -53,8 +53,9 @@
 }
 .kifi-pane-head {
   position: relative;
-  z-index: 4;
+  z-index: 3;
   height: 44px;
+  background-color: inherit;
 }
 .kifi-pane-head-logo {
   position: absolute;
@@ -93,7 +94,6 @@ a.kifi-pane-settings {
   height: 100%;
   background-position: 99px;
   background-repeat: no-repeat;
-  z-index: 1;
 }
 a.kifi-pane-settings::before {
   content: " ";
@@ -304,7 +304,9 @@ div.kifi-pane-empty > img {
   bottom: 54px;
   transition-delay: 0s;
 }
-.kifi-pane .kifi-keeper,
+.kifi-pane .kifi-keeper {
+  z-index: 2;
+}
 .kifi-pane .kifi-tagbox {
   z-index: 3;
 }
