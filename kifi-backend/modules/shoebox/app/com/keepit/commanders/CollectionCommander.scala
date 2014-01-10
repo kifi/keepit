@@ -97,7 +97,7 @@ class CollectionCommander @Inject() (
                 keptAnalytics.renamedTag(coll, newColl, context)
                 Left(BasicCollection.fromCollection(newColl))
               } getOrElse {
-                Right(CollectionSaveFail(s"Collection not found for id $id"))
+                Right(CollectionSaveFail(s"Tag with name $id not found"))
               }
             } getOrElse {
               val newColl = collectionRepo.save(existingCollection
@@ -109,15 +109,15 @@ class CollectionCommander @Inject() (
               Left(BasicCollection.fromCollection(newColl))
             }
           } else {
-            Right(CollectionSaveFail(s"Collection '$name' already exists with id ${existingExternalId.get}"))
+            Right(CollectionSaveFail(s"Tag '$name' already exists"))
           }
         }
       } else {
-        Right(CollectionSaveFail(s"Name '$name' is too long (maximum ${Collection.MaxNameLength} chars)"))
+        Right(CollectionSaveFail(s"Name '$name' is too long (maximum ${Collection.MaxNameLength} characters)"))
       }
     }
     saved.getOrElse {
-      Right(CollectionSaveFail("Could not parse collection from body"))
+      Right(CollectionSaveFail("Could not parse tag from body"))
     }
   }
 

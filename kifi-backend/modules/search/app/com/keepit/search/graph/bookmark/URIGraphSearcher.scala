@@ -1,16 +1,14 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.bookmark
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
-import com.keepit.search.graph.URIGraphFields._
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachedIndex
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.IdMapper
 import com.keepit.search.Searcher
-import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.util.LongArraySet
@@ -21,6 +19,16 @@ import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import com.keepit.search.SharingUserInfo
+import com.keepit.search.graph.BaseGraphSearcher
+import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
+import com.keepit.search.graph.DocIdSetEdgeSet
+import com.keepit.search.graph.EdgeSet
+import com.keepit.search.graph.IdSetEdgeSet
+import com.keepit.search.graph.LongSetEdgeSetWithAttributes
+import com.keepit.search.graph.LuceneBackedEdgeSet
+import com.keepit.search.graph.URIList
+import com.keepit.search.graph.Util
+import com.keepit.search.graph.bookmark.URIGraphFields._
 
 
 class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {
@@ -119,7 +127,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {
-    import com.keepit.search.graph.BookmarkRecordSerializer._
+    import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
 
     val bookmarkId = myUriEdgeSet.accessor.getBookmarkId(uriId.id)
     storeSearcher.getDecodedDocValue[BookmarkRecord](BookmarkStoreFields.recField, bookmarkId)

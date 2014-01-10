@@ -9,7 +9,7 @@ import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
 
 @ImplementedBy(classOf[EmailAddressRepoImpl])
-trait EmailAddressRepo extends Repo[EmailAddress] {
+trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddress] {
   def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[EmailAddress]
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
@@ -22,7 +22,8 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo) extends DbRepo[EmailAddress] with EmailAddressRepo {
+class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo)
+  extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with EmailAddressRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
   import DBSession._
@@ -36,6 +37,8 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ address ~ verifiedAt.? ~ lastVerificationSent.? ~
         verificationCode <> (EmailAddress, EmailAddress.unapply _)
   }
+
+  def deleteCache(emailAddr: EmailAddress) {}
 
   def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[EmailAddress] =

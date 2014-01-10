@@ -1,4 +1,4 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.bookmark
 
 import java.io.StringReader
 import org.apache.lucene.document.Field
@@ -20,6 +20,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Success, Try}
 import scala.math._
+import com.keepit.search.graph.URIList
+import com.keepit.search.graph.Util
 
 object URIGraphFields {
   val userField = "usr"

@@ -91,6 +91,7 @@ class UserCommander @Inject() (
   invitationRepo: InvitationRepo,
   friendRequestRepo: FriendRequestRepo,
   userCache: SocialUserInfoUserCache,
+  socialUserConnectionsCache: SocialUserConnectionsCache,
   socialGraphPlugin: SocialGraphPlugin,
   bookmarkCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
@@ -342,7 +343,7 @@ class UserCommander @Inject() (
     }
   }
 
-  // legacy api -- to be replaced after removing dependencies
+  // todo(eishay): legacy api -- to be replaced after removing dependencies
   def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)
@@ -365,14 +366,19 @@ class UserCommander @Inject() (
     }
 
     def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) = {
-      log.info(s"getWithInviteStatus social connection info: $sci")
       sci -> sci.userId.map(_ => "joined").getOrElse {
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
+          case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
+            // This is a hint that that cache may be stale as userId should be set
+            socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
+              socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
+            }
+            "joined"
+          }
           case inv if inv.state != InvitationStates.INACTIVE => "invited"
         } getOrElse ""
       }
     }
-
 
     def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
       if (sui.networkType == SocialNetworks.FORTYTWO) Nil

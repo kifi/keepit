@@ -158,8 +158,8 @@ if (searchUrlRe.test(document.URL)) !function() {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showPreview = Boolean(resp.show && resp.hits.length && !(inDoc && tGoogleResultsShown >= tQuery));
-      var showAny = Boolean(showPreview || newFilter);
+      var showAny = Boolean(resp.show && resp.hits.length && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
+      var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit, resp);
 
@@ -492,7 +492,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         });
       }
     }).on('mouseup', '.kifi-res-kifi-com', function () {
-      window.location = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
+      location.href = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
     }).on('mouseup', '.kifi-res-max-results-n', function () {
       var $this = $(this).addClass('kifi-checked').removeAttr('href');
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');

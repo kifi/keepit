@@ -3285,8 +3285,13 @@ $(function () {
 						if ($myKeeps.data('collId') === collId) {
 							$main.find('h1').text(newName);
 						}
-					}).fail(function () {
-						showMessage('Could not rename tag, please try again later');
+					}).fail(function (jqXhr) {
+						try {
+							var errorReason = JSON.parse(jqXhr.responseText).error;
+							showMessage('Could not rename: ' + errorReason);
+						} catch (e) {
+							showMessage('Could not rename tag, please try again later');
+						}
 						$name.text(oldName);
 					});
 				}

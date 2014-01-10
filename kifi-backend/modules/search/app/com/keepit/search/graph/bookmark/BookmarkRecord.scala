@@ -1,4 +1,4 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.bookmark
 
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model.Bookmark

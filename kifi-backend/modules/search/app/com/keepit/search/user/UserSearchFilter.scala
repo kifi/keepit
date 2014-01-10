@@ -4,7 +4,7 @@ import com.keepit.search.IdFilterCompressor
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.google.inject.{Inject, Singleton}
-import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

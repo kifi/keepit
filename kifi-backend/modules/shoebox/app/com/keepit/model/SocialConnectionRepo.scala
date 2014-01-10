@@ -68,6 +68,7 @@ case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[Soci
   def toKey(): String = id.id.toString
 }
 
+// todo(eishay): this cache should be invalidated when a connection is updated in SocialUserInfoRepo, but as it is, it would be very expensive to find all the keys that need invalidation
 class SocialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](stats, accessLog, inner, outer: _*)
 
@@ -77,7 +78,7 @@ class SocialConnectionRepoImpl @Inject() (
   val clock: Clock,
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialRepo: SocialUserInfoRepoImpl)
-  extends DbRepo[SocialConnection] with SocialConnectionRepo with Logging {
+  extends DbRepo[SocialConnection] with SocialConnectionRepo {
 
   import FortyTwoTypeMappers._
   import scala.slick.jdbc.StaticQuery
@@ -170,9 +171,7 @@ class SocialConnectionRepoImpl @Inject() (
 
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo] = {
     socialUserConnectionsCache.getOrElse(SocialUserConnectionsKey(id)) {
-      val socialUserInfo = getSocialUserConnections(id)
-      log.info(s"Fetched a connexion for social user ${id.id}: ${socialUserInfo}")
-      socialUserInfo map SocialConnectionInfo.fromSocialUser
+      getSocialUserConnections(id) map SocialConnectionInfo.fromSocialUser
     }
   }
 

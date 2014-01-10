@@ -311,6 +311,9 @@
 .kifi-notice-global>.kifi-notice-kicker::after {
   content: 'Announcement';
 }
+.kifi-notice-triggered.kifi-notice-triggered.kifi-notice-triggered>.kifi-notice-kicker::after {
+  content: 'Notification';
+}
 .kifi-notice-state-tip {
   padding: 6px 10px;
 }
