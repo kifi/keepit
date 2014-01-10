@@ -124,7 +124,7 @@ body {
 	height: 4px;
 }
 
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
 .kifi-arrow-down {
 	left: 50% !important;
 	margin-left: -25px / 2;
@@ -146,7 +146,7 @@ body {
 	.padding-bottom(35px);
 
 	h1 {
-		.font-size(40px / 2);
+		font-size: 40px / 2;
 		font-weight: 400;
 		line-height: 1.2;
 		margin: 0;
@@ -161,6 +161,16 @@ body {
 	.kifi-arrow-cover {
 		background: @bg;
 	}
+}
+
+@media screen and (min-width: 768px) {
+.kifi-coming-soon {
+	padding-top: 66px;
+	padding-bottom: 61px;
+	h1 {
+		font-size: 30px;
+	}
+}
 }
 
 @dateFs: 150px / 2;
@@ -202,6 +212,29 @@ body {
 	}
 }
 
+@media screen and (min-width: 768px) {
+.kifi-not-ready {
+	h1 {
+		margin-left: -234px;
+	}
+}
+.kifi-coming-soon {
+	.kifi-add-form,
+	.kifi-added {
+		margin-left: -234px;
+	}
+	.kifi-add-form,
+	.kifi-added {
+		html.iphone & {
+			margin-left: 0;
+		}
+	}
+	.kifi-added {
+		margin-top: 11px;
+	}
+}
+}
+
 .kifi-lab-img {
 	@size: 74px;
 	width: @size;
@@ -214,9 +247,23 @@ body {
 	background-position: 0 0;
 }
 
+@media screen and (min-width: 768px) {
+.kifi-lab-img {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	@size: 164px;
+	width: @size;
+	height: @size;
+	margin-left: 95px;
+	margin-top: -@size / 2 + 4px;
+	.at2x('/assets/img/mobile/beakeripad.png', 100%, 100%);
+}
+}
+
 .kifi-waiting-text {
 	@fs: 30px / 2;
-	.font-size(@fs);
+	font-size: @fs;
 	font-weight: 600;
 	color: white;
 	.margin-top(12px, @fs);
@@ -226,7 +273,7 @@ body {
 	position: relative;
 	.padding-lr(28px);
 	margin: 0 auto;
-	.max-width(360px);
+	max-width: 264px;
 }
 
 .kifi-waiting-email,
@@ -345,7 +392,7 @@ body {
 	}
 }
 
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
 .kifi-good-news {
 	text-align: center;
 	padding-bottom: 21px;
@@ -369,9 +416,9 @@ body {
 	color: #424242;
 	background-color: #f6f6f6;
 	text-align: center;
-	.padding-top(36px);
-	.padding-lr(20px);
-	.padding-bottom(94px);
+	padding-top: 36px;
+	padding-lr: 20px;
+	padding-bottom: 94px;
 	
 	h2 {
 		@fs: 48px / 2;
@@ -382,8 +429,10 @@ body {
 	}
 }
 
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
 	.kifi-watch-video {
+		padding-top: 52px;
+		padding-bottom: 63px;
 		.at2x('/assets/img/mobile/header2.png', auto, 77.5%);
 		background-size: auto 77.5%;
 		background-repeat: no-repeat;
@@ -405,7 +454,7 @@ body {
 	background-position: 0 0;
 }
 
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
 .kifi-play {
 	@size: 130px;
 	width: @size;
@@ -415,10 +464,6 @@ body {
 	background-size: 100%;
 	background-repeat: no-repeat;
 }
-}
-
-.kifi-watch-bg {
-
 }
 
 .kifi-desktop {
@@ -440,9 +485,20 @@ body {
 	height: @h;
 	.at2x('/assets/img/mobile/flatmacbookiphone.png', 100%, 100%);
 	background-size: 100%;
-	background-size: @w @h;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+}
+
+@media screen and (min-width: 768px) {
+.kifi-desktop-img {
+	@w: 321px;
+	@h: 214px;
+	width: @w;
+	height: @h;
+	margin-left: -235px;
+	margin-top: -100px;
+	.at2x('/assets/img/mobile/flatmacbookipad.png', 100%, 100%);
+}
 }
 
 .kifi-desktop-text {
@@ -459,7 +515,7 @@ body {
 	font-weight: 200;
 	letter-spacing: 1px;
 	.margin-top(20px, @fs);
-	.padding-tb(13px, @fs);
+	.padding-tb(12px, @fs);
 	.padding-lr(26px, @fs);
 	border: 1px solid #4f8ad9;
 	.border-radius(2px);
@@ -516,13 +572,13 @@ body {
 	}
 }
 
-@media screen and (max-width: 799px) {
+@media screen and (max-width: 767px) {
 	.tablet-only {
 		display: none !important;
 	}
 }
 
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
 	.phone-only {
 		display: none !important;
 	}
