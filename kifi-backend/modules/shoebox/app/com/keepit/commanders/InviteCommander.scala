@@ -166,6 +166,7 @@ class InviteCommander @Inject() (
       to = Seq(GenericEmailAddress(c.email)),
       subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
       htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
+      textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
       category = PostOffice.Categories.User.INVITATION
     )
 

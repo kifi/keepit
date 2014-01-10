@@ -11,7 +11,7 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
 
 
   val emailTriggers = Map(
-     "mobile_app" -> views.html.email.mobileWaitlistInlined
+     "mobile_app" -> (views.html.email.mobileWaitlistInlined, views.html.email.mobileWaitlistText)
   )
 
   private def triggerEmail(feature: String, email: String) : Unit = {
@@ -24,7 +24,8 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
           fromName = Some("Kifi"),
           to = List(GenericEmailAddress(email)),
           subject = s"You're on the wait list",
-          htmlBody = template(unsubLink).body,
+          htmlBody = template._1(unsubLink).body,
+          textBody = Some(template._2(unsubLink).body),
           category = PostOffice.Categories.User.NOTIFICATION)
         )
       }
