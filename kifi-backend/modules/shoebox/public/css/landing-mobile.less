@@ -458,6 +458,33 @@ body {
 	}
 }
 
+.wistia_embed {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	@w: 300px;
+	@h: 150px;
+	width: @w;
+	height: @h;
+	margin-left: -@w / 2;
+	margin-top: -@h / 2;
+	z-index: -10;
+
+	&.playing {
+		position: fixed;
+		z-index: 5;
+	}
+
+	@media @tablet {
+		@w: 600px;
+		@h: 300px;
+		width: @w;
+		height: @h;
+		margin-left: -@w / 2;
+		margin-top: -@h / 2;
+	}
+}
+
 .kifi-play {
 	position: relative;
 	display: inline-block;
@@ -470,6 +497,7 @@ body {
 	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+	overflow: hidden;
 
 	@media @retina {
 		background-image: url(/assets/img/mobile/playbuttoniphone@2x.png);
