@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.index
 
 import akka.actor._
 import akka.pattern.ask
@@ -13,7 +13,6 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
-import com.keepit.search.index.Indexer
 import com.keepit.search.sharding.ShardedIndexer
 import play.api.Play.current
 import play.api.Plugin
