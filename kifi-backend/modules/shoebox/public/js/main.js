@@ -1,8 +1,13 @@
 var log = KF.log;
 var xhrBase = KF.xhrBase;
 
-var compareSearch = {usage: 'search', sensitivity: 'base'};
-var compareSort = {numeric: true};
+var compareSearch = {
+	usage: 'search',
+	sensitivity: 'base'
+};
+var compareSort = {
+	numeric: true
+};
 
 $.ajaxSetup({
 	timeout: 10000,
@@ -2061,9 +2066,14 @@ $(function () {
 		if (val) {
 			var prefixes = val.split(/\s+/);
 			$friendsList.find('.friend').filter(function () {
-				var $f = $(this), o = $f.data('o'), names = $.trim(o.firstName + ' ' + o.lastName).split(/\s+/);
+				var $f = $(this),
+					o = $f.data('o'),
+					names = $.trim(o.firstName + ' ' + o.lastName).toLowerCase().split(/\s+/);
 				$f.toggleClass('no-match', !prefixes.every(function (p) {
-					return names.some(function (n) {return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch); });
+					p = p.toLowerCase();
+					return names.some(function (n) {
+						return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch);
+					});
 				}));
 			});
 		} else {
