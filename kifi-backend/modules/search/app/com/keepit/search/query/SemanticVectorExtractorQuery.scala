@@ -1,9 +1,9 @@
 package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.SemanticVector
-import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.search.index.Searcher
+import com.keepit.search.semantic.SemanticVector
+import com.keepit.search.PersonalizedSearcher
+import com.keepit.search.Searcher
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term

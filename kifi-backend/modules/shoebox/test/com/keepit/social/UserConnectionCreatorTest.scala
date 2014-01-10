@@ -32,18 +32,19 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
          */
         val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
-        inject[Database].readWrite { implicit s =>
+        val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
-          inject[SocialUserInfoRepo].save(SocialUserInfo(
+          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u))
+          su
         }
 
         val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
 
-        inject[SocialUserImportFriends].importFriends(extractedFriends)
+        inject[SocialUserImportFriends].importFriends(socialUser, extractedFriends)
 
         val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith"))
@@ -77,9 +78,9 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
 
         val json1 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
-        inject[Database].readWrite { implicit s =>
+        val sui1 = inject[Database].readWrite { implicit s =>
           val u1 = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
-          inject[SocialUserInfoRepo].save(SocialUserInfo(
+          val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
             networkType = SocialNetworks.FACEBOOK
@@ -90,10 +91,11 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
             socialId = SocialId("28779"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u2))
+          su1
         }
 
         val extractedFriends = inject[FacebookSocialGraph].extractFriends(json1)
-        inject[SocialUserImportFriends].importFriends(extractedFriends)
+        inject[SocialUserImportFriends].importFriends(sui1, extractedFriends)
 
         val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1"))

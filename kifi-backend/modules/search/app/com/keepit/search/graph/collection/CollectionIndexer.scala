@@ -1,4 +1,4 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.collection
 
 import org.apache.lucene.document.BinaryDocValuesField
 import org.apache.lucene.index.IndexWriterConfig
@@ -12,7 +12,8 @@ import com.keepit.model.CollectionStates._
 import com.keepit.search.index._
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.{Indexable, Indexer}
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
+import com.keepit.search.graph.URIList
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}

@@ -1,10 +1,10 @@
-package com.keepit.search.index
+package com.keepit.search
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.search._
-import com.keepit.search.graph.CollectionSearcherWithUser
+import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import scala.concurrent.duration._
@@ -12,8 +12,10 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Await
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.tracker.ClickedURI
+import com.keepit.search.index.WrappedIndexReader
+import com.keepit.search.semantic._
+
 
 
 object PersonalizedSearcher {

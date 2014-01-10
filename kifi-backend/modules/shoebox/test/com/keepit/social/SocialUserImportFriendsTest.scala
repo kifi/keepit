@@ -8,7 +8,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.Id
 import com.keepit.inject._
-import com.keepit.model.SocialUserInfo
+import com.keepit.model.{SocialUserInfoRepo, User, UserRepo, SocialUserInfo}
 import com.keepit.test.{ShoeboxTestInjector, TestInjector, DeprecatedEmptyApplication}
 
 import play.api.libs.json.Json
@@ -16,7 +16,8 @@ import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.social.{SocialUserRawInfo, SocialUserRawInfoStore}
+import com.keepit.social.{SocialNetworks, SocialId, SocialUserRawInfo, SocialUserRawInfoStore}
+import com.keepit.common.db.slick.Database
 
 class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector {
 
@@ -29,16 +30,25 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
             ("facebook_graph_eishay_no_friends.json", 0),
             ("facebook_graph_shawn.json", 82)
         )
-        graphs map { case (filename, numOfFriends) => testFacebookGraph(filename, numOfFriends) }
+        val socialUser = inject[Database].readWrite { implicit s =>
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
+            fullName = "Andrew Conner",
+            socialId = SocialId("7110335121"),
+            networkType = SocialNetworks.FACEBOOK
+          ).withUser(u))
+          su
+        }
+        graphs map { case (filename, numOfFriends) => testFacebookGraph(socialUser, filename, numOfFriends) }
 
       }
     }
   }
 
-  def testFacebookGraph(jsonFilename: String, numOfFriends: Int)(implicit injector: Injector) = {
+  def testFacebookGraph(socialUserInfo: SocialUserInfo, jsonFilename: String, numOfFriends: Int)(implicit injector: Injector) = {
     val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
     val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
-    val rawFriends = inject[SocialUserImportFriends].importFriends(extractedFriends)
+    val rawFriends = inject[SocialUserImportFriends].importFriends(socialUserInfo, extractedFriends)
     val store = inject[SocialUserRawInfoStore].asInstanceOf[Map[Id[SocialUserInfo], SocialUserRawInfo]]
     store.size === numOfFriends
     store.clear()

@@ -44,9 +44,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin].enabled)
     require(injector.instance[ImageDataIntegrityPlugin].enabled)
     require(injector.instance[InvitationMailPlugin].enabled)
-    require(injector.instance[TopicUpdaterPlugin].enabled)
-    require(injector.instance[TopicModelSwitcherPlugin].enabled)
-    require(injector.instance[ExpertRecommenderController].enabled)
     require(injector.instance[GeckoboardReporterPlugin].enabled)
     require(injector.instance[UriIntegrityPlugin].enabled)
   }

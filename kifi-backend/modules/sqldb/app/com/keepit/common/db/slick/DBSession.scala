@@ -31,7 +31,7 @@ object DBSession {
     }
 
     private val dbLog = Logger("com.keepit.db")
-    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock)
+    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave)
     def metaData = session.metaData
     def capabilities = session.capabilities
     override def resultSetType = session.resultSetType
@@ -41,7 +41,7 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\ttype:SESSION\tduration:${time}\tname:$name\ttype:$masterSlave")
+      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
     }
 
     def rollback() { doRollback = true }
@@ -76,10 +76,9 @@ object DBSession {
     def getPreparedStatement(statement: String): PreparedStatement = {
       val preparedStatement = statementCache.getOrElseUpdate(statement, {
         val newPreparedStatement = this.conn.prepareStatement(statement)
-        dbLog.info(s"t:${clock.now}\ttype:NEW_PRP_STMT\tcacheSize:${statementCache.size}\tstatement:$statement")
         newPreparedStatement
       })
-      dbLog.info(s"t:${clock.now}\ttype:USE_PRP_STMT\tstatement:$statement")
+      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tstatement:$statement")
       preparedStatement
     }
 

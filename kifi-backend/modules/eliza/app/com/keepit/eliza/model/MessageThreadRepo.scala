@@ -54,9 +54,8 @@ class MessageThreadRepoImpl @Inject() (
 
   import db.Driver.Implicit._
 
-  override def invalidateCache(thread: MessageThread)(implicit session: RSession): MessageThread = {
+  override def invalidateCache(thread: MessageThread)(implicit session: RSession): Unit = {
     threadExternalIdCache.set(MessageThreadExternalIdKey(thread.externalId), thread)
-    thread
   }
 
   override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())

@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.ReaderUtil

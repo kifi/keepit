@@ -1,6 +1,6 @@
 package com.keepit.search.query
 
-import com.keepit.search.index.Searcher
+import com.keepit.search.Searcher
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.util.AhoCorasick
 import com.keepit.search.util.LocalAlignment

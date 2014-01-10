@@ -14,14 +14,13 @@ import com.keepit.model.User
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.index.VolatileIndexDirectoryImpl
-import com.keepit.search.graph.CollectionNameIndexer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.FakePhraseIndexer
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
-import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.collection._
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient}
@@ -35,9 +34,14 @@ import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.tracker.ProbablisticLRU
 import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
+import com.keepit.search.sharding.Shard
+import com.keepit.search.sharding.ShardedArticleIndexer
+import com.keepit.search.sharding.ActiveShards
 
 trait SearchTestHepler { self: SearchApplicationInjector =>
 
+  val singleShard = Shard(0,1)
+  val activeShards = ActiveShards(Seq(singleShard))
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
 
@@ -59,6 +63,11 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
 
     val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, articleConfig, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val shardedArticleIndexer = new ShardedArticleIndexer(
+        Map(singleShard -> articleIndexer),
+        store,
+        inject[ShoeboxServiceClient]
+    )
     val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
@@ -71,7 +80,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     implicit val fortyTwoServices = inject[FortyTwoServices]
 
     val mainSearcherFactory = new MainSearcherFactory(
-      articleIndexer,
+      shardedArticleIndexer,
       userIndexer,
       uriGraph,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),

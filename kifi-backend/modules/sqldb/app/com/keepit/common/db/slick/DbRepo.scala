@@ -23,7 +23,7 @@ trait Repo[M <: Model[M]] {
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
-  def invalidateCache(model: M)(implicit session: RSession): M
+  def invalidateCache(model: M)(implicit session: RSession): Unit
 }
 
 trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
@@ -53,7 +53,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   import db.Driver.Table
 
   lazy val dbLog = Logger("com.keepit.db")
-  override def invalidateCache(model: M)(implicit session: RSession): M = model
+
+  //todo(martin) remove this default implementation so we force repos to implement it
+  override def invalidateCache(model: M)(implicit session: RSession): Unit = {}
 
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
@@ -77,6 +79,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
       case None => toUpdate.withId(insert(toUpdate))
     }
     invalidateCache(result)
+    result
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
       throw new MySQLIntegrityConstraintViolationException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}").initCause(m)
@@ -89,7 +92,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val startTime = System.currentTimeMillis()
     val model = (for(f <- table if f.id is id) yield f).first
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 
@@ -106,7 +109,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val startTime = System.currentTimeMillis()
     val inserted = table.autoInc.insert(model)
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\ttype:${inserted.getClass.getSimpleName()}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:${inserted.getClass.getSimpleName()}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     inserted
   }
 
@@ -115,7 +118,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val target = for(t <- table if t.id === model.id.get) yield t
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exsactly one")
     model
   }
@@ -182,7 +185,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
     val startTime = System.currentTimeMillis()
     val model = (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 }

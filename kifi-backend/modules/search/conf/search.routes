@@ -59,8 +59,6 @@ POST    /internal/search/searchConfig/:id/set    @com.keepit.controllers.search.
 GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
 
-GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-
 GET     /internal/search/semanticVector/leaveOneOut   @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean)
 GET     /internal/search/semanticVector/allSubsets    @com.keepit.controllers.search.SemanticVectorController.allSubsets(queryText: String, stem: Boolean, useSketch: Boolean)
 GET     /internal/search/semanticVector/similarity    @com.keepit.controllers.search.SemanticVectorController.similarity(query1: String, query2: String, stem: Boolean)

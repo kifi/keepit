@@ -12,6 +12,7 @@ import org.apache.lucene.index.Term
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.search.Searcher
 import play.modules.statsd.api.Statsd
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.store.IOContext
@@ -272,8 +273,8 @@ abstract class Indexer[T](
     Map() ++ mutableMap
   }
 
-  def commitSequenceNumber: Option[SequenceNumber] = {
-    commitData.get(Indexer.CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong))
+  def commitSequenceNumber: SequenceNumber = {
+    SequenceNumber(commitData.get(Indexer.CommitData.sequenceNumber).map(v => v.toLong).getOrElse(-1L))
   }
 
   def committedAt: Option[String] = {
