@@ -2,6 +2,11 @@
 @import "common-mobile";
 @import "retina-1.1.0";
 
+@phone: ~"(max-width: 767px)";
+@tablet: ~"(min-width: 768px)";
+@retina: ~"(-webkit-min-device-pixel-ratio: 1.5), (min--moz-device-pixel-ratio: 1.5), (-o-min-device-pixel-ratio: 3/2), (min-device-pixel-ratio: 1.5), (min-resolution: 144dpi), (min-resolution: 1.5dppx)";
+@retinaTablet: ~"(min-width: 768px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 768px) and (min--moz-device-pixel-ratio: 1.5), (min-width: 768px) and (-o-min-device-pixel-ratio: 3/2), (min-width: 768px) and (min-device-pixel-ratio: 1.5), (min-width: 768px) and (min-resolution: 144dpi), (min-width: 768px) and (min-resolution: 1.5dppx)";
+
 @phcolor: #c4c4c4;
 @phfw: 300;
 ::-webkit-input-placeholder {
@@ -55,10 +60,14 @@ body {
 	margin-right: 8px;
 	color: transparent;
 	vertical-align: bottom;
-	.at2x('/assets/img/mobile/kifilogo.png', 100%, 100%);
+	background-image: url(/assets/img/mobile/kifilogo.png);
 	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+
+	@media @retina {
+		background-image: url(/assets/img/mobile/kifilogo@2x.png);
+	}
 }
 
 .kifi-header-text {
@@ -115,7 +124,7 @@ body {
 	background-position: 0 0;
 	background-size: 100%;
 
-	@media (min-width: 768px) {
+	@media @tablet {
 		left: 50% !important;
 		margin-left: -25px / 2;
 		bottom: -13px;
@@ -129,7 +138,7 @@ body {
 	width: 100%;
 	height: 4px;
 
-	@media (min-width: 768px) {
+	@media @tablet {
 		display: none;
 	}
 }
@@ -149,22 +158,26 @@ body {
 		font-weight: 400;
 		line-height: 1.2;
 		margin: 0;
-		@media (min-width: 768px) {
+		@media @tablet {
 			font-size: 30px;
 		}
 	}
 
 	.kifi-arrow-down {
 		.left(36px);
-		.at2x('/assets/img/mobile/blackcaret.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/blackcaret.png);
 		background-size: 100%;
+
+		@media @retina {
+			background-image: url(/assets/img/mobile/blackcaret@2x.png);
+		}
 	}
 
 	.kifi-arrow-cover {
 		background: @bg;
 	}
 
-	@media (min-width: 768px) {
+	@media @tablet {
 		padding-top: 66px;
 		padding-bottom: 61px;
 
@@ -222,7 +235,7 @@ body {
 		display: none;
 	}
 
-	@media (min-width: 768px) {
+	@media @tablet {
 		h1 {
 			margin-left: -234px;
 		}
@@ -235,12 +248,16 @@ body {
 	height: @size;
 	margin: 0 auto;
 	margin-top: 24px;
-	.at2x('/assets/img/mobile/beakeriphone.png', 100%, 100%);
+	background-image: url(/assets/img/mobile/beakeriphone.png);
 	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
 
-	@media (min-width: 768px) {
+	@media @retina {
+		background-image: url(/assets/img/mobile/beakeriphone@2x.png);
+	}
+
+	@media @tablet {
 		position: absolute;
 		left: 50%;
 		top: 50%;
@@ -249,7 +266,12 @@ body {
 		height: @size;
 		margin-left: 95px;
 		margin-top: -@size / 2 + 4px;
-		.at2x('/assets/img/mobile/beakeripad.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/beakeripad.png);
+
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/beakeripad@2x.png);
 	}
 }
 
@@ -359,7 +381,7 @@ body {
 		text-transform: uppercase;
 		margin: 0;
 
-		@media (min-width: 768px) {
+		@media @tablet {
 			@fs: 56px / 2;
 			font-size: @fs;
 			font-weight: 600;
@@ -372,7 +394,7 @@ body {
 		font-size: @fs;
 		margin: 0;
 
-		@media (min-width: 768px) {
+		@media @tablet {
 			@fs: 46px / 2;
 			font-size: @fs;
 			margin-top: -6px;
@@ -388,15 +410,19 @@ body {
 
 	.kifi-arrow-down {
 		.left(28px);
-		.at2x('/assets/img/mobile/greencaret.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/greencaret.png);
 		background-size: 100%;
+
+		@media @retina {
+			background-image: url(/assets/img/mobile/greencaret@2x.png);
+		}
 	}
 
 	.kifi-arrow-cover {
 		background: @bg;
 	}
 
-	@media (min-width: 768px) {
+	@media @tablet {
 		text-align: center;
 		padding-bottom: 21px;
 	}
@@ -418,13 +444,17 @@ body {
 		margin: 0;
 	}
 
-	@media (min-width: 768px) {
+	@media @tablet {
 		padding-top: 52px;
 		padding-bottom: 63px;
-		.at2x('/assets/img/mobile/header2.png', auto, 77.5%);
+		background-image: url(/assets/img/mobile/header2.png);
 		background-size: auto 77.5%;
 		background-repeat: no-repeat;
 		background-position: bottom right 83px;
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/header2@2x.png);
 	}
 }
 
@@ -436,19 +466,27 @@ body {
 	height: @size;
 	margin: 0 auto;
 	margin-top: 28px;
-	.at2x('/assets/img/mobile/playbuttoniphone.png', 100%, 100%);
+	background-image: url(/assets/img/mobile/playbuttoniphone.png);
 	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
 
-	@media (min-width: 768px) {
+	@media @retina {
+		background-image: url(/assets/img/mobile/playbuttoniphone@2x.png);
+	}
+
+	@media @tablet {
 		@size: 130px;
 		width: @size;
 		height: @size;
 		margin-top: 17px;
-		.at2x('/assets/img/mobile/playbuttonipad.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/playbuttonipad.png);
 		background-size: 100%;
 		background-repeat: no-repeat;
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/playbuttonipad@2x.png);
 	}
 }
 
@@ -469,19 +507,27 @@ body {
 	.margin-top(-23px);
 	width: @w;
 	height: @h;
-	.at2x('/assets/img/mobile/flatmacbookiphone.png', 100%, 100%);
+	background-image: url(/assets/img/mobile/flatmacbookiphone.png);
 	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
 
-	@media (min-width: 768px) {
+	@media @retina {
+		background-image: url(/assets/img/mobile/flatmacbookiphone@2x.png);
+	}
+
+	@media @tablet {
 		@w: 321px;
 		@h: 186px;
 		width: @w;
 		height: @h;
 		margin-left: -381px;
 		margin-top: -72px;
-		.at2x('/assets/img/mobile/flatmacbookipad.png', 100%, 100%);
+		background-image: url(/assets/img/mobile/flatmacbookipad.png);
+	}
+
+	@media @retinaTablet {
+		background-image: url(/assets/img/mobile/flatmacbookipad@2x.png);
 	}
 }
 
@@ -556,13 +602,13 @@ body {
 	}
 }
 
-@media (max-width: 767px) {
+@media @phone {
 	.tablet-only {
 		display: none !important;
 	}
 }
 
-@media (min-width: 768px) {
+@media @tablet {
 	.phone-only {
 		display: none !important;
 	}
