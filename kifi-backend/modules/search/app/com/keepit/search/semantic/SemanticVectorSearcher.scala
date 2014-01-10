@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.Searcher
-import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.bookmark.URIGraphSearcher
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS

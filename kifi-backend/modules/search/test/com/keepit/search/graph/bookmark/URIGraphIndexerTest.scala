@@ -1,4 +1,4 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.bookmark
 
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.model._
@@ -8,11 +8,12 @@ import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.graph.BaseGraphSearcher
+import com.keepit.search.graph.GraphTestHelper
 
 class URIGraphIndexerTest extends Specification with GraphTestHelper {
 

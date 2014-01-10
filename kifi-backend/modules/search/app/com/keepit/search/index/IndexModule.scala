@@ -30,6 +30,7 @@ import com.keepit.search.article.ArticleIndexerPluginImpl
 import com.keepit.search.article.ArticleIndexerPlugin
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.graph.collection._
+import com.keepit.search.graph.bookmark._
 import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.keepit.search.ArticleStore

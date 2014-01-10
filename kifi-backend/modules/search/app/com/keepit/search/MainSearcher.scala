@@ -8,12 +8,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.graph.BookmarkRecord
+import com.keepit.search.graph.bookmark.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.URIGraphSearcherWithUser
-import com.keepit.search.graph.UserToUriEdgeSet
-import com.keepit.search.graph.UserToUserEdgeSet
+import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
+import com.keepit.search.graph.bookmark.UserToUriEdgeSet
+import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.spellcheck.SpellCorrector
