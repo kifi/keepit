@@ -1,5 +1,6 @@
 package com.keepit.common.plugin
 
+import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -9,70 +10,100 @@ import akka.actor.{ActorSystem, Cancellable, ActorRef}
 import play.api.Plugin
 
 import us.theatr.akka.quartz._
+import com.keepit.common.zookeeper.ServiceDiscovery
+import scala.collection.mutable.ListBuffer
 
-sealed trait SchedulingEnabled
-
-object SchedulingEnabled {
-  case object Always extends SchedulingEnabled
-  case object Never extends SchedulingEnabled
-  case object LeaderOnly extends SchedulingEnabled
+trait SchedulingProperties {
+  def enabled: Boolean
+  //bad name, can you think of anything else?
+  //method returns true if schedualing is enabled and the instance is the leader
+  def enabledOnlyForLeader: Boolean
 }
 
-class NamedCancellable(underlying:Cancellable, taskName:String) extends Cancellable {
+class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: Boolean = true) extends SchedulingProperties {
+  def enabledOnlyForLeader: Boolean = enabled && serviceDiscovery.isLeader()
+}
+
+case class NamedCancellable(underlying:Cancellable, taskName:String) extends Cancellable {
   def name() = taskName
   def cancel() = underlying.cancel
   def isCancelled: Boolean = underlying.isCancelled
+  override def toString(): String = name()
 }
 
-trait SchedulingPlugin extends Plugin with Logging {
+trait SchedulerPlugin extends Plugin with Logging {
 
-  def schedulingProperties: SchedulingProperties
+  def scheduling: SchedulingProperties
 
-  private var _cancellables: Seq[NamedCancellable] = Seq()
+  val _cancellables: ListBuffer[NamedCancellable] = ListBuffer()
 
-  private def execute(f: => Unit, taskName: String): Unit =
-    if (schedulingProperties.allowScheduling) {log.info(s"executing scheduled task: $taskName"); f}
-    else log.info(s"scheduling disabled, block execution of scheduled task: $taskName")
+  private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =_cancellables.synchronized {
+    _cancellables +=
+      NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
+  }
 
-  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverAllowScheduling) {
-      log.info(s"Registering $taskName in scheduler")
-      val cancellable = system.scheduler.schedule(initialDelay, frequency) {
-        execute(f, taskName)
-      }
-      _cancellables :+= new NamedCancellable(cancellable, taskName)
-    } else log.info(s"permanently disable scheduling for task: $taskName")
-
-  def cronTask(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
-    val taskName = s"cron message $message to actor $receiver"
-    if (!schedulingProperties.neverAllowScheduling) {
+  def cronTaskOnLeader(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
+    val taskName = s"cron message $message to actor $receiver on leader only"
+    if (scheduling.enabled) {
       log.info(s"Scheduling $taskName in Cron")
       val spigot = new Spigot {
-        def open = schedulingProperties.allowScheduling
+        def open = scheduling.enabledOnlyForLeader
       }
       quartz.ref ! AddCronSchedule(receiver, cron, message, false, spigot)
     } else log.info(s"permanently disable cron for task: $taskName")
   }
 
-  def scheduleTaskOnce(system: ActorSystem, initialDelay: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverAllowScheduling) {
-      val once: Cancellable = system.scheduler.scheduleOnce(initialDelay) {
-        execute(f, taskName)
+  def cronTaskOnAllMachines(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
+    val taskName = s"cron message $message to actor $receiver on all machines"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName in Cron")
+      val spigot = new Spigot {
+        def open = true
       }
-      _cancellables :+= new NamedCancellable(once, taskName)
-    } else log.info(s"permanently disable scheduling for task: $taskName")
-
-  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any, desc:Option[String] = None): Unit = {
-    val taskName = desc getOrElse s"send message $message to actor $receiver"
-    log.info(s"Scheduling $taskName")
-    scheduleTask(system, initialDelay, frequency, taskName) { receiver ! message }
+      quartz.ref ! AddCronSchedule(receiver, cron, message, false, spigot)
+    } else log.info(s"permanently disable cron for task: $taskName")
   }
 
-  def cancelTasks() = {
-    log.info(s"Cancelling scheduled (${_cancellables.length}) tasks: ${_cancellables.mkString(",")}")
-    for (task <- _cancellables) {
-      task.cancel()
-      log.info(s"[cancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+  def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
+    val taskName = s"send message $message to actor $receiver on leader only"
+    if(scheduling.enabled) {
+      log.info(s"Scheduling $taskName on leader only")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        if (scheduling.enabledOnlyForLeader) {
+          timing(s"executing scheduled task: $taskName") {
+            receiver ! message
+          }
+        }
+      }
+    } else {
+      log.info(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
+    val taskName = s"send message $message to actor $receiver on all machines"
+    if(scheduling.enabled) {
+      log.info(s"Scheduling $taskName on all machines")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        timing(s"executing scheduled task: $taskName") {
+          receiver ! message
+        }
+      }
+    } else {
+      log.info(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def cancelTasks() = _cancellables.synchronized {
+    log.info(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
+    _cancellables foreach { task =>
+      if (!task.isCancelled) {
+        log.info(s"[aboutToCancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+        task.cancel()
+        log.info(s"[canceledTask] task:${task.name}) isCancelled:${task.isCancelled}")
+      } else {
+        log.info(s"[canceledTask] task:${task.name}) is already cancelled")
+      }
     }
   }
 
