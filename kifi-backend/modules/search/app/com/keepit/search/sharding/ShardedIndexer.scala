@@ -1,7 +1,7 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
-import com.keepit.search.IndexManager
+import com.keepit.search.index.IndexManager
 import com.keepit.search.index.Indexer
 
 trait ShardedIndexer[T <: Indexer[_]] extends IndexManager[T] {
