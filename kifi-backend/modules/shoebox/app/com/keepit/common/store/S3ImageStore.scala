@@ -192,7 +192,7 @@ class S3ImageStoreImpl @Inject() (
     if (contentLength > 0) {
       om.setContentLength(contentLength)
     }
-    om.setCacheControl("max-age=86400")
+    om.setCacheControl("public, max-age=3600")
     s3Client.putObject(config.bucketName, key, is, om)
   }
 
