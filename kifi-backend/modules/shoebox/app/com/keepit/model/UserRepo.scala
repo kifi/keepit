@@ -12,7 +12,7 @@ import com.keepit.heimdal.{HeimdalContextBuilder, HeimdalServiceClient}
 import com.keepit.common.akka.SafeFuture
 
 @ImplementedBy(classOf[UserRepoImpl])
-trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
+trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
   def pageExcluding(excludeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
   def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int
@@ -29,7 +29,7 @@ class UserRepoImpl @Inject() (
     val idCache: UserIdCache,
     basicUserCache: BasicUserUserIdCache,
     heimdal: HeimdalServiceClient)
-  extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
+  extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -69,7 +69,17 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  override def invalidateCache(user: User)(implicit session: RSession): Unit = {
+  def deleteCache(user: User): User = {
+    for (id <- user.id) {
+      idCache.remove(UserIdKey(id))
+      basicUserCache.remove(BasicUserUserIdKey(id))
+      externalIdCache.remove(UserExternalIdKey(user.externalId))
+    }
+    invalidateMixpanel(user.withState(UserStates.INACTIVE))
+    user
+  }
+
+  override def invalidateCache(user: User)(implicit session: RSession) = {
     for (id <- user.id) {
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
@@ -77,6 +87,7 @@ class UserRepoImpl @Inject() (
 
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     invalidateMixpanel(user)
+    user
   }
 
   private def invalidateMixpanel(user: User) = SafeFuture {

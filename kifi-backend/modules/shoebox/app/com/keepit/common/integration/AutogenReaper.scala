@@ -12,6 +12,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import play.api.{Play, Plugin}
 import play.api.Play.current
+import scala.collection.mutable
+import com.keepit.common.db.Id
 
 trait AutogenReaperPlugin extends Plugin {
   def reap()
@@ -56,21 +58,32 @@ private[integration] class AutogenAcctReaperActor @Inject() (
         // a variant of this could live in UserCommander
         val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
         log.info(s"[reap] got (${generated.length}) to be reaped: ${generated.mkString(",")}")
-        generated foreach { exp =>
+        implicit val userOrd = new Ordering[Id[User]] {
+          def compare(x: Id[User], y: Id[User]): Int = x.id compare y.id
+        }
+        for (exp <- generated) {
+          userSessionRepo.invalidateByUser(exp.userId)
+          userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
+            userExperimentRepo.delete(exp)
+          }
+          for (emailAddr <- emailAddressRepo.getAllByUser(exp.userId)) {
+            emailAddressRepo.delete(emailAddr)
+          }
+          for (sui <- socialUserInfoRepo.getByUser(exp.userId)) {
+            socialUserInfoRepo.delete(sui)
+          }
+          for (cred <- userCredRepo.findByUserIdOpt(exp.userId)) {
+            userCredRepo.delete(cred)
+          }
           val user = userRepo.get(exp.userId)
           log.info(s"[reap] processing $user")
-          userSessionRepo.invalidateByUser(exp.userId)
-          userRepo.save(user.withState(UserStates.INACTIVE)) // mark as inactive for now; delete later
-          socialUserInfoRepo.getByUser(exp.userId) map { sui =>
-            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE))
-          }
-          emailAddressRepo.getAllByUser(exp.userId) foreach { emailAddr =>
-            emailAddressRepo.save(emailAddr.withState(EmailAddressStates.INACTIVE))
-          }
-          // skip UserCred/UserExp for now; delete later
+          // todo: userRepo.delete(user) -- not there yet (bookmarks/keeps, etc.)
+          userRepo.save(user.withState(UserStates.INACTIVE))
         }
-        userExperimentRepo.getByType(ExperimentType.AUTO_GEN) foreach { exp => // mark as inactive for now; delete later
-          userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
+        generated foreach { exp =>
+          userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
+            userExperimentRepo.delete(exp)
+          }
         }
       }
     case m => throw new UnsupportedActorMessage(m)

@@ -15,6 +15,7 @@ import DBSession._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Logger
+import scala.reflect.ClassTag
 
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
@@ -23,6 +24,15 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): Unit
+}
+
+trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
+  def deleteCache(model: M): M
+  def delete(model: M)(implicit session:RWSession):Int
+
+  // potentially more efficient variant but we currently depend on having the model available for our caches
+  // def deleteCacheById(id: Id[M]): Int
+  // def deleteById(id: Id[M])(implicit ev$0:ClassTag[M], session:RWSession):Int
 }
 
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
@@ -139,6 +149,20 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     }
 
     def externalId = column[ExternalId[M]]("external_id", O.NotNull)
+  }
+}
+
+trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M] =>
+  import db.Driver.Implicit._
+
+  def delete(model: M)(implicit session: RWSession) = {
+    val startTime = System.currentTimeMillis()
+    val target = (for(t <- table if t.id === model.id.get) yield t)
+    val count = target.delete
+    deleteCache(model)
+    val time = System.currentTimeMillis - startTime
+    dbLog.info(s"t:${clock.now}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    count
   }
 }
 

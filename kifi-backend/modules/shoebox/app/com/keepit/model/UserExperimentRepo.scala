@@ -8,8 +8,9 @@ import com.keepit.common.time.Clock
 import scala.Some
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
-trait UserExperimentRepo extends Repo[UserExperiment] {
+trait UserExperimentRepo extends Repo[UserExperiment] with RepoWithDelete[UserExperiment] {
   def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType]
+  def getAllUserExperiments(userId: Id[User])(implicit session: RSession): Seq[UserExperiment]
   def get(userId: Id[User], experiment: ExperimentType,
           excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))
          (implicit session: RSession): Option[UserExperiment]
@@ -23,7 +24,7 @@ class UserExperimentRepoImpl @Inject()(
     val clock: Clock,
     val userRepo: UserRepo,
     userExperimentCache: UserExperimentCache)
-  extends DbRepo[UserExperiment] with UserExperimentRepo {
+  extends DbRepo[UserExperiment] with DbRepoWithDelete[UserExperiment] with UserExperimentRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -48,6 +49,10 @@ class UserExperimentRepoImpl @Inject()(
     } toSet
   }
 
+  def getAllUserExperiments(userId: Id[User])(implicit session: RSession): Seq[UserExperiment] = {
+    (for(f <- table if f.userId === userId) yield f).list
+  }
+
   def get(userId: Id[User], experimentType: ExperimentType,
           excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))
          (implicit session: RSession): Option[UserExperiment] = {
@@ -62,6 +67,11 @@ class UserExperimentRepoImpl @Inject()(
 
   override def invalidateCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
+  }
+
+  def deleteCache(model: UserExperiment): UserExperiment = {
+    userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
+    model
   }
 
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
