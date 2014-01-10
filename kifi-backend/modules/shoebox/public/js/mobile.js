@@ -55,19 +55,21 @@
 		var $form = $(this);
 		var data = {};
 		$.each($form.serializeArray(), function (i, field) {
-			data[field.name] = field.value;
+			data[field.name] = field.value || void 0;
 		});
 		$.ajax({
-			type: 'POST',
 			url: '/waitlist',
+			type: 'POST',
 			dataType: 'json',
-			data: data
+			contentType: 'application/json',
+			data: JSON.stringify(data)
 		})
-		.complete(function (extId) {
+		.complete(function (data) {
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
-			$('input[name=extId]').val(extId);
+			// TODO
+			$('input[name=extId]').val(1);
 		});
 	});
 
