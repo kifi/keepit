@@ -62,7 +62,19 @@
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
-			$('input[name=extId]').val(1);
+			$('input[name=extId]').val(extId);
+		});
+	});
+
+	var wistiaEmbed = win.Wistia.embed('arn4nh8il4');
+	$('.kifi-play').on('click', function (e) {
+		e.preventDefault();
+		wistiaEmbed.play();
+		wistiaEmbed.bind('play', function () {
+			$('.wistia_embed').addClass('playing');
+		});
+		wistiaEmbed.bind('end', function () {
+			$('.wistia_embed').removeClass('playing');
 		});
 	});
 
