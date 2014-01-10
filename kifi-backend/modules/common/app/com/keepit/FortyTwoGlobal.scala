@@ -146,6 +146,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     } finally {
       if (app.mode == Mode.Prod) {
         println("<<<<<< about to pause and let the system shut down")
+        new Exception("Just Tracing shotdown hook").printStackTrace()
         Thread.sleep(21000)
         println("<<<<<< done sleeping, continue with termination")
         log.info("<<<<<< done sleeping, continue with termination")
