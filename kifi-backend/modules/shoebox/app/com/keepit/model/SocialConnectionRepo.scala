@@ -64,7 +64,7 @@ object SocialConnectionInfo {
 
 case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialConnectionInfo]] {
   val namespace = "social_user_connections"
-  override val version = 3
+  override val version = 2
   def toKey(): String = id.id.toString
 }
 
