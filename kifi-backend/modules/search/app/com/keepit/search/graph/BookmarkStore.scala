@@ -29,7 +29,7 @@ object BookmarkStore {
   val bookmarkSource = BookmarkSource("BookmarkStore")
 }
 
-class BookmarkStore @Inject() (
+class BookmarkStore(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     airbrake: AirbrakeNotifier,

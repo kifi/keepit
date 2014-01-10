@@ -26,7 +26,7 @@ import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
 
 
-class ArticleIndexer @Inject() (
+class ArticleIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,

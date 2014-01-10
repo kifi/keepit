@@ -34,9 +34,11 @@ import com.keepit.search.IdFilterCompressor
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.search.user.UserSearchRequest
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.search.sharding.ActiveShards
 
 
 class SearchController @Inject()(
+    shards: ActiveShards,
     searchConfigManager: SearchConfigManager,
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
@@ -54,8 +56,10 @@ class SearchController @Inject()(
   }
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
-    val searcher = searcherFactory.bookmarkSearcher(userId)
-    val uris = searcher.search(query, Lang("en"))
+    val uris = shards.shards.foldLeft(Set.empty[Long]){ (uris, shard) =>
+      val searcher = searcherFactory.bookmarkSearcher(shard, userId)
+      uris ++ searcher.search(query, Lang("en"))
+    }
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 
@@ -94,79 +98,14 @@ class SearchController @Inject()(
     val excludeFromExperiments = Await.result(shoeboxClient.getUserExperiments(userId), 5 seconds).contains(NO_SEARCH_EXPERIMENTS)
     val (config, _) = searchConfigManager.getConfig(userId, query, excludeFromExperiments)
 
-    val searcher = searcherFactory(userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config)
-    val explanation = searcher.explain(uriId)
-    Ok(html.admin.explainResult(query, userId, uriId, explanation))
-  }
-
-  def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
-    val data = new ArrayBuffer[JsArray]
-    q.foreach{ q =>
-      val friendIdsFuture = shoeboxClient.getSearchFriends(userId)
-      val friendIds = Await.result(friendIdsFuture, 5 seconds)
-      val allUserIds = (friendIds + userId).toArray
-
-      val searcher = searcherFactory.semanticVectorSearcher()
-      val vectorMap = searcher.getSemanticVectors(allUserIds, q, Lang("en"), minKeeps.getOrElse(1))
-      val size = vectorMap.size
-      val userIndex = vectorMap.keys.toArray
-      val vectors = userIndex.map{ u => vectorMap(u) }
-
-      // use the Quantification Method IV to map friends onto 2D space
-      if (size > 2) {
-        val matrix = {
-          val m = Array.tabulate(size, size){ (i, j) => if (i == j) 0.0d else similarity(vectors(i), vectors(j)) }
-          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum - m(i)(j) } }
-          new Array2DRowRealMatrix(m)
-        }
-        val decomposition = new EigenDecomposition(matrix)
-
-        try {
-          val eigenVals = decomposition.getRealEigenvalues()
-          val minEigenVal = eigenVals(size - 2)
-
-          def getValues(n: Int) = {
-            val eigenVal = eigenVals(n)
-            val norm = sqrt(eigenVal - minEigenVal)
-            val vec = decomposition.getEigenvector(n).toArray
-            vec.map(v => v * norm)
-          }
-
-          val x = getValues(0)
-          val y = getValues(1)
-
-          val norm = {
-            val n = Seq(abs(x.max), abs(x.min), abs(y.max), abs(y.min)).max * 1.1
-            if (n == 0 || n.isNaN()) 1.0 else n
-          }
-
-          val positionMap = (0 until size).foldLeft(Map.empty[Id[User],(Double,Double)]){ (m,i) =>
-            m + (userIndex(i) -> (x(i)/norm, y(i)/norm))
-          }
-
-          val usersFuture = shoeboxClient.getUsers(userIndex)
-          Await.result(usersFuture, 5 seconds).foreach { user =>
-              val (px,py) = positionMap(user.id.get)
-              data += JsArray(Seq(JsNumber(px), JsNumber(py), JsString("%s %s".format(user.firstName, user.lastName))))
-          }
-        } catch {
-          case e: ArrayIndexOutOfBoundsException => // ignore. not enough eigenvectors
-          case e: Exception => log.error("friend mapping failed", e)
-        }
-      }
+    shards.find(uriId) match {
+      case Some(shard) =>
+        val searcher = searcherFactory(shard, userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config)
+        val explanation = searcher.explain(uriId)
+        Ok(html.admin.explainResult(query, userId, uriId, explanation))
+      case None =>
+        Ok("shard not found")
     }
-    Ok(JsArray(data))
-  }
-
-  private def similarity(vectors1: Array[SemanticVector], vectors2: Array[SemanticVector]) = {
-    val s = vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
-      if (v1.bytes.isEmpty || v2.bytes.isEmpty) sum
-      else {
-        val tmp = v1.similarity(v2).toDouble
-        sum + tmp*tmp
-      }
-    }
-    (sqrt(s) / vectors1.length) - 1.0d - Double.MinPositiveValue
   }
 
   //randomly creates one of two exceptions, each time with a random exception message
