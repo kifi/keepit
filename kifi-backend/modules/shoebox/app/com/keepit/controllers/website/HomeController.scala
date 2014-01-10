@@ -92,6 +92,11 @@ class HomeController @Inject() (
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.privacy(isLoggedIn))
   }
+
+  def mobileLanding = HtmlAction(true)(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
+  private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.mobileLanding(isLoggedIn))
+  }
   // End post-launch stuff!
 
   def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))

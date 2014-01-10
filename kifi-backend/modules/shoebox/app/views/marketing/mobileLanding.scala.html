@@ -1,0 +1,113 @@
+@(isLoggedIn: Boolean)
+
+@styles = {
+  <link href="//fonts.googleapis.com/css?family=Open+Sans:100,200,300,400" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/assets/css/normalize.css">
+  <link rel="stylesheet" href="/assets/css/landing-mobile.css">
+}
+@content = {
+<div class="kifi-header" data-track-source="header">
+	<a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
+	<span class="kifi-header-text">Keep it | Find it</span>
+</div>
+
+<div class="kifi-content">
+	<div class="kifi-coming-soon">
+		<div class="iphone-only">
+			<h1>kifi app for iPhone<br>
+				will be ready Feburary 1st</h1>
+			<div class="kifi-countdown">
+				<div class="kifi-countdown-numbers">
+					<div class="kifi-time">00:00:00</div>
+					<div class="kifi-date">0</div>
+				</div>
+				<div class="kifi-date-left">days left</div>
+			</div>
+		</div>
+		<div class="kifi-not-ready">
+			<h1>kifi for your mobile device<br>
+				is coming soon</h1>
+			<div class="kifi-lab-img"></div>
+		</div>
+		<form class="kifi-add-form" method="POST" action="/waitlist">
+			<input type="hidden" name="feature" value="mobile_app">
+			<input type="hidden" name="extId" value="">
+			<div class="kifi-waiting-list">
+				<div class="kifi-waiting-text">Add me to the waitlist</div>
+				<div class="kifi-waiting-input-box">
+					<input class="kifi-waiting-email" type="email" name="email" placeholder="Enter your email here">
+				</div>
+			</div>
+			<button class="hidden" type="submit"></button>
+		</form>
+		<div class="kifi-added">
+			<h1>You are on the list</h1>
+			<div class="kifi-added-email"></div>
+			<a class="kifi-change-email" href="javascript:">Change email</a>
+		</div>
+		<span class="kifi-arrow-down"><span class="kifi-arrow-cover"></span></span>
+	</div>
+	<div class="kifi-good-news">
+		<h2>The good news is ...</h1>
+		<p class="phone-only">Your kifi for desktop is live<br>on Chrome and Firefox.</p>
+		<p class="tablet-only">Your kifi for desktop is live on Chrome and Firefox.</p>
+		<p class="tablet-only what-is-kifi">What is kifi - &nbsp;Watch this short video</p>
+		<span class="kifi-arrow-down"><span class="kifi-arrow-cover"></span></span>
+	</div>
+	<div class="kifi-watch-video">
+		<h2 class="phone-only">Search like normal<br>Find like never before</h1>
+		<h2 class="tablet-only">Search like normal, Find like never before</h1>
+		<div class="kifi-watch-bg">
+			<div id="wistia_arn4nh8il4" class="wistia_embed" allowtransparency="true" data-video-width="150" data-video-height="150"></div>
+			<a class="kifi-play" href="javascript:"></a>
+		</div>
+	</div>
+	<div class="kifi-desktop">
+		<div class="kifi-desktop-img"></div>
+		<div class="kifi-desktop-text">
+			Send instructions to<br>
+			get kifi on my desktop<br>
+			& notify me when<br>
+			it's ready on mobile
+		</div>
+		<form class="kifi-add-form-2" method="POST" action="/waitlist">
+			<input type="hidden" name="feature" value="mobile_app">
+			<input type="hidden" name="extId" value="">
+			<div class="kifi-waiting-input-box">
+				<input class="kifi-desktop-email" type="email" name="email" placeholder="Enter your email here">
+			</div>
+			<button type="submit" class="kifi-desktop-button">Send Instructions</button>
+		</form>
+		<div class="kifi-added-2">
+			<h1>Instructions sent to:</h1>
+			<div class="kifi-added-email"></div>
+			<a class="kifi-change-email" href="javascript:">Send to another email</a>
+		</div>
+	</div>
+</div>
+
+<div class="kifi-footer" data-track-source="footer">
+	<ul class="kifi-footer-menu">
+		<li>
+			<a href="http://support.kifi.com" data-track-action="clickSupport">Support</a>
+		</li>
+		<li>
+			<span class="kifi-footer-menu-dot">&middot;</span>
+			<a href="/blog" data-track-action="clickBlog">Blog</a>
+		</li>
+		<li>
+			<span class="kifi-footer-menu-dot">&middot;</span>
+			<a href="http://support.kifi.com/customer/portal/emails/new" data-track-action="clickContactUs">Contact Us</a>
+		</li>
+	</ul>
+</div>
+}
+@earlyScripts = {
+  <script charset="ISO-8859-1" src="http://fast.wistia.com/static/concat/E-v1.js"></script>
+}
+@scripts = {
+  <script type="text/javascript" src="/assets/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/assets/js/mobile.js"></script>
+  <script type="text/javascript" src="/assets/js/track-ext.js"></script>
+}
+@views.html.marketing.helper.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="mobile-landing", htmlClass="mobile-landing", earlyScripts = earlyScripts, isLoggedIn = isLoggedIn)
