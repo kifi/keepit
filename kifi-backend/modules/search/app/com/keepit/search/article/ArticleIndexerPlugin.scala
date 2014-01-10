@@ -7,16 +7,12 @@ import com.google.inject.Inject
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.inject._
-import play.api.Play.current
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import scala.concurrent.Await
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import org.h2.tools.Backup
-import com.keepit.common.service.{ServiceStatus, FortyTwoServices}
+import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.search.sharding.ShardedArticleIndexer
 
@@ -41,7 +37,7 @@ private[article] class ArticleIndexerActor @Inject() (
   }
 }
 
-trait ArticleIndexerPlugin extends SchedulingPlugin {
+trait ArticleIndexerPlugin {
   def update(): Int
   def reindex()
   def refreshSearcher()
@@ -55,19 +51,19 @@ trait ArticleIndexerPlugin extends SchedulingPlugin {
 class ArticleIndexerPluginImpl @Inject() (
     actor: ActorInstance[ArticleIndexerActor],
     shardedArticleIndexer: ShardedArticleIndexer,
-    serviceDiscovery: ServiceDiscovery)
-  extends ArticleIndexerPlugin with Logging {
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties)
+  extends ArticleIndexerPlugin with SchedulerPlugin with Logging {
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
-    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Update)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, Update)
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 30 minutes, 2 hours, actor.ref, BackUp)
+      scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUp)
     }
   }
   override def onStop() {

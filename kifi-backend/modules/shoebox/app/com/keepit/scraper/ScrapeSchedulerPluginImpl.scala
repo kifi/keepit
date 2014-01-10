@@ -9,7 +9,7 @@ import scala.concurrent.Future
 import akka.util.Timeout
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -84,8 +84,8 @@ class ScrapeSchedulerPluginImpl @Inject() (
     actor: ActorInstance[ScrapeScheduler],
     scraperConfig: ScraperConfig,
     scraperClient: ScraperServiceClient,
-    val schedulingProperties: SchedulingProperties) //only on leader
-  extends ScrapeSchedulerPlugin with SchedulingPlugin with Logging {
+    val scheduling: SchedulingProperties) //only on leader
+  extends ScrapeSchedulerPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(scraperConfig.actorTimeout)
 
@@ -93,7 +93,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
-    scheduleTask(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape)
+    scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape)
   }
 
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {

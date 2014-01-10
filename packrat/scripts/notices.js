@@ -2,6 +2,7 @@
 // @require scripts/api.js
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
+// @require scripts/html/keeper/notice_triggered.js
 // @require scripts/html/keeper/notice_message.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
@@ -202,6 +203,8 @@ panes.notices = function () {
       }
       notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
       return render('html/keeper/notice_message', notice);
+    case 'triggered':
+      return render('html/keeper/notice_triggered', notice);
     case 'global':
       return render('html/keeper/notice_global', notice);
     default:
@@ -315,6 +318,7 @@ panes.notices = function () {
         window.location = uri;
       }
       break;
+    case 'triggered':
     case 'global':
       markOneRead(this.dataset.createdAt, this.dataset.thread, this.dataset.id);
       api.port.emit('set_message_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});

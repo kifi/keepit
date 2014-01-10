@@ -309,7 +309,8 @@ class MessagingCommander @Inject() (
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
-    "9c211915-2413-4030-8efa-d7a9cfc77359"  // joon
+    "9c211915-2413-4030-8efa-d7a9cfc77359", // joon
+    "1714ac86-4ce5-4083-b4c7-bb1e8292c373"  // martin
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
@@ -322,7 +323,7 @@ class MessagingCommander @Inject() (
   )
   val family = engineers ++ product ++ Seq(
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb", // two-meals
-    "7a0f844e-a1b2-4dab-b94b-0a9b7932e141" // noam
+    "7a0f844e-a1b2-4dab-b94b-0a9b7932e141"  // noam
   )
 
   def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {

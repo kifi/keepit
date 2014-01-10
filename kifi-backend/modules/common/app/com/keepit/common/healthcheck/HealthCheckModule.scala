@@ -16,12 +16,12 @@ case class ProdHealthCheckModule() extends HealthCheckModule {
 
   @Provides
   @AppScoped
-  def healthcheckHost(): HealthcheckHost = HealthcheckHost(InetAddress.getLocalHost().getHostName())
+  def healthcheckHost(): HealthcheckHost = HealthcheckHost(InetAddress.getLocalHost.getHostName)
 
   @Provides
   @AppScoped
   def healthcheckProvider(actor: ActorInstance[HealthcheckActor],
-    services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actor, services, host)
+    services: FortyTwoServices, host: HealthcheckHost, scheduling: SchedulingProperties): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actor, services, host, scheduling)
   }
 }

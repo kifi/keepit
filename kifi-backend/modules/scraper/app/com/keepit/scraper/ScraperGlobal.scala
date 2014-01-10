@@ -20,9 +20,11 @@ trait ScraperServices { self: FortyTwoGlobal =>
   def startScraperServices() {
     log.info("starting ScraperService")
     // TODO: clean-up
-    require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[FortyTwoCachePlugin].enabled)
-    require(injector.instance[InMemoryCachePlugin].enabled)
+    require(injector.instance[HealthcheckPlugin] != null)//make sure its not lazy loaded
+    require(injector.instance[FortyTwoCachePlugin] != null)//make sure its not lazy loaded
+    require(injector.instance[InMemoryCachePlugin] != null)//make sure its not lazy loaded
     log.info("ScraperService started")
   }
+
+
 }

@@ -20,8 +20,8 @@ object HeimdalGlobal extends FortyTwoGlobal(Prod) with HeimdalServices {
 
 trait HeimdalServices { self: FortyTwoGlobal =>
   def startHeimdalServices() {
-    require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[FortyTwoCachePlugin].enabled)
-    require(injector.instance[InMemoryCachePlugin].enabled)
+    require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
   }
 }

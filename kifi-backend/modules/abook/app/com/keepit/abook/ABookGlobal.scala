@@ -20,9 +20,9 @@ object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
 
 trait ABookServices { self: FortyTwoGlobal =>
   def startABookServices() {
-    require(injector.instance[ContactsUpdaterPlugin].enabled)
-    require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[FortyTwoCachePlugin].enabled)
-    require(injector.instance[InMemoryCachePlugin].enabled)
+    require(injector.instance[ContactsUpdaterPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
   }
 }

@@ -38,7 +38,8 @@ case class ElectronicMail (
   timeSubmitted: Option[DateTime] = None,
   messageId: Option[ElectronicMailMessageId] = None, //of the format 475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local
   inReplyTo: Option[ElectronicMailMessageId] = None,
-  category: ElectronicMailCategory //type of mail in free form, will be use for tracking
+  category: ElectronicMailCategory, //type of mail in free form, will be use for tracking
+  extraHeaders: Option[Map[String, String]] = None
 ) extends ModelWithExternalId[ElectronicMail] {
 
   def clean(): ElectronicMail = copy(subject = subject.trimAndRemoveLineBreaks())
@@ -106,7 +107,8 @@ object ElectronicMail {
       (__ \ 'timeSubmitted).formatNullable[DateTime] and
       (__ \ 'messageId).formatNullable[ElectronicMailMessageId] and
       (__ \ 'inReplyTo).formatNullable[ElectronicMailMessageId] and
-      (__ \ 'category).format[ElectronicMailCategory]
+      (__ \ 'category).format[ElectronicMailCategory] and
+      (__ \ 'extraHeaders).formatNullable[Map[String,String]]
   )(ElectronicMail.apply, unlift(ElectronicMail.unapply))
 }
 

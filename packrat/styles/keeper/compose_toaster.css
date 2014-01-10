@@ -4,7 +4,7 @@
   bottom: 54px;
   left: 6px;
   right: 6px;
-  z-index: 3;
+  z-index: 2; /* for Enter-to-send menu to cover keeper */
   background: rgba(255,255,255,.94);
   transition: background-color .2s linear, visibility 0s, z-index 0s .2s;
   overflow: hidden;
@@ -175,7 +175,6 @@
   right: 0;
   height: 28px;
   width: 28px;
-  z-index: 2;
   border-top-right-radius: inherit;
 }
 .kifi-toast-x:before,

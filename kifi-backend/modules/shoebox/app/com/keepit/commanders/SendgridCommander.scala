@@ -15,7 +15,7 @@ class SendgridCommander @Inject() (
 
   private val alertEventTypes = Set("dropped", "bounce", "spamreport")
 
-  private def emailAlert(event: SendgridEvent) {
+  private def emailAlert(event: SendgridEvent): Unit = {
     event.event foreach { eventType =>
       if (alertEventTypes.contains(eventType)) {
         db.readWrite{ implicit s =>
@@ -29,5 +29,9 @@ class SendgridCommander @Inject() (
         }
       }
     }
+  }
+
+  private def report(event: SendgridEvent): Unit = {
+    // todo(Martin): send a user event to Heimdal of type WAS_NOTIFIED, action event.event, channel email cf. MessagingAnalytics.clearedNotification
   }
 }
