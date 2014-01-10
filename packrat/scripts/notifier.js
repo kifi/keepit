@@ -33,7 +33,20 @@ var notifier = function () {
         });
         break;
       case 'triggered':
-        // currently handled the same as globals:
+        this.hide(o.thread);
+        add({
+          title: o.title,
+          subtitle: o.subtitle,
+          contentHtml: o.bodyHtml,
+          triggered: true,
+          link: o.linkText,
+          image: o.image,
+          sticky: o.isSticky,
+          showForMs: o.showForMs || 60000,
+          onClick: $.proxy(onClickGlobal, null, o.thread, o.id, o.url), // handled the same as globals
+          threadId: o.thread
+        });
+        break;
       case 'global':
         this.hide(o.thread);
         add({
@@ -63,6 +76,7 @@ var notifier = function () {
       title: params.title,
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,
+      triggered: params.triggered,
       image: params.image ? '<img src="' + params.image + '" class=kifi-notify-image>' : '',
       popupClass: '',
       innerClass: params.image ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
