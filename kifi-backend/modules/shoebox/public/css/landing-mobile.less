@@ -34,7 +34,7 @@ body {
 	left: 0;
 	width: 100%;
 	font-size: 0;
-	padding: 13.5px 28px;
+	padding: 13.5px 29px;
 	background-color: white;
 	z-index: 10;
 
@@ -123,6 +123,17 @@ body {
 	height: 4px;
 }
 
+@media screen and (min-width: 800px) {
+.kifi-arrow-down {
+	left: 50% !important;
+	margin-left: -25px / 2;
+	bottom: -13px;
+}
+.kifi-arrow-cover {
+	display: none;
+}
+}
+
 
 .kifi-coming-soon {
 	position: relative;
@@ -200,7 +211,7 @@ body {
 .kifi-desktop-email {
 	display: block;
 	@fs: 30px / 2;
-	.font-size(@fs);
+	font-size: @fs;
 	font-weight: 400;
 	width: 100%;
 	.padding-tb(12px, @fs);
@@ -212,6 +223,10 @@ body {
 	text-align: left;
 	.letter-spacing(0.65px, @fs);
 	.box-sizing(border-box);
+}
+
+.kifi-waiting-email {
+	.border-radius(4px);
 }
 
 .kifi-desktop-email {
@@ -278,7 +293,7 @@ body {
 	
 	h2 {
 		@fs: 36px / 2;
-		.font-size(@fs);
+		font-size: @fs;
 		font-weight: 600;
 		text-transform: uppercase;
 		margin: 0;
@@ -286,8 +301,15 @@ body {
 
 	p {
 		@fs: 34px / 2;
-		.font-size(@fs);
+		font-size: @fs;
 		margin: 0;
+	}
+
+	.what-is-kifi {
+		@fs: 34px / 2;
+		font-size: @fs;
+		margin-top: 31px;
+		font-weight: 400;
 	}
 
 	.kifi-arrow-down {
@@ -298,6 +320,26 @@ body {
 	.kifi-arrow-cover {
 		background: @bg;
 	}
+}
+
+@media screen and (min-width: 800px) {
+.kifi-good-news {
+	text-align: center;
+	padding-bottom: 21px;
+	
+	h2 {
+		@fs: 56px / 2;
+		font-size: @fs;
+		font-weight: 600;
+		margin-top: 25px;
+	}
+
+	p {
+		@fs: 46px / 2;
+		font-size: @fs;
+		margin-top: -6px;
+	}
+}
 }
 
 .kifi-watch-video {
@@ -317,6 +359,15 @@ body {
 	}
 }
 
+@media screen and (min-width: 800px) {
+	.kifi-watch-video {
+		.at2x('/assets/img/mobile/header2.png', auto, 77.5%);
+		background-size: auto 77.5%;
+		background-repeat: no-repeat;
+		background-position: bottom right 83px;
+	}
+}
+
 .kifi-play {
 	position: relative;
 	display: inline-block;
@@ -326,9 +377,19 @@ body {
 	margin: 0 auto;
 	margin-top: 28px;
 	.at2x('/assets/img/mobile/playbuttoniphone.png', 100%, 100%);
-	background-size: @size @size;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+}
+
+@media screen and (min-width: 800px) {
+.kifi-play {
+	@size: 130px;
+	width: @size;
+	height: @size;
+	margin-top: 17px;
+	.at2x('/assets/img/mobile/playbuttonipad.png', 100%, 100%);
+	background-repeat: no-repeat;
+}
 }
 
 .kifi-watch-bg {
@@ -419,4 +480,16 @@ body {
 
 .hidden {
 	display: none;
+}
+
+@media screen and (max-width: 799px) {
+	.tablet-only {
+		display: none !important;
+	}
+}
+
+@media screen and (min-width: 800px) {
+	.phone-only {
+		display: none !important;
+	}
 }
