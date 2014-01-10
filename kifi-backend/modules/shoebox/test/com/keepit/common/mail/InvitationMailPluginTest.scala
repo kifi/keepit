@@ -1,6 +1,5 @@
 package com.keepit.common.mail
 
-import scala.Some
 
 import org.joda.time.Days
 import org.specs2.mutable.Specification

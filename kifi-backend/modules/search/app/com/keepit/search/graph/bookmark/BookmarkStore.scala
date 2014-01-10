@@ -46,6 +46,8 @@ class BookmarkStore(
     super.onFailure(indexable, e)
   }
 
+  def update(): Int = throw new UnsupportedOperationException("BookmarkStore should not be updated by update()")
+
   def update(bookmarks: Seq[Bookmark]) {
     try {
       val cnt = successCount

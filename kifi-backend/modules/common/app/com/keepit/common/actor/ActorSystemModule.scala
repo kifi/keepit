@@ -4,9 +4,10 @@ import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{Scheduler, ActorSystem}
 import com.keepit.inject.AppScoped
 import com.google.inject.Provides
-import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
 import play.api.Play
 import play.api.Play._
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 trait ActorSystemModule extends ScalaModule
 
@@ -19,6 +20,10 @@ case class ProdActorSystemModule() extends ActorSystemModule {
   @Provides
   @AppScoped
   def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
+
+  @Provides
+  def globalSchedulingEnabled(serviceDiscovery: ServiceDiscovery): SchedulingProperties =
+    new SchedulingPropertiesImpl(serviceDiscovery, true)
 
   @Provides
   @AppScoped
