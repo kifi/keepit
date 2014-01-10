@@ -460,28 +460,15 @@ body {
 
 .wistia_embed {
 	position: absolute;
-	top: 50%;
-	left: 50%;
-	@w: 300px;
-	@h: 150px;
-	width: @w !important;
-	height: @h !important;
-	margin-left: -@w / 2;
-	margin-top: -@h / 2;
+	top: 25%;
+	left: 5%;
+	width: 90% !important;
+	height: 50% !important;
 	z-index: -10;
 
 	&.playing {
 		position: fixed;
 		z-index: 5;
-	}
-
-	@media @tablet {
-		@w: 600px;
-		@h: 300px;
-		width: @w !important;
-		height: @h !important;
-		margin-left: -@w / 2;
-		margin-top: -@h / 2;
 	}
 }
 
