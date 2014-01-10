@@ -1,24 +1,18 @@
 package com.keepit.search.graph
 
 import akka.actor._
-import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.inject._
-import play.api.Play.current
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.keepit.search.article.BackUp
+import com.keepit.search.IndexerPluginMessages._
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
 
-case object Update
 
 private[graph] class URIGraphActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -26,19 +20,19 @@ private[graph] class URIGraphActor @Inject() (
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case Update => try {
+    case UpdateIndex => try {
         sender ! uriGraph.update()
       } catch {
         case e: Exception =>
           airbrake.notify("Error updating uri graph", e)
           sender ! -1
       }
-    case BackUp => uriGraph.backup()
+    case BackUpIndex => uriGraph.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
 
-trait URIGraphPlugin extends SchedulingPlugin {
+trait URIGraphPlugin {
   def update()
   def reindex()
   def reindexCollection()
@@ -47,18 +41,18 @@ trait URIGraphPlugin extends SchedulingPlugin {
 class URIGraphPluginImpl @Inject() (
     actor: ActorInstance[URIGraphActor],
     uriGraph: URIGraph,
-    serviceDiscovery: ServiceDiscovery)
-  extends URIGraphPlugin with Logging {
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties)
+  extends URIGraphPlugin with SchedulerPlugin with Logging {
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minute, actor.ref, UpdateIndex)
     log.info("starting URIGraphPluginImpl")
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 10 minutes, 3 hours, actor.ref, BackUp)
+      scheduleTaskOnAllMachines(actor.system, 10 minutes, 3 hours, actor.ref, BackUpIndex)
     }
   }
   override def onStop() {
@@ -68,16 +62,16 @@ class URIGraphPluginImpl @Inject() (
   }
 
   override def update() {
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 
   override def reindex() {
     uriGraph.reindex()
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 
   override def reindexCollection() {
     uriGraph.reindexCollection()
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 }

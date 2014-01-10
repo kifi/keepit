@@ -52,6 +52,8 @@ class SemanticVarianceTest extends Specification {
     }
 
     def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)
+
+    def update(): Int = ???
   }
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing

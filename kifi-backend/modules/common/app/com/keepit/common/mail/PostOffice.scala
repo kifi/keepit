@@ -9,7 +9,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{Success, Failure}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import akka.util.Timeout
 import play.api.Plugin
@@ -39,6 +39,13 @@ object PostOffice {
       val PLAY = ElectronicMailCategory("play")
       val all = Set(HEALTHCHECK, ASANA_HEALTHCHECK, ADMIN, PLAY)
     }
+  }
+
+  object Headers {
+    val ALL = Seq[String]("Reply-To", "List-Unsubscribe", "Precedence")
+    val REPLY_TO = "Reply-To"
+    val LIST_UNSUBSCRIBE = "List-Unsubscribe"
+    val PRECEDENCE = "Precedence"
   }
 
   val BODY_MAX_SIZE = 1048576
@@ -77,15 +84,14 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actor: ActorInstance[RemotePostOfficeActor])
-  extends RemotePostOfficePlugin with SchedulingPlugin {
-
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+    actor: ActorInstance[RemotePostOfficeActor],
+    val scheduling: SchedulingProperties)
+  extends RemotePostOfficePlugin with SchedulerPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
+     scheduleTaskOnAllMachines(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
   }
   def sendMail(mail: ElectronicMail) = actor.ref ! SendEmail(mail)
 }

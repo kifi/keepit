@@ -12,7 +12,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 
@@ -20,13 +21,9 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import play.api.Mode
 import play.api.Mode._
-import play.api.Plugin
 import play.api.templates.Html
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import net.codingwell.scalaguice.ScalaModule
-import scala.Some
+
 
 object Healthcheck {
 
@@ -149,7 +146,7 @@ class HealthcheckActor @Inject() (
   }
 }
 
-trait HealthcheckPlugin extends Plugin {
+trait HealthcheckPlugin {
   def errorCount(): Int
   def errors(): Seq[AirbrakeError]
   def resetErrorCount(): Unit
@@ -164,16 +161,16 @@ trait HealthcheckPlugin extends Plugin {
 class HealthcheckPluginImpl @Inject() (
     actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices,
-    host: HealthcheckHost)
-  extends HealthcheckPlugin with SchedulingPlugin with Logging {
+    host: HealthcheckHost,
+    val scheduling: SchedulingProperties)
+  extends HealthcheckPlugin with SchedulerPlugin with Logging {
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
+    scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
@@ -185,27 +182,27 @@ class HealthcheckPluginImpl @Inject() (
   def reportErrors(): Unit = actor.ref ! ReportErrorsAction
 
   def addError(error: AirbrakeError): AirbrakeError = {
-    log.error(s"Healthcheck logged error: ${error}")
+    log.error(s"Healthcheck logged error: $error")
     actor.ref ! error
     error
   }
 
   override def reportStart() = {
     val subject = s"Service ${services.currentService} started"
-    val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
-    val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
+    val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.System.HEALTHCHECK))
+        category = PostOffice.Categories.System.HEALTHCHECK)
     actor.ref ! email
     email
   }
 
   override def reportStop() = {
     val subject = s"Service ${services.currentService} stopped"
-    val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
-    val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
+    val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.System.HEALTHCHECK))
+        category = PostOffice.Categories.System.HEALTHCHECK)
     actor.ref ! email
     email
   }

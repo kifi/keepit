@@ -5,7 +5,7 @@ import com.google.inject.Provider
 import com.google.inject.Scope
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.SchedulerPlugin
 import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
@@ -15,6 +15,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.Promise
 import scala.util.Try
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits._
 
 class AppScope extends Scope with Logging {
 
@@ -49,7 +51,6 @@ class AppScope extends Scope with Logging {
   }
 
   def onStop(app: Application): Unit = {
-    val appScope = this
     stopping = true
     println(s"[$identifier] scope stopping...")
     if(!started) {
@@ -60,13 +61,15 @@ class AppScope extends Scope with Logging {
       // stop plugins, explicitly using the app classloader
       Threads.withContextClassLoader(app.classloader) {
         for (plugin <- plugins) {
-          log.info("stopping plugin: " + plugin)
-          plugin match {
-            case p: SchedulingPlugin =>
-              p.cancelTasks()
-              p.onStop()
-            case p =>
-              p.onStop()
+          SafeFuture {
+            log.info("stopping plugin: " + plugin)
+            plugin match {
+              case p: SchedulerPlugin =>
+                p.cancelTasks()
+                p.onStop()
+              case p =>
+                p.onStop()
+            }
           }
         }
       }
@@ -100,7 +103,6 @@ class AppScope extends Scope with Logging {
     }
 
   def scope[T](key: Key[T], unscoped: Provider[T]): Provider[T] = {
-    val appScope = this
     // return a provider that always gives the same instance
     new Provider[T] {
       def get: T = {

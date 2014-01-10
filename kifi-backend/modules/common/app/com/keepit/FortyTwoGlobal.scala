@@ -134,9 +134,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
-    if (app.mode != Mode.Test && app.mode != Mode.Dev) Thread.sleep(21000)
-    println("<<<<<< done sleeping")
-    log.info("<<<<<< done sleeping")
     try {
       if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.instance[HealthcheckPlugin].reportStop()
       injector.instance[AppScope].onStop(app)
@@ -146,8 +143,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         println(errorMessage)
         e.printStackTrace
         log.error(errorMessage, e)
-    }
-    finally {
+    } finally {
+      if (app.mode == Mode.Prod) {
+        println("<<<<<< about to pause and let the system shut down")
+        new Exception("Just Tracing shotdown hook").printStackTrace()
+        Thread.sleep(21000)
+        println("<<<<<< done sleeping, continue with termination")
+        log.info("<<<<<< done sleeping, continue with termination")
+      }
       serviceDiscovery.unRegister()
     }
   }

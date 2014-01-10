@@ -12,12 +12,6 @@ import com.keepit.search.SearchConfig
 
 object ResultUtil {
 
-  def merge(results: Seq[ShardSearchResult], maxHits: Int, config: SearchConfig): MergedSearchResult = {
-    // TODO: this is a skeleton
-    val head = results.head
-    MergedSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.show, head.svVariance)
-  }
-
   def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
     hits.map{ h =>
       val json = h.json

@@ -10,7 +10,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.time.Clock
 
 import scala.concurrent.{Future, Await}
@@ -20,7 +20,6 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import play.api.Plugin
 import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -29,7 +28,7 @@ import com.keepit.serializer.TypeCode
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 
-trait HeimdalServiceClient extends ServiceClient with Plugin {
+trait HeimdalServiceClient extends ServiceClient {
   final val serviceType = ServiceType.HEIMDAL
 
   def trackEvent(event: HeimdalEvent): Unit
@@ -95,9 +94,9 @@ class HeimdalClientActor @Inject() (
         flush()
       } else {
         events.size match {
-          case s if(s >= EventQueueConsts.LowWatermarkBatchSize) =>
+          case s if s >= EventQueueConsts.LowWatermarkBatchSize =>
             self ! FlushEventQueue //flush with the events in the actor mailbox
-          case s if(s >= EventQueueConsts.MaxBatchSize) =>
+          case s if s >= EventQueueConsts.MaxBatchSize =>
             flush() //flushing without taking in account events in the mailbox
           case _ =>
             //ignore
@@ -124,7 +123,7 @@ class HeimdalClientActor @Inject() (
         call(Heimdal.internal.trackEvent, Json.toJson(event))
         events = Vector()
       case more =>
-        log.info(s"Sending ${events.size} events to Heimdal: ${events}")
+        log.info(s"Sending ${events.size} events to Heimdal: $events")
         events.zipWithIndex map { case (event, i) => EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventFlushTime, s"flush($i/${events.size} #$batchId)") }
         call(Heimdal.internal.trackEvents, Json.toJson(events))
         events = Vector()
@@ -137,15 +136,14 @@ class HeimdalServiceClientImpl @Inject() (
     val httpClient: HttpClient,
     val serviceCluster: ServiceCluster,
     actor: ActorInstance[HeimdalClientActor],
-    clock: Clock)
-  extends HeimdalServiceClient with SchedulingPlugin with Logging {
+    clock: Clock,
+    val scheduling: SchedulingProperties)
+  extends HeimdalServiceClient with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(30 seconds)
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
-
   override def onStart(): Unit = {
-    scheduleTask(actor.system, 1 seconds, EventQueueConsts.BatchFlushTiming seconds, actor.ref, FlushEventQueue)
+    scheduleTaskOnAllMachines(actor.system, 1 seconds, EventQueueConsts.BatchFlushTiming seconds, actor.ref, FlushEventQueue)
   }
 
   override def onStop() {

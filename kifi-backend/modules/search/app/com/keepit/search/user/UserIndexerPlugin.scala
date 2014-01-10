@@ -6,18 +6,16 @@ import scala.concurrent.duration.DurationInt
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.healthcheck.{AirbrakeError,AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 
 import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout.durationToTimeout
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.search.article.BackUp
-
-private[user] case object Update
+import com.keepit.search.IndexerPluginMessages._
 
 private[user] class UserIndexerActor @Inject()(
   airbrake: AirbrakeNotifier,
@@ -25,20 +23,20 @@ private[user] class UserIndexerActor @Inject()(
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive = {
-    case Update => try {
+    case UpdateIndex => try {
       sender ! indexer.update()
     } catch {
       case e: Exception =>
         airbrake.notify("Error updating user index", e)
         sender ! -1
     }
-    case BackUp => indexer.backup()
+    case BackUpIndex => indexer.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 
 }
 
-trait UserIndexerPlugin extends SchedulingPlugin {
+trait UserIndexerPlugin extends SchedulerPlugin {
   def update(): Future[Int]
   def reindex(): Unit
 }
@@ -46,17 +44,16 @@ trait UserIndexerPlugin extends SchedulingPlugin {
 class UserIndexerPluginImpl @Inject()(
    actor: ActorInstance[UserIndexerActor],
    indexer: UserIndexer,
-  serviceDiscovery: ServiceDiscovery
+  serviceDiscovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties
 ) extends UserIndexerPlugin {
-
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 2 minute, actor.ref, Update)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 2 minute, actor.ref, UpdateIndex)
     log.info("starting UserIndexerPluginImpl")
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 1 minute, 4 hours, actor.ref, BackUp)
+      scheduleTaskOnAllMachines(actor.system, 1 minute, 4 hours, actor.ref, BackUpIndex)
     }
   }
   override def onStop() {
@@ -65,10 +62,10 @@ class UserIndexerPluginImpl @Inject()(
     indexer.close()
   }
 
-  override def update(): Future[Int] = actor.ref.ask(Update)(2 minutes).mapTo[Int]
+  override def update(): Future[Int] = actor.ref.ask(UpdateIndex)(2 minutes).mapTo[Int]
 
   override def reindex() {
     indexer.reindex()
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 }

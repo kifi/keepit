@@ -139,6 +139,15 @@ class SendgridMailProvider @Inject() (
       message.setHeader("In-Reply-To", id.toEmailHeader)
       message.setHeader("References", id.toEmailHeader)
     }
+
+    mail.extraHeaders.foreach{ headers =>
+      PostOffice.Headers.ALL.foreach{ header =>
+        headers.get(header).foreach{ value =>
+          message.setHeader(header, value)
+        }
+      }
+    }
+
     val multipart = new MimeMultipart("alternative")
 
     val part1 = new MimeBodyPart()

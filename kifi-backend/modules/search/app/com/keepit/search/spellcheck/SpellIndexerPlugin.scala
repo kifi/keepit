@@ -3,9 +3,9 @@ package com.keepit.search.spellcheck
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.healthcheck.{AirbrakeError,AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import scala.concurrent.duration._
 
 private[spellcheck] case object BuildDict
@@ -20,17 +20,17 @@ private[spellcheck] class SpellIndexerActor @Inject()(
   }
 }
 
-trait SpellIndexerPlugin extends SchedulingPlugin
+trait SpellIndexerPlugin extends SchedulerPlugin
 
 class SpellIndexerPluginImpl @Inject()(
-  actor: ActorInstance[SpellIndexerActor]
+  actor: ActorInstance[SpellIndexerActor],
+  val scheduling: SchedulingProperties
 ) extends SpellIndexerPlugin {
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   override def enabled: Boolean = true
 
   override def onStart() {
-    scheduleTask(actor.system, 2 minute, 12 hour, actor.ref, BuildDict)
+    scheduleTaskOnAllMachines(actor.system, 2 minute, 12 hour, actor.ref, BuildDict)
     log.info("starting SpellDictionaryPluginImpl")
   }
   override def onStop() {

@@ -13,7 +13,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
@@ -79,15 +79,15 @@ private[mail] class InvitationMailActor @Inject() (
 }
 
 @ImplementedBy(classOf[InvitationMailPluginImpl])
-trait InvitationMailPlugin extends Plugin {
+trait InvitationMailPlugin {
   def resendNotifications()
   def notifyAcceptedUser(userId: Id[User])
 }
 
 class InvitationMailPluginImpl @Inject()(
     actor: ActorInstance[InvitationMailActor],
-    val schedulingProperties: SchedulingProperties //only on leader
-    ) extends InvitationMailPlugin with SchedulingPlugin with Logging {
+    val scheduling: SchedulingProperties //only on leader
+    ) extends InvitationMailPlugin with SchedulerPlugin with Logging {
 
   override def enabled: Boolean = true
 
@@ -99,6 +99,6 @@ class InvitationMailPluginImpl @Inject()(
   }
   override def onStart() {
     log.info("Starting InvitationMailPluginImpl")
-    scheduleTask(actor.system, 10 seconds, 12 hours, actor.ref, ResendNotifications)
+    scheduleTaskOnLeader(actor.system, 10 seconds, 12 hours, actor.ref, ResendNotifications)
   }
 }

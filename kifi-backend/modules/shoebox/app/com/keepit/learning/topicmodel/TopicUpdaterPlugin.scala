@@ -8,7 +8,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.inject._
 import play.api.Play.current
@@ -46,7 +46,7 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
   }
 }
 
-trait TopicUpdaterPlugin extends SchedulingPlugin {
+trait TopicUpdaterPlugin extends SchedulerPlugin {
   def remodel(): Unit
 }
 
@@ -54,16 +54,16 @@ trait TopicUpdaterPlugin extends SchedulingPlugin {
 class TopicUpdaterPluginImpl @Inject() (
     actor: ActorInstance[TopicUpdaterActor],
     centralConfig: CentralConfig,
-    val schedulingProperties: SchedulingProperties //only on leader
+    val scheduling: SchedulingProperties //only on leader
 ) extends TopicUpdaterPlugin with Logging{
 
   implicit val actorTimeout = Timeout(5 seconds)
 
   override def enabled: Boolean = true
   override def onStart() {
-     log.info("starting TopicUpdaterPluginImpl")
-     scheduleTask(actor.system, 10 minutes, 2 minutes, actor.ref, UpdateTopic)
-     scheduleTask(actor.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
+//     log.info("starting TopicUpdaterPluginImpl")
+//     scheduleTaskOnLeader(actor.system, 10 minutes, 2 minutes, actor.ref, UpdateTopic)
+//     scheduleTaskOnLeader(actor.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
