@@ -31,12 +31,14 @@ import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ShardedArticleIndexer
+import com.keepit.search.graph.collection.CollectionGraph
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
     uriGraph: URIGraph,
+    collectionGraph: CollectionGraph,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
@@ -124,7 +126,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
-    Promise[CollectionSearcherWithUser].success(uriGraph.getCollectionSearcher(userId)).future
+    Promise[CollectionSearcherWithUser].success(collectionGraph.getCollectionSearcher(userId)).future
   }
 
   def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {

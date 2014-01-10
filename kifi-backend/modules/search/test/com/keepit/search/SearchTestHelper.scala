@@ -76,6 +76,9 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
       new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
       inject[ShoeboxServiceClient],
       inject[MonitoredAwait])
+
+    val collectionGraph = new CollectionGraphImpl(new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]) )
+
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
 
@@ -83,6 +86,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
       shardedArticleIndexer,
       userIndexer,
       uriGraph,
+      collectionGraph,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,
       inject[BrowsingHistoryTracker],
