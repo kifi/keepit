@@ -4,7 +4,7 @@ import scala.concurrent.duration.Duration
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.{Logging, AccessLog}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
@@ -77,7 +77,7 @@ class SocialConnectionRepoImpl @Inject() (
   val clock: Clock,
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialRepo: SocialUserInfoRepoImpl)
-  extends DbRepo[SocialConnection] with SocialConnectionRepo {
+  extends DbRepo[SocialConnection] with SocialConnectionRepo with Logging {
 
   import FortyTwoTypeMappers._
   import scala.slick.jdbc.StaticQuery
@@ -170,7 +170,9 @@ class SocialConnectionRepoImpl @Inject() (
 
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo] = {
     socialUserConnectionsCache.getOrElse(SocialUserConnectionsKey(id)) {
-      getSocialUserConnections(id) map SocialConnectionInfo.fromSocialUser
+      val socialUserInfo = getSocialUserConnections(id)
+      log.info(s"Fetched a connexion for social user ${id.id}: ${socialUserInfo}")
+      socialUserInfo map SocialConnectionInfo.fromSocialUser
     }
   }
 
