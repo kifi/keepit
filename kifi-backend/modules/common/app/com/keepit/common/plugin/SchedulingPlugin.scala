@@ -18,11 +18,17 @@ object SchedulingEnabled {
   case object LeaderOnly extends SchedulingEnabled
 }
 
+class NamedCancellable(underlying:Cancellable, taskName:String) extends Cancellable {
+  def name() = taskName
+  def cancel() = underlying.cancel
+  def isCancelled: Boolean = underlying.isCancelled
+}
+
 trait SchedulingPlugin extends Plugin with Logging {
 
   def schedulingProperties: SchedulingProperties
 
-  private var _cancellables: Seq[Cancellable] = Seq()
+  private var _cancellables: Seq[NamedCancellable] = Seq()
 
   private def execute(f: => Unit, taskName: String): Unit =
     if (schedulingProperties.allowScheduling) {log.info(s"executing scheduled task: $taskName"); f}
@@ -31,7 +37,10 @@ trait SchedulingPlugin extends Plugin with Logging {
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
     if (!schedulingProperties.neverAllowScheduling) {
       log.info(s"Registering $taskName in scheduler")
-      _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { execute(f, taskName) }
+      val cancellable = system.scheduler.schedule(initialDelay, frequency) {
+        execute(f, taskName)
+      }
+      _cancellables :+= new NamedCancellable(cancellable, taskName)
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
   def cronTask(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
@@ -47,7 +56,10 @@ trait SchedulingPlugin extends Plugin with Logging {
 
   def scheduleTaskOnce(system: ActorSystem, initialDelay: FiniteDuration, taskName: String)(f: => Unit): Unit =
     if (!schedulingProperties.neverAllowScheduling) {
-      _cancellables :+= system.scheduler.scheduleOnce(initialDelay) { execute(f, taskName) }
+      val once: Cancellable = system.scheduler.scheduleOnce(initialDelay) {
+        execute(f, taskName)
+      }
+      _cancellables :+= new NamedCancellable(once, taskName)
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
@@ -58,7 +70,10 @@ trait SchedulingPlugin extends Plugin with Logging {
 
   def cancelTasks() = {
     log.info("Cancelling scheduled tasks")
-    _cancellables.map(_.cancel())
+    for (task <- _cancellables) {
+      task.cancel()
+      log.info(s"[cancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+    }
   }
 
   override def onStop() {
