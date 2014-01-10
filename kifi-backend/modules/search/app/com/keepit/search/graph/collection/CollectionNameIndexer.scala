@@ -40,6 +40,8 @@ class CollectionNameIndexer(
     super.onFailure(indexable, e)
   }
 
+  def update(): Int = throw new UnsupportedOperationException("CollectionNameIndex should not be updated by update()")
+
   def update(collectionsChanged: Seq[Collection], collectionSearcher: CollectionSearcher): Int = updateLock.synchronized {
     doUpdate("CollectionNameIndex") {
       val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)

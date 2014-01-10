@@ -35,8 +35,9 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def messageId = column[ElectronicMailMessageId]("message_id", O.Nullable)
     def inReplyTo = column[ElectronicMailMessageId]("in_reply_to", O.Nullable)
     def category = column[ElectronicMailCategory]("category", O.NotNull)
+    def extraHeaders = column[Map[String,String]]("extra_headers", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ cc ~ subject ~ state ~
-      htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
+      htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category ~ extraHeaders.? <>
       (ElectronicMail.apply _, ElectronicMail.unapply _)
   }
 

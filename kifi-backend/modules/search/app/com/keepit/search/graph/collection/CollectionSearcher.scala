@@ -118,7 +118,7 @@ object UserToCollectionEdgeSet {
   def apply(sourceId: Id[User], currentSearcher: Searcher): UserToCollectionEdgeSet = {
     new UserToCollectionEdgeSet(sourceId) with LuceneBackedEdgeSet[User, Collection] {
       override val searcher: Searcher = currentSearcher
-      override def createSourceTerm = new Term(userField, sourceId.toString)
+      override val sourceFieldName = userField
     }
   }
 
@@ -137,7 +137,7 @@ object UriToCollectionEdgeSet {
   def apply(sourceId: Id[NormalizedURI], currentSearcher: Searcher): UriToCollectionEdgeSet = {
     new UriToCollectionEdgeSet(sourceId) with LuceneBackedEdgeSet[NormalizedURI, Collection] {
       override val searcher: Searcher = currentSearcher
-      override def createSourceTerm = new Term(uriField, sourceId.toString)
+      override val sourceFieldName = uriField
     }
   }
 }

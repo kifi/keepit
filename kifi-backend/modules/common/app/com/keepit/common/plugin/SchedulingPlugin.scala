@@ -11,6 +11,7 @@ import play.api.Plugin
 
 import us.theatr.akka.quartz._
 import com.keepit.common.zookeeper.ServiceDiscovery
+import scala.collection.mutable.ListBuffer
 
 trait SchedulingProperties {
   def enabled: Boolean
@@ -34,10 +35,12 @@ trait SchedulerPlugin extends Plugin with Logging {
 
   def scheduling: SchedulingProperties
 
-  private var _cancellables: Seq[NamedCancellable] = Seq()
+  val _cancellables: ListBuffer[NamedCancellable] = ListBuffer()
 
-  private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    _cancellables :+= NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
+  private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =_cancellables.synchronized {
+    _cancellables +=
+      NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
+  }
 
   def cronTaskOnLeader(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
     val taskName = s"cron message $message to actor $receiver on leader only"
@@ -91,11 +94,16 @@ trait SchedulerPlugin extends Plugin with Logging {
     }
   }
 
-  def cancelTasks() = {
-    log.info("Cancelling scheduled tasks")
-    for (task <- _cancellables) {
-      task.cancel()
-      log.info(s"[cancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+  def cancelTasks() = _cancellables.synchronized {
+    log.info(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
+    _cancellables foreach { task =>
+      if (!task.isCancelled) {
+        log.info(s"[aboutToCancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+        task.cancel()
+        log.info(s"[canceledTask] task:${task.name}) isCancelled:${task.isCancelled}")
+      } else {
+        log.info(s"[canceledTask] task:${task.name}) is already cancelled")
+      }
     }
   }
 

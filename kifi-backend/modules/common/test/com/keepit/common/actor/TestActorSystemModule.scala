@@ -21,8 +21,11 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
   }
 
   @Provides
-  def globalSchedulingEnabled(serviceDiscovery: ServiceDiscovery): SchedulingProperties =
-    new SchedulingPropertiesImpl(serviceDiscovery, true)
+  def globalSchedulingEnabled: SchedulingProperties =
+    new SchedulingProperties {
+      def enabled = false
+      def enabledOnlyForLeader = false
+    }
 
   @Provides
   @AppScoped

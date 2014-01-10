@@ -119,6 +119,7 @@ trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
 
 trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   val searcher: Searcher
+  val sourceFieldName: String
 
   private[this] lazy val lazyDestIdLongSet: Set[Long] = {
     val mapper = searcher.indexReader.asAtomicReader.getIdMapper
@@ -137,7 +138,7 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
     if (td != null) td else emptyDocIdSetIterator
   }
 
-  protected def createSourceTerm: Term
+  protected def createSourceTerm: Term = new Term(sourceFieldName, sourceId.toString)
 }
 
 trait IdSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {

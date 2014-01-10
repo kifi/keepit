@@ -241,7 +241,7 @@ object UriToUserEdgeSet {
   def apply(sourceId: Id[NormalizedURI], currentSearcher: Searcher): UriToUserEdgeSet = {
     new UriToUserEdgeSet(sourceId) with LuceneBackedEdgeSet[NormalizedURI, User] {
       override val searcher: Searcher = currentSearcher
-      override def createSourceTerm = new Term(uriField, sourceId.toString)
+      override val sourceFieldName = uriField
     }
   }
 }
