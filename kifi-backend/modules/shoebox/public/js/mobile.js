@@ -60,16 +60,15 @@
 		$.ajax({
 			url: '/waitlist',
 			type: 'POST',
-			dataType: 'json',
+			dataType: 'text',
 			contentType: 'application/json',
 			data: JSON.stringify(data)
 		})
-		.complete(function (data) {
+		.complete(function (resp) {
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
-			// TODO
-			$('input[name=extId]').val(1);
+			$('input[name=extId]').val(resp.responseText);
 		});
 	});
 
