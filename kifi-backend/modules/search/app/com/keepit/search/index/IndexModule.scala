@@ -70,10 +70,16 @@ trait IndexModule extends ScalaModule with Logging {
 
   private[this] val noShard = Shard(0, 1)
 
-  //TODO: enable
-  def activeShards: ActiveShards = ActiveShardsSpecParser(current.configuration.getString("index.shards"))
+  @Singleton
+  @Provides
+  def activeShards: ActiveShards = {
+    ActiveShardsSpecParser(
+      Option(System.getProperty("index.shards")) orElse current.configuration.getString("index.shards")
+    )
+  }
 
-  //TODO: enable
+  @Singleton
+  @Provides
   def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedArticleIndexer = {
     def articleIndexer(shard: Shard) = {
       val dir = getIndexDirectory("index.article.directory", shard, backup)
@@ -103,15 +109,6 @@ trait IndexModule extends ScalaModule with Logging {
 
     val indexShards = activeShards.shards.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
     new ShardedURIGraphIndexer(indexShards.toMap, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def articleIndexer(articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
-    val dir = getIndexDirectory("index.article.directory", noShard, backup)
-    log.info(s"storing search index in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new ArticleIndexer(dir, config, articleStore, airbrake, shoeboxClient)
   }
 
   private def bookmarkStore(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): BookmarkStore = {

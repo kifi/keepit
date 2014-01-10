@@ -7,13 +7,19 @@ trait ShardedIndexer[T <: Indexer[_]] {
   val indexShards: Map[Shard, T]
   protected val updateLock = new AnyRef
 
-  private[this] var _sequenceNumber: SequenceNumber = {
-    SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.map(_.value).getOrElse(-1L)).min)
+  def commitSequenceNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
+
+  def committedAt: Option[String] = {
+    indexShards.valuesIterator.reduce{ (a, b) =>
+      if (a.commitSequenceNumber.value < b.commitSequenceNumber.value) a else b
+    }.committedAt
   }
+
+  private[this] var _sequenceNumber: SequenceNumber = commitSequenceNumber
 
   def sequenceNumber = _sequenceNumber
 
-  private[search] def sequenceNumber_=(n: SequenceNumber) {
+  protected def sequenceNumber_=(n: SequenceNumber) {
     _sequenceNumber = n
   }
 
@@ -21,17 +27,24 @@ trait ShardedIndexer[T <: Indexer[_]] {
   protected def resetSequenceNumberIfReindex() {
     if (resetSequenceNumber) {
       resetSequenceNumber = false
-      sequenceNumber = SequenceNumber.MinValue
+      _sequenceNumber = SequenceNumber.MinValue
     }
   }
 
+  def getIndexerFor(id: Long): T = getIndexer(indexShards.keysIterator.find(_.contains(id)).get)
   def getIndexer(shard: Shard): T = indexShards(shard)
+
+  def numDocs: Int = indexShards.valuesIterator.map(_.numDocs).sum
 
   def update(): Int
 
   def reindex(): Unit = {
     indexShards.valuesIterator.foreach(_.reindex())
     resetSequenceNumber = true
+  }
+
+  def refreshSearcher(): Unit = {
+    indexShards.valuesIterator.foreach(_.refreshSearcher())
   }
 
   def backup(): Unit = indexShards.valuesIterator.foreach(_.backup())

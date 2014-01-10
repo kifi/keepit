@@ -3,6 +3,7 @@ package com.keepit.search
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, JsValue}
 import play.modules.statsd.api.Statsd
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -19,6 +20,7 @@ import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.ResultDecorator
 import com.keepit.search.result.DecoratedResult
@@ -45,6 +47,7 @@ trait SearchCommander {
 }
 
 class SearchCommanderImpl @Inject() (
+  shards: ActiveShards,
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
@@ -69,6 +72,8 @@ class SearchCommanderImpl @Inject() (
     tz: Option[String] = None,
     coll: Option[String] = None) : DecoratedResult = {
 
+    if (maxHits <= 0) throw new IllegalArgumentException("maxHits is zero")
+
     val timing = new SearchTiming
 
     // fetch user data in background
@@ -90,17 +95,14 @@ class SearchCommanderImpl @Inject() (
 
     val mergedResult = {
       timing.factory
-      val searcher = mainSearcherFactory(userId, query, lang, maxHits, searchFilter, config)
-
-      timing.search
-      val shardRes = if (maxHits > 0) {
-        searcher.search()
-      } else {
-        log.warn("maxHits is zero")
-        ShardSearchResult.empty
+      val future = Future.traverse(shards.shards){ shard =>
+        val searcher = mainSearcherFactory(shard, userId, query, lang, maxHits, searchFilter, config)
+        SafeFuture{ searcher.search() }
       }
 
-      ResultUtil.merge(Seq(shardRes), maxHits, config)
+      timing.search
+      val results = monitoredAwait.result(future, 10 seconds, "slow search")
+      ResultUtil.merge(results, maxHits, config)
     }
 
     timing.decoration

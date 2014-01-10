@@ -1,6 +1,5 @@
 package com.keepit.search.sharding
 
-import com.keepit.common.db.SequenceNumber
 import com.keepit.search.ArticleStore
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -26,11 +25,12 @@ class ShardedArticleIndexer(
 
       indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
         val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-        total += indexer.doUpdate("ArticleIndex${shard.indexNameSuffix}"){
+        total += indexer.doUpdate(s"ArticleIndex${shard.indexNameSuffix}"){
           next.iterator.map(indexer.buildIndexable)
         }
         rest
       }
+      if (!done) sequenceNumber = uris.last.seq
     }
     total
   }

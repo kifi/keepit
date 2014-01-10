@@ -58,6 +58,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         searchConfigManager.setUserConfig(users(0).id.get, noBoostConfig("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1"))
 
         val searchCommander = new SearchCommanderImpl(
+          activeShards,
           searchConfigManager,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],

@@ -18,24 +18,25 @@ import scala.concurrent.duration._
 import org.h2.tools.Backup
 import com.keepit.common.service.{ServiceStatus, FortyTwoServices}
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.search.sharding.ShardedArticleIndexer
 
 case object Update
 case object BackUp
 
 private[article] class ArticleIndexerActor @Inject() (
     airbrake: AirbrakeNotifier,
-    articleIndexer: ArticleIndexer)
+    shardedArticleIndexer: ShardedArticleIndexer)
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Update => try {
-        sender ! articleIndexer.update()
+        sender ! shardedArticleIndexer.update()
       } catch {
         case e: Exception =>
           airbrake.notify("Error indexing articles", e)
           sender ! -1
       }
-    case BackUp => articleIndexer.backup()
+    case BackUp => shardedArticleIndexer.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -43,11 +44,17 @@ private[article] class ArticleIndexerActor @Inject() (
 trait ArticleIndexerPlugin extends SchedulingPlugin {
   def update(): Int
   def reindex()
+  def refreshSearcher()
+  def numDocs(): Int
+  def sequenceNumber: SequenceNumber
+  def commitSequenceNumber: SequenceNumber
+  def committedAt: Option[String]
+  def getIndexerFor(id: Long): ArticleIndexer
 }
 
 class ArticleIndexerPluginImpl @Inject() (
     actor: ActorInstance[ArticleIndexerActor],
-    articleIndexer: ArticleIndexer,
+    shardedArticleIndexer: ShardedArticleIndexer,
     serviceDiscovery: ServiceDiscovery)
   extends ArticleIndexerPlugin with Logging {
 
@@ -65,7 +72,7 @@ class ArticleIndexerPluginImpl @Inject() (
   }
   override def onStop() {
     log.info("stopping ArticleIndexerPluginImpl")
-    articleIndexer.close()
+    shardedArticleIndexer.close()
   }
 
   override def update(): Int = {
@@ -73,8 +80,22 @@ class ArticleIndexerPluginImpl @Inject() (
     Await.result(future, 1 minutes)
   }
 
-  override def reindex() {
-    articleIndexer.reindex()
+  override def reindex(): Unit = {
+    shardedArticleIndexer.reindex()
     actor.ref ! Update
   }
+
+  override def refreshSearcher(): Unit = {
+    shardedArticleIndexer.refreshSearcher()
+  }
+
+  override def numDocs: Int = shardedArticleIndexer.numDocs
+
+  override def sequenceNumber: SequenceNumber = shardedArticleIndexer.sequenceNumber
+
+  override def commitSequenceNumber: SequenceNumber = shardedArticleIndexer.commitSequenceNumber
+
+  override def committedAt: Option[String] = shardedArticleIndexer.committedAt
+
+  def getIndexerFor(id: Long): ArticleIndexer = shardedArticleIndexer.getIndexerFor(id).asInstanceOf[ArticleIndexer]
 }

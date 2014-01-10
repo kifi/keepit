@@ -22,7 +22,7 @@ trait Repo[M <: Model[M]] {
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
-  def invalidateCache(model: M)(implicit session: RSession): M
+  def invalidateCache(model: M)(implicit session: RSession): Unit
 }
 
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
@@ -43,7 +43,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   import db.Driver.Table
 
   lazy val dbLog = Logger("com.keepit.db")
-  override def invalidateCache(model: M)(implicit session: RSession): M = model
+
+  //todo(martin) remove this default implementation so we force repos to implement it
+  override def invalidateCache(model: M)(implicit session: RSession): Unit = {}
 
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
@@ -67,6 +69,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
       case None => toUpdate.withId(insert(toUpdate))
     }
     invalidateCache(result)
+    result
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
       throw new MySQLIntegrityConstraintViolationException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}").initCause(m)

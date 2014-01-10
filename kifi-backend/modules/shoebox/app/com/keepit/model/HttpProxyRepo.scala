@@ -35,10 +35,9 @@ class HttpProxyRepoImpl @Inject() (
 
   private var allMemCache: Option[Seq[HttpProxy]] = None
 
-  override def invalidateCache(HttpProxy: HttpProxy)(implicit session: RSession) = {
+  override def invalidateCache(HttpProxy: HttpProxy)(implicit session: RSession): Unit = {
     httpProxyAllCache.remove(HttpProxyAllKey())
     allMemCache = None
-    HttpProxy
   }
 
   def allActive()(implicit session: RSession): Seq[HttpProxy] =

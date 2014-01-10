@@ -53,9 +53,8 @@ class UserConnectionRepoImpl @Inject() (
     unfriendedCache.remove(UnfriendedConnectionsKey(userId))
   }
 
-  override def invalidateCache(conn: UserConnection)(implicit session: RSession): UserConnection = {
+  override def invalidateCache(conn: UserConnection)(implicit session: RSession): Unit = {
     Set(conn.user1, conn.user2) foreach invalidateCache
-    conn
   }
 
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int = {

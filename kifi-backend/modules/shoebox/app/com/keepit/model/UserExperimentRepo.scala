@@ -60,9 +60,8 @@ class UserExperimentRepoImpl @Inject()(
     getUserExperiments(userId).contains(experimentType)
   }
 
-  override def invalidateCache(model: UserExperiment)(implicit session: RSession): UserExperiment = {
+  override def invalidateCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
-    model
   }
 
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {

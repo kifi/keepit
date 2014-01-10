@@ -35,8 +35,7 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 
-  override def invalidateCache(kifiInstallation: KifiInstallation)(implicit session: RSession) = {
+  override def invalidateCache(kifiInstallation: KifiInstallation)(implicit session: RSession): Unit = {
     versionCache.set(ExtensionVersionInstallationIdKey(kifiInstallation.externalId), kifiInstallation.version.toString)
-    kifiInstallation
   }
 }

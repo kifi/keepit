@@ -13,7 +13,10 @@ case class Shard(shardId: Int, numShards: Int) {
   def contains(id: Long): Boolean = ((id % numShards.toLong) == shardId.toLong)
 }
 
-case class ActiveShards(shards: Seq[Shard])
+case class ActiveShards(shards: Seq[Shard]) {
+  def find[T](id: Id[T]): Option[Shard] = find(id.id)
+  def find(id: Long): Option[Shard] = shards.find(_.contains(id))
+}
 
 object ActiveShardsSpecParser extends RegexParsers {
 
@@ -34,3 +37,4 @@ object ActiveShardsSpecParser extends RegexParsers {
 
   def num: Parser[Int] = """\d+""".r ^^ { _.toInt }
 }
+
