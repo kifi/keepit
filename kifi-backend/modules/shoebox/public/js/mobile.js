@@ -57,7 +57,12 @@
 		$.each($form.serializeArray(), function (i, field) {
 			data[field.name] = field.value;
 		});
-		$.post('/waitlist', data)
+		$.ajax({
+			type: 'POST',
+			url: '/waitlist',
+			dataType: 'json',
+			data: data
+		})
 		.complete(function (extId) {
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
