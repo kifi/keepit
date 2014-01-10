@@ -10,15 +10,7 @@ import play.api.Plugin
 
 import us.theatr.akka.quartz._
 
-sealed trait SchedulingEnabled
-
-object SchedulingEnabled {
-  case object Always extends SchedulingEnabled
-  case object Never extends SchedulingEnabled
-  case object LeaderOnly extends SchedulingEnabled
-}
-
-trait SchedulingPlugin extends Plugin with Logging {
+trait Scheduler extends Plugin with Logging {
 
   def schedulingProperties: SchedulingProperties
 
@@ -44,11 +36,6 @@ trait SchedulingPlugin extends Plugin with Logging {
       quartz.ref ! AddCronSchedule(receiver, cron, message, false, spigot)
     } else log.info(s"permanently disable cron for task: $taskName")
   }
-
-  def scheduleTaskOnce(system: ActorSystem, initialDelay: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverAllowScheduling) {
-      _cancellables :+= system.scheduler.scheduleOnce(initialDelay) { execute(f, taskName) }
-    } else log.info(s"permanently disable scheduling for task: $taskName")
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
     val taskName = s"send message $message to actor $receiver"

@@ -29,7 +29,7 @@ import com.keepit.serializer.TypeCode
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 
-trait HeimdalServiceClient extends ServiceClient with Plugin {
+trait HeimdalServiceClient extends ServiceClient {
   final val serviceType = ServiceType.HEIMDAL
 
   def trackEvent(event: HeimdalEvent): Unit

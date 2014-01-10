@@ -17,7 +17,7 @@ import com.keepit.common.time._
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-trait MailSenderPlugin extends Plugin {
+trait MailSender {
   def processMail(mail: ElectronicMail)
   def processOutbox()
 }
@@ -25,7 +25,7 @@ trait MailSenderPlugin extends Plugin {
 class MailSenderPluginImpl @Inject() (
     actor: ActorInstance[MailSenderActor],
     val schedulingProperties: SchedulingProperties) //only on leader
-  extends Logging with MailSenderPlugin with SchedulingPlugin {
+  extends Logging with MailSender with SchedulingPlugin {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
