@@ -12,6 +12,7 @@ import org.apache.lucene.index.Term
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.search.IndexManager
 import com.keepit.search.Searcher
 import play.modules.statsd.api.Statsd
 import org.apache.commons.io.FileUtils
@@ -58,7 +59,7 @@ abstract class Indexer[T](
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     fieldDecoders: Map[String, FieldDecoder])
-  extends IndexingEventHandler[T] with Logging {
+  extends IndexManager[Indexer[T]] with IndexingEventHandler[T] with Logging {
 
   def this(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
 
@@ -159,6 +160,8 @@ abstract class Indexer[T](
   def close(): Unit = {
     indexWriter.close()
   }
+
+  def getIndexerFor(id: Long): Indexer[T] = this
 
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
     doWithIndexWriter{ indexWriter =>

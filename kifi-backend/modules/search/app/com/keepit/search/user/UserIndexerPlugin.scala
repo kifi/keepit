@@ -15,9 +15,7 @@ import akka.pattern.ask
 import akka.util.Timeout.durationToTimeout
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.search.article.BackUp
-
-private[user] case object Update
+import com.keepit.search.IndexerPluginMessages._
 
 private[user] class UserIndexerActor @Inject()(
   airbrake: AirbrakeNotifier,
@@ -25,14 +23,14 @@ private[user] class UserIndexerActor @Inject()(
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive = {
-    case Update => try {
+    case UpdateIndex => try {
       sender ! indexer.update()
     } catch {
       case e: Exception =>
         airbrake.notify("Error updating user index", e)
         sender ! -1
     }
-    case BackUp => indexer.backup()
+    case BackUpIndex => indexer.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -52,10 +50,10 @@ class UserIndexerPluginImpl @Inject()(
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnAllMachines(actor.system, 30 seconds, 2 minute, actor.ref, Update)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 2 minute, actor.ref, UpdateIndex)
     log.info("starting UserIndexerPluginImpl")
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTaskOnAllMachines(actor.system, 1 minute, 4 hours, actor.ref, BackUp)
+      scheduleTaskOnAllMachines(actor.system, 1 minute, 4 hours, actor.ref, BackUpIndex)
     }
   }
   override def onStop() {
@@ -64,10 +62,10 @@ class UserIndexerPluginImpl @Inject()(
     indexer.close()
   }
 
-  override def update(): Future[Int] = actor.ref.ask(Update)(2 minutes).mapTo[Int]
+  override def update(): Future[Int] = actor.ref.ask(UpdateIndex)(2 minutes).mapTo[Int]
 
   override def reindex() {
     indexer.reindex()
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 }
