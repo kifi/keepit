@@ -51,6 +51,8 @@ class SemanticVectorQueryTest extends Specification {
     }
 
     def getPersonalizedSeacher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)
+
+    def update(): Int = ???
   }
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing

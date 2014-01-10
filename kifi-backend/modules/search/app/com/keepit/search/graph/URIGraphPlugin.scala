@@ -14,11 +14,10 @@ import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.keepit.search.article.BackUp
+import com.keepit.search.IndexerPluginMessages._
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
 
-case object Update
 
 private[graph] class URIGraphActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -26,14 +25,14 @@ private[graph] class URIGraphActor @Inject() (
   extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case Update => try {
+    case UpdateIndex => try {
         sender ! uriGraph.update()
       } catch {
         case e: Exception =>
           airbrake.notify("Error updating uri graph", e)
           sender ! -1
       }
-    case BackUp => uriGraph.backup()
+    case BackUpIndex => uriGraph.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -55,10 +54,10 @@ class URIGraphPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
+    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, UpdateIndex)
     log.info("starting URIGraphPluginImpl")
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 10 minutes, 3 hours, actor.ref, BackUp)
+      scheduleTask(actor.system, 10 minutes, 3 hours, actor.ref, BackUpIndex)
     }
   }
   override def onStop() {
@@ -68,16 +67,16 @@ class URIGraphPluginImpl @Inject() (
   }
 
   override def update() {
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 
   override def reindex() {
     uriGraph.reindex()
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 
   override def reindexCollection() {
     uriGraph.reindexCollection()
-    actor.ref ! Update
+    actor.ref ! UpdateIndex
   }
 }
