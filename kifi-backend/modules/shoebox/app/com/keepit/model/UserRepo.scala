@@ -69,14 +69,13 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def deleteCache(user: User): User = {
+  def deleteCache(user: User): Unit = {
     for (id <- user.id) {
       idCache.remove(UserIdKey(id))
       basicUserCache.remove(BasicUserUserIdKey(id))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
-    user
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
@@ -87,7 +86,6 @@ class UserRepoImpl @Inject() (
 
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     invalidateMixpanel(user)
-    user
   }
 
   private def invalidateMixpanel(user: User) = SafeFuture {

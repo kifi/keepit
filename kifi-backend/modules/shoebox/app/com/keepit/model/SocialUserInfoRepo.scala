@@ -52,14 +52,13 @@ class SocialUserInfoRepoImpl @Inject() (
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
 
-  def deleteCache(socialUser: SocialUserInfo): SocialUserInfo = {
+  def deleteCache(socialUser: SocialUserInfo):Unit = {
     socialUser.userId map { userId =>
       userCache.remove(SocialUserInfoUserKey(userId))
       socialUserCache.remove(SocialUserKey(userId))
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
-    socialUser
   }
 
   override def count(implicit session: RSession): Int = {
