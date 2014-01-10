@@ -14,9 +14,9 @@ case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {
   def getPictureUrl(width: Option[Int], user: User, picVersion: String): Future[String] =
     promise[String]().success(s"http://cloudfront/${user.id.get}_${width.getOrElse(100)}x${width.getOrElse(100)}_$picVersion").future
 
-  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String): Future[Seq[(String, Try[PutObjectResult])]] =
+  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String, setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]] =
     promise[Seq[(String,Try[PutObjectResult])]]().success(Seq()).future
-  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[(String, Try[PutObjectResult])]] =
+  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]] =
     promise[Seq[(String,Try[PutObjectResult])]]().success(Seq()).future
 
   def uploadTemporaryPicture(file: File): Try[(String, String)] =
