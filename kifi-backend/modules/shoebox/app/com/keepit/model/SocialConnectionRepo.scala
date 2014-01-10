@@ -68,7 +68,7 @@ case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[Soci
   def toKey(): String = id.id.toString
 }
 
-// todo: this cache should be invalidated when a connection is updated in SocialUserInfoRepo, but as it is, it would be very expensive to find all the keys that need invalidation
+// todo(eishay): this cache should be invalidated when a connection is updated in SocialUserInfoRepo, but as it is, it would be very expensive to find all the keys that need invalidation
 class SocialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](stats, accessLog, inner, outer: _*)
 
