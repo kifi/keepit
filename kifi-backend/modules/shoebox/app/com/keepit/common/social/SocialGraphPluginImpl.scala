@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -115,8 +115,8 @@ private[social] class SocialGraphActor @Inject() (
 class SocialGraphPluginImpl @Inject() (
   graphs: Set[SocialGraph],
   actor: ActorInstance[SocialGraphActor],
-  val schedulingProperties: SchedulingProperties) //only on leader
-  extends SocialGraphPlugin with Logging with SchedulingPlugin {
+  val scheduling: SchedulingProperties) //only on leader
+  extends SocialGraphPlugin with Logging with SchedulerPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -124,7 +124,7 @@ class SocialGraphPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    scheduleTask(actor.system, 10 seconds, 1 minutes, actor.ref, FetchAll)
+    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minutes, actor.ref, FetchAll)
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")

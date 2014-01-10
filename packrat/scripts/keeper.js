@@ -158,7 +158,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
               suppressed: isSticky,
               mustHoverFor: 100,
               canLeaveFor: 800,
-              hideAfter: 4000,
               click: 'hide',
               parent: btn
             });

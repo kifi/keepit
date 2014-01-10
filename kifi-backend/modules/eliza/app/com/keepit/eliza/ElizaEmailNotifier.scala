@@ -1,7 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.eliza.model._
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
@@ -9,8 +9,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model.{UserStates, User}
-import com.keepit.common.db.{Id}
-import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.common.db.Id
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
 import com.keepit.inject.AppScoped
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -100,16 +100,15 @@ class ElizaEmailNotifierActor @Inject() (
   }
 }
 
-
 @ImplementedBy(classOf[ElizaEmailNotifierPluginImpl])
-trait ElizaEmailNotifierPlugin extends SchedulingPlugin {
+trait ElizaEmailNotifierPlugin extends SchedulerPlugin {
   def sendEmails(): Unit
 }
 
 @AppScoped
 class ElizaEmailNotifierPluginImpl @Inject() (
     actor: ActorInstance[ElizaEmailNotifierActor],
-    val schedulingProperties: SchedulingProperties) //only on leader
+    val scheduling: SchedulingProperties)
   extends ElizaEmailNotifierPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 second)
@@ -117,7 +116,7 @@ class ElizaEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ElizaEmailNotifierPluginImpl")
-    scheduleTask(actor.system, 30 seconds, 2 minutes, actor.ref, SendEmails)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendEmails)
   }
 
   override def sendEmails() {

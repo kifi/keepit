@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
 import com.keepit.search.index.Indexer
@@ -39,7 +39,7 @@ trait IndexManager[T <: Indexer[_]] {
   def getIndexerFor(id: Long): T
 }
 
-trait IndexerPlugin[T <: Indexer[_]] extends SchedulingPlugin {
+trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
   def update(): Int
   def reindex()
   def refreshSearcher()
@@ -60,16 +60,15 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
 
   val name: String = getClass.toString
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateIndex)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateIndex)
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
+      scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
     }
   }
   override def onStop() {

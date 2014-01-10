@@ -162,12 +162,14 @@
 .body-font() {
 	font-family: 'Open Sans', sans-serif;
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 	text-rendering: optimizeLegibility;
 }
 
 .header-font() {
 	font-family: 'Raleway', sans-serif;
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 	text-rendering: optimizeLegibility;
 }
 
@@ -179,7 +181,7 @@ body {
 	.body-font;
 }
 
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
 body {
 	font-size: @bodyFontSizeLarge;
 }

@@ -8,7 +8,7 @@ import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessag
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import play.api.Plugin
 import com.keepit.model.{User, EmailAddressRepo, UserNotifyPreferenceRepo, EmailOptOutRepo}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
@@ -17,20 +17,20 @@ import com.keepit.common.time._
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-trait MailSenderPlugin extends Plugin {
+trait MailSenderPlugin {
   def processMail(mail: ElectronicMail)
   def processOutbox()
 }
 
 class MailSenderPluginImpl @Inject() (
     actor: ActorInstance[MailSenderActor],
-    val schedulingProperties: SchedulingProperties) //only on leader
-  extends Logging with MailSenderPlugin with SchedulingPlugin {
+    val scheduling: SchedulingProperties) //only on leader
+  extends Logging with MailSenderPlugin with SchedulerPlugin {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 5 seconds, 5 seconds, actor.ref, ProcessOutbox)
+    scheduleTaskOnLeader(actor.system, 5 seconds, 5 seconds, actor.ref, ProcessOutbox)
   }
 
   override def processOutbox() { actor.ref ! ProcessOutbox }

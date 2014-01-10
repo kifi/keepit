@@ -6,9 +6,9 @@ import scala.concurrent.duration.DurationInt
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.healthcheck.{AirbrakeError,AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 
 import akka.actor.actorRef2Scala
 import akka.pattern.ask
@@ -36,7 +36,7 @@ private[user] class UserIndexerActor @Inject()(
 
 }
 
-trait UserIndexerPlugin extends SchedulingPlugin {
+trait UserIndexerPlugin extends SchedulerPlugin {
   def update(): Future[Int]
   def reindex(): Unit
 }
@@ -44,17 +44,16 @@ trait UserIndexerPlugin extends SchedulingPlugin {
 class UserIndexerPluginImpl @Inject()(
    actor: ActorInstance[UserIndexerActor],
    indexer: UserIndexer,
-  serviceDiscovery: ServiceDiscovery
+  serviceDiscovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties
 ) extends UserIndexerPlugin {
-
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 2 minute, actor.ref, UpdateIndex)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 2 minute, actor.ref, UpdateIndex)
     log.info("starting UserIndexerPluginImpl")
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 1 minute, 4 hours, actor.ref, BackUpIndex)
+      scheduleTaskOnAllMachines(actor.system, 1 minute, 4 hours, actor.ref, BackUpIndex)
     }
   }
   override def onStop() {
