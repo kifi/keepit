@@ -20,9 +20,9 @@ object ElizaGlobal extends FortyTwoGlobal(Prod) with ElizaServices {
 
 trait ElizaServices { self: FortyTwoGlobal =>
   def startElizaServices() {
-    require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[FortyTwoCachePlugin].enabled)
-    require(injector.instance[InMemoryCachePlugin].enabled)
-    require(injector.instance[ElizaEmailNotifierPlugin].enabled)
+    require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[ElizaEmailNotifierPlugin] != null) //make sure its not lazy loaded
   }
 }

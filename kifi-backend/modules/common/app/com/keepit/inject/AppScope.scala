@@ -5,7 +5,7 @@ import com.google.inject.Provider
 import com.google.inject.Scope
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.SchedulerPlugin
 import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
@@ -62,7 +62,7 @@ class AppScope extends Scope with Logging {
         for (plugin <- plugins) {
           log.info("stopping plugin: " + plugin)
           plugin match {
-            case p: SchedulingPlugin =>
+            case p: SchedulerPlugin =>
               p.cancelTasks()
               p.onStop()
             case p =>

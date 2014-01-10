@@ -1,7 +1,7 @@
 package com.keepit.search.message
 
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
@@ -40,7 +40,7 @@ class MessageIndexerActor @Inject() (
 }
 
 
-trait MessageIndexerPlugin extends SchedulingPlugin {
+trait MessageIndexerPlugin {
   def update(): Future[Int]
   def reindex(): Unit
 }
@@ -48,17 +48,17 @@ trait MessageIndexerPlugin extends SchedulingPlugin {
 class MessageIndexerPluginImpl @Inject() (
     actor: ActorInstance[MessageIndexerActor],
     messageIndexer: MessageIndexer,
-    serviceDiscovery: ServiceDiscovery)
-  extends MessageIndexerPlugin with Logging {
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties)
+  extends MessageIndexerPlugin with SchedulerPlugin with Logging {
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, UpdateIndex)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minute, actor.ref, UpdateIndex)
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 15 minutes, 2 hours, actor.ref, BackUp)
+      scheduleTaskOnAllMachines(actor.system, 15 minutes, 2 hours, actor.ref, BackUp)
     }
     log.info("starting MessageIndexerPluginImpl")
   }

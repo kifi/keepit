@@ -12,22 +12,22 @@ import com.keepit.model._
 import akka.actor.{Actor, Cancellable, Props, ActorSystem}
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.zookeeper.LongCentralConfigKey
 
 
-trait DataIntegrityPlugin extends SchedulingPlugin
+trait DataIntegrityPlugin extends SchedulerPlugin
 
 class DataIntegrityPluginImpl @Inject() (
     actor: ActorInstance[DataIntegrityActor],
-    val schedulingProperties: SchedulingProperties) //only on leader
+    val scheduling: SchedulingProperties) //only on leader
   extends Logging with DataIntegrityPlugin {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 5 minutes, 1 hour, actor.ref, Cron)
+    scheduleTaskOnLeader(actor.system, 5 minutes, 1 hour, actor.ref, Cron)
   }
 }
 

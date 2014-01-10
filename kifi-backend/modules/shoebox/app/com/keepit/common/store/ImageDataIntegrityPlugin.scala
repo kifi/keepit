@@ -91,14 +91,14 @@ trait ImageDataIntegrityPlugin extends Plugin {
 class ImageDataIntegrityPluginImpl @Inject()(
     system: ActorSystem,
     actor: ActorInstance[ImageDataIntegrityActor],
-    val schedulingProperties: SchedulingProperties //only on leader
-  ) extends SchedulingPlugin with ImageDataIntegrityPlugin {
+    val scheduling: SchedulingProperties //only on leader
+  ) extends SchedulerPlugin with ImageDataIntegrityPlugin {
   def verifyAll() {
     actor.ref ! VerifyAllPictures
   }
 
   override def onStart() {
-    scheduleTask(system, 2 minutes, 1 hour, actor.ref, VerifyAllPictures)
+    scheduleTaskOnLeader(system, 2 minutes, 1 hour, actor.ref, VerifyAllPictures)
     super.onStart()
   }
 }

@@ -9,7 +9,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{Success, Failure}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import akka.util.Timeout
 import play.api.Plugin
@@ -77,15 +77,14 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actor: ActorInstance[RemotePostOfficeActor])
-  extends RemotePostOfficePlugin with SchedulingPlugin {
-
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+    actor: ActorInstance[RemotePostOfficeActor],
+    val scheduling: SchedulingProperties)
+  extends RemotePostOfficePlugin with SchedulerPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
+     scheduleTaskOnAllMachines(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
   }
   def sendMail(mail: ElectronicMail) = actor.ref ! SendEmail(mail)
 }

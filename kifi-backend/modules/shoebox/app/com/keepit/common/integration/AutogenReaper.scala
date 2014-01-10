@@ -9,18 +9,18 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import play.api.{Play, Plugin}
 import play.api.Play.current
 
-trait AutogenReaperPlugin extends Plugin {
+trait AutogenReaperPlugin {
   def reap()
 }
 
 class AutogenReaperPluginImpl @Inject() (
   actor: ActorInstance[AutogenAcctReaperActor],
-  val schedulingProperties: SchedulingProperties //only on leader
-) extends Logging with AutogenReaperPlugin with SchedulingPlugin {
+  val scheduling: SchedulingProperties //only on leader
+    ) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
 
   log.info(s"<ctr> ReaperPlugin created")
 
@@ -30,7 +30,7 @@ class AutogenReaperPluginImpl @Inject() (
     for (app <- Play.maybeApplication) {
       val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 1 hour)
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
-      scheduleTask(actor.system, initDelay, freq, actor.ref, Reap)
+      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, Reap)
     }
   }
 
