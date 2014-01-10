@@ -30,7 +30,7 @@ class AutogenReaperPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
-      val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 1 hour)
+      val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 15 minutes)
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
       scheduleTask(actor.system, initDelay, freq, actor.ref, Reap)
     }
