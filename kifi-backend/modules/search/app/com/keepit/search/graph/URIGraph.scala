@@ -5,6 +5,7 @@ import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.graph.collection._
 
 @ImplementedBy(classOf[URIGraphImpl])
 trait URIGraph {

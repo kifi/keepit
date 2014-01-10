@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.graph.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
-import com.keepit.search.graph.CollectionSearcherWithUser
+import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet

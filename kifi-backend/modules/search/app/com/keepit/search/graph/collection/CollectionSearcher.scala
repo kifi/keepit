@@ -1,11 +1,10 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.collection
 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.model.{NormalizedURI, User, Collection}
-import com.keepit.search.graph.CollectionFields._
 import com.keepit.search.Searcher
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.util.LongArraySet
@@ -14,6 +13,14 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.graph.BaseGraphSearcher
+import com.keepit.search.graph.DocIdSetEdgeSet
+import com.keepit.search.graph.EdgeSet
+import com.keepit.search.graph.LongSetEdgeSetWithAttributes
+import com.keepit.search.graph.LuceneBackedEdgeSet
+import com.keepit.search.graph.URIList
+import com.keepit.search.graph.Util
+import com.keepit.search.graph.collection.CollectionFields._
 
 
 class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {
