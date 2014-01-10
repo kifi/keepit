@@ -32,6 +32,8 @@ var notifier = function () {
           threadId: o.thread
         });
         break;
+      case 'triggered':
+        // currently handled the same as globals:
       case 'global':
         this.hide(o.thread);
         add({
@@ -99,7 +101,7 @@ var notifier = function () {
   }
 
   function onClickGlobal(threadId, messageId, url, e) {
-    api.port.emit('set_global_read', {threadId: threadId, messageId: messageId});
+    api.port.emit('set_message_read', {threadId: threadId, messageId: messageId});
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
     if (url && url !== document.URL) {
       if (inThisTab) {

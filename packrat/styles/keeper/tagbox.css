@@ -1,9 +1,9 @@
 /*
  * Clear fix
- */.kifi-group {
+ */
+.kifi-group {
   zoom: 1;
   /* For IE 6/7 (trigger hasLayout) */
-
 }
 .kifi-group::before,
 .kifi-group::after {
@@ -124,7 +124,6 @@
 .kifi-tagbox-input-box table th {
   padding: 0;
   /* 'cellpadding' equivalent */
-
 }
 .kifi-tagbox-input-box.kifi-focus .kifi-tagbox-input-placeholder {
   color: #bfcbd6;
