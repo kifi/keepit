@@ -1,4 +1,4 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.collection
 
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
@@ -6,6 +6,8 @@ import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import com.keepit.search.graph.URIGraphUnsupportedVersionException
+import com.keepit.search.graph.Util
 
 trait CollectionIdList {
   val version: Int

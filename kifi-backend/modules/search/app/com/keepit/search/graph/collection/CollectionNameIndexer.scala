@@ -1,4 +1,4 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.collection
 
 import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.db._

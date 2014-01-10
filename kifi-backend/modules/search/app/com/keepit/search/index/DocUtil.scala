@@ -1,7 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.time._
-import com.keepit.search.graph.CollectionIdList
+import com.keepit.search.graph.collection.CollectionIdList
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.line.LineField

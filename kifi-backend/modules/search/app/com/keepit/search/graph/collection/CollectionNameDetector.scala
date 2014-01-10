@@ -1,9 +1,5 @@
-package com.keepit.search.graph
+package com.keepit.search.graph.collection
 
-import com.keepit.common.db.Id
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging.Logging
-import com.keepit.model.Collection
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
