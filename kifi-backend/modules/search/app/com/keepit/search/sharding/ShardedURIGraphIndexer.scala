@@ -1,7 +1,7 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
-import com.keepit.search.graph.URIGraphIndexer
+import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.index.Indexer
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await

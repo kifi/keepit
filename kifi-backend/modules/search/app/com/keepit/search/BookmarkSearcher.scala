@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.search.graph.URIGraphSearcherWithUser
+import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.parser.DefaultSyntax
