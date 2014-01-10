@@ -61,26 +61,28 @@ private[integration] class AutogenAcctReaperActor @Inject() (
         implicit val userOrd = new Ordering[Id[User]] {
           def compare(x: Id[User], y: Id[User]): Int = x.id compare y.id
         }
-        val userIds = new mutable.TreeSet[Id[User]]
-        generated foreach { exp =>
-          userIds += exp.userId
+        for (exp <- generated) {
+          userSessionRepo.invalidateByUser(exp.userId)
+          userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
+            userExperimentRepo.delete(exp)
+          }
+          for (emailAddr <- emailAddressRepo.getAllByUser(exp.userId)) {
+            emailAddressRepo.delete(emailAddr)
+          }
+          for (sui <- socialUserInfoRepo.getByUser(exp.userId)) {
+            socialUserInfoRepo.delete(sui)
+          }
+          for (cred <- userCredRepo.findByUserIdOpt(exp.userId)) {
+            userCredRepo.delete(cred)
+          }
           val user = userRepo.get(exp.userId)
           log.info(s"[reap] processing $user")
-          userSessionRepo.invalidateByUser(exp.userId)
-          userRepo.save(user.withState(UserStates.INACTIVE)) // mark as inactive for now; delete later
-          socialUserInfoRepo.getByUser(exp.userId) map { sui =>
-            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE))
-          }
-          emailAddressRepo.getAllByUser(exp.userId) foreach { emailAddr =>
-            emailAddressRepo.save(emailAddr.withState(EmailAddressStates.INACTIVE))
-          }
-          // skip UserCred/UserExp for now; delete later
+          // todo: userRepo.delete(user) -- not there yet (bookmarks/keeps, etc.)
+          userRepo.save(user.withState(UserStates.INACTIVE))
         }
-        log.info(s"[reap] got (${userIds.size}) users")
-        for (id <- userIds) {
-          userExperimentRepo.getAllUserExperiments(id) foreach { exp =>
-            val count = userExperimentRepo.delete(exp)
-            log.info(s"[reap] userExp ($exp) DELETE result:$count")
+        generated foreach { exp =>
+          userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
+            userExperimentRepo.delete(exp)
           }
         }
       }

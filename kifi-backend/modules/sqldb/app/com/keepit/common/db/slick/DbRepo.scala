@@ -15,6 +15,7 @@ import DBSession._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Logger
+import scala.reflect.ClassTag
 
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
@@ -28,6 +29,10 @@ trait Repo[M <: Model[M]] {
 trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
   def deleteCache(model: M): M
   def delete(model: M)(implicit session:RWSession):Int
+
+  // potentially more efficient variant but we currently depend on having the model available for our caches
+  // def deleteCacheById(id: Id[M]): Int
+  // def deleteById(id: Id[M])(implicit ev$0:ClassTag[M], session:RWSession):Int
 }
 
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
