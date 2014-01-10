@@ -109,7 +109,7 @@ class S3ScreenshotStoreImpl(
                   val om = new ObjectMetadata()
                   om.setContentType("image/jpeg")
                   om.setContentLength(contentLength)
-                  om.setCacheControl("max-age=1800")
+                  om.setCacheControl("public, max-age=1800")
                   val key = keyByExternalId(externalId, size)
                   val s3obj = s3Client.putObject(config.bucketName, key, imageStream, om)
                   log.info(s"Uploading screenshot of $url to S3 key $key")
