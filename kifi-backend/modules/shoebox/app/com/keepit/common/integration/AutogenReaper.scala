@@ -70,7 +70,7 @@ private[integration] class AutogenAcctReaperActor @Inject() (
             emailAddressRepo.delete(emailAddr)
           }
           for (sui <- socialUserInfoRepo.getByUser(exp.userId)) {
-            socialUserInfoRepo.delete(sui)
+            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE)) // also not there yet
           }
           for (cred <- userCredRepo.findByUserIdOpt(exp.userId)) {
             userCredRepo.delete(cred)
