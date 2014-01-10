@@ -31,20 +31,20 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
 trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
-    require(injector.instance[ScrapeSchedulerPlugin].enabled)
-    require(injector.instance[SocialGraphPlugin].enabled)
-    require(injector.instance[SocialGraphRefresher].enabled)
-    require(injector.instance[MailSenderPlugin].enabled)
-    require(injector.instance[AutogenReaperPlugin].enabled)
+    require(injector.instance[ScrapeSchedulerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[SocialGraphRefresher] != null) //make sure its not lazy loaded
+    require(injector.instance[MailSenderPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[AutogenReaperPlugin] != null) //make sure its not lazy loaded
     injector.instance[MailSenderPlugin].processOutbox()
-    require(injector.instance[MailToKeepPlugin].enabled)
-    require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[DataIntegrityPlugin].enabled)
-    require(injector.instance[UriIntegrityPlugin].enabled)
-    require(injector.instance[FortyTwoCachePlugin].enabled)
-    require(injector.instance[ImageDataIntegrityPlugin].enabled)
-    require(injector.instance[InvitationMailPlugin].enabled)
-    require(injector.instance[GeckoboardReporterPlugin].enabled)
-    require(injector.instance[UriIntegrityPlugin].enabled)
+    require(injector.instance[MailToKeepPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[DataIntegrityPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[ImageDataIntegrityPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[InvitationMailPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
   }
 }

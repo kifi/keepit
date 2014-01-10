@@ -44,14 +44,14 @@ trait SocialGraphRefresher extends Plugin {}
 
 class SocialGraphRefresherImpl @Inject() (
     actor: ActorInstance[SocialGraphRefresherActor],
-    val schedulingProperties: SchedulingProperties) //only on leader
-  extends SocialGraphRefresher with SchedulingPlugin {
+    val scheduling: SchedulingProperties) //only on leader
+  extends SocialGraphRefresher with SchedulerPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actor.system, 90 seconds, 5 minutes, actor.ref, RefreshAll)
+    scheduleTaskOnLeader(actor.system, 90 seconds, 5 minutes, actor.ref, RefreshAll)
   }
 }

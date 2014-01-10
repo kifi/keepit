@@ -11,7 +11,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.db.slick.DBSession.RWSession
 import akka.pattern.{ask, pipe}
@@ -203,7 +203,7 @@ class UriIntegrityActor @Inject()(
 }
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
-trait UriIntegrityPlugin extends SchedulingPlugin  {
+trait UriIntegrityPlugin extends SchedulerPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
@@ -212,13 +212,13 @@ trait UriIntegrityPlugin extends SchedulingPlugin  {
 @Singleton
 class UriIntegrityPluginImpl @Inject() (
   actor: ActorInstance[UriIntegrityActor],
-  val schedulingProperties: SchedulingProperties
+  val scheduling: SchedulingProperties
 ) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
      log.info("starting UriIntegrityPluginImpl")
-     scheduleTask(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
-     scheduleTask(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
+     scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
+     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
   }
   override def onStop() {
      log.info("stopping UriIntegrityPluginImpl")
