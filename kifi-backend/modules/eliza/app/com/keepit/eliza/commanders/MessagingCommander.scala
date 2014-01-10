@@ -130,7 +130,7 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -158,12 +158,13 @@ class MessagingCommander @Inject() (
     val notificationAttempts = userIds.map { userId =>
       Try {
         val (notifJson, userThread) = db.readWrite{ implicit session =>
+          val categoryString = categoryOverride.getOrElse(NotificationCategory.GLOBAL.category)
           val notifJson = Json.obj(
             "id"       -> message.externalId.id,
             "time"     -> message.createdAt,
             "thread"   -> message.threadExtId.id,
             "unread"   -> true,
-            "category" -> NotificationCategory.GLOBAL.category,
+            "category" -> categoryString,
             "title"    -> title,
             "bodyHtml" -> body,
             "linkText" -> linkText,
