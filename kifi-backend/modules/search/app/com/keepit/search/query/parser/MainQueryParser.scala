@@ -87,8 +87,8 @@ class MainQueryParser(
           val phrases = if (phrasesFuture != null ) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, proximityPowerFactor))
-          proxQ.add(ProximityQuery(proxTermsFor("ts"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, 1f))
-          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, 1f))
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))     // disable phrase scoring for title. penalty could be too big
+          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
