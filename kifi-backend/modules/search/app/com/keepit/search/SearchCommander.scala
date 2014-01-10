@@ -101,7 +101,7 @@ class SearchCommanderImpl @Inject() (
       }
 
       timing.search
-      val results = Await.result(future, 10 seconds)
+      val results = monitoredAwait.result(future, 10 seconds, "slow search")
       ResultUtil.merge(results, maxHits, config)
     }
 
