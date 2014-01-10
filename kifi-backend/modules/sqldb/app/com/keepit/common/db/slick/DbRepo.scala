@@ -27,7 +27,7 @@ trait Repo[M <: Model[M]] {
 }
 
 trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
-  def deleteCache(model: M): M
+  def deleteCache(model: M): Unit
   def delete(model: M)(implicit session:RWSession):Int
 
   // potentially more efficient variant but we currently depend on having the model available for our caches

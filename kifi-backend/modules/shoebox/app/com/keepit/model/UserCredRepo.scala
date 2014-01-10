@@ -41,5 +41,5 @@ class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ext
     q.firstOption
   }
 
-  def deleteCache(cred: UserCred): UserCred = cred // no cache
+  def deleteCache(cred: UserCred) {}
 }

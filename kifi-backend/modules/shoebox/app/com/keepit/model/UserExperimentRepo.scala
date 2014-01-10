@@ -69,9 +69,8 @@ class UserExperimentRepoImpl @Inject()(
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
   }
 
-  def deleteCache(model: UserExperiment): UserExperiment = {
+  def deleteCache(model: UserExperiment):Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
-    model
   }
 
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
