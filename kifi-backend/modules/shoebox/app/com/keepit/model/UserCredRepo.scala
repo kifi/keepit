@@ -10,13 +10,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[UserCredRepoImpl])
-trait UserCredRepo extends Repo[UserCred] {
+trait UserCredRepo extends Repo[UserCred] with RepoWithDelete[UserCred] {
   def findByUserIdOpt(id:Id[User])(implicit session:RSession):Option[UserCred]
   def findByEmailOpt(email:String)(implicit session:RSession):Option[UserCred]
 }
 
 @Singleton
-class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[UserCred] with UserCredRepo with Logging {
+class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[UserCred] with DbRepoWithDelete[UserCred] with UserCredRepo with Logging {
 
   import db.Driver.Implicit._
   import DBSession._
@@ -41,4 +41,5 @@ class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ext
     q.firstOption
   }
 
+  def deleteCache(cred: UserCred) {}
 }
