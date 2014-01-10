@@ -31,6 +31,8 @@ class SendgridMailProvider @Inject() (
     heimdal: HeimdalServiceClient)
   extends MailProvider with Logging {
 
+  private val validHeaders = Seq[String]("Reply-To", "List-Unsubscribe", "Precedence")
+
   private class SMTPAuthenticator extends Authenticator {
     override def getPasswordAuthentication(): PasswordAuthentication = {
       val username = "fortytwo"//load from conf
@@ -139,6 +141,15 @@ class SendgridMailProvider @Inject() (
       message.setHeader("In-Reply-To", id.toEmailHeader)
       message.setHeader("References", id.toEmailHeader)
     }
+
+    mail.extraHeaders.foreach{ headers =>
+      validHeaders.foreach{ header =>
+        headers.get(header).foreach{ value =>
+          message.setHeader(header, value)
+        }
+      }
+    }
+
     val multipart = new MimeMultipart("alternative")
 
     val part1 = new MimeBodyPart()

@@ -301,6 +301,10 @@ object FortyTwoTypeMappers {
     def apply(profile:BasicProfile) = new UserPictureSourceMapperDelegate(profile)
   }
 
+  implicit object SimpleKeyValueTypeMapper extends BaseTypeMapper[Map[String,String]] {
+    def apply(profile : BasicProfile) = new SimpleKeyValueMapperDelegate(profile)
+  }
+
 }
 
 //************************************
@@ -673,3 +677,13 @@ class RestrictionMapperDelegate(profile: BasicProfile) extends StringMapperDeleg
   def sourceToDest(value: Restriction): String = value.context
   def safeDestToSource(str: String): Restriction = Restriction(str)
 }
+
+//******************************************
+//       Map[String,String] -> String (json)
+//******************************************
+class SimpleKeyValueMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Map[String,String]](profile) {
+  def zero = Map[String,String]()
+  def sourceToDest(value: Map[String,String]): String = Json.stringify(JsObject(value.mapValues(JsString(_)).toSeq))
+  def safeDestToSource(str: String): Map[String,String] = Json.parse(str).as[JsObject].fields.toMap.mapValues(_.as[JsString].value)
+}
+
