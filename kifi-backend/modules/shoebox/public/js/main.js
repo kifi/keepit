@@ -2064,13 +2064,12 @@ $(function () {
 	var $friendsFilter = $('.friends-filter').on('input', function () {
 		var val = $.trim(this.value);
 		if (val) {
-			var prefixes = val.split(/\s+/);
+			var prefixes = val.toLowerCase().split(/\s+/);
 			$friendsList.find('.friend').filter(function () {
 				var $f = $(this),
 					o = $f.data('o'),
 					names = $.trim(o.firstName + ' ' + o.lastName).toLowerCase().split(/\s+/);
 				$f.toggleClass('no-match', !prefixes.every(function (p) {
-					p = p.toLowerCase();
 					return names.some(function (n) {
 						return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch);
 					});
