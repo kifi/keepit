@@ -39,14 +39,13 @@ class KeepToCollectionRepoImpl @Inject() (
 
   private lazy val bookmarkRepo = bookmarkRepoProvider.get
 
-  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): KeepToCollection = {
+  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForBookmarkCache.set(CollectionsForBookmarkKey(ktc.bookmarkId),
       (for (c <- table if c.bookmarkId === ktc.bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list)
     bookmarksForCollectionCache.set(BookmarksForCollectionKey(ktc.collectionId),
       (for (c <- table if c.collectionId === ktc.collectionId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.bookmarkId).list)
-    ktc
   }
 
   override val table = new RepoTable[KeepToCollection](db, "keep_to_collection") {

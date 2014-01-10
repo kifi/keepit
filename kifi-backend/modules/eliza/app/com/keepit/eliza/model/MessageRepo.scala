@@ -64,10 +64,9 @@ class MessageRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ auxData.? ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
   }
 
-  override def invalidateCache(message:Message)(implicit session:RSession):Message = {
+  override def invalidateCache(message:Message)(implicit session:RSession): Unit = {
     val key = MessagesForThreadIdKey(message.thread)
     messagesForThreadIdCache.remove(key)
-    message
   }
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {

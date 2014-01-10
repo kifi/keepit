@@ -43,9 +43,8 @@ class UserValueRepoImpl @Inject() (
       })
   }
 
-  override def invalidateCache(userValue: UserValue)(implicit session: RSession) = {
+  override def invalidateCache(userValue: UserValue)(implicit session: RSession): Unit = {
     valueCache.remove(UserValueKey(userValue.userId, userValue.name))
-    userValue
   }
 
   def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] = {

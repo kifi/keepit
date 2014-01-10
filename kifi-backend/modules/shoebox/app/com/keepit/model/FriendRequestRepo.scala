@@ -48,9 +48,8 @@ class FriendRequestRepoImpl @Inject() (
     def * = id.? ~ senderId ~ recipientId ~ createdAt ~ updatedAt ~ state <> (FriendRequest.apply _, FriendRequest.unapply _)
   }
 
-  override def invalidateCache(request: FriendRequest)(implicit session: RSession): FriendRequest = {
+  override def invalidateCache(request: FriendRequest)(implicit session: RSession): Unit = {
     friendRequestCountCache.remove(FriendRequestCountKey(request.recipientId))
-    super.invalidateCache(request)
   }
 
   def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int = {

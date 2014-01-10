@@ -48,10 +48,9 @@ class CollectionRepoImpl @Inject() (
       Collection.apply _, Collection.unapply _)
   }
 
-  override def invalidateCache(collection: Collection)(implicit session: RSession): Collection = {
+  override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.set(UserCollectionsKey(collection.userId),
       (for (c <- table if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
-    collection
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =

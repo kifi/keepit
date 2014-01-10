@@ -109,9 +109,8 @@ abstract  class UserTopicRepoBase(
     def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
   }
 
-  override def invalidateCache(topic: UserTopic)(implicit session: RSession): UserTopic = {
+  override def invalidateCache(topic: UserTopic)(implicit session: RSession): Unit = {
     userTopicCache.set(UserTopicKey(topic.userId, flag), topic)
-    topic
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {

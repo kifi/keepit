@@ -41,10 +41,9 @@ class UrlPatternRuleRepoImpl @Inject() (
 
   private var allMemCache: Option[Seq[UrlPatternRule]] = None
 
-  override def invalidateCache(urlPatternRule: UrlPatternRule)(implicit session: RSession) = {
+  override def invalidateCache(urlPatternRule: UrlPatternRule)(implicit session: RSession): Unit = {
     urlPatternRuleAllCache.remove(UrlPatternRuleAllKey())
     allMemCache = None
-    urlPatternRule
   }
 
   def allActive()(implicit session: RSession): Seq[UrlPatternRule] =
