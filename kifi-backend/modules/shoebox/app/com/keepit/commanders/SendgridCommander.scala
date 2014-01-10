@@ -1,12 +1,18 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{LocalPostOffice, PostOffice, EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{LocalPostOffice, PostOffice, EmailAddresses, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
+import com.keepit.heimdal.{UserEventTypes, HeimdalContext, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.model.{EmailAddress, EmailAddressRepo}
 
 class SendgridCommander @Inject() (
   db: Database,
-  postOffice: LocalPostOffice
+  postOffice: LocalPostOffice,
+  heimdalClient: HeimdalServiceClient,
+  emailAddressRepo: EmailAddressRepo,
+  electronicMailRepo: ElectronicMailRepo,
+  heimdalContextBuilder: HeimdalContextBuilderFactory
   ) {
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
@@ -32,6 +38,24 @@ class SendgridCommander @Inject() (
   }
 
   private def report(event: SendgridEvent): Unit = {
-    // todo(Martin): send a user event to Heimdal of type WAS_NOTIFIED, action event.event, channel email cf. MessagingAnalytics.clearedNotification
+    event.event foreach { eventType =>
+      event.email foreach { address =>
+        event.mailId foreach { mailId =>
+        val emailOpt = db.readOnly{ implicit s =>
+          electronicMailRepo.getOpt(mailId).toSet
+        }
+        for {
+          email <- emailOpt if (PostOffice.Categories.User.all.contains(email.category))
+          emailAddress <- db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }
+        } yield {
+            val contextBuilder =  heimdalContextBuilder()
+            contextBuilder += ("action", eventType)
+            contextBuilder.addEmailInfo(email)
+            val userEvent = UserEvent(emailAddress.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED)
+            heimdalClient.trackEvent(userEvent)
+          }
+        }
+      }
+    }
   }
 }
