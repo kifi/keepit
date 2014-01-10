@@ -492,10 +492,20 @@ body {
 
 .kifi-desktop {
 	position: relative;
-	.padding-bottom(41px);
+	padding-bottom: 41px;
 	color: white;
 	background-color: #93c059;
 	text-align: center;
+
+	@media @tablet {
+		padding-bottom: 82px;
+	}
+
+	html.submitted & {
+		@media @tablet {
+			padding-bottom: 39px;
+		}
+	}
 }
 
 .kifi-desktop-img {
@@ -533,10 +543,31 @@ body {
 
 .kifi-desktop-text {
 	@fs: 34px / 2;
-	.font-size(@fs);
+	font-size: @fs;
 	font-weight: 400;
 	line-height: 1.45;
 	.margin-top(9px, @fs);
+
+	@media @tablet {
+		@fs: 46px / 2;
+		font-size: @fs;
+		margin-top: -95px;
+		margin-left: 268px;
+		margin-bottom: 24px;
+		line-height: 1.2;
+	}
+}
+
+.kifi-desktop {
+	.kifi-waiting-input-box {
+		@media @tablet {
+			display: inline-block;
+			padding: 0;
+			width: 268px;
+			margin-left: -56px;
+			margin-right: 3px;
+		}
+	}
 }
 
 .kifi-desktop-button {
@@ -567,20 +598,35 @@ body {
 	margin-top: 17px;
 	margin-bottom: 20px;
 
+	@media @tablet {
+		text-align: center;
+		margin-top: 10px;
+		margin-bottom: 0;
+	}
+
 	h1 {
 		font-size: 56px / 2;
 		font-weight: 300;
 		margin: 0;
+
+		@media @tablet {
+			font-weight: 400;
+		}
 	}
 
 	.kifi-added-email {
 		margin-top: 10px;
 		color: white;
+
+		@media @tablet {
+			font-size: 36px / 2;
+			margin-top: 5px;
+		}
 	}
 
 	.kifi-change-email {
 		display: inline-block;
-		margin-top: 13px;
+		margin-top: 11px;
 		color: white;
 		text-decoration: none;
 
