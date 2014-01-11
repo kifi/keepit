@@ -21,7 +21,6 @@ import scala.math._
 
 
 class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcherWithUser) extends Logging {
-  val currentTime = currentDateTime.getMillis()
 
   val myUriEdges = uriGraphSearcher.myUriEdgeSet
   val myUris = myUriEdges.destIdLongSet

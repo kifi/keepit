@@ -66,11 +66,11 @@ class CollectionWeight(query: CollectionQuery, searcher: PersonalizedSearcher) e
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("collection (${collectionName})")
+      result.setDescription(s"collection (${collectionName})")
       result.setValue(sc.score)
       result.setMatch(true)
     } else {
-      result.setDescription("collection (${collectionName}), doesn't match id %d".format(doc))
+      result.setDescription(s"collection (${collectionName}), doesn't match id %d".format(doc))
       result.setValue(0)
       result.setMatch(false)
     }
