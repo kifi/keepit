@@ -1,7 +1,6 @@
 package com.keepit.search
 
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
@@ -31,12 +30,17 @@ import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ShardedArticleIndexer
+import com.keepit.search.graph.bookmark.URIGraphIndexer
+import com.keepit.search.graph.collection.CollectionIndexer
+import com.keepit.search.graph.bookmark.URIGraphSearcher
+import com.keepit.search.graph.collection.CollectionSearcher
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
-    uriGraph: URIGraph,
+    uriGraphIndexer: URIGraphIndexer,
+    collectionIndexer: CollectionIndexer,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
@@ -116,7 +120,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
-    Promise[URIGraphSearcherWithUser].success(uriGraph.getURIGraphSearcher(userId)).future
+    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)).future
   }
 
   def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
@@ -124,7 +128,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
-    Promise[CollectionSearcherWithUser].success(uriGraph.getCollectionSearcher(userId)).future
+    Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, collectionIndexer)).future
   }
 
   def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
@@ -147,13 +151,13 @@ class MainSearcherFactory @Inject() (
 
   def bookmarkSearcher(shard: Shard, userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher(userId)
+    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
   def semanticVectorSearcher(shard: Shard) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher()
+    val uriGraphSearcher = URIGraphSearcher(uriGraphIndexer)
     new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
   }
 }
