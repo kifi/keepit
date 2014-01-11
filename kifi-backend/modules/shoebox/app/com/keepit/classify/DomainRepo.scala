@@ -24,10 +24,16 @@ trait DomainRepo extends Repo[Domain] {
 @Singleton
 class DomainRepoImpl @Inject()(
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[Domain] with DomainRepo {
+    val clock: Clock,
+    domainCache: DomainCache) extends DbRepo[Domain] with DomainRepo {
   import DBSession._
   import db.Driver.Implicit._
 
+
+  //todo(martin) remove this default implementation so we force repos to implement it
+  override def invalidateCache(domain: Domain)(implicit session: RSession): Unit = {
+    domainCache.set(DomainKey(domain.hostname), domain)
+  }
 
   override val table = new RepoTable[Domain](db, "domain") {
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
@@ -38,7 +44,9 @@ class DomainRepoImpl @Inject()(
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] = {
-    (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+    domainCache.getOrElseOpt(DomainKey(domain)) {
+      (for (d <- table if d.hostname === domain) yield d).firstOption
+    } filter { d => excludeState.map(s => d.state != s).getOrElse(true) }
   }
 
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
