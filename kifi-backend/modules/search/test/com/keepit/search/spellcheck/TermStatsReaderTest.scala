@@ -1,15 +1,16 @@
 package com.keepit.search.spellcheck
 
 import org.specs2.mutable.Specification
-import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.FieldType
 import org.apache.lucene.document.TextField
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import org.apache.lucene.index.DirectoryReader
+import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import org.apache.lucene.index.IndexWriter
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.VolatileIndexDirectoryImpl
 import scala.math.{log, abs}
 
 class TermStatsReaderTest extends Specification {
@@ -38,7 +39,7 @@ class TermStatsReaderTest extends Specification {
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
-      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+      val statsReader = new TermStatsReaderImpl(DirectoryReader.open(articleIndexDir), "c")
       var stats = statsReader.getSimpleTermStats("abc")
       stats.docFreq === 3
       stats.docIds === Set(0,1,2)
@@ -59,7 +60,9 @@ class TermStatsReaderTest extends Specification {
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
-      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+      val indexReader = DirectoryReader.open(articleIndexDir)
+
+      val statsReader = new TermStatsReaderImpl(indexReader, "c")
 
       var docsAndPos = statsReader.getDocsAndPositions("abc", null)
       docsAndPos.size === 3
