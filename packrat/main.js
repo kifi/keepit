@@ -521,9 +521,8 @@ api.port.on({
   },
   message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {
-      if (markRead(o.threadId, o.messageId, o.time) || o.forceSend) {
-        socket.send(['set_message_read', o.messageId]);
-      }
+      markRead(o.threadId, o.messageId, o.time);
+      socket.send(['set_message_read', o.messageId]);
     });
   },
   set_message_read: function (o) {
