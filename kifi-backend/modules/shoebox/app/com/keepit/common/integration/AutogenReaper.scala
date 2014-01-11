@@ -51,10 +51,14 @@ private[integration] class AutogenReaper @Inject() (
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
   userSessionRepo: UserSessionRepo,
+  invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
+
+  val deleteSocialUserInfo = sys.props.getOrElse("cron.reaper.sui.delete", "true").toBoolean
+//  val deleteUser = sys.props.getOrElse("cron.reaper.user.delete", "false").toBoolean
 
   def receive() = {
     case Reap =>
@@ -74,7 +78,16 @@ private[integration] class AutogenReaper @Inject() (
             emailAddressRepo.delete(emailAddr)
           }
           for (sui <- socialUserInfoRepo.getByUser(exp.userId)) {
-            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE)) // also not there yet
+            for (invite <- invitationRepo.getByRecipientSocialUserId(sui.id.get)) {
+              invitationRepo.delete(invite)
+            }
+            if (deleteSocialUserInfo) {
+              log.info(s"[reap] DELETE sui=$sui")
+              socialUserInfoRepo.delete(sui)
+            } else {
+              log.info(s"[reap] DEACTIVATE sui=$sui")
+              socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE)) // also not there yet
+            }
           }
           for (cred <- userCredRepo.findByUserIdOpt(exp.userId)) {
             userCredRepo.delete(cred)
