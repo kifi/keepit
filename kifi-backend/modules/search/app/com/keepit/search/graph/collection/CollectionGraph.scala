@@ -4,6 +4,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db._
 import com.keepit.model._
 
+@ImplementedBy(classOf[CollectionGraphImpl])
 trait CollectionGraph {
   def update(): Int
   def update(userId: Id[User]): Int

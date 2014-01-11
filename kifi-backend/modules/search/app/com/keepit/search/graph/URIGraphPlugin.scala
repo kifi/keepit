@@ -35,7 +35,6 @@ private[graph] class URIGraphActor @Inject() (
 trait URIGraphPlugin {
   def update()
   def reindex()
-  def reindexCollection()
 }
 
 class URIGraphPluginImpl @Inject() (
@@ -70,8 +69,4 @@ class URIGraphPluginImpl @Inject() (
     actor.ref ! UpdateIndex
   }
 
-  override def reindexCollection() {
-    uriGraph.reindexCollection()
-    actor.ref ! UpdateIndex
-  }
 }

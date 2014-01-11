@@ -16,25 +16,32 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
+import com.keepit.search.graph.collection.CollectionGraphPlugin
+import com.keepit.search.graph.collection.CollectionGraph
+import com.keepit.search.graph.collection.CollectionGraphImpl
 
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
+    collectionGraphPlugin: CollectionGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
     mainSearcherFactory: MainSearcherFactory,
-    uriGraph: URIGraph) extends SearchServiceController {
+    uriGraph: URIGraph,
+    collectionGraph: CollectionGraph) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
+    collectionGraphPlugin.reindex()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def reindexCollection() = Action { implicit request =>
-    uriGraphPlugin.reindexCollection()
+    collectionGraphPlugin.reindex()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def updateURIGraph() = Action { implicit request =>
     uriGraphPlugin.update()
+    collectionGraphPlugin.update()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
@@ -52,7 +59,7 @@ class URIGraphController @Inject()(
   def indexInfo = Action { implicit request =>
     val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
     val bookmarkStore = uriGraphIndexer.bookmarkStore
-    val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
+    val collectionIndexer = collectionGraph.asInstanceOf[CollectionGraphImpl].collectionIndexer
 
     Ok(Json.toJson(Seq(
         mkIndexInfo("URIGraphIndex", uriGraphIndexer),
@@ -81,7 +88,7 @@ class URIGraphController @Inject()(
   }
 
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
-    val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
+    val collectionIndexer = collectionGraph.asInstanceOf[CollectionGraphImpl].collectionIndexer
     try {
       val collection = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
       val doc = collectionIndexer.buildIndexable(collection).buildDocument

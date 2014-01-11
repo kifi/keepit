@@ -46,7 +46,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (graph, _, indexer, mainSearcherFactory) = initIndexes(store)
         graph.update() === users.size
         indexer.update() === uris.size
 

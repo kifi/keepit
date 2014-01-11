@@ -28,7 +28,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
           val bookmarks = getBookmarksByUser(user.id.get)
           m + (user.id.get -> saveBookmarksToCollection(coll, bookmarks))
         }
-        val graph = mkURIGraph()
+        val graph = mkCollectionGraph()
         graph.update()
 
         val searcher = graph.getCollectionSearcher()
@@ -56,7 +56,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
 
           m + (user -> saveBookmarksToCollection(coll, bookmarks))
         }
-        val graph = mkURIGraph()
+        val graph = mkCollectionGraph()
         graph.update()
 
         val searcher = graph.getCollectionSearcher()
@@ -83,7 +83,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
 
           (saveBookmarksToCollection(coll, bookmarks), bookmarks)
         }
-        val graph = mkURIGraph()
+        val graph = mkCollectionGraph()
         graph.update()
 
         val searcher = graph.getCollectionSearcher()
@@ -109,7 +109,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
 
           m + (user -> saveBookmarksToCollection(coll, bookmarks))
         }
-        val graph = mkURIGraph()
+        val graph = mkCollectionGraph()
         graph.update()
 
         val searcher = graph.getCollectionSearcher()

@@ -17,7 +17,7 @@ class CollectionGraphPluginImpl @Inject()(
   indexer: CollectionIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[CollectionIndexer, CollectionGraphActor](indexer.asInstanceOf[IndexManager[CollectionIndexer]], actor, serviceDiscovery)
+) extends IndexerPluginImpl[CollectionIndexer, CollectionGraphActor](indexer.asInstanceOf[IndexManager[CollectionIndexer]], actor, serviceDiscovery) with CollectionGraphPlugin
 
 class CollectionGraphActor @Inject()(
   airbrake: AirbrakeNotifier,
