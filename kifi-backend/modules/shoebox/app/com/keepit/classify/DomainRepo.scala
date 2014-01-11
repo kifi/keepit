@@ -39,7 +39,7 @@ class DomainRepoImpl @Inject()(
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] = {
-    domainCache.getOrElse(DomainKey(domain)) {
+    domainCache.getOrElseOpt(DomainKey(domain)) {
       (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
     }
   }
