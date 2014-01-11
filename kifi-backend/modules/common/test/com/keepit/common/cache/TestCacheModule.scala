@@ -7,6 +7,7 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
+import com.keepit.classify.DomainCache
 
 case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
 
@@ -74,6 +75,11 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def userIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserIdCache(stats, accessLog, (outerRepo, 24 hours))
+
+  @Singleton
+  @Provides
+  def domainCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new DomainCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
