@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{Collection, CollectionStates, NormalizedURI, User}
-import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
+import com.keepit.search.graph.{URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
 import play.api.libs.json._
@@ -17,16 +17,17 @@ import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
 import com.keepit.search.graph.collection.CollectionGraphPlugin
-import com.keepit.search.graph.collection.CollectionGraph
-import com.keepit.search.graph.collection.CollectionGraphImpl
+
+import com.keepit.search.graph.bookmark.URIGraphIndexer
+import com.keepit.search.graph.collection.CollectionIndexer
 
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
     mainSearcherFactory: MainSearcherFactory,
-    uriGraph: URIGraph,
-    collectionGraph: CollectionGraph) extends SearchServiceController {
+    uriGraphIndexer: URIGraphIndexer,
+    collectionIndexer: CollectionIndexer) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
@@ -57,9 +58,7 @@ class URIGraphController @Inject()(
   }
 
   def indexInfo = Action { implicit request =>
-    val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
     val bookmarkStore = uriGraphIndexer.bookmarkStore
-    val collectionIndexer = collectionGraph.asInstanceOf[CollectionGraphImpl].collectionIndexer
 
     Ok(Json.toJson(Seq(
         mkIndexInfo("URIGraphIndex", uriGraphIndexer),
@@ -78,7 +77,6 @@ class URIGraphController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>
-    val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
     try {
       val doc = uriGraphIndexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
       Ok(html.admin.luceneDocDump("URIGraph", doc, uriGraphIndexer))
@@ -88,7 +86,6 @@ class URIGraphController @Inject()(
   }
 
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
-    val collectionIndexer = collectionGraph.asInstanceOf[CollectionGraphImpl].collectionIndexer
     try {
       val collection = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
       val doc = collectionIndexer.buildIndexable(collection).buildDocument

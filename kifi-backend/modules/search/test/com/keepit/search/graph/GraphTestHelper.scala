@@ -118,15 +118,6 @@ trait GraphTestHelper extends ApplicationInjector {
     new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
-  def mkURIGraph(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphImpl = {
-    new URIGraphImpl(mkURIGraphIndexer(uriGraphDir), inject[ShoeboxServiceClient], inject[MonitoredAwait])
-  }
-
-  def mkCollectionGraph(collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CollectionGraphImpl = {
-    new CollectionGraphImpl(mkCollectionIndexer(collectionDir))
-  }
-
-
   def addConnections(connections: Map[Id[User], Set[Id[User]]]) {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveConnections(connections)

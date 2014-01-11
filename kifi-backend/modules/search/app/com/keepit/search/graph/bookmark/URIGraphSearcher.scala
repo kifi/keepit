@@ -36,7 +36,7 @@ object URIGraphSearcher {
     new URIGraphSearcher(indexSearcher, storeSearcher)
   }
 
-  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): URIGraphSearcher = {
+  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
     new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
   }

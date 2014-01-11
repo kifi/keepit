@@ -28,10 +28,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
           val bookmarks = getBookmarksByUser(user.id.get)
           m + (user.id.get -> saveBookmarksToCollection(coll, bookmarks))
         }
-        val graph = mkCollectionGraph()
-        graph.asInstanceOf[CollectionGraphImpl].collectionIndexer.update()
+        val indexer = mkCollectionIndexer()
+        indexer.update()
 
-        val searcher = graph.getCollectionSearcher()
+        val searcher =CollectionSearcher(indexer)
 
         val positiveUsers = usersWithCollection.map(_.id.get).toSet
         users.forall{ user =>
@@ -56,10 +56,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
 
           m + (user -> saveBookmarksToCollection(coll, bookmarks))
         }
-        val graph = mkCollectionGraph()
-        graph.asInstanceOf[CollectionGraphImpl].collectionIndexer.update()
+        val indexer = mkCollectionIndexer()
+        indexer.update()
 
-        val searcher = graph.getCollectionSearcher()
+        val searcher =CollectionSearcher(indexer)
 
         expectedUriToUsers.forall{ case (uri, users) =>
           val answer = searcher.getUriToCollectionEdgeSet(uri.id.get)
@@ -83,10 +83,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
 
           (saveBookmarksToCollection(coll, bookmarks), bookmarks)
         }
-        val graph = mkCollectionGraph()
-        graph.asInstanceOf[CollectionGraphImpl].collectionIndexer.update()
+        val indexer = mkCollectionIndexer()
+        indexer.update()
 
-        val searcher = graph.getCollectionSearcher()
+        val searcher =CollectionSearcher(indexer)
 
         collections.forall{ case (coll, bookmarks) =>
           val answer = searcher.getCollectionToUriEdgeSet(coll.id.get)
@@ -109,10 +109,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
 
           m + (user -> saveBookmarksToCollection(coll, bookmarks))
         }
-        val graph = mkCollectionGraph()
-        graph.asInstanceOf[CollectionGraphImpl].collectionIndexer.update()
+        val indexer = mkCollectionIndexer()
+        indexer.update()
 
-        val searcher = graph.getCollectionSearcher()
+        val searcher =CollectionSearcher(indexer)
 
         expectedUriToUsers.forall{ case (uri, users) =>
           val uriToColl = searcher.getUriToCollectionEdgeSet(uri.id.get)

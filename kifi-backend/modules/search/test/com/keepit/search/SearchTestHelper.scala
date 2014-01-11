@@ -19,7 +19,6 @@ import com.keepit.search.phrasedetector.FakePhraseIndexer
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
-import com.keepit.search.graph.{URIGraphImpl}
 import com.keepit.search.graph.collection._
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.query.parser.MainQueryParserFactory
@@ -73,10 +72,8 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val uriGraph = new URIGraphImpl(uriGraphIndexer, inject[ShoeboxServiceClient],inject[MonitoredAwait])
 
     val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val collectionGraph = new CollectionGraphImpl(collectionIndexer)
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -84,8 +81,8 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val mainSearcherFactory = new MainSearcherFactory(
       shardedArticleIndexer,
       userIndexer,
-      uriGraph,
-      collectionGraph,
+      uriGraphIndexer,
+      collectionIndexer,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,
       inject[BrowsingHistoryTracker],
