@@ -1,8 +1,8 @@
 {
-  "name": "Kifi Beta",
+  "name": "kifi",
   "version": "see build.properties",
   "manifest_version": 2,
-  "description": "Kifi Private Beta",
+  "description": "Search like normal, find like never before",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",
