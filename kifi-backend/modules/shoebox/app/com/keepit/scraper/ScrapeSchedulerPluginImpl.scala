@@ -14,7 +14,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
 import play.modules.statsd.api.Statsd
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingPropertiesImpl, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 
 case object ScheduleScrape
 
