@@ -6,7 +6,7 @@ import scala.concurrent.Promise
 import scala.util.Try
 import org.joda.time.Weeks
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
+import com.amazonaws.services.s3.model.{CopyObjectRequest, PutObjectResult, ObjectMetadata}
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.{Id, ExternalId}
@@ -147,7 +147,7 @@ class S3ImageStoreImpl @Inject() (
       } yield {
         val px = if (sizeName == "original") "1000" else sizeName
         val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
-        val usedImage = if(useDefaultImage) S3UserPictureConfig.defaultName else originalImageUrl
+        val usedImage = if(useDefaultImage) S3UserPictureConfig.defaultName else pictureName
         WS.url(originalImageUrl).get().map { response =>
           val key = keyByExternalId(sizeName, externalId, usedImage)
           val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)

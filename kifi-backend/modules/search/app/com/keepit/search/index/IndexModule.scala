@@ -180,10 +180,9 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def spellIndexer(backup: IndexStore): SpellIndexer = {
+  def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer): SpellIndexer = {
     val spellDir = getIndexDirectory("index.spell.directory", noShard, backup)
-    val articleDir = getIndexDirectory("index.article.directory", noShard, backup)
-    SpellIndexer(spellDir, articleDir)
+    SpellIndexer(spellDir, shardedArticleIndexer)
   }
 
 }

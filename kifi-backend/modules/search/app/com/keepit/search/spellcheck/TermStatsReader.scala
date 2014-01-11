@@ -1,8 +1,10 @@
 package com.keepit.search.spellcheck
 
 import org.apache.lucene.store.Directory
+import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.CompositeReader
+import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.SlowCompositeReaderWrapper
-import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.util.{BytesRef, Bits, DocIdBitSet}
 import org.apache.lucene.search.DocIdSetIterator
 import java.util.BitSet
@@ -24,11 +26,16 @@ object TermStatsReader {
   }
 }
 
-class TermStatsReaderImpl(indexDir: Directory, field: String) extends TermStatsReader {
+class TermStatsReaderImpl(indexReader: IndexReader, field: String) extends TermStatsReader {
 
   private def log2(x: Double) = log(x)/log(2)
 
-  lazy val reader = new SlowCompositeReaderWrapper(DirectoryReader.open(indexDir))
+  private[this] val reader: AtomicReader = indexReader match {
+    case atomicReader: AtomicReader => atomicReader
+    case compositeReader: CompositeReader => new SlowCompositeReaderWrapper(compositeReader)
+    case _ => throw new IllegalArgumentException(s"unsupported index reader type: ${indexReader.getClass}")
+  }
+
   lazy val termsEnum = {
     val fields = reader.fields()
     val terms = fields.terms(field)

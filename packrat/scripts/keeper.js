@@ -542,7 +542,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var $tile = $(tile).hoverfu(function (configureHover) {
         // TODO: preload friend pictures
         render('html/keeper/keepers', setKeepersAndCounts(keepers, otherKeeps, {
-          cssClass: 'kifi-keepers-promo' + ($tile.has('.kifi-count') ? ' kifi-above-count' : '')
+          cssClass: 'kifi-keepers-promo' + ($tile.find('.kifi-count').length ? ' kifi-above-count' : '')
         }), function (html) {
           var $tip = $(html).on('transitionend', function unhoverfu(e) {
             if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {

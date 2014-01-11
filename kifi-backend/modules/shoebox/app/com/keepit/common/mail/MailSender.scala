@@ -118,14 +118,7 @@ private[mail] class MailSenderActor @Inject() (
     SafeFuture {
       val contextBuilder =  heimdalContextBuiler()
       contextBuilder += ("action", "sent")
-      contextBuilder += ("channel", "email")
-      contextBuilder += ("category", email.category.category)
-      contextBuilder += ("emailId", email.id.map(_.id.toString).getOrElse(email.externalId.id))
-      contextBuilder += ("subject", email.subject)
-      contextBuilder += ("from", email.from.address)
-      contextBuilder += ("fromName", email.fromName.getOrElse(""))
-      email.inReplyTo.foreach { previousEmailId => contextBuilder += ("inReplyTo", previousEmailId.id) }
-      email.senderUserId.foreach { id => contextBuilder += ("senderUserId", id.id) }
+      contextBuilder.addEmailInfo(email)
 
       val (toUsers, ccUsers) = db.readOnly { implicit session =>
         val cc = for {

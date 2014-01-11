@@ -433,8 +433,17 @@ body {
 	background-color: #f6f6f6;
 	text-align: center;
 	padding-top: 36px;
-	padding-lr: 20px;
+	padding-left: 20px;
+	padding-right: 20px;
 	padding-bottom: 94px;
+	background-image: url(/assets/img/mobile/mainimageiphone.png);
+	background-size: 778px 209px;
+	background-repeat: no-repeat;
+	background-position: bottom 35px right -8px;
+
+	@media @retina {
+		background-image: url(/assets/img/mobile/mainimageiphone@2x.png);
+	}
 	
 	h2 {
 		@fs: 48px / 2;
@@ -447,15 +456,30 @@ body {
 	@media @tablet {
 		padding-top: 52px;
 		padding-bottom: 63px;
-		background-image: url(/assets/img/mobile/header2.png);
-		background-size: auto 77.5%;
-		background-repeat: no-repeat;
-		background-position: bottom right 83px;
+		background-image: url(/assets/img/mobile/mainimageipad.png);
+		background-size: 756px 212px;
+		background-position: bottom 27px right 84px;
 	}
 
 	@media @retinaTablet {
-		background-image: url(/assets/img/mobile/header2@2x.png);
+		background-image: url(/assets/img/mobile/mainimageipad@2x.png);
 	}
+}
+
+.wistia_embed {
+	position: absolute;
+	top: 25%;
+	left: 5%;
+	width: 90% !important;
+	height: 50% !important;
+	z-index: -10;
+
+	/*
+	&.playing {
+		position: fixed;
+		z-index: 5;
+	}
+	*/
 }
 
 .kifi-play {
@@ -470,6 +494,7 @@ body {
 	background-size: 100%;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+	overflow: hidden;
 
 	@media @retina {
 		background-image: url(/assets/img/mobile/playbuttoniphone@2x.png);

@@ -1,14 +1,14 @@
 package com.keepit.search.spellcheck
 
+import org.specs2.mutable.Specification
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.FieldType
 import org.apache.lucene.document.TextField
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import org.specs2.mutable.Specification
-
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import scala.math.abs
@@ -28,12 +28,15 @@ class SpellCheckerTest extends Specification {
   "spell correcter" should {
     "work" in {
       val articleIndexDir = new VolatileIndexDirectoryImpl()
+
       val spellIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
-      val spellIndexer = SpellIndexer(spellIndexDir, articleIndexDir, SpellCheckerConfig(0f, "lev"))
+      val spellIndexer: SpellIndexer = new SpellIndexerImpl(spellIndexDir, config, SpellCheckerConfig(0f, "lev")) {
+        protected def getIndexReader() = DirectoryReader.open(articleIndexDir)
+      }
       var corrector = new SpellCorrectorImpl(spellIndexer, "slow", enableAdjScore = false)
 
-      val indexWriter = new IndexWriter(articleIndexDir, config)
+      val indexWriter = new IndexWriter(articleIndexDir, new IndexWriterConfig(Version.LUCENE_41, analyzer))
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 

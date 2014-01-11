@@ -348,8 +348,8 @@
 .kifi-keepers-box {
   position: fixed;
   z-index: 999999999991;
-  right: 12px;
-  bottom: 72px;
+  right: 16px;
+  bottom: 78px;
   height: 122px;
   border: 2px solid #b8c5d2;
   border-radius: 5px;
@@ -367,7 +367,6 @@
 }
 .kifi-keepers-box.kifi-above-count {
   bottom: 86px;
-  right: 16px;
 }
 .kifi-keepers-box.kifi-keepers-hover {
   bottom: 70px;

@@ -15,14 +15,14 @@ import play.api.Play.current
 import scala.collection.mutable
 import com.keepit.common.db.Id
 
-trait AutogenReaperPlugin {
+trait AutogenReaperPlugin extends Plugin {
   def reap()
 }
 
 class AutogenReaperPluginImpl @Inject() (
-  actor: ActorInstance[AutogenAcctReaperActor],
+  actor: ActorInstance[AutogenReaper],
   val scheduling: SchedulingProperties //only on leader
-    ) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
+) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
 
   log.info(s"<ctr> ReaperPlugin created")
 
@@ -35,22 +35,30 @@ class AutogenReaperPluginImpl @Inject() (
       scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, Reap)
     }
   }
+  override def onStop() {
+    log.info(s"[AutogenReaperPlugin] stopped")
+    super.onStop
+  }
 
   override def reap() { actor.ref ! Reap }
 }
 
 private[integration] case class Reap()
 
-private[integration] class AutogenAcctReaperActor @Inject() (
+private[integration] class AutogenReaper @Inject() (
   db: Database,
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
   userSessionRepo: UserSessionRepo,
+  invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
+
+  val deleteSocialUserInfo = sys.props.getOrElse("cron.reaper.sui.delete", "true").toBoolean
+//  val deleteUser = sys.props.getOrElse("cron.reaper.user.delete", "false").toBoolean
 
   def receive() = {
     case Reap =>
@@ -70,7 +78,16 @@ private[integration] class AutogenAcctReaperActor @Inject() (
             emailAddressRepo.delete(emailAddr)
           }
           for (sui <- socialUserInfoRepo.getByUser(exp.userId)) {
-            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE)) // also not there yet
+            for (invite <- invitationRepo.getByRecipientSocialUserId(sui.id.get)) {
+              invitationRepo.delete(invite)
+            }
+            if (deleteSocialUserInfo) {
+              log.info(s"[reap] DELETE sui=$sui")
+              socialUserInfoRepo.delete(sui)
+            } else {
+              log.info(s"[reap] DEACTIVATE sui=$sui")
+              socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE)) // also not there yet
+            }
           }
           for (cred <- userCredRepo.findByUserIdOpt(exp.userId)) {
             userCredRepo.delete(cred)
