@@ -55,14 +55,20 @@
 		var $form = $(this);
 		var data = {};
 		$.each($form.serializeArray(), function (i, field) {
-			data[field.name] = field.value;
+			data[field.name] = field.value || void 0;
 		});
-		$.post('/waitlist', data)
-		.complete(function (extId) {
+		$.ajax({
+			url: '/waitlist',
+			type: 'POST',
+			dataType: 'text',
+			contentType: 'application/json',
+			data: JSON.stringify(data)
+		})
+		.complete(function (resp) {
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
-			$('input[name=extId]').val(extId);
+			$('input[name=extId]').val(resp.responseText);
 		});
 	});
 

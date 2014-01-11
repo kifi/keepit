@@ -135,9 +135,11 @@ module.exports = function (grunt) {
 					'css/about.css': 'css/about.less',
 					'css/privacy.css': 'css/privacy.less',
 					'css/auth.css': 'css/auth.less',
+					'css/auth-header.css': 'css/auth-header.less',
 					'css/auth-footer.css': 'css/auth-footer.less',
 					'css/onboarding.css': 'css/onboarding.less',
-					'css/landing-mobile.css': 'css/landing-mobile.less'
+					'css/landing-mobile.css': 'css/landing-mobile.less',
+					'css/unsupported.css': 'css/unsupported.less'
 				}
 			}
 		},
