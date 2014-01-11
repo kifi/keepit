@@ -4,10 +4,10 @@ import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{Scheduler, ActorSystem}
 import com.keepit.inject.AppScoped
 import com.google.inject.Provides
-import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
 import play.api.Play
 import play.api.Play._
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
 
 trait ActorSystemModule extends ScalaModule
 

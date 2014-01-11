@@ -9,7 +9,7 @@ import scala.Some
 import scala.collection.mutable
 
 @ImplementedBy(classOf[InvitationRepoImpl])
-trait InvitationRepo extends Repo[Invitation] with ExternalIdColumnFunction[Invitation] {
+trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] {
   def getAdminAccepted()(implicit session: RSession): Seq[Invitation]
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
                      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
@@ -25,7 +25,7 @@ class InvitationRepoImpl @Inject() (
                                      val userRepo: UserRepoImpl,
                                      val socialUserInfoRepo: SocialUserInfoRepoImpl,
                                      val clock: Clock)
-  extends DbRepo[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
+  extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -41,6 +41,8 @@ class InvitationRepoImpl @Inject() (
 
   private implicit val userIdTypeMapper = userRepo.idMapper
   private implicit val userStateMapper = userRepo.stateTypeMapper
+
+  def deleteCache(model: Invitation) = {}
 
   // TODO: add support for econtactId
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)

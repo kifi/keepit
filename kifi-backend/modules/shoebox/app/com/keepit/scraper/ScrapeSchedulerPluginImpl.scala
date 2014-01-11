@@ -9,12 +9,12 @@ import scala.concurrent.Future
 import akka.util.Timeout
 import scala.concurrent.duration._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
 import play.modules.statsd.api.Statsd
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 
 case object ScheduleScrape
 
@@ -94,6 +94,10 @@ class ScrapeSchedulerPluginImpl @Inject() (
   override def onStart() {
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape)
+  }
+  override def onStop() {
+    log.info(s"[onStop] ScrapeScheduler stopped")
+    super.onStop()
   }
 
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
