@@ -3,4 +3,99 @@
 @import "retina-1.1.0";
 
 @import "auth-header";
-@import "footer";
+@import "unsupported-footer";
+
+html {
+	width: 100%;
+	height: 100%;
+	background: url(/assets/img/unsupported/cat.jpg) no-repeat center center fixed;
+	.background-size(cover);
+}
+
+body {
+	width: 100%;
+	min-height: 100%;
+	.box-sizing(border-box);
+	padding-top: 103px;
+	padding-bottom: 147px;
+	color: white;
+}
+
+.kifi-shade {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: black;
+	.opacity(0.28);
+	z-index: -1;
+}
+
+.kifi-content {
+	.padding-lr(48px);
+	.padding-bottom(60px);
+
+	h1 {
+		position: relative;
+		.left(-1px);
+		margin-top: 13.5%;
+		.font-size(42px);
+		.body-font();
+	}
+
+	h2 {
+		@fs: 24px;
+		.font-size(@fs);
+		font-weight: 500;
+		.margin-top(16px, @fs);
+		.margin-bottom(42px, @fs);
+		.body-font();
+	}
+}
+
+.kifi-download-link {
+	display: inline-block;
+	width: 252px;
+	padding-left: 15px;
+	color: white;
+	text-decoration: none;
+	@bg: #6fa6ef;
+	background: @bg;
+	@fs: 18px;
+	.font-size(@fs);
+	.margin-right(28px, @fs);
+	.margin-bottom(28px, @fs);
+	z-index: 1;
+	.box-sizing(border-box);
+	font-weight: 400;
+	line-height: 99px;
+
+	&:hover, &:focus {
+		background: lighten(@bg, 5%);
+	}
+
+	&:active {
+		background: darken(@bg, 10%);
+	}
+}
+
+.browser-icon {
+	position: relative;
+	display: inline-block;
+	width: 72px;
+	height: 72px;
+	background-image: url(/assets/img/browsers.png);
+	background-size: 72px auto;
+	background-repeat: no-repeat;
+	vertical-align: middle;
+	margin-right: 31px;
+
+	&.chrome {
+		background-position: left top -2px;
+	}
+
+	&.firefox {
+		background-position: left top -100px;
+	}
+}
