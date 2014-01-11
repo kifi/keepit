@@ -248,6 +248,16 @@ var socketHandlers = {
       friendsById[f.id] = f;
     }
   },
+  lost_friends: function(fr) {
+    log("[socket:lost_friends]", fr)();
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i];
+      if (friendsById[f.id]) {
+        friends = friends.filter(function(e) {return e.id !== f.id});
+      }
+      delete friendsById[f.id];
+    }
+  },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
