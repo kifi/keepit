@@ -31,7 +31,7 @@ class SendgridCommander @Inject() (
           postOffice.sendMail(
             ElectronicMail(
               from = EmailAddresses.ENG,
-              to = List(EmailAddresses.EISHAY),
+              to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
               subject = s"Sendgrid event [$eventType]",
               htmlBody = s"Got event:<br/>\n $event",
               category = PostOffice.Categories.System.ADMIN))
