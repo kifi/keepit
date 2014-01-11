@@ -24,8 +24,7 @@ trait DomainRepo extends Repo[Domain] {
 @Singleton
 class DomainRepoImpl @Inject()(
     val db: DataBaseComponent,
-    val clock: Clock,
-    domainCache: DomainCache) extends DbRepo[Domain] with DomainRepo {
+    val clock: Clock) extends DbRepo[Domain] with DomainRepo {
   import DBSession._
   import db.Driver.Implicit._
 
@@ -39,9 +38,7 @@ class DomainRepoImpl @Inject()(
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] = {
-    domainCache.getOrElseOpt(DomainKey(domain)) {
-      (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
-    }
+    (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
   }
 
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
