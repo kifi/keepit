@@ -17,6 +17,8 @@ import org.apache.lucene.search.TermQuery
 import com.keepit.search.graph.bookmark._
 import com.google.inject.Singleton
 import com.keepit.search.graph.GraphTestHelper
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.akka.MonitoredAwait
 
 
 class URIGraphSearcherTest extends Specification with GraphTestHelper {
@@ -70,10 +72,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         saveBookmarksByURI(expectedUriToUserEdges)
-        val graph = mkURIGraph()
-        graph.update() === users.size
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === users.size
 
-        val searcher = graph.getURIGraphSearcher()
+        val searcher = URIGraphSearcher(indexer)
 
         expectedUriToUserEdges.map{ case (uri, users) =>
           val expected = users.map(_.id.get).toSet
@@ -81,7 +83,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
           answer === expected
         }
 
-        graph.uriGraphIndexer.numDocs === users.size
+        indexer.numDocs === users.size
       }
     }
 
@@ -91,10 +93,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges, mixPrivate = true)
-        val graph = mkURIGraph()
-        graph.update() === users.size
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === users.size
 
-        val searcher = graph.getURIGraphSearcher()
+        val searcher = URIGraphSearcher(indexer)
 
         val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId).map{ case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
         expectedUserIdToUriIdEdges.map{ case (userId, uriIds) =>
@@ -107,7 +109,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
           answerPublicOnly === expectedPublicOnly
         }
 
-        graph.uriGraphIndexer.numDocs === users.size
+        indexer.numDocs === users.size
       }
     }
 
@@ -117,10 +119,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
-        val graph = mkURIGraph()
-        graph.update() === users.size
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === users.size
 
-        val searcher = graph.getURIGraphSearcher()
+        val searcher = URIGraphSearcher(indexer)
 
         users.sliding(3).foreach{ friends =>
           val friendIds = friends.map(_.id.get).toSet
@@ -138,17 +140,16 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
           }
         }
 
-        graph.uriGraphIndexer.numDocs === users.size
+        indexer.numDocs === users.size
       }
     }
 
     "intersect empty sets" in {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
-        val graph = mkURIGraph()
-        graph.update()
+        val indexer = mkURIGraphIndexer()
 
-        val searcher = graph.getURIGraphSearcher()
+        val searcher = URIGraphSearcher(indexer)
 
         searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
 
@@ -169,10 +170,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
     "determine whether intersection is empty" in {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
-        val graph = mkURIGraph()
-        graph.update()
+        val indexer = mkURIGraphIndexer()
+        indexer.update()
 
-        val searcher = graph.getURIGraphSearcher()
+        val searcher = URIGraphSearcher(indexer)
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
         searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
         searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
@@ -188,8 +189,8 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id))}
         saveBookmarksByEdges(edges)
 
-        val graph = mkURIGraph()
-        graph.update()
+        val indexer = mkURIGraphIndexer()
+        indexer.update()
 
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
@@ -197,8 +198,8 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         addConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
 
-        val searcher0 = graph.getURIGraphSearcher(users(0).id.get)
-        val searcher1 = graph.getURIGraphSearcher(users(1).id.get)
+        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
         searcher0.search(personaltitle).keySet === Set(2L, 4L, 6L)
         searcher1.search(personaltitle).keySet === Set(1L, 3L, 5L)
@@ -218,12 +219,12 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
         saveBookmarksByEdges(edges)
 
-        val graph = mkURIGraph()
-        graph.update() === 1
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
 
-        val searcher = graph.getURIGraphSearcher(users(0).id.get)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
         def mkSiteQuery(site: String) = {
           new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
@@ -257,12 +258,12 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
         saveBookmarksByEdges(edges)
 
-        val graph = mkURIGraph()
-        graph.update() === 1
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
 
-        val searcher = graph.getURIGraphSearcher(users(0).id.get)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
         def mkQuery(word: String) = new TermQuery(new Term("title", word))
 
@@ -294,12 +295,12 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
         saveBookmarksByEdges(edges)
 
-        val graph = mkURIGraph()
-        graph.update() === 1
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
 
-        val searcher = graph.getURIGraphSearcher(users(0).id.get)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
         uris.take(3).foreach{ uri =>
           val uriId =  uri.id.get
