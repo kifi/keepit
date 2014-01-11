@@ -10,13 +10,9 @@ import com.keepit.search.graph.bookmark._
 
 @ImplementedBy(classOf[URIGraphImpl])
 trait URIGraph {
-  def update(): Int
-  def update(userId: Id[User]): Int
-  def reindex(): Unit
   def getURIGraphSearcher(): URIGraphSearcher
   def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser
-  def close(): Unit
-  def backup(): Unit
+
 }
 
 @Singleton
@@ -25,24 +21,6 @@ class URIGraphImpl @Inject()(
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait
   ) extends URIGraph {
-
-  def update(): Int = {
-    uriGraphIndexer.update()
-  }
-  def update(userId: Id[User]): Int = {
-    uriGraphIndexer.update(userId)
-  }
-  def reindex() {
-    uriGraphIndexer.reindex()
-  }
-
-  def close() {
-    uriGraphIndexer.close()
-  }
-
-  def backup() {
-    uriGraphIndexer.backup()
-  }
 
   def getURIGraphSearcher(): URIGraphSearcher = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers

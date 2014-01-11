@@ -17,6 +17,7 @@ import org.apache.lucene.search.TermQuery
 import com.keepit.search.graph.bookmark._
 import com.google.inject.Singleton
 import com.keepit.search.graph.GraphTestHelper
+import com.keepit.search.graph.URIGraphImpl
 
 
 class URIGraphSearcherTest extends Specification with GraphTestHelper {
@@ -71,7 +72,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         saveBookmarksByURI(expectedUriToUserEdges)
         val graph = mkURIGraph()
-        graph.update() === users.size
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -92,7 +93,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges, mixPrivate = true)
         val graph = mkURIGraph()
-        graph.update() === users.size
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -118,7 +119,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
         val graph = mkURIGraph()
-        graph.update() === users.size
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -146,7 +147,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val graph = mkURIGraph()
-        graph.update()
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update()
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -170,7 +171,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     "determine whether intersection is empty" in {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val graph = mkURIGraph()
-        graph.update()
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update()
 
         val searcher = graph.getURIGraphSearcher()
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
@@ -189,7 +190,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         saveBookmarksByEdges(edges)
 
         val graph = mkURIGraph()
-        graph.update()
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update()
 
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
@@ -219,7 +220,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         saveBookmarksByEdges(edges)
 
         val graph = mkURIGraph()
-        graph.update() === 1
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
 
@@ -258,7 +259,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         saveBookmarksByEdges(edges)
 
         val graph = mkURIGraph()
-        graph.update() === 1
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
 
@@ -295,7 +296,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         saveBookmarksByEdges(edges)
 
         val graph = mkURIGraph()
-        graph.update() === 1
+        graph.asInstanceOf[URIGraphImpl].uriGraphIndexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
 

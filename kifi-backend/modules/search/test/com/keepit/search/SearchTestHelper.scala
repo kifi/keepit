@@ -71,12 +71,12 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val uriGraph = new URIGraphImpl(
-      new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]),
-      inject[ShoeboxServiceClient],
-      inject[MonitoredAwait])
 
-    val collectionGraph = new CollectionGraphImpl(new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient]) )
+    val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val uriGraph = new URIGraphImpl(uriGraphIndexer, inject[ShoeboxServiceClient],inject[MonitoredAwait])
+
+    val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionGraph = new CollectionGraphImpl(collectionIndexer)
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -96,7 +96,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
       inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
-    (uriGraph, collectionGraph, articleIndexer, mainSearcherFactory)
+    (uriGraphIndexer, collectionIndexer, articleIndexer, mainSearcherFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
