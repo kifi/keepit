@@ -16,49 +16,61 @@ class SendgridCommander @Inject() (
   ) {
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
-    events foreach { event =>
-      emailAlert(event)
-      report(event)
-    }
+    events foreach report
   }
 
   private val alertEventTypes = Set("dropped", "bounce", "spamreport")
 
-  private def emailAlert(event: SendgridEvent): Unit = {
+  private def emailAlert(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
     event.event foreach { eventType =>
       if (alertEventTypes.contains(eventType)) {
         db.readWrite{ implicit s =>
+          val htmlBody = emailOpt match {
+            case Some(email) =>  s"""|Got event:<br/> $event<br/><br/>
+                                     |Email data:<br/>
+                                     |Category: ${email.category}<br/>
+                                     |Subject: ${email.subject}<br/>
+                                     |Created at: ${email.createdAt}<br/>
+                                     |Updated at: ${email.updatedAt}<br/>
+                                     |Body:<br/> ${email.htmlBody}<br/>""".stripMargin
+            case None => s"Got event:<br/> $event"
+          }
           postOffice.sendMail(
             ElectronicMail(
               from = EmailAddresses.ENG,
               to = List(EmailAddresses.EISHAY),
               subject = s"Sendgrid event [$eventType]",
-              htmlBody = s"Got event:<br/>\n $event",
+              htmlBody = htmlBody,
               category = PostOffice.Categories.System.ADMIN))
         }
       }
     }
   }
 
-  private def report(event: SendgridEvent): Unit = {
+  private def heimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
     event.event foreach { eventType =>
       event.email foreach { address =>
-        event.mailId foreach { mailId =>
-        val emailOpt = db.readOnly{ implicit s =>
-          electronicMailRepo.getOpt(mailId).toSet
-        }
-        for {
-          email <- emailOpt if (PostOffice.Categories.User.all.contains(email.category))
-          emailAddress <- db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }
-        } yield {
-            val contextBuilder =  heimdalContextBuilder()
-            contextBuilder += ("action", eventType)
-            contextBuilder.addEmailInfo(email)
-            val userEvent = UserEvent(emailAddress.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED)
-            heimdalClient.trackEvent(userEvent)
+        emailOpt foreach { email =>
+          if (PostOffice.Categories.User.all.contains(email.category)) {
+            val emailAddresses = db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }
+            emailAddresses foreach { emailAddress =>
+              val contextBuilder =  heimdalContextBuilder()
+              contextBuilder += ("action", eventType)
+              contextBuilder.addEmailInfo(email)
+              val userEvent = UserEvent(emailAddress.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED)
+              heimdalClient.trackEvent(userEvent)
+            }
           }
         }
       }
     }
+  }
+
+  private def report(event: SendgridEvent): Unit = {
+    lazy val emailOpt = event.mailId map { mailId =>
+      db.readOnly{ implicit s => electronicMailRepo.getOpt(mailId) }
+    } getOrElse None
+    emailAlert(event, emailOpt)
+    heimdalEvent(event, emailOpt)
   }
 }
