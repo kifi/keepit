@@ -298,11 +298,11 @@ class UserCommander @Inject() (
     val contextBuilder = new HeimdalContextBuilder()
     contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
-    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags.reverse, BookmarkSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
     val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
     db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
-    bookmarkCommander.setKeepOrdering(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
+    bookmarkCommander.setTopKeeps(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
   }
 
   def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
@@ -586,17 +586,17 @@ object DefaultKeeps {
     val Seq(recipe, shopping, travel, later, funny, example, support) = orderedTags
     Seq(
       // Example keeps
-      (KeepInfo(title = None, url = "http://www.simplyrecipes.com/recipes/bruschetta_with_tomato_and_basil/", isPrivate = true), Seq(example, recipe)),
-      (KeepInfo(title = None, url = "http://www.apple.com/ipad/", isPrivate = true), Seq(example, shopping)),
-      (KeepInfo(title = None, url = "http://www.fourseasons.com/borabora/", isPrivate = true), Seq(example, travel)),
+      (KeepInfo(title = None, url = "http://joythebaker.com/2013/12/curry-hummus-with-currants-and-olive-oil/", isPrivate = true), Seq(example, recipe)),
+      (KeepInfo(title = None, url = "http://www.kickstarter.com/projects/1046165765/egg-the-intelligent-cat-companion", isPrivate = true), Seq(example, shopping)),
+      (KeepInfo(title = None, url = "https://www.airbnb.com/locations/san-francisco/mission-district", isPrivate = true), Seq(example, travel)),
       (KeepInfo(title = None, url = "http://twistedsifter.com/2013/01/50-life-hacks-to-simplify-your-world/", isPrivate = true), Seq(example, later)),
       (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),
 
       // Support Keeps
-      (KeepInfo(title = Some("Install Kifi"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("How to Use Kifi"), url = "http://support.kifi.com/", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("Contact Us"), url = "http://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("Kifi is better with more friends"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
+      (KeepInfo(title = Some("kifi • Install Kifi on Firefox and Chrome"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • How to Use Kifi"), url = "http://support.kifi.com/customer/portal/articles/1397866-introduction-to-kifi-", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • Contact Us"), url = "http://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • Find friends your friends on Kifi"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
     )
   }
 }

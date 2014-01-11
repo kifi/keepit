@@ -234,24 +234,10 @@ class BookmarksCommander @Inject() (
     keepsByTag
   }
 
-  def setKeepOrdering(userId: Id[User], keeps: Seq[Bookmark], inBetween: Option[(Bookmark, Bookmark)] = None): Unit = {
-    require(keeps.forall(_.userId == userId), "Keeps to be moved do not belong to the expected user.")
-    inBetween match {
-      case Some((firstKeep, secondKeep)) =>
-        val Seq(lowerKeep, upperKeep) = Seq(firstKeep, secondKeep).sortBy(_.createdAt)
-        val interval = upperKeep.createdAt.getMillis - lowerKeep.createdAt.getMillis
-        val step = interval.toInt / (keeps.length + 1)
-        require(step > 0, "Cannot insert in between keeps that have been created at the same time.")
-        db.readWrite { implicit session =>
-          keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
-            bookmarkRepo.save(keep.copy(createdAt = lowerKeep.createdAt.plusMillis((i+1) * step)))
-          }
-        }
-
-      case None => db.readWrite { implicit session =>
-        keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
-          bookmarkRepo.save(keep.copy(createdAt = currentDateTime))
-        }
+  def setTopKeeps(userId: Id[User], keeps: Seq[Bookmark]): Unit = {
+    db.readWrite { implicit session =>
+      keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
+        bookmarkRepo.save(keep.copy(createdAt = currentDateTime))
       }
     }
   }
