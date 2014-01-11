@@ -5,8 +5,6 @@ import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
 import com.keepit.common.time._
 import com.keepit.common.db.{Id, State}
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.model.Normalization
-import com.keepit.common.db.slick.FortyTwoTypeMappers
 import com.keepit.common.db.slick.DBSession
 
 @ImplementedBy(classOf[DomainRepoImpl])
@@ -24,11 +22,12 @@ trait DomainRepo extends Repo[Domain] {
 }
 
 @Singleton
-class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DbRepo[Domain] with DomainRepo {
+class DomainRepoImpl @Inject()(
+    val db: DataBaseComponent,
+    val clock: Clock,
+    domainCache: DomainCache) extends DbRepo[Domain] with DomainRepo {
   import DBSession._
   import db.Driver.Implicit._
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
 
 
   override val table = new RepoTable[Domain](db, "domain") {
@@ -39,8 +38,11 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
   }
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
-      (implicit session: RSession): Option[Domain] =
-    (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+      (implicit session: RSession): Option[Domain] = {
+    domainCache.getOrElseOpt(DomainKey(domain)) {
+      (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+    }
+  }
 
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
