@@ -4,7 +4,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
 import com.keepit.common.time._
 import com.keepit.common.db.{Id, State}
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick.DBSession
 
 @ImplementedBy(classOf[DomainRepoImpl])
@@ -17,7 +17,7 @@ trait DomainRepo extends Repo[Domain] {
       (implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain]
-  def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RSession): Int
+  def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
   def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
 }
 
@@ -61,8 +61,11 @@ class DomainRepoImpl @Inject()(
       (implicit session: RSession): Seq[Domain] =
     (for (d <- table if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
 
-  def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RSession): Int =
-    (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive ~ d.updatedAt).update(value -> clock.now())
+  def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int = {
+    val count = (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive ~ d.updatedAt).update(value -> clock.now())
+    domainIds foreach { id => invalidateCache(get(id)) }
+    count
+  }
     
   def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
     (for (d <- table if d.hostname.startsWith(prefix) && d.state =!= excludeState.orNull) yield d).sortBy(_.hostname).list
