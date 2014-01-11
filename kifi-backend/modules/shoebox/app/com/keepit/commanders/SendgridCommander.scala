@@ -16,7 +16,10 @@ class SendgridCommander @Inject() (
   ) {
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
-    events foreach emailAlert
+    events foreach { event =>
+      emailAlert(event)
+      report(event)
+    }
   }
 
   private val alertEventTypes = Set("dropped", "bounce", "spamreport")
