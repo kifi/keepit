@@ -50,12 +50,14 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           result: String = null,
           error: String = null,
           remoteServiceType: String = null,
+          remoteUp: String = null,
           remoteLeader: String = null,
           remoteServiceId: String = null,
           remoteIsLeader: String = null,
           query: String = null,
           trackingId: String = null,
           method: String = null,
+          currentRequestCount : Int = NoIntValue,
           body: String = null,
           key: String = null,
           space: String = null,
@@ -71,12 +73,14 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       statusCode = intOption(statusCode),
       result = Option(result),
       error = Option(error),
+      remoteUp = Option(remoteUp),
       remoteLeader = Option(remoteLeader),
       remoteServiceType = Option(remoteServiceType),
       remoteServiceId = Option(remoteServiceId),
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
+      currentRequestCount = intOption(currentRequestCount),
       body = Option(body),
       key = Option(key),
       space = Option(space),
@@ -95,11 +99,13 @@ case class AccessLogEvent(
   result: Option[String],
   error: Option[String],
   remoteServiceType: Option[String],
+  remoteUp: Option[String],
   remoteLeader: Option[String],
   remoteServiceId: Option[String],
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
+  currentRequestCount: Option[Int],
   body: Option[String],
   key: Option[String],
   space: Option[String],
@@ -130,6 +136,7 @@ class AccessLog @Inject() (clock: Clock) {
       Some(s"t:${formatter.print(e.time)}") ::
       Some(s"type:${e.eventType.name}") ::
       Some(s"duration:${e.duration}") ::
+      e.currentRequestCount.map("currentRequestCount:" + _) ::
       e.method.map("method:" + _) ::
       e.trackingId.map("trackingId:" + _) ::
       e.key.map("key:" + _) ::
@@ -141,6 +148,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.result.map("result:" + _) ::
       e.remoteServiceType.map("remoteServiceType:" + _) ::
       e.remoteServiceId.map("remoteServiceId:" + _) ::
+      e.remoteUp.map("remoteUp:" + _) ::
       e.remoteLeader.map("remoteLeader:" + _) ::
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::

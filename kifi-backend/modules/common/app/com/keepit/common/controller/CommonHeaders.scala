@@ -6,4 +6,5 @@ object CommonHeaders {
   val LocalServiceId = "si"
   val LocalServiceType = "st"
   val IsLeader = "ld"
+  val IsUP = "up"
 }

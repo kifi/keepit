@@ -61,6 +61,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
   "BookmarksController" should {
     "remove tag" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
+        inject[MidFlightRequests].totalRequestsSoFar === 0L
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
@@ -100,7 +101,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
         }
         bookmarksWithTags.size === 1
 
-        db.readOnly {implicit s =>
+        db.readOnly { implicit s =>
           bookmarkRepo.getByUser(user.id.get, None, None, None, 100).size === 2
           val uris = uriRepo.all
           println(uris mkString "\n")
@@ -122,6 +123,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
           bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
         }
         bookmarks.size === 0
+        inject[MidFlightRequests].totalRequestsSoFar === 1L
       }
     }
 
