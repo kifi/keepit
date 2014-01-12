@@ -48,19 +48,19 @@ class SendgridCommander @Inject() (
   }
 
   private def heimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
-    event.event foreach { eventType =>
-      event.email foreach { address =>
-        emailOpt foreach { email =>
-          if (PostOffice.Categories.User.all.contains(email.category)) {
-            val emailAddresses = db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }
-            emailAddresses foreach { emailAddress =>
-              val contextBuilder =  heimdalContextBuilder()
-              contextBuilder += ("action", eventType)
-              contextBuilder.addEmailInfo(email)
-              val userEvent = UserEvent(emailAddress.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED)
-              heimdalClient.trackEvent(userEvent)
-            }
-          }
+    for {
+      eventType <- event.event
+      address <- event.email
+      email <- emailOpt
+    } yield {
+      if (PostOffice.Categories.User.all.contains(email.category)) {
+        val emailAddresses = db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }
+        emailAddresses foreach { emailAddress =>
+          val contextBuilder =  heimdalContextBuilder()
+          contextBuilder += ("action", eventType)
+          contextBuilder.addEmailInfo(email)
+          val userEvent = UserEvent(emailAddress.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED)
+          heimdalClient.trackEvent(userEvent)
         }
       }
     }
