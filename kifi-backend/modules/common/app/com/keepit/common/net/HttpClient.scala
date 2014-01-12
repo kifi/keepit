@@ -4,8 +4,6 @@ import com.google.inject.Provider
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Try, Success, Failure}
-import java.net.ConnectException
 import java.util.concurrent.TimeUnit
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -23,10 +21,17 @@ import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
-import com.ning.http.util.AsyncHttpProviderUtils
+import play.mvc.Http.Status
+import com.keepit.common.service.ServiceUri
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] Bad Http Status on ${url.summary} body:[${requestBody.map(_.toString.abbreviate(30)).getOrElse("")}] status:${response.status} res [${response.body.toString.abbreviate(30).replaceAll("\n"  ," ")}]"){
+  override def toString(): String = getMessage
+}
+
+
+case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientResponse)
+  extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}]"){
   override def toString(): String = getMessage
 }
 
@@ -159,8 +164,13 @@ case class HttpClientImpl(
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
     val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser)
-    if (response.status / 100 != validResponseClass) {
-      val exception = new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+    val status = response.status
+    if (status / 100 != validResponseClass) {
+      val exception = if (status == Status.SERVICE_UNAVAILABLE) {
+        new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse)
+      } else {
+        new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+      }
       if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
       else throw exception
     }
@@ -181,12 +191,14 @@ case class HttpClientImpl(
   }
 
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
+    val remoteUp = res.res.header(CommonHeaders.IsUP).getOrElse(null)
     val remoteLeader = res.res.header(CommonHeaders.IsLeader).getOrElse(null)
     val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
         parsingTime = res.parsingTime.map(_.toInt),
+        remoteUp = remoteUp,
         remoteLeader = remoteLeader,
         result = "success",
         query = request.queryString,
