@@ -58,7 +58,7 @@ trait ServiceClient extends Logging {
     }
     respFuture.onFailure{
       case sue: ServiceUnavailableException =>
-        val msg = s"service ${uri.serviceInstance} is not available, reported ${uri.serviceInstance.remoteService.sentServiceUnavailable} times"
+        val msg = s"service ${uri.serviceInstance} is not available, reported ${uri.serviceInstance.sentServiceUnavailable} times"
         log.error(msg, sue)
         uri.serviceInstance.sentServiceUnavailableException(sue)
         airbrakeNotifier.notify(AirbrakeError(
