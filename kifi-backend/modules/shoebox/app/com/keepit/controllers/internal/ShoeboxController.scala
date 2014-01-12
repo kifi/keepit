@@ -74,6 +74,8 @@ class ShoeboxController @Inject() (
    private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 
+  val MaxContentLength = 6000
+
   def getUserOpt(id: ExternalId[User]) = Action { request =>
     val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) } //using cache
     userOpt match {
@@ -130,7 +132,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
-  def saveNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+  def saveNormalizedURI() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite(attempts = 3) { implicit s =>
@@ -269,7 +271,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
-  def getNormalizedURIByURL() = SafeAsyncAction(parse.json) { request =>
+  def getNormalizedURIByURL() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
     val url : String = Json.fromJson[String](request.body).get
     val uriOpt = db.readOnly { implicit s =>
       normUriRepo.getByUri(url) //using cache
@@ -280,7 +282,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getNormalizedUriByUrlOrPrenormalize() = SafeAsyncAction(parse.json) { request =>
+  def getNormalizedUriByUrlOrPrenormalize() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
     val url = Json.fromJson[String](request.body).get
     val normalizedUriOrPrenormStr = db.readOnly { implicit s => //using cache
       normUriRepo.getByUriOrPrenormalize(url) match {
@@ -291,7 +293,7 @@ class ShoeboxController @Inject() (
     Ok(normalizedUriOrPrenormStr)
   }
 
-  def internNormalizedURI() = SafeAsyncAction(parse.json) { request =>
+  def internNormalizedURI() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uriId = db.readWrite(attempts = 2) { implicit s =>  //using cache

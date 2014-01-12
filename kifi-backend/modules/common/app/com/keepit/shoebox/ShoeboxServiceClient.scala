@@ -138,6 +138,8 @@ class ShoeboxServiceClientImpl @Inject() (
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient with Logging{
 
+  val MaxUrlLength = 3000
+
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
   private[this] val consolidateSocialInfoByNetworkAndSocialIdReq = new RequestConsolidator[SocialUserInfoNetworkKey, Option[SocialUserInfo]](ttl = 30 seconds)
@@ -330,14 +332,14 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] =
-      call(Shoebox.internal.getNormalizedURIByURL(), JsString(url)).map { r => r.json match {
+      call(Shoebox.internal.getNormalizedURIByURL(), JsString(url.take(MaxUrlLength))).map { r => r.json match {
         case JsNull => None
         case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
         case null => None
       }}
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] =
-    call(Shoebox.internal.getNormalizedUriByUrlOrPrenormalize(), JsString(url)).map { r =>
+    call(Shoebox.internal.getNormalizedUriByUrlOrPrenormalize(), JsString(url.take(MaxUrlLength))).map { r =>
       (r.json \ "url").asOpt[String] match {
         case Some(url) => Right(url)
         case None => Left(Json.fromJson[NormalizedURI](r.json \ "normalizedURI").get)
@@ -601,7 +603,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    call(Shoebox.internal.isUnscrapable(url, destinationUrl)).map { r =>
+    call(Shoebox.internal.isUnscrapable(url.take(MaxUrlLength), destinationUrl.map(_.take(MaxUrlLength)))).map { r =>
       r.json.as[Boolean]
     }
   }
