@@ -91,6 +91,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int = 10000):Future[Boolean]
+  def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Bookmark]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Bookmark]]
   def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
@@ -99,7 +100,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
-  def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
   def scrapeFailed(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
@@ -617,8 +617,8 @@ class ShoeboxServiceClientImpl @Inject() (
       dUrl
     }
     val payload = JsArray(destUrl match {
-      case Some(dUrl) => Seq(Json.toJson(url), Json.toJson(dUrl))
-      case None => Seq(Json.toJson(url))
+      case Some(dUrl) => Seq(Json.toJson(url.take(MaxUrlLength)), Json.toJson(dUrl.take(MaxUrlLength)))
+      case None => Seq(Json.toJson(url.take(MaxUrlLength)))
     })
     call(Shoebox.internal.isUnscrapableP, payload, timeout = timeout).map { r =>
       r.json.as[Boolean]

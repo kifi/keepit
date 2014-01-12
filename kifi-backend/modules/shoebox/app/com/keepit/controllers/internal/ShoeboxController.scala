@@ -252,7 +252,7 @@ class ShoeboxController @Inject() (
     Ok(JsBoolean(res))
   }
 
-  def isUnscrapableP() = SafeAsyncAction(parse.json) { request =>
+  def isUnscrapableP() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val args = request.body.as[JsArray].value
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
