@@ -40,7 +40,9 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   override def toString(): String = s"""Service Cluster of $serviceType:
     ${instances.toString}"""
 
-  //using round robin, also use sick etc. instances if less than half of the instances ar UP.
+  /**
+   * using round robin, also use sick etc. instances if less than half of the instances ar UP.
+   */
   def nextService(): Option[ServiceInstance] = {
     val upList = routingList.filter(_.isUp)
     val availableList = routingList.filter(_.isAvailable)
