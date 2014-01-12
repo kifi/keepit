@@ -11,6 +11,7 @@ import scala.concurrent._
 import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.net.ServiceUnavailableException
 
 case class ServiceInstanceId(id: Long) {
   override def toString(): String = id.toString
@@ -21,9 +22,14 @@ case class ServiceInstance(node: Node, var remoteService: RemoteService, thisIns
 
   lazy val id: ServiceInstanceId = ServiceInstanceId(node.name.substring(node.name.lastIndexOf('_') + 1).toLong)
 
+  def sentServiceUnavailableException(e: ServiceUnavailableException) = {
+    log.warn(s"marking service $this as sentServiceUnavailableException for the ${remoteService.sentServiceUnavailable} time")
+    remoteService = remoteService.copy(sentServiceUnavailable = remoteService.sentServiceUnavailable + 1)
+  }
+
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
-  def isHealthy : Boolean = remoteService.status == remoteService.healthyStatus
+  def isHealthy : Boolean = (remoteService.status == remoteService.healthyStatus) && (remoteService.sentServiceUnavailable == 0)
 
   def isUp: Boolean = remoteService.status == ServiceStatus.UP
 

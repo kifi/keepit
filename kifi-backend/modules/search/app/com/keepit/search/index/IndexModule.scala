@@ -64,6 +64,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
+    bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
     bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
@@ -179,10 +180,9 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def spellIndexer(backup: IndexStore): SpellIndexer = {
+  def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer): SpellIndexer = {
     val spellDir = getIndexDirectory("index.spell.directory", noShard, backup)
-    val articleDir = getIndexDirectory("index.article.directory", noShard, backup)
-    SpellIndexer(spellDir, articleDir)
+    SpellIndexer(spellDir, shardedArticleIndexer)
   }
 
 }

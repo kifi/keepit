@@ -1,5 +1,6 @@
 @import "common";
 @import "retina-1.1.0";
+@import "auth-header";
 
 .kifi-footer {
 	display: none;
@@ -30,96 +31,6 @@
 		.at2x('/assets/images/heart.png', 100%, 100%);
 		background-size: 100%;
 		background-repeat: no-repeat;
-	}
-}
-
-.kifi-header-bg {
-	position: absolute;
-	top: 0;
-	width: 100%;
-	z-index: 1;
-	background: #eeeeee;
-}
-
-.kifi-header {
-	position: relative;
-	max-width: 1349px;
-	.padding-tb(30px);
-	.padding-lr(65px);
-	margin: 0 auto;
-	.box-sizing(border-box);
-	.centered-content;
-	white-space: nowrap;
-}
-
-.kifi-header-left {
-	position: relative;
-	display: inline-block;
-	float: left;
-}
-
-.kifi-header-logo {
-	display: inline-block;
-	.width(73px);
-	.height(43px);
-	color: transparent;
-	.at2x('/assets/images/greykifilogo.png', 100%, 100%);
-	background-size: 100%;
-	background-repeat: no-repeat;
-}
-
-.kifi-header-caption {
-	position: absolute;
-	font-size: 26px;
-	font-weight: 300;
-	color: #c3c3c3;
-	line-height: 1;
-	margin-left: 17px;
-	bottom: 0;
-	display: none;
-
-	html.signup-page & {
-		display: inline;
-	}
-}
-
-.kifi-header-signup {
-	display: none;
-
-	html.login-page & {
-		display: inline;
-	}
-}
-
-.cancel-signup {
-  display: none;
-}
-
-.kifi-header-login {
-	display: none;
-
-	html.signup-page & {
-		display: inline;
-	}
-}
-
-
-@rightFontSize: 18px;
-
-.kifi-header-right {
-	display: inline-block;
-	float: right;
-	.font-size(@rightFontSize);
-	.line-height(42px, @rightFontSize);
-	margin: 0;
-	color: black;
-
-	a {
-		color: #6fa6ef;
-
-		&:hover {
-			text-decoration: underline;
-		}
 	}
 }
 

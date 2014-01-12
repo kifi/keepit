@@ -1,19 +1,18 @@
 package com.keepit.search.spellcheck
 
-import scala.math.log
-
+import org.specs2.mutable.Specification
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.FieldType
 import org.apache.lucene.document.TextField
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import org.specs2.mutable.Specification
-
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import scala.math.abs
+import scala.math.log
 
 class TermScorerTest extends Specification {
 
@@ -44,7 +43,8 @@ class TermScorerTest extends Specification {
 
       def log2(x: Double) = log(x)/log(2)
 
-      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+      val indexReader = DirectoryReader.open(articleIndexDir)
+      val statsReader = new TermStatsReaderImpl(indexReader, "c")
       val scorer = new TermScorer(statsReader, false)
       equals(scorer.scoreSingleTerm("abc"), singleTermScore(3, 3)) === true         // 3 intersections
       equals(scorer.scorePairTerms("def", "deg"), scorer.minPairTermsScore) === true          // zero intersection, smoothed to min score
@@ -60,7 +60,8 @@ class TermScorerTest extends Specification {
       texts.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
-      val statsReader = new TermStatsReaderImpl(articleIndexDir, "c")
+      val indexReader = DirectoryReader.open(articleIndexDir)
+      val statsReader = new TermStatsReaderImpl(indexReader, "c")
       var scorer = new TermScorer(statsReader, true, false)
       var score = scorer.scorePairTerms("ab", "cd")
       var numInter = 2

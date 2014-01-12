@@ -228,8 +228,8 @@ class ServiceDiscoveryImpl(
   }
 
   def amIUp: Boolean = {
-    myStatus.map{ status =>
-      myHealthyStatus.map(_==status).getOrElse(false)
+    myStatus.map { status =>
+      myHealthyStatus.map(_ == status).getOrElse(false)
     } getOrElse(false)
   }
 
