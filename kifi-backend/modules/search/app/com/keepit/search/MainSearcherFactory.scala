@@ -1,7 +1,5 @@
 package com.keepit.search
 
-import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -30,16 +28,19 @@ import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ShardedArticleIndexer
+import com.keepit.search.sharding.ShardedURIGraphIndexer
 import com.keepit.search.graph.bookmark.URIGraphIndexer
-import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.bookmark.URIGraphSearcher
+import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
+import com.keepit.search.graph.collection.CollectionSearcherWithUser
+import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
-    uriGraphIndexer: URIGraphIndexer,
+    shardedUriGraphIndexer: ShardedURIGraphIndexer,
     collectionIndexer: CollectionIndexer,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
@@ -117,6 +118,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getURIGraphSearcherFuture(shard: Shard, userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
+    val uriGraphIndexer = shardedUriGraphIndexer.indexShards(shard)
     Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)).future
   }
 
@@ -148,12 +150,14 @@ class MainSearcherFactory @Inject() (
 
   def bookmarkSearcher(shard: Shard, userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+    val uriGraphIndexer = shardedUriGraphIndexer.indexShards(shard)
     val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
   def semanticVectorSearcher(shard: Shard) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+    val uriGraphIndexer = shardedUriGraphIndexer.indexShards(shard)
     val uriGraphSearcher = URIGraphSearcher(uriGraphIndexer)
     new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
   }

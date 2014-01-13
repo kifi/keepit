@@ -36,6 +36,7 @@ import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ShardedArticleIndexer
 import com.keepit.search.sharding.ActiveShards
+import com.keepit.search.sharding.ShardedURIGraphIndexer
 
 trait SearchTestHepler { self: SearchApplicationInjector =>
 
@@ -72,6 +73,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val shardedUriGraphIndexer = new ShardedURIGraphIndexer(Map(singleShard -> uriGraphIndexer), inject[ShoeboxServiceClient])
 
     val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
@@ -81,7 +83,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val mainSearcherFactory = new MainSearcherFactory(
       shardedArticleIndexer,
       userIndexer,
-      uriGraphIndexer,
+      shardedUriGraphIndexer,
       collectionIndexer,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,

@@ -94,7 +94,8 @@ trait IndexModule extends ScalaModule with Logging {
     new ShardedArticleIndexer(indexShards.toMap, articleStore, shoeboxClient)
   }
 
-  //TODO: enable
+  @Singleton
+  @Provides
   def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedURIGraphIndexer = {
     def bookmarkStore(shard: Shard) = {
       val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
