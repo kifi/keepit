@@ -35,22 +35,20 @@
   transition-duration: .3s;
 }
 .kifi-keeper-intro-h {
-  text-align: center;
   line-height: 24px;
   font-size: 18px;
   color: #6fa6ef;
   margin-bottom: 18px;
 }
 .kifi-keeper-intro-body {
-  padding-left: 60px;
+  padding-left: 88px;
 }
 .kifi-keeper-intro-ul {
-  margin: 6px 0 16px;
-  padding-left: 40px;
+  margin: 6px 0 12px;
+  padding-left: 16px;
 }
 .kifi-keeper-intro-li {
   display: list-item;
-  text-indent: -2px;
 }
 .kifi-keeper-intro-tip::before {
   content: 'Tip: ';

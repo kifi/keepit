@@ -34,9 +34,10 @@ object EmailAddresses {
   case object NOTIFY extends SystemEmailAddress("42.notify@gmail.com")
   case object SENDGRID extends SystemEmailAddress("sendgrid@42go.com")
   case object SUPPORT extends SystemEmailAddress("support@kifi.com")
+  case object OLD_SUPPORT extends SystemEmailAddress("support@42go.com")//keep for serialization of mail
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, JOON)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, NOTIFICATIONS, ENG, CONGRATS, ASANA_PROD_HEALTH, EDUARDO, EFFI, NOTIFY)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, ASANA_PROD_HEALTH, EDUARDO, EFFI, NOTIFY)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 
