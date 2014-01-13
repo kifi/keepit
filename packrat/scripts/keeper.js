@@ -20,7 +20,7 @@ var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 var keeper = keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastShownAt;
+  var $slider, lastCreatedAt;
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -74,6 +74,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     var kept = tile && tile.dataset.kept;
     var count = +(tile && tile.dataset.count || 0);
     log('[createSlider] kept: %s count: %o', kept || 'no', count)();
+    lastCreatedAt = Date.now();
 
     $slider = $(render('html/keeper/keeper', {
       'bgDir': api.url('images/keeper'),
@@ -271,12 +272,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function showSlider(trigger) {
     log('[showSlider]', trigger)();
-    lastShownAt = Date.now();
 
     createSlider();
     $slider.prependTo(tile);
 
-    api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0)})]);
+    api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)})]);
     api.port.emit('keeper_shown');
   }
 
@@ -500,7 +500,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         if (trigger === 'tile') {
           showSlider(trigger);
           growSlider('', 'kifi-wide');
-        } else if ((trigger === 'auto' || trigger === 'scroll') && !lastShownAt) { // auto-show only if not already shown
+        } else if ((trigger === 'auto' || trigger === 'scroll') && !lastCreatedAt) { // auto-show only if not already shown
           showSlider(trigger);
           growSlider('kifi-tiny', 'kifi-auto');
           idleTimer.start(5000);
@@ -538,7 +538,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       $(tile).css('transform', '');
     },
     showKeepers: function (keepers, otherKeeps) {
-      if (lastShownAt) return;
+      if (lastCreatedAt) return;
       var $tile = $(tile).hoverfu(function (configureHover) {
         // TODO: preload friend pictures
         render('html/keeper/keepers', setKeepersAndCounts(keepers, otherKeeps, {
