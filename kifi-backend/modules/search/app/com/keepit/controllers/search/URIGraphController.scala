@@ -19,7 +19,7 @@ import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
 import com.keepit.search.graph.collection.CollectionGraphPlugin
 import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.graph.collection.CollectionIndexer
-import com.keepit.search.sharding.ActiveShards
+import com.keepit.search.sharding._
 
 class URIGraphController @Inject()(
     activeShards: ActiveShards,
@@ -28,7 +28,7 @@ class URIGraphController @Inject()(
     shoeboxClient: ShoeboxServiceClient,
     mainSearcherFactory: MainSearcherFactory,
     uriGraphIndexer: URIGraphIndexer,
-    collectionIndexer: CollectionIndexer) extends SearchServiceController {
+    shardedCollectionIndexer: ShardedCollectionIndexer) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
@@ -63,11 +63,18 @@ class URIGraphController @Inject()(
   def indexInfo = Action { implicit request =>
     val bookmarkStore = uriGraphIndexer.bookmarkStore
 
-    Ok(Json.toJson(Seq(
-        mkIndexInfo("URIGraphIndex", uriGraphIndexer),
-        mkIndexInfo("BookmarkStore", bookmarkStore),
-        mkIndexInfo("CollectionIndex", collectionIndexer)
-    )))
+    Ok(Json.toJson(
+        Seq(
+          mkIndexInfo("URIGraphIndex", uriGraphIndexer),
+          mkIndexInfo("BookmarkStore", bookmarkStore)
+        ) ++ (
+          activeShards.shards.map{ shard =>
+            val collectionIndexer = shardedCollectionIndexer.getIndexer(shard)
+            mkIndexInfo(s"CollectionIndex${shard.indexNameSuffix}", collectionIndexer)
+          }
+        )
+      )
+    )
   }
 
   private def mkIndexInfo(name: String, indexer: Indexer[_]): IndexInfo = {
@@ -89,9 +96,10 @@ class URIGraphController @Inject()(
   }
 
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
+    val collectionIndexer = collectionGraphPlugin.getIndexerFor(1L)
     try {
-      val collection = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
-      val doc = collectionIndexer.buildIndexable(collection).buildDocument
+      val collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
+      val doc = collectionIndexer.buildIndexable(collections).buildDocument
       Ok(html.admin.luceneDocDump("Collection", doc, collectionIndexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, collectionIndexer))
