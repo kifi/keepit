@@ -68,8 +68,8 @@ class URIGraphController @Inject()(
           val bookmarkStore = uriGraphIndexer.bookmarkStore
           val collectionIndexer = shardedCollectionIndexer.getIndexer(shard)
           Seq(
-            mkIndexInfo("URIGraphIndex", uriGraphIndexer),
-            mkIndexInfo("BookmarkStore", bookmarkStore),
+            mkIndexInfo(s"URIGraphIndex${shard.indexNameSuffix}", uriGraphIndexer),
+            mkIndexInfo(s"BookmarkStore${shard.indexNameSuffix}", bookmarkStore),
             mkIndexInfo(s"CollectionIndex${shard.indexNameSuffix}", collectionIndexer)
           )
         }.flatten
