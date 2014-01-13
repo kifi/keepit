@@ -35,13 +35,14 @@ import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
+import com.keepit.search.sharding._
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
-    collectionIndexer: CollectionIndexer,
+    shardedCollectionIndexer: ShardedCollectionIndexer,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
@@ -127,7 +128,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getCollectionSearcherFuture(shard: Shard, userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
-    Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, collectionIndexer)).future
+    Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard))).future
   }
 
   def getCollectionSearcher(shard: Shard, userId: Id[User]): CollectionSearcherWithUser = {

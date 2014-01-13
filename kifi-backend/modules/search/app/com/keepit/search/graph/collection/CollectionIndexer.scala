@@ -72,17 +72,21 @@ class CollectionIndexer(
     var total = 0
     var done = false
     while (!done) {
-      var collections: Seq[Collection] = Seq()
-      total += doUpdate("CollectionIndex") {
-        collections = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
-        done = collections.isEmpty
-        collections.iterator.map(buildIndexable)
-      }
-      collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
-      // update searchers together to get a consistent view of indexes
-      searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
+      val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
+      done = collections.isEmpty
+      total += update("CollectionIndex", collections)
     }
     total
+  }
+
+  def update(name: String, collections: Seq[Collection]): Int = {
+    val cnt = doUpdate(name) {
+      collections.iterator.map(buildIndexable)
+    }
+    collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
+    // update searchers together to get a consistent view of indexes
+    searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
+    cnt
   }
 
   def update(userId: Id[User]): Int = updateLock.synchronized {

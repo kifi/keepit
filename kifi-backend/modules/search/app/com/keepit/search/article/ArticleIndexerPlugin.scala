@@ -22,5 +22,5 @@ class ArticleIndexerPluginImpl @Inject() (
 
 class ArticleIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  shardedIndexer: ShardedArticleIndexer
-) extends IndexerActor[ArticleIndexer](airbrake, shardedIndexer)
+  indexer: ShardedArticleIndexer
+) extends IndexerActor[ArticleIndexer](airbrake, indexer)
