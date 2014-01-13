@@ -93,6 +93,13 @@ section > h3 {
 .browser-newer {
   margin: -20px 0 30px;
 }
+.chrome .chrome-webstore-badge {
+  display: block;
+  margin-top: 40px;
+}
+.firefox .chrome-webstore-badge {
+  display: none;
+}
 html.unsupported .install,
 html.supported .install-old,
 html.unsupported.other .install-old,
