@@ -515,9 +515,16 @@ class UserCommander @Inject() (
 
   def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
     db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } map { user =>
-      db.readWrite(attempts = 2) { implicit s =>
+      val success = db.readWrite(attempts = 2) { implicit s =>
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
+      if (success) {
+        db.readOnly{ implicit session =>
+          elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
+          elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
+        }
+      }
+      success
     } getOrElse false
   }
 
