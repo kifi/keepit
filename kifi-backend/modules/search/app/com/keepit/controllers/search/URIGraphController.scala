@@ -17,11 +17,12 @@ import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
 import com.keepit.search.graph.collection.CollectionGraphPlugin
-
 import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.graph.collection.CollectionIndexer
+import com.keepit.search.sharding.ActiveShards
 
 class URIGraphController @Inject()(
+    activeShards: ActiveShards,
     uriGraphPlugin: URIGraphPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
@@ -43,9 +44,16 @@ class URIGraphController @Inject()(
 
   def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
     val infosFuture = future {
-      val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
       val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
-      ids map searcher.getSharingUserInfo
+      ids.map{ id =>
+        activeShards.find(id) match {
+          case Some(shard) =>
+            val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
+            searcher.getSharingUserInfo(id)
+          case None =>
+            throw new Exception("shard not found")
+        }
+      }
     }
     Async {
       infosFuture.map(info => Ok(Json.toJson(info)))
