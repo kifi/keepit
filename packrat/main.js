@@ -248,6 +248,16 @@ var socketHandlers = {
       friendsById[f.id] = f;
     }
   },
+  lost_friends: function(fr) {
+    log("[socket:lost_friends]", fr)();
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i];
+      if (friendsById[f.id]) {
+        friends = friends.filter(function(e) {return e.id !== f.id});
+      }
+      delete friendsById[f.id];
+    }
+  },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
@@ -309,6 +319,10 @@ var socketHandlers = {
     log("[socket:message_read]", nUri, threadId, time)();
     removeNotificationPopups(threadId);
     markRead(threadId, messageId, time);
+  },
+  message_unread: function(nUri, threadId, time, messageId) {
+    log("[socket:message_unread]", nUri, threadId, time)();
+    markUnread(threadId, messageId);
   }
 };
 
@@ -528,6 +542,10 @@ api.port.on({
   set_message_read: function (o) {
     markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
+  },
+  set_message_unread: function (o) {
+    markUnread(o.threadId, o.messageId);
+    socket.send(['set_message_unread', o.messageId]);
   },
   participants: function(id, respond, tab) {
     var th = threadsById[id];
@@ -916,6 +934,38 @@ function requestMissedNotifications() {
     }
     tellVisibleTabsNoticeCountIfChanged();
   });
+}
+
+// messageId is of last read message
+function markUnread(threadId, messageId) {
+  delete threadReadAt[threadId];
+  var th = threadsById[threadId];
+  if (th && !th.unread) {
+    var thOld = clone(th);
+    th.unread = true;
+    th.unreadAuthors = th.unreadMessages = 1;
+    threadLists.unread.insertOrReplace(thOld, th);
+    if (!th.muted) {
+      var tlKeys = ['all', th.url];
+      if (isSent(th)) {
+        tlKeys.push('sent');
+      }
+      tlKeys.forEach(function (key) {
+        var tl = threadLists[key];
+        if (tl) {
+          tl.incNumUnreadUnmuted();
+        }
+      });
+    }
+
+    forEachTabAtThreadList(function (tab, tl) {
+      api.tabs.emit(tab, 'thread_unread', th);
+      sendUnreadThreadCount(tab);
+    });
+
+    tellVisibleTabsNoticeCountIfChanged();
+    return true;
+  }
 }
 
 // messageId is of last read message, timeStr is its createdAt time.

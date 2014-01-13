@@ -70,7 +70,8 @@ class MessageRepoImpl @Inject() (
   }
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.id===message.id) yield row.sentOnUriId).update(uriId)
+    (for (row <- table if row.id === message.id) yield row.sentOnUriId).update(uriId)
+    invalidateCache(message)
   }
 
   def refreshCache(threadId: Id[MessageThread])(implicit session: RSession): Unit = {
@@ -116,6 +117,7 @@ class MessageRepoImpl @Inject() (
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
     updates.foreach{ case (oldId, newId) =>
       (for (row <- table if row.sentOnUriId===oldId) yield row.sentOnUriId).update(newId)
+      //todo(stephen): do you invalidate cache here?
     }
   }
 

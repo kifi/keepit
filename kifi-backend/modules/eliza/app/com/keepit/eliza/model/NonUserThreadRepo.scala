@@ -39,7 +39,9 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
 }
 
-
+/**
+ * If we ever add cache to this repo and need to invalidate it then pay attention to the update statments!
+ */
 @Singleton
 class NonUserThreadRepoImpl @Inject() (
   val clock: Clock,

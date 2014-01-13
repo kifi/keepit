@@ -105,7 +105,9 @@ trait UserThreadRepo extends Repo[UserThread] {
 
 }
 
-
+/**
+ * If we ever add cache to this repo and need to invalidate it then pay attention to the update statments!
+ */
 @Singleton
 class UserThreadRepoImpl @Inject() (
     val clock: Clock,
