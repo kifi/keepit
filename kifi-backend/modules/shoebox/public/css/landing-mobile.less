@@ -2,10 +2,11 @@
 @import "common-mobile";
 @import "retina-1.1.0";
 
-@phone: ~"(max-width: 767px)";
-@tablet: ~"(min-width: 768px)";
+@phone: ~"(max-width: 699px)";
+@tablet: ~"(min-width: 700px)";
 @retina: ~"(-webkit-min-device-pixel-ratio: 1.5), (min--moz-device-pixel-ratio: 1.5), (-o-min-device-pixel-ratio: 3/2), (min-device-pixel-ratio: 1.5), (min-resolution: 144dpi), (min-resolution: 1.5dppx)";
-@retinaTablet: ~"(min-width: 768px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 768px) and (min--moz-device-pixel-ratio: 1.5), (min-width: 768px) and (-o-min-device-pixel-ratio: 3/2), (min-width: 768px) and (min-device-pixel-ratio: 1.5), (min-width: 768px) and (min-resolution: 144dpi), (min-width: 768px) and (min-resolution: 1.5dppx)";
+@retinaTablet: ~"(min-width: 700px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 700px) and (min--moz-device-pixel-ratio: 1.5), (min-width: 700px) and (-o-min-device-pixel-ratio: 3/2), (min-width: 700px) and (min-device-pixel-ratio: 1.5), (min-width: 700px) and (min-resolution: 144dpi), (min-width: 700px) and (min-resolution: 1.5dppx)";
+@tabletLandscape: ~"(min-width: 860px)";
 
 @phcolor: #c4c4c4;
 @phfw: 300;
@@ -463,6 +464,12 @@ body {
 
 	@media @retinaTablet {
 		background-image: url(/assets/img/mobile/mainimageipad@2x.png);
+	}
+
+	@media @tabletLandscape {
+		background-image: url(/assets/img/mobile/mainimageipadlandscape.png);
+		background-size: 1026px 286px;
+		background-position: bottom 10px right 84px;
 	}
 }
 
