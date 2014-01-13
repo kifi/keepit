@@ -34,7 +34,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
-  def reindexCollection(): Unit
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
 
   def index(): Unit
@@ -110,10 +109,6 @@ class SearchServiceClientImpl(
 
   def reindexURIGraph(): Unit = {
     broadcast(Search.internal.uriGraphReindex())
-  }
-
-  def reindexCollection(): Unit = {
-    broadcast(Search.internal.collectionReindex())
   }
 
   def index(): Unit = {

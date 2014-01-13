@@ -41,11 +41,6 @@ class AdminURIGraphController @Inject()(
     }
   }
 
-  def reindexCollection = AdminHtmlAction { implicit request =>
-    searchClient.reindexCollection()
-    Ok("reindexing started")
-  }
-
   def dumpCollectionLuceneDocument(id: Id[Collection]) =  AdminHtmlAction { implicit request =>
     Async {
       val collection = db.readOnly { implicit s => collectionRepo.get(id) }

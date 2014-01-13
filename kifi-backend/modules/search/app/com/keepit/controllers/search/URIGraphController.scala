@@ -35,11 +35,6 @@ class URIGraphController @Inject()(
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
-  def reindexCollection() = Action { implicit request =>
-    collectionGraphPlugin.reindex()
-    Ok(JsObject(Seq("started" -> JsString("ok"))))
-  }
-
   def updateURIGraph() = Action { implicit request =>
     uriGraphPlugin.update()
     collectionGraphPlugin.update()
