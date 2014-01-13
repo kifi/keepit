@@ -163,7 +163,7 @@
     }
   }
   function onMouseOver(create, e) {  // $a or $h
-    if (e.relatedTarget && this.contains(e.relatedTarget)) return;
+    if (e.relatedTarget && this.contains(e.relatedTarget) || e.originalEvent.isTrusted === false) return;
     var data = getData(this);
     if (e.originalEvent.hoverfu === data) return;  // e.g. mouseover $h from containing $a propagated up to $a
     e.originalEvent.hoverfu = data;
@@ -182,7 +182,7 @@
     }
   }
   function onMouseOut(e) {  // $a or $h
-    if (e.relatedTarget && this.contains(e.relatedTarget)) return;
+    if (e.relatedTarget && this.contains(e.relatedTarget) || e.originalEvent.isTrusted === false) return;
     var data = getData(this), a = data.$a[0], edge;
     clearTimeout(data.show), delete data.show;
     data.mouseoutTimeStamp = e.timeStamp || Date.now();
