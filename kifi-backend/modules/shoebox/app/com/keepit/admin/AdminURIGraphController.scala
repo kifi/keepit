@@ -21,11 +21,19 @@ class AdminURIGraphController @Inject()(
     Ok(s"indexed users")
   }
 
+
   def update(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    // bump up seqNum
     val bookmarks = db.readOnly { implicit s => bookmarkRepo.getByUser(userId) }
     bookmarks.grouped(1000).foreach { group =>
       db.readWrite { implicit s => group.foreach(bookmarkRepo.save) }
     }
+
+    val collections = db.readOnly(implicit s => collectionRepo.getByUser(userId))
+    collections.grouped(1000).foreach{group =>
+      db.readWrite( implicit s => group.foreach(collectionRepo.save))
+    }
+
     searchClient.updateURIGraph()
     Ok(s"indexed users")
   }
@@ -48,4 +56,3 @@ class AdminURIGraphController @Inject()(
     }
   }
 }
-
