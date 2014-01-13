@@ -193,7 +193,7 @@
 					<div class="antiscroll-inner">
 						<ol id="search-results"></ol>
 						<ol id="my-keeps">
-							<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" style="display:none">
+							<li class="keep{% if isMyBookmark %} mine{% endif %}{% if isExample %} example{% endif %}" data-template data-id="{{id}}" style="display:none">
 							{% if typeof createdAt !== "undefined" %}
 							<time datetime="{{createdAt}}">{{createdAt}}</time>
 							{% endif %}
@@ -201,11 +201,12 @@
 								<div class="keep-checkbox"></div>
 							</div>
 							<div class="keep-title long-text">
+								<span class="example-tag">Example keep</span>
 								<a href="{{url | escape}}" target="_blank" title="{{titleHtml | escape | replace '</?b>', ''}}">{{titleHtml}}</a>
 							</div>
 							<div class="keep-url long-text" title="{{url | escape}}">{{descHtml}}</div>
 							<div class="keep-colls">
-								<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
+								<span class="keep-coll {{exampleClass}}" data-template-for="collections" data-id="{{id}}">
 									<a class="keep-coll-a" href="tag/{{id}}">{{name | escape}}</a>
 								</span>
 							</div>

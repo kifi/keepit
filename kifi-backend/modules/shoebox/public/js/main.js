@@ -2847,6 +2847,17 @@ $(function () {
 		if (hit.collections) {
 			prepKeepCollections(hit.collections);
 		}
+		hit.isExample = hasExampleTag(hit.collections);
+	}
+
+	function hasExampleTag(tags) {
+		return !!tags && tags.some(function (tag) {
+			if ((tag.name && tag.name.toLowerCase()) === 'example keep') {
+				tag.exampleClass = 'example';
+				return true;
+			}
+			return false;
+		});
 	}
 
 	function prepKeepForRender(keep) {
@@ -2855,6 +2866,7 @@ $(function () {
 		keep.isMyBookmark = true;
 		keep.me = me;
 		prepKeepCollections(keep.collections);
+		keep.isExample = hasExampleTag(keep.collections);
 	}
 
 	var aUrlParser = document.createElement('a');
