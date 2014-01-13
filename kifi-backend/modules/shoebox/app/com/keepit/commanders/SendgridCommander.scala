@@ -67,9 +67,10 @@ class SendgridCommander @Inject() (
   }
 
   private def report(event: SendgridEvent): Unit = {
-    val emailOpt = event.mailId flatMap { mailId =>
-      db.readOnly{ implicit s => electronicMailRepo.getOpt(mailId) }
-    }
+    val emailOpt = for {
+      mailId <- event.mailId
+      mail <- db.readOnly{ implicit s => electronicMailRepo.getOpt(mailId) }
+    } yield mail
     emailAlert(event, emailOpt)
     heimdalEvent(event, emailOpt)
   }
