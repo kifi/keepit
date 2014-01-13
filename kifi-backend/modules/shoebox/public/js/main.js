@@ -4124,7 +4124,17 @@ $(function () {
 	function getNetworks() {
 		return $.getJSON(xhrBase + '/user/networks', function (data) {
 			myNetworks = data;
-			$friendsTabPages.toggleClass('no-networks', !data.length);
+			var hasOtherNetworks = data.some(function (net) {
+				return net.network !== 'fortytwo';
+			});
+			if (hasOtherNetworks) {
+				$friendsTabPages.removeClass('no-networks');
+			}
+			else {
+				$.getJSON(xhrBase + '/user/abooks', function (abooks) {
+					$friendsTabPages.toggleClass('no-networks', !abooks.length);
+				});
+			}
 		});
 	}
 
