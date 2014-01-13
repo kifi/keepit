@@ -119,7 +119,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getURIGraphSearcherFuture(shard: Shard, userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
-    val uriGraphIndexer = shardedUriGraphIndexer.indexShards(shard)
+    val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
     Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)).future
   }
 
@@ -151,14 +151,14 @@ class MainSearcherFactory @Inject() (
 
   def bookmarkSearcher(shard: Shard, userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphIndexer = shardedUriGraphIndexer.indexShards(shard)
+    val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
     val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
   def semanticVectorSearcher(shard: Shard) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphIndexer = shardedUriGraphIndexer.indexShards(shard)
+    val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
     val uriGraphSearcher = URIGraphSearcher(uriGraphIndexer)
     new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
   }
