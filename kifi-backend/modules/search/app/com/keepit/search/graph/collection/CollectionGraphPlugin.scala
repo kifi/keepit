@@ -9,17 +9,18 @@ import com.keepit.search.index.IndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
+import com.keepit.search.sharding.ShardedCollectionIndexer
 
 trait CollectionGraphPlugin extends IndexerPlugin[CollectionIndexer]
 
 class CollectionGraphPluginImpl @Inject()(
   actor: ActorInstance[CollectionGraphActor],
-  indexer: CollectionIndexer,
+  indexer: ShardedCollectionIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[CollectionIndexer, CollectionGraphActor](indexer.asInstanceOf[IndexManager[CollectionIndexer]], actor, serviceDiscovery) with CollectionGraphPlugin
+) extends IndexerPluginImpl[CollectionIndexer, CollectionGraphActor](indexer, actor, serviceDiscovery) with CollectionGraphPlugin
 
 class CollectionGraphActor @Inject()(
   airbrake: AirbrakeNotifier,
-  collectionIndexer: CollectionIndexer
-) extends IndexerActor[CollectionIndexer](airbrake, collectionIndexer.asInstanceOf[IndexManager[CollectionIndexer]])
+  indexer: ShardedCollectionIndexer
+) extends IndexerActor[CollectionIndexer](airbrake, indexer)
