@@ -1944,6 +1944,10 @@ $(function () {
 		var isEmail = network === 'email',
 		isSocial = /^facebook|linkedin$/.test(network);
 
+		if (network) {
+			$friendsTabPages.removeClass('no-networks');
+		}
+
 		if (isEmail) {
 			$nwFriendsLoading.show();
 
@@ -2281,9 +2285,7 @@ $(function () {
 		log('[prepInviteTab]', opts);
 
 		if (!network) {
-			$.getJSON(xhrBase + '/user/networks').done(function (networks) {
-				$friendsTabPages.toggleClass('no-networks', !networks.length);
-			});
+			getNetworks();
 		}
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
@@ -4119,6 +4121,13 @@ $(function () {
 		return false;
 	}
 
+	function getNetworks() {
+		return $.getJSON(xhrBase + '/user/networks', function (data) {
+			myNetworks = data;
+			$friendsTabPages.toggleClass('no-networks', !data.length);
+		});
+	}
+
 	// load data for persistent (view-independent) page UI
 	var hasGmailInvite = false;
 	var promise = {
@@ -4129,9 +4138,7 @@ $(function () {
 			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
 			return me;
 		}),
-		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
-			myNetworks = data;
-		}).promise(),
+		myNetworks: getNetworks().promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function (data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
