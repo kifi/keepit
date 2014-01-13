@@ -13,7 +13,6 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
-import com.keepit.search.sharding.ShardedIndexer
 import play.api.Play.current
 import play.api.Plugin
 import scala.concurrent.Await

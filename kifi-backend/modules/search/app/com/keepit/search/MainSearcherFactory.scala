@@ -28,19 +28,18 @@ import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.sharding.Shard
-import com.keepit.search.sharding.ShardedArticleIndexer
 import com.keepit.search.graph.bookmark.URIGraphIndexer
-import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.bookmark.URIGraphSearcher
+import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
+import com.keepit.search.sharding._
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
     uriGraphIndexer: URIGraphIndexer,
-    collectionIndexer: CollectionIndexer,
+    shardedCollectionIndexer: ShardedCollectionIndexer,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
@@ -125,7 +124,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getCollectionSearcherFuture(shard: Shard, userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
-    Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, collectionIndexer)).future
+    Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard))).future
   }
 
   def getCollectionSearcher(shard: Shard, userId: Id[User]): CollectionSearcherWithUser = {
