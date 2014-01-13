@@ -24,17 +24,17 @@ class SendgridCommander @Inject() (
   private def emailAlert(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
     event.event foreach { eventType =>
       if (alertEventTypes.contains(eventType)) {
+        val htmlBody = emailOpt match {
+          case Some(email) =>  s"""|Got event:<br/> $event<br/><br/>
+                                   |Email data:<br/>
+                                   |Category: ${email.category}<br/>
+                                   |Subject: ${email.subject}<br/>
+                                   |Created at: ${email.createdAt}<br/>
+                                   |Updated at: ${email.updatedAt}<br/>
+                                   |Body:<br/> ${email.htmlBody}<br/>""".stripMargin
+          case None => s"Got event:<br/> $event"
+        }
         db.readWrite{ implicit s =>
-          val htmlBody = emailOpt match {
-            case Some(email) =>  s"""|Got event:<br/> $event<br/><br/>
-                                     |Email data:<br/>
-                                     |Category: ${email.category}<br/>
-                                     |Subject: ${email.subject}<br/>
-                                     |Created at: ${email.createdAt}<br/>
-                                     |Updated at: ${email.updatedAt}<br/>
-                                     |Body:<br/> ${email.htmlBody}<br/>""".stripMargin
-            case None => s"Got event:<br/> $event"
-          }
           postOffice.sendMail(
             ElectronicMail(
               from = EmailAddresses.ENG,
@@ -67,9 +67,9 @@ class SendgridCommander @Inject() (
   }
 
   private def report(event: SendgridEvent): Unit = {
-    lazy val emailOpt = event.mailId map { mailId =>
+    val emailOpt = event.mailId flatMap { mailId =>
       db.readOnly{ implicit s => electronicMailRepo.getOpt(mailId) }
-    } getOrElse None
+    }
     emailAlert(event, emailOpt)
     heimdalEvent(event, emailOpt)
   }
