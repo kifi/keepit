@@ -2847,6 +2847,7 @@ $(function () {
 		if (hit.collections) {
 			prepKeepCollections(hit.collections);
 		}
+		// hasExampleTag has a side effect -> sets tag.exampleClass for example tag
 		hit.isExample = hasExampleTag(hit.collections);
 	}
 
@@ -2866,6 +2867,7 @@ $(function () {
 		keep.isMyBookmark = true;
 		keep.me = me;
 		prepKeepCollections(keep.collections);
+		// hasExampleTag has a side effect -> sets tag.exampleClass for example tag
 		keep.isExample = hasExampleTag(keep.collections);
 	}
 
