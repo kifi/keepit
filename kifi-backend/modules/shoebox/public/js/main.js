@@ -1771,6 +1771,10 @@ $(function () {
 		connectSocial($(this).data('network'));
 	});
 
+	$('.have-no-networks').on('click', '.connect-network-button', function (e) {
+		connectSocial($(e.target).data('network'));
+	});
+
 	function connectSocial(network) {
 		log('[connectSocial]', network);
 		toggleInviteHelp(network, false);
@@ -1939,6 +1943,10 @@ $(function () {
 		chooseNetworkFilterDOM(network);
 		var isEmail = network === 'email',
 		isSocial = /^facebook|linkedin$/.test(network);
+
+		if (network) {
+			$friendsTabPages.removeClass('no-networks');
+		}
 
 		if (isEmail) {
 			$nwFriendsLoading.show();
@@ -2275,6 +2283,10 @@ $(function () {
 		};
 
 		log('[prepInviteTab]', opts);
+
+		if (!network) {
+			getNetworks();
+		}
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
 			log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
@@ -4109,6 +4121,23 @@ $(function () {
 		return false;
 	}
 
+	function getNetworks() {
+		return $.getJSON(xhrBase + '/user/networks', function (data) {
+			myNetworks = data;
+			var hasOtherNetworks = data.some(function (net) {
+				return net.network !== 'fortytwo';
+			});
+			if (hasOtherNetworks) {
+				$friendsTabPages.removeClass('no-networks');
+			}
+			else {
+				$.getJSON(xhrBase + '/user/abooks', function (abooks) {
+					$friendsTabPages.toggleClass('no-networks', !abooks.length);
+				});
+			}
+		});
+	}
+
 	// load data for persistent (view-independent) page UI
 	var hasGmailInvite = false;
 	var promise = {
@@ -4119,9 +4148,7 @@ $(function () {
 			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
 			return me;
 		}),
-		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
-			myNetworks = data;
-		}).promise(),
+		myNetworks: getNetworks().promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function (data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
