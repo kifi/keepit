@@ -72,7 +72,7 @@ class URIGraphController @Inject()(
             mkIndexInfo("BookmarkStore", bookmarkStore),
             mkIndexInfo(s"CollectionIndex${shard.indexNameSuffix}", collectionIndexer)
           )
-        }
+        }.flatten
       )
     )
   }
