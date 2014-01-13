@@ -2847,6 +2847,18 @@ $(function () {
 		if (hit.collections) {
 			prepKeepCollections(hit.collections);
 		}
+		// hasExampleTag has a side effect -> sets tag.exampleClass for example tag
+		hit.isExample = hasExampleTag(hit.collections);
+	}
+
+	function hasExampleTag(tags) {
+		return !!tags && tags.some(function (tag) {
+			if ((tag.name && tag.name.toLowerCase()) === 'example keep') {
+				tag.exampleClass = 'example';
+				return true;
+			}
+			return false;
+		});
 	}
 
 	function prepKeepForRender(keep) {
@@ -2855,6 +2867,8 @@ $(function () {
 		keep.isMyBookmark = true;
 		keep.me = me;
 		prepKeepCollections(keep.collections);
+		// hasExampleTag has a side effect -> sets tag.exampleClass for example tag
+		keep.isExample = hasExampleTag(keep.collections);
 	}
 
 	var aUrlParser = document.createElement('a');
