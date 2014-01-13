@@ -1912,6 +1912,48 @@ td.profile-email-separator {
   transition-timing-function: ease-in;
 }
 
+.have-no-friends {
+  display: none;
+  margin-top: 29px;
+  text-align: center;
+}
+
+.friends-page.no-friends .have-no-friends {
+  display: block;
+}
+
+.friends-page.no-friends #friends-list {
+  display: none;
+}
+
+.have-no-friends h2 {
+  color: #929292;
+  font-size: 24px;
+  letter-spacing: 1px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+.invite-friends-button.invite-friends-button {
+  display: inline-block;
+  font-size: 18px;
+  font-weight: 400;
+  padding: 29px 48px;
+  border-radius: 6px;
+  margin-top: 25px;
+  color: white;
+  background: #71a6ec;
+  -webkit-font-smoothing: antialiased;
+}
+
+.invite-friends-button:hover {
+  background: #81b6fc;
+}
+
+.invite-friends-button:active {
+  background: #6196dc;
+}
+
 input.friends-filter,
 input.invite-filter,
 input.user-filter {
