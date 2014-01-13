@@ -27,7 +27,7 @@ class URIGraphController @Inject()(
     collectionGraphPlugin: CollectionGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
     mainSearcherFactory: MainSearcherFactory,
-    uriGraphIndexer: URIGraphIndexer,
+    shardedUriGraphIndexer: ShardedURIGraphIndexer,
     shardedCollectionIndexer: ShardedCollectionIndexer) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
@@ -61,18 +61,18 @@ class URIGraphController @Inject()(
   }
 
   def indexInfo = Action { implicit request =>
-    val bookmarkStore = uriGraphIndexer.bookmarkStore
 
     Ok(Json.toJson(
-        Seq(
-          mkIndexInfo("URIGraphIndex", uriGraphIndexer),
-          mkIndexInfo("BookmarkStore", bookmarkStore)
-        ) ++ (
-          activeShards.shards.map{ shard =>
-            val collectionIndexer = shardedCollectionIndexer.getIndexer(shard)
+        activeShards.shards.map{ shard =>
+          val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
+          val bookmarkStore = uriGraphIndexer.bookmarkStore
+          val collectionIndexer = shardedCollectionIndexer.getIndexer(shard)
+          Seq(
+            mkIndexInfo("URIGraphIndex", uriGraphIndexer),
+            mkIndexInfo("BookmarkStore", bookmarkStore),
             mkIndexInfo(s"CollectionIndex${shard.indexNameSuffix}", collectionIndexer)
-          }
-        )
+          )
+        }
       )
     )
   }
@@ -87,6 +87,7 @@ class URIGraphController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>
+    val uriGraphIndexer = shardedUriGraphIndexer.getIndexerFor(1l)
     try {
       val doc = uriGraphIndexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
       Ok(html.admin.luceneDocDump("URIGraph", doc, uriGraphIndexer))
