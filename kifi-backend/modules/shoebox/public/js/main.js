@@ -1771,6 +1771,10 @@ $(function () {
 		connectSocial($(this).data('network'));
 	});
 
+	$('.have-no-networks').on('click', '.connect-network-button', function (e) {
+		connectSocial($(e.target).data('network'));
+	});
+
 	function connectSocial(network) {
 		log('[connectSocial]', network);
 		toggleInviteHelp(network, false);
@@ -2275,6 +2279,12 @@ $(function () {
 		};
 
 		log('[prepInviteTab]', opts);
+
+		if (!network) {
+			$.getJSON(xhrBase + '/user/networks').done(function (networks) {
+				$friendsTabPages.toggleClass('no-networks', !networks.length);
+			});
+		}
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
 			log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
