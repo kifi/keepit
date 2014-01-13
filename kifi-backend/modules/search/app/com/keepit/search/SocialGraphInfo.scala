@@ -1,14 +1,22 @@
 package com.keepit.search
 
-import com.keepit.search.graph._
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.model.User
+import com.keepit.search.graph._
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter) {
+class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter, monitoredAwait: MonitoredAwait) {
 
-  val (myUriEdgeAccessor, friendsUriEdgeAccessors, mySearchUris, friendSearchUris, relevantFriendEdgeSet, socialGraphInfoTime) = {
+  lazy val (myUriEdgeAccessor, friendsUriEdgeAccessors, mySearchUris, friendSearchUris, relevantFriendEdgeSet, socialGraphInfoTime) = {
+    monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
+  }
+
+  private[this] val socialGraphInfoFuture = SafeFuture {
     val startTime: Long = System.currentTimeMillis
 
     // initialize user's social graph info

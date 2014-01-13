@@ -53,8 +53,8 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
-  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
-  private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
+  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard,Id[User]), URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard, Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
 
@@ -72,7 +72,7 @@ class MainSearcherFactory @Inject() (
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
-    val socialGraphInfoFuture = getSocialGraphInfoFuture(userId, filter)
+    val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
 
     new MainSearcher(
         userId,
@@ -83,8 +83,7 @@ class MainSearcherFactory @Inject() (
         config,
         articleSearcher,
         parserFactory,
-        socialGraphInfoFuture,
-        getCollectionSearcher(userId),
+        socialGraphInfo,
         clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,
@@ -113,26 +112,24 @@ class MainSearcherFactory @Inject() (
 
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
-  def getSocialGraphInfoFuture(userId: Id[User], filter: SearchFilter): Future[SocialGraphInfo] = {
-    SafeFuture {
-      new SocialGraphInfo(userId, getURIGraphSearcher(userId), getCollectionSearcher(userId), filter: SearchFilter)
-    }
+  def getSocialGraphInfo(shard: Shard, userId: Id[User], filter: SearchFilter): SocialGraphInfo = {
+    new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId), getCollectionSearcher(shard, userId), filter: SearchFilter, monitoredAwait)
   }
 
-  private[this] def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
+  private[this] def getURIGraphSearcherFuture(shard: Shard, userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)).future
   }
 
-  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
-    Await.result(getURIGraphSearcherFuture(userId), 5 seconds)
+  def getURIGraphSearcher(shard: Shard, userId: Id[User]): URIGraphSearcherWithUser = {
+    Await.result(getURIGraphSearcherFuture(shard, userId), 5 seconds)
   }
 
-  private[this] def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
+  private[this] def getCollectionSearcherFuture(shard: Shard, userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
     Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, collectionIndexer)).future
   }
 
-  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
-    Await.result(getCollectionSearcherFuture(userId), 5 seconds)
+  def getCollectionSearcher(shard: Shard, userId: Id[User]): CollectionSearcherWithUser = {
+    Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
   }
 
   private[this] def getBrowsingHistoryFuture(userId: Id[User]) = consolidateBrowsingHistoryReq(userId){ userId =>
