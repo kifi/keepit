@@ -30,6 +30,8 @@ import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.LuceneBackedBookmarkTimeRangeFilter
+import com.keepit.search.graph.TimeRangeFilter
+import com.keepit.search.graph.BookmarkInfoAccessor
 
 object URIGraphSearcher {
   def apply(uriGraphIndexer: URIGraphIndexer): URIGraphSearcher = {
@@ -183,7 +185,7 @@ object UserToUserEdgeSet{
   }
 }
 
-abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI] with LuceneBackedBookmarkTimeRangeFilter[User, NormalizedURI]
+abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends BookmarkInfoAccessor[User, NormalizedURI] with TimeRangeFilter[User, NormalizedURI]
 
 object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {

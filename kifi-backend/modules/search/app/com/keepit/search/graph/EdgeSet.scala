@@ -23,7 +23,7 @@ trait EdgeSet[S,D] {
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator
   def size: Int
 
-  def accessor: EdgeSetAccessor[S, D] = throw new UnsupportedOperationException
+  //def accessor: EdgeSetAccessor[S, D] = throw new UnsupportedOperationException
 
   implicit def toIterator(it: DocIdSetIterator): Iterator[Int] = {
     if (it != null) {
