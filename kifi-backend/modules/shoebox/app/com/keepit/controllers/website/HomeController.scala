@@ -10,6 +10,7 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.commanders.{InviteCommander, UserCommander}
 import com.keepit.common.db.ExternalId
+import com.keepit.common.KestrelCombinator
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -26,6 +27,7 @@ import com.keepit.common.db.ExternalId
 import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
+import com.keepit.common.net.UserAgent
 
 class HomeController @Inject() (
   db: Database,
@@ -92,6 +94,11 @@ class HomeController @Inject() (
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.privacy(isLoggedIn))
   }
+
+  def mobileLanding = HtmlAction(true)(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
+  private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+    Ok(views.html.marketing.mobileLanding(isLoggedIn, "iphone"))
+  }
   // End post-launch stuff!
 
   def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
@@ -120,7 +127,18 @@ class HomeController @Inject() (
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
       if(request.cookies.get("newdesign").isDefined) {
-        Ok(views.html.marketing.landing())
+        log.info(request.headers.toSimpleMap.toString)
+        val agentOpt = request.headers.get("User-Agent").map { agent =>
+          UserAgent.fromString(agent)
+        }
+        if (agentOpt.map(_.isMobile).getOrElse(false)) {
+          val ua = agentOpt.get.userAgent
+          val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
+          val agentClass = if (isIphone) "iphone" else ""
+          Ok(views.html.marketing.mobileLanding(false, agentClass))
+        } else {
+          Ok(views.html.marketing.landing())
+        }
       } else {
         Ok(views.html.auth.auth())
       }

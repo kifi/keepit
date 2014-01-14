@@ -123,7 +123,7 @@
 							{% endif %}{% if numShown > 1 %}
 							Top {{numShown}} results
 							{% endif %}
-							<ul class="search-filters" data-query="{{query}}" style="display:none">
+							<ul class="search-filters" data-query="{{query}}">
 								<li>
 								{% if filter == 'm' %}
 								<span class="search-filter-selected">You ({{myTotal}})</span>
@@ -193,7 +193,7 @@
 					<div class="antiscroll-inner">
 						<ol id="search-results"></ol>
 						<ol id="my-keeps">
-							<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" style="display:none">
+							<li class="keep{% if isMyBookmark %} mine{% endif %}{% if isExample %} example{% endif %}" data-template data-id="{{id}}" style="display:none">
 							{% if typeof createdAt !== "undefined" %}
 							<time datetime="{{createdAt}}">{{createdAt}}</time>
 							{% endif %}
@@ -201,11 +201,12 @@
 								<div class="keep-checkbox"></div>
 							</div>
 							<div class="keep-title long-text">
+								<span class="example-tag">Example keep</span>
 								<a href="{{url | escape}}" target="_blank" title="{{titleHtml | escape | replace '</?b>', ''}}">{{titleHtml}}</a>
 							</div>
 							<div class="keep-url long-text" title="{{url | escape}}">{{descHtml}}</div>
 							<div class="keep-colls">
-								<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
+								<span class="keep-coll {{exampleClass}}" data-template-for="collections" data-id="{{id}}">
 									<a class="keep-coll-a" href="tag/{{id}}">{{name | escape}}</a>
 								</span>
 							</div>
@@ -437,6 +438,10 @@
 						</div>
 						<img class="image-preload" src="/assets/img/friend-actions.png">
 						<img class="image-preload" src="/assets/img/friend-actions.2x.png">
+						<div class="have-no-friends">
+							<h2>You haven't added any friends yet!</h2>
+							<a class="invite-friends-button" href="friends/invite">Invite your friends to kifi</a>
+						</div>
 						<div id="friends-list">
 							<ul class="antiscroll-inner">
 								<li class="friend {{state}}" data-template>
@@ -507,6 +512,13 @@ Kifi also lets you message your friends about what you keep and find alongside a
 									<p>An invitation link will be attached to this message.</p>
 									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
 								</form>
+							</div>
+
+							<div class="have-no-networks">
+								<h2>Please connect some networks to invite your friends to kifi</h2>
+								<a class="connect-network-button facebook" href="javascript:" data-network="facebook"><span class="connect-network-logo"></span>Connect Facebook</a>
+								<a class="connect-network-button linkedin" href="javascript:" data-network="linkedin"><span class="connect-network-logo"></span>Connect LinkedIn</a>
+								<a class="connect-network-button email" href="javascript:" data-network="email"><span class="connect-network-logo"></span>Connect Gmail</a>
 							</div>
 
 							<div class="invite-friends" data-href="friends/invite">
@@ -620,11 +632,11 @@ Kifi also lets you message your friends about what you keep and find alongside a
 					<div class="antiscroll-inner">
 						<h2>Getting Started with kifi</h2>
 						<ul class="about-kifi splash-list">
-							<li><a class="kifi-tutorial" href="#"><span class="kifi-icon kifi-icon-tutorial"></span>View tutorial</a></li>
+							<li><a class="kifi-tutorial" href="#"><span class="kifi-icon kifi-icon-tutorial"></span>Quick guide to get started</a></li>
 							<li class="install-kifi"><a href="/install"><span class="kifi-icon kifi-icon-install"></span>Install the extension</a></li>
 							<li><a href="friends/invite"><span class="kifi-icon kifi-icon-friends"></span>Find friends</a></li>
 						</ul>
-						<h2>kifi Supports and Updates</h2>
+						<h2>kifi Support and Updates</h2>
 						<ul class="about-us splash-list">
 							<li><a href="http://support.kifi.com" class="support-center"><span class="kifi-icon kifi-icon-support"></span>Support center</a></li>
 							<li><a href="http://support.kifi.com/customer/portal/emails/new" class="contact-us"><span class="kifi-icon kifi-icon-contact"></span>Contact us</a></li>

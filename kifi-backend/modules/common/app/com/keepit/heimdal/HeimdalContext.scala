@@ -9,6 +9,7 @@ import com.keepit.model.{BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.net.{Host, URI, UserAgent}
 import com.keepit.common.time.DateTimeJsonFormat
+import com.keepit.common.mail.ElectronicMail
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -157,6 +158,17 @@ class HeimdalContextBuilder {
       }
       uri.scheme.foreach { scheme => this += ("scheme", scheme) }
     }
+  }
+
+  def addEmailInfo(email: ElectronicMail): Unit = {
+    this += ("channel", "email")
+    this += ("category", email.category.category)
+    this += ("emailId", email.id.map(_.id.toString).getOrElse(email.externalId.id))
+    this += ("subject", email.subject)
+    this += ("from", email.from.address)
+    this += ("fromName", email.fromName.getOrElse(""))
+    email.inReplyTo.foreach { previousEmailId => this += ("inReplyTo", previousEmailId.id) }
+    email.senderUserId.foreach { id => this += ("senderUserId", id.id) }
   }
 
   def anonymise(toBeRemoved: String*): Unit = {

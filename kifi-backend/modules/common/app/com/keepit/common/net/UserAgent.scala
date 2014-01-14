@@ -13,7 +13,7 @@ case class UserAgent(
   typeName: String,
   version: String) {
 
-  lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily)
+  lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily) || UserAgent.iPhonePattern.findFirstIn(userAgent).isDefined
   lazy val isSupportedDesktop: Boolean = {
     !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
   }

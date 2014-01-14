@@ -40,14 +40,22 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   override def toString(): String = s"""Service Cluster of $serviceType:
     ${instances.toString}"""
 
-  //using round robin, also use sick etc. instances if less than half of the instances ar UP.
+  /**
+   * using round robin, also use sick etc. instances if less than half of the instances ar UP.
+   */
   def nextService(): Option[ServiceInstance] = {
     val upList = routingList.filter(_.isUp)
     val availableList = routingList.filter(_.isAvailable)
-    var list = upList
-    if (upList.length < availableList.length/2.0) list = availableList
-    if (list.isEmpty) None
-    else Some(list(nextRoutingInstance.getAndIncrement % list.size))
+    val list = if (upList.length < availableList.length / 2.0) {
+      availableList
+    } else {
+      upList
+    }
+    if (list.isEmpty) {
+      None
+    } else {
+      Some(list(nextRoutingInstance.getAndIncrement % list.size))
+    }
   }
 
   def allServices: Vector[ServiceInstance] = routingList.filter(_.isAvailable)
@@ -75,15 +83,14 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     val remoteService = RemoteService.fromJson(nodeData)
     if (newInstances.isDefinedAt(childNode)){
       log.info(s"discovered updated node $childNode: $remoteService, adding to ${newInstances.keys}")
-      newInstances(childNode).remoteService = remoteService
-    }
-    else {
+      newInstances(childNode).setRemoteService(remoteService)
+    } else {
       log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
-      newInstances(childNode) = ServiceInstance(childNode, remoteService, false)
+      newInstances(childNode) = new ServiceInstance(childNode, false).setRemoteService(remoteService)
     }
   } catch {
     case t: Throwable =>
-      log.error(s"could not fetch data node for instance of $childNode")
+      log.error(s"could not fetch data node for instance of $childNode: ${t.toString}", t)
   }
 
   private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) =

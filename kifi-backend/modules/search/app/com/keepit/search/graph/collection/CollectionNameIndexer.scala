@@ -40,9 +40,11 @@ class CollectionNameIndexer(
     super.onFailure(indexable, e)
   }
 
+  def update(): Int = throw new UnsupportedOperationException("CollectionNameIndex should not be updated by update()")
+
   def update(collectionsChanged: Seq[Collection], collectionSearcher: CollectionSearcher): Int = updateLock.synchronized {
+    val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
     doUpdate("CollectionNameIndex") {
-      val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
       usersChanged.iterator.map(buildIndexable(_, collectionSearcher))
     }
   }
@@ -52,7 +54,7 @@ class CollectionNameIndexer(
     val collections = collectionSearcher.getCollections(userId)
     new CollectionNameIndexable(id = userId,
       sequenceNumber = seq,
-      isDeleted = false,
+      isDeleted = collections.isEmpty,
       collections = collections)
   }
 

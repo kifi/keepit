@@ -38,14 +38,6 @@ class AdminArticleIndexerController @Inject()(
     }
   }
 
-  def indexInfo = AdminHtmlAction { implicit request =>
-    Async {
-      (searchClient.articleIndexInfo() zip searchClient.uriGraphIndexInfo()).map{ case (aiInfo, ugInfo) =>
-        Ok(views.html.admin.indexer(aiInfo, ugInfo))
-      }
-    }
-  }
-
   def getSequenceNumber = AdminJsonAction { implicit request =>
     Async {
       searchClient.articleIndexerSequenceNumber().map { number =>

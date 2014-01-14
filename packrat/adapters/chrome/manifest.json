@@ -1,8 +1,9 @@
 {
-  "name": "Kifi Beta",
+  "name": "kifi",
+  "short_name": "kifi",
+  "description": "Search like normal, find like never before",
   "version": "see build.properties",
   "manifest_version": 2,
-  "description": "Kifi Private Beta",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",
@@ -11,7 +12,7 @@
   "options_page": "options.html",
   "page_action": {
     "default_icon": {
-      "38": "icons/keep.faint.png"
+      "38": "icons/k_gray.png"
     },
     "default_title": "Kifi"
   },
@@ -38,6 +39,17 @@
       "matches": [
         "*://www.kifi.com/r/*",
         "*://dev.ezkeep.com/r/*"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "js": [
+        "scripts/api.js",
+        "scripts/support.js"
+      ],
+      "matches": [
+        "*://support.kifi.com/*",
+        "*://www.kifi.com/support*"
       ],
       "run_at": "document_start"
     },

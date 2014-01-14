@@ -76,8 +76,8 @@ class ServiceClusterTest extends Specification {
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000001"), remoteService1, false)) === true
-      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000002"), remoteService2, false)) === true
+      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000001"), false).setRemoteService(remoteService1)) === true
+      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000002"), false).setRemoteService(remoteService2)) === true
     }
 
     "dedup nodes" in {
@@ -102,8 +102,8 @@ class ServiceClusterTest extends Specification {
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000002"), remoteService1, false)) === true
-      cluster.registered(ServiceInstance(Node(s"$basePath/node_00000003"), remoteService2, false)) === true
+      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000002"), false).setRemoteService(remoteService1)) === true
+      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000003"), false).setRemoteService(remoteService2)) === true
     }
 
     "RR router" in {
@@ -114,19 +114,32 @@ class ServiceClusterTest extends Specification {
       zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService2))
       zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService3))
       cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
-      val service1 = cluster.nextService()
-      val service2 = cluster.nextService()
-      val service3 = cluster.nextService()
-      val service4 = cluster.nextService()
-      val service5 = cluster.nextService()
-      val service6 = cluster.nextService()
-      val service7 = cluster.nextService()
+      val service1 = cluster.nextService.get
+      val service2 = cluster.nextService.get
+      val service3 = cluster.nextService.get
+      val service4 = cluster.nextService.get
+      val service5 = cluster.nextService.get
+      val service6 = cluster.nextService.get
+      val service7 = cluster.nextService.get
+      Set(service1.node.name, service2.node.name, service3.node.name) === Set("/fortytwo/services/TEST_MODE/node_00000001", "/fortytwo/services/TEST_MODE/node_00000002", "/fortytwo/services/TEST_MODE/node_00000003")
       service1 === service4
       service2 === service5
       service3 === service6
       service1 === service7
       service1 !== service2
       service1 !== service3
+      service1.reportedSentServiceUnavailable === false
+      service1.reportServiceUnavailable()
+      service1.reportedSentServiceUnavailable === true
+      service1.reportServiceUnavailable()
+      service1.reportedSentServiceUnavailable === true
+      val service = cluster.nextService.get
+      service !== service1
+      service !== service2
+      service  === service3
+      cluster.nextService.get === service2
+      cluster.nextService.get === service3
+      cluster.nextService.get === service2
     }
   }
 }

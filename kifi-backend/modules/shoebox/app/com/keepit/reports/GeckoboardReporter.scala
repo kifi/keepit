@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time._
 import com.keepit.inject._
@@ -30,14 +30,14 @@ private[reports] class GeckoboardReporterActor @Inject() (
   }
 }
 
-trait GeckoboardReporterPlugin extends SchedulingPlugin {
+trait GeckoboardReporterPlugin extends SchedulerPlugin {
   def refreshAll(): Unit
 }
 
 class GeckoboardReporterPluginImpl @Inject() (
     actor: ActorInstance[GeckoboardReporterActor],
     quartz: ActorInstance[QuartzActor],
-    val schedulingProperties: SchedulingProperties)
+    val scheduling: SchedulingProperties)
 extends GeckoboardReporterPlugin with Logging {
 
   implicit val actorTimeout = Timeout(60 seconds)

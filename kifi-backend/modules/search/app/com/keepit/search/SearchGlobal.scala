@@ -12,6 +12,7 @@ import com.keepit.search.nlp.NlpParser
 import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 import com.keepit.search.spellcheck.SpellIndexerPlugin
+import com.keepit.search.graph.collection.CollectionGraphPlugin
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
   val module = SearchProdModule()
@@ -27,15 +28,16 @@ object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
 
 trait SearchServices { self: FortyTwoGlobal =>
   def startSearchServices() {
-    require(injector.instance[ArticleIndexerPlugin].enabled)
-    require(injector.instance[URIGraphPlugin].enabled)
-    require(injector.instance[MessageIndexerPlugin].enabled)
-    require(injector.instance[UserIndexerPlugin].enabled)
-    require(injector.instance[HealthcheckPlugin].enabled)
-    require(injector.instance[FortyTwoCachePlugin].enabled)
-    require(injector.instance[InMemoryCachePlugin].enabled)
-    require(injector.instance[PhraseIndexerPlugin].enabled)
-    require(injector.instance[SpellIndexerPlugin].enabled)
+    require(injector.instance[ArticleIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[URIGraphPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[CollectionGraphPlugin] != null)
+    require(injector.instance[MessageIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[UserIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[PhraseIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[SpellIndexerPlugin] != null) //make sure its not lazy loaded
     require(NlpParser.enabled)
   }
 }

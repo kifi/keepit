@@ -11,21 +11,45 @@ import scala.concurrent._
 import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.net.ServiceUnavailableException
+import java.util.concurrent.atomic.AtomicInteger
 
 case class ServiceInstanceId(id: Long) {
   override def toString(): String = id.toString
 }
 
-//thisInstance means the representation of the current running instance
-case class ServiceInstance(node: Node, var remoteService: RemoteService, thisInstance: Boolean) extends Logging {
+/**
+ * thisInstance means the representation of the current running instance
+ */
+class ServiceInstance(val node: Node, val thisInstance: Boolean) extends Logging {
+
+  private var remoteServiceOpt: Option[RemoteService] = None
+  private val sentServiceUnavailable = new AtomicInteger(0)
+  def reportedSentServiceUnavailable: Boolean = sentServiceUnavailable.get() != 0
+  def reportedSentServiceUnavailableCount: Int = sentServiceUnavailable.get()
+
+  override def toString() = s"Service Instance of zk node $node with remote service ${remoteServiceOpt}"
+
+  def remoteService: RemoteService = remoteServiceOpt.get
+
+  def setRemoteService(service: RemoteService): ServiceInstance = synchronized {
+    remoteServiceOpt = Some(service)
+    sentServiceUnavailable.set(0)
+    this
+  }
 
   lazy val id: ServiceInstanceId = ServiceInstanceId(node.name.substring(node.name.lastIndexOf('_') + 1).toLong)
+
+  def reportServiceUnavailable() = {
+    log.warn(s"marking service $remoteService as sentServiceUnavailableException for the ${sentServiceUnavailable.get} time")
+    sentServiceUnavailable.incrementAndGet()
+  }
 
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
   def isHealthy : Boolean = remoteService.status == remoteService.healthyStatus
 
-  def isUp: Boolean = remoteService.status == ServiceStatus.UP
+  def isUp: Boolean = (remoteService.status == ServiceStatus.UP) && !reportedSentServiceUnavailable
 
   def isAvailable : Boolean = isUp || isAlmostUp
 
@@ -34,5 +58,5 @@ case class ServiceInstance(node: Node, var remoteService: RemoteService, thisIns
 
 
 object ServiceInstance {
-  def EMPTY = ServiceInstance(null, null, true)
+  def EMPTY = new ServiceInstance(null, true)
 }

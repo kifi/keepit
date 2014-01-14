@@ -21,6 +21,7 @@ import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
 import com.keepit.common.akka.SlowRunningExecutionContext
+import com.keepit.common.time.Clock
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
@@ -34,6 +35,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def timeSinceLastStatusChange: Long
   def amIUp: Boolean
 }
 
@@ -49,6 +51,7 @@ class ServiceDiscoveryImpl(
     doKeepAlive: Boolean = true)
   extends ServiceDiscovery with Logging {
 
+  private var lastStatusChangeTime = System.currentTimeMillis
 
   if (disableRegistration) log.warn("[ServiceDiscovery] registration DISABLED")
 
@@ -173,7 +176,7 @@ class ServiceDiscoveryImpl(
       }
 
       val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
-      myInstance = Some(ServiceInstance(myNode, thisRemoteService, true))
+      myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
       watchServices()
@@ -188,11 +191,14 @@ class ServiceDiscoveryImpl(
   }
 
   def changeStatus(newStatus: ServiceStatus): Unit = if (!disableRegistration) if(stillRegistered()) {
-    myInstance foreach { instance =>
-      log.info(s"Changing instance status to $newStatus")
-      thisRemoteService.status = newStatus
-      instance.remoteService = thisRemoteService
-      zk.set(instance.node, RemoteService.toJson(instance.remoteService))
+    synchronized {
+      myInstance foreach { instance =>
+        log.info(s"Changing instance status to $newStatus")
+        thisRemoteService.status = newStatus
+        instance.setRemoteService(thisRemoteService)
+        lastStatusChangeTime = System.currentTimeMillis
+        zk.set(instance.node, RemoteService.toJson(instance.remoteService))
+      }
     }
   }
 
@@ -209,7 +215,7 @@ class ServiceDiscoveryImpl(
       val selfCheckFuture = services.currentService.selfCheck()
       selfCheckFuture.onComplete{
           case Success(passed) =>
-            val result = if (passed) {
+            if (passed) {
               changeStatus(myHealthyStatus.get)
               selfCheckPromise.success(true)
             } else {
@@ -228,10 +234,12 @@ class ServiceDiscoveryImpl(
   }
 
   def amIUp: Boolean = {
-    myStatus.map{ status =>
-      myHealthyStatus.map(_==status).getOrElse(false)
+    myStatus.map { status =>
+      myHealthyStatus.map(_ == status).getOrElse(false)
     } getOrElse(false)
   }
+
+  def timeSinceLastStatusChange: Long = System.currentTimeMillis - lastStatusChangeTime
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format

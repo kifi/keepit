@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
-import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.service.{ServiceClient, ServiceType, ServiceUri}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.model.Collection
@@ -23,6 +23,7 @@ import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
+import play.api.libs.json.JsNull
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -34,7 +35,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
-  def reindexCollection(): Unit
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
 
   def index(): Unit
@@ -76,6 +76,7 @@ trait SearchServiceClient extends ServiceClient {
   def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
   def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
   def semanticLoss(query: String): Future[Map[String, Float]]
+  def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 }
 
 class SearchServiceClientImpl(
@@ -110,10 +111,6 @@ class SearchServiceClientImpl(
 
   def reindexURIGraph(): Unit = {
     broadcast(Search.internal.uriGraphReindex())
-  }
-
-  def reindexCollection(): Unit = {
-    broadcast(Search.internal.collectionReindex())
   }
 
   def index(): Unit = {
@@ -278,4 +275,10 @@ class SearchServiceClientImpl(
     }
   }
 
+  def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]] = {
+    val url = Search.internal.indexInfoList()
+    serviceCluster.allServices.map(new ServiceUri(_, protocol, port, url.url)).map{ case u: ServiceUri =>
+      callUrl(url, u, JsNull).map{ r => (u.serviceInstance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
+    }
+  }
 }

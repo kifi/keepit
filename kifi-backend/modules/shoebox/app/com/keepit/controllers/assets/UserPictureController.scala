@@ -7,18 +7,25 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
+import com.keepit.common.store.{S3ImageConfig, S3UserPictureConfig, S3ImageStore}
 import com.keepit.model._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 import play.api.mvc.Action
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.model.{ListObjectsRequest, CopyObjectRequest}
+import com.keepit.common.akka.SafeFuture
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 class UserPictureController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   suiRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
-  imageStore: S3ImageStore)
+  imageStore: S3ImageStore,
+  val config: S3ImageConfig,
+  s3Client: AmazonS3)
   extends WebsiteController(actionAuthenticator) {
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action { request =>
@@ -57,7 +64,7 @@ class UserPictureController @Inject() (
           user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
         } yield {
           val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
-          imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId).map(_ => socialUser.socialId)
+          imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId, setDefault = false).map(_ => socialUser.socialId)
         }).map { results =>
           Ok(results.mkString(","))
         }
@@ -66,4 +73,5 @@ class UserPictureController @Inject() (
       Forbidden
     }
   }
+
 }

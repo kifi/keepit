@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{Collection, CollectionStates, NormalizedURI, User}
-import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
+import com.keepit.search.graph.{URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
 import play.api.libs.json._
@@ -16,33 +16,44 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
+import com.keepit.search.graph.collection.CollectionGraphPlugin
+import com.keepit.search.graph.bookmark.URIGraphIndexer
+import com.keepit.search.graph.collection.CollectionIndexer
+import com.keepit.search.sharding._
 
 class URIGraphController @Inject()(
+    activeShards: ActiveShards,
     uriGraphPlugin: URIGraphPlugin,
+    collectionGraphPlugin: CollectionGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
     mainSearcherFactory: MainSearcherFactory,
-    uriGraph: URIGraph) extends SearchServiceController {
+    shardedUriGraphIndexer: ShardedURIGraphIndexer,
+    shardedCollectionIndexer: ShardedCollectionIndexer) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
-    Ok(JsObject(Seq("started" -> JsString("ok"))))
-  }
-
-  def reindexCollection() = Action { implicit request =>
-    uriGraphPlugin.reindexCollection()
+    collectionGraphPlugin.reindex()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def updateURIGraph() = Action { implicit request =>
     uriGraphPlugin.update()
+    collectionGraphPlugin.update()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
     val infosFuture = future {
-      val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
       val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
-      ids map searcher.getSharingUserInfo
+      ids.map{ id =>
+        activeShards.find(id) match {
+          case Some(shard) =>
+            val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
+            searcher.getSharingUserInfo(id)
+          case None =>
+            throw new Exception("shard not found")
+        }
+      }
     }
     Async {
       infosFuture.map(info => Ok(Json.toJson(info)))
@@ -50,15 +61,20 @@ class URIGraphController @Inject()(
   }
 
   def indexInfo = Action { implicit request =>
-    val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
-    val bookmarkStore = uriGraphIndexer.bookmarkStore
-    val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
 
-    Ok(Json.toJson(Seq(
-        mkIndexInfo("URIGraphIndex", uriGraphIndexer),
-        mkIndexInfo("BookmarkStore", bookmarkStore),
-        mkIndexInfo("CollectionIndex", collectionIndexer)
-    )))
+    Ok(Json.toJson(
+        activeShards.shards.map{ shard =>
+          val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
+          val bookmarkStore = uriGraphIndexer.bookmarkStore
+          val collectionIndexer = shardedCollectionIndexer.getIndexer(shard)
+          Seq(
+            mkIndexInfo(s"URIGraphIndex${shard.indexNameSuffix}", uriGraphIndexer),
+            mkIndexInfo(s"BookmarkStore${shard.indexNameSuffix}", bookmarkStore),
+            mkIndexInfo(s"CollectionIndex${shard.indexNameSuffix}", collectionIndexer)
+          )
+        }.flatten
+      )
+    )
   }
 
   private def mkIndexInfo(name: String, indexer: Indexer[_]): IndexInfo = {
@@ -71,7 +87,7 @@ class URIGraphController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>
-    val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
+    val uriGraphIndexer = shardedUriGraphIndexer.getIndexerFor(1l)
     try {
       val doc = uriGraphIndexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
       Ok(html.admin.luceneDocDump("URIGraph", doc, uriGraphIndexer))
@@ -81,10 +97,10 @@ class URIGraphController @Inject()(
   }
 
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
-    val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
+    val collectionIndexer = collectionGraphPlugin.getIndexerFor(1L)
     try {
-      val collection = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
-      val doc = collectionIndexer.buildIndexable(collection).buildDocument
+      val collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
+      val doc = collectionIndexer.buildIndexable(collections, Shard(0, 1)).buildDocument
       Ok(html.admin.luceneDocDump("Collection", doc, collectionIndexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, collectionIndexer))

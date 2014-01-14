@@ -1,6 +1,40 @@
 @(error: String)
 
+@content = {
+<main>
+  <h1 class="main-logo">kifi</h1>
+  <h2 class="page-title">Email Address Verification</h2>
+
+  <section>
+    @error match {
+      case "invalid_code" => {
+        <p>Sorry, this is not a valid email address verification link.</p>
+      }
+      case "expired" => {
+        <p>This email address verification link has expired.</p>
+      }
+    }
+  </section>
+</main>
+}
+
+@scripts = {
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/jquery-ui-slider.min.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/auth-footer.js"></script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
+<script src="//platform.linkedin.com/in.js">
+api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
+onLoad:onLoadLinkedInApi
+authorize:true
+</script>
+
+}
+
 @styles = {
+  <link rel="stylesheet" href="/assets/css/auth2.css">
+  <link rel="stylesheet" href="/assets/css/auth-footer.css">
 <style>
 section {
   width: 96%;
@@ -15,20 +49,6 @@ section {
 </style>
 }
 
-@content = {
-  <h1 class="main-logo">kifi</h1>
-  <h2 class="page-title">Email Address Verification</h2>
+@views.html.marketing.helper.page(title = "kifi • Email address verification", styles = styles, content = content, scripts = scripts, dataTrack = "verifyEmailError", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")
 
-  <section>
-    @error match {
-      case "invalid_code" => {
-        <p>Sorry, this is not a valid email address verification link.</p>
-      }
-      case "expired" => {
-        <p>This email address verification link has expired.</p>
-      }
-    }
-  </section>
-}
 
-@views.html.auth.helper.page(title = "kifi.com • Email Address Verification", styles = styles, content = content)

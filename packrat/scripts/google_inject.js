@@ -492,7 +492,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         });
       }
     }).on('mouseup', '.kifi-res-kifi-com', function () {
-      window.location = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
+      location.href = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
     }).on('mouseup', '.kifi-res-max-results-n', function () {
       var $this = $(this).addClass('kifi-checked').removeAttr('href');
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');

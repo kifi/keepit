@@ -23,14 +23,10 @@ class ShardedURIGraphIndexer(
       val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
       done = bookmarks.isEmpty
 
-      indexShards.foldLeft(bookmarks){ case (toBeIndexed, (shard, indexer)) =>
-        val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-
-        total += indexer.doUpdate(s"URIGraph${shard.indexNameSuffix}"){
-          indexer.toIndexables(bookmarks)
-        }
-        rest
+      indexShards.foreach{ case (shard, indexer) =>
+        indexer.update(s"UriGraphIndex${shard.indexNameSuffix}", bookmarks, shard)
       }
+      total += bookmarks.size
       if (!done) sequenceNumber = bookmarks.last.seq
     }
     total

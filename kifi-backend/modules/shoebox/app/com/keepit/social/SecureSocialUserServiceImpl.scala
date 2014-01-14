@@ -100,7 +100,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def updateExperimentIfTestUser(userId: Id[User]): Unit = timing(s"updateExperimentIfTestUser $userId") {
-    db.readWrite { implicit rw =>
+    db.readWrite(attempts = 3) { implicit rw =>
       @inline def setExp(exp: ExperimentType) {
         val marked = userExperimentRepo.hasExperiment(userId, exp)
         if (marked)
@@ -185,25 +185,32 @@ class SecureSocialUserPluginImpl @Inject() (
 
     val sui: SocialUserInfo = suiOpt.map(_.withCredentials(socialUser)) match {
 
-      case Some(socialUserInfo) if socialUserInfo.userId.isDefined => db.readWrite { implicit session =>
-        // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
-        val sui = if (suiOpt == Some(socialUserInfo)) socialUserInfo else {
-          val user = userRepo.get(socialUserInfo.userId.get)
-          if (user.state == UserStates.INCOMPLETE_SIGNUP && isComplete) {
-            userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(newUserState))
+      case Some(socialUserInfo) if socialUserInfo.userId.isDefined =>
+        val sui = db.readWrite(attempts = 3) { implicit session =>
+          // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
+          val sui = if (suiOpt == Some(socialUserInfo)) socialUserInfo else {
+            val user = userRepo.get(socialUserInfo.userId.get)
+            if (user.state == UserStates.INCOMPLETE_SIGNUP && isComplete) {
+              userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(newUserState))
+            }
+            socialUserInfoRepo.save(socialUserInfo)
           }
-          socialUserInfoRepo.save(socialUserInfo)
+          sui
         }
-        saveVerifiedEmail(sui.userId.get, sui.credentials.get)
+        try {
+          db.readWrite(attempts = 3) { implicit session =>
+            saveVerifiedEmail(sui.userId.get, sui.credentials.get)
+          }
+        } catch {
+          case e: Exception => airbrake.notify(s"on saving email of $sui", e)
+        }
         sui
-      }
 
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
         val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
-
         for (user <- userOpt; su <- db.readOnly { implicit session => socialUserInfoRepo.getByUser(user.id.get) }
             if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get) {
           throw new IllegalStateException(
@@ -211,14 +218,26 @@ class SecureSocialUserPluginImpl @Inject() (
             s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su")
         }
 
-        db.readWrite { implicit session =>
-          val sui = socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
-          for (user <- userOpt) {
-            if (socialUserInfo.networkType != SocialNetworks.FORTYTWO) imageStore.uploadPictureFromSocialNetwork(sui, user.externalId)
-            saveVerifiedEmail(sui.userId.get, sui.credentials.get)
-          }
-          sui
+        val sui = db.readWrite(attempts = 3) { implicit session =>
+          socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
         }
+        for (user <- userOpt) {
+          if (socialUserInfo.networkType != SocialNetworks.FORTYTWO) {
+            try {
+              imageStore.uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
+            } catch {
+              case e: Exception => airbrake.notify(s"on user $user", e)
+            }
+          }
+          try {
+            db.readWrite(attempts = 3) { implicit session =>
+              saveVerifiedEmail(sui.userId.get, sui.credentials.get)
+            }
+          } catch {
+            case e: Exception => airbrake.notify(s"on saving mail of $sui", e)
+          }
+        }
+        sui
 
       case None =>
         val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
@@ -228,32 +247,37 @@ class SecureSocialUserPluginImpl @Inject() (
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
         log.info("SocialUserInfo created is %s".format(userInfo))
-        db.readWrite { implicit session =>
-          val sui = socialUserInfoRepo.save(userInfo)
-
-          for (user <- userOpt) {
-            if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
-              val email = socialUser.email.getOrElse(throw new IllegalStateException("user has no email"))
-              val cred =
-                UserCred(
-                  userId = user.id.get,
-                  loginName = email,
-                  provider = "bcrypt" /* hard-coded */,
-                  credentials = socialUser.passwordInfo.get.password,
-                  salt = socialUser.passwordInfo.get.salt.getOrElse(""))
-              val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
-                emailRepo.save(EmailAddress(userId = user.id.get, address = email))
+        val sui = db.readWrite(attempts = 3) { implicit session =>
+          socialUserInfoRepo.save(userInfo)
+        }
+        try {
+          db.readWrite(attempts = 3) { implicit session =>
+            for (user <- userOpt) {
+              if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
+                val email = socialUser.email.getOrElse(throw new IllegalStateException("user has no email"))
+                val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
+                  emailRepo.save(EmailAddress(userId = user.id.get, address = email))
+                }
+                val cred =
+                  UserCred(
+                    userId = user.id.get,
+                    loginName = email,
+                    provider = "bcrypt" /* hard-coded */,
+                    credentials = socialUser.passwordInfo.get.password,
+                    salt = socialUser.passwordInfo.get.salt.getOrElse(""))
+                log.info(s"[save(userpass)] Saved email is $emailAddress")
+                val savedCred = userCredRepo.save(cred)
+                log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
+              } else {
+                imageStore.uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
               }
-              log.info(s"[save(userpass)] Saved email is $emailAddress")
-              val savedCred = userCredRepo.save(cred)
-              log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
-            } else {
-              imageStore.uploadPictureFromSocialNetwork(sui, user.externalId)
             }
           }
-          sui
+        } catch {
+          case e: Exception => airbrake.notify(s"on user $sui", e)
         }
-      }
+        sui
+    }
     sui
   }
 
@@ -352,7 +376,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   }
 
   private def persistSession(newSession: UserSession): UserSession = timing(s"persistSession ${newSession.socialId}") {
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val sessionFromCookie = sessionRepo.save(newSession)
       log.info(s"[save] newSession=$sessionFromCookie")
       sessionFromCookie
@@ -389,7 +413,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   }
 
   def delete(id: String): Either[Error, Unit] = reportExceptionsAndTime(s"delete $id") {
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
         sessionRepo.save(session invalidated)
       }

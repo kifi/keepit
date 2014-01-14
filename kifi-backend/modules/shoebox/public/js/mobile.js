@@ -55,14 +55,32 @@
 		var $form = $(this);
 		var data = {};
 		$.each($form.serializeArray(), function (i, field) {
-			data[field.name] = field.value;
+			data[field.name] = field.value || void 0;
 		});
-		$.post('/waitlist', data)
-		.complete(function (extId) {
+		$.ajax({
+			url: '/waitlist',
+			type: 'POST',
+			dataType: 'text',
+			contentType: 'application/json',
+			data: JSON.stringify(data)
+		})
+		.complete(function (resp) {
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
-			$('input[name=extId]').val(1);
+			$('input[name=extId]').val(resp.responseText);
+		});
+	});
+
+	var wistiaEmbed = win.Wistia.embed('arn4nh8il4');
+	$('.kifi-play').on('click', function (e) {
+		e.preventDefault();
+		wistiaEmbed.play();
+		wistiaEmbed.bind('play', function () {
+			$('.wistia_embed').addClass('playing');
+		});
+		wistiaEmbed.bind('end', function () {
+			$('.wistia_embed').removeClass('playing');
 		});
 	});
 

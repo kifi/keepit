@@ -99,6 +99,11 @@
           }
         }
       }
+    },
+    incNumUnreadUnmuted: function() {
+      if (this.numUnreadUnmuted != null) {
+        this.numUnreadUnmuted++;
+      }
     }
   };
 }.call(this.exports || this));

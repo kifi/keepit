@@ -1,83 +1,28 @@
 package com.keepit.search.graph
 
-import akka.actor._
-import akka.pattern.ask
-import akka.util.Timeout
 import com.google.inject.Inject
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.db.SequenceNumber
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.inject._
-import play.api.Play.current
-import scala.concurrent.Future
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.SchedulingProperties
 import scala.concurrent.duration._
-import com.keepit.search.article.BackUp
-import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.search.index.IndexerActor
+import com.keepit.search.index.IndexerPlugin
+import com.keepit.search.index.IndexerPluginImpl
+import com.keepit.search.index.IndexManager
+import com.keepit.search.graph.bookmark.URIGraphIndexer
+import com.keepit.search.sharding.ShardedURIGraphIndexer
 
-case object Update
-
-private[graph] class URIGraphActor @Inject() (
-    airbrake: AirbrakeNotifier,
-    uriGraph: URIGraph)
-  extends FortyTwoActor(airbrake) with Logging {
-
-  def receive() = {
-    case Update => try {
-        sender ! uriGraph.update()
-      } catch {
-        case e: Exception =>
-          airbrake.notify("Error updating uri graph", e)
-          sender ! -1
-      }
-    case BackUp => uriGraph.backup()
-    case m => throw new UnsupportedActorMessage(m)
-  }
-}
-
-trait URIGraphPlugin extends SchedulingPlugin {
-  def update()
-  def reindex()
-  def reindexCollection()
-}
+trait URIGraphPlugin extends IndexerPlugin[URIGraphIndexer]
 
 class URIGraphPluginImpl @Inject() (
-    actor: ActorInstance[URIGraphActor],
-    uriGraph: URIGraph,
-    serviceDiscovery: ServiceDiscovery)
-  extends URIGraphPlugin with Logging {
+  actor: ActorInstance[URIGraphActor],
+  indexer: ShardedURIGraphIndexer,
+  serviceDiscovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties
+) extends IndexerPluginImpl[URIGraphIndexer, URIGraphActor](indexer, actor, serviceDiscovery) with URIGraphPlugin
 
-  val schedulingProperties = SchedulingProperties.AlwaysEnabled
-  implicit val actorTimeout = Timeout(5 seconds)
-
-  override def enabled: Boolean = true
-  override def onStart() {
-    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
-    log.info("starting URIGraphPluginImpl")
-    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTask(actor.system, 10 minutes, 3 hours, actor.ref, BackUp)
-    }
-  }
-  override def onStop() {
-    log.info("stopping URIGraphPluginImpl")
-    cancelTasks()
-    uriGraph.close()
-  }
-
-  override def update() {
-    actor.ref ! Update
-  }
-
-  override def reindex() {
-    uriGraph.reindex()
-    actor.ref ! Update
-  }
-
-  override def reindexCollection() {
-    uriGraph.reindexCollection()
-    actor.ref ! Update
-  }
-}
+class URIGraphActor @Inject()(
+  airbrake: AirbrakeNotifier,
+  indexer: ShardedURIGraphIndexer
+) extends IndexerActor[URIGraphIndexer](airbrake, indexer)

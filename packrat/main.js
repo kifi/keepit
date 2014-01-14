@@ -248,6 +248,16 @@ var socketHandlers = {
       friendsById[f.id] = f;
     }
   },
+  lost_friends: function(fr) {
+    log("[socket:lost_friends]", fr)();
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i];
+      if (friendsById[f.id]) {
+        friends = friends.filter(function(e) {return e.id !== f.id});
+      }
+      delete friendsById[f.id];
+    }
+  },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
@@ -309,6 +319,10 @@ var socketHandlers = {
     log("[socket:message_read]", nUri, threadId, time)();
     removeNotificationPopups(threadId);
     markRead(threadId, messageId, time);
+  },
+  message_unread: function(nUri, threadId, time, messageId) {
+    log("[socket:message_unread]", nUri, threadId, time)();
+    markUnread(threadId, messageId);
   }
 };
 
@@ -422,6 +436,7 @@ api.port.on({
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
+    reloadKifiAppTabs();
   },
   unkeep: function(data, _, tab) {
     log("[unkeep]", data)();
@@ -521,14 +536,17 @@ api.port.on({
   },
   message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {
-      if (markRead(o.threadId, o.messageId, o.time) || o.forceSend) {
-        socket.send(['set_message_read', o.messageId]);
-      }
+      markRead(o.threadId, o.messageId, o.time);
+      socket.send(['set_message_read', o.messageId]);
     });
   },
   set_message_read: function (o) {
     markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
+  },
+  set_message_unread: function (o) {
+    markUnread(o.threadId, o.messageId);
+    socket.send(['set_message_unread', o.messageId]);
   },
   participants: function(id, respond, tab) {
     var th = threadsById[id];
@@ -699,6 +717,13 @@ api.port.on({
         });
       }
     }
+  },
+  open_support_chat: function (_, __, tab) {
+    api.tabs.emit(tab, 'open_to', {
+      trigger: 'deepLink',
+      locator: '/messages',
+      composeTo: friendsById && friendsById['aa345838-70fe-45f2-914c-f27c865bdb91'] || {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', name: 'Tamila, Kifi Help'}
+    }, {queue: 1});
   },
   open_login_popup: function(o) {
     var baseUri = webBaseUri();
@@ -919,6 +944,38 @@ function requestMissedNotifications() {
   });
 }
 
+// messageId is of last read message
+function markUnread(threadId, messageId) {
+  delete threadReadAt[threadId];
+  var th = threadsById[threadId];
+  if (th && !th.unread) {
+    var thOld = clone(th);
+    th.unread = true;
+    th.unreadAuthors = th.unreadMessages = 1;
+    threadLists.unread.insertOrReplace(thOld, th);
+    if (!th.muted) {
+      var tlKeys = ['all', th.url];
+      if (isSent(th)) {
+        tlKeys.push('sent');
+      }
+      tlKeys.forEach(function (key) {
+        var tl = threadLists[key];
+        if (tl) {
+          tl.incNumUnreadUnmuted();
+        }
+      });
+    }
+
+    forEachTabAtThreadList(function (tab, tl) {
+      api.tabs.emit(tab, 'thread_unread', th);
+      sendUnreadThreadCount(tab);
+    });
+
+    tellVisibleTabsNoticeCountIfChanged();
+    return true;
+  }
+}
+
 // messageId is of last read message, timeStr is its createdAt time.
 function markRead(threadId, messageId, timeStr) {
   var time = new Date(timeStr);
@@ -1023,10 +1080,19 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function dateWithoutMs(t) { // until db has ms precision
-  var d = new Date(t);
-  d.setMilliseconds(0);
-  return d;
+function reloadKifiAppTabs() {
+  var appRe = new RegExp('^' + webBaseUri() + '/(?:|blog|profile|find|tag/[a-z0-9-]+|friends(?:/\\w+)?)(?:[?#].*)?$');
+  for (var url in tabsByUrl) {
+    if (appRe.test(url)) {
+      var tabs = tabsByUrl[url];
+      if (tabs) {
+        tabs.forEach(reload);
+      }
+    }
+  }
+  function reload(tab) {
+    api.tabs.reload(tab.id);
+  }
 }
 
 function forEachTabAt() { // (url[, url]..., f)
@@ -1175,7 +1241,7 @@ api.icon.on.click.add(function(tab) {
 function kifify(tab) {
   log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', session ? '' : 'no session')();
   if (!tab.icon) {
-    api.icon.set(tab, "icons/keep.faint.png");
+    api.icon.set(tab, "icons/k_gray.png");
   }
 
   if (!session) {
@@ -1413,7 +1479,7 @@ function isSent(th) {
 
 function setIcon(tab, kept) {
   log("[setIcon] tab:", tab.id, "kept:", kept)();
-  api.icon.set(tab, kept ? "icons/kept.png" : "icons/keep.png");
+  api.icon.set(tab, kept ? 'icons/k_blue.png' : 'icons/k_dark.png');
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -1838,7 +1904,7 @@ function openLogin(callback, retryMs) {
 function clearSession() {
   if (session) {
     api.tabs.each(function(tab) {
-      api.icon.set(tab, 'icons/keep.faint.png');
+      api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'session_change', null);
     });
   }

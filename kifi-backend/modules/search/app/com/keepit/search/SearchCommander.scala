@@ -24,6 +24,7 @@ import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.ResultDecorator
 import com.keepit.search.result.DecoratedResult
+import com.keepit.search.result.ResultMerger
 import com.keepit.search.result.ResultUtil
 
 @ImplementedBy(classOf[SearchCommanderImpl])
@@ -89,6 +90,7 @@ class SearchCommanderImpl @Inject() (
         (new SearchConfig(default.params ++ conf.params), None)      // almost complete overwrite. But when search config parameter list changes, this prevents exception
     }
 
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // TODO: use user profile info as a bias
     val lang = LangDetector.detectShortText(query, getLangsPriorProbabilities(acceptLangs))
@@ -102,7 +104,7 @@ class SearchCommanderImpl @Inject() (
 
       timing.search
       val results = monitoredAwait.result(future, 10 seconds, "slow search")
-      ResultUtil.merge(results, maxHits, config)
+      ResultMerger.merge(results, maxHits, enableTailCutting, config)
     }
 
     timing.decoration

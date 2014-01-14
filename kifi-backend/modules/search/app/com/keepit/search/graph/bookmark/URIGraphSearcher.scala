@@ -30,6 +30,17 @@ import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphFields._
 
+object URIGraphSearcher {
+  def apply(uriGraphIndexer: URIGraphIndexer): URIGraphSearcher = {
+    val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
+    new URIGraphSearcher(indexSearcher, storeSearcher)
+  }
+
+  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
+    val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
+    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
+  }
+}
 
 class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {
 
@@ -241,7 +252,7 @@ object UriToUserEdgeSet {
   def apply(sourceId: Id[NormalizedURI], currentSearcher: Searcher): UriToUserEdgeSet = {
     new UriToUserEdgeSet(sourceId) with LuceneBackedEdgeSet[NormalizedURI, User] {
       override val searcher: Searcher = currentSearcher
-      override def createSourceTerm = new Term(uriField, sourceId.toString)
+      override val sourceFieldName = uriField
     }
   }
 }

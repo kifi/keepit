@@ -1912,6 +1912,144 @@ td.profile-email-separator {
   transition-timing-function: ease-in;
 }
 
+.have-no-friends,
+.have-no-networks {
+  display: none;
+  margin-top: 29px;
+  text-align: center;
+}
+
+.friends-page.no-friends .have-no-friends {
+  display: block;
+}
+
+.friends-page.no-friends #friends-list {
+  display: none;
+}
+
+.friends-page.no-networks .have-no-networks {
+  display: block;
+}
+
+.friends-page.no-networks .invite-friends {
+  display: none;
+}
+
+.have-no-friends h2,
+.have-no-networks h2 {
+  color: #929292;
+  font-size: 24px;
+  letter-spacing: 1px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+.invite-friends-button,
+.connect-network-button {
+  display: inline-block;
+  font-weight: 400;
+  margin-top: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.invite-friends-button.invite-friends-button,
+.connect-network-button.connect-network-button {
+  color: white;
+}
+
+.invite-friends-button {
+  font-size: 18px;
+  padding: 29px 48px;
+  border-radius: 6px;
+  margin-top: 28px;
+  background: #71a6ec;
+}
+
+.invite-friends-button:hover {
+  background: #81b6fc;
+}
+
+.invite-friends-button:active {
+  background: #6196dc;
+}
+
+.connect-network-button {
+  font-size: 17px;
+  line-height: 40px;
+  width: 289px;
+  padding: 15px 0;
+  padding-left: 35px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.connect-network-button.facebook {
+  margin-top: 28px;
+  background: #5a7ab1;
+}
+
+.connect-network-button.facebook:hover {
+  background: #6a8ac1;
+}
+
+.connect-network-button.facebook:active {
+  background: #4a6aa1;
+}
+
+.connect-network-button.linkedin {
+  background: #2886c4;
+}
+
+.connect-network-button.linkedin:hover {
+  background: #3896d4;
+}
+
+.connect-network-button.linkedin:active {
+  background: #1876b4;
+}
+
+.connect-network-button.email,
+.connect-network-button.gmail {
+  background: #df696c;
+}
+
+.connect-network-button.email:hover,
+.connect-network-button.gmail:hover {
+  background: #ef797c;
+}
+
+.connect-network-button.email:active,
+.connect-network-button.gmail:active {
+  background: #cf595c;
+}
+
+.connect-network-logo {
+  display: inline-block;
+  float: left;
+  background-image: url(../img/networks2.png);
+  width: 40px;
+  height: 40px;
+  background-size: auto 60px;
+  margin-right: 28px;
+}
+
+.connect-network-button.facebook .connect-network-logo {
+  background-position: -10px;
+}
+
+.connect-network-button.linkedin .connect-network-logo {
+  background-position: -70px;
+  position: relative;
+  top: -2px;
+}
+
+.connect-network-button.email .connect-network-logo,
+.connect-network-button.gmail .connect-network-logo {
+  background-position: -250px;
+}
+
 input.friends-filter,
 input.invite-filter,
 input.user-filter {
@@ -1983,30 +2121,37 @@ input.user-filter {
   text-align: center;
 }
 
-.invite-friends-help .invite-friends-help-connect {
+.invite-friends-help-connect {
   display: inline-block;
   font-size: 16px;
   font-weight: 300;
   line-height: 40px;
-  color: white;
   padding: 14px 55px 14px 25px;
-  ; background-color: #cccccc;
+  background-color: #cccccc;
   margin-top: 15px;
 }
 
-.invite-friends-help.facebook .invite-friends-help-connect {
+.invite-friends-help-connect.invite-friends-help-connect {
+  color: white;
+}
+
+.invite-friends-help.facebook .invite-friends-help-connect,
+.invite-friends-help-connect.facebook {
   background-color: #597ab1;
 }
 
-.invite-friends-help.linkedin .invite-friends-help-connect {
+.invite-friends-help.linkedin .invite-friends-help-connect,
+.invite-friends-help-connect.linkedin {
   background-color: #2886c5;
 }
 
-.invite-friends-help.email .invite-friends-help-connect {
+.invite-friends-help.email .invite-friends-help-connect,
+.invite-friends-help-connect.email {
   background-color: #df696c;
 }
 
-.invite-friends-help.gmail .invite-friends-help-connect {
+.invite-friends-help.gmail .invite-friends-help-connect,
+.invite-friends-help-connect.gmail {
   background-color: #df696c;
 }
 
@@ -3322,6 +3467,15 @@ body[data-view=search] .main-keeps {
   -webkit-font-smoothing: antialiased;
 }
 
+.keep.example {
+  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=75)";
+  filter: alpha(opacity=75);
+  -webkit-opacity: 0.75;
+  -moz-opacity: 0.75;
+  -khtml-opacity: 0.75;
+  opacity: 0.75;
+}
+
 .keep-url {
   font-size: 12px;
   line-height: 14px;
@@ -3372,6 +3526,10 @@ body[data-view=search] .main-keeps {
 
 .keep-coll-a {
   padding: 0 5px;
+}
+
+.keep-coll.example .keep-coll-a:not(:hover) {
+  color: #bed38c;
 }
 
 .keep-coll-a:not(:hover) {
@@ -3497,6 +3655,24 @@ body[data-view=search] .main-keeps {
 .keeps-dragging>.keep {
   position: absolute;
   width: 100%;
+}
+
+.example-tag {
+  display: none;
+  position: relative;
+  top: -1px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 22px;
+  padding: 0 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  color: white;
+  background-color: #bed38c;
+}
+
+.keep.example .example-tag {
+  display: inline-block;
 }
 
 .blog-outer {
@@ -3683,9 +3859,9 @@ body[data-view=search] .main-keeps {
 }
 
 .kifi-icon-tutorial {
-  background-image: url(../img/playbtnicon.png);
-  background-size: 24px 24px;
-  height: 24px;
+  background-image: url(../img/viewtutorial.png);
+  background-size: 24px 23px;
+  height: 23px;
 }
 
 .kifi-icon-install {
@@ -4893,7 +5069,7 @@ a.friend-nw-google[href] {
   }
 
   .kifi-icon-tutorial {
-    background-image: url(../img/playbtnicon@2x.png);
+    background-image: url(../img/viewtutorial@2x.png);
   }
 
   .kifi-icon-install {

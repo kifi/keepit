@@ -5,15 +5,19 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State, SequenceNumber, NotFoundException}
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{zones, Clock}
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.heimdal.{HeimdalContextBuilder, HeimdalServiceClient}
 import com.keepit.common.akka.SafeFuture
+import scala.slick.jdbc.{GetResult, StaticQuery}
+import org.joda.time.DateTime
+import scala.slick.session.PositionedResult
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
+  def allActiveTimes()(implicit session: RSession): Seq[DateTime]
   def pageExcluding(excludeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
   def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int
   def getOpt(id: Id[User])(implicit session: RSession): Option[User]
@@ -47,6 +51,13 @@ class UserRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
+  }
+
+  def allActiveTimes()(implicit session: RSession): Seq[DateTime] = {
+    implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] {
+      def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC)
+    }
+    StaticQuery.queryNA[(DateTime)](s"""select created_at from user u where state = 'active' and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type = 'fake');""").list
   }
 
   override def save(user: User)(implicit session: RWSession): User = {

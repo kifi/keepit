@@ -18,6 +18,8 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}
 import com.keepit.common.concurrent.ExecutionContext.immediate
+import com.keepit.search.IndexInfo
+import com.keepit.search.sharding.Shard
 
 object CollectionFields {
   val userField = "coll_usr"
@@ -33,11 +35,6 @@ object CollectionFields {
   )
 }
 
-object CollectionIndexer {
-  def shouldDelete(collection: Collection): Boolean = (collection.state == INACTIVE)
-  val bookmarkSource = BookmarkSource("BookmarkStore")
-}
-
 class CollectionIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
@@ -47,6 +44,7 @@ class CollectionIndexer(
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
   import CollectionFields._
+  import CollectionIndexer.CollectionIndexable
 
   override val commitBatchSize = 100
   private val fetchSize = 100
@@ -72,25 +70,16 @@ class CollectionIndexer(
     var total = 0
     var done = false
     while (!done) {
-      var collections: Seq[Collection] = Seq()
-      total += doUpdate("CollectionIndex") {
-        collections = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
-        done = collections.isEmpty
-        collections.iterator.map(buildIndexable)
-      }
-      collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
-      // update searchers together to get a consistent view of indexes
-      searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
+      val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
+      done = collections.isEmpty
+      total += update("CollectionIndex", collections, Shard(0, 1))
     }
     total
   }
 
-  def update(userId: Id[User]): Int = updateLock.synchronized {
-    deleteDocuments(new Term(userField, userId.toString), doCommit = false)
-    var collections: Seq[Collection] = Seq()
-    val cnt = doUpdate("CollectionIndex") {
-      collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
-      collections.iterator.map(buildIndexable)
+  def update(name: String, collections: Seq[Collection], shard: Shard): Int = {
+    val cnt = doUpdate(name) {
+      collections.iterator.map(buildIndexable(_, shard))
     }
     collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
     // update searchers together to get a consistent view of indexes
@@ -98,12 +87,26 @@ class CollectionIndexer(
     cnt
   }
 
-  def buildIndexable(collection: Collection): CollectionIndexable = {
+  def update(userId: Id[User]): Int = updateLock.synchronized {
+    deleteDocuments(new Term(userField, userId.toString), doCommit = false)
+    var collections: Seq[Collection] = Seq()
+    val cnt = doUpdate("CollectionIndex") {
+      collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
+      collections.iterator.map(buildIndexable(_, Shard(0, 1)))
+    }
+    collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
+    // update searchers together to get a consistent view of indexes
+    searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
+    cnt
+  }
+
+  def buildIndexable(collection: Collection, shard: Shard): CollectionIndexable = {
     val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
       Await.result(shoeboxClient.getUriIdsInCollection(collection.id.get), 180 seconds)
     } else {
       Seq.empty[BookmarkUriAndTime]
-    }
+    }.filter(b => shard.contains(b.uriId))
+
     new CollectionIndexable(
       id = collection.id.get,
       sequenceNumber = collection.seq,
@@ -111,6 +114,17 @@ class CollectionIndexer(
       collection = collection,
       normalizedUris = bookmarks)
   }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("CollectionIndex" + name) ++ collectionNameIndexer.indexInfos("CollectionNameIndex" + name)
+  }
+}
+
+object CollectionIndexer {
+  import CollectionFields._
+
+  def shouldDelete(collection: Collection): Boolean = (collection.state == INACTIVE)
+  val bookmarkSource = BookmarkSource("BookmarkStore")
 
   class CollectionIndexable(
     override val id: Id[Collection],

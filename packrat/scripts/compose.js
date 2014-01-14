@@ -63,7 +63,7 @@ function initCompose($c, enterToSend, opts) {
     $f.toggleClass('kifi-empty', empty);
   }).on('paste', function (e) {
     var cd = e.originalEvent.clipboardData;
-    if (cd) {
+    if (cd && e.originalEvent.isTrusted !== false) {
       e.preventDefault();
       document.execCommand('insertText', false, cd.getData('text/plain'));
     }
@@ -110,7 +110,7 @@ function initCompose($c, enterToSend, opts) {
         }
       },
       onDelete: function () {
-        if (defaultText && !$t.tokenInput('get').length && $d.text() == defaultText) {
+        if (defaultText && !$t.tokenInput('get').length && $d.text() === defaultText) {
           $d.empty();
           $f.addClass('kifi-empty');
         }
@@ -125,13 +125,13 @@ function initCompose($c, enterToSend, opts) {
   }
 
   $f.keydown(function (e) {
-    if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey)) {
+    if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey) && e.originalEvent.isTrusted !== false) {
       e.preventDefault();
       $f.submit();
     }
   }).submit(function (e) {
     e.preventDefault();
-    if ($f.data('submitted')) {
+    if ($f.data('submitted') || (e.originalEvent || {}).isTrusted === false) {
       return;
     }
     var text;
@@ -168,7 +168,8 @@ function initCompose($c, enterToSend, opts) {
         position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
     });
   })
-  .on('click', '.kifi-compose-snapshot', function () {
+  .on('click', '.kifi-compose-snapshot', function (e) {
+    if (e.originalEvent.isTrusted === false) return;
     snapshot.take(function (selector) {
       $d.focus();
       if (!selector) return;
@@ -220,6 +221,7 @@ function initCompose($c, enterToSend, opts) {
     });
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
+    if (e.originalEvent.isTrusted === false) return;
     e.preventDefault();
     var prefix = CO_KEY + '-';
     var $tip = $(this), tipTextNode = this.firstChild;
@@ -255,11 +257,13 @@ function initCompose($c, enterToSend, opts) {
     }
   })
   .find('.kifi-compose-submit')
-  .click(function () {
-    $f.submit();
+  .click(function (e) {
+    if (e.originalEvent.isTrusted !== false) {
+      $f.submit();
+    }
   })
   .keypress(function (e) {
-    if (e.which == 32) {
+    if (e.which === 32 && e.originalEvent.isTrusted !== false) {
       e.preventDefault();
       $f.submit();
     }
@@ -275,9 +279,15 @@ function initCompose($c, enterToSend, opts) {
     form: function () {
       return $f[0];
     },
+    prefill: function (r) {
+      log('[compose.prefill]', r)();
+      r.name = r.name || r.firstName + ' ' + r.lastName;
+      defaultText = '';
+      $t.tokenInput('add', r);
+    },
     focus: function () {
       log('[compose.focus]')();
-      if ($t.length) {
+      if ($t.length && !$t.tokenInput('get').length) {
         $f.find('#token-input-kifi-compose-to').focus();
       } else {
         $d.focus();

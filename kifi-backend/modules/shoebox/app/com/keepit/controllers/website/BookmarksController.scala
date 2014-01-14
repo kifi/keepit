@@ -57,17 +57,33 @@ class BookmarksController @Inject() (
   }
 
   def getScreenshotUrl() = AuthenticatedJsonToJsonAction { request =>
-    val url = (request.body \ "url").as[String]
-    Async {
-      db.readOnlyAsync { implicit session =>
-        uriRepo.getByUri(url)
-      } map { uri =>
-        s3ScreenshotStore.getScreenshotUrl(uri) match {
-          case Some(url) => Ok(Json.obj("url" -> url))
-          case None => NotFound
+    val urlOpt = (request.body \ "url").asOpt[String]
+    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
+    urlOpt.map { url =>
+      Async {
+        db.readOnlyAsync { implicit session =>
+          uriRepo.getByUri(url)
+        } map { uri =>
+          s3ScreenshotStore.getScreenshotUrl(uri) match {
+            case Some(url) => Ok(Json.obj("url" -> url))
+            case None => NotFound
+          }
         }
       }
-    }
+    }.orElse {
+      urlsOpt.map { urls =>
+        Async {
+          db.readOnlyAsync { implicit session =>
+            urls.map( url => url -> uriRepo.getByUri(url) )
+          } map { case uris =>
+            val results = uris.map { case (uri, ssOpt) =>
+              uri -> (s3ScreenshotStore.getScreenshotUrl(ssOpt).map(JsString).getOrElse(JsNull): JsValue)
+            }
+            Ok(Json.obj("urls" -> JsObject(results)))
+          }
+        }
+      }
+    }.getOrElse(BadRequest("0"))
   }
 
   def keepMultiple() = AuthenticatedJsonAction { request =>

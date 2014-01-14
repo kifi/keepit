@@ -10,7 +10,12 @@
       <div class="kifi-on-page">On this page:</div>
       {{/subtitle}}
       {{#link}}<div class="kifi-notify-link">{{link}}</div>{{/link}}
+      {{#triggered}}
+      <div class="kifi-notify-triggered">{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}</div>
+      {{/triggered}}
+      {{^triggered}}
       <div class="kifi-notify-text">&ldquo;{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}&rdquo;</div>
+      {{/triggered}}
       <div class="kifi-notify-footer">Kifi</div>
     </div>
     <div style="clear:both"></div>

@@ -22,6 +22,13 @@ import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.collection.CollectionFields._
 
+object CollectionSearcher {
+  def apply(collectionIndexer: CollectionIndexer): CollectionSearcher = new CollectionSearcher(collectionIndexer.getSearcher)
+  def apply(userId: Id[User], collectionIndexer: CollectionIndexer): CollectionSearcherWithUser = {
+    val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
+    new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, userId)
+  }
+}
 
 class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {
 
@@ -118,7 +125,7 @@ object UserToCollectionEdgeSet {
   def apply(sourceId: Id[User], currentSearcher: Searcher): UserToCollectionEdgeSet = {
     new UserToCollectionEdgeSet(sourceId) with LuceneBackedEdgeSet[User, Collection] {
       override val searcher: Searcher = currentSearcher
-      override def createSourceTerm = new Term(userField, sourceId.toString)
+      override val sourceFieldName = userField
     }
   }
 
@@ -137,7 +144,7 @@ object UriToCollectionEdgeSet {
   def apply(sourceId: Id[NormalizedURI], currentSearcher: Searcher): UriToCollectionEdgeSet = {
     new UriToCollectionEdgeSet(sourceId) with LuceneBackedEdgeSet[NormalizedURI, Collection] {
       override val searcher: Searcher = currentSearcher
-      override def createSourceTerm = new Term(uriField, sourceId.toString)
+      override val sourceFieldName = uriField
     }
   }
 }
