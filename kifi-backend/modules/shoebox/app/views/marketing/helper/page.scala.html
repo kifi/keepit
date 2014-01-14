@@ -1,4 +1,4 @@
-@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", earlyScripts: Html = Html(""), isLoggedIn: Boolean)
+@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", earlyScripts: Html = Html(""), isLoggedIn: Boolean = false)
 
 <!DOCTYPE html>
 <html class="@if(!isLoggedIn){guest }@htmlClass"@if(dataTrack!=""){ data-track-type="@dataTrack"}>
