@@ -20,6 +20,7 @@ import scala.collection.JavaConversions._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
+import com.keepit.search.sharding.Shard
 
 class CollectionIndexerTest extends Specification with ApplicationInjector with GraphTestHelper {
 
@@ -238,7 +239,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         saveBookmarksToCollection(collection, bookmarks)
 
         val collectionIndexer = mkCollectionIndexer()
-        val doc = collectionIndexer.buildIndexable(collection).buildDocument
+        val doc = collectionIndexer.buildIndexable(collection, Shard(0, 1)).buildDocument
         doc.getFields.forall{ f => collectionIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }

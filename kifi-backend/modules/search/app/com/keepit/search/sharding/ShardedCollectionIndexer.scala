@@ -26,12 +26,10 @@ class ShardedCollectionIndexer(
       val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
       done = collections.isEmpty
 
-      indexShards.foldLeft(collections){ case (toBeIndexed, (shard, indexer)) =>
-        val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-
-        total += indexer.update(s"CollectionIndex${shard.indexNameSuffix}", next)
-        rest
+      indexShards.foreach{ case (shard, indexer) =>
+        indexer.update(s"CollectionIndex${shard.indexNameSuffix}", collections, shard)
       }
+      total += collections.size
       if (!done) sequenceNumber = collections.last.seq
     }
     total

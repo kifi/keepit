@@ -33,24 +33,23 @@ class AdminClusterController @Inject() (
         "54.219.29.184"   -> "b11"
     )
 
+    def clustersInfo : Seq[ClusterMemberInfo] = serviceTypes.flatMap{ serviceType =>
+      val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
+      serviceCluster.allMembers.map { serviceInstance =>
+      var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
+      var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
+      val versionResp : String = try {
+        httpClient.get(DirectUrl("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url), httpClient.ignoreFailure).body
+      } catch {
+        case _: Throwable => "NA"
+      }
+      val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName()
+          val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString).getOrElse("NA")
+          ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp), name)
+      }
+    }
+
     def clustersView = AdminHtmlAction { implicit request =>
-
-        var clustersInfo : Seq[ClusterMemberInfo] = serviceTypes.flatMap{ serviceType =>
-            val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
-            serviceCluster.allMembers.map { serviceInstance =>
-                var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
-                var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
-                val versionResp : String = try {
-                    httpClient.get(DirectUrl("http://" + serviceInstance.instanceInfo.localHostname + ":9000" + Common.internal.version().url), httpClient.ignoreFailure).body
-                } catch {
-                    case _ => "NA"
-                }
-                val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName()
-                val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString).getOrElse("NA")
-                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp), name)
-            }
-        }
-
-        Ok(html.admin.adminClustersView(clustersInfo))
+      Ok(html.admin.adminClustersView(clustersInfo))
     }
 }

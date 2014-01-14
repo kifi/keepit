@@ -24,6 +24,7 @@ import com.keepit.search.index.Indexer
 import com.keepit.search.index.IndexWarmer
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.IndexInfo
 
 
 class ArticleIndexer(
@@ -81,6 +82,10 @@ class ArticleIndexer(
       isDeleted = ArticleIndexer.shouldDelete(uri),
       uri = uri,
       articleStore = articleStore)
+  }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("ArticleIndex" + name)
   }
 }
 

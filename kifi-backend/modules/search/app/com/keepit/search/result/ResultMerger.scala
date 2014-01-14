@@ -45,7 +45,7 @@ object ResultMerger {
     val usefulPageBoost = config.asFloat("usefulPageBoost")
 
     // tailCutting is set to low when a non-default filter is in use
-    val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.001f
+    val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
@@ -124,10 +124,10 @@ object ResultMerger {
     }
 
     val hitList = hits.toSortedList
-    hitList.foreach{ hit =>
+    hitList.map{ hit =>
       hit.hit = hit.hit.set("score", JsNumber(hit.score))
+      hit.hit
     }
-    hitList.asInstanceOf[Seq[DetailedSearchHit]]
   }
 
   @inline private def createQueue(maxHits: Int) = new HitQueue[DetailedSearchHit](maxHits)
