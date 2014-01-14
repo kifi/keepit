@@ -436,6 +436,7 @@ api.port.on({
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
+    reloadKifiAppTabs();
   },
   unkeep: function(data, _, tab) {
     log("[unkeep]", data)();
@@ -1079,10 +1080,19 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function dateWithoutMs(t) { // until db has ms precision
-  var d = new Date(t);
-  d.setMilliseconds(0);
-  return d;
+function reloadKifiAppTabs() {
+  var appRe = new RegExp('^' + webBaseUri() + '/(?:|blog|profile|find|tag/[a-z0-9-]+|friends(?:/\\w+)?)(?:[?#].*)?$');
+  for (var url in tabsByUrl) {
+    if (appRe.test(url)) {
+      var tabs = tabsByUrl[url];
+      if (tabs) {
+        tabs.forEach(reload);
+      }
+    }
+  }
+  function reload(tab) {
+    api.tabs.reload(tab.id);
+  }
 }
 
 function forEachTabAt() { // (url[, url]..., f)
