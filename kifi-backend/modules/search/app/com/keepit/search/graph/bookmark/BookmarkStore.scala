@@ -39,8 +39,6 @@ class BookmarkStore(
 
   import BookmarkStoreFields._
 
-  private[this] val commitBatchSize = 3000
-
   override def onFailure(indexable: Indexable[Bookmark], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
@@ -49,14 +47,9 @@ class BookmarkStore(
 
   def update(): Int = throw new UnsupportedOperationException("BookmarkStore should not be updated by update()")
 
-  def update(bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]) {
-    try {
-      val cnt = successCount
-      indexDocuments(bookmarks.iterator.map(buildIndexable(_, shard)), commitBatchSize)
-      successCount - cnt
-    } catch { case e: Throwable =>
-      log.error("error in BookmarkStore update", e)
-      throw e
+  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]) {
+    doUpdate("BookmarkStore" + name){
+      bookmarks.iterator.map(buildIndexable(_, shard))
     }
   }
 

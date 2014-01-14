@@ -26,9 +26,7 @@ class ShardedArticleIndexer(
 
       indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
         val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-        total += indexer.doUpdate(s"ArticleIndex${shard.indexNameSuffix}"){
-          next.iterator.map(indexer.buildIndexable)
-        }
+        total += indexer.update(shard.indexNameSuffix, next, shard)
         rest
       }
       if (!done) sequenceNumber = uris.last.seq

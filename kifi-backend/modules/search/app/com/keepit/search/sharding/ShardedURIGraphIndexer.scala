@@ -25,7 +25,7 @@ class ShardedURIGraphIndexer(
       done = bookmarks.isEmpty
 
       indexShards.foreach{ case (shard, indexer) =>
-        indexer.update(s"UriGraphIndex${shard.indexNameSuffix}", bookmarks, shard)
+        indexer.update(shard.indexNameSuffix, bookmarks, shard)
       }
       total += bookmarks.size
       if (!done) sequenceNumber = bookmarks.last.seq
