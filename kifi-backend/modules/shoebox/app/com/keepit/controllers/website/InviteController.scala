@@ -151,7 +151,7 @@ class InviteController @Inject() (db: Database,
               nameOpt.map {
                 case Some(name) =>
                   val inviter = inviterUserOpt.get.firstName
-                  Ok(views.html.auth.auth(
+                  Ok(views.html.auth.authGrey(
                     "signup",
                     titleText = s"$inviter sent you an invite to kifi",
                     titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results.",

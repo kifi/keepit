@@ -456,7 +456,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       document.addEventListener('mousewheel', hide, true);
       document.addEventListener('wheel', hide, true);
       document.addEventListener('keypress', hide, true);
-      if (response.session) {
+      if (response.session && !$leaves.filter('.kifi-res-max-results-n.kifi-checked').length) {
         $leaves.filter('.kifi-res-max-results-' + response.session.prefs.maxResults).addClass('kifi-checked').removeAttr('href');
       }
       // .kifi-hover class needed because :hover does not work during drag
@@ -498,9 +498,6 @@ if (searchUrlRe.test(document.URL)) !function() {
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');
       var n = +$this.text();
       api.port.emit('set_max_results', n);
-      if (response.session) {
-        response.session.prefs.maxResults = n;
-      }
     }).on('click', '.kifi-res-bar', function (e) {
       if (e.shiftKey && response.session && ~response.session.experiments.indexOf("admin")) {
         location.href = response.admBaseUri + '/admin/search/results/' + response.uuid;

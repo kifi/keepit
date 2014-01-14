@@ -77,11 +77,11 @@ class CollectionIndexer(
     total
   }
 
-  def update(name: String, collections: Seq[Collection], shard: Shard): Int = {
-    val cnt = doUpdate(name) {
+  def update(name: String, collections: Seq[Collection], shard: Shard[NormalizedURI]): Int = {
+    val cnt = doUpdate("CollectionIndex" + name) {
       collections.iterator.map(buildIndexable(_, shard))
     }
-    collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
+    collectionNameIndexer.update(name, collections, new CollectionSearcher(getSearcher))
     // update searchers together to get a consistent view of indexes
     searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
     cnt
@@ -94,13 +94,13 @@ class CollectionIndexer(
       collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
       collections.iterator.map(buildIndexable(_, Shard(0, 1)))
     }
-    collectionNameIndexer.update(collections, new CollectionSearcher(getSearcher))
+    collectionNameIndexer.update("", collections, new CollectionSearcher(getSearcher))
     // update searchers together to get a consistent view of indexes
     searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
     cnt
   }
 
-  def buildIndexable(collection: Collection, shard: Shard): CollectionIndexable = {
+  def buildIndexable(collection: Collection, shard: Shard[NormalizedURI]): CollectionIndexable = {
     val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
       Await.result(shoeboxClient.getUriIdsInCollection(collection.id.get), 180 seconds)
     } else {

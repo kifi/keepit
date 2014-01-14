@@ -103,9 +103,9 @@ class MobileSearchControllerTest extends Specification with SearchApplicationInj
 }
 
 case class FixedResultIndexModule() extends IndexModule {
-  var volatileDirMap = Map.empty[(String, Shard), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
+  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard, indexStore: IndexStore): IndexDirectory = {
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectoryImpl()
       volatileDirMap += (configName, shard) -> newdir
