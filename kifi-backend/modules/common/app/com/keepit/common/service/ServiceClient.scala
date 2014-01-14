@@ -6,7 +6,7 @@ import scala.util.Random
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ClientResponse, HttpClient, HttpUri}
+import com.keepit.common.net.{ServiceUnavailableException, ClientResponse, HttpClient, HttpUri}
 import com.keepit.common.routes._
 import com.keepit.common.zookeeper.{ServiceCluster, ServiceInstance}
 import com.keepit.common.KestrelCombinator
@@ -24,7 +24,7 @@ object ServiceClient {
   val MaxUrlLength = 1000
 }
 
-class ServiceUri(serviceInstance: ServiceInstance, protocol: String, port: Int, path: String)
+class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: Int, path: String)
     extends HttpUri {
   override val serviceInstanceOpt = Some(serviceInstance)
   override def summary: String = s"${path.abbreviate(50)}"
@@ -44,7 +44,7 @@ trait ServiceClient extends Logging {
   val protocol: String = "http"
   val port: Int = 9000
 
-  protected def url(path: String): HttpUri = new ServiceUri(nextInstance(), protocol, port, path)
+  protected def url(path: String): ServiceUri = new ServiceUri(nextInstance(), protocol, port, path)
 
   protected def urls(path: String): Seq[HttpUri] =
     serviceCluster.allServices.filter(!_.thisInstance).map(new ServiceUri(_, protocol, port, path)) tap { uris =>
@@ -53,9 +53,17 @@ trait ServiceClient extends Logging {
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000): Future[ClientResponse] = {
     val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
-      callUrl(call, url(call.url), body, ignoreFailure=true, timeout = timeout)
+      callUrl(call, url(call.url), body, ignoreFailure = true, timeout = timeout)
     }
     respFuture.onFailure{
+      case sue: ServiceUnavailableException =>
+        val msg = s"service ${sue.serviceUri.serviceInstance} is not available, reported ${sue.serviceUri.serviceInstance.sentServiceUnavailable} times"
+        log.error(msg, sue)
+        sue.serviceUri.serviceInstance.sentServiceUnavailableException(sue)
+        airbrakeNotifier.notify(AirbrakeError(
+          exception = sue,
+          message = Some(msg),
+          url = Some(call.path)))
       case ex: Throwable =>
         val stringBody = body.toString
         airbrakeNotifier.notify(AirbrakeError(

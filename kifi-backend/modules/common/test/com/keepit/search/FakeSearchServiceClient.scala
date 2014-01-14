@@ -34,8 +34,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def reindexURIGraph(): Unit = {}
 
-  override def reindexCollection(): Unit = {}
-
   override def index(): Unit = {}
 
   override def reindex(): Unit = {}

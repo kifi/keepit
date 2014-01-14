@@ -173,7 +173,7 @@ class ServiceDiscoveryImpl(
       }
 
       val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
-      myInstance = Some(ServiceInstance(myNode, thisRemoteService, true))
+      myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
       watchServices()
@@ -191,7 +191,7 @@ class ServiceDiscoveryImpl(
     myInstance foreach { instance =>
       log.info(s"Changing instance status to $newStatus")
       thisRemoteService.status = newStatus
-      instance.remoteService = thisRemoteService
+      instance.setRemoteService(thisRemoteService)
       zk.set(instance.node, RemoteService.toJson(instance.remoteService))
     }
   }
@@ -209,7 +209,7 @@ class ServiceDiscoveryImpl(
       val selfCheckFuture = services.currentService.selfCheck()
       selfCheckFuture.onComplete{
           case Success(passed) =>
-            val result = if (passed) {
+            if (passed) {
               changeStatus(myHealthyStatus.get)
               selfCheckPromise.success(true)
             } else {
@@ -228,8 +228,8 @@ class ServiceDiscoveryImpl(
   }
 
   def amIUp: Boolean = {
-    myStatus.map{ status =>
-      myHealthyStatus.map(_==status).getOrElse(false)
+    myStatus.map { status =>
+      myHealthyStatus.map(_ == status).getOrElse(false)
     } getOrElse(false)
   }
 

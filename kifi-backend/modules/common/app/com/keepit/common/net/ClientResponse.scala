@@ -13,6 +13,7 @@ import com.ning.http.util.AsyncHttpProviderUtils
 import java.io.{FileOutputStream, File}
 import org.apache.commons.io.IOUtils
 import scala.util.Try
+import play.mvc.Http.Status
 
 
 case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
@@ -37,7 +38,12 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
-  def status: Int = res.status
+  lazy val status: Int = res.status
+
+  if (status == Status.SERVICE_UNAVAILABLE) {
+    //the following notification may be removed after we'll see the system works fine as its pretty much expected
+    airbrake.get.notify(s"got a SERVICE_UNAVAILABLE status code for ${request.httpUri.summary}")
+  }
 
   lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
   private var _parsingTime: Option[Long] = None

@@ -1771,6 +1771,10 @@ $(function () {
 		connectSocial($(this).data('network'));
 	});
 
+	$('.have-no-networks').on('click', '.connect-network-button', function (e) {
+		connectSocial($(e.target).data('network'));
+	});
+
 	function connectSocial(network) {
 		log('[connectSocial]', network);
 		toggleInviteHelp(network, false);
@@ -1939,6 +1943,10 @@ $(function () {
 		chooseNetworkFilterDOM(network);
 		var isEmail = network === 'email',
 		isSocial = /^facebook|linkedin$/.test(network);
+
+		if (network) {
+			$friendsTabPages.removeClass('no-networks');
+		}
 
 		if (isEmail) {
 			$nwFriendsLoading.show();
@@ -2177,6 +2185,9 @@ $(function () {
 		.done(function (a0, a1) {
 			var friends = a0[0].friends, requests = a1[0];
 			var requested = requests.reduce(function (o, u) {o[u.id] = true; return o; }, {});
+
+			$friendsTabPages.toggleClass('no-friends', !friends.length);
+
 			log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
 			for (var f, i = 0; i < friends.length; i++) {
 				f = friends[i];
@@ -2272,6 +2283,10 @@ $(function () {
 		};
 
 		log('[prepInviteTab]', opts);
+
+		if (!network) {
+			getNetworks();
+		}
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
 			log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
@@ -2784,10 +2799,6 @@ $(function () {
 					othersTotal: othersTotal || 0
 				});
 
-				if (hasGmailInvite) {
-					$('.search-filters').show();
-				}
-
 				if (numShown) {
 					$checkAll.addClass('live');
 				}
@@ -2832,6 +2843,18 @@ $(function () {
 		if (hit.collections) {
 			prepKeepCollections(hit.collections);
 		}
+		// hasExampleTag has a side effect -> sets tag.exampleClass for example tag
+		hit.isExample = hasExampleTag(hit.collections);
+	}
+
+	function hasExampleTag(tags) {
+		return !!tags && tags.some(function (tag) {
+			if ((tag.name && tag.name.toLowerCase()) === 'example keep') {
+				tag.exampleClass = 'example';
+				return true;
+			}
+			return false;
+		});
 	}
 
 	function prepKeepForRender(keep) {
@@ -2840,6 +2863,8 @@ $(function () {
 		keep.isMyBookmark = true;
 		keep.me = me;
 		prepKeepCollections(keep.collections);
+		// hasExampleTag has a side effect -> sets tag.exampleClass for example tag
+		keep.isExample = hasExampleTag(keep.collections);
 	}
 
 	var aUrlParser = document.createElement('a');
@@ -4106,19 +4131,30 @@ $(function () {
 		return false;
 	}
 
+	function getNetworks() {
+		return $.getJSON(xhrBase + '/user/networks', function (data) {
+			myNetworks = data;
+			var hasOtherNetworks = data.some(function (net) {
+				return net.network !== 'fortytwo';
+			});
+			if (hasOtherNetworks) {
+				$friendsTabPages.removeClass('no-networks');
+			}
+			else {
+				$.getJSON(xhrBase + '/user/abooks', function (abooks) {
+					$friendsTabPages.toggleClass('no-networks', !abooks.length);
+				});
+			}
+		});
+	}
+
 	// load data for persistent (view-independent) page UI
-	var hasGmailInvite = false;
 	var promise = {
 		me: refreshMe().promise().done(function (me) {
-			if (hasExperiment(me, 'gmail_invite', true)) {
-				hasGmailInvite = true;
-			}
 			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
 			return me;
 		}),
-		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) {
-			myNetworks = data;
-		}).promise(),
+		myNetworks: getNetworks().promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function (data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {

@@ -57,8 +57,7 @@ class MainSearcher(
     config: SearchConfig,
     articleSearcher: Searcher,
     parserFactory: MainQueryParserFactory,
-    socialGraphInfoFuture: Future[SocialGraphInfo],
-    val collectionSearcher: CollectionSearcherWithUser,
+    socialGraphInfo: SocialGraphInfo,
     clickBoostsFuture: Future[ResultClickBoosts],
     browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
@@ -109,8 +108,8 @@ class MainSearcher(
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.0f
 
   // social graph info
-  private[this] lazy val socialGraphInfo = monitoredAwait.result(socialGraphInfoFuture, 5 seconds, s"getting SocialGraphInfo for user Id $userId")
   lazy val uriGraphSearcher = socialGraphInfo.uriGraphSearcher
+  lazy val collectionSearcher = socialGraphInfo.collectionSearcher
 
   private[this] lazy val browsingFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond, s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI])
 
