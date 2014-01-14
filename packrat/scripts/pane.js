@@ -223,9 +223,7 @@ var pane = pane || function () {  // idempotent for Chrome
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         api.port.emit("deauthenticate");
-        $(tile).hide();
         setTimeout(function () {
-          hidePane();
           $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/keep.faint.png') + '"> button above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
         }, 150);
