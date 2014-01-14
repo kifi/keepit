@@ -27,7 +27,7 @@ object ServiceClient {
 class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: Int, path: String)
     extends HttpUri {
   override val serviceInstanceOpt = Some(serviceInstance)
-  override def summary: String = s"$service:${path.abbreviate(50)}"
+  override def summary: String = s"$service:${path.abbreviate(100)}"
   override def service: String = s"${serviceInstance.remoteService.serviceType.shortName}${serviceInstance.id.id.toString}"
   lazy val url: String = s"$protocol://${serviceInstance.instanceInfo.localHostname}:${port}$path"
 }

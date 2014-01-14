@@ -47,7 +47,7 @@ trait HttpUri {
   val serviceInstanceOpt: Option[ServiceInstance] = None
   def url: String
   def service: String = ""
-  def summary: String = url.abbreviate(30)
+  def summary: String = url.abbreviate(100)
   override def equals(obj: Any) = obj.asInstanceOf[HttpUri].url == url
   override def toString(): String = s"$url for service $serviceInstanceOpt"
 }
