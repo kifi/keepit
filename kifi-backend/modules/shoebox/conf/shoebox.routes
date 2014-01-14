@@ -1,6 +1,4 @@
 
-GET     /doitandrew                 @com.keepit.controllers.assets.UserPictureController.metaUpdate
-
 GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
 GET     /ss/login                   securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
