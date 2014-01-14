@@ -60,7 +60,11 @@ trait EdgeSet[S,D] {
   }
 }
 
-trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
+/**
+ * destIdSet is specified as a set of DB Ids. We need some IdMapper to get corresponding Lucene DocIds.
+ * This is the dual of DocIdSetEdgeSet.
+ */
+trait DbIdSetEdgeSet[S,D] extends EdgeSet[S, D] {
   protected var cache: (Searcher, Array[Int]) = (null, null)
 
   protected def getDocIds(searcher: Searcher): Array[Int] = {
@@ -79,17 +83,23 @@ trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = toDocIdSetIterator(getDocIds(searcher))
 }
 
-trait IdSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] with EdgeSetAccessor[S, D]{
+trait IdSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
   override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
   override def size = destIdSet.size
 }
 
-trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] with LongArrayBasedEdgeInfoAccessor[S, D]{
+trait LongSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] with LongArrayBasedEdgeInfoAccessor[S, D]{
   override def destIdLongSet = longArraySet
   override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(Id[D](_))
   override def size = longArraySet.size
 }
 
+trait LongSetEdgeSetWithAttributes[S, D] extends LongSetEdgeSet[S, D] with LuceneBackedBookmarkInfoAccessor[S, D]
+
+
+/**
+ * Only sourceId is specified. destIdSet is constructed by performing Lucene search
+ */
 trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   val searcher: Searcher
   val sourceFieldName: String
@@ -115,8 +125,10 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
 }
 
 
-trait LongSetEdgeSetWithAttributes[S, D] extends LongSetEdgeSet[S, D] with LuceneBackedBookmarkInfoAccessor[S, D]
-
+/**
+ * we are given Lucene docIds of the destination nodes. Need some IdMapper to get corresponding DB Ids.
+ * This is the dual of DbIdSetEdgeSet.
+ */
 trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
   val docids: Array[Int]
   val searcher: Searcher
