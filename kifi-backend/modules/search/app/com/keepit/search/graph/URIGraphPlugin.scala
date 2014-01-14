@@ -11,18 +11,18 @@ import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
 import com.keepit.search.graph.bookmark.URIGraphIndexer
-
+import com.keepit.search.sharding.ShardedURIGraphIndexer
 
 trait URIGraphPlugin extends IndexerPlugin[URIGraphIndexer]
 
 class URIGraphPluginImpl @Inject() (
   actor: ActorInstance[URIGraphActor],
-  indexer: URIGraphIndexer,
+  indexer: ShardedURIGraphIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[URIGraphIndexer, URIGraphActor](indexer.asInstanceOf[IndexManager[URIGraphIndexer]] , actor, serviceDiscovery) with URIGraphPlugin
+) extends IndexerPluginImpl[URIGraphIndexer, URIGraphActor](indexer, actor, serviceDiscovery) with URIGraphPlugin
 
 class URIGraphActor @Inject()(
   airbrake: AirbrakeNotifier,
-  uriGraphIndexer: URIGraphIndexer
-) extends IndexerActor[URIGraphIndexer](airbrake, uriGraphIndexer.asInstanceOf[IndexManager[URIGraphIndexer]])
+  indexer: ShardedURIGraphIndexer
+) extends IndexerActor[URIGraphIndexer](airbrake, indexer)

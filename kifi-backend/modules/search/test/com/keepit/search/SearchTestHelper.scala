@@ -69,6 +69,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val shardedUriGraphIndexer = new ShardedURIGraphIndexer(Map(singleShard -> uriGraphIndexer), inject[ShoeboxServiceClient])
 
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
@@ -84,7 +85,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     val mainSearcherFactory = new MainSearcherFactory(
       shardedArticleIndexer,
       userIndexer,
-      uriGraphIndexer,
+      shardedUriGraphIndexer,
       shardedCollectionIndexer,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,
