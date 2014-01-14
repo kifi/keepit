@@ -442,7 +442,14 @@ exports.tabs = {
     focus: new Listeners,
     blur: new Listeners,
     loading: new Listeners,
-    unload: new Listeners}};
+    unload: new Listeners
+  },
+  reload: function(tabId) {
+    var tab = tabsById[tabId];
+    if (tab) {
+      tab.reload();
+    }
+  }};
 
 exports.timers = timers;
 exports.version = self.version;
