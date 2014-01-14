@@ -20,8 +20,8 @@ class ArticleIndexerController @Inject()(
   extends SearchServiceController {
 
   def index() = Action { implicit request =>
-    val cnt = indexerPlugin.update()
-    Ok(JsObject(Seq("articles" -> JsNumber(cnt))))
+    indexerPlugin.update()
+    Ok(JsObject(Seq("articles" -> JsString("ok"))))
   }
 
   def reindex() = Action { implicit request =>
