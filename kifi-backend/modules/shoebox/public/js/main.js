@@ -2823,7 +2823,7 @@ $(function () {
 		if (!(keeps && keeps.length)) {
 			return;
 		}
-		return $.postJson('https://www.kifi.com/site/keeps/screenshot', {
+		return $.postJson(xhrBase + '/keeps/screenshot', {
 			urls: keeps.map(function (keep) {
 				return keep.url;
 			})
