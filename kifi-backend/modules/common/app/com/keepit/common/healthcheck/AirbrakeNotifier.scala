@@ -63,7 +63,8 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
 
 class AirbrakeSender @Inject() (
   httpClient: HttpClient,
-  healthcheck: HealthcheckPlugin)
+  healthcheck: HealthcheckPlugin,
+  pagerDutySender: PagerDutySender)
     extends Logging {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -75,6 +76,7 @@ class AirbrakeSender @Inject() (
         firstErrorReported = true
         val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
         log.error(s"can't deal with error: $he")
+        pagerDutySender.openIncident("Airbrake Error!", ex)
       }
     }
   }
