@@ -219,8 +219,8 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
   def numSyncs = syncs
 
   protected def putValueHash(key: Long, value: Long, updateStrength: Double) {
-    def putValueHashOnce(bufferChunk: IntBufferWrapper, tableSize: Int) : Unit = {
-      val (positions, values) = getValueHashes(key, true)
+    def putValueHashOnce(bufferChunk: IntBufferWrapper, useSlaveAsPrimary: Boolean) : Unit = {
+      val (positions, values) = getValueHashes(key, useSlaveAsPrimary)
 
       // count open positions
       var openCount = 0
@@ -246,12 +246,12 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
     }
 
     val bufferChunkMaster = masterBuffer.getChunk(key)
-    putValueHashOnce(bufferChunkMaster, masterBuffer.chunkSize)
+    putValueHashOnce(bufferChunkMaster, false)
     dirtyChunks = dirtyChunks + bufferChunkMaster
 
     slaveBuffer.foreach{ mcBuffer =>
       val bufferChunkSlave = mcBuffer.getChunk(key)
-      putValueHashOnce(bufferChunkSlave, mcBuffer.chunkSize)
+      putValueHashOnce(bufferChunkSlave, true)
       dirtyChunks = dirtyChunks + bufferChunkSlave
     }
   }
