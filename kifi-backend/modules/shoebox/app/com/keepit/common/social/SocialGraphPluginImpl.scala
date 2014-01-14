@@ -59,6 +59,7 @@ private[social] class SocialGraphActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
+  // hotspot: need optimization; gathering timing info for analysis
   def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = timing(s"fetchUserInfo($socialUserInfo)") {
     try {
       require(socialUserInfo.credentials.isDefined,
