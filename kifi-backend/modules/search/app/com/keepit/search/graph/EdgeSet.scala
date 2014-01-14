@@ -23,7 +23,7 @@ trait EdgeSet[S,D] {
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator
   def size: Int
 
-  def accessor: EdgeSetAccessor[S, D] = ???
+  def accessor: EdgeSetAccessor[S, D] = throw new UnsupportedOperationException
 
   implicit def toIterator(it: DocIdSetIterator): Iterator[Int] = {
     if (it != null) {
@@ -81,6 +81,17 @@ trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = toDocIdSetIterator(getDocIds(searcher))
 }
 
+trait IdSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] with EdgeSetAccessor[S, D]{
+  override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
+  override def size = destIdSet.size
+}
+
+trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] with LongArrayBasedEdgeInfoAccessor[S, D]{
+  override def destIdLongSet = longArraySet
+  override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(Id[D](_))
+  override def size = longArraySet.size
+}
+
 trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   val searcher: Searcher
   val sourceFieldName: String
@@ -105,19 +116,6 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   protected def createSourceTerm: Term = new Term(sourceFieldName, sourceId.toString)
 }
 
-trait IdSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] with EdgeSetAccessor[S, D]{
-  override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
-  override def size = destIdSet.size
-}
-
-trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] with LongArrayBasedEdgeInfoAccessor[S, D]{
-  //protected val longArraySet: LongArraySet
-
-  override def destIdLongSet = longArraySet
-  override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(Id[D](_))
-  override def size = longArraySet.size
-
-}
 
 trait LongSetEdgeSetWithAttributes[S, D] extends LongSetEdgeSet[S, D] with LuceneBackedBookmarkInfoAccessor[S, D]
 

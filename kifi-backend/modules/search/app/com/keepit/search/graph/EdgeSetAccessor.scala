@@ -6,31 +6,6 @@ import scala.util.Sorting
 import com.keepit.search.util.LongArraySet
 import com.keepit.common.logging.Logging
 
-//trait BookmarkVisitor[S, Bookmark] extends TimeRangeFilter[S, Bookmark] with BookmarkInfoAccessor[S, Bookmark] {
-//  override def getTimeStamp(id: Long): Long = getCreatedAt(id)
-//}
-//
-//trait LuceneBackedBookmarkVisitor[S, Bookmark] extends TimeRangeFilter[S, Bookmark] with LuceneBackedBookmarkInfoAccessor[S, Bookmark] {
-//  override def getTimeStamp(id: Long) = getCreatedAt(id)
-//  override def filterEdgeSet(): EdgeSet[S, Bookmark] = {
-//    val buf = new ArrayBuffer[Long]
-//    var size = longArraySet.size
-//    var i = 0
-//    while (i < size) {
-//      val timestamp = createdAtByIndex(i)
-//      if (startLong <= timestamp && timestamp <= endLong) buf += longArraySet.key(i)
-//      i += 1
-//    }
-//    val filtered = buf.toArray
-//    Sorting.quickSort(filtered)
-//    val inheritedSourceId = sourceId
-//    new LongSetEdgeSet[S, Bookmark] {
-//      override val sourceId: Id[S] = inheritedSourceId
-//      override val longArraySet = LongArraySet.fromSorted(filtered)
-//    }
-//  }
-//}
-
 trait EdgeSetAccessor[S, D] extends EdgeSet[S, D] {
   override def accessor: EdgeSetAccessor[S, D] = this
   protected var _destId: Long = -1L
@@ -70,7 +45,7 @@ trait LuceneBackedBookmarkInfoAccessor[S, D]
 
   protected def createdAtByIndex(idx: Int): Long
   protected def isPublicByIndex(idx: Int): Boolean
-  protected def bookmarkIdByIndex(idx: Int): Long = ???
+  protected def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
 
   override def createdAt: Long = if (index >= 0) createdAtByIndex(index) else throw new IllegalStateException("accessor is not positioned")
   override def isPublic: Boolean = if (index >= 0) isPublicByIndex(index) else throw new IllegalStateException("accessor is not positioned")

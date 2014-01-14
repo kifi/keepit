@@ -6,35 +6,7 @@ import com.keepit.search.util.LongArraySet
 import org.joda.time.DateTime
 import scala.collection.mutable.ArrayBuffer
 
-trait EdgeSetFilter[S, D] extends EdgeSet[S, D] {
-  val inheritedSourceId = sourceId
-  def accept(id: Long): Boolean
-
-  def filterEdgeSet(): EdgeSet[S, D] = {
-    val subDestId = destIdLongSet.iterator.filter(accept(_)).toArray
-    Sorting.quickSort(subDestId)
-    new LongSetEdgeSet[S, D] {
-      override val sourceId: Id[S] = inheritedSourceId
-      override val longArraySet = LongArraySet.fromSorted(subDestId)
-    }
-  }
-}
-
-trait TimeRangeFilter[S, D] extends EdgeSetFilter[S, D] {
-//  val start: DateTime
-//  val end: DateTime
-//  val startLong = start.getMillis
-//  val endLong = end.getMillis
-//
-//  def getTimeStamp(id: Long): Long
-//
-//  override def accept(id: Long): Boolean = {
-//    val t = getTimeStamp(id)
-//    startLong <= t && t <= endLong
-//  }
-
-  override def accept(id: Long) = true
-
+trait TimeRangeFilter[S, D] {
   def filterByTimeRange(start: Long, end: Long): EdgeSet[S, D]
 }
 
