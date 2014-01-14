@@ -707,6 +707,13 @@ api.port.on({
       }
     }
   },
+  open_support_chat: function (_, __, tab) {
+    api.tabs.emit(tab, 'open_to', {
+      trigger: 'deepLink',
+      locator: '/messages',
+      composeTo: friendsById && friendsById['aa345838-70fe-45f2-914c-f27c865bdb91'] || {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', name: 'Tamila, Kifi Help'}
+    }, {queue: 1});
+  },
   open_login_popup: function(o) {
     var baseUri = webBaseUri();
     api.popup.open({

@@ -45,6 +45,17 @@
     {
       "js": [
         "scripts/api.js",
+        "scripts/support.js"
+      ],
+      "matches": [
+        "*://support.kifi.com/*",
+        "*://www.kifi.com/support*"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "js": [
+        "scripts/api.js",
         "scripts/lib/jquery.js",
         "scripts/lib/jquery-hoverfu.js",
         "scripts/lib/jquery-ui-position.min.js",

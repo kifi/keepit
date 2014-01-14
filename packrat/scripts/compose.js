@@ -110,7 +110,7 @@ function initCompose($c, enterToSend, opts) {
         }
       },
       onDelete: function () {
-        if (defaultText && !$t.tokenInput('get').length && $d.text() == defaultText) {
+        if (defaultText && !$t.tokenInput('get').length && $d.text() === defaultText) {
           $d.empty();
           $f.addClass('kifi-empty');
         }
@@ -279,9 +279,15 @@ function initCompose($c, enterToSend, opts) {
     form: function () {
       return $f[0];
     },
+    prefill: function (r) {
+      log('[compose.prefill]', r)();
+      r.name = r.name || r.firstName + ' ' + r.lastName;
+      defaultText = '';
+      $t.tokenInput('add', r);
+    },
     focus: function () {
       log('[compose.focus]')();
-      if ($t.length) {
+      if ($t.length && !$t.tokenInput('get').length) {
         $f.find('#token-input-kifi-compose-to').focus();
       } else {
         $d.focus();
