@@ -1241,7 +1241,7 @@ api.icon.on.click.add(function(tab) {
 function kifify(tab) {
   log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', session ? '' : 'no session')();
   if (!tab.icon) {
-    api.icon.set(tab, "icons/keep.faint.png");
+    api.icon.set(tab, "icons/k_gray.png");
   }
 
   if (!session) {
@@ -1479,7 +1479,7 @@ function isSent(th) {
 
 function setIcon(tab, kept) {
   log("[setIcon] tab:", tab.id, "kept:", kept)();
-  api.icon.set(tab, kept ? "icons/kept.png" : "icons/keep.png");
+  api.icon.set(tab, kept ? 'icons/k_blue.png' : 'icons/k_dark.png');
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -1904,7 +1904,7 @@ function openLogin(callback, retryMs) {
 function clearSession() {
   if (session) {
     api.tabs.each(function(tab) {
-      api.icon.set(tab, 'icons/keep.faint.png');
+      api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'session_change', null);
     });
   }

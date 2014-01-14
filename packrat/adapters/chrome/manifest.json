@@ -12,7 +12,7 @@
   "options_page": "options.html",
   "page_action": {
     "default_icon": {
-      "38": "icons/keep.faint.png"
+      "38": "icons/k_gray.png"
     },
     "default_title": "Kifi"
   },
