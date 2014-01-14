@@ -84,7 +84,7 @@
   content: 'Message Box';
 }
 .kifi-pane[data-locator^='/messages/'] .kifi-pane-head-title::before {
-  content: 'Kifi Chat';
+  content: 'Same-Page Chat';
 }
 a.kifi-pane-settings {
   position: absolute;
