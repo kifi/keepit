@@ -470,7 +470,7 @@ class UserCommander @Inject() (
                 userIds = Set(user.id.get),
                 title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
                 body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                linkText = "Invite more friends to kifi.",
+                linkText = "Invite more friends to kifi",
                 linkUrl = "https://www.kifi.com/friends/invite",
                 imageUrl = respondingUserImage,
                 sticky = false,
@@ -508,7 +508,7 @@ class UserCommander @Inject() (
 
               elizaServiceClient.sendGlobalNotification(
                 userIds = Set(user.id.get),
-                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
+                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
                 body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
                 linkText = s"Respond to ${requestingUser.firstName}'s friend request",
                 linkUrl = "https://kifi.com/friends/requests",
