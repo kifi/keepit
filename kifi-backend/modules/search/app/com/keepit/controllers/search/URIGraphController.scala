@@ -100,7 +100,7 @@ class URIGraphController @Inject()(
     val collectionIndexer = collectionGraphPlugin.getIndexerFor(1L)
     try {
       val collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
-      val doc = collectionIndexer.buildIndexable(collections).buildDocument
+      val doc = collectionIndexer.buildIndexable(collections, Shard(0, 1)).buildDocument
       Ok(html.admin.luceneDocDump("Collection", doc, collectionIndexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, collectionIndexer))

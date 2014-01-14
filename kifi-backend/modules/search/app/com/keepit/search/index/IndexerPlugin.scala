@@ -18,6 +18,7 @@ import play.api.Plugin
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.keepit.search.IndexInfo
 
 object IndexerPluginMessages {
   case object UpdateIndex
@@ -35,6 +36,7 @@ trait IndexManager[T <: Indexer[_]] {
   def reindex(): Unit
   def close(): Unit
   def getIndexerFor(id: Long): T
+  def indexInfos(name: String): Seq[IndexInfo]
 }
 
 trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
@@ -46,6 +48,7 @@ trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
   def commitSequenceNumber: SequenceNumber
   def committedAt: Option[String]
   def getIndexerFor(id: Long): T
+  def indexInfos: Seq[IndexInfo]
 }
 
 abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
@@ -97,6 +100,8 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
   override def committedAt: Option[String] = indexer.committedAt
 
   def getIndexerFor(id: Long): T = indexer.getIndexerFor(id)
+
+  def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
 }
 
 class IndexerActor[T <: Indexer[_]](

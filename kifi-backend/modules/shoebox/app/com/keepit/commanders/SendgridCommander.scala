@@ -29,9 +29,11 @@ class SendgridCommander @Inject() (
                                    |Email data:<br/>
                                    |Category: ${email.category}<br/>
                                    |Subject: ${email.subject}<br/>
+                                   |From: ${email.from}<br/>
+                                   |To: ${email.to}<br/>
+                                   |CC: ${email.cc}<br/>
                                    |Created at: ${email.createdAt}<br/>
-                                   |Updated at: ${email.updatedAt}<br/>
-                                   |Body:<br/> ${email.htmlBody}<br/>""".stripMargin
+                                   |Updated at: ${email.updatedAt}<br/>""".stripMargin
           case None => s"Got event:<br/> $event"
         }
         db.readWrite{ implicit s =>
