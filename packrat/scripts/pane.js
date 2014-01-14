@@ -286,8 +286,12 @@ var pane = pane || function () {  // idempotent for Chrome
       return !!$pane;
     },
     show: function (o) {
-      log('[pane.show]', o.locator, o.trigger || '', o.paramsArg || '', o.redirected || '')();
-      showPane(o.locator, false, o.paramsArg, o.redirected);
+      log('[pane.show]', o.locator, o.trigger || '', o.paramsArg || '', o.redirected || '', o.composeTo || '')();
+      if (o.composeTo) {
+        pane.compose(o.trigger, o.composeTo);
+      } else {
+        showPane(o.locator, false, o.paramsArg, o.redirected);
+      }
     },
     hide: function (leaveSlider) {
       if ($pane) {
@@ -309,17 +313,23 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(locator);
       }
     },
-    compose: function(trigger) {
+    compose: function(trigger, recipient) {
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
         if ($pane) {
-          toggleToaster();
+          withPane();
         } else {
-          showPane('/messages:all').then(toggleToaster);
+          showPane('/messages:all').then(withPane);
         }
-        function toggleToaster() {
+        function withPane() {
+          if (recipient && toaster.showing()) return;  // don't clobber form
           toaster.toggle($pane).done(function (compose) {
-            compose && compose.focus();
+            if (compose) {
+              if (recipient) {
+                compose.prefill(recipient);
+              }
+              compose.focus();
+            }
           });
         }
       });
