@@ -55,7 +55,6 @@ class LoggingFilter() extends EssentialFilter {
           ))
           result.withHeaders(
             CommonHeaders.ResponseTime -> event.duration.toString,
-            CommonHeaders.IsLeader -> (if(discovery.isLeader()) "Y" else "N"),
             CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N"),
             CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA"))
         }

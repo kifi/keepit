@@ -40,7 +40,7 @@ class ServiceInstance(val node: Node, val thisInstance: Boolean) extends Logging
 
   lazy val id: ServiceInstanceId = ServiceInstanceId(node.name.substring(node.name.lastIndexOf('_') + 1).toLong)
 
-  def sentServiceUnavailableException(e: ServiceUnavailableException) = {
+  def reportServiceUnavailable() = {
     log.warn(s"marking service $remoteService as sentServiceUnavailableException for the ${sentServiceUnavailable.get} time")
     sentServiceUnavailable.incrementAndGet()
   }

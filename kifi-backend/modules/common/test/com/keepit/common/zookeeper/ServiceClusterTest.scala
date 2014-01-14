@@ -129,9 +129,9 @@ class ServiceClusterTest extends Specification {
       service1 !== service2
       service1 !== service3
       service1.reportedSentServiceUnavailable === false
-      service1.sentServiceUnavailableException(null)
+      service1.reportServiceUnavailable()
       service1.reportedSentServiceUnavailable === true
-      service1.sentServiceUnavailableException(null)
+      service1.reportServiceUnavailable()
       service1.reportedSentServiceUnavailable === true
       val service = cluster.nextService.get
       service !== service1
