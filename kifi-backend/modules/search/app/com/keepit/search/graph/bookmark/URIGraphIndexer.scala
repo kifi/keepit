@@ -22,6 +22,7 @@ import scala.util.{Success, Try}
 import scala.math._
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
+import com.keepit.search.IndexInfo
 
 object URIGraphFields {
   val userField = "usr"
@@ -128,6 +129,10 @@ class URIGraphIndexer(
       sequenceNumber = seq,
       isDeleted = false,
       bookmarks = bookmarks)
+  }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("URIGraphIndex" + name) ++ bookmarkStore.indexInfos("BookmarkStore" + name)
   }
 }
 

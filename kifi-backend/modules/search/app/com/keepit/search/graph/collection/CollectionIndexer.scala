@@ -18,6 +18,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}
 import com.keepit.common.concurrent.ExecutionContext.immediate
+import com.keepit.search.IndexInfo
 
 object CollectionFields {
   val userField = "coll_usr"
@@ -33,11 +34,6 @@ object CollectionFields {
   )
 }
 
-object CollectionIndexer {
-  def shouldDelete(collection: Collection): Boolean = (collection.state == INACTIVE)
-  val bookmarkSource = BookmarkSource("BookmarkStore")
-}
-
 class CollectionIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
@@ -47,6 +43,7 @@ class CollectionIndexer(
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
   import CollectionFields._
+  import CollectionIndexer.CollectionIndexable
 
   override val commitBatchSize = 100
   private val fetchSize = 100
@@ -115,6 +112,17 @@ class CollectionIndexer(
       collection = collection,
       normalizedUris = bookmarks)
   }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("CollectionIndex" + name) ++ collectionNameIndexer.indexInfos("CollectionNameIndex" + name)
+  }
+}
+
+object CollectionIndexer {
+  import CollectionFields._
+
+  def shouldDelete(collection: Collection): Boolean = (collection.state == INACTIVE)
+  val bookmarkSource = BookmarkSource("BookmarkStore")
 
   class CollectionIndexable(
     override val id: Id[Collection],

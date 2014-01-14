@@ -124,10 +124,10 @@ object ResultMerger {
     }
 
     val hitList = hits.toSortedList
-    hitList.foreach{ hit =>
+    hitList.map{ hit =>
       hit.hit = hit.hit.set("score", JsNumber(hit.score))
+      hit.hit
     }
-    hitList.asInstanceOf[Seq[DetailedSearchHit]]
   }
 
   @inline private def createQueue(maxHits: Int) = new HitQueue[DetailedSearchHit](maxHits)
