@@ -86,7 +86,8 @@ trait IndexModule extends ScalaModule with Logging {
     new ShardedArticleIndexer(indexShards.toMap, articleStore, shoeboxClient)
   }
 
-  //TODO: enable
+  @Singleton
+  @Provides
   def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedURIGraphIndexer = {
     def bookmarkStore(shard: Shard) = {
       val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
@@ -95,7 +96,7 @@ trait IndexModule extends ScalaModule with Logging {
       new BookmarkStore(dir, config, airbrake, shoeboxClient)
     }
     def uriGraphIndexer(shard: Shard, store: BookmarkStore): URIGraphIndexer = {
-      val dir = getIndexDirectory("index.urigraph.directory", noShard, backup)
+      val dir = getIndexDirectory("index.urigraph.directory", shard, backup)
       log.info(s"storing URIGraphIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
       new URIGraphIndexer(dir, config, store, airbrake, shoeboxClient)
@@ -110,16 +111,6 @@ trait IndexModule extends ScalaModule with Logging {
     log.info(s"storing BookmarkStore in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new BookmarkStore(dir, config, airbrake, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def uriGraphIndexer(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
-    val store = bookmarkStore(backup, airbrake, shoeboxClient)
-    val dir = getIndexDirectory("index.urigraph.directory", noShard, backup)
-    log.info(s"storing URIGraph in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, store, airbrake, shoeboxClient)
   }
 
   @Singleton

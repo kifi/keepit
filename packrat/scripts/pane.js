@@ -171,6 +171,7 @@ var pane = pane || function () {  // idempotent for Chrome
         });
       })
       .on("mousedown", ".kifi-pane-settings", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         var $sett = $(this).addClass("kifi-active");
         var $menu = $sett.next(".kifi-pane-settings-menu").fadeIn(50);
@@ -204,6 +205,7 @@ var pane = pane || function () {  // idempotent for Chrome
         });
       })
       .on("mouseup", ".kifi-pane-settings-hide", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         var $hide = $(this).toggleClass("kifi-checked");
         var checked = $hide.hasClass("kifi-checked");
@@ -218,6 +220,7 @@ var pane = pane || function () {  // idempotent for Chrome
         }, 150);
       })
       .on("mouseup", ".kifi-pane-settings-sign-out", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         api.port.emit("deauthenticate");
         $(tile).hide();
@@ -228,6 +231,7 @@ var pane = pane || function () {  // idempotent for Chrome
         }, 150);
       })
       .on("mouseup", ".kifi-pane-settings-link", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         window.open('https://www.kifi.com/profile');
       })
@@ -282,8 +286,12 @@ var pane = pane || function () {  // idempotent for Chrome
       return !!$pane;
     },
     show: function (o) {
-      log('[pane.show]', o.locator, o.trigger || '', o.paramsArg || '', o.redirected || '')();
-      showPane(o.locator, false, o.paramsArg, o.redirected);
+      log('[pane.show]', o.locator, o.trigger || '', o.paramsArg || '', o.redirected || '', o.composeTo || '')();
+      if (o.composeTo) {
+        pane.compose(o.trigger, o.composeTo);
+      } else {
+        showPane(o.locator, false, o.paramsArg, o.redirected);
+      }
     },
     hide: function (leaveSlider) {
       if ($pane) {
@@ -305,17 +313,23 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(locator);
       }
     },
-    compose: function(trigger) {
+    compose: function(trigger, recipient) {
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
         if ($pane) {
-          toggleToaster();
+          withPane();
         } else {
-          showPane('/messages:all').then(toggleToaster);
+          showPane('/messages:all').then(withPane);
         }
-        function toggleToaster() {
+        function withPane() {
+          if (recipient && toaster.showing()) return;  // don't clobber form
           toaster.toggle($pane).done(function (compose) {
-            compose && compose.focus();
+            if (compose) {
+              if (recipient) {
+                compose.prefill(recipient);
+              }
+              compose.focus();
+            }
           });
         }
       });

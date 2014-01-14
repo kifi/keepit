@@ -71,7 +71,7 @@ var tile = tile || function() {  // idempotent for Chrome
             var hViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"].clientHeight;
             var hSeen = window.pageYOffset + hViewport;
             log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?")();
-            if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage) {
+            if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage && e.isTrusted !== false) {
               log("[onScroll] showing")();
               loadAndDo('keeper', 'show', 'scroll');
             }
@@ -82,8 +82,7 @@ var tile = tile || function() {  // idempotent for Chrome
     reset: cleanUpDom.bind(null, true)
   });
   function onKeyDown(e) {
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
-      // intentionally ommited altKey
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
       switch (e.keyCode) {
       case 75: // k
         if (session === undefined) {  // not yet initialized
@@ -188,8 +187,8 @@ var tile = tile || function() {  // idempotent for Chrome
     "<div class=kifi-tile-keep></div>" +
     "<div class=kifi-tile-kept></div></div>";
   tile["kifi:position"] = positionTile;
-  tile.addEventListener("mouseover", function(e) {
-    if (e.target === tileCount || tileCard.contains(e.target)) {
+  tile.addEventListener("mouseover", function (e) {
+    if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
       loadAndDo('keeper', 'show', 'tile');
     }
   });
