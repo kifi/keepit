@@ -12,6 +12,7 @@ import org.apache.lucene.index.Term
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.search.IndexInfo
 import com.keepit.search.Searcher
 import play.modules.statsd.api.Statsd
 import org.apache.commons.io.FileUtils
@@ -161,6 +162,15 @@ abstract class Indexer[T](
   }
 
   def getIndexerFor(id: Long): Indexer[T] = this
+
+  def indexInfos(name: String): Seq[IndexInfo] = {
+    Seq(IndexInfo(
+      name = name,
+      numDocs = numDocs,
+      sequenceNumber = Some(commitSequenceNumber),
+      committedAt = committedAt
+    ))
+  }
 
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
     doWithIndexWriter{ indexWriter =>

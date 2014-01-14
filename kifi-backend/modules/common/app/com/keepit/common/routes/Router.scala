@@ -173,6 +173,7 @@ object Search extends Service {
     def semanticSimilarity(query1: String, query2: String, stem: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/similarity", Param("query1", query1), Param("query2", query2), Param("stem", stem))
     def visualizeSemanticVector() = ServiceRoute(POST, "/internal/search/semanticVector/visualize")
     def semanticLoss(queryText: String) = ServiceRoute(GET, "/internal/search/semanticVector/semanticLoss", Param("queryText", queryText))
+    def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
   }
 }
 

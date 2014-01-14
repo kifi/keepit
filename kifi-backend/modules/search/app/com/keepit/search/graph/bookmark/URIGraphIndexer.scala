@@ -22,6 +22,8 @@ import scala.util.{Success, Try}
 import scala.math._
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
+import com.keepit.search.IndexInfo
+import com.keepit.search.sharding.Shard
 
 object URIGraphFields {
   val userField = "usr"
@@ -87,7 +89,7 @@ class URIGraphIndexer(
       total += doUpdate("URIGraphIndex") {
         val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
         done = bookmarks.isEmpty
-        toIndexables(bookmarks)
+        toIndexables(bookmarks, Shard(0, 1))
       }
       // update searchers together to get a consistent view of indexes
       searchers = (this.getSearcher, bookmarkStore.getSearcher)
@@ -95,9 +97,9 @@ class URIGraphIndexer(
     total
   }
 
-  def update(name: String, bookmarks: Seq[Bookmark]): Int = {
+  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard): Int = {
     val cnt = doUpdate(name) {
-      toIndexables(bookmarks)
+      toIndexables(bookmarks, shard)
     }
     // update searchers together to get a consistent view of indexes
     searchers = (this.getSearcher, bookmarkStore.getSearcher)
@@ -106,15 +108,15 @@ class URIGraphIndexer(
 
   def update(userId: Id[User]): Int = updateLock.synchronized {
     val cnt = doUpdate("URIGraphIndex") {
-      toIndexables(Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber))
+      toIndexables(Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber), Shard(0, 1))
     }
     // update searchers together to get a consistent view of indexes
     searchers = (this.getSearcher, bookmarkStore.getSearcher)
     cnt
   }
 
-  def toIndexables(bookmarks: Seq[Bookmark]): Iterator[Indexable[User]] = {
-    bookmarkStore.update(bookmarks)
+  def toIndexables(bookmarks: Seq[Bookmark], shard: Shard): Iterator[Indexable[User]] = {
+    bookmarkStore.update(bookmarks, shard)
 
     val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
     usersChanged.iterator.map(buildIndexable)
@@ -135,8 +137,12 @@ class URIGraphIndexer(
     val bookmarks = bookmarkStore.getBookmarks(userId)
     new URIGraphIndexable(id = userId,
       sequenceNumber = seq,
-      isDeleted = false,
+      isDeleted = bookmarks.isEmpty,
       bookmarks = bookmarks)
+  }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("URIGraphIndex" + name) ++ bookmarkStore.indexInfos("BookmarkStore" + name)
   }
 }
 
