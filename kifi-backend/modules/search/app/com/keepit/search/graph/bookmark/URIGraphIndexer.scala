@@ -96,6 +96,15 @@ class URIGraphIndexer(
     total
   }
 
+  def update(name: String, bookmarks: Seq[Bookmark]): Int = {
+    val cnt = doUpdate(name) {
+      toIndexables(bookmarks)
+    }
+    // update searchers together to get a consistent view of indexes
+    searchers = (this.getSearcher, bookmarkStore.getSearcher)
+    cnt
+  }
+
   def update(userId: Id[User]): Int = updateLock.synchronized {
     val cnt = doUpdate("URIGraphIndex") {
       toIndexables(Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber))
