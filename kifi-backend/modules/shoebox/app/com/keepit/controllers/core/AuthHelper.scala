@@ -363,6 +363,8 @@ class AuthHelper @Inject() (
                   .withCookies(authenticator.toCookie)
               }
             )
+          case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id =>
+            Redirect(s"/?m=3&email=${address.address}")
           case (true, _) =>
             Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
         }
