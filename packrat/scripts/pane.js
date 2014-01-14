@@ -230,10 +230,10 @@ var pane = pane || function () {  // idempotent for Chrome
             .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
         }, 150);
       })
-      .on("mouseup", ".kifi-pane-settings-link", function (e) {
+      .on("mouseup", ".kifi-pane-settings-menu-item[data-href]", function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
-        window.open('https://www.kifi.com/profile');
+        window.open(this.dataset.href);
       })
       .on("kifi:show-pane", function (e, loc, paramsArg) {
         showPane(loc, false, paramsArg);
