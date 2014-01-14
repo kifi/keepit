@@ -81,6 +81,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "experimentId": response.experimentId,
         "query": response.query,
         "filter": filter,
+        "maxResults": response.session.prefs.maxResults,
         "kifiResults": response.hits.length,
         "kifiExpanded": response.expanded || false,
         "kifiTime": tKifiResultsReceived - tQuery,
@@ -301,12 +302,24 @@ if (searchUrlRe.test(document.URL)) !function() {
     clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
+      if (isKifi) {
+        var richHit = response.hits[resIdx]
+        var hit = {
+          "isMyBookmark": richHit.isMyBookmark,
+          "isPrivate": richHit.isPrivate,
+          "count": richHit.count,
+          "users": richHit.users,
+          "score": richHit.score,
+          "bookmark": richHit.bookmark 
+        }
+      }
       api.port.emit("log_search_event", [
         "resultClicked",
         {
           "origin": window.location.origin,
           "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
           "filter": filter,
+          "maxResults": response.session.prefs.maxResults,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length,
           "kifiExpanded": response.expanded || false,
@@ -319,7 +332,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
           "query": response.query,
-          "hit": isKifi ? response.hits[resIdx] : null,
+          "hit": isKifi ? hit : null,
           "refinements": refinements,
           "pageSession": pageSession
         }
