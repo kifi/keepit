@@ -29,15 +29,6 @@ class ArticleIndexerController @Inject()(
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
-  def indexInfo = Action { implicit request =>
-    Ok(Json.toJson(IndexInfo(
-      name = "ArticleIndex",
-      numDocs = indexerPlugin.numDocs,
-      sequenceNumber = Some(indexerPlugin.commitSequenceNumber),
-      committedAt = indexerPlugin.committedAt
-    )))
-  }
-
   def getSequenceNumber = Action { implicit request =>
     Ok(JsObject(Seq("sequenceNumber" -> JsNumber(indexerPlugin.sequenceNumber.value))))
   }
