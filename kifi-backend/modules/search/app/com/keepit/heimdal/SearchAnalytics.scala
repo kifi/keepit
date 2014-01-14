@@ -163,8 +163,8 @@ class SearchAnalytics @Inject() (
     contextBuilder += ("topKifiResults", topKeeps.length)
     contextBuilder += ("topKeeps", topKeeps)
     contextBuilder += ("ownTopKeeps", topKeeps.count(_ == own))
-    contextBuilder += ("FriendsTopKeeps", topKeeps.count(_ == friends))
-    contextBuilder += ("OthersTopKeeps", topKeeps.count(_ == others))
+    contextBuilder += ("friendsTopKeeps", topKeeps.count(_ == friends))
+    contextBuilder += ("othersTopKeeps", topKeeps.count(_ == others))
 
     searchContext.maxResults.foreach { maxResults =>
       val initialKeeps = topKeeps take maxResults

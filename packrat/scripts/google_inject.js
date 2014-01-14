@@ -303,7 +303,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
     if (href && resIdx >= 0) {
       if (isKifi) {
-        var richHit = response.hits[resIdx]
+        var richHit = response.hits[resIdx];
         var hit = {
           "isMyBookmark": richHit.isMyBookmark,
           "isPrivate": richHit.isPrivate,
@@ -311,7 +311,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "users": richHit.users,
           "score": richHit.score,
           "bookmark": richHit.bookmark 
-        }
+        };
       }
       api.port.emit("log_search_event", [
         "resultClicked",
