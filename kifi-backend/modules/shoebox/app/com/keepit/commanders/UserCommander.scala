@@ -298,7 +298,7 @@ class UserCommander @Inject() (
     val contextBuilder = new HeimdalContextBuilder()
     contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
-    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags.reverse, BookmarkSource.default)(contextBuilder.build)
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
     val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
     db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }

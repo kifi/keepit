@@ -33,6 +33,7 @@ import scala.Some
 import com.keepit.model.KeepToCollection
 import com.keepit.model.UserExperiment
 import com.keepit.common.akka.SafeFuture
+import com.keepit.commanders.{CollectionCommander, DefaultKeeps, BookmarksCommander, UserCommander}
 
 case class UserStatistics(
     user: User,
@@ -66,6 +67,9 @@ class AdminUserController @Inject() (
     imageStore: S3ImageStore,
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
+    userCommander: UserCommander,
+    bookmarkCommander: BookmarksCommander,
+    collectionCommander: CollectionCommander,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
@@ -532,5 +536,47 @@ class AdminUserController @Inject() (
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }
+  }
+
+  //Migration code for default keeps
+  def createDefaultKeeps(doIt : Boolean = false) = AdminHtmlAction { implicit request =>
+    Async { SafeFuture {
+      val allUsers = db.readOnly { implicit s => userRepo.all() }
+      val sourcesByUser = db.readOnly { implicit s => bookmarkRepo.getSourcesByUser() }.withDefaultValue(Seq.empty)
+      val actions = allUsers.collect {
+
+        case user if sourcesByUser(user.id.get).isEmpty =>
+          if (doIt) userCommander.createDefaultKeeps(user.id.get)(HeimdalContext.empty)
+          (user.id.get -> "create")
+
+        case user if sourcesByUser(user.id.get) == Seq(BookmarkSource.bookmarkImport) =>
+          val userId = user.id.get
+          if (doIt) {
+            val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(HeimdalContext.empty)
+            val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
+            val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
+            db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
+
+            val oldestKeep = db.readOnly { implicit session => bookmarkRepo.getOldest(userId).get.createdAt }
+            val userCreation = user.createdAt
+            val keepCount = DefaultKeeps.orderedKeepsWithTags.length
+            val interval = Seq((oldestKeep.getMillis - userCreation.getMillis).toInt, 1000).min
+            val step = interval / (keepCount + 1)
+            require(step > 0, s"Cannot create default keeps for user $userId")
+
+            var nextTime = userCreation.plusMillis(step)
+            DefaultKeeps.orderedKeepsWithTags.reverse.map { case (keepInfo, _) =>
+              val keep = keepsByUrl(keepInfo.url)
+              db.readWrite { implicit session => bookmarkRepo.save(keep.copy(createdAt = nextTime))}
+              nextTime = nextTime.plusMillis(step)
+            }
+          }
+          (userId -> "insert")
+      }
+      val json = JsObject(actions.groupBy(_._2).mapValues(actions =>
+        JsArray(actions.map { action => JsNumber(action._1.id) })
+      ).toSeq)
+      Ok(json)
+    }}
   }
 }
