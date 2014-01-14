@@ -7,7 +7,7 @@ import com.keepit.search.util.LongArraySet
 import com.keepit.common.logging.Logging
 
 trait EdgeSetAccessor[S, D] extends EdgeSet[S, D] {
-  override def accessor: EdgeSetAccessor[S, D] = this
+  def accessor: EdgeSetAccessor[S, D] = this
   protected var _destId: Long = -1L
 
   def seek(id: Id[D]): Boolean = seek(id.id)
@@ -31,13 +31,11 @@ trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
 }
 
 trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D]{
-  def createdAt: Long = throw new UnsupportedOperationException
-  def isPublic: Boolean = throw new UnsupportedOperationException
-  def isPrivate: Boolean = throw new UnsupportedOperationException
-  def bookmarkId: Long = throw new UnsupportedOperationException
-
-  def getCreatedAt(id: Long): Long = throw new UnsupportedOperationException
-  def getBookmarkId(id: Long): Long = throw new UnsupportedOperationException
+  def createdAt: Long
+  def isPublic: Boolean
+  def bookmarkId: Long
+  def getCreatedAt(id: Long): Long
+  def getBookmarkId(id: Long): Long
 }
 
 trait LuceneBackedBookmarkInfoAccessor[S, D]
