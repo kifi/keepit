@@ -44,7 +44,6 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
-  case object TEST_SHOEBOX extends ServiceType("TEST_SHOEBOX", "TS")
 
   def fromString(str: String) = str match {
     case SHOEBOX.name => SHOEBOX
@@ -55,7 +54,6 @@ object ServiceType {
     case SCRAPER.name => SCRAPER
     case DEV_MODE.name => DEV_MODE
     case TEST_MODE.name => TEST_MODE
-    case TEST_SHOEBOX.name => TEST_SHOEBOX
   }
 
   implicit def format[T]: Format[ServiceType] = Format(
