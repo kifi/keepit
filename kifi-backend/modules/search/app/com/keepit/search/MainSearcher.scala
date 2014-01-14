@@ -9,7 +9,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.graph.bookmark.BookmarkRecord
-import com.keepit.search.graph.EdgeAccessor
+import com.keepit.search.graph.EdgeSetAccessor
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.bookmark.UserToUriEdgeSet
@@ -46,6 +46,7 @@ import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
 import com.keepit.search.result.FriendStats
+import com.keepit.search.graph.BookmarkInfoAccessor
 
 
 class MainSearcher(
@@ -161,7 +162,7 @@ class MainSearcher(
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
-      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]]
       val mySearchUris = socialGraphInfo.mySearchUris
       val friendSearchUris = socialGraphInfo.friendSearchUris
 
@@ -208,7 +209,7 @@ class MainSearcher(
 
     val tProcessHits = currentDateTime.getMillis()
 
-    val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+    val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]]
     val friendsUriEdgeAccessors = socialGraphInfo.friendsUriEdgeAccessors
     val relevantFriendEdgeSet = socialGraphInfo.relevantFriendEdgeSet
 
@@ -241,7 +242,7 @@ class MainSearcher(
         if (numCollectStats > 0 && sharingUsers.size > 0) {
           val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
           sharingUsers.destIdLongSet.foreach{ f =>
-            val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
+            val keptTime = friendsUriEdgeAccessors(f).asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].getCreatedAt(h.id)
             if (keptTime < createdAt) {
               friendStats.add(f, hit.score * 1.5f) // an early keeper gets more credit
             } else {
@@ -279,7 +280,7 @@ class MainSearcher(
         if (numCollectStats > 0) {
           val introducedAt = sharingUsers.destIdLongSet.foldLeft(Long.MaxValue){ (t, f) =>
             friendStats.add(f, hit.score)
-            val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
+            val keptTime = friendsUriEdgeAccessors(f).asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].getCreatedAt(h.id)
             min(t, keptTime)
           }
           recencyScoreVal = if (newContentBoost > 0.0f) recencyScore(introducedAt) else 0.0f
@@ -472,7 +473,7 @@ class MainSearcher(
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
-  def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
+  def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].getBookmarkId(uriId.id)
 
   def timing(): Unit = {
     SafeFuture {
