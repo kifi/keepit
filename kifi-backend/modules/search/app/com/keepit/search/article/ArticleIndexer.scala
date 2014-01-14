@@ -25,6 +25,7 @@ import com.keepit.search.index.IndexWarmer
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.IndexInfo
+import com.keepit.search.sharding.Shard
 
 
 class ArticleIndexer(
@@ -47,17 +48,21 @@ class ArticleIndexer(
     super.onFailure(indexable, e)
   }
 
+  def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = {
+    doUpdate("ArticleIndex" + name) {
+      uris.iterator.map(buildIndexable)
+    }
+  }
+
   def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
 
     var total = 0
     var done = false
     while (!done) {
-      total += doUpdate("ArticleIndex") {
-        val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
-        done = uris.isEmpty
-        uris.iterator.map(buildIndexable)
-      }
+      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
+      done = uris.isEmpty
+      total += update("", uris, Shard(0,1))
     }
     total
   }

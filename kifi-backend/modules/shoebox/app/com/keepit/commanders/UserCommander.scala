@@ -16,6 +16,7 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
+import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 
@@ -233,20 +234,22 @@ class UserCommander @Inject() (
 
       }
 
-      // elizaServiceClient.sendGlobalNotification( //ZZZ reenable post front end sync
-      //   userIds = toNotify,
-      //   title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-      //   body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
-      //   linkText = "Invite more friends to Kifi.",
-      //   linkUrl = "https://www.kifi.com/friends/invite",
-      //   imageUrl = imageUrl,
-      //   sticky = false
-      // )
+      elizaServiceClient.sendGlobalNotification(
+        userIds = toNotify,
+        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+        linkText = "Invite more friends to Kifi.",
+        linkUrl = "https://www.kifi.com/friends/invite",
+        imageUrl = imageUrl,
+        sticky = false,
+        categoryOverride = Some("triggered")
+      )
     }
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
     val guardKey = "welcomeEmailSent"
+    val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
@@ -264,7 +267,7 @@ class UserCommander @Inject() (
               views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
             ("Let's get started with Kifi",
-              views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
+              if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
@@ -285,7 +288,7 @@ class UserCommander @Inject() (
             to = Seq(emailAddr),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = "Let's get started with Kifi",
-            htmlBody = views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
+            htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
           )
           postOffice.sendMail(mail)
@@ -441,7 +444,7 @@ class UserCommander @Inject() (
 
             SafeFuture{
               //sending 'friend request accepted' email && Notification
-              db.readWrite{ session =>
+              val (respondingUser, respondingUserImage) = db.readWrite{ session =>
                 val respondingUser = userRepo.get(userId)(session)
                 val destinationEmail = emailRepo.getByUser(user.id.get)(session)
                 val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"), Some("https"))
@@ -458,16 +461,23 @@ class UserCommander @Inject() (
                   textBody = Some(views.html.email.friendRequestAcceptedText(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
+
+                (respondingUser, respondingUserImage)
+
+
               }
-              // elizaServiceClient.sendGlobalNotification( //ZZZ reenable post front end sync
-              //   userIds = Set(user.id.get),
-              //   title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-              //   body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-              //   linkText = "Invite more friends to kifi.",
-              //   linkUrl = "https://www.kifi.com/friends/invite",
-              //   imageUrl = respondingUserImage,
-              //   sticky = false
-              // )
+
+              elizaServiceClient.sendGlobalNotification(
+                userIds = Set(user.id.get),
+                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                linkText = "Invite more friends to kifi",
+                linkUrl = "https://www.kifi.com/friends/invite",
+                imageUrl = respondingUserImage,
+                sticky = false,
+                categoryOverride = Some("triggered")
+              )
+
             }
 
 
@@ -477,7 +487,7 @@ class UserCommander @Inject() (
 
             SafeFuture{
               //sending 'friend request' email && Notification
-              db.readWrite{ session =>
+              val (requestingUser, requestingUserImage) = db.readWrite{ session =>
                 val requestingUser = userRepo.get(userId)(session)
                 val destinationEmail = emailRepo.getByUser(user.id.get)(session)
                 val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
@@ -492,16 +502,22 @@ class UserCommander @Inject() (
                   textBody = Some(views.html.email.friendRequestText(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body),
                   category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
+
+                (requestingUser, requestingUserImage)
+
               }
-              // elizaServiceClient.sendGlobalNotification( //ZZZ reenable post front end sync
-              //   userIds = Set(user.id.get),
-              //   title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
-              //   body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-              //   linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-              //   linkUrl = "https://kifi.com/friends/requests",
-              //   imageUrl = requestingUserImage,
-              //   sticky = false
-              // )
+
+              elizaServiceClient.sendGlobalNotification(
+                userIds = Set(user.id.get),
+                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
+                body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
+                linkText = s"Respond to ${requestingUser.firstName}'s friend request",
+                linkUrl = "https://kifi.com/friends/requests",
+                imageUrl = requestingUserImage,
+                sticky = false,
+                categoryOverride = Some("triggered")
+              )
+
             }
 
             (true, "sentRequest")

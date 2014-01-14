@@ -32,6 +32,7 @@ case class BasicSearchContext(
   query: String,
   filterByPeople: Option[String],
   filterByTime: Option[String],
+  maxResults: Option[Int],
   kifiResults: Int,
   kifiExpanded: Boolean,
   kifiTime: Option[Int],
@@ -51,6 +52,7 @@ object BasicSearchContext {
     (__ \ 'query).read[String] and
     (__ \\ 'who).readNullable[String].fmap(filterByPeople) and
     (__ \\ 'when).readNullable[String].fmap(filterByTime) and
+    (__ \ 'maxResults).readNullable[Int] and
     (__ \ 'kifiResults).read[Int] and
     ((__ \ 'kifiExpanded).read[Boolean] orElse (__ \ 'kifiCollapsed).read[Boolean].fmap(!_)) and
     (__ \ 'kifiTime).readNullable[Int] and
@@ -157,15 +159,25 @@ class SearchAnalytics @Inject() (
 
     // Kifi Results
 
-    val initialKeeps = initialSearchResult.hits.map(keep)
-    contextBuilder += ("initialKifiResults", initialSearchResult.hits.length)
-    contextBuilder += ("initialKeeps", initialKeeps)
-    contextBuilder += ("initialOwnKeeps", initialKeeps.count(_ == own))
-    contextBuilder += ("initialFriendsKeeps", initialKeeps.count(_ == friends))
-    contextBuilder += ("initialOthersKeeps", initialKeeps.count(_ == others))
-    contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
+    val topKeeps = initialSearchResult.hits.map(keep)
+    contextBuilder += ("topKifiResults", topKeeps.length)
+    contextBuilder += ("topKeeps", topKeeps)
+    contextBuilder += ("ownTopKeeps", topKeeps.count(_ == own))
+    contextBuilder += ("friendsTopKeeps", topKeeps.count(_ == friends))
+    contextBuilder += ("othersTopKeeps", topKeeps.count(_ == others))
 
-    contextBuilder += ("kifiResults", searchContext.kifiResults)
+    searchContext.maxResults.foreach { maxResults =>
+      val initialKeeps = topKeeps take maxResults
+      contextBuilder += ("maxResults", maxResults)
+      contextBuilder += ("initialKifiResults", initialKeeps.length)
+      contextBuilder += ("initialKeeps", initialKeeps)
+      contextBuilder += ("initialOwnKeeps", initialKeeps.count(_ == own))
+      contextBuilder += ("initialFriendsKeeps", initialKeeps.count(_ == friends))
+      contextBuilder += ("initialOthersKeeps", initialKeeps.count(_ == others))
+    }
+
+    contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
+    contextBuilder += ("displayedKifiResults", searchContext.kifiResults)
     searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
     searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
 

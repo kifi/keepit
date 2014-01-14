@@ -21,6 +21,9 @@ import com.keepit.search.graph.LuceneBackedEdgeSet
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.collection.CollectionFields._
+import com.keepit.search.graph.LuceneBackedBookmarkTimeRangeFilter
+import com.keepit.search.graph.TimeRangeFilter
+import com.keepit.search.graph.BookmarkInfoAccessor
 
 object CollectionSearcher {
   def apply(collectionIndexer: CollectionIndexer): CollectionSearcher = new CollectionSearcher(collectionIndexer.getSearcher)
@@ -102,13 +105,12 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
   }
 }
 
-abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends EdgeSet[Collection, NormalizedURI]
-
+abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends BookmarkInfoAccessor[Collection, NormalizedURI] with TimeRangeFilter[Collection, NormalizedURI]
 object CollectionToUriEdgeSet {
   def apply(sourceId: Id[Collection], uriList: URIList): CollectionToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[Collection, NormalizedURI] {
+    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[Collection, NormalizedURI] with LuceneBackedBookmarkTimeRangeFilter[Collection, NormalizedURI]{
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = uriList.createdAt(idx)

@@ -14,7 +14,7 @@ import com.keepit.search.Lang
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 
 
-class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) {
+class SemanticVectorSearcher(articleSearcher: Searcher) {
   val indexReader = articleSearcher.indexReader
 
   private def getSemanticVector(term: Term, ids: Set[Long], minDocs: Int = 1): Option[SemanticVector] = {
@@ -44,22 +44,6 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
       i += 1
     }
     if (composer.numInputs >= minDocs) Some(composer.getSemanticVector()) else None
-  }
-
-
-  // used for friendMap
-  def getSemanticVectors(userIds: Array[Id[User]], query: String, lang: Lang, minDocs: Int = 1): Map[Id[User],Array[SemanticVector]] = {
-    val terms = getTerms(query, lang)
-    userIds.foldLeft(Map.empty[Id[User],Array[SemanticVector]]){ (m, u) =>
-      val uriIds = uriGraphSearcher.getUserToUriEdgeSet(u, publicOnly = false).destIdLongSet
-      val vectors = terms.map{ term =>
-        getSemanticVector(term, uriIds, minDocs) match {
-          case Some(v) => v
-          case None => new SemanticVector(Array.empty[Byte])
-        }
-      }
-      if (vectors.forall(_.bytes.isEmpty)) m else m + (u -> vectors)
-    }
   }
 
   def getTerms(query: String, lang: Lang): Array[Term] = {
