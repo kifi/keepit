@@ -4223,8 +4223,8 @@ $(function () {
 	$(window).trigger('statechange');
 
 	// bind hover behavior later to avoid slowing down page load
-	var friendCardTmpl = Tempo.prepare('fr-card-template');
-	$('#fr-card-template').remove();
+	var friendCardTmpl = Tempo.prepare('kifi-fr-card-template');
+	$('#kifi-fr-card-template').remove();
 	$.getScript('assets/js/jquery-hoverfu.min.js').done(function () {
 		$(document).hoverfu('.pic:not(.me)', function (configureHover) {
 			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
@@ -4250,7 +4250,7 @@ $(function () {
 		});
 		function show(pos, o) {
 			o.element.element.css(pos).addClass(o.horizontal + ' ' + o.vertical)
-				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
+				.find('.kifi-fr-kcard-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
 
