@@ -8,6 +8,7 @@ import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
+import com.keepit.common.performance.timing
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
@@ -74,21 +75,27 @@ class UserController @Inject() (
   emailAddressRepo: EmailAddressRepo
 ) extends WebsiteController(actionAuthenticator) {
 
+  // hotspot -- need optimization; gather timing info for analysis
   def friends() = AuthenticatedJsonAction { request =>
+    val userId = request.userId
     Ok(Json.obj(
-      "friends" -> db.readOnly { implicit s =>
-        val searchFriends = searchFriendRepo.getSearchFriends(request.userId)
-        val socialUsers = socialUserRepo.getByUser(request.userId)
-        val connectionIds = userConnectionRepo.getConnectedUsers(request.userId)
-        val unfriendedIds = userConnectionRepo.getUnfriendedUsers(request.userId)
-        (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq).map { case (userId, unfriended) =>
-          Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
-            "searchFriend" -> searchFriends.contains(userId),
-            "networks" -> networkInfoLoader.load(socialUsers, userId),
-            "unfriended" -> unfriended,
-            "description" -> userValueRepo.getValue(userId, "user_description"),
-            "friendCount" -> userConnectionRepo.getConnectionCount(userId)
-          )
+      "friends" -> timing(s"friends($userId) ALL") {
+        db.readOnly { implicit s =>
+          val searchFriends = timing(s"friends($userId) searchFriends") { searchFriendRepo.getSearchFriends(request.userId) }
+          val socialUsers = timing(s"friends($userId) socialUsers") { socialUserRepo.getByUser(request.userId) }
+          val connectionIds = timing(s"friends($userId) connectionIds") { userConnectionRepo.getConnectedUsers(request.userId) }
+          val unfriendedIds = timing(s"friends($userId) unfriendedIds") { userConnectionRepo.getUnfriendedUsers(request.userId) }
+          timing(s"friends($userId) post-processing++") {
+            (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq).map { case (userId, unfriended) =>
+              Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
+                "searchFriend" -> searchFriends.contains(userId),
+                "networks" -> networkInfoLoader.load(socialUsers, userId),
+                "unfriended" -> unfriended,
+                "description" -> userValueRepo.getValue(userId, "user_description"),
+                "friendCount" -> userConnectionRepo.getConnectionCount(userId)
+              )
+            }
+          }
         }
       }
     ))
