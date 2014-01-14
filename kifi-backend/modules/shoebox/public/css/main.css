@@ -3859,9 +3859,9 @@ body[data-view=search] .main-keeps {
 }
 
 .kifi-icon-tutorial {
-  background-image: url(../img/playbtnicon.png);
-  background-size: 24px 24px;
-  height: 24px;
+  background-image: url(../img/viewtutorial.png);
+  background-size: 24px 23px;
+  height: 23px;
 }
 
 .kifi-icon-install {
@@ -5069,7 +5069,7 @@ a.friend-nw-google[href] {
   }
 
   .kifi-icon-tutorial {
-    background-image: url(../img/playbtnicon@2x.png);
+    background-image: url(../img/viewtutorial@2x.png);
   }
 
   .kifi-icon-install {
