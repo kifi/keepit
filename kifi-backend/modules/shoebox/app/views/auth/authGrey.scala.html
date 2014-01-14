@@ -175,4 +175,4 @@ authorize:true
   else "Kifi • Sign up"
 }
 
-@views.html.marketing.helper.page(bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn", title = title, styles = styles, content = content, scripts = scripts, dataTrack="terms", htmlClass = if (view == "login") "login-page" else "signup-page", isLoggedIn = false, headerType = "grey", footerType = "minimalist", headScripts = headScripts)
+@views.html.marketing.helper.page(bodyClass = if (view == "") "" else if (view == "signup2Email" || view == "signup2Social") "curtains-drawn finalizing" else "curtains-drawn", title = title, styles = styles, content = content, scripts = scripts, dataTrack=view, htmlClass = if (view == "login") "login-page" else "signup-page", isLoggedIn = false, headerType = "grey", footerType = "minimalist", headScripts = headScripts)

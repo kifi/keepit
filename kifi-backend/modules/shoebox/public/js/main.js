@@ -2804,6 +2804,7 @@ $(function () {
 				}
 
 				data.hits.forEach(prepHitForRender);
+				prefetchScreenshots(data.hits);
 
 				if (context) {
 					keepsTmpl.into($results[0]).append(data.hits);
@@ -2815,6 +2816,33 @@ $(function () {
 
 				$checkAll.removeClass('checked');
 			});
+		});
+	}
+
+	function prefetchScreenshots(keeps) {
+		if (!(keeps && keeps.length)) {
+			return;
+		}
+		return $.postJson(xhrBase + '/keeps/screenshot', {
+			urls: keeps.map(function (keep) {
+				return keep.url;
+			})
+		}).done(function (data) {
+			var i;
+			var urls = data.urls;
+			for (i in urls) {
+				if (urls.hasOwnProperty(i)) {
+					var url = urls[i];
+					if (url) {
+						setTimeout((function (url) {
+							return function () {
+								var img = document.createElement('img');
+								img.src = url;
+							};
+						})(url));
+					}
+				}
+			}
 		});
 	}
 
@@ -2957,6 +2985,7 @@ $(function () {
 				var keepIds = $myKeeps.find('.keep').map(getDataId).get().reduce(function (ids, id) {ids[id] = true; return ids; }, {});
 				var keeps = data.keeps.filter(function (k) {return !keepIds[k.id]; });
 				keeps.forEach(prepKeepForRender);
+				prefetchScreenshots(keeps);
 				keepsTmpl.into($myKeeps[0]).prepend(keeps);
 				// TODO: insert this group heading if not already there
 				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
@@ -3051,6 +3080,7 @@ $(function () {
 						lastKeep = 'end';
 					} else {
 						data.keeps.forEach(prepKeepForRender);
+						prefetchScreenshots(data.keeps);
 						if (lastKeep == null) {
 							keepsTmpl.into($myKeeps[0]).render(data.keeps);
 						} else {
