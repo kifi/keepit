@@ -91,7 +91,7 @@ trait IndexModule extends ScalaModule with Logging {
   def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedURIGraphIndexer = {
     def bookmarkStore(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
-      log.info(s"storing BookmarkStore${shard.indexNameSuffix}in $dir")
+      log.info(s"storing BookmarkStore${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
       new BookmarkStore(dir, config, airbrake, shoeboxClient)
     }
