@@ -234,10 +234,11 @@ class BookmarksCommander @Inject() (
     keepsByTag
   }
 
-  def setTopKeeps(userId: Id[User], keeps: Seq[Bookmark]): Unit = {
+  def setFirstKeeps(userId: Id[User], keeps: Seq[Bookmark]): Unit = {
     db.readWrite { implicit session =>
-      keeps.reverse.zipWithIndex.foreach { case (keep, i) =>
-        bookmarkRepo.save(keep.copy(createdAt = currentDateTime))
+      val origin = bookmarkRepo.oldestBookmark(userId).map(_.createdAt) getOrElse currentDateTime
+      keeps.zipWithIndex.foreach { case (keep, i) =>
+        bookmarkRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
       }
     }
   }
