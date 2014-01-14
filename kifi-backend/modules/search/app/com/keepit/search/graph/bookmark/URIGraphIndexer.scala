@@ -97,7 +97,7 @@ class URIGraphIndexer(
     total
   }
 
-  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard): Int = {
+  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = {
     val cnt = doUpdate(name) {
       toIndexables(bookmarks, shard)
     }
@@ -115,7 +115,7 @@ class URIGraphIndexer(
     cnt
   }
 
-  def toIndexables(bookmarks: Seq[Bookmark], shard: Shard): Iterator[Indexable[User]] = {
+  def toIndexables(bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Iterator[Indexable[User]] = {
     bookmarkStore.update(bookmarks, shard)
 
     val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)

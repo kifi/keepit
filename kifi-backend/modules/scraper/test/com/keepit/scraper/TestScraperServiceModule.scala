@@ -1,7 +1,6 @@
 package com.keepit.scraper
 
 import com.keepit.common.cache.ScraperCacheModule
-import com.keepit.scraper.{DevScraperProcessorModule, ProdScraperProcessorModule, ScraperServiceModule}
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperTestStoreModule
