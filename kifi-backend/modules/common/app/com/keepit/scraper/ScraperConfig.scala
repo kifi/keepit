@@ -11,7 +11,7 @@ case class ScraperConfig(
   maxBackoff: Double = 1024.0d, //hours
   maxRandomDelay: Int = 300, // seconds
   changeThreshold: Double = 0.05,
-  scrapePendingFrequency: Int = sys.props.getOrElse("scraper.pending.freq", "15").toInt, // seconds
+  scrapePendingFrequency: Int = sys.props.getOrElse("scraper.pending.freq", "10").toInt, // seconds
   async: Boolean = sys.props.getOrElse("scraper.plugin.async", "true").toBoolean,
   actorTimeout: Int = sys.props.getOrElse("scraper.actor.timeout", "20000").toInt,
   syncAwaitTimeout: Int = sys.props.getOrElse("scraper.plugin.sync.await.timeout", "20000").toInt,
@@ -20,7 +20,7 @@ case class ScraperConfig(
   batchSize: Int = sys.props.getOrElse("scraper.service.batch.size", "10").toInt,
   batchMax: Int = sys.props.getOrElse("scraper.service.batch.max", "50").toInt,
   pendingOverdueThreshold: Int = sys.props.getOrElse("scraper.service.pending.overdue.threshold", "3600").toInt,
-  pendingSkipThreshold: Int = sys.props.getOrElse("scraper.service.pending.skip.threshold", "50").toInt
+  pendingSkipThreshold: Int = sys.props.getOrElse("scraper.service.pending.skip.threshold", "500").toInt
 ) {
 
   private[this] val rnd = new Random
