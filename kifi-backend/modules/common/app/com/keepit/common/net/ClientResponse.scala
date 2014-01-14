@@ -14,6 +14,7 @@ import java.io.{FileOutputStream, File}
 import org.apache.commons.io.IOUtils
 import scala.util.Try
 import play.mvc.Http.Status
+import com.keepit.common.controller.CommonHeaders
 
 
 case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
@@ -23,6 +24,8 @@ case class SlowJsonParsingException(request: Request, response: ClientResponse, 
 
 trait ClientResponse {
   def res: Response
+  def request: Request
+  def isUp: Boolean
   def bytes: Array[Byte]
   def body: String
   def json: JsValue
@@ -48,6 +51,11 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
   private var _parsingTime: Option[Long] = None
   override def parsingTime = _parsingTime
+
+  /**
+   * if the header is NOT there then the remote service does not support it and so we'll assume the service is UP
+   */
+  def isUp = res.header(CommonHeaders.IsUP).map(_ != "N").getOrElse(true)
 
   lazy val ahcResponse = res.ahcResponse
 

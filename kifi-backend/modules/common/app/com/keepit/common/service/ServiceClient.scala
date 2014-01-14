@@ -55,11 +55,15 @@ trait ServiceClient extends Logging {
     val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
       callUrl(call, url(call.url), body, ignoreFailure = true, timeout = timeout)
     }
-    respFuture.onFailure{
+    respFuture.onSuccess {
+      case res: ClientResponse => if(!res.isUp)
+        res.request.httpUri.serviceInstanceOpt.map(_.reportServiceUnavailable())
+    }
+    respFuture.onFailure {
       case sue: ServiceUnavailableException =>
         val msg = s"service ${sue.serviceUri.serviceInstance} is not available, reported ${sue.serviceUri.serviceInstance.reportedSentServiceUnavailableCount} times"
         log.error(msg, sue)
-        sue.serviceUri.serviceInstance.sentServiceUnavailableException(sue)
+        sue.serviceUri.serviceInstance.reportServiceUnavailable()
         airbrakeNotifier.notify(AirbrakeError(
           exception = sue,
           message = Some(msg),

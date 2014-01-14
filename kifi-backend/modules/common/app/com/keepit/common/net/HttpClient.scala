@@ -191,15 +191,13 @@ case class HttpClientImpl(
   }
 
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
-    val remoteUp = res.res.header(CommonHeaders.IsUP).getOrElse(null)
-    val remoteLeader = res.res.header(CommonHeaders.IsLeader).getOrElse(null)
+    val remoteUp = res.isUp
     val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
         parsingTime = res.parsingTime.map(_.toInt),
-        remoteUp = remoteUp,
-        remoteLeader = remoteLeader,
+        remoteUp = remoteUp.toString,
         result = "success",
         query = request.queryString,
         remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
