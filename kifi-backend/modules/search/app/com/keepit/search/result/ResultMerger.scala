@@ -45,7 +45,7 @@ object ResultMerger {
     val usefulPageBoost = config.asFloat("usefulPageBoost")
 
     // tailCutting is set to low when a non-default filter is in use
-    val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.001f
+    val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
