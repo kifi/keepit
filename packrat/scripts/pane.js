@@ -171,6 +171,7 @@ var pane = pane || function () {  // idempotent for Chrome
         });
       })
       .on("mousedown", ".kifi-pane-settings", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         var $sett = $(this).addClass("kifi-active");
         var $menu = $sett.next(".kifi-pane-settings-menu").fadeIn(50);
@@ -204,6 +205,7 @@ var pane = pane || function () {  // idempotent for Chrome
         });
       })
       .on("mouseup", ".kifi-pane-settings-hide", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         var $hide = $(this).toggleClass("kifi-checked");
         var checked = $hide.hasClass("kifi-checked");
@@ -218,6 +220,7 @@ var pane = pane || function () {  // idempotent for Chrome
         }, 150);
       })
       .on("mouseup", ".kifi-pane-settings-sign-out", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         api.port.emit("deauthenticate");
         $(tile).hide();
@@ -228,6 +231,7 @@ var pane = pane || function () {  // idempotent for Chrome
         }, 150);
       })
       .on("mouseup", ".kifi-pane-settings-link", function (e) {
+        if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         window.open('https://www.kifi.com/profile');
       })
