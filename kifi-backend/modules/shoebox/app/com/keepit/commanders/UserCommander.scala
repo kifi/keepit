@@ -248,6 +248,7 @@ class UserCommander @Inject() (
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
     val guardKey = "welcomeEmailSent"
+    val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
@@ -265,7 +266,7 @@ class UserCommander @Inject() (
               views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
             ("Let's get started with Kifi",
-              views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
+              if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
@@ -286,7 +287,7 @@ class UserCommander @Inject() (
             to = Seq(emailAddr),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = "Let's get started with Kifi",
-            htmlBody = views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
+            htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
           )
           postOffice.sendMail(mail)

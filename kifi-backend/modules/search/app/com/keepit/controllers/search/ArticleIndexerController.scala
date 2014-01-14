@@ -20,22 +20,13 @@ class ArticleIndexerController @Inject()(
   extends SearchServiceController {
 
   def index() = Action { implicit request =>
-    val cnt = indexerPlugin.update()
-    Ok(JsObject(Seq("articles" -> JsNumber(cnt))))
+    indexerPlugin.update()
+    Ok(JsObject(Seq("articles" -> JsString("ok"))))
   }
 
   def reindex() = Action { implicit request =>
     indexerPlugin.reindex()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
-  }
-
-  def indexInfo = Action { implicit request =>
-    Ok(Json.toJson(IndexInfo(
-      name = "ArticleIndex",
-      numDocs = indexerPlugin.numDocs,
-      sequenceNumber = Some(indexerPlugin.commitSequenceNumber),
-      committedAt = indexerPlugin.committedAt
-    )))
   }
 
   def getSequenceNumber = Action { implicit request =>
@@ -53,7 +44,7 @@ class ArticleIndexerController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>
-    val indexer = indexerPlugin.getIndexerFor(id.id)
+    val indexer = indexerPlugin.getIndexerFor(id)
     try {
       val doc = indexer.buildIndexable(id).buildDocument
       Ok(html.admin.luceneDocDump("Article", doc, indexer))

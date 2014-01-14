@@ -55,13 +55,13 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
-  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard,Id[User]), URIGraphSearcherWithUser](3 seconds)
-  private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard, Id[User]), CollectionSearcherWithUser](3 seconds)
+  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI],Id[User]), URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
 
   def apply(
-    shard: Shard,
+    shard: Shard[NormalizedURI],
     userId: Id[User],
     queryString: String,
     lang: Lang,
@@ -114,24 +114,24 @@ class MainSearcherFactory @Inject() (
 
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
-  def getSocialGraphInfo(shard: Shard, userId: Id[User], filter: SearchFilter): SocialGraphInfo = {
+  def getSocialGraphInfo(shard: Shard[NormalizedURI], userId: Id[User], filter: SearchFilter): SocialGraphInfo = {
     new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId), getCollectionSearcher(shard, userId), filter: SearchFilter, monitoredAwait)
   }
 
-  private[this] def getURIGraphSearcherFuture(shard: Shard, userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
+  private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
     Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)).future
   }
 
-  def getURIGraphSearcher(shard: Shard, userId: Id[User]): URIGraphSearcherWithUser = {
+  def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {
     Await.result(getURIGraphSearcherFuture(shard, userId), 5 seconds)
   }
 
-  private[this] def getCollectionSearcherFuture(shard: Shard, userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
+  private[this] def getCollectionSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
     Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard))).future
   }
 
-  def getCollectionSearcher(shard: Shard, userId: Id[User]): CollectionSearcherWithUser = {
+  def getCollectionSearcher(shard: Shard[NormalizedURI], userId: Id[User]): CollectionSearcherWithUser = {
     Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
   }
 
@@ -149,14 +149,14 @@ class MainSearcherFactory @Inject() (
     }
   }
 
-  def bookmarkSearcher(shard: Shard, userId: Id[User]) = {
+  def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
     val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
-  def semanticVectorSearcher(shard: Shard) = {
+  def semanticVectorSearcher(shard: Shard[NormalizedURI]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
     val uriGraphSearcher = URIGraphSearcher(uriGraphIndexer)

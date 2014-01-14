@@ -1080,8 +1080,8 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
+var appRe = /^https?:\/\/(?:www\.)?kifi\.com(?:\/(?:|blog|profile|find|tag\/[a-z0-9-]+|friends(?:\/\w+)?))?(?:[?#].*)?$/;
 function reloadKifiAppTabs() {
-  var appRe = new RegExp('^' + webBaseUri() + '/(?:|blog|profile|find|tag/[a-z0-9-]+|friends(?:/\\w+)?)(?:[?#].*)?$');
   for (var url in tabsByUrl) {
     if (appRe.test(url)) {
       var tabs = tabsByUrl[url];

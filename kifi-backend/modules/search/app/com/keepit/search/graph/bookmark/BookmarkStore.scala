@@ -26,7 +26,7 @@ object BookmarkStoreFields {
 }
 
 object BookmarkStore {
-  def shouldDelete(bookmark: Bookmark, shard: Shard): Boolean = ((bookmark.state == INACTIVE) || (!shard.contains(bookmark.uriId)))
+  def shouldDelete(bookmark: Bookmark, shard: Shard[NormalizedURI]): Boolean = ((bookmark.state == INACTIVE) || (!shard.contains(bookmark.uriId)))
   val bookmarkSource = BookmarkSource("BookmarkStore")
 }
 
@@ -49,7 +49,7 @@ class BookmarkStore(
 
   def update(): Int = throw new UnsupportedOperationException("BookmarkStore should not be updated by update()")
 
-  def update(bookmarks: Seq[Bookmark], shard: Shard) {
+  def update(bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]) {
     try {
       val cnt = successCount
       indexDocuments(bookmarks.iterator.map(buildIndexable(_, shard)), commitBatchSize)
@@ -104,7 +104,7 @@ class BookmarkStore(
     }
   }
 
-  def buildIndexable(bookmark: Bookmark, shard: Shard): BookmarkIndexable = {
+  def buildIndexable(bookmark: Bookmark, shard: Shard[NormalizedURI]): BookmarkIndexable = {
     new BookmarkIndexable(
       id = bookmark.id.get,
       sequenceNumber = bookmark.seq,
