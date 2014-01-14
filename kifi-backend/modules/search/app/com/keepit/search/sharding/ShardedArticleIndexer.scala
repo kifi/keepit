@@ -1,5 +1,6 @@
 package com.keepit.search.sharding
 
+import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -7,10 +8,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ShardedArticleIndexer(
-  override val indexShards: Map[Shard, ArticleIndexer],
+  override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
   articleStore: ArticleStore,
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[ArticleIndexer] {
+) extends ShardedIndexer[NormalizedURI, ArticleIndexer] {
 
   private val fetchSize = 2000
 

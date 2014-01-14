@@ -99,7 +99,7 @@ class AuthController @Inject() (
           ))
         case None =>
           // No email for this user exists in the system.
-          Redirect("/signup")
+          Redirect("/signup").flashing("signin_error" -> "no_account")
       }
     } else {
       Redirect("/") // error??

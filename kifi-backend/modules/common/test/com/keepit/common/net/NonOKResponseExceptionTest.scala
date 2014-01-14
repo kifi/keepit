@@ -9,7 +9,7 @@ class NonOKResponseExceptionTest extends Specification {
   "NonOKResponseException" should {
     "have short message with DirectUrl" in {
       val exception = NonOKResponseException(
-        DirectUrl("http://commons.apache.org/proper/commons-lang/javadocs/api-3.1/org/apache/commons/lang3/StringUtils.html#abbreviate(java.lang.String, int)"),
+        DirectUrl("http://commons.apache.org/proper/commons-lang/javadocs/api-3.1/org/apache/commons/api-3.1/org/apache/commons/api-3.1/org/apache/commons/api-3.1/org/apache/commons/lang3/StringUtils.html#abbreviate(java.lang.String, int)"),
         FakeClientResponse("Abbreviates a String using ellipses. This will turn \"Now is the time for all good men\" into \"Now is the time for...\""),
         Some("""Specifically: If str is less than maxWidth characters long, return it.
               Else abbreviate it to (substring(str, 0, max-3) + "...").
@@ -22,17 +22,17 @@ class NonOKResponseExceptionTest extends Specification {
                StringUtils.abbreviate("abcdefg", 8) = "abcdefg"
                StringUtils.abbreviate("abcdefg", 4) = "a..."
                StringUtils.abbreviate("abcdefg", 3) = IllegalArgumentException"""))
-      exception.getMessage() === "[] Bad Http Status on http://commons.apache.org/p... body:[Specifically: If str is les...] status:200 res [Abbreviates a String using ...]"
+      exception.getMessage() === "[] Bad Http Status on http://commons.apache.org/proper/commons-lang/javadocs/api-3.1/org/apache/commons/api-3.1/org/apa... body:[Specifically: If str is les...] status:200 res [Abbreviates a String using ...]"
     }
 
     "have short message with ServiceUri" in {
       val remoteService1 = RemoteService(null, ServiceStatus.UP, ServiceType.TEST_MODE)
       val instance = new ServiceInstance(Node("/node_00000001"), false).setRemoteService(remoteService1)
       val exception = NonOKResponseException(
-        new ServiceUri(instance, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
+        new ServiceUri(instance, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
         FakeClientResponse("short response"),
         Some("short body"))
-      exception.getMessage() === "[TM1] Bad Http Status on /this/is/the/path/and/it/may/be/very/very/long/... body:[short body] status:200 res [short response]"
+      exception.getMessage() === "[TM1] Bad Http Status on TM1:/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mea... body:[short body] status:200 res [short response]"
     }
   }
 }

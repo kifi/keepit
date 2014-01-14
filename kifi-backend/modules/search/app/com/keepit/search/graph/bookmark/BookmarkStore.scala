@@ -16,6 +16,7 @@ import org.apache.lucene.util.BytesRef
 import org.joda.time.DateTime
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.Some
+import com.keepit.search.sharding.Shard
 
 
 object BookmarkStoreFields {
@@ -25,7 +26,7 @@ object BookmarkStoreFields {
 }
 
 object BookmarkStore {
-  def shouldDelete(bookmark: Bookmark): Boolean = (bookmark.state == INACTIVE)
+  def shouldDelete(bookmark: Bookmark, shard: Shard[NormalizedURI]): Boolean = ((bookmark.state == INACTIVE) || (!shard.contains(bookmark.uriId)))
   val bookmarkSource = BookmarkSource("BookmarkStore")
 }
 
@@ -48,10 +49,10 @@ class BookmarkStore(
 
   def update(): Int = throw new UnsupportedOperationException("BookmarkStore should not be updated by update()")
 
-  def update(bookmarks: Seq[Bookmark]) {
+  def update(bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]) {
     try {
       val cnt = successCount
-      indexDocuments(bookmarks.iterator.map(buildIndexable), commitBatchSize)
+      indexDocuments(bookmarks.iterator.map(buildIndexable(_, shard)), commitBatchSize)
       successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in BookmarkStore update", e)
@@ -103,11 +104,11 @@ class BookmarkStore(
     }
   }
 
-  def buildIndexable(bookmark: Bookmark): BookmarkIndexable = {
+  def buildIndexable(bookmark: Bookmark, shard: Shard[NormalizedURI]): BookmarkIndexable = {
     new BookmarkIndexable(
       id = bookmark.id.get,
       sequenceNumber = bookmark.seq,
-      isDeleted = BookmarkStore.shouldDelete(bookmark),
+      isDeleted = BookmarkStore.shouldDelete(bookmark, shard),
       bookmark = bookmark)
   }
 

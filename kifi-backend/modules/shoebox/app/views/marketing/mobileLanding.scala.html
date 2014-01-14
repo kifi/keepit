@@ -1,7 +1,7 @@
-@(isLoggedIn: Boolean)
+@(isLoggedIn: Boolean, agentClass: String)
 
 <!DOCTYPE html>
-<html class="guest mobile-landing" data-track-type="mobile-landing">
+<html class="guest mobile-landing @agentClass" data-track-type="mobile-landing">
   <head>
     <meta charset="utf-8">
 <!--
@@ -15,7 +15,7 @@
    great engineers! |___/     42go.com
 -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
 
     <title>Kifi • Search like normal, find like never before</title>
     <script>
@@ -44,7 +44,7 @@
   <body>
 
 <div class="kifi-header" data-track-source="header">
-  <a class="kifi-header-logo" href="/" data-track-action="clickLogo">Kifi</a>
+  <a class="kifi-header-logo" href="/" data-track-action="clickLogo"></a>
   <span class="kifi-header-text">Keep it | Find it</span>
 </div>
 
@@ -130,7 +130,7 @@
     </li>
     <li>
       <span class="kifi-footer-menu-dot">&middot;</span>
-      <a href="/blog" data-track-action="clickBlog">Blog</a>
+      <a href="http://blog.kifi.com" data-track-action="clickBlog">Blog</a>
     </li>
     <li>
       <span class="kifi-footer-menu-dot">&middot;</span>
@@ -141,10 +141,7 @@
 
   <script charset="ISO-8859-1" src="http://fast.wistia.com/static/concat/E-v1.js"></script>
 
-  <script type="text/javascript" src="/assets/js/jquery.min.js"></script>
-  <script type="text/javascript" src="/assets/js/track-ext.js"></script>
-
-  <script type="text/javascript" src="/assets/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/assets/js/jquery-1.10.2.min.js"></script>
   <script type="text/javascript" src="/assets/js/mobile.js"></script>
   <script type="text/javascript" src="/assets/js/track-ext.js"></script>
 

@@ -46,10 +46,16 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def nextService(): Option[ServiceInstance] = {
     val upList = routingList.filter(_.isUp)
     val availableList = routingList.filter(_.isAvailable)
-    var list = upList
-    if (upList.length < availableList.length/2.0) list = availableList
-    if (list.isEmpty) None
-    else Some(list(nextRoutingInstance.getAndIncrement % list.size))
+    val list = if (upList.length < availableList.length / 2.0) {
+      availableList
+    } else {
+      upList
+    }
+    if (list.isEmpty) {
+      None
+    } else {
+      Some(list(nextRoutingInstance.getAndIncrement % list.size))
+    }
   }
 
   def allServices: Vector[ServiceInstance] = routingList.filter(_.isAvailable)
@@ -149,7 +155,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       if (instances.size < serviceType.minInstances){
         if (scheduledPanic.isEmpty) {
           scheduledPanic = Some(scheduler.scheduleOnce(3 minutes){
-            airbrake.get.notify(s"PANIC! Service cluster for ${serviceType} too small!")
+            airbrake.get.panic(s"Service cluster for ${serviceType} way too small!")
           })
         }
       } else if (instances.size < serviceType.warnInstances) {

@@ -21,6 +21,7 @@ import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
 import com.keepit.common.akka.SlowRunningExecutionContext
+import com.keepit.common.time.Clock
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
@@ -34,6 +35,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def timeSinceLastStatusChange: Long
   def amIUp: Boolean
 }
 
@@ -49,6 +51,7 @@ class ServiceDiscoveryImpl(
     doKeepAlive: Boolean = true)
   extends ServiceDiscovery with Logging {
 
+  private var lastStatusChangeTime = System.currentTimeMillis
 
   if (disableRegistration) log.warn("[ServiceDiscovery] registration DISABLED")
 
@@ -165,7 +168,7 @@ class ServiceDiscoveryImpl(
           airbrake.get.notify(s"deleting instance $instance from zookeeper before re-registering itself")
           zk.deleteNode(instance.node)
         } catch {
-          case e: Exception =>
+          case e: Throwable =>
             log.info("trying to delete node on re-registration, safe to ignore", e)
         } finally {
           myInstance = None
@@ -188,11 +191,14 @@ class ServiceDiscoveryImpl(
   }
 
   def changeStatus(newStatus: ServiceStatus): Unit = if (!disableRegistration) if(stillRegistered()) {
-    myInstance foreach { instance =>
-      log.info(s"Changing instance status to $newStatus")
-      thisRemoteService.status = newStatus
-      instance.setRemoteService(thisRemoteService)
-      zk.set(instance.node, RemoteService.toJson(instance.remoteService))
+    synchronized {
+      myInstance foreach { instance =>
+        log.info(s"Changing instance status to $newStatus")
+        thisRemoteService.status = newStatus
+        instance.setRemoteService(thisRemoteService)
+        lastStatusChangeTime = System.currentTimeMillis
+        zk.set(instance.node, RemoteService.toJson(instance.remoteService))
+      }
     }
   }
 
@@ -232,6 +238,8 @@ class ServiceDiscoveryImpl(
       myHealthyStatus.map(_ == status).getOrElse(false)
     } getOrElse(false)
   }
+
+  def timeSinceLastStatusChange: Long = System.currentTimeMillis - lastStatusChangeTime
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format

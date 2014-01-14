@@ -18,10 +18,12 @@ import play.api.Plugin
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.keepit.search.IndexInfo
 
 object IndexerPluginMessages {
   case object UpdateIndex
   case object BackUpIndex
+  case object RefreshSearcher
 }
 
 trait IndexManager[T <: Indexer[_]] {
@@ -34,18 +36,18 @@ trait IndexManager[T <: Indexer[_]] {
   def refreshSearcher(): Unit
   def reindex(): Unit
   def close(): Unit
-  def getIndexerFor(id: Long): T
+  def indexInfos(name: String): Seq[IndexInfo]
 }
 
 trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
-  def update(): Int
+  def update()
   def reindex()
   def refreshSearcher()
   def numDocs(): Int
   def sequenceNumber: SequenceNumber
   def commitSequenceNumber: SequenceNumber
   def committedAt: Option[String]
-  def getIndexerFor(id: Long): T
+  def indexInfos: Seq[IndexInfo]
 }
 
 abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
@@ -74,9 +76,8 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
     indexer.close()
   }
 
-  def update(): Int = {
-    val future = actor.ref.ask(UpdateIndex)(1 minutes).mapTo[Int]
-    Await.result(future, 1 minutes)
+  def update(): Unit = {
+    actor.ref ! UpdateIndex
   }
 
   override def reindex(): Unit = {
@@ -85,7 +86,7 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
   }
 
   override def refreshSearcher(): Unit = {
-    indexer.refreshSearcher()
+    actor.ref ! RefreshSearcher
   }
 
   override def numDocs: Int = indexer.numDocs
@@ -96,7 +97,7 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
 
   override def committedAt: Option[String] = indexer.committedAt
 
-  def getIndexerFor(id: Long): T = indexer.getIndexerFor(id)
+  def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
 }
 
 class IndexerActor[T <: Indexer[_]](
@@ -108,13 +109,13 @@ class IndexerActor[T <: Indexer[_]](
 
   def receive() = {
     case UpdateIndex => try {
-        sender ! indexer.update()
+        indexer.update()
       } catch {
         case e: Exception =>
           airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e)
-          sender ! -1
       }
     case BackUpIndex => indexer.backup()
+    case RefreshSearcher => indexer.refreshSearcher()
     case m => throw new UnsupportedActorMessage(m)
   }
 }

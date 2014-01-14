@@ -3467,6 +3467,15 @@ body[data-view=search] .main-keeps {
   -webkit-font-smoothing: antialiased;
 }
 
+.keep.example {
+  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=75)";
+  filter: alpha(opacity=75);
+  -webkit-opacity: 0.75;
+  -moz-opacity: 0.75;
+  -khtml-opacity: 0.75;
+  opacity: 0.75;
+}
+
 .keep-url {
   font-size: 12px;
   line-height: 14px;
@@ -3517,6 +3526,10 @@ body[data-view=search] .main-keeps {
 
 .keep-coll-a {
   padding: 0 5px;
+}
+
+.keep-coll.example .keep-coll-a:not(:hover) {
+  color: #bed38c;
 }
 
 .keep-coll-a:not(:hover) {
@@ -3642,6 +3655,24 @@ body[data-view=search] .main-keeps {
 .keeps-dragging>.keep {
   position: absolute;
   width: 100%;
+}
+
+.example-tag {
+  display: none;
+  position: relative;
+  top: -1px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 22px;
+  padding: 0 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  color: white;
+  background-color: #bed38c;
+}
+
+.keep.example .example-tag {
+  display: inline-block;
 }
 
 .blog-outer {
@@ -3828,9 +3859,9 @@ body[data-view=search] .main-keeps {
 }
 
 .kifi-icon-tutorial {
-  background-image: url(../img/playbtnicon.png);
-  background-size: 24px 24px;
-  height: 24px;
+  background-image: url(../img/viewtutorial.png);
+  background-size: 24px 23px;
+  height: 23px;
 }
 
 .kifi-icon-install {
@@ -5038,7 +5069,7 @@ a.friend-nw-google[href] {
   }
 
   .kifi-icon-tutorial {
-    background-image: url(../img/playbtnicon@2x.png);
+    background-image: url(../img/viewtutorial@2x.png);
   }
 
   .kifi-icon-install {

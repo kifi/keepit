@@ -1,6 +1,7 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
+import com.keepit.model.NormalizedURI
 import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.index.Indexer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -8,9 +9,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ShardedURIGraphIndexer(
-  override val indexShards: Map[Shard, URIGraphIndexer],
+  override val indexShards: Map[Shard[NormalizedURI], URIGraphIndexer],
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[URIGraphIndexer] {
+) extends ShardedIndexer[NormalizedURI, URIGraphIndexer] {
 
   private val fetchSize = 2000
 
@@ -23,12 +24,10 @@ class ShardedURIGraphIndexer(
       val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
       done = bookmarks.isEmpty
 
-      indexShards.foldLeft(bookmarks){ case (toBeIndexed, (shard, indexer)) =>
-        val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-
-        total += indexer.update(s"UriGraphIndex${shard.indexNameSuffix}", next)
-        rest
+      indexShards.foreach{ case (shard, indexer) =>
+        indexer.update(s"UriGraphIndex${shard.indexNameSuffix}", bookmarks, shard)
       }
+      total += bookmarks.size
       if (!done) sequenceNumber = bookmarks.last.seq
     }
     total

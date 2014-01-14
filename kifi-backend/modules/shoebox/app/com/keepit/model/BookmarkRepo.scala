@@ -8,6 +8,7 @@ import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import scala.Some
 import com.keepit.common.mail.ElectronicMail
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
@@ -33,6 +34,8 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark]
   def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean
+  def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[BookmarkSource]]
+  def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark]
 }
 
 @Singleton
@@ -191,5 +194,17 @@ class BookmarkRepoImpl @Inject() (
 
   def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean = {
     (for(b <- table if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
+  }
+
+  def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[BookmarkSource]] =
+    StaticQuery.queryNA[(Long, String)]("""select distinct user_Id, source from bookmark where state != 'inactive'""").list.map {
+      case (id, source) => (Id[User](id), BookmarkSource.get(source))
+    }.groupBy(_._1).mapValues(_.map(_._2))
+
+  def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark] = {
+    val bookmarks = for { bookmark <- table if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
+    val min = bookmarks.map(_.createdAt).min
+    val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark
+    oldest.sortBy(_.createdAt asc).firstOption
   }
 }

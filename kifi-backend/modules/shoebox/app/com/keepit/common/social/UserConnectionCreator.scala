@@ -35,12 +35,18 @@ class UserConnectionCreator @Inject() (
   extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = {
-    disableOldConnections(socialUserInfo, socialIds, network)
-    val socialConnections = createNewConnections(socialUserInfo, socialIds, network)
-    socialUserInfo.userId.map(updateUserConnections)
-    socialConnections
-  }
+      network: SocialNetworkType): Seq[SocialConnection] =
+    if (socialIds.isEmpty) {
+      // An empty sequence of socialIds may indicate that the auth token is out of date and we missed that for some reason,
+      // In this case we don't want to disable all of the user's connections
+      airbrake.notify(AirbrakeError(new IllegalArgumentException(s"[Suspicious] Social user ${socialUserInfo.id.get} of user ${socialUserInfo.userId.get} doesn't have any connection.")))
+      Seq.empty
+    } else {
+      disableOldConnections(socialUserInfo, socialIds, network)
+      val socialConnections = createNewConnections(socialUserInfo, socialIds, network)
+      socialUserInfo.userId.map(updateUserConnections)
+      socialConnections
+    }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>
     userValueRepo.getValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime

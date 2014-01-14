@@ -114,7 +114,7 @@ extends Scorer(weight) with Logging {
           if (boosterScorer.docID() == doc) {
             score *= (boosterScorer.score() * boosterStrength + (1.0f - boosterStrength))
           } else {
-            score *= 0f // (1.0f - boosterStrength)     // boostscorer doesn't have this doc id. A more consistent way is to modify next().
+            score *=  (1.0f - boosterStrength)     // boostscorer doesn't have this doc id.
           }
         } else {
           score *= (1.0f - boosterStrength)

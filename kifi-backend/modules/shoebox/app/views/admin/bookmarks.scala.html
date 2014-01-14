@@ -76,11 +76,11 @@
       <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
-        @{bookmark.source.value.toLowerCase match {
-          case "init_load" | "bookmarkImport" => {
+        @{bookmark.source.value match {
+          case "INIT_LOAD" | "bookmarkImport" => {
             <span class="label">Bookmark Import</span>
           }
-          case "hover_keep" | "keeper"=> {
+          case "HOVER_KEEP" | "keeper"=> {
             <span class="label label-success">Keeper</span>
           }
           case "plugin_start" => {
@@ -94,9 +94,6 @@
           }
           case "mobile" => {
             <span class="label label-success">Mobile</span>
-          }
-          case "bookmarkimport" => {
-            <span class="label label-default">Bookmark Import</span>
           }
           case "default" => {
             <span class="label label-info">Default</span>

@@ -247,6 +247,7 @@ class UserCommander @Inject() (
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
     val guardKey = "welcomeEmailSent"
+    val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
@@ -264,7 +265,7 @@ class UserCommander @Inject() (
               views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
             ("Let's get started with Kifi",
-              views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
+              if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
@@ -285,7 +286,7 @@ class UserCommander @Inject() (
             to = Seq(emailAddr),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = "Let's get started with Kifi",
-            htmlBody = views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
+            htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
           )
           postOffice.sendMail(mail)
@@ -298,11 +299,11 @@ class UserCommander @Inject() (
     val contextBuilder = new HeimdalContextBuilder()
     contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
-    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags.reverse, BookmarkSource.default)(contextBuilder.build)
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
     val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
     db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
-    bookmarkCommander.setTopKeeps(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
+    bookmarkCommander.setFirstKeeps(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
   }
 
   def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
@@ -594,7 +595,7 @@ object DefaultKeeps {
     Seq(
       // Example keeps
       (KeepInfo(title = None, url = "http://joythebaker.com/2013/12/curry-hummus-with-currants-and-olive-oil/", isPrivate = true), Seq(example, recipe)),
-      (KeepInfo(title = None, url = "http://www.kickstarter.com/projects/1046165765/egg-the-intelligent-cat-companion", isPrivate = true), Seq(example, shopping)),
+      (KeepInfo(title = None, url = "http://www.amazon.com/Hitchhikers-Guide-Galaxy-25th-Anniversary/dp/1400052920/", isPrivate = true), Seq(example, shopping)),
       (KeepInfo(title = None, url = "https://www.airbnb.com/locations/san-francisco/mission-district", isPrivate = true), Seq(example, travel)),
       (KeepInfo(title = None, url = "http://twistedsifter.com/2013/01/50-life-hacks-to-simplify-your-world/", isPrivate = true), Seq(example, later)),
       (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),

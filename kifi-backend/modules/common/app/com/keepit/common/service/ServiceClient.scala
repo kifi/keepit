@@ -27,9 +27,9 @@ object ServiceClient {
 class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: Int, path: String)
     extends HttpUri {
   override val serviceInstanceOpt = Some(serviceInstance)
-  override def summary: String = s"${path.abbreviate(50)}"
+  override def summary: String = s"$service:${path.abbreviate(100)}"
   override def service: String = s"${serviceInstance.remoteService.serviceType.shortName}${serviceInstance.id.id.toString}"
-  lazy val url: String = s"${protocol}://${serviceInstance.instanceInfo.localHostname}:${port}${path}"
+  lazy val url: String = s"$protocol://${serviceInstance.instanceInfo.localHostname}:${port}$path"
 }
 
 trait ServiceClient extends Logging {
@@ -39,7 +39,7 @@ trait ServiceClient extends Logging {
   val airbrakeNotifier: AirbrakeNotifier
 
   private def nextInstance(): ServiceInstance =
-    serviceCluster.nextService.getOrElse(throw new ServiceNotAvailableException(serviceCluster.serviceType))
+    serviceCluster.nextService().getOrElse(throw new ServiceNotAvailableException(serviceCluster.serviceType))
 
   val protocol: String = "http"
   val port: Int = 9000
@@ -52,15 +52,19 @@ trait ServiceClient extends Logging {
     }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000): Future[ClientResponse] = {
-    val uri = url(call.url)
     val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
-      callUrl(call, uri, body, ignoreFailure = true, timeout = timeout)
+      callUrl(call, url(call.url), body, ignoreFailure = true, timeout = timeout)
     }
-    respFuture.onFailure{
+    respFuture.onSuccess {
+      case res: ClientResponse => if(!res.isUp) {
+        res.request.httpUri.serviceInstanceOpt.map(_.reportServiceUnavailable())
+      }
+    }
+    respFuture.onFailure {
       case sue: ServiceUnavailableException =>
-        val msg = s"service ${uri.serviceInstance} is not available, reported ${uri.serviceInstance.sentServiceUnavailable} times"
+        val msg = s"service ${sue.serviceUri.serviceInstance} is not available, reported ${sue.serviceUri.serviceInstance.reportedSentServiceUnavailableCount} times"
         log.error(msg, sue)
-        uri.serviceInstance.sentServiceUnavailableException(sue)
+        sue.serviceUri.serviceInstance.reportServiceUnavailable()
         airbrakeNotifier.notify(AirbrakeError(
           exception = sue,
           message = Some(msg),

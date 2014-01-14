@@ -1,4 +1,5 @@
 @import "lesshat";
+@import "retina-1.1.0";
 
 @bodyFontSize: 16px;
 @bodyFontSizeSmall: 12px;
@@ -188,28 +189,12 @@ h1, h2, h3, h4, h5 {
 .kifi-scroll-down {
 	@fontSize: 18px;
 	position: absolute;
-	.bottom(-5px, @fontSize);
-	right: 0;
-	.font-size(@fontSize);
-	font-weight: 400;
-	writing-mode: tb-rl;
-	.rotate(90deg);
-	color: #909090;
-	.letter-spacing(.75px, @fontSize);
-}
-
-.kifi-scroll-down-arrow {
-	@fontSize: 18px;
-	position: relative;
-	.left(-25px, @fontSize);
-	display: inline-block;
-	.width(50px, @fontSize);
-	.height(50px, @fontSize);
-	background: url(/assets/images/scroll.png) no-repeat;
+	bottom: -35px;
+	right: 5%;
+	width: 50px;
+	height: 134px;
+	.at2x('/assets/images/scrolldown.png', 100%, 100%);
 	background-size: 100%;
-	vertical-align: middle;
-	.rotate(-90deg);
-	z-index: -1;
 }
 
 @media screen and (max-width: 639px) {

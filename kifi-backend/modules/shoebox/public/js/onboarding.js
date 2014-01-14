@@ -173,9 +173,11 @@
 		$('.kifi-onboarding-pic').attr('src', pic);
 	}
 
-	win.parent.getMe().then(function (me) {
-		updateMe(me.firstName || me.lastName, me.pic200);
-	});
+	if (win.parent && win.parent.getMe) {
+		win.parent.getMe().then(function (me) {
+			updateMe(me.firstName || me.lastName, me.pic200);
+		});
+	}
 
 	var resizeId;
 	$(win).resize(function () {

@@ -1,6 +1,62 @@
 @(emailAddress: String, network: com.keepit.social.SocialNetworkType, logInAttempted: Boolean)
 
+@import com.keepit.controllers.core.routes.{AuthController => routes}
+
+@content = {
+<main>
+
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title">Connect @network.displayName</h2>
+
+<section>
+  <p class="copy-1">
+    @if(logInAttempted) {
+      This is the first time you’ve used your @network.displayName account here.
+    } else {
+      We already have an account for <b>@emailAddress</b>.
+    }
+  </p>
+  <p class="copy-2">Please enter your Kifi password to connect @network.displayName.</p>
+
+  <form class="login" action="@routes.logInWithUserPass(network.name)" novalidate>
+    <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required tabindex="1" value="@emailAddress">
+    <label class="password-label">
+      <input class="form-password" type="password" name="login-password" placeholder="Your password" required autofocus tabindex="1">
+      <a class="password-forgot" href="javascript:" tabindex="2">I forgot</a>
+    </label>
+    <button class="form-submit primary-button" tabindex="1">Log in</button>
+  </form>
+</section>
+
+@helper.resetPasswordDialog()
+</main>
+}
+
+@scripts = {
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/jquery-ui-slider.min.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/auth-footer.js"></script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
+<script src="//platform.linkedin.com/in.js">
+api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
+onLoad:onLoadLinkedInApi
+authorize:true
+</script>
+<script>
+  $('.sign-up-link').on('mousedown click', function(e) {
+    e.preventDefault();
+    $.post($(this).data('cancelUri'), function(e) {
+      window.location = "/signup";
+    });
+    return false;
+  });
+</script>
+}
+
 @styles = {
+  <link rel="stylesheet" href="/assets/css/auth2.css">
+  <link rel="stylesheet" href="/assets/css/auth-footer.css">
 <style>
 section {
   width: 96%;
@@ -34,40 +90,4 @@ section {
 </style>
 }
 
-@import com.keepit.controllers.core.routes.{AuthController => routes}
-
-@content = {
-<a class="curtain-back" href="javascript:" tabindex="1" data-cancel-uri="@routes.cancelAuth">Cancel</a> @* TODO: Handle Cancel click properly *@
-
-<h1 class="main-logo">kifi</h1>
-<h2 class="page-title">Connect @network.displayName</h2>
-
-<section>
-  <p class="copy-1">
-    @if(logInAttempted) {
-      This is the first time you’ve used your @network.displayName account here.
-    } else {
-      We already have an account for <b>@emailAddress</b>.
-    }
-  </p>
-  <p class="copy-2">Please enter your Kifi password to connect @network.displayName.</p>
-
-  <form class="login" action="@routes.logInWithUserPass(network.name)" novalidate>
-    <input class="form-email-addr" type="email" name="login-email" placeholder="Your email address" required tabindex="1" value="@emailAddress">
-    <label class="password-label">
-      <input class="form-password" type="password" name="login-password" placeholder="Your password" required autofocus tabindex="1">
-      <a class="password-forgot" href="javascript:" tabindex="2">I forgot</a>
-    </label>
-    <button class="form-submit primary-button" tabindex="1">Log in</button>
-  </form>
-</section>
-
-@helper.resetPasswordDialog()
-}
-
-@scripts = {
-<script src="/assets/js/jquery-ui-position.min.js"></script>
-<script src="/assets/js/auth.js"></script>
-}
-
-@helper.page(styles = styles, content = content, scripts = scripts)
+@views.html.marketing.helper.page(styles = styles, content = content, scripts = scripts, dataTrack = "loginConnectNetwork", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")

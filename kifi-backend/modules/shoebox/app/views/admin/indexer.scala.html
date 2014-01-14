@@ -1,21 +1,19 @@
-@(articleIndexInfo: com.keepit.search.IndexInfo,
-  uriGraphIndexInfoSeq: Seq[com.keepit.search.IndexInfo])
+@(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.IndexInfo)])
 
-@admin("Index") {
-  <h2>Article Index</h2>
-  <div>
-    <b>index name:</b> @{articleIndexInfo.name}<br>
-    <b>num documents indexed:</b> @{articleIndexInfo.numDocs}<br>
-    <b>last committed at:</b> @{articleIndexInfo.committedAt.getOrElse("N/A")}<br>
-    <b>last sequence number:</b> @{articleIndexInfo.sequenceNumber.getOrElse("N/A")}<br>
-  </div>
-  <h2>URI Graph</h2>
-  <div>
-    @uriGraphIndexInfoSeq.map{ info =>
-      <b>index name:</b> @{info.name}<br>
-      <b>num documents indexed:</b> @{info.numDocs}<br>
-      <b>last committed at:</b> @{info.committedAt.getOrElse("N/A")}<br>
-      <b>last sequence number:</b> @{info.sequenceNumber.getOrElse("N/A")}<br><br>
+@admin("Index Infos") {
+  <table class="table table-condensed table-striped">
+    <thead>
+      <th> ZK Id</th> <th>IPs</th> <th>Name</th> <th>Number of Docs</th> <th>Committed At</th> <th>SequenceNummbr</th>
+    </thead>
+    @indexInfos.map{ case (cmi, indexInfo) =>
+      <tr>
+        <td>@{cmi.map(_.zkid).getOrElse("")}</td>
+        <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
+        <td>@{indexInfo.name}</td>
+        <td>@{indexInfo.numDocs}</td>
+        <td>@{indexInfo.committedAt.getOrElse("NA")}</td>
+        <td>@{indexInfo.sequenceNumber.getOrElse("NA")}<td>
+      </tr>
     }
-  </div>  
+  </table>
 }

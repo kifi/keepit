@@ -5,11 +5,8 @@
 @message = @{ !opts.contains(Categories.ALL) && !opts.contains(Categories.User.MESSAGE) }
 @all = @{ !opts.contains(Categories.ALL) }
 
-@styles = {
-<link rel="stylesheet" href="/assets/css/optout.css">
-}
-
 @content = {
+<main>
   <h1 class="main-logo">kifi</h1>
   <h2 class="page-title">Opt-out of Kifi Emails</h2>
 
@@ -31,9 +28,20 @@
       <span class="optout" id="all">Opt-out of all emails</span>
     </form>
   </section>
+</main>
 }
 
 @scripts = {
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/jquery-ui-slider.min.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/auth-footer.js"></script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
+<script src="//platform.linkedin.com/in.js">
+api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
+onLoad:onLoadLinkedInApi
+authorize:true
+</script>
   <script>
     $(function() {
       $form = $("#optout");
@@ -49,5 +57,10 @@
   </script>
 }
 
+@styles = {
+  <link rel="stylesheet" href="/assets/css/auth2.css">
+  <link rel="stylesheet" href="/assets/css/auth-footer.css">
+  <link rel="stylesheet" href="/assets/css/optout.css">
+}
 
-@views.html.auth.helper.page(title = "kifi.com • Opt-out of emails", content = content, styles = styles, scripts = scripts)
+@views.html.marketing.helper.page(title = "kifi • Opt-out of emails", styles = styles, content = content, scripts = scripts, dataTrack = "optOutEmails", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")
