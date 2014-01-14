@@ -5,7 +5,7 @@ import com.keepit.heimdal._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.User
+import com.keepit.model.{NotificationCategory, User}
 import com.keepit.common.db.{ExternalId, Id}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -32,7 +32,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", kifi)
-      contextBuilder += ("category", NotificationCategory.MESSAGE.category)
+      contextBuilder += ("category", NotificationCategory.User.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageId", message.externalId.id)
@@ -48,7 +48,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", push)
-      contextBuilder += ("category", NotificationCategory.MESSAGE.category)
+      contextBuilder += ("category", NotificationCategory.User.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("threadId", notification.id.id)
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
@@ -61,7 +61,7 @@ class MessagingAnalytics @Inject() (
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
-      contextBuilder += ("channel", NotificationCategory.GLOBAL.category)
+      contextBuilder += ("channel", NotificationCategory.User.GLOBAL.category)
       contextBuilder += ("global", true)
       contextBuilder += ("messageId", message.externalId.id)
       contextBuilder += ("threadId", thread.externalId.id)

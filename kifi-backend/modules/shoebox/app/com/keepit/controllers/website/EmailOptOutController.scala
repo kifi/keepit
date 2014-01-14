@@ -55,12 +55,12 @@ class EmailOptOutController @Inject() (
         { case (all, invite, message) =>
           // Checkbox unchecked == unsubscribe
           db.readWrite { implicit session =>
-            all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.ALL) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.ALL) }
-            invite.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.INVITATION) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.INVITATION) }
-            message.map { _ => emailOptOutRepo.optIn(emailAddress, PostOffice.Categories.User.MESSAGE) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, PostOffice.Categories.User.MESSAGE) }
+            all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, NotificationCategory.ALL) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.ALL) }
+            invite.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.INVITATION) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.INVITATION) }
+            message.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.MESSAGE) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.MESSAGE) }
           }
           Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
         }

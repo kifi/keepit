@@ -227,7 +227,7 @@ class UserCommander @Inject() (
             subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
             htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
             textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-            category = PostOffice.Categories.User.NOTIFICATION)
+            category = NotificationCategory.User.NOTIFICATION)
           )
         }
 
@@ -271,7 +271,7 @@ class UserCommander @Inject() (
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(targetEmailOpt.get),
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            category = NotificationCategory.User.EMAIL_CONFIRMATION,
             subject = subj,
             htmlBody = body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, verifyUrl, unsubLink).body)
@@ -285,7 +285,7 @@ class UserCommander @Inject() (
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(emailAddr),
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            category = NotificationCategory.User.EMAIL_CONFIRMATION,
             subject = "Let's get started with Kifi",
             htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
@@ -458,7 +458,7 @@ class UserCommander @Inject() (
                   subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
                   htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestAcceptedText(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
-                  category = PostOffice.Categories.User.NOTIFICATION)
+                  category = NotificationCategory.User.NOTIFICATION)
                 )(session)
 
                 (respondingUser, respondingUserImage)
@@ -499,7 +499,7 @@ class UserCommander @Inject() (
                   subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
                   htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestText(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body),
-                  category = PostOffice.Categories.User.NOTIFICATION)
+                  category = NotificationCategory.User.NOTIFICATION)
                 )(session)
 
                 (requestingUser, requestingUserImage)

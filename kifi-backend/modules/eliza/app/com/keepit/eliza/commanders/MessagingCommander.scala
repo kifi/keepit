@@ -3,7 +3,7 @@ package com.keepit.eliza.commanders
 import com.keepit.eliza.controllers.NotificationRouter
 import com.keepit.eliza._
 import com.keepit.eliza.model._
-import com.keepit.model.{User, DeepLocator, NormalizedURI}
+import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -11,7 +11,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.heimdal._
 import com.keepit.common.mail.GenericEmailAddress
@@ -158,7 +157,7 @@ class MessagingCommander @Inject() (
     val notificationAttempts = userIds.map { userId =>
       Try {
         val (notifJson, userThread) = db.readWrite{ implicit session =>
-          val categoryString = categoryOverride.getOrElse(NotificationCategory.GLOBAL.category)
+          val categoryString = categoryOverride.getOrElse(NotificationCategory.User.GLOBAL.category)
           val notifJson = Json.obj(
             "id"       -> message.externalId.id,
             "time"     -> message.createdAt,
@@ -228,7 +227,7 @@ class MessagingCommander @Inject() (
       "participants"  -> messageWithBasicUser.participants,
       "locator"       -> locator,
       "unread"        -> unread,
-      "category"      -> NotificationCategory.MESSAGE.category,
+      "category"      -> NotificationCategory.User.MESSAGE.category,
       "firstAuthor"   -> originalAuthorIdx,
       "authors"       -> numAuthors, //number of people who have sent messages in this conversation
       "messages"      -> numMessages, //total number of messages in this conversation
@@ -682,7 +681,7 @@ class MessagingCommander @Inject() (
             "participants" -> participants,
             "locator"      -> ("/messages/" + thread.externalId),
             "unread"       -> true,
-            "category"     -> NotificationCategory.MESSAGE.category
+            "category"     -> NotificationCategory.User.MESSAGE.category
           )
           db.readWrite { implicit session =>
             // todo: Add adding non-users
