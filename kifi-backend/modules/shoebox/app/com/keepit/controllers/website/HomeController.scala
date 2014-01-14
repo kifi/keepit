@@ -131,7 +131,7 @@ class HomeController @Inject() (
         val agentOpt = request.headers.get("User-Agent").map { agent =>
           UserAgent.fromString(agent)
         }
-        if (agentOpt.map(_.isMobile).isDefined) {
+        if (agentOpt.map(_.isMobile).getOrElse(false)) {
           val ua = agentOpt.get.userAgent
           val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
           val agentClass = if (isIphone) "iphone" else ""
