@@ -172,7 +172,10 @@ color: #fff !important;
 }
 @@media only screen and (max-width: 600px) {
   table[class="body"] img {
-    width: auto !important; height: auto !important;
+    width: 100% !important; height: 100% !important;
+  }
+  table[class="body"] img.really-special {
+    width: 75px !important; height: 75px !important;
   }
   table[class="body"] center {
     min-width: 0 !important;
@@ -183,9 +186,9 @@ color: #fff !important;
   table[class="body"] .row {
     width: 100% !important; display: block !important;
   }
-  table[class="body"] .wrapper {
+/*  table[class="body"] .wrapper {
     display: block !important; padding-right: 0 !important;
-  }
+  }*/
   table[class="body"] .columns {
     table-layout: fixed !important; float: none !important; width: 100% !important; padding-right: 0px !important; padding-left: 0px !important; display: block !important;
   }
@@ -204,71 +207,8 @@ color: #fff !important;
   table[class="body"] table.column td {
     width: 100% !important;
   }
-  table[class="body"] td.offset-by-one {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-two {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-three {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-four {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-five {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-six {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-seven {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-eight {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-nine {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-ten {
-    padding-left: 0 !important;
-  }
-  table[class="body"] td.offset-by-eleven {
-    padding-left: 0 !important;
-  }
   table[class="body"] .expander {
     width: 9999px !important;
-  }
-  table[class="body"] .right-text-pad {
-    padding-left: 10px !important;
-  }
-  table[class="body"] .text-pad-right {
-    padding-left: 10px !important;
-  }
-  table[class="body"] .left-text-pad {
-    padding-right: 10px !important;
-  }
-  table[class="body"] .text-pad-left {
-    padding-right: 10px !important;
-  }
-  table[class="body"] .hide-for-small {
-    display: none !important;
-  }
-  table[class="body"] .show-for-desktop {
-    display: none !important;
-  }
-  table[class="body"] .show-for-small {
-    display: inherit !important;
-  }
-  table[class="body"] .hide-for-desktop {
-    display: inherit !important;
-  }
-  table[class="body"] .right-text-pad {
-    padding-left: 10px !important;
-  }
-  table[class="body"] .left-text-pad {
-    padding-right: 10px !important;
   }
 }
 </style>
@@ -314,18 +254,18 @@ color: #fff !important;
             <td class="expander" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; visibility: hidden; width: 0px; padding: 0;" align="left" valign="top"></td>
           </tr></table></td>
 
-      <td class="wrapper" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; position: relative; padding: 10px 20px 0px 0px;" align="left" valign="top">
-        <table class="two columns" style="border-spacing: 0; border-collapse: collapse; vertical-align: top; text-align: left; width: 80px; margin: 0 auto; padding: 0;"><tr style="vertical-align: top; text-align: left; padding: 0;" align="left"><td class="center" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: center; padding: 0px 0px 10px;" align="center" valign="top">
+      <td class="wrapper" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; position: relative; padding: 10px 5px 0px 0px; display: block;" align="left" valign="top">
+        <table class="two columns" style="border-spacing: 0; border-collapse: collapse; vertical-align: top; text-align: left; width: 80px; margin: 0 auto; padding: 0;"><tr style="vertical-align: top; text-align: left; padding: 0;" align="left"><td class="center" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: center; padding: 0px 0px 20px;" align="center" valign="top">
               <center style="width: 100%; min-width: 80px;">
-                <img class="center rounded-left" height="80" width="80" src="@yourImageUrl" style="outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; width: auto; max-width: 100%; float: none; clear: both; display: block; -webkit-border-top-left-radius: 25px; -webkit-border-bottom-left-radius: 25px; -moz-border-radius-topleft: 25px; -moz-border-radius-bottomleft: 25px; border-top-left-radius: 25px; border-bottom-left-radius: 25px; margin: 0 auto;" align="none" alt=""/></center>
+                <img class="center rounded-left really-special" height="80" width="80" src="@yourImageUrl" style="outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; width: auto; max-width: 100%; float: none; clear: both; display: block; -webkit-border-top-left-radius: 15px; -webkit-border-bottom-left-radius: 15px; -moz-border-radius-topleft: 15px; -moz-border-radius-bottomleft: 15px; border-top-left-radius: 15px; border-bottom-left-radius: 15px; margin: 0 auto;" align="none" alt=""/></center>
             </td>
             <td class="expander" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; visibility: hidden; width: 0px; padding: 0;" align="left" valign="top"></td>
           </tr></table></td>
 
-      <td class="wrapper" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; position: relative; padding: 10px 20px 0px 0px;" align="left" valign="top">
-        <table class="two columns" style="border-spacing: 0; border-collapse: collapse; vertical-align: top; text-align: left; width: 80px; margin: 0 auto; padding: 0;"><tr style="vertical-align: top; text-align: left; padding: 0;" align="left"><td class="center" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: center; padding: 0px 0px 10px;" align="center" valign="top">
+      <td class="wrapper" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; position: relative; padding: 10px 5px 0px 0px;" align="left" valign="top">
+        <table class="two columns" style="border-spacing: 0; border-collapse: collapse; vertical-align: top; text-align: left; width: 80px; margin: 0 auto; padding: 0;"><tr style="vertical-align: top; text-align: left; padding: 0;" align="left"><td class="center" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: center; padding: 0px 0px 20px;" align="center" valign="top">
               <center style="width: 100%; min-width: 80px;">
-                <img class="center rounded-right" height="80" width="80" src="@otherImageUrl" style="outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; width: auto; max-width: 100%; float: none; clear: both; display: block; -webkit-border-top-right-radius: 25px; -webkit-border-bottom-right-radius: 25px; -moz-border-radius-topright: 25px; -moz-border-radius-bottomright: 25px; border-top-right-radius: 25px; border-bottom-right-radius: 25px; margin: 0 auto;" align="none" alt=""/></center>
+                <img class="center rounded-right really-special" height="80" width="80" src="@otherImageUrl" style="outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; width: auto; max-width: 100%; float: none; clear: both; display: block; -webkit-border-top-right-radius: 15px; -webkit-border-bottom-right-radius: 15px; -moz-border-radius-topright: 15px; -moz-border-radius-bottomright: 15px; border-top-right-radius: 15px; border-bottom-right-radius: 15px; margin: 0 auto;" align="none" alt=""/></center>
             </td>
             <td class="expander" style="word-break: break-word; -webkit-hyphens: auto; -moz-hyphens: auto; hyphens: auto; border-collapse: collapse !important; vertical-align: top; text-align: left; visibility: hidden; width: 0px; padding: 0;" align="left" valign="top"></td>
           </tr></table></td>
