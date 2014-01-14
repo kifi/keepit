@@ -686,7 +686,11 @@ var api = function() {
         focus: new Listeners,
         blur: new Listeners,
         loading: new Listeners,
-        unload: new Listeners}},
+        unload: new Listeners
+      },
+      reload: function(tabId) {
+        chrome.tabs.reload(tabId, {bypassCache: false});
+      }},
     toggleLogging: function (bool) {
       doLogging = bool;
     },

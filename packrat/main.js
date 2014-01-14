@@ -436,6 +436,7 @@ api.port.on({
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
+    reloadKifiAppTabs();
   },
   unkeep: function(data, _, tab) {
     log("[unkeep]", data)();
@@ -716,6 +717,13 @@ api.port.on({
         });
       }
     }
+  },
+  open_support_chat: function (_, __, tab) {
+    api.tabs.emit(tab, 'open_to', {
+      trigger: 'deepLink',
+      locator: '/messages',
+      composeTo: friendsById && friendsById['aa345838-70fe-45f2-914c-f27c865bdb91'] || {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', name: 'Tamila, Kifi Help'}
+    }, {queue: 1});
   },
   open_login_popup: function(o) {
     var baseUri = webBaseUri();
@@ -1072,10 +1080,19 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function dateWithoutMs(t) { // until db has ms precision
-  var d = new Date(t);
-  d.setMilliseconds(0);
-  return d;
+function reloadKifiAppTabs() {
+  var appRe = new RegExp('^' + webBaseUri() + '/(?:|blog|profile|find|tag/[a-z0-9-]+|friends(?:/\\w+)?)(?:[?#].*)?$');
+  for (var url in tabsByUrl) {
+    if (appRe.test(url)) {
+      var tabs = tabsByUrl[url];
+      if (tabs) {
+        tabs.forEach(reload);
+      }
+    }
+  }
+  function reload(tab) {
+    api.tabs.reload(tab.id);
+  }
 }
 
 function forEachTabAt() { // (url[, url]..., f)
