@@ -35,7 +35,6 @@ trait IndexManager[T <: Indexer[_]] {
   def refreshSearcher(): Unit
   def reindex(): Unit
   def close(): Unit
-  def getIndexerFor(id: Long): T
   def indexInfos(name: String): Seq[IndexInfo]
 }
 
@@ -47,7 +46,6 @@ trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
   def sequenceNumber: SequenceNumber
   def commitSequenceNumber: SequenceNumber
   def committedAt: Option[String]
-  def getIndexerFor(id: Long): T
   def indexInfos: Seq[IndexInfo]
 }
 
@@ -98,8 +96,6 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
   override def commitSequenceNumber: SequenceNumber = indexer.commitSequenceNumber
 
   override def committedAt: Option[String] = indexer.committedAt
-
-  def getIndexerFor(id: Long): T = indexer.getIndexerFor(id)
 
   def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
 }

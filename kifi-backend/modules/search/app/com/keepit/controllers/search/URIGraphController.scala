@@ -87,7 +87,7 @@ class URIGraphController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>
-    val uriGraphIndexer = shardedUriGraphIndexer.getIndexerFor(1l)
+    val uriGraphIndexer = shardedUriGraphIndexer.getIndexerFor(Id[NormalizedURI](0L))
     try {
       val doc = uriGraphIndexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
       Ok(html.admin.luceneDocDump("URIGraph", doc, uriGraphIndexer))
@@ -97,7 +97,7 @@ class URIGraphController @Inject()(
   }
 
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
-    val collectionIndexer = collectionGraphPlugin.getIndexerFor(1L)
+    val collectionIndexer = collectionGraphPlugin.getIndexerFor(Id[NormalizedURI](0L))
     try {
       val collections = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
       val doc = collectionIndexer.buildIndexable(collections, Shard(0, 1)).buildDocument

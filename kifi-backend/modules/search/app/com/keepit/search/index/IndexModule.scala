@@ -1,31 +1,31 @@
 package com.keepit.search.index
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
-import com.keepit.search.graph._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.index._
-import play.api.Play._
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
-import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
-import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
-import com.keepit.search.spellcheck.{SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
-import com.keepit.inject.AppScoped
-import java.io.File
 import com.keepit.common.logging.Logging
-import com.keepit.search.user._
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
-import org.apache.commons.io.FileUtils
-import com.keepit.search.sharding._
+import com.keepit.inject.AppScoped
+import com.keepit.model.NormalizedURI
+import com.keepit.search.ArticleStore
 import com.keepit.search.article._
+import com.keepit.search.graph._
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.bookmark._
+import com.keepit.search.index._
+import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
+import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
+import com.keepit.search.sharding._
+import com.keepit.search.spellcheck.{SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
+import com.keepit.search.user._
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.ImplementedBy
-import com.google.inject.Inject
-import com.keepit.search.ArticleStore
+import com.google.inject.{Inject, Provides, Singleton}
+import org.apache.commons.io.FileUtils
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.util.Version
+import java.io.File
+import play.api.Play._
 
 trait IndexModule extends ScalaModule with Logging {
 
@@ -50,7 +50,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
   }
 
-  protected def getIndexDirectory(configName: String, shard: Shard, indexStore: IndexStore): IndexDirectory
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory
 
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
@@ -62,12 +62,12 @@ trait IndexModule extends ScalaModule with Logging {
     bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
   }
 
-  private[this] val noShard = Shard(0, 1)
+  private[this] val noShard = Shard[Any](0, 1)
 
   @Singleton
   @Provides
   def activeShards: ActiveShards = {
-    ActiveShardsSpecParser(
+    (new ActiveShardsSpecParser).parse(
       Option(System.getProperty("index.shards")) orElse current.configuration.getString("index.shards")
     )
   }
@@ -75,7 +75,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedArticleIndexer = {
-    def articleIndexer(shard: Shard) = {
+    def articleIndexer(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.article.directory", shard, backup)
       log.info(s"storing ArticleIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
@@ -89,13 +89,13 @@ trait IndexModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedURIGraphIndexer = {
-    def bookmarkStore(shard: Shard) = {
+    def bookmarkStore(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
       log.info(s"storing BookmarkStore${shard.indexNameSuffix}in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
       new BookmarkStore(dir, config, airbrake, shoeboxClient)
     }
-    def uriGraphIndexer(shard: Shard, store: BookmarkStore): URIGraphIndexer = {
+    def uriGraphIndexer(shard: Shard[NormalizedURI], store: BookmarkStore): URIGraphIndexer = {
       val dir = getIndexDirectory("index.urigraph.directory", shard, backup)
       log.info(s"storing URIGraphIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
@@ -106,23 +106,16 @@ trait IndexModule extends ScalaModule with Logging {
     new ShardedURIGraphIndexer(indexShards.toMap, shoeboxClient)
   }
 
-  private def bookmarkStore(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
-    val dir = getIndexDirectory("index.bookmarkStore.directory", noShard, backup)
-    log.info(s"storing BookmarkStore in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new BookmarkStore(dir, config, airbrake, shoeboxClient)
-  }
-
   @Singleton
   @Provides
   def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedCollectionIndexer = {
-    def collectionNameIndexer(shard: Shard) = {
+    def collectionNameIndexer(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.collectionName.directory", shard, backup)
       log.info(s"storing CollectionNameIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
       new CollectionNameIndexer(dir, config, airbrake, shoeboxClient)
     }
-    def collectionIndexer(shard: Shard, collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
+    def collectionIndexer(shard: Shard[NormalizedURI], collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
       val dir = getIndexDirectory("index.collection.directory", shard, backup)
       log.info(s"storing CollectionIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
@@ -175,14 +168,14 @@ trait IndexModule extends ScalaModule with Logging {
 
 case class ProdIndexModule() extends IndexModule {
 
-  protected def getIndexDirectory(configName: String, shard: Shard, indexStore: IndexStore): IndexDirectory =
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
     getPersistentIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).get
 }
 
 case class DevIndexModule() extends IndexModule {
-  var volatileDirMap = Map.empty[(String, Shard), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
+  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard, indexStore: IndexStore): IndexDirectory =
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
     getPersistentIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse{
       volatileDirMap.getOrElse((configName, shard), {
         val newdir = new VolatileIndexDirectoryImpl()
