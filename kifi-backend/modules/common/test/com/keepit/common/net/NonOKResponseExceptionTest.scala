@@ -32,7 +32,7 @@ class NonOKResponseExceptionTest extends Specification {
         new ServiceUri(instance, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
         FakeClientResponse("short response"),
         Some("short body"))
-      exception.getMessage() === "[TM1] Bad Http Status on /this/is/the/path/and/it/may/be/very/very/long/... body:[short body] status:200 res [short response]"
+      exception.getMessage() === "[TM1] Bad Http Status on TM1:/this/is/the/path/and/it/may/be/very/very/long/... body:[short body] status:200 res [short response]"
     }
   }
 }
