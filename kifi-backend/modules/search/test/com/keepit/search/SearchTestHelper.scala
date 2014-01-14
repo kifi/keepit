@@ -37,7 +37,7 @@ import com.keepit.search.sharding._
 
 trait SearchTestHepler { self: SearchApplicationInjector =>
 
-  val singleShard = Shard(0,1)
+  val singleShard = Shard[NormalizedURI](0,1)
   val activeShards = ActiveShards(Seq(singleShard))
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))

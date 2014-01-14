@@ -53,7 +53,7 @@ class ArticleIndexerController @Inject()(
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>
-    val indexer = indexerPlugin.getIndexerFor(id.id)
+    val indexer = indexerPlugin.getIndexerFor(id)
     try {
       val doc = indexer.buildIndexable(id).buildDocument
       Ok(html.admin.luceneDocDump("Article", doc, indexer))

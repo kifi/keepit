@@ -2,6 +2,7 @@ package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.Collection
+import com.keepit.model.NormalizedURI
 import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionNameIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
@@ -11,9 +12,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ShardedCollectionIndexer(
-  override val indexShards: Map[Shard, CollectionIndexer],
+  override val indexShards: Map[Shard[NormalizedURI], CollectionIndexer],
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[CollectionIndexer] {
+) extends ShardedIndexer[NormalizedURI, CollectionIndexer] {
 
   private val fetchSize = 2000
 
@@ -27,7 +28,7 @@ class ShardedCollectionIndexer(
       done = collections.isEmpty
 
       indexShards.foreach{ case (shard, indexer) =>
-        indexer.update(s"CollectionIndex${shard.indexNameSuffix}", collections, shard)
+        indexer.update(shard.indexNameSuffix, collections, shard)
       }
       total += collections.size
       if (!done) sequenceNumber = collections.last.seq
