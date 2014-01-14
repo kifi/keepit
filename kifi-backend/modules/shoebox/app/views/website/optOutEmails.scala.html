@@ -42,12 +42,6 @@ api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.cl
 onLoad:onLoadLinkedInApi
 authorize:true
 </script>
-}
-
-@styles = {
-  <link rel="stylesheet" href="/assets/css/auth2.css">
-  <link rel="stylesheet" href="/assets/css/auth-footer.css">
-  <link rel="stylesheet" href="/assets/css/optout.css">
   <script>
     $(function() {
       $form = $("#optout");
@@ -61,6 +55,12 @@ authorize:true
       });
     });
   </script>
+}
+
+@styles = {
+  <link rel="stylesheet" href="/assets/css/auth2.css">
+  <link rel="stylesheet" href="/assets/css/auth-footer.css">
+  <link rel="stylesheet" href="/assets/css/optout.css">
 }
 
 @views.html.marketing.helper.page(title = "kifi • Opt-out of emails", styles = styles, content = content, scripts = scripts, dataTrack = "optOutEmails", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")
