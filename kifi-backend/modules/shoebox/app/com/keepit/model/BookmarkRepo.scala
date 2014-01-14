@@ -35,7 +35,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark]
   def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[BookmarkSource]]
-  def getOldest(userId: Id[User])(implicit session: RSession): Option[Bookmark]
+  def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark]
 }
 
 @Singleton
@@ -201,7 +201,10 @@ class BookmarkRepoImpl @Inject() (
       case (id, source) => (Id[User](id), BookmarkSource.get(source))
     }.groupBy(_._1).mapValues(_.map(_._2))
 
-  def getOldest(userId: Id[User])(implicit session: RSession): Option[Bookmark] =
-    (for(b <- table if b.userId === userId && b.state =!= BookmarkStates.INACTIVE) yield b).sortBy(_.createdAt).firstOption()
-
+  def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark] = {
+    val bookmarks = for { bookmark <- table if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
+    val min = bookmarks.map(_.createdAt).min
+    val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark
+    oldest.sortBy(_.createdAt asc).firstOption
+  }
 }

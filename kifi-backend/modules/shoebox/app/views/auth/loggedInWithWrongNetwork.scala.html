@@ -1,6 +1,48 @@
 @(network: com.keepit.social.SocialNetworkType)
 
+@import com.keepit.controllers.core.routes.{AuthController => routes}
+
+@content = {
+<main>
+<h1 class="main-logo">kifi</h1>
+<h2 class="page-title">Account Not Found</h2>
+
+<section>
+  <p class="copy-1">Hmmm... We’ve never seen this @network.displayName account before.</p>
+  <p class="copy-2">Have you signed up with us before?</p>
+
+  <a class="button-sign-up primary-button" href="@com.keepit.controllers.core.routes.AuthController.signupPage">I’m new here, sign me up!</a>
+  <a class="button-sign-in alt-button" href="@com.keepit.controllers.core.routes.AuthController.loginPage">I already have a Kifi account</a>
+</section>
+
+</main>
+}
+
+@scripts = {
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/jquery-ui-slider.min.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/auth-footer.js"></script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
+<script src="//platform.linkedin.com/in.js">
+api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
+onLoad:onLoadLinkedInApi
+authorize:true
+</script>
+<script>
+  $('.sign-up-link').on('mousedown click', function(e) {
+    e.preventDefault();
+    $.post($(this).data('cancelUri'), function(e) {
+      window.location = "/signup";
+    });
+    return false;
+  });
+</script>
+}
+
 @styles = {
+  <link rel="stylesheet" href="/assets/css/auth2.css">
+  <link rel="stylesheet" href="/assets/css/auth-footer.css">
 <style>
 section {
   width: 96%;
@@ -25,17 +67,4 @@ section {
 </style>
 }
 
-@content = {
-<h1 class="main-logo">kifi</h1>
-<h2 class="page-title">Account Not Found</h2>
-
-<section>
-  <p class="copy-1">Hmmm... We’ve never seen this @network.displayName account before.</p>
-  <p class="copy-2">Have you signed up with us before?</p>
-
-  <a class="button-sign-up primary-button" href="@com.keepit.controllers.core.routes.AuthController.signupPage">I’m new here, sign me up!</a>
-  <a class="button-sign-in alt-button" href="@com.keepit.controllers.core.routes.AuthController.loginPage">I already have a Kifi account</a>
-</section>
-}
-
-@helper.page(styles = styles, content = content)
+@views.html.marketing.helper.page(styles = styles, content = content, scripts = scripts, dataTrack = "loginNeverSeenUserBefore", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")

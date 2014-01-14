@@ -46,10 +46,16 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def nextService(): Option[ServiceInstance] = {
     val upList = routingList.filter(_.isUp)
     val availableList = routingList.filter(_.isAvailable)
-    var list = upList
-    if (upList.length < availableList.length/2.0) list = availableList
-    if (list.isEmpty) None
-    else Some(list(nextRoutingInstance.getAndIncrement % list.size))
+    val list = if (upList.length < availableList.length / 2.0) {
+      availableList
+    } else {
+      upList
+    }
+    if (list.isEmpty) {
+      None
+    } else {
+      Some(list(nextRoutingInstance.getAndIncrement % list.size))
+    }
   }
 
   def allServices: Vector[ServiceInstance] = routingList.filter(_.isAvailable)
