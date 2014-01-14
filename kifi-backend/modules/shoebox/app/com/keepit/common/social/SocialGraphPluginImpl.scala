@@ -18,6 +18,7 @@ import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
 import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient}
 import com.google.inject.Singleton
+import com.keepit.common.performance.timing
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -58,7 +59,7 @@ private[social] class SocialGraphActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = {
+  def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = timing(s"fetchUserInfo($socialUserInfo)") {
     try {
       require(socialUserInfo.credentials.isDefined,
         s"SocialUserInfo's credentials are not defined: $socialUserInfo")

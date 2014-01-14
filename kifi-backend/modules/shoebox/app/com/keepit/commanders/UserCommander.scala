@@ -16,6 +16,7 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
+import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 

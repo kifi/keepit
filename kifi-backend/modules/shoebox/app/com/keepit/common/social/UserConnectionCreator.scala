@@ -16,6 +16,7 @@ import com.keepit.social.{SocialNetworkType, SocialId}
 
 import play.api.libs.json.Json
 import com.keepit.heimdal.{ContextDoubleData, HeimdalServiceClient}
+import com.keepit.common.performance.timing
 
 object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"
@@ -35,7 +36,7 @@ class UserConnectionCreator @Inject() (
   extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] =
+      network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     if (socialIds.isEmpty) {
       // An empty sequence of socialIds may indicate that the auth token is out of date and we missed that for some reason,
       // In this case we don't want to disable all of the user's connections
@@ -47,12 +48,13 @@ class UserConnectionCreator @Inject() (
       socialUserInfo.userId.map(updateUserConnections)
       socialConnections
     }
+  }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>
     userValueRepo.getValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
   }
 
-  def updateUserConnections(userId: Id[User]) {
+  def updateUserConnections(userId: Id[User]) = timing(s"updateUserConnections($userId)") {
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
@@ -77,7 +79,7 @@ class UserConnectionCreator @Inject() (
   }
 
   private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType)(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = {
+      network: SocialNetworkType)(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     for {
       socialId <- socialIds
       sui <- socialRepo.getOpt(socialId, network)
@@ -87,7 +89,7 @@ class UserConnectionCreator @Inject() (
   }
 
   private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = {
+      network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
     log.info(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
       db.readWrite { implicit s =>
@@ -120,7 +122,7 @@ class UserConnectionCreator @Inject() (
   }
 
   def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = {
+      network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     log.info(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
       val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get) collect {
