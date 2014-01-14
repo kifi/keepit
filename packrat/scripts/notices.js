@@ -38,6 +38,14 @@ panes.notices = function () {
         log('[new_thread] kind mismatch', kind, o)();
       }
     },
+    thread_unread: function (th) {
+      if ($list) {
+        var $th = $list.find('.kifi-notice[data-thread="' + th.thread + '"]').removeClass('kifi-notice-visited');
+        if (!$th.length && $list.data('kind') === 'unread') {
+          showNew(th);
+        }
+      }
+    },
     thread_read: function (o) {
       markOneRead(o.time, o.threadId, o.id);
     },
@@ -215,9 +223,17 @@ panes.notices = function () {
 
   function showNew(th) {
     $list.find('.kifi-notice[data-id="' + th.id + '"],.kifi-notice[data-thread="' + th.thread + '"]').remove();
-    $(renderOne(th))
-      .find('time').timeago().end()
-      .prependTo($list);
+    var $th = $(renderOne(th));
+    $th.find('time').timeago();
+    $list.find('.kifi-notice-time').each(function () {
+      if (th.time >= this.getAttribute('datetime')) {
+        $th.insertBefore($(this).closest('.kifi-notice'));
+        return false;
+      }
+    });
+    if ($th.parent()[0] !== $list[0]) {
+      $th.appendTo($list);
+    }
   }
 
   function markOneRead(timeStr, threadId, id) {
@@ -301,10 +317,13 @@ panes.notices = function () {
   }
 
   function onClickState(e) {
-    log('[onClickState] marking read')();
+    log('[onClickState] toggling read state')();
     e.stopImmediatePropagation();
-    var data = $(this).hoverfu('hide').closest('.kifi-notice').data();
-    api.port.emit('set_message_read', {threadId: data.thread, messageId: data.id, time: data.createdAt});
+    var $notice = $(this).closest('.kifi-notice');
+    var data = $notice.data();
+    api.port.emit(
+      $notice.hasClass('kifi-notice-visited') ? 'set_message_unread' : 'set_message_read',
+      {threadId: data.thread, messageId: data.id, time: data.createdAt});
   }
 
   function onClickNotice(e) {
@@ -366,8 +385,10 @@ panes.notices = function () {
   }
 
   function onHoverfuState(configureHover) {
-    configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: 'Mark as read'}), {
-      position: {my: 'left-26 bottom-7', at: 'center top', of: this, collision: 'none'}
+    var html = $(this).is('.kifi-notice-visited *') ? 'Mark as unread' : 'Mark as read';
+    configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: html}), {
+      position: {my: 'left-26 bottom-7', at: 'center top', of: this, collision: 'none'},
+      click: 'hide'
     });
   }
 

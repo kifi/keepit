@@ -229,6 +229,49 @@
   border-radius: 0 3px 0 0;
 }
 
+.kifi-notice-state {
+  position: absolute;
+  top: 17px;
+  left: 71px;
+  width: 9px;
+  height: 9px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  background-color: #85a4ea;
+  background-clip: content-box;
+  border-radius: 50%;
+}
+.kifi-notice-state:hover {
+  top: 16px;
+  left: 70px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #fff;
+  box-shadow: #fff 0 0 4px;
+}
+.kifi-notice-visited>.kifi-notice-state {
+  top: 16px;
+  left: 70px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #85a4ea;
+  background-color: #fff;
+}
+.kifi-notice-visited>.kifi-notice-state:hover {
+  box-shadow: #85a4ea 0 0 4px -1px;
+}
+.kifi-notice-visited>.kifi-notice-state {
+  -webkit-transform-origin: left center;
+  transform-origin: left center;
+  -webkit-transform: scale(.001,.001);
+  transform: scale(.001,.001);
+  transition: .16s -webkit-transform ease-in-out;
+  transition: .16s transform ease-in-out;
+}
+.kifi-notice-visited:hover>.kifi-notice-state {
+  -webkit-transform: none;
+  transform: none;
+}
 .kifi-notice-kicker {
   font-size: 10px;
   line-height: 15px;
@@ -237,30 +280,11 @@
   -webkit-font-smoothing: antialiased;
   position: relative;
   top: -2px;
+  transition: left .16s ease-in-out;
 }
-.kifi-notice-state {
-  position: relative;
-  padding: 0 3px;
-  margin: 0 1px 0 -5px;
-}
-.kifi-notice-visited .kifi-notice-state {
-  display: none;
-}
-.kifi-notice-state::before {
-  content: ' ';
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  background-color: #85a4ea;
-  background-clip: content-box;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  vertical-align: top;
-  position: relative;
-  top: 1px;
-}
-.kifi-notice-state:hover::before {
-  border-color: #fff;
+:not(.kifi-notice-visited)>.kifi-notice-kicker,
+.kifi-notice:hover>.kifi-notice-kicker {
+  left: 15px;
 }
 .kifi-notice-dir {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAALCAYAAACZIGYHAAAAiElEQVR42p3PIQ6DQBBG4VnuQQ0Hw5FU4NojodsLoLhCFUEVhWiDwE9f3Z81TFZ8YjaTN1l7LatK6DHDonS4YIT/lURa7PDSyAA/scGw4oYqjzwDkQ9M5gmNRhKuOALfcXGgQ9KFBlMW+cJPPPJLFe54w7AFIoMEQlzsaGGlkRE1rCQyo0fS9x9eWSm84pN2nwAAAABJRU5ErkJggg==);
