@@ -18,11 +18,17 @@ case class ServiceInstanceId(id: Long) {
   override def toString(): String = id.toString
 }
 
-//thisInstance means the representation of the current running instance
+/**
+ * thisInstance means the representation of the current running instance
+ */
 class ServiceInstance(val node: Node, val thisInstance: Boolean) extends Logging {
 
   private var remoteServiceOpt: Option[RemoteService] = None
-  val sentServiceUnavailable = new AtomicInteger(0)
+  private val sentServiceUnavailable = new AtomicInteger(0)
+  def reportedSentServiceUnavailable: Boolean = sentServiceUnavailable.get() != 0
+  def reportedSentServiceUnavailableCount: Int = sentServiceUnavailable.get()
+
+  override def toString() = s"Service Instance of zk node $node with remote service ${remoteServiceOpt}"
 
   def remoteService: RemoteService = remoteServiceOpt.get
 
@@ -41,9 +47,9 @@ class ServiceInstance(val node: Node, val thisInstance: Boolean) extends Logging
 
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
-  def isHealthy : Boolean = (remoteService.status == remoteService.healthyStatus) && sentServiceUnavailable == 0
+  def isHealthy : Boolean = remoteService.status == remoteService.healthyStatus
 
-  def isUp: Boolean = remoteService.status == ServiceStatus.UP
+  def isUp: Boolean = (remoteService.status == ServiceStatus.UP) && !reportedSentServiceUnavailable
 
   def isAvailable : Boolean = isUp || isAlmostUp
 
