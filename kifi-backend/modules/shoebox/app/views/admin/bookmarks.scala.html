@@ -76,7 +76,7 @@
       <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
-        @{bookmark.source.value.toLowerCase match {
+        @{bookmark.source.value match {
           case "init_load" | "bookmarkImport" => {
             <span class="label">Bookmark Import</span>
           }
@@ -94,9 +94,6 @@
           }
           case "mobile" => {
             <span class="label label-success">Mobile</span>
-          }
-          case "bookmarkimport" => {
-            <span class="label label-default">Bookmark Import</span>
           }
           case "default" => {
             <span class="label label-info">Default</span>
