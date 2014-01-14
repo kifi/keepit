@@ -43,6 +43,7 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
     "friendRequestInlined" -> views.html.email.friendRequestInlined("Stephen", "Tester MacTest", "http://lorempixel.com/200/200/cats", "https://kifi.com"),
     "welcome" -> views.html.email.welcome("Stephen", "https://www.kifi.com", "https://kifi.com"),
     "welcomeInlined" -> views.html.email.welcomeInlined("Stephen", "https://www.kifi.com", "https://kifi.com"),
+    "welcomeLongInlined" -> views.html.email.welcomeLongInlined("Stephen", "https://www.kifi.com", "https://kifi.com"),
     "mobileWaitlist" -> views.html.email.mobileWaitlist("https://kifi.com"),
     "mobileWaitlistInlined" -> views.html.email.mobileWaitlistInlined("https://kifi.com")
   )
