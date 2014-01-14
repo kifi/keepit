@@ -97,7 +97,7 @@ class HomeController @Inject() (
 
   def mobileLanding = HtmlAction(true)(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
   private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    Ok(views.html.marketing.mobileLanding(isLoggedIn))
+    Ok(views.html.marketing.mobileLanding(isLoggedIn, "iphone"))
   }
   // End post-launch stuff!
 
@@ -128,11 +128,14 @@ class HomeController @Inject() (
       // Non-user landing page
       if(request.cookies.get("newdesign").isDefined) {
         log.info(request.headers.toSimpleMap.toString)
-        val isMobile = request.headers.get("User-Agent").exists { agent =>
-          UserAgent.fromString(agent).isMobile
+        val agentOpt = request.headers.get("User-Agent").map { agent =>
+          UserAgent.fromString(agent)
         }
-        if (isMobile) {
-          Ok(views.html.marketing.mobileLanding(false))
+        if (agentOpt.map(_.isMobile).isDefined) {
+          val ua = agentOpt.get.userAgent
+          val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
+          val agentClass = if (isIphone) "iphone" else ""
+          Ok(views.html.marketing.mobileLanding(false, agentClass))
         } else {
           Ok(views.html.marketing.landing())
         }
