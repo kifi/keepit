@@ -158,8 +158,6 @@ class MainSearcherFactory @Inject() (
 
   def semanticVectorSearcher(shard: Shard[NormalizedURI]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    val uriGraphSearcher = URIGraphSearcher(uriGraphIndexer)
-    new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
+    new SemanticVectorSearcher(articleSearcher)
   }
 }
