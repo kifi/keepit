@@ -9,7 +9,6 @@ import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.NormalizedURI
 
 class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter, monitoredAwait: MonitoredAwait) {
 
@@ -73,6 +72,6 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
 
     val time: Long = System.currentTimeMillis - startTime
 
-    (myUriEdges.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]], friendsUriEdgeSets.mapValues{ _.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]] }, mySearchUris, friendSearchUris, relevantFriendEdgeSet, time)
+    (myUriEdges.accessor, friendsUriEdgeSets.mapValues{ _.accessor }, mySearchUris, friendSearchUris, relevantFriendEdgeSet, time)
   }
 }
