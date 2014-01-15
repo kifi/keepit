@@ -161,9 +161,9 @@ class AuthController @Inject() (
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.isMobile) {
-        log.info(s"placeholder for redirecting to mobile only page")
+        Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
       } else if (!agent.isSupportedDesktop) {
-        log.info(s"placeholder for redirecting to unsupported browsers page")
+        Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
       }
     }
     Ok(views.html.auth.authGrey("login"))
@@ -188,50 +188,57 @@ class AuthController @Inject() (
       }.isDefined
     }
 
-    (request.userOpt, request.identityOpt) match {
-      case (Some(user), _) if user.state != UserStates.INCOMPLETE_SIGNUP =>
-        // Complete user, they don't need to be here!
-        Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
-      case (Some(user), Some(identity)) =>
-        // User exists, is incomplete
-        val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
-        val picture = identityPicture(identity)
+    val agentOpt = request.headers.get("User-Agent").map { agent =>
+      UserAgent.fromString(agent)
+    }
+    if (agentOpt.exists(ua => ua.name == "IE" || ua.name == "Safari")) {
+      Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
+    } else {
+      (request.userOpt, request.identityOpt) match {
+        case (Some(user), _) if user.state != UserStates.INCOMPLETE_SIGNUP =>
+          // Complete user, they don't need to be here!
+          Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+        case (Some(user), Some(identity)) =>
+          // User exists, is incomplete
+          val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
+          val picture = identityPicture(identity)
 
-        Ok(views.html.auth.authGrey(
-          view = "signup2Email",
-          emailAddress = identity.email.getOrElse(""),
-          picturePath = picture,
-          firstName = firstName,
-          lastName = lastName
-        ))
-      case (Some(user), None) =>
-        // User but no identity. Huh?
-        // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
-        Redirect(securesocial.controllers.routes.LoginPage.logout)
-      case (None, Some(identity)) if emailAddressMatchesSomeKifiUser(identity) =>
-        // No user exists, but social network identity’s email address matches a Kifi user
-        Ok(views.html.auth.connectToAuthenticate(
-          emailAddress = identity.email.get,
-          network = SocialNetworkType(identity.identityId.providerId),
-          logInAttempted = false
-        ))
-      case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
-        // No user exists, social login was attempted. Let user choose what to do next.
-        Ok(views.html.auth.loggedInWithWrongNetwork(
-          network = SocialNetworkType(identity.identityId.providerId)
-        ))
-      case (None, Some(identity)) =>
-        // No user exists, has social network identity, must finalize
-        Ok(views.html.auth.authGrey(
-          view = "signup2Social",
-          firstName = User.sanitizeName(identity.firstName),
-          lastName = User.sanitizeName(identity.lastName),
-          emailAddress = identity.email.getOrElse(""),
-          picturePath = identityPicture(identity),
-          network = Some(SocialNetworkType(identity.identityId.providerId))
-        ))
-      case (None, None) =>
-        Ok(views.html.auth.authGrey("signup"))
+          Ok(views.html.auth.authGrey(
+            view = "signup2Email",
+            emailAddress = identity.email.getOrElse(""),
+            picturePath = picture,
+            firstName = firstName,
+            lastName = lastName
+          ))
+        case (Some(user), None) =>
+          // User but no identity. Huh?
+          // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
+          Redirect(securesocial.controllers.routes.LoginPage.logout)
+        case (None, Some(identity)) if emailAddressMatchesSomeKifiUser(identity) =>
+          // No user exists, but social network identity’s email address matches a Kifi user
+          Ok(views.html.auth.connectToAuthenticate(
+            emailAddress = identity.email.get,
+            network = SocialNetworkType(identity.identityId.providerId),
+            logInAttempted = false
+          ))
+        case (None, Some(identity)) if request.flash.get("signin_error").exists(_ == "no_account") =>
+          // No user exists, social login was attempted. Let user choose what to do next.
+          Ok(views.html.auth.loggedInWithWrongNetwork(
+            network = SocialNetworkType(identity.identityId.providerId)
+          ))
+        case (None, Some(identity)) =>
+          // No user exists, has social network identity, must finalize
+          Ok(views.html.auth.authGrey(
+            view = "signup2Social",
+            firstName = User.sanitizeName(identity.firstName),
+            lastName = User.sanitizeName(identity.lastName),
+            emailAddress = identity.email.getOrElse(""),
+            picturePath = identityPicture(identity),
+            network = Some(SocialNetworkType(identity.identityId.providerId))
+          ))
+        case (None, None) =>
+          Ok(views.html.auth.authGrey("signup"))
+      }
     }
   }
 
