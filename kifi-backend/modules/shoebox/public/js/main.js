@@ -343,6 +343,7 @@ $(function () {
 	var myTotal;
 	var friendsTotal;
 	var othersTotal;
+	var prefetchedPreviewUrls = {};
 
 	function identity(a) {
 		return a;
@@ -415,11 +416,16 @@ $(function () {
 				}
 
 				if (!skipImage) {
-					$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
-						$pic.css('background-image', 'url(' + data.url + ')');
-					}).fail(function () {
-						$pic.find('.page-pic-soon').addClass('showing');
-					});
+					if (o.url in prefetchedPreviewUrls) {
+						$pic.css('background-image', 'url(' + prefetchedPreviewUrls[o.url] + ')');
+					}
+					else {
+						$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
+							$pic.css('background-image', 'url(' + data.url + ')');
+						}).fail(function () {
+							$pic.find('.page-pic-soon').addClass('showing');
+						});
+					}
 				}
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
 				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
@@ -2834,6 +2840,7 @@ $(function () {
 				if (urls.hasOwnProperty(i)) {
 					var url = urls[i];
 					if (url) {
+						prefetchedPreviewUrls[i] = url;
 						setTimeout((function (url) {
 							return function () {
 								var img = document.createElement('img');
