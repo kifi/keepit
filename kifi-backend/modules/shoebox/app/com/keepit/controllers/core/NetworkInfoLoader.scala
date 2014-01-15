@@ -3,6 +3,7 @@ package com.keepit.controllers.core
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.performance.timing
 import com.keepit.common.social._
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.model._
@@ -27,7 +28,7 @@ class NetworkInfoLoader @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialUserInfoRepo: SocialUserInfoRepo) {
 
-  def load(mySocialUsers: Seq[SocialUserInfo], friendId: Id[User]): Map[SocialNetworkType, NetworkInfo] = {
+  def load(mySocialUsers: Seq[SocialUserInfo], friendId: Id[User]): Map[SocialNetworkType, NetworkInfo] = timing(s"loadNetworkInfo friendId($friendId) mySocialUsers:(len=${mySocialUsers.length})") {
     db.readOnly { implicit s =>
       for (su <- socialUserInfoRepo.getByUser(friendId)) yield {
         su.networkType -> NetworkInfo(
