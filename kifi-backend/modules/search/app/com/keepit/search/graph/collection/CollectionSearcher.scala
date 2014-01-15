@@ -16,12 +16,11 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.DocIdSetEdgeSet
 import com.keepit.search.graph.EdgeSet
-import com.keepit.search.graph.LongSetEdgeSetWithAttributes
+import com.keepit.search.graph.LongSetEdgeSet
 import com.keepit.search.graph.LuceneBackedEdgeSet
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.collection.CollectionFields._
-import com.keepit.search.graph.TimeRangeFilter
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 
@@ -110,7 +109,7 @@ object CollectionToUriEdgeSet {
   def apply(sourceId: Id[Collection], uriList: URIList): CollectionToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[Collection, NormalizedURI] {
+    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSet[Collection, NormalizedURI] {
       override protected val longArraySet = set
 
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet){
@@ -118,8 +117,8 @@ object CollectionToUriEdgeSet {
           val datetime = uriList.createdAt(idx)
           Util.unitToMillis(datetime)
         }
-        override protected def isPublicByIndex(idx: Int): Boolean = false
       }
+
     }
   }
 }

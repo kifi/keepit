@@ -24,14 +24,13 @@ import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
 import com.keepit.search.graph.DocIdSetEdgeSet
 import com.keepit.search.graph.EdgeSet
 import com.keepit.search.graph.IdSetEdgeSet
-import com.keepit.search.graph.LongSetEdgeSetWithAttributes
 import com.keepit.search.graph.LuceneBackedEdgeSet
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphFields._
-import com.keepit.search.graph.TimeRangeFilter
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
+import com.keepit.search.graph.LongSetEdgeSet
 
 
 object URIGraphSearcher {
@@ -192,7 +191,7 @@ object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
       override protected val longArraySet = set
 
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
@@ -215,7 +214,7 @@ object UserToUriEdgeSet {
       val set = LongArraySet.from(concat(publicIds, privateIds))
       val pubListSize = publicIds.length
 
-      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
+      new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
         override protected val longArraySet = set
         override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
 
@@ -237,7 +236,7 @@ object UserToUriEdgeSet {
     val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
 
     val pubListSize = publicList.size
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
       override protected val longArraySet = set
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
         override protected def createdAtByIndex(idx:Int): Long = {

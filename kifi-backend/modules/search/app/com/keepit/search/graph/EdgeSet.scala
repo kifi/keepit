@@ -62,7 +62,8 @@ trait EdgeSet[S,D] {
   }
 }
 
-trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
+// A set of db ids are given as the destination set. Need IdMapper to map them to Lucene DocIds. Dual of DocIdSetEdgeSet
+trait DbIdSetEdgeSet[S,D] extends EdgeSet[S, D] {
   protected var cache: (Searcher, Array[Int]) = (null, null)
 
   protected def getDocIds(searcher: Searcher): Array[Int] = {
@@ -81,12 +82,14 @@ trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = toDocIdSetIterator(getDocIds(searcher))
 }
 
-trait IdSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
+
+
+trait IdSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
   override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
   override def size = destIdSet.size
 }
 
-trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
+trait LongSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
   protected val longArraySet: LongArraySet
   override def accessor: EdgeSetAccessor[S, D] = new LongArrayBasedEdgeInfoAccessorImpl(this, longArraySet: LongArraySet)
   override def destIdLongSet = longArraySet
@@ -94,36 +97,7 @@ trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
   override def size = longArraySet.size
 }
 
-trait LongSetEdgeSetWithAttributes[S, D] extends LongSetEdgeSet[S, D] {
-  override def accessor: BookmarkInfoAccessor[S, D] = new LuceneBackedBookmarkInfoAccessor(this, longArraySet)
-}
-
-trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
-  val searcher: Searcher
-  val sourceFieldName: String
-
-  private[this] lazy val lazyDestIdLongSet: Set[Long] = {
-    val mapper = searcher.indexReader.asAtomicReader.getIdMapper
-    getDestDocIdSetIterator(searcher).map(docid => mapper.getId(docid)).toSet
-  }
-
-  private[this] lazy val lazyDestIdSet: Set[Id[D]] = new IdSetWrapper[D](lazyDestIdLongSet)
-
-  override def destIdLongSet = lazyDestIdLongSet
-  override def destIdSet = lazyDestIdSet
-
-  override def size = getDestDocIdSetIterator(searcher).size
-
-  override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
-    val td = searcher.indexReader.asAtomicReader.termDocsEnum(createSourceTerm)
-    if (td != null) td else emptyDocIdSetIterator
-  }
-
-  protected def createSourceTerm: Term = new Term(sourceFieldName, sourceId.toString)
-}
-
-
-
+// A set of Lucene DocIds are given as the destination set. Need IdMapper to map them to DB Ids. Dual of DbIdSetEdgeSet
 trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
   val docids: Array[Int]
   val searcher: Searcher
@@ -151,6 +125,32 @@ trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
 
   override def size = docids.length
 }
+
+// only the sourceId is given. Destination set is constructed by performing Lucene search.
+trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
+  val searcher: Searcher
+  val sourceFieldName: String
+
+  private[this] lazy val lazyDestIdLongSet: Set[Long] = {
+    val mapper = searcher.indexReader.asAtomicReader.getIdMapper
+    getDestDocIdSetIterator(searcher).map(docid => mapper.getId(docid)).toSet
+  }
+
+  private[this] lazy val lazyDestIdSet: Set[Id[D]] = new IdSetWrapper[D](lazyDestIdLongSet)
+
+  override def destIdLongSet = lazyDestIdLongSet
+  override def destIdSet = lazyDestIdSet
+
+  override def size = getDestDocIdSetIterator(searcher).size
+
+  override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
+    val td = searcher.indexReader.asAtomicReader.termDocsEnum(createSourceTerm)
+    if (td != null) td else emptyDocIdSetIterator
+  }
+
+  protected def createSourceTerm: Term = new Term(sourceFieldName, sourceId.toString)
+}
+
 
 class IdSetWrapper[T](inner: Set[Long]) extends Set[Id[T]] {
 

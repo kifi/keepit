@@ -34,12 +34,13 @@ trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D]{
 
 class LongArrayBasedEdgeInfoAccessorImpl[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet) extends LongArrayBasedEdgeInfoAccessor[S, D]
 
-trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D] with TimeRangeFilter[S, D] {
-  def createdAt: Long = ???
-  def isPublic: Boolean = ???
-  def bookmarkId: Long = ???
-  def getCreatedAt(id: Long): Long = ???
-  def getBookmarkId(id: Long): Long = ???
+trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
+  def createdAt: Long
+  def isPublic: Boolean
+  def bookmarkId: Long
+  def getCreatedAt(id: Long): Long
+  def getBookmarkId(id: Long): Long
+  def filterByTimeRange(start: Long, end: Long): EdgeSet[S, D]
 }
 
 class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet)
@@ -58,7 +59,7 @@ class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D]
     if (idx >= 0) {
       createdAtByIndex(idx)
     } else {
-      log.error(s"failed in getCreatedAt: src=${} dest=${id} idx=${idx}")
+      log.error(s"failed in getCreatedAt: src=${edgeSet.sourceId} dest=${id} idx=${idx}")
       if (longArraySet.verify) {
         if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
       }
@@ -70,7 +71,7 @@ class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D]
     if (idx >= 0) {
       bookmarkIdByIndex(idx)
     } else {
-      log.error(s"failed in getBookmarkId: src=${} dest=${id} idx=${idx}")
+      log.error(s"failed in getBookmarkId: src=${edgeSet.sourceId} dest=${id} idx=${idx}")
       if (longArraySet.verify) {
         if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
       }

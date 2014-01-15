@@ -31,7 +31,7 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
               collections.foldLeft(Set.empty[Long]){ (s, collId) =>
                 s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).accessor.asInstanceOf[BookmarkInfoAccessor[Collection, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
               }
-            case _ => myUriEdges.asInstanceOf[BookmarkInfoAccessor[Collection, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+            case _ => myUriEdges.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
           }
         // no time range
         case _ =>
