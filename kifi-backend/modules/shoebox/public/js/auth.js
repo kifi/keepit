@@ -301,10 +301,17 @@ kifi.form = (function () {
         email: email,
         password: password
       })
-      .done(function() {
-        animation.success();
+      .done(function(resp) {
+        if ($('html').data('kifi-ext')) {
+          setTimeout(function() {
+            animation.success();
+            navigate(resp);
+          }, 3000);
+        } else {
+          animation.success();
+          navigate(resp);
+        }
       })
-      .done(navigate)
       .fail(function (xhr) {
         animation.fail();
         var o = xhr.responseJSON;
