@@ -285,10 +285,10 @@ var socketHandlers = {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
-  notification: function(n) {  // a new notification (real-time)
-    log("[socket:notification]", n)();
+  notification: function(n, th) {  // a new notification (real-time)
+    log('[socket:notification]', n, th || '')();
     standardizeNotification(n);
-    if (insertNewNotification(n)) {
+    if (insertNewNotification(th ? standardizeNotification(th) : n)) {
       handleRealTimeNotification(n);
       tellVisibleTabsNoticeCountIfChanged();
     }
@@ -903,6 +903,7 @@ function removeNotificationPopups(threadId) {
 function standardizeNotification(n) {
   n.category = (n.category || 'message').toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
+  return n;
 }
 
 function handleRealTimeNotification(n) {
