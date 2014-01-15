@@ -149,45 +149,40 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, InternalServerError(message))
   }
 
-  sys.addShutdownHook({
-    println(s"[announceStopping] announcing service stop $this via shutdown hook")
-    Play.maybeApplication map { app => announceStopping(app) }
-    println(s"[announceStopping] done announcing service stop $this via shutdown hook")
-  })
-
   @volatile private var announcedStopping: Boolean = false
 
-  def announceStopping(app: Application): Unit = synchronized {
-    if (mode == Mode.Prod && !announcedStopping) {
-      try {
-        val serviceDiscovery = injector.instance[ServiceDiscovery]
-        serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-        println("[announceStopping] about to pause for 10 seconds and let clients and ELB know we're stopping")
-        Thread.sleep(18000)
-        injector.instance[HealthcheckPlugin].reportStop()
-        println("[announceStopping] moving on")
-      } catch {
-        case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
-      }
-    }
-    try {
-      if (mode == Mode.Prod)
-      injector.instance[AppScope].onStop(app)
-    } catch {
-      case e: Throwable =>
-        val errorMessage = "====================== error during onStop ==============================="
-        println(errorMessage)
-        e.printStackTrace
-        log.error(errorMessage, e)
-    } finally {
+  def announceStopping(app: Application): Unit = if(!announcedStopping) synchronized {
+    if(!announcedStopping) {//double check on entering sync block
       if (mode == Mode.Prod) {
-        println("<<<<<< about to pause and let the system shut down")
-        Thread.sleep(3000)
-        println("<<<<<< done sleeping, continue with termination")
-        log.info("<<<<<< done sleeping, continue with termination")
+        try {
+          val serviceDiscovery = injector.instance[ServiceDiscovery]
+          serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+          println("[announceStopping] about to pause for 10 seconds and let clients and ELB know we're stopping")
+          Thread.sleep(18000)
+          injector.instance[HealthcheckPlugin].reportStop()
+          println("[announceStopping] moving on")
+        } catch {
+          case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
+        }
       }
+      try {
+        if (mode == Mode.Prod)
+        injector.instance[AppScope].onStop(app)
+      } catch {
+        case e: Throwable =>
+          val errorMessage = "====================== error during onStop ==============================="
+          println(errorMessage)
+          e.printStackTrace
+          log.error(errorMessage, e)
+      } finally {
+        if (mode == Mode.Prod) {
+          println("<<<<<< about to pause and let the system shut down")
+          Thread.sleep(3000)
+          println("<<<<<< done sleeping, continue with termination")
+        }
+      }
+      announcedStopping = true
     }
-    announcedStopping = true
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {

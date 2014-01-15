@@ -10,3 +10,4 @@
 10002:com.keepit.social.providers.LinkedInProvider
 10003:com.keepit.social.providers.UsernamePasswordProvider
 10004:com.keepit.common.cache.PlayCachePlugin
+10005:com.keepit.ShutdownPlugin

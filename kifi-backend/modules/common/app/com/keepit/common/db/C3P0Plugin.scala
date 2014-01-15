@@ -71,11 +71,6 @@ class C3P0Plugin(app: Application) extends DBPlugin{
    * Closes all data sources.
    */
   override def onStop() {
-    try {
-      app.global.asInstanceOf[FortyTwoGlobal].announceStopping(app)
-    } catch {
-      case t: Throwable => t.printStackTrace()
-    }
     dbApi.datasources.foreach {
       case (ds, _) => try {
         dbApi.shutdownPool(ds)

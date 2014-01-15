@@ -19,14 +19,7 @@ import play.api.Play._
 class PlayCachePlugin(app: Application) extends CachePlugin {
   override lazy val enabled = !app.configuration.getString("playcache").filter(_ == "disabled").isDefined
   override def onStart() {}
-  override def onStop() {
-    println("PlayCachePlugin stopping")
-    try {
-      app.global.asInstanceOf[FortyTwoGlobal].announceStopping(app)
-    } catch {
-      case t: Throwable => t.printStackTrace()
-    }
-  }
+  override def onStop() {}
   lazy val api = app.global.asInstanceOf[FortyTwoGlobal].injector.instance[PlayCacheApi]
 }
 
