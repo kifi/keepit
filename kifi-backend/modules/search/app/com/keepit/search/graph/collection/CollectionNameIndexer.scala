@@ -7,7 +7,6 @@ import com.keepit.model._
 import com.keepit.search.LangDetector
 import com.keepit.search.index._
 import com.keepit.search.line.LineFieldBuilder
-import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.phrasedetector.PhraseTokenStream
 import com.keepit.search.Lang
@@ -27,8 +26,7 @@ object CollectionNameFields {
 class CollectionNameIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[User](indexDirectory, indexWriterConfig, CollectionNameFields.decoders) {
 
   override val commitBatchSize = 100
