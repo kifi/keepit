@@ -18,7 +18,7 @@ case class ShoeboxProdModule() extends ShoeboxModule (
 
   // Shoebox Functional Modules
   analyticsModule = ProdAnalyticsModule(),
-  topicModelModule = LdaTopicModelModule(),
+  //topicModelModule = LdaTopicModelModule(), //disable for now
   domainTagImporterModule = ProdDomainTagImporterModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule
