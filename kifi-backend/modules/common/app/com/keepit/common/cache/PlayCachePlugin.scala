@@ -15,14 +15,17 @@ import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import play.api.Application
 import play.api.cache.{CacheAPI, CachePlugin}
 import play.api.Play._
-import com.keepit.common.cache.PlayCacheKey
 
 class PlayCachePlugin(app: Application) extends CachePlugin {
   override lazy val enabled = !app.configuration.getString("playcache").filter(_ == "disabled").isDefined
   override def onStart() {}
   override def onStop() {
     println("PlayCachePlugin stopping")
-    current.global.asInstanceOf[FortyTwoGlobal].announceStopping()
+    try {
+      app.global.asInstanceOf[FortyTwoGlobal].announceStopping(app)
+    } catch {
+      case t: Throwable => t.printStackTrace()
+    }
   }
   lazy val api = app.global.asInstanceOf[FortyTwoGlobal].injector.instance[PlayCacheApi]
 }

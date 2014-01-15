@@ -149,35 +149,29 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, InternalServerError(message))
   }
 
-  sys.addShutdownHook({ announceStopping() })
+  sys.addShutdownHook({
+    println(s"[announceStopping] announcing service stop $this via shutdown hook")
+    Play.maybeApplication map { app => announceStopping(app) }
+    println(s"[announceStopping] done announcing service stop $this via shutdown hook")
+  })
 
-  @volatile private var announcedStopping: Boolan = false
+  @volatile private var announcedStopping: Boolean = false
 
-  def announceStopping(): Unit = synchronized {
+  def announceStopping(app: Application): Unit = synchronized {
     if (mode == Mode.Prod && !announcedStopping) {
-      println(s"[announceStopping] announcing service stop $this via shutdown hook")
       try {
         val serviceDiscovery = injector.instance[ServiceDiscovery]
         serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-        println("[announceStopping] about to pause for 10 seconds and let clients know we're stopping")
-        Thread.sleep(10000)
+        println("[announceStopping] about to pause for 10 seconds and let clients and ELB know we're stopping")
+        Thread.sleep(18000)
+        injector.instance[HealthcheckPlugin].reportStop()
         println("[announceStopping] moving on")
       } catch {
         case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
       }
-      announcedStopping = true
-      println(s"[announceStopping] done announcing service stop $this via shutdown hook")
     }
-  }
-
-  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
-    val serviceDiscovery = injector.instance[ServiceDiscovery]
-    announceStopping()
-    val stopMessage = "<<<<<<<<<< Stopping " + this
-    println(stopMessage)
-    log.info(stopMessage)
     try {
-      if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.instance[HealthcheckPlugin].reportStop()
+      if (mode == Mode.Prod)
       injector.instance[AppScope].onStop(app)
     } catch {
       case e: Throwable =>
@@ -186,14 +180,23 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         e.printStackTrace
         log.error(errorMessage, e)
     } finally {
-      if (app.mode == Mode.Prod) {
+      if (mode == Mode.Prod) {
         println("<<<<<< about to pause and let the system shut down")
-        Thread.sleep(11000)
+        Thread.sleep(3000)
         println("<<<<<< done sleeping, continue with termination")
         log.info("<<<<<< done sleeping, continue with termination")
       }
-      serviceDiscovery.unRegister()
     }
+    announcedStopping = true
+  }
+
+  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+    val serviceDiscovery = injector.instance[ServiceDiscovery]
+    announceStopping(app)
+    val stopMessage = "<<<<<<<<<< Stopping " + this
+    println(stopMessage)
+    log.info(stopMessage)
+    serviceDiscovery.unRegister()
   }
 
   private def allowCrossOrigin(request: RequestHeader, result: Result): Result = {  // for kifi.com/site dev

@@ -34,6 +34,10 @@ class UsernamePasswordProvider(application: Application)
   private def error(errorCode: String) = Forbidden(Json.obj("error" -> errorCode))
 
   override def onStop() {
-    application.global.asInstanceOf[FortyTwoGlobal].announceStopping()
+    try {
+      application.global.asInstanceOf[FortyTwoGlobal].announceStopping(application)
+    } catch {
+      case t: Throwable => t.printStackTrace()
+    }
   }
 }

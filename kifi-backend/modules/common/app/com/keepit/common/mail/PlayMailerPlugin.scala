@@ -12,6 +12,10 @@ class PlayMailerPlugin(app: Application) extends MailerPlugin {
     global.inject[MailerAPI]
   }
   override def onStop() {
-    app.global.asInstanceOf[FortyTwoGlobal].announceStopping()
+    try {
+      app.global.asInstanceOf[FortyTwoGlobal].announceStopping(app)
+    } catch {
+      case t: Throwable => t.printStackTrace()
+    }
   }
 }
