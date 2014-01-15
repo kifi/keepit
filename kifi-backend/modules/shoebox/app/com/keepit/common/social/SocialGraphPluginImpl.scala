@@ -98,7 +98,7 @@ private[social] class SocialGraphActor @Inject() (
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }
         throw new Exception(s"Error updating SocialUserInfo: ${socialUserInfo.id}, ${socialUserInfo.fullName}", ex)
     } finally {
-      markGraphImportUserValue(socialUserInfo.userId.get, socialUserInfo.networkType, "false")
+      socialUserInfo.userId.foreach { userId => markGraphImportUserValue(userId, socialUserInfo.networkType, "false") }
     }
   }
 
