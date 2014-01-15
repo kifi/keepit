@@ -19,6 +19,7 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
+import akka.actor.Scheduler
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -101,6 +102,7 @@ class UserCommander @Inject() (
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
+  scheduler: Scheduler,
   elizaServiceClient: ElizaServiceClient,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander) extends Logging {
@@ -235,16 +237,18 @@ class UserCommander @Inject() (
 
       }
 
-      elizaServiceClient.sendGlobalNotification(
-        userIds = toNotify,
-        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
-        linkText = "Invite more friends to Kifi.",
-        linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = imageUrl,
-        sticky = false,
-        categoryOverride = Some("triggered")
-      )
+      delaySend {
+        elizaServiceClient.sendGlobalNotification(
+          userIds = toNotify,
+          title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+          body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+          linkText = "Invite more friends to Kifi.",
+          linkUrl = "https://www.kifi.com/friends/invite",
+          imageUrl = imageUrl,
+          sticky = false,
+          categoryOverride = Some("triggered")
+        )
+      }
     }
   }
 
@@ -272,6 +276,7 @@ class UserCommander @Inject() (
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("kifi"),
             to = Seq(targetEmailOpt.get),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = subj,
@@ -468,16 +473,18 @@ class UserCommander @Inject() (
 
               }
 
-              elizaServiceClient.sendGlobalNotification(
-                userIds = Set(user.id.get),
-                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                linkText = "Invite more friends to kifi",
-                linkUrl = "https://www.kifi.com/friends/invite",
-                imageUrl = respondingUserImage,
-                sticky = false,
-                categoryOverride = Some("triggered")
-              )
+              delaySend {
+                elizaServiceClient.sendGlobalNotification(
+                  userIds = Set(user.id.get),
+                  title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                  body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                  linkText = "Invite more friends to kifi",
+                  linkUrl = "https://www.kifi.com/friends/invite",
+                  imageUrl = respondingUserImage,
+                  sticky = false,
+                  categoryOverride = Some("triggered")
+                )
+              }
 
             }
 
@@ -508,16 +515,18 @@ class UserCommander @Inject() (
 
               }
 
-              elizaServiceClient.sendGlobalNotification(
-                userIds = Set(user.id.get),
-                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
-                body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-                linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-                linkUrl = "https://kifi.com/friends/requests",
-                imageUrl = requestingUserImage,
-                sticky = false,
-                categoryOverride = Some("triggered")
-              )
+              delaySend {
+                elizaServiceClient.sendGlobalNotification(
+                  userIds = Set(user.id.get),
+                  title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
+                  body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
+                  linkText = s"Respond to ${requestingUser.firstName}'s friend request",
+                  linkUrl = "https://kifi.com/friends/requests",
+                  imageUrl = requestingUserImage,
+                  sticky = false,
+                  categoryOverride = Some("triggered")
+                )
+              }
 
             }
 
@@ -590,6 +599,14 @@ class UserCommander @Inject() (
       userCache.remove(SocialUserInfoUserKey(userId))
       val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
       (Some(newLoginUser), "disconnected")
+    }
+  }
+
+
+  def delaySend(f: => Unit) = {
+    import scala.concurrent.duration._
+    scheduler.scheduleOnce(5 seconds) {
+      f
     }
   }
 
