@@ -4,6 +4,7 @@ import java.io.File
 
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
+import com.keepit.common.strings._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
 import com.keepit.common.logging.Logging
@@ -139,7 +140,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     System.err.println(s"Play onError handler for ${ex.toString}")
     ex.printStackTrace()
     serviceDiscoveryHandleError()
-    allowCrossOrigin(request, InternalServerError(s"error: $errorId}"))
+    val message = if (request.path.startsWith("/internal/")) {
+      //todo(eishay) consider use the original ex.getCause instead
+      s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(50)}, errorId:${errorId.id}"
+    } else {
+      errorId.id
+    }
+    allowCrossOrigin(request, InternalServerError(message))
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
