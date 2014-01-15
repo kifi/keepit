@@ -25,6 +25,7 @@ import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.AbuseControlModule
+import com.keepit.common.actor.TestSchedulerModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
@@ -43,7 +44,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       TestNormalizationServiceModule(),
       FakeActionAuthenticatorModule(),
       AbuseControlModule(),
-      TestActorSystemModule()
+      TestSchedulerModule()
     ), overridingModules
   ))
 
@@ -63,6 +64,6 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     TestNormalizationServiceModule(),
     TestScraperServiceClientModule(),
     AbuseControlModule(),
-    TestActorSystemModule()
+    TestSchedulerModule()
   )
 }
