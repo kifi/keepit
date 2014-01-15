@@ -49,6 +49,9 @@ class ArticleIndexer(
 
   def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     doUpdate("ArticleIndex" + name) {
+      uris.foreach{ u =>
+        if (!shard.contains(u.id.get)) throw new Exception(s"URI (id=${u.id.get}) does not belong to this shard ($shard)")
+      }
       uris.iterator.map(buildIndexable)
     }
   }
