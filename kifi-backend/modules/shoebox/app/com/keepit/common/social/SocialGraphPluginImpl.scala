@@ -13,14 +13,13 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import akka.pattern.ask
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
-import scala.util.Try
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
 import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient}
 import com.google.inject.Singleton
 import com.keepit.common.performance.timing
 import com.keepit.common.time.Clock
-import org.joda.time.Days
+import com.keepit.common.time._
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -116,7 +115,8 @@ private[social] class SocialGraphActor @Inject() (
       userValueRepo.getUserValue(userId, s"import_in_progress_${networkType.name}")
     }
     stateOpt match {
-      case None | Some(stateValue) if stateValue.value == "false" => false
+      case None => false
+      case Some(stateValue) if stateValue.value == "false" => false
       case Some(stateValue) if stateValue.updatedAt.isBefore(clock.now.minusHours(1)) =>
           markGraphImportUserValue(userId, networkType, "false")
           false
