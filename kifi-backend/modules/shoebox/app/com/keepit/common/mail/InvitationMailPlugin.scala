@@ -72,7 +72,7 @@ private[mail] class InvitationMailActor @Inject() (
           to = List(address),
           subject = subject,
           htmlBody = body(user),
-          category = NotificationCategory.User.INVITATION))
+          category = NotificationCategory.User.APPROVED))
       }
     }
   }

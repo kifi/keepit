@@ -26,7 +26,7 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
           subject = s"You're on the wait list",
           htmlBody = template._1(unsubLink).body,
           textBody = Some(template._2(unsubLink).body),
-          category = NotificationCategory.User.NOTIFICATION)
+          category = NotificationCategory.User.WAITLIST)
         )
       }
     }

@@ -5,7 +5,7 @@ import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.model.{BookmarkSource, ExperimentType}
+import com.keepit.model.{NotificationCategory, BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.net.{Host, URI, UserAgent}
 import com.keepit.common.time.DateTimeJsonFormat
@@ -162,13 +162,21 @@ class HeimdalContextBuilder {
 
   def addEmailInfo(email: ElectronicMail): Unit = {
     this += ("channel", "email")
-    this += ("category", email.category.category)
     this += ("emailId", email.id.map(_.id.toString).getOrElse(email.externalId.id))
     this += ("subject", email.subject)
     this += ("from", email.from.address)
     this += ("fromName", email.fromName.getOrElse(""))
+    this.addNotificationCategory(email.category)
     email.inReplyTo.foreach { previousEmailId => this += ("inReplyTo", previousEmailId.id) }
     email.senderUserId.foreach { id => this += ("senderUserId", id.id) }
+  }
+
+  def addNotificationCategory(category: NotificationCategory): Unit = {
+    val camelledCategory = category.category.toLowerCase().split("_") match { case Array(h, q @ _*)  => h + q.map(_.capitalize).mkString }
+    this += ("category", camelledCategory)
+
+    if (NotificationCategory.User.all.contains(category))
+      NotificationCategory.User.parentCategory.get(category).foreach { parentCategory => this += ("parentCategory", parentCategory) }
   }
 
   def anonymise(toBeRemoved: String*): Unit = {
