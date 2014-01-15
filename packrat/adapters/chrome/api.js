@@ -674,6 +674,10 @@ var api = function() {
       get: function(tabId) {
         return pages[tabId];
       },
+      getFocused: function () {
+        var id = selectedTabIds[focusedWinId];
+        return id ? pages[id] : null;
+      },
       isFocused: function(tab) {
         return selectedTabIds[focusedWinId] === tab.id;
       },

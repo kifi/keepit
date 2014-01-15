@@ -474,6 +474,19 @@ api.port.on({
       respond(d.neverOnSite);
     }
   },
+  silence: function (minutes) {
+    if (silence) {
+      api.timers.clearTimeout(silence.timeout);
+    } else {
+      api.tabs.each(function (tab) {
+        tab.engaged = false;
+        api.tabs.emit(tab, 'silence', null, {queue: 1});
+      });
+    }
+    silence = {timeout: api.timers.setTimeout(unsilence, minutes * 60000)};
+    api.tabs.eachSelected(updateIconSilence);
+  },
+  unsilence: unsilence.bind(null, false),
   set_keeper_pos: function(o, _, tab) {
     for (var nUri in pageData) {
       if (nUri.match(hostRe)[1] == o.host) {
@@ -834,6 +847,17 @@ api.port.on({
   }
 });
 
+function unsilence(tab) {
+  if (silence) {
+    api.timers.clearTimeout(silence.timeout);
+    silence = null;
+    api.tabs.eachSelected(kifify);
+    if (tab || tab !== false && (tab = api.tabs.getFocused())) {
+      api.tabs.emit(tab, 'unsilenced');
+    }
+  }
+}
+
 function onTagChangeFromServer(op, tag) {
   var tagId = tag.id;
   switch (op) {
@@ -882,7 +906,7 @@ function standardizeNotification(n) {
 }
 
 function handleRealTimeNotification(n) {
-  if (n.unread && !n.muted) {
+  if (n.unread && !n.muted && !silence) {
     api.play('media/notification.mp3');
     api.tabs.eachSelected(function (tab) {
       api.tabs.emit(tab, 'show_notification', n, {queue: true});
@@ -1234,14 +1258,20 @@ function ymd(d) {  // yyyy-mm-dd local date
 }
 
 // kifi icon in location bar
-api.icon.on.click.add(function(tab) {
-  api.tabs.emit(tab, "button_click", null, {queue: 1});
+api.icon.on.click.add(function (tab) {
+  if (silence) {
+    unsilence(tab);
+  } else {
+    api.tabs.emit(tab, 'button_click', null, {queue: 1});
+  }
 });
 
 function kifify(tab) {
   log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', session ? '' : 'no session')();
   if (!tab.icon) {
-    api.icon.set(tab, "icons/k_gray.png");
+    api.icon.set(tab, 'icons/k_gray' + (silence ? '.paused' : '') + '.png');
+  } else {
+    updateIconSilence(tab);
   }
 
   if (!session) {
@@ -1272,6 +1302,8 @@ function kifify(tab) {
   if (d) {
     if (!tab.nUri) {
       stashTab(tab, uri);
+    }
+    if (!tab.engaged) {
       kififyWithPageData(tab, d);
     }
   } else {
@@ -1299,7 +1331,7 @@ function stashTab(tab, uri) {
   var tabs = tabsByUrl[uri];
   if (tabs) {
     for (var i = tabs.length; i--;) {
-      if (tabs[i].id == tab.id) {
+      if (tabs[i].id === tab.id) {
         tabs.splice(i, 1);
       }
     }
@@ -1311,10 +1343,11 @@ function stashTab(tab, uri) {
 }
 
 function kififyWithPageData(tab, d) {
-  log("[kififyWithPageData]", tab.id, tab.engaged ? 'already engaged' : '')();
+  log('[kififyWithPageData]', tab.id, tab.engaged ? 'already engaged' : '')();
   setIcon(tab, d.kept);
+  if (silence) return;
 
-  api.tabs.emit(tab, "init", {  // harmless if sent to same page more than once
+  api.tabs.emit(tab, 'init', {  // harmless if sent to same page more than once
     kept: d.kept,
     position: d.position,
     hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive,
@@ -1439,7 +1472,7 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
   var tooLate = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
   log('[gotPageThreadsFor]', tab.id, tooLate ? 'TOO LATE' : '', url, nUri === url ? '' : nUri, pt.ids)();
 
-  if (!tooLate) {
+  if (!tooLate && !silence) {
     threadLists[nUri] = pt;
     var numUnreadUnmuted = pt.countUnreadUnmuted();
     if (ruleSet.rules.message && numUnreadUnmuted > 0) {  // open immediately to unread message(s)
@@ -1478,8 +1511,15 @@ function isSent(th) {
 }
 
 function setIcon(tab, kept) {
-  log("[setIcon] tab:", tab.id, "kept:", kept)();
-  api.icon.set(tab, kept ? 'icons/k_blue.png' : 'icons/k_dark.png');
+  log('[setIcon] tab:', tab.id, 'kept:', kept)();
+  api.icon.set(tab, (kept ? 'icons/k_blue' : 'icons/k_dark') + (silence ? '.paused' : '') + '.png');
+}
+
+function updateIconSilence(tab) {
+  log('[updateIconSilence] tab:', tab.id, 'silent:', !!silence)();
+  if (tab.icon && tab.icon.indexOf('.paused') < 0 !== !silence) {
+    api.icon.set(tab, tab.icon.substr(0, tab.icon.indexOf('.')) + (silence ? '.paused' : '') + '.png');
+  }
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -1792,7 +1832,7 @@ function throttle(func, wait, opts) {  // underscore.js
 
 // ===== Session management
 
-var session, socket, onLoadingTemp;
+var session, socket, silence, onLoadingTemp;
 
 function connectSync() {
   getRules();
@@ -1912,6 +1952,10 @@ function clearSession() {
   if (socket) {
     socket.close();
     socket = null;
+  }
+  if (silence) {
+    api.timers.clearTimeout(silence.timeout);
+    silence = null;
   }
   clearDataCache();
 }
