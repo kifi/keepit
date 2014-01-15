@@ -20,7 +20,7 @@ class ShardedArticleIndexer(
 
     var total = 0
     var done = false
-    while (!done) {
+    while (!done && !closing) {
       val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
       done = uris.isEmpty
 
