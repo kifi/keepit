@@ -9,6 +9,7 @@ import com.keepit.search.IndexInfo
 trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
   val indexShards: Map[Shard[K], T]
   protected val updateLock = new AnyRef
+  @volatile protected var closing = false
 
   def commitSequenceNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
 
@@ -45,7 +46,7 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
 
   def update(): Int
 
-  def reindex(): Unit = {
+  def reindex(): Unit = updateLock.synchronized {
     indexShards.valuesIterator.foreach(_.reindex())
     resetSequenceNumber = true
   }
@@ -54,7 +55,12 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
     indexShards.valuesIterator.foreach(_.refreshSearcher())
   }
 
-  def backup(): Unit = indexShards.valuesIterator.foreach(_.backup())
+  def backup(): Unit = updateLock.synchronized {
+    indexShards.valuesIterator.foreach(_.backup())
+  }
 
-  def close(): Unit = indexShards.valuesIterator.foreach(_.close())
+  def close(): Unit = {
+    closing = true
+    indexShards.valuesIterator.foreach(_.close())
+  }
 }

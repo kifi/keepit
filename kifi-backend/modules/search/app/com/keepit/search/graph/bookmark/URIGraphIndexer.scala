@@ -80,20 +80,9 @@ class URIGraphIndexer(
     super.onFailure(indexable, e)
   }
 
-  def update(): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
+  def update(): Int = throw new UnsupportedOperationException()
 
-    var total = 0
-    var done = false
-    while (!done) {
-      val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
-      done = bookmarks.isEmpty
-      total += update("", bookmarks, Shard(0,1))
-    }
-    total
-  }
-
-  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = {
+  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     val cnt = doUpdate("URIGraphIndex" + name) {
       bookmarkStore.update(name, bookmarks, shard)
 

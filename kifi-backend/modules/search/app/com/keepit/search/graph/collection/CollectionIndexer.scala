@@ -64,20 +64,9 @@ class CollectionIndexer(
     super.backup()
   }
 
-  def update(): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
+  def update(): Int = throw new UnsupportedOperationException()
 
-    var total = 0
-    var done = false
-    while (!done) {
-      val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
-      done = collections.isEmpty
-      total += update("CollectionIndex", collections, Shard(0, 1))
-    }
-    total
-  }
-
-  def update(name: String, collections: Seq[Collection], shard: Shard[NormalizedURI]): Int = {
+  def update(name: String, collections: Seq[Collection], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     val cnt = doUpdate("CollectionIndex" + name) {
       collections.iterator.map(buildIndexable(_, shard))
     }

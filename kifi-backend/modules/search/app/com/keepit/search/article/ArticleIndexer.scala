@@ -41,39 +41,19 @@ class ArticleIndexer(
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
   override val commitBatchSize = 1000
-  private val fetchSize = 2000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
     airbrake.notify(s"Error indexing article from normalized uri ${indexable.id}", e)
     super.onFailure(indexable, e)
   }
 
-  def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = {
+  def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     doUpdate("ArticleIndex" + name) {
       uris.iterator.map(buildIndexable)
     }
   }
 
-  def update(): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
-
-    var total = 0
-    var done = false
-    while (!done) {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
-      done = uris.isEmpty
-      total += update("", uris, Shard(0,1))
-    }
-    total
-  }
-  def update(fsize: Int): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
-
-    doUpdate("ArticleIndex") {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
-      uris.iterator.map(buildIndexable)
-    }
-  }
+  def update(): Int = throw new UnsupportedOperationException()
 
   def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
     val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 30 seconds)

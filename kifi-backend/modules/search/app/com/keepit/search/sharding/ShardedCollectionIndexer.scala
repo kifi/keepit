@@ -23,7 +23,7 @@ class ShardedCollectionIndexer(
 
     var total = 0
     var done = false
-    while (!done) {
+    while (!done && !closing) {
       val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
       done = collections.isEmpty
 
