@@ -241,7 +241,7 @@ class UserCommander @Inject() (
         linkUrl = "https://www.kifi.com/friends/invite",
         imageUrl = imageUrl,
         sticky = false,
-        categoryOverride = Some("triggered")
+        category = NotificationCategory.User.FRIEND_JOINED
       )
     }
   }
@@ -476,7 +476,7 @@ class UserCommander @Inject() (
                 linkUrl = "https://www.kifi.com/friends/invite",
                 imageUrl = respondingUserImage,
                 sticky = false,
-                categoryOverride = Some("triggered")
+                category = NotificationCategory.User.FRIEND_ACCEPTED
               )
 
             }
@@ -516,7 +516,7 @@ class UserCommander @Inject() (
                 linkUrl = "https://kifi.com/friends/requests",
                 imageUrl = requestingUserImage,
                 sticky = false,
-                categoryOverride = Some("triggered")
+                category = NotificationCategory.User.FRIEND_REQUEST
               )
 
             }

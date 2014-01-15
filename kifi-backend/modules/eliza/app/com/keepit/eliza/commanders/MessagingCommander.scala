@@ -129,7 +129,7 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -157,7 +157,7 @@ class MessagingCommander @Inject() (
     val notificationAttempts = userIds.map { userId =>
       Try {
         val (notifJson, userThread) = db.readWrite{ implicit session =>
-          val categoryString = categoryOverride.getOrElse(NotificationCategory.User.GLOBAL.category)
+          val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
           val notifJson = Json.obj(
             "id"       -> message.externalId.id,
             "time"     -> message.createdAt,
@@ -197,7 +197,7 @@ class MessagingCommander @Inject() (
     }
 
     val notified = notificationAttempts collect { case Success(userId) => userId }
-    messagingAnalytics.sentGlobalNotification(notified, message, thread)
+    messagingAnalytics.sentGlobalNotification(notified, message, thread, category)
 
     val errors = notificationAttempts collect { case Failure(ex) => ex }
     if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)

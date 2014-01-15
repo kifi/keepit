@@ -1,12 +1,16 @@
 package com.keepit.model
 
 import com.keepit.common.mail.ElectronicMailCategory
+import play.api.libs.json._
+import com.keepit.common.mail.ElectronicMailCategory
+import com.keepit.common.mail.ElectronicMailCategory
+import com.keepit.common.mail.ElectronicMailCategory
 
 case class NotificationCategory(category: String)
 object NotificationCategory {
   val ALL = NotificationCategory("all")
   object User {
-    val GLOBAL = NotificationCategory("global")
+    val ANNOUNCEMENT = NotificationCategory("announcement")
     val WAITLIST = NotificationCategory("waitlist")
     val APPROVED = NotificationCategory("approved")
     val WELCOME = NotificationCategory("welcome")
@@ -21,13 +25,19 @@ object NotificationCategory {
 
     val FRIEND_JOINED = NotificationCategory("friend_joined")
 
-    val all = Set(GLOBAL, MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST, FRIEND_ACCEPTED, FRIEND_JOINED, WELCOME, APPROVED, WAITLIST)
-    val fromKifi = Set(GLOBAL, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP)
+    val all = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST, FRIEND_ACCEPTED, FRIEND_JOINED, WELCOME, APPROVED, WAITLIST)
+
+    // Parent Categories used in analytics
+    val fromKifi = Set(ANNOUNCEMENT, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP)
     val fromFriends = Set(INVITATION, MESSAGE, FRIEND_REQUEST, FRIEND_ACCEPTED)
     val aboutFriends = Set(FRIEND_JOINED)
-
     val parentCategory: Map[NotificationCategory, String] =
       Map.empty ++ fromKifi.map(_ -> "fromKifi") ++ fromFriends.map(_ -> "fromFriends") ++ aboutFriends.map(_ -> "aboutFriends")
+
+    // Formatting Categories used in the extension
+    val triggered = Set(FRIEND_ACCEPTED, FRIEND_JOINED, FRIEND_REQUEST)
+    val global = Set(ANNOUNCEMENT)
+    val kifiMessageFormattingCategory = Map.empty ++ triggered.map(_ -> "triggered") ++ global.map(_ -> "global")
   }
 
   object System {
@@ -40,4 +50,8 @@ object NotificationCategory {
 
   implicit def toElectronicMailCategory(category: NotificationCategory): ElectronicMailCategory = ElectronicMailCategory(category.category)
   implicit def fromElectronicMailCategory(category: ElectronicMailCategory): NotificationCategory = NotificationCategory(category.category)
+  implicit val format: Format[NotificationCategory] = Format(
+    __.read[String].map(s => NotificationCategory(s)),
+    new Writes[NotificationCategory]{ def writes(o: NotificationCategory) = JsString(o.category) }
+  )
 }

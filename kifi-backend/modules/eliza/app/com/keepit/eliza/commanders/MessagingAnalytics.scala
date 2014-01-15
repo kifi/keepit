@@ -56,12 +56,12 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread, category: NotificationCategory): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
-      contextBuilder.addNotificationCategory(NotificationCategory.User.GLOBAL)
+      contextBuilder.addNotificationCategory(category)
       contextBuilder += ("global", true)
       contextBuilder += ("messageId", message.externalId.id)
       contextBuilder += ("threadId", thread.externalId.id)
