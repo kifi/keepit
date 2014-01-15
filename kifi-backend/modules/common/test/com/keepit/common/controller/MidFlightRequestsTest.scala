@@ -1,0 +1,53 @@
+package com.keepit.common.controller
+
+import org.specs2.mutable._
+import play.api.mvc.{RequestHeader, Headers}
+import java.util.concurrent.atomic.AtomicLong
+
+case class DummyRequestHeader(id: Long, path: String) extends RequestHeader{
+  def tags = Map()
+  def uri = ""
+  def method = ""
+  def version = ""
+  def queryString = Map()
+  def remoteAddress = ""
+  lazy val headers = new Headers { val data = Seq() }
+}
+
+class MidFlightRequestsTest extends Specification {
+
+  "MidFlightRequests" should {
+    "list largest paths" in {
+      val req = new MidFlightRequests(null)
+      val i = new AtomicLong(0)
+      val fr1 = DummyRequestHeader(i.incrementAndGet(), "/foo/aar")
+      val fr2 = DummyRequestHeader(i.incrementAndGet(), "/foo/bar")
+      val fr3 = DummyRequestHeader(i.incrementAndGet(), "/foo/car")
+      val fr4 = DummyRequestHeader(i.incrementAndGet(), "/foo/bar")
+      val fr5 = DummyRequestHeader(i.incrementAndGet(), "/foo/aar")
+      val fr6 = DummyRequestHeader(i.incrementAndGet(), "/foo/bar")
+      req.comingIn(fr1)
+      req.count === 1
+      req.comingIn(fr2)
+      req.count === 2
+      req.comingIn(fr3)
+      req.count === 3
+      req.comingIn(fr4)
+      req.count === 4
+      req.comingIn(fr5)
+      req.count === 5
+      req.comingIn(fr6)
+      req.count === 6
+      req.topRequests === "3:/foo/bar,2:/foo/aar,1:/foo/car"
+      req.topRequests === "3:/foo/bar,2:/foo/aar,1:/foo/car"
+      req.goingOut(fr3)
+      req.topRequests === "3:/foo/bar,2:/foo/aar"
+      req.goingOut(fr3)
+      req.topRequests === "3:/foo/bar,2:/foo/aar"
+      req.goingOut(fr1)
+      req.topRequests === "3:/foo/bar,1:/foo/aar"
+      req.goingOut(fr5)
+      req.topRequests === "3:/foo/bar"
+    }
+  }
+}
