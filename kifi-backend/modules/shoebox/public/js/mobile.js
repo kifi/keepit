@@ -106,7 +106,7 @@
 		resizeWistiaEmbed(true);
 
 		if ($win.width() >= 700) {
-			win.setTimout(playVideo, 600);
+			win.setTimeout(playVideo, 600);
 		}
 		else {
 			playVideo();
