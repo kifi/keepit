@@ -160,7 +160,9 @@ class AuthController @Inject() (
     request.request.headers.get(USER_AGENT) map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (agent.isMobile) {
+      if (agent.name == "IE" || agent.name == "Safari") {
+        Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
+      } else if (agent.isMobile) {
         Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
       } else if (!agent.isSupportedDesktop) {
         Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
