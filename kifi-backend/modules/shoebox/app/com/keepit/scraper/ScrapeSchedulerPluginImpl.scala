@@ -105,7 +105,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     val uriId = uri.id.get
     val info = scrapeInfoRepo.getByUriId(uriId)
     val toSave = info match {
-      case Some(s) => s.withState(ScrapeInfoStates.PENDING)
+      case Some(s) => s.withState(ScrapeInfoStates.PENDING).withNextScrape(currentDateTime)
       case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
     }
     val saved = scrapeInfoRepo.save(toSave)
