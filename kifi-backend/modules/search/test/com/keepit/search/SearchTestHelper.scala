@@ -66,13 +66,13 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
       store,
       inject[ShoeboxServiceClient]
     )
-    val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier])
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val uriGraphIndexer = new StandaloneURIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val shardedUriGraphIndexer = new ShardedURIGraphIndexer(Map(singleShard -> uriGraphIndexer), inject[ShoeboxServiceClient])
 
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier])
     val collectionIndexer = new StandaloneCollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val shardedCollectionIndexer = new ShardedCollectionIndexer(
       Map(singleShard -> collectionIndexer),

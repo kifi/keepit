@@ -14,8 +14,6 @@ import BookmarkRecordSerializer._
 import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
 import org.joda.time.DateTime
-import com.keepit.shoebox.ShoeboxServiceClient
-import scala.Some
 import com.keepit.search.sharding.Shard
 
 
@@ -33,8 +31,7 @@ object BookmarkStore {
 class BookmarkStore(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[Bookmark](indexDirectory, indexWriterConfig) {
 
   import BookmarkStoreFields._

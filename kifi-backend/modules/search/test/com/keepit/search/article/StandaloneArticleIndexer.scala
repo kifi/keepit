@@ -15,7 +15,7 @@ class StandaloneArticleIndexer(
   articleStore: ArticleStore,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends ArticleIndexer(indexDirectory, indexWriterConfig, articleStore, airbrake, shoeboxClient) {
+) extends ArticleIndexer(indexDirectory, indexWriterConfig, articleStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
