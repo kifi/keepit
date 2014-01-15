@@ -149,6 +149,19 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, InternalServerError(message))
   }
 
+  sys.addShutdownHook({
+    if (mode == Mode.Prod) {
+      println(s"=========== announcing service stop $this via shutdown hook")
+      try {
+        val serviceDiscovery = injector.instance[ServiceDiscovery]
+        serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+      } catch {
+        case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
+      }
+      println(s"=========== done announcing service stop $this via shutdown hook")
+    }
+  })
+
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
