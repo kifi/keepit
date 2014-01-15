@@ -142,7 +142,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     serviceDiscoveryHandleError()
     val message = if (request.path.startsWith("/internal/")) {
       //todo(eishay) consider use the original ex.getCause instead
-      s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(50)}, errorId:${errorId.id}"
+      s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
     } else {
       errorId.id
     }

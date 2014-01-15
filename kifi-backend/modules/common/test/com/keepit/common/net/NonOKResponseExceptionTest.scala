@@ -22,7 +22,7 @@ class NonOKResponseExceptionTest extends Specification {
                StringUtils.abbreviate("abcdefg", 8) = "abcdefg"
                StringUtils.abbreviate("abcdefg", 4) = "a..."
                StringUtils.abbreviate("abcdefg", 3) = IllegalArgumentException"""))
-      exception.getMessage() === "[] Bad Http Status on http://commons.apache.org/proper/commons-lang/javadocs/api-3.1/org/apache/commons/api-3.1/org/apa... body:[Specifically: If str is les...] status:200 res [Abbreviates a String using ...]"
+      exception.getMessage() === "[] ERR on http://commons.apache.org/proper/commons-lang/javadocs/api-3.1/org/apache/commons/api-3.1/org/apa... stat:200 - Abbreviates a String using ellipses. This will turn \"Now is the time for all good men\" into \"Now ...]"
     }
 
     "have short message with ServiceUri" in {
@@ -32,7 +32,7 @@ class NonOKResponseExceptionTest extends Specification {
         new ServiceUri(instance, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
         FakeClientResponse("short response"),
         Some("short body"))
-      exception.getMessage() === "[TM1] Bad Http Status on TM1:/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mea... body:[short body] status:200 res [short response]"
+      exception.getMessage() === "[TM1] ERR on TM1:/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mea... stat:200 - short response]"
     }
   }
 }
