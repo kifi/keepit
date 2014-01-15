@@ -73,16 +73,80 @@
 	});
 
 	var wistiaEmbed = win.Wistia.embed('arn4nh8il4');
+	var $shadow = $('.wistia_shadow');
+	var $wrapper = $shadow.find('.wistia_video_wrapper');
+	var $win = $(win);
+
+	function playVideo() {
+		wistiaEmbed.play();
+		wistiaEmbed.bind('end', function () {
+			$shadow.removeClass('visible shown');
+		});
+	}
+
+	function closeVideo() {
+		wistiaEmbed.pause();
+		$shadow.removeClass('shown visible');
+	}
+
+	$('.wistia_close').click(closeVideo);
+
+	$shadow.on('click', function (e) {
+		if (!$(e.target).closest('.wistia_video_wrapper').length) {
+			closeVideo();
+		}
+	});
+
 	$('.kifi-play').on('click', function (e) {
 		e.preventDefault();
-		wistiaEmbed.play();
-		wistiaEmbed.bind('play', function () {
-			$('.wistia_embed').addClass('playing');
-		});
-		wistiaEmbed.bind('end', function () {
-			$('.wistia_embed').removeClass('playing');
-		});
+		$shadow.addClass('shown');
+		var a = $shadow[0].clientHeight;
+		$shadow.addClass('visible');
+		resizeWistiaEmbed(true);
+
+		if ($win.width() >= 700) {
+			win.setTimout(playVideo, 600);
+		}
+		else {
+			playVideo();
+		}
 	});
+
+	var VW = 960,
+		VH = 540,
+		VR = VH / VW;
+
+	function resizeWistiaEmbed(force) {
+		if (!(force || wistiaEmbed.state() === 'playing')) {
+			return;
+		}
+
+		var ww = $win.width(),
+			wh = $win.height();
+
+		var vw = VW,
+			vh = VH;
+
+		if (ww < vw) {
+			vw = ww * 0.9;
+			vh = VR * vw;
+		}
+
+		if (wh < vh) {
+			vh = wh * 0.9;
+			vw = vh / VR;
+		}
+
+		wistiaEmbed.width(vw);
+		wistiaEmbed.height(vh);
+		$wrapper.width(vw).height(vh);
+		$wrapper.css({
+			'margin-left': - (vw / 2) + 'px',
+			'margin-top': - (vh / 2) + 'px'
+		});
+	}
+
+	$win.resize(resizeWistiaEmbed);
 
 	$('.kifi-change-email').on('click', function (e) {
 		e.preventDefault();
@@ -91,7 +155,7 @@
 
 	var THRESHOLD = 50;
 
-	$(win).scroll(function () {
+	$win.scroll(function () {
 		win.setTimeout(function () {
 			var scrolling = $(this).scrollTop() > THRESHOLD;
 			$('html').toggleClass('scroll', scrolling);
