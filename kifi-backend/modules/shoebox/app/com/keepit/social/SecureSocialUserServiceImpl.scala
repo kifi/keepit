@@ -136,12 +136,6 @@ class SecureSocialUserPluginImpl @Inject() (
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
-
-    // TODO(Léo) MOVE BACK TO USERCOMMANDER AFTER TESTING PERIOD
-    SafeFuture {
-      val isTestUser = identity.email.map(e => EmailParserUtils.isFakeEmail(e)) getOrElse false
-      if (Play.isDev || isTestUser) userCommander.createDefaultKeeps(u.id.get)(HeimdalContext.empty)
-    }
     u
   }
 
