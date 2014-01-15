@@ -7,7 +7,7 @@ import play.api.mvc.RequestHeader
 import java.util.concurrent.ConcurrentMap
 import scala.collection.JavaConversions._
 
-
+//todo(eishay): add alerts/stats on the longest outstanding request and/or average time using the value of the currentRequests map
 @Singleton
 class MidFlightRequests @Inject() (airbrake: AirbrakeNotifier) {
   private val currentRequests: ConcurrentMap[RequestHeader, Long] = new MapMaker().concurrencyLevel(4).weakKeys().makeMap()
