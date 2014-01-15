@@ -37,6 +37,7 @@ trait ServiceDiscovery {
   def thisInstance: Option[ServiceInstance]
   def timeSinceLastStatusChange: Long
   def amIUp: Boolean
+  def isCanary: Boolean
 }
 
 class ServiceDiscoveryImpl(
@@ -46,8 +47,9 @@ class ServiceDiscoveryImpl(
     scheduler: Scheduler,
     airbrake: Provider[AirbrakeNotifier],
     disableRegistration: Boolean = sys.props.getOrElse("service.register.disable", "false").toBoolean, // todo: inject config
+    val isCanary: Boolean = false,
     servicesToListenOn: Seq[ServiceType] =
-        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil,
+        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.C_SHOEBOX :: Nil,
     doKeepAlive: Boolean = true)
   extends ServiceDiscovery with Logging {
 
@@ -80,7 +82,7 @@ class ServiceDiscoveryImpl(
 
   def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
 
-  def isLeader: Boolean = if (disableRegistration) false
+  def isLeader: Boolean = if (isCanary || disableRegistration) false
   else {
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")

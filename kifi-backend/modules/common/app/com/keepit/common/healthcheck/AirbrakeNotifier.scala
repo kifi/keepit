@@ -136,11 +136,10 @@ trait AirbrakeNotifier {
   def panic(errorMessage: String): AirbrakeError
 }
 
-// apiKey is per service type (showbox, search etc)
-class AirbrakeNotifierImpl (
-  actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
+// apiKey is per service type (shoebox, search etc)
+class AirbrakeNotifierImpl (actor: ActorInstance[AirbrakeNotifierActor], isCanary:Boolean) extends AirbrakeNotifier with Logging {
 
-  def reportDeployment(): Unit = actor.ref ! AirbrakeDeploymentNotice
+  def reportDeployment(): Unit = if (!isCanary) actor.ref ! AirbrakeDeploymentNotice
 
   def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(exception = errorException))
 
@@ -149,7 +148,9 @@ class AirbrakeNotifierImpl (
   def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
   def notify(error: AirbrakeError): AirbrakeError = {
-    actor.ref ! AirbrakeErrorNotice(error.cleanError)
+    if (!isCanary) { // can filter out panic later
+      actor.ref ! AirbrakeErrorNotice(error.cleanError)
+    }
     log.error(error.toString())
     error
   }
