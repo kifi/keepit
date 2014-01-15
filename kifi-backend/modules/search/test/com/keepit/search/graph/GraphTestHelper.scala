@@ -110,12 +110,12 @@ trait GraphTestHelper extends ApplicationInjector {
 
   def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphIndexer = {
     val bookmarkStore = new BookmarkStore(bookmarkStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new StandaloneURIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CollectionIndexer = {
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new StandaloneCollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def addConnections(connections: Map[Id[User], Set[Id[User]]]) {
