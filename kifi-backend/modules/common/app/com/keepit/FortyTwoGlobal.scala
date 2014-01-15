@@ -114,18 +114,32 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId)))
   }
 
+  @volatile private var lastAlert: Long = -1
+
+  private def serviceDiscoveryHandleError(): Unit = {
+    val now = System.currentTimeMillis()
+    if (now - lastAlert > 600000) { //10 minute
+      synchronized {
+        if (now - lastAlert > 600000) { //10 minutes - double check after getting into the synchronized block
+          val serviceDiscovery = injector.instance[ServiceDiscovery]
+          serviceDiscovery.changeStatus(ServiceStatus.SICK)
+          serviceDiscovery.startSelfCheck()
+          serviceDiscovery.forceUpdate()
+          lastAlert = System.currentTimeMillis()
+        }
+      }
+    }
+  }
+
   override def onError(request: RequestHeader, ex: Throwable): Result = {
-    val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.changeStatus(ServiceStatus.SICK)
     val errorId: ExternalId[_] = ex match {
       case reported: ReportedException => reported.id
       case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
     }
     System.err.println(s"Play onError handler for ${ex.toString}")
     ex.printStackTrace()
-    serviceDiscovery.startSelfCheck()
-    serviceDiscovery.forceUpdate()
-    allowCrossOrigin(request, InternalServerError("error: %s".format(errorId)))
+    serviceDiscoveryHandleError()
+    allowCrossOrigin(request, InternalServerError(s"error: $errorId}"))
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
