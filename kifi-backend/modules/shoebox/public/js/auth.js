@@ -304,7 +304,17 @@ kifi.form = (function () {
       .done(function() {
         animation.success();
       })
-      .done(navigate)
+      .done(function(resp) {
+        if ($('html').data('kifi-ext')) {
+          setTimeout(function() {
+            animation.success();
+            navigate(resp);
+          }, 3000);
+        } else {
+          animation.success();
+          navigate(resp);
+        }
+      })
       .fail(function (xhr) {
         animation.fail();
         var o = xhr.responseJSON;
