@@ -2436,8 +2436,9 @@ $(function () {
 		}
 
 		$noResults.html(html).show();
-		$noResults.find('.refresh-friends').click(function () {
+		$noResults.find('.refresh-friends').click(function (e) {
 			submitForm('/friends/invite/refresh');
+			$(this).removeAttr('href').text('Now refreshing... This may take a few minutes. Please try your search again later.');
 		});
 	}
 
