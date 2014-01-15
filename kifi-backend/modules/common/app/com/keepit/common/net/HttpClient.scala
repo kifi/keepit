@@ -167,7 +167,19 @@ case class HttpClientImpl(
     val status = response.status
     if (status / 100 != validResponseClass) {
       val exception = if (status == Status.SERVICE_UNAVAILABLE) {
-        new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse)
+        request.httpUri match {
+          case d: DirectUrl =>
+            val msg = s"external service ${d.summary} is not available"
+            log.error(msg)
+            new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+          case s: ServiceUri =>
+            val msg = s"service ${s.serviceInstance} is not available, reported ${s.serviceInstance.reportedSentServiceUnavailableCount} times"
+            log.error(msg)
+            s.serviceInstance.reportServiceUnavailable()
+            val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
+            airbrake.get.notify(err)
+            new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse)
+        }
       } else {
         new NonOKResponseException(request.httpUri, clientResponse, requestBody)
       }
