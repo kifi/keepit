@@ -8,9 +8,10 @@
 
 	var year = 2014,
 		month = 2,
-		day = 1;
+		day = 15,
+		hour = 11;
 
-	var relTime = new Date(year, month - 1, day);
+	var relTime = new Date(Date.UTC(year, month - 1, day, hour + 8, 0, 0, 0));
 	if (relTime > new Date()) {
 		updateTime();
 		var tid = win.setInterval(updateTime, 250);
