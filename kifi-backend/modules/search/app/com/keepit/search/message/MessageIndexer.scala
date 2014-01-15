@@ -1,23 +1,20 @@
 package com.keepit.search.message
 
-import com.keepit.search.index.{Indexer, Indexable, DefaultAnalyzer, IndexDirectory}
 import com.keepit.search.{Lang, LangDetector}
+import com.keepit.search.IndexInfo
+import com.keepit.search.index.{Indexer, Indexable, DefaultAnalyzer, IndexDirectory}
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.net.{URI, Host}
 import com.keepit.common.strings.UTF8
 import com.keepit.eliza.ElizaServiceClient
-
 import org.apache.lucene.store.Directory
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.document.Document
-
 import play.api.libs.json.Json
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
-
 import java.io.StringReader
 
 
@@ -155,6 +152,10 @@ class MessageIndexer(
         }
       }
       total
+    }
+
+    override def indexInfos(name: String): Seq[IndexInfo] = {
+      super.indexInfos("MessageIndex" + name)
     }
   }
 
