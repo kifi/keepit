@@ -151,7 +151,8 @@ GET     /beta                       @com.keepit.controllers.website.HomeControll
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /terms                      @com.keepit.controllers.website.HomeController.newTerms
 GET     /privacy                    @com.keepit.controllers.website.HomeController.newPrivacy
-GET     /mobileLanding              @com.keepit.controllers.website.HomeController.mobileLanding
+GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
+GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 ####
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)

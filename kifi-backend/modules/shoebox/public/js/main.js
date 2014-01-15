@@ -343,6 +343,7 @@ $(function () {
 	var myTotal;
 	var friendsTotal;
 	var othersTotal;
+	var prefetchedPreviewUrls = {};
 
 	function identity(a) {
 		return a;
@@ -415,11 +416,16 @@ $(function () {
 				}
 
 				if (!skipImage) {
-					$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
-						$pic.css('background-image', 'url(' + data.url + ')');
-					}).fail(function () {
-						$pic.find('.page-pic-soon').addClass('showing');
-					});
+					if (o.url in prefetchedPreviewUrls) {
+						$pic.css('background-image', 'url(' + prefetchedPreviewUrls[o.url] + ')');
+					}
+					else {
+						$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
+							$pic.css('background-image', 'url(' + data.url + ')');
+						}).fail(function () {
+							$pic.find('.page-pic-soon').addClass('showing');
+						});
+					}
 				}
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
 				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
@@ -2834,6 +2840,7 @@ $(function () {
 				if (urls.hasOwnProperty(i)) {
 					var url = urls[i];
 					if (url) {
+						prefetchedPreviewUrls[i] = url;
 						setTimeout((function (url) {
 							return function () {
 								var img = document.createElement('img');
@@ -4223,8 +4230,8 @@ $(function () {
 	$(window).trigger('statechange');
 
 	// bind hover behavior later to avoid slowing down page load
-	var friendCardTmpl = Tempo.prepare('fr-card-template');
-	$('#fr-card-template').remove();
+	var friendCardTmpl = Tempo.prepare('kifi-fr-card-template');
+	$('#kifi-fr-card-template').remove();
 	$.getScript('assets/js/jquery-hoverfu.min.js').done(function () {
 		$(document).hoverfu('.pic:not(.me)', function (configureHover) {
 			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
@@ -4250,7 +4257,7 @@ $(function () {
 		});
 		function show(pos, o) {
 			o.element.element.css(pos).addClass(o.horizontal + ' ' + o.vertical)
-				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
+				.find('.kifi-fr-kcard-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
 

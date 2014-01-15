@@ -23,6 +23,24 @@ import scala.concurrent.{Future, Promise}
 
 trait DiscoveryModule extends ScalaModule
 
+object DiscoveryModule {
+
+  val isCanary = sys.props.getOrElse("service.canary", "false").toBoolean // for "canary/sandbox" instance
+  val isLocal  = sys.props.getOrElse("service.local",  "false").toBoolean // for "local-prod" testing -- can be removed when things settle down
+
+  val LOCAL_AMZN_INFO = AmazonInstanceInfo(AmazonInstanceId("i-f168c1a8"),
+    localHostname = "localhost",
+    publicHostname = "localhost",
+    localIp = IpAddress("127.0.0.1"),
+    publicIp = IpAddress("127.0.0.1"),
+    instanceType = "c1.medium",
+    availabilityZone = "us-west-1b",
+    securityGroups = "default",
+    amiId = "ami-1bf9de5e",
+    amiLaunchIndex = "0")
+
+}
+
 case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   def configure() { }
@@ -32,7 +50,8 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   def amazonInstanceInfo(httpClient: HttpClient): AmazonInstanceInfo = {
     val metadataUrl: String = "http://169.254.169.254/latest/meta-data/"
 
-    val instance = AmazonInstanceInfo(
+    val instance = if (DiscoveryModule.isCanary && DiscoveryModule.isLocal) DiscoveryModule.LOCAL_AMZN_INFO
+    else AmazonInstanceInfo(
       instanceId = AmazonInstanceId(httpClient.get(DirectUrl(metadataUrl + "instance-id")).body),
       localHostname = httpClient.get(DirectUrl(metadataUrl + "local-hostname")).body,
       publicHostname = httpClient.get(DirectUrl(metadataUrl + "public-hostname")).body,
@@ -58,7 +77,7 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
-    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake)
+    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake, isCanary = DiscoveryModule.isCanary)
   }
 
   @Singleton
@@ -75,19 +94,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Singleton
   @Provides
-  def amazonInstanceInfo: AmazonInstanceInfo =
-    new AmazonInstanceInfo(
-      instanceId = AmazonInstanceId("i-f168c1a8"),
-      localHostname = "localhost",
-      publicHostname = "localhost",
-      localIp = IpAddress("127.0.0.1"),
-      publicIp = IpAddress("127.0.0.1"),
-      instanceType = "c1.medium",
-      availabilityZone = "us-west-1b",
-      securityGroups = "default",
-      amiId = "ami-1bf9de5e",
-      amiLaunchIndex = "0"
-    )
+  def amazonInstanceInfo: AmazonInstanceInfo = DiscoveryModule.LOCAL_AMZN_INFO
 
   @Provides
   @Singleton
@@ -111,6 +118,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def myStatus: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def myVersion: ServiceVersion = services.currentVersion
       def amIUp: Boolean = true
+      def isCanary = false
     }
 
   @Singleton

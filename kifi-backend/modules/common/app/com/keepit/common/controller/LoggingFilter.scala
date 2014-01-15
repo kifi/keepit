@@ -34,11 +34,11 @@ class LoggingFilter() extends EssentialFilter {
         airbrake.notify(message)
         Done(SimpleResult[String](header = ResponseHeader(Status.SERVICE_UNAVAILABLE), body = Enumerator(message)))
       } else {
-        val countStart = midFlightRequests.comingIn()
+        val countStart = midFlightRequests.comingIn(rh)
         val timer = accessLog.timer(HTTP_IN)
 
         def logTime(result: PlainResult): Result = {
-          midFlightRequests.goingOut()
+          midFlightRequests.goingOut(rh)
           val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
           val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
           val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
@@ -58,9 +58,15 @@ class LoggingFilter() extends EssentialFilter {
             CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N"),
             CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA"))
         }
-        next(rh).map {
-          case plain: PlainResult => logTime(plain)
-          case async: AsyncResult => async.transform(logTime)
+        try {
+          next(rh).map {
+            case plain: PlainResult => logTime(plain)
+            case async: AsyncResult => async.transform(logTime)
+          }
+        } catch {
+          case t: Throwable =>
+            midFlightRequests.goingOut(rh)
+            throw t
         }
       }
     }

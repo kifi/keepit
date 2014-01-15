@@ -214,12 +214,20 @@ body {
             animation: fadeIn 0.5s ease;
 }
 
+.wistia-fancybox #fancybox-overlay#fancybox-overlay {
+	background: white;
+}
+
 .wistia-fancybox .fancybox-close.fancybox-close {
 	.box-shadow(none);
 }
 
 .wistia-fancybox .fancybox-outer.fancybox-outer {
 	background: black;
+}
+
+.wistia-fancybox .fancybox-opened .fancybox-outer.fancybox-outer {
+	.box-shadow(0 10px 25px rgba(0,0,0,0.3));
 }
 
 @-webkit-keyframes fadeIn {

@@ -16,6 +16,7 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
+import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 
@@ -603,7 +604,7 @@ object DefaultKeeps {
     "Read Later",
     "Funny",
     "Example Keep",
-    "Kifi Support"
+    "kifi Support"
   )
 
   val orderedKeepsWithTags: Seq[(KeepInfo, Seq[String])] = {
@@ -617,10 +618,10 @@ object DefaultKeeps {
       (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),
 
       // Support Keeps
-      (KeepInfo(title = Some("kifi • Install Kifi on Firefox and Chrome"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("kifi • How to Use Kifi"), url = "http://support.kifi.com/customer/portal/articles/1397866-introduction-to-kifi-", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • Install kifi on Firefox and Chrome"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • How to Use kifi"), url = "http://support.kifi.com/customer/portal/articles/1397866-introduction-to-kifi-", isPrivate = true), Seq(support)),
       (KeepInfo(title = Some("kifi • Contact Us"), url = "http://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("kifi • Find friends your friends on Kifi"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
+      (KeepInfo(title = Some("kifi • Find friends your friends on kifi"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
     )
   }
 }

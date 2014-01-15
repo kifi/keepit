@@ -43,11 +43,6 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
 
   lazy val status: Int = res.status
 
-  if (status == Status.SERVICE_UNAVAILABLE) {
-    //the following notification may be removed after we'll see the system works fine as its pretty much expected
-    airbrake.get.notify(s"got a SERVICE_UNAVAILABLE status code for ${request.httpUri.summary}")
-  }
-
   lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
   private var _parsingTime: Option[Long] = None
   override def parsingTime = _parsingTime

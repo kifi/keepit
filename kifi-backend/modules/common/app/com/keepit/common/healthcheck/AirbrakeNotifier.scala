@@ -76,7 +76,7 @@ class AirbrakeSender @Inject() (
         firstErrorReported = true
         val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
         log.error(s"can't deal with error: $he")
-        pagerDutySender.openIncident("Airbrake Error!", ex)
+        pagerDutySender.openIncident("Airbrake HttpClient Error!", ex)
       }
     }
   }
@@ -93,19 +93,28 @@ class AirbrakeSender @Inject() (
     withTimeout(60000).
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture(DirectUrl("http://airbrakeapp.com/notifier_api/v2/notices"), xml, defaultFailureHandler) map { res =>
-      val xmlRes = res.xml
-      val id = (xmlRes \ "id").head.text
-      val url = (xmlRes \ "url").head.text
-      log.info(s"sent to airbreak error $id more info at $url: $xml")
-      println(s"sent to airbreak error $id more info at $url: $xml")
+      try {
+        val x : String = res.body
+        val xmlRes = res.xml
+        val id = (xmlRes \ "id").head.text
+        val url = (xmlRes \ "url").head.text
+        log.info(s"sent to airbreak error $id more info at $url: $xml")
+        println(s"sent to airbreak error $id more info at $url: $xml")
+      } catch {
+        case t: Throwable => {
+          pagerDutySender.openIncident("Airbrake Response Deserialization Error!", t, moreInfo = Some(res.body.take(1000)))
+          throw t
+        }
+      }
     }
 }
 
 class PagerDutySender @Inject() (httpClient: HttpClient) {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  def openIncident(description: String, exception: Throwable, signature: Option[String]=None): Unit = {
+  def openIncident(description: String, exception: Throwable, signature: Option[String]=None, moreInfo: Option[String] = None): Unit = {
     val incidentKey : String = signature.getOrElse(description.take(1000))
+    val moreInfoMessage : String = moreInfo.getOrElse("See Airbrake/Healthcheck for more.")
     val payload = Json.obj(
       "service_key"  -> "7785f2cc14ec44e49ae3bb8186400cc7",
       "event_type"   -> "trigger",
@@ -113,7 +122,7 @@ class PagerDutySender @Inject() (httpClient: HttpClient) {
       "incident_key" -> incidentKey,
       "details"      -> Json.obj(
         "exceptionInfo" -> exception.getMessage(),
-        "moreInfo"      -> "See Airbrake/Healthcheck for more."
+        "moreInfo"      -> moreInfoMessage
       )
     )
     httpClient.postFuture(DirectUrl("https://events.pagerduty.com/generic/2010-04-15/create_event.json"), payload)
@@ -136,11 +145,10 @@ trait AirbrakeNotifier {
   def panic(errorMessage: String): AirbrakeError
 }
 
-// apiKey is per service type (showbox, search etc)
-class AirbrakeNotifierImpl (
-  actor: ActorInstance[AirbrakeNotifierActor]) extends AirbrakeNotifier with Logging {
+// apiKey is per service type (shoebox, search etc)
+class AirbrakeNotifierImpl (actor: ActorInstance[AirbrakeNotifierActor], isCanary:Boolean) extends AirbrakeNotifier with Logging {
 
-  def reportDeployment(): Unit = actor.ref ! AirbrakeDeploymentNotice
+  def reportDeployment(): Unit = if (!isCanary) actor.ref ! AirbrakeDeploymentNotice
 
   def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(exception = errorException))
 
@@ -149,7 +157,9 @@ class AirbrakeNotifierImpl (
   def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
   def notify(error: AirbrakeError): AirbrakeError = {
-    actor.ref ! AirbrakeErrorNotice(error.cleanError)
+    if (!isCanary) { // can filter out panic later
+      actor.ref ! AirbrakeErrorNotice(error.cleanError)
+    }
     log.error(error.toString())
     error
   }

@@ -7,7 +7,7 @@ import scala.util.parsing.combinator.RegexParsers
 case class Shard[T](shardId: Int, numShards: Int) {
 
   def indexNameSuffix: String = {
-    if (shardId == 0 && numShards == 1) "" else s"_${shardId}of${numShards}"
+    if (shardId == 0 && numShards == 1) "" else s"_${shardId}_${numShards}"
   }
 
   def contains(id: Id[T]): Boolean = ((id.id % numShards.toLong) == shardId.toLong)

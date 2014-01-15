@@ -80,46 +80,18 @@ class URIGraphIndexer(
     super.onFailure(indexable, e)
   }
 
-  def update(): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
+  def update(): Int = throw new UnsupportedOperationException()
 
-    var total = 0
-    var done = false
-    while (!done) {
-      total += doUpdate("URIGraphIndex") {
-        val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
-        done = bookmarks.isEmpty
-        toIndexables(bookmarks, Shard(0, 1))
-      }
-      // update searchers together to get a consistent view of indexes
-      searchers = (this.getSearcher, bookmarkStore.getSearcher)
-    }
-    total
-  }
+  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
+    val cnt = doUpdate("URIGraphIndex" + name) {
+      bookmarkStore.update(name, bookmarks, shard)
 
-  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = {
-    val cnt = doUpdate(name) {
-      toIndexables(bookmarks, shard)
+      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
+      usersChanged.iterator.map(buildIndexable)
     }
     // update searchers together to get a consistent view of indexes
     searchers = (this.getSearcher, bookmarkStore.getSearcher)
     cnt
-  }
-
-  def update(userId: Id[User]): Int = updateLock.synchronized {
-    val cnt = doUpdate("URIGraphIndex") {
-      toIndexables(Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber), Shard(0, 1))
-    }
-    // update searchers together to get a consistent view of indexes
-    searchers = (this.getSearcher, bookmarkStore.getSearcher)
-    cnt
-  }
-
-  def toIndexables(bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Iterator[Indexable[User]] = {
-    bookmarkStore.update(bookmarks, shard)
-
-    val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
-    usersChanged.iterator.map(buildIndexable)
   }
 
   override def reindex() {

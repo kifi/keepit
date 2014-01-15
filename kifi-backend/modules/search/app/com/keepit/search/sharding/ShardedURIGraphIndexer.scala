@@ -20,12 +20,12 @@ class ShardedURIGraphIndexer(
 
     var total = 0
     var done = false
-    while (!done) {
+    while (!done && !closing) {
       val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
       done = bookmarks.isEmpty
 
       indexShards.foreach{ case (shard, indexer) =>
-        indexer.update(s"UriGraphIndex${shard.indexNameSuffix}", bookmarks, shard)
+        indexer.update(shard.indexNameSuffix, bookmarks, shard)
       }
       total += bookmarks.size
       if (!done) sequenceNumber = bookmarks.last.seq

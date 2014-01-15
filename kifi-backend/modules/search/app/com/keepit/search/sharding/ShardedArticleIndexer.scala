@@ -20,15 +20,13 @@ class ShardedArticleIndexer(
 
     var total = 0
     var done = false
-    while (!done) {
+    while (!done && !closing) {
       val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
       done = uris.isEmpty
 
       indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
         val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-        total += indexer.doUpdate(s"ArticleIndex${shard.indexNameSuffix}"){
-          next.iterator.map(indexer.buildIndexable)
-        }
+        total += indexer.update(shard.indexNameSuffix, next, shard)
         rest
       }
       if (!done) sequenceNumber = uris.last.seq

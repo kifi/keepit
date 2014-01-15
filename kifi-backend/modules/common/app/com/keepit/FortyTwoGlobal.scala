@@ -4,6 +4,7 @@ import java.io.File
 
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
+import com.keepit.common.strings._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
 import com.keepit.common.logging.Logging
@@ -114,18 +115,38 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId)))
   }
 
+  @volatile private var lastAlert: Long = -1
+
+  private def serviceDiscoveryHandleError(): Unit = {
+    val now = System.currentTimeMillis()
+    if (now - lastAlert > 600000) { //10 minute
+      synchronized {
+        if (now - lastAlert > 600000) { //10 minutes - double check after getting into the synchronized block
+          val serviceDiscovery = injector.instance[ServiceDiscovery]
+          serviceDiscovery.changeStatus(ServiceStatus.SICK)
+          serviceDiscovery.startSelfCheck()
+          serviceDiscovery.forceUpdate()
+          lastAlert = System.currentTimeMillis()
+        }
+      }
+    }
+  }
+
   override def onError(request: RequestHeader, ex: Throwable): Result = {
-    val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.changeStatus(ServiceStatus.SICK)
     val errorId: ExternalId[_] = ex match {
       case reported: ReportedException => reported.id
       case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
     }
     System.err.println(s"Play onError handler for ${ex.toString}")
     ex.printStackTrace()
-    serviceDiscovery.startSelfCheck()
-    serviceDiscovery.forceUpdate()
-    allowCrossOrigin(request, InternalServerError("error: %s".format(errorId)))
+    serviceDiscoveryHandleError()
+    val message = if (request.path.startsWith("/internal/")) {
+      //todo(eishay) consider use the original ex.getCause instead
+      s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
+    } else {
+      errorId.id
+    }
+    allowCrossOrigin(request, InternalServerError(message))
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
