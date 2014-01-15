@@ -151,7 +151,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.unRegister()
     serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
@@ -173,6 +172,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         println("<<<<<< done sleeping, continue with termination")
         log.info("<<<<<< done sleeping, continue with termination")
       }
+      serviceDiscovery.unRegister()
     }
   }
 
