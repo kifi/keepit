@@ -149,22 +149,30 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, InternalServerError(message))
   }
 
-  sys.addShutdownHook({
-    if (mode == Mode.Prod) {
-      println(s"=========== announcing service stop $this via shutdown hook")
+  sys.addShutdownHook({ announceStopping() })
+
+  @volatile private var announcedStopping: Boolan = false
+
+  def announceStopping(): Unit = synchronized {
+    if (mode == Mode.Prod && !announcedStopping) {
+      println(s"[announceStopping] announcing service stop $this via shutdown hook")
       try {
         val serviceDiscovery = injector.instance[ServiceDiscovery]
         serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+        println("[announceStopping] about to pause for 10 seconds and let clients know we're stopping")
+        Thread.sleep(10000)
+        println("[announceStopping] moving on")
       } catch {
         case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
       }
-      println(s"=========== done announcing service stop $this via shutdown hook")
+      announcedStopping = true
+      println(s"[announceStopping] done announcing service stop $this via shutdown hook")
     }
-  })
+  }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+    announceStopping()
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
@@ -180,8 +188,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     } finally {
       if (app.mode == Mode.Prod) {
         println("<<<<<< about to pause and let the system shut down")
-        new Exception("Just Tracing shotdown hook").printStackTrace()
-        Thread.sleep(21000)
+        Thread.sleep(11000)
         println("<<<<<< done sleeping, continue with termination")
         log.info("<<<<<< done sleeping, continue with termination")
       }

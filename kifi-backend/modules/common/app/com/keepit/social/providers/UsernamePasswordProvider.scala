@@ -9,6 +9,7 @@ import play.api.mvc.Results.Forbidden
 
 import securesocial.core.providers.{UsernamePasswordProvider => UPP}
 import securesocial.core.{Registry, UserService, IdentityId, SocialUser}
+import com.keepit.FortyTwoGlobal
 
 class UsernamePasswordProvider(application: Application)
   extends UPP(application) with UserIdentityProvider {
@@ -31,4 +32,8 @@ class UsernamePasswordProvider(application: Application)
   }
 
   private def error(errorCode: String) = Forbidden(Json.obj("error" -> errorCode))
+
+  override def onStop() {
+    application.global.asInstanceOf[FortyTwoGlobal].announceStopping()
+  }
 }

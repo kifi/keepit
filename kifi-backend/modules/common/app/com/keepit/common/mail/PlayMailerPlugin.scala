@@ -11,4 +11,7 @@ class PlayMailerPlugin(app: Application) extends MailerPlugin {
     implicit val injector = global.injector
     global.inject[MailerAPI]
   }
+  override def onStop() {
+    app.global.asInstanceOf[FortyTwoGlobal].announceStopping()
+  }
 }
