@@ -1,13 +1,10 @@
 package com.keepit.search.query
 
-import java.io.StringReader
-
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.util.Version
 import org.specs2.mutable.Specification
-
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.PersonalizedSearcher
@@ -17,50 +14,11 @@ import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.Tst
+import com.keepit.search.TstIndexer
 
 
 class TextQueryTest extends Specification {
-
-  class Tst(val id: Id[Tst], val text: String, val personalText: String)
-
-  class TstIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig)
-    extends Indexer[Tst](indexDirectory, indexWriterConfig) {
-
-    class TstIndexable[Tst](override val id: Id[Tst], val text: String, val personalText: String) extends Indexable[Tst] {
-
-      implicit def toReader(text: String) = new StringReader(text)
-
-      override val sequenceNumber = SequenceNumber.ZERO
-      override val isDeleted = false
-
-      override def buildDocument = {
-        val doc = super.buildDocument
-        val analyzer = indexWriterConfig.getAnalyzer
-        val content = buildTextField("c", text)
-        val personal = buildTextField("p", personalText)
-        val builder = new SemanticVectorBuilder(60)
-        builder.load( analyzer.tokenStream("c", text) )
-        val semanticVector = buildSemanticVectorField("sv", builder)
-        val docSemanticVector = buildDocSemanticVectorField("docSV", builder)
-        doc.add(content)
-        doc.add(personal)
-        doc.add(semanticVector)
-        doc.add(docSemanticVector)
-        doc
-      }
-    }
-
-    def buildIndexable(id: Id[Tst]): Indexable[Tst] = throw new UnsupportedOperationException()
-    def buildIndexable(data: Tst): Indexable[Tst] = new TstIndexable(data.id, data.text, data.personalText)
-
-    def index(id: Id[Tst], text: String, fallbackText: String) = {
-      indexDocuments(Some(buildIndexable(new Tst(id, text, fallbackText))).iterator, 100)
-    }
-
-    def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)
-
-    def update(): Int = ???
-  }
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
   val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)

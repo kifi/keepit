@@ -38,7 +38,7 @@ import play.api.libs.json.Json
 class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHepler {
 
   "SearchCommander" should {
-    "generate results the incorrect json format" in {
+    "generate results in the correct json format" in {
       running(application) {
         val (users, uris) = initData(numUsers = 4, numUris = 9)
         val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)), uris(2) -> Seq(users(2)), uris(3) -> Seq(users(3)))
