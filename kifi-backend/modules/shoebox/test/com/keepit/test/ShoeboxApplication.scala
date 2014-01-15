@@ -42,7 +42,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       ShoeboxCacheModule(HashMapMemoryCacheModule()),
       TestNormalizationServiceModule(),
       FakeActionAuthenticatorModule(),
-      AbuseControlModule()
+      AbuseControlModule(),
+      TestActorSystemModule()
     ), overridingModules
   ))
 
@@ -61,6 +62,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     TestNormalizationServiceModule(),
     TestScraperServiceClientModule(),
-    AbuseControlModule()
+    AbuseControlModule(),
+    TestActorSystemModule()
   )
 }
