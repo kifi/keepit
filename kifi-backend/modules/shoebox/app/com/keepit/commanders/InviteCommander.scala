@@ -184,7 +184,7 @@ class InviteCommander @Inject() (
           sendEmailInvitation(c, alreadyInvited, user, url, inviteInfo)
         }
         case inactiveOpt => {
-          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(100)
+          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(1000)
           val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
           if (currentInvitations.length < totalAllowedInvites) {
             val invite = inactiveOpt map {
@@ -249,7 +249,7 @@ class InviteCommander @Inject() (
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserInfo.id.get) match {
           case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE => cb(socialUserInfo, currInvite)
           case inactiveOpt =>
-            val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(100) // todo: removeme
+            val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(1000) // todo: removeme
             val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {
