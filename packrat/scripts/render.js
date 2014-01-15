@@ -5,8 +5,14 @@ var cdnBase = api.dev ?
 var render = function() {
   'use strict';
   return function(path, params, partials, callback) {  // partials and callback are both optional
-    if (!callback && typeof partials == "function") {
-      callback = partials, partials = null;
+    if (!callback) {
+      if (partials) {
+        if (typeof partials === 'function') {
+          callback = partials, partials = null;
+        }
+      } else if (params && typeof params === 'function') {
+        callback = params, params = null;
+      }
     }
     var paths = [path];
     if (partials) {
