@@ -64,45 +64,41 @@ private[social] class SocialGraphActor @Inject() (
     try {
       require(socialUserInfo.credentials.isDefined,
         s"SocialUserInfo's credentials are not defined: $socialUserInfo")
-      socialUserInfo.userId.toSeq.flatMap { userId =>
-        networkTypeToGraph.get(socialUserInfo.networkType).toSeq.flatMap { graph =>
+      val connectionsOpt = for {
+        userId <- socialUserInfo.userId if !isImportAlreadyInProcess(userId, socialUserInfo.networkType)
+        graph <- networkTypeToGraph.get(socialUserInfo.networkType)
+        rawInfo <- {
           markGraphImportUserValue(userId, socialUserInfo.networkType, "fetching")
+          graph.fetchSocialUserRawInfo(socialUserInfo)
+        }
+      } yield {
+          markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
+          rawInfo.jsons flatMap graph.extractEmails foreach (socialUserImportEmail.importEmail(userId, _))
 
-          val connections = graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
-            markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
-            rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(userId, _))
+          socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
-            socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
+          val friends = rawInfo.jsons flatMap graph.extractFriends
+          socialUserImportFriends.importFriends(socialUserInfo, friends)
+          val connections = socialUserCreateConnections.createConnections(socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
-            val friends = rawInfo.jsons flatMap graph.extractFriends
-            socialUserImportFriends.importFriends(socialUserInfo, friends)
-            val connections = socialUserCreateConnections.createConnections(
-              socialUserInfo, friends.map(_._1.socialId), graph.networkType)
-
-            val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
-            val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
-            db.readWrite { implicit c =>
-              latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
-                userValueRepo.setValue(userId, key, value)
-                heimdal.setUserProperties(userId, key -> ContextStringData(value))
-              }
-              socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+          val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
+          val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
+          db.readWrite { implicit c =>
+            latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
+              userValueRepo.setValue(userId, key, value)
+              heimdal.setUserProperties(userId, key -> ContextStringData(value))
             }
-            connections
+            socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
           }
-          markGraphImportUserValue(socialUserInfo.userId.get, socialUserInfo.networkType, "false")
           connections
         }
-      }
+      connectionsOpt getOrElse Seq.empty
     } catch {
       case ex: Exception =>
-        Try {
-          markGraphImportUserValue(socialUserInfo.userId.get, socialUserInfo.networkType, "false")
-          db.readWrite { implicit c =>
-            socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
-          }
-        }
+        db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }
         throw new Exception(s"Error updating SocialUserInfo: ${socialUserInfo.id}, ${socialUserInfo.fullName}", ex)
+    } finally {
+      markGraphImportUserValue(socialUserInfo.userId.get, socialUserInfo.networkType, "false")
     }
   }
 
@@ -110,6 +106,13 @@ private[social] class SocialGraphActor @Inject() (
     db.readWrite { implicit session =>
       userValueRepo.setValue(userId, s"import_in_progress_${networkType.name}", state)
     }
+  }
+
+  private def isImportAlreadyInProcess(userId: Id[User], networkType: SocialNetworkType): Boolean = {
+    val stateOpt = db.readOnly { implicit session =>
+      userValueRepo.getValue(userId, s"import_in_progress_${networkType.name}")
+    }
+    stateOpt.map(_ != "false") getOrElse false
   }
 }
 
