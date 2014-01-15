@@ -13,7 +13,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{EmailParserUtils, ABookServiceClient}
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
@@ -37,7 +37,7 @@ import scala.Some
 
 
 import securesocial.core.{Identity, UserService, Registry, SocialUser}
-
+import play.api.Play
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -193,6 +193,7 @@ class UserCommander @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
     SafeFuture {
+      createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
