@@ -97,7 +97,13 @@ class HomeController @Inject() (
 
   def mobileLanding = HtmlAction(true)(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
   private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    Ok(views.html.marketing.mobileLanding(isLoggedIn, "iphone"))
+    val agentOpt = request.headers.get("User-Agent").map { agent =>
+      UserAgent.fromString(agent)
+    }
+    val ua = agentOpt.get.userAgent
+    val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
+    val agentClass = if (isIphone) "iphone" else ""
+    Ok(views.html.marketing.mobileLanding(false, agentClass))
   }
   // End post-launch stuff!
 
@@ -119,6 +125,10 @@ class HomeController @Inject() (
     }
   }
 
+  def unsupported = Action {
+    Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
+  }
+
   private def homeNotAuthed(implicit request: Request[_]): Result = {
     if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
@@ -131,7 +141,7 @@ class HomeController @Inject() (
         val agentOpt = request.headers.get("User-Agent").map { agent =>
           UserAgent.fromString(agent)
         }
-        if (agentOpt.map(_.isMobile).getOrElse(false)) {
+        if (agentOpt.exists(_.isMobile)) {
           val ua = agentOpt.get.userAgent
           val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
           val agentClass = if (isIphone) "iphone" else ""
@@ -143,6 +153,14 @@ class HomeController @Inject() (
         Ok(views.html.auth.auth())
       }
     }
+  }
+
+  def agent = Action { request =>
+    val res = request.headers.get("User-Agent").map { ua =>
+      val parsed = UserAgent.fromString(ua)
+      (parsed.name, parsed.operatingSystemFamily, parsed.operatingSystemName, parsed.typeName, parsed.userAgent, parsed.version)
+    }
+    Ok(res.toString)
   }
 
   def homeWithParam(id: String) = home
