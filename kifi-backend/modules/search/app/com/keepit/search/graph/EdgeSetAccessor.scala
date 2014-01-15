@@ -6,22 +6,24 @@ import scala.util.Sorting
 import com.keepit.search.util.LongArraySet
 import com.keepit.common.logging.Logging
 
-trait EdgeSetAccessor[S, D] extends EdgeSet[S, D] {
-  def accessor: EdgeSetAccessor[S, D] = this
+trait EdgeSetAccessor[S, D] {
+  protected val edgeSet: EdgeSet[S, D]
   protected var _destId: Long = -1L
-
-  def seek(id: Id[D]): Boolean = seek(id.id)
-  def seek(id: Long): Boolean = {
-    _destId = id
-    destIdLongSet.contains(id)
-  }
-
   def destId: Long = _destId
+  def seek(id: Id[D]): Boolean = seek(id.id)
+  def seek(id: Long): Boolean
 }
 
-trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
+class SimpleEdgeSetAccessor[S, D](override val edgeSet: EdgeSet[S, D]) extends EdgeSetAccessor[S, D] {
+  override def seek(id: Long): Boolean = {
+    _destId = id
+    edgeSet.destIdLongSet.contains(id)
+  }
+}
+
+trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D]{
+  val longArraySet: LongArraySet
   protected var index: Int = -1
-  protected val longArraySet: LongArraySet
 
   override def seek(id: Long) = {
     _destId = id
@@ -30,19 +32,21 @@ trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
   }
 }
 
-trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D]{
-  def createdAt: Long
-  def isPublic: Boolean
-  def bookmarkId: Long
-  def getCreatedAt(id: Long): Long
-  def getBookmarkId(id: Long): Long
+class LongArrayBasedEdgeInfoAccessorImpl[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet) extends LongArrayBasedEdgeInfoAccessor[S, D]
+
+trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D] with TimeRangeFilter[S, D] {
+  def createdAt: Long = ???
+  def isPublic: Boolean = ???
+  def bookmarkId: Long = ???
+  def getCreatedAt(id: Long): Long = ???
+  def getBookmarkId(id: Long): Long = ???
 }
 
-trait LuceneBackedBookmarkInfoAccessor[S, D]
-  extends BookmarkInfoAccessor[S, D] with LongArrayBasedEdgeInfoAccessor[S, D] with Logging{
+class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet)
+  extends LongArrayBasedEdgeInfoAccessor[S, D] with BookmarkInfoAccessor[S, D] with Logging{
 
-  protected def createdAtByIndex(idx: Int): Long
-  protected def isPublicByIndex(idx: Int): Boolean
+  protected def createdAtByIndex(idx: Int): Long = throw new UnsupportedOperationException
+  protected def isPublicByIndex(idx: Int): Boolean = throw new UnsupportedOperationException
   protected def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
 
   override def createdAt: Long = if (index >= 0) createdAtByIndex(index) else throw new IllegalStateException("accessor is not positioned")
@@ -71,6 +75,24 @@ trait LuceneBackedBookmarkInfoAccessor[S, D]
         if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
       }
       -1L //throw new NoSuchElementException(s"failed to find id: ${id}")
+    }
+  }
+
+  override def filterByTimeRange(startTime: Long, endTime: Long): EdgeSet[S, D] = {
+    val buf = new ArrayBuffer[Long]
+    var size = longArraySet.size
+    var i = 0
+    while (i < size) {
+      val timestamp = createdAtByIndex(i)
+      if (startTime <= timestamp && timestamp <= endTime) buf += longArraySet.key(i)
+      i += 1
+    }
+    val filtered = buf.toArray
+    Sorting.quickSort(filtered)
+    val inheritedSourceId = edgeSet.sourceId
+    new LongSetEdgeSet[S, D] {
+      override val sourceId: Id[S] = inheritedSourceId
+      override val longArraySet = LongArraySet.fromSorted(filtered)
     }
   }
 }

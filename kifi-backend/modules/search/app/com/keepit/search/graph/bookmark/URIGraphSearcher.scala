@@ -29,9 +29,10 @@ import com.keepit.search.graph.LuceneBackedEdgeSet
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphFields._
-import com.keepit.search.graph.LuceneBackedBookmarkTimeRangeFilter
 import com.keepit.search.graph.TimeRangeFilter
 import com.keepit.search.graph.BookmarkInfoAccessor
+import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
+
 
 object URIGraphSearcher {
   def apply(uriGraphIndexer: URIGraphIndexer): URIGraphSearcher = {
@@ -143,7 +144,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {
     import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
 
-    val bookmarkId = myUriEdgeSet.getBookmarkId(uriId.id)
+    val bookmarkId = myUriEdgeSet.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].getBookmarkId(uriId.id)
     storeSearcher.getDecodedDocValue[BookmarkRecord](BookmarkStoreFields.recField, bookmarkId)
   }
 }
@@ -185,19 +186,22 @@ object UserToUserEdgeSet{
   }
 }
 
-abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends BookmarkInfoAccessor[User, NormalizedURI] with TimeRangeFilter[User, NormalizedURI]
+abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI]
 
 object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] with LuceneBackedBookmarkTimeRangeFilter[User, NormalizedURI]{
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
       override protected val longArraySet = set
-      override protected def createdAtByIndex(idx:Int): Long = {
-        val datetime = uriList.createdAt(idx)
-        Util.unitToMillis(datetime)
+
+      override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
+        override protected def createdAtByIndex(idx:Int): Long = {
+          val datetime = uriList.createdAt(idx)
+          Util.unitToMillis(datetime)
+        }
+        override protected def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
       }
-      override protected def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
     }
   }
 
@@ -211,13 +215,16 @@ object UserToUriEdgeSet {
       val set = LongArraySet.from(concat(publicIds, privateIds))
       val pubListSize = publicIds.length
 
-      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] with LuceneBackedBookmarkTimeRangeFilter[User, NormalizedURI] {
+      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
         override protected val longArraySet = set
-        override protected def createdAtByIndex(idx:Int): Long = {
-          val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
-          Util.unitToMillis(datetime)
+        override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
+
+          override protected def createdAtByIndex(idx:Int): Long = {
+            val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
+            Util.unitToMillis(datetime)
+          }
+          override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
         }
-        override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
       }
     }
   }
@@ -230,14 +237,16 @@ object UserToUriEdgeSet {
     val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
 
     val pubListSize = publicList.size
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] with LuceneBackedBookmarkTimeRangeFilter[User, NormalizedURI]{
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
       override protected val longArraySet = set
-      override protected def createdAtByIndex(idx:Int): Long = {
-        val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
-        Util.unitToMillis(datetime)
+      override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
+        override protected def createdAtByIndex(idx:Int): Long = {
+          val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
+          Util.unitToMillis(datetime)
+        }
+        override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
+        override protected def bookmarkIdByIndex(idx: Int): Long = bookmarkIds(idx)
       }
-      override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
-      override protected def bookmarkIdByIndex(idx: Int): Long = bookmarkIds(idx)
     }
   }
 
