@@ -276,6 +276,7 @@ class UserCommander @Inject() (
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("kifi"),
             to = Seq(targetEmailOpt.get),
             category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = subj,
