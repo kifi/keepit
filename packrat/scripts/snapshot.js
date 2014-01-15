@@ -148,9 +148,9 @@ var snapshot = function () {
     var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
       updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
     });
-    render("html/snapshot_bar", function(html) {
+    render('html/snapshot_bar', function (html) {
       api.require("scripts/lib/jquery-ui-draggable.min.js", function() {  // for draggable
-        $(html).appendTo("body")
+        $(html).appendTo('body')
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
           .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
           .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
@@ -163,7 +163,8 @@ var snapshot = function () {
     $glass.click(function() {
       exitSnapshotMode(null, snapshot.generateSelector(sel.el));
     });
-    function exitSnapshotMode(_, selector) {
+    function exitSnapshotMode(e, selector) {
+      if (e && e.type === 'keydown') e.preventDefault();
       document.documentElement.classList.remove("kifi-snapshot-mode");
       $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() {
         $(this).remove();
