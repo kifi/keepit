@@ -162,8 +162,9 @@ class HealthcheckPluginImpl @Inject() (
     actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices,
     host: HealthcheckHost,
-    val scheduling: SchedulingProperties)
-  extends HealthcheckPlugin with SchedulerPlugin with Logging {
+    val scheduling: SchedulingProperties,
+    isCanary: Boolean
+) extends HealthcheckPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -193,7 +194,9 @@ class HealthcheckPluginImpl @Inject() (
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.System.HEALTHCHECK)
-    actor.ref ! email
+    if (!isCanary) {
+      actor.ref ! email
+    }
     email
   }
 
@@ -203,7 +206,9 @@ class HealthcheckPluginImpl @Inject() (
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.System.HEALTHCHECK)
-    actor.ref ! email
+    if (!isCanary) {
+      actor.ref ! email
+    }
     email
   }
 

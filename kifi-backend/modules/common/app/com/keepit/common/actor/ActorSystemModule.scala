@@ -6,7 +6,7 @@ import com.keepit.inject.AppScoped
 import com.google.inject.Provides
 import play.api.Play
 import play.api.Play._
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.zookeeper.{DiscoveryModule, ServiceDiscovery}
 import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
 
 trait ActorSystemModule extends ScalaModule
@@ -23,7 +23,7 @@ case class ProdActorSystemModule() extends ActorSystemModule {
 
   @Provides
   def globalSchedulingEnabled(serviceDiscovery: ServiceDiscovery): SchedulingProperties =
-    new SchedulingPropertiesImpl(serviceDiscovery, true)
+    new SchedulingPropertiesImpl(serviceDiscovery, !(DiscoveryModule.isCanary)) // can allow some (e.g. heimdal) to run on canary later
 
   @Provides
   @AppScoped
