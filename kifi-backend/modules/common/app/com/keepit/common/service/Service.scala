@@ -44,7 +44,10 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
-  case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", true)
+  case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", true) {
+    override val minInstances = 0
+    override val warnInstances = 0
+  }
 
   def fromString(str: String) = str match {
     case SHOEBOX.name => SHOEBOX
