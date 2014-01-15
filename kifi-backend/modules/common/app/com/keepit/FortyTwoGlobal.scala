@@ -150,26 +150,28 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   }
 
   sys.addShutdownHook({
-    if (mode == Mode.Prod) {
-      println(s"=========== announcing service stop $this via shutdown hook")
+    println(s"[announceStopping] announcing service stop $this via shutdown hook")
+    Play.maybeApplication map { app => announceStopping(app) }
+    println(s"[announceStopping] done announcing service stop $this via shutdown hook")
+  })
+
+  @volatile private var announcedStopping: Boolean = false
+
+  def announceStopping(app: Application): Unit = synchronized {
+    if (mode == Mode.Prod && !announcedStopping) {
       try {
         val serviceDiscovery = injector.instance[ServiceDiscovery]
         serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+        println("[announceStopping] about to pause for 10 seconds and let clients and ELB know we're stopping")
+        Thread.sleep(18000)
+        injector.instance[HealthcheckPlugin].reportStop()
+        println("[announceStopping] moving on")
       } catch {
         case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
       }
-      println(s"=========== done announcing service stop $this via shutdown hook")
     }
-  })
-
-  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
-    val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-    val stopMessage = "<<<<<<<<<< Stopping " + this
-    println(stopMessage)
-    log.info(stopMessage)
     try {
-      if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.instance[HealthcheckPlugin].reportStop()
+      if (mode == Mode.Prod)
       injector.instance[AppScope].onStop(app)
     } catch {
       case e: Throwable =>
@@ -178,15 +180,23 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         e.printStackTrace
         log.error(errorMessage, e)
     } finally {
-      if (app.mode == Mode.Prod) {
+      if (mode == Mode.Prod) {
         println("<<<<<< about to pause and let the system shut down")
-        new Exception("Just Tracing shotdown hook").printStackTrace()
-        Thread.sleep(21000)
+        Thread.sleep(3000)
         println("<<<<<< done sleeping, continue with termination")
         log.info("<<<<<< done sleeping, continue with termination")
       }
-      serviceDiscovery.unRegister()
     }
+    announcedStopping = true
+  }
+
+  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+    val serviceDiscovery = injector.instance[ServiceDiscovery]
+    announceStopping(app)
+    val stopMessage = "<<<<<<<<<< Stopping " + this
+    println(stopMessage)
+    log.info(stopMessage)
+    serviceDiscovery.unRegister()
   }
 
   private def allowCrossOrigin(request: RequestHeader, result: Result): Result = {  // for kifi.com/site dev
