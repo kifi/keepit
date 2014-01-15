@@ -301,9 +301,6 @@ kifi.form = (function () {
         email: email,
         password: password
       })
-      .done(function() {
-        animation.success();
-      })
       .done(function(resp) {
         if ($('html').data('kifi-ext')) {
           setTimeout(function() {
