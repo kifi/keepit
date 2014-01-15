@@ -103,7 +103,7 @@ private[social] class SocialGraphActor @Inject() (
   }
 
   private def markGraphImportUserValue(userId: Id[User], networkType: SocialNetworkType, state: String) = {
-    db.readWrite { implicit session =>
+    db.readWrite(attempts = 3) { implicit session =>
       userValueRepo.setValue(userId, s"import_in_progress_${networkType.name}", state)
     }
   }
