@@ -32,6 +32,10 @@ class SearchConfigExperimentRepoImpl @Inject()(
       (SearchConfigExperiment.apply _, SearchConfigExperiment.unapply _)
   }
 
+  override def deleteCache(model: SearchConfigExperiment)(implicit session: RSession): Unit = {
+    cache.remove(ActiveExperimentsKey)
+  }
+
   def getActive()(implicit session: RSession): Seq[SearchConfigExperiment] = {
     cache.getOrElseUpdate {
       (for (v <- table if v.state === SearchConfigExperimentStates.ACTIVE) yield v).list

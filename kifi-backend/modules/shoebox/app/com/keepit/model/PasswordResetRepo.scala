@@ -40,6 +40,8 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ token ~ usedAt.? ~ usedByIP.? ~ sentTo.? <> (PasswordReset, PasswordReset.unapply _)
   }
 
+  override def deleteCache(model: PasswordReset)(implicit session: RSession): Unit = {}
+
   def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset] =
     if (getPotentiallyExpired) {
       (for(f <- table if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list

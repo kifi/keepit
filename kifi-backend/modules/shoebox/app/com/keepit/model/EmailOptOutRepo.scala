@@ -34,6 +34,8 @@ class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
     def * = id.? ~ createdAt ~ updatedAt ~ address ~ category ~ state <> (EmailOptOut, EmailOptOut.unapply _)
   }
 
+  override def deleteCache(model: EmailOptOut)(implicit session: RSession): Unit = {}
+
   def getByEmailAddress(address: EmailAddressHolder, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut] = {
     (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
   }

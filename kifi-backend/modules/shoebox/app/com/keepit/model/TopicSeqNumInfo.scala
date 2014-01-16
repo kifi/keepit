@@ -45,6 +45,8 @@ abstract class TopicSeqNumInfoRepoBase(
     def * = id.? ~ createdAt ~ updatedAt ~ uriSeq ~ bookmarkSeq <> (TopicSeqNumInfo.apply _, TopicSeqNumInfo.unapply _)
   }
 
+  override def deleteCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
+
   def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)] = {
     (for( r <- table ) yield (r.uriSeq, r.bookmarkSeq)).firstOption
   }
