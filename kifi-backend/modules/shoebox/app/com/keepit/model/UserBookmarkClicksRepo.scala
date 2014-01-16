@@ -30,6 +30,7 @@ class UserBookmarkClicksRepoImpl @Inject()(
   }
 
   override def deleteCache(model: UserBookmarkClicks)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: UserBookmarkClicks)(implicit session: RSession): Unit = {}
 
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks] = {
     (for( r<- table if (r.userId === userId && r.uriId === uriId) ) yield r).firstOption

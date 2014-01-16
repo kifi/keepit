@@ -32,6 +32,7 @@ class FailedContentCheckRepoImpl @Inject()(
   }
 
   override def deleteCache(model: FailedContentCheck)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: FailedContentCheck)(implicit session: RSession): Unit = {}
 
   private def sortUrls(url1: String, url2: String): (String, String) = if (url1.compareTo(url2) < 0) (url1, url2) else (url2, url1)
 

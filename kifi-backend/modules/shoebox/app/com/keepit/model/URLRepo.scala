@@ -30,6 +30,7 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extend
   }
 
   override def deleteCache(model: URL)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: URL)(implicit session: RSession): Unit = {}
 
   def get(url: String)(implicit session: RSession): Option[URL] =
     (for(u <- table if u.url === url && u.state === URLStates.ACTIVE) yield u).firstOption

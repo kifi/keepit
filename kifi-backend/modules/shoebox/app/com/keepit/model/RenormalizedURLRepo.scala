@@ -41,6 +41,7 @@ class RenormalizedURLRepoImpl @Inject()(
   }
 
   override def deleteCache(model: RenormalizedURL)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: RenormalizedURL)(implicit session: RSession): Unit = {}
 
   def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[RenormalizedURL])(implicit session: RSession): Seq[RenormalizedURL] = {
     val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list

@@ -46,6 +46,7 @@ abstract class TopicSeqNumInfoRepoBase(
   }
 
   override def deleteCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
 
   def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)] = {
     (for( r <- table ) yield (r.uriSeq, r.bookmarkSeq)).firstOption

@@ -26,6 +26,7 @@ class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent, val clock:
     def * = id.? ~ createdAt ~ updatedAt ~ uri1Id ~ uri2Id ~ percentMatch ~ state <> (DuplicateDocument, DuplicateDocument.unapply _)
   }
 
+  override def invalidateCache(model: DuplicateDocument)(implicit session: RSession): Unit = {}
   override def deleteCache(model: DuplicateDocument)(implicit session: RSession): Unit = {}
 
   def getActive(page: Int = 0, size: Int = 50)(implicit session: RSession): Seq[DuplicateDocument] = {

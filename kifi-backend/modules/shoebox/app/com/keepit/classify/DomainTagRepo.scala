@@ -29,6 +29,7 @@ class DomainTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) e
   }
 
   override def deleteCache(model: DomainTag)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: DomainTag)(implicit session: RSession): Unit = {}
 
   def getTags(tagIds: Seq[Id[DomainTag]], excludeState: Option[State[DomainTag]] = Some(DomainTagStates.INACTIVE))
       (implicit session: RSession): Seq[DomainTag] =

@@ -92,6 +92,7 @@ class NonUserThreadRepoImpl @Inject() (
   }
 
   override def deleteCache(model: NonUserThread)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: NonUserThread)(implicit session: RSession): Unit = {}
 
   def getThreadsByEmail(emailAddress: EmailAddressHolder)(implicit session: RSession): Seq[Id[MessageThread]] =
     (for (row <- table if row.emailAddress === emailAddress) yield row.threadId).list
