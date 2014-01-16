@@ -52,6 +52,10 @@ class FriendRequestRepoImpl @Inject() (
     friendRequestCountCache.remove(FriendRequestCountKey(request.recipientId))
   }
 
+  override def deleteCache(model: FriendRequest)(implicit session: RSession): Unit = {
+    friendRequestCountCache.remove(FriendRequestCountKey(model.recipientId))
+  }
+
   def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int = {
     friendRequestCountCache.getOrElse(FriendRequestCountKey(userId)) {
       Query(

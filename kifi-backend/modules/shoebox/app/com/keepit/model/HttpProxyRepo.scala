@@ -40,6 +40,11 @@ class HttpProxyRepoImpl @Inject() (
     allMemCache = None
   }
 
+  override def deleteCache(model: HttpProxy)(implicit session: RSession): Unit = {
+    httpProxyAllCache.remove(HttpProxyAllKey())
+    allMemCache = None
+  }
+
   def allActive()(implicit session: RSession): Seq[HttpProxy] =
     allMemCache.getOrElse {
       val result = httpProxyAllCache.getOrElse(HttpProxyAllKey()) {

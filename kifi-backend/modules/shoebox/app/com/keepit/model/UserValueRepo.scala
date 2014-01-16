@@ -48,6 +48,10 @@ class UserValueRepoImpl @Inject() (
     valueCache.remove(UserValueKey(userValue.userId, userValue.name))
   }
 
+  override def deleteCache(userValue: UserValue)(implicit session: RSession): Unit = {
+    valueCache.remove(UserValueKey(userValue.userId, userValue.name))
+  }
+
   def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] =
     valueCache.getOrElseOpt(UserValueKey(userId, name)) { getUserValue(userId, name).map(_.value) }
 

@@ -9,7 +9,6 @@
     "128": "icons/kifi.128.png",
     "256": "icons/kifi.256.png"
   },
-  "options_page": "options.html",
   "page_action": {
     "default_icon": {
       "38": "icons/k_gray.png"

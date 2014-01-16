@@ -31,6 +31,9 @@ class FailedContentCheckRepoImpl @Inject()(
     def * = id.? ~ createdAt ~ updatedAt ~ url1Hash ~ url2Hash ~ url1 ~ url2 ~ state ~ counts ~ lastContentCheck <> (FailedContentCheck.apply _, FailedContentCheck.unapply _)
   }
 
+  override def deleteCache(model: FailedContentCheck)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: FailedContentCheck)(implicit session: RSession): Unit = {}
+
   private def sortUrls(url1: String, url2: String): (String, String) = if (url1.compareTo(url2) < 0) (url1, url2) else (url2, url1)
 
   def getByUrls(url1: String, url2: String)(implicit session: RSession): Option[FailedContentCheck] = {

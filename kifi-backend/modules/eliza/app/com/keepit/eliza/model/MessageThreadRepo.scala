@@ -58,6 +58,10 @@ class MessageThreadRepoImpl @Inject() (
     threadExternalIdCache.set(MessageThreadExternalIdKey(thread.externalId), thread)
   }
 
+  override def deleteCache(thread: MessageThread)(implicit session: RSession): Unit = {
+    threadExternalIdCache.remove(MessageThreadExternalIdKey(thread.externalId))
+  }
+
   override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())
 
   def getOrCreate(userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
