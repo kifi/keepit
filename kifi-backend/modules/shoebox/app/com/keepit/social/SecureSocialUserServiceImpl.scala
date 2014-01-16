@@ -27,8 +27,6 @@ import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
 import com.keepit.commanders.UserCommander
-import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
-import com.keepit.abook.EmailParserUtils
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -112,11 +110,8 @@ class SecureSocialUserPluginImpl @Inject() (
       }
 
       val emailAddresses = emailRepo.getAllByUser(userId)
-      for (e <- emailAddresses filter (_.isTestEmail()) headOption) {
-        setExp(ExperimentType.FAKE)
-        if (e.isAutoGenEmail())
-          setExp(ExperimentType.AUTO_GEN)
-      }
+      val testExperiments = emailAddresses.flatMap(ExperimentType.getTestExperiments)
+      testExperiments.foreach(setExp)
     }
   }
 
@@ -129,10 +124,9 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def newUserState: State[User] = UserStates.ACTIVE // This is the default user state for new accounts
 
-  private def createUser(identity: Identity, isComplete: Boolean): User = timing(s"create user ${identity.identityId}") {
+  private def createUser(socialUser: SocialUser, isComplete: Boolean): User = timing(s"create user ${identity.identityId}") {
     val u = userCommander.createUser(
-      firstName = identity.firstName,
-      lastName = identity.lastName,
+      socialUser,
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")

@@ -70,6 +70,14 @@ object ExperimentType {
     else if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
+
+  def getTestExperiments(email: EmailAddress): Set[ExperimentType] = {
+    if (email.isTestEmail()) {
+      if (email.isAutoGenEmail()) Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
+      else Set(ExperimentType.FAKE)
+    } else
+      Set.empty
+  }
 }
 
 object UserExperimentStates extends States[UserExperiment] {

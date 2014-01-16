@@ -182,26 +182,28 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User]) = {
-    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
+  def createUser(socialUser: SocialUser, state: State[User]) = {
+    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = socialUser.firstName, lastName = socialUser.lastName, state = state)) }
     SafeFuture {
       val contextBuilder = eventContextBuilder()
-      contextBuilder += ("action", "registered")
-      // more properties to be added after some refactoring in SecureSocialUserServiceImpl
-      // requestInfo ???
-      // val socialUser: SocialUser = ???
-      // contextBuilder += ("identityProvider", socialUser.identityId.providerId)
-      // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
-      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
-    }
-    SafeFuture {
-      createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
+      socialUser.email.foreach { address =>
+        val testExperiments = ExperimentType.getTestExperiments(EmailAddress(userId = newUser.id.get, address = address))
+        contextBuilder.addExperiments(testExperiments)
+      }
+
+      createDefaultKeeps(newUser.id.get)(contextBuilder.build)
+
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
-      Unit
+
+      contextBuilder += ("action", "registered")
+      contextBuilder += ("identityId", socialUser.identityId.userId)
+      contextBuilder += ("identityProvider", socialUser.identityId.providerId)
+      contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
+      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
     newUser
   }
