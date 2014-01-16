@@ -10,6 +10,7 @@ import com.keepit.model._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.logging.Logging
 
 case class NetworkInfo(profileUrl: Option[String], connected: Boolean)
 
@@ -26,7 +27,7 @@ class NetworkInfoLoader @Inject() (
   db: Database,
   userRepo: UserRepo,
   socialConnectionRepo: SocialConnectionRepo,
-  socialUserInfoRepo: SocialUserInfoRepo) {
+  socialUserInfoRepo: SocialUserInfoRepo) extends Logging {
 
   def load(mySocialUsers: Seq[SocialUserInfo], friendId: Id[User]): Map[SocialNetworkType, NetworkInfo] = timing(s"loadNetworkInfo friendId($friendId) mySocialUsers:(len=${mySocialUsers.length})") {
     db.readOnly { implicit s =>
