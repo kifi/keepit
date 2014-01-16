@@ -1222,7 +1222,6 @@ function searchOnServer(request, respond) {
     resp.filter = request.filter;
     resp.session = session;
     resp.admBaseUri = admBaseUri();
-    resp.showScores = api.prefs.get('showScores');
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.othersTotal = resp.othersTotal || 0;
