@@ -21,18 +21,6 @@
         {"value": "development", "label": "Development"}],
       "name": "env",
       "value": "production"
-    },
-    {
-      "title": "Show slider automatically",
-      "type": "bool",
-      "name": "showSlider",
-      "value": true
-    },
-    {
-      "title": "Show search result scores",
-      "type": "bool",
-      "name": "showScores",
-      "value": false
     }
   ]
 }

@@ -1222,7 +1222,6 @@ function searchOnServer(request, respond) {
     resp.filter = request.filter;
     resp.session = session;
     resp.admBaseUri = admBaseUri();
-    resp.showScores = api.prefs.get('showScores');
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.othersTotal = resp.othersTotal || 0;
@@ -1360,7 +1359,7 @@ function kififyWithPageData(tab, d) {
       } else if (ruleSet.rules.shown && d.shown) {
         log("[initTab]", tab.id, "shown before")();
       } else {
-        if (api.prefs.get("showSlider") && ruleSet.rules.scroll) {
+        if (ruleSet.rules.scroll) {
           api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
         }
         tab.autoShowSec = (ruleSet.rules.focus || [])[0];
@@ -1662,21 +1661,17 @@ function getPrefetched(request, cb) {
 function scheduleAutoShow(tab) {
   log("[scheduleAutoShow] scheduling tab:", tab.id)();
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
-  if (api.prefs.get("showSlider")) {
-    tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
-      delete tab.autoShowSec;
-      delete tab.autoShowTimer;
-      if (api.prefs.get("showSlider")) {
-        log("[autoShow]", tab.id)();
-        api.tabs.emit(tab, "auto_show", null, {queue: 1});
-      }
-    }, tab.autoShowSec * 1000);
-  }
+  tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
+    delete tab.autoShowSec;
+    delete tab.autoShowTimer;
+    log('[autoShow]', tab.id)();
+    api.tabs.emit(tab, 'auto_show', null, {queue: 1});
+  }, tab.autoShowSec * 1000);
 }
 
 function compilePatterns(arr) {
   for (var i = 0; i < arr.length; i++) {
-    arr[i] = new RegExp(arr[i], "");
+    arr[i] = new RegExp(arr[i], '');
   }
   return arr;
 }

@@ -44,8 +44,8 @@ object ExperimentType {
   val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val DEMO = ExperimentType("demo")
-  val TSEARCH = ExperimentType("tsearch")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
+  val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
 
   val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE)
   val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
@@ -61,8 +61,8 @@ object ExperimentType {
     case CAN_CONNECT.value => CAN_CONNECT
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
     case DEMO.value => DEMO
-    case TSEARCH.value => TSEARCH
     case EXTENSION_LOGGING.value => EXTENSION_LOGGING
+    case SHOW_HIT_SCORES.value => SHOW_HIT_SCORES
   }
 
   def getUserStatus(experiments: Set[ExperimentType]): String =
