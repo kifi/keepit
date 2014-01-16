@@ -10,6 +10,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.Play._
+import com.keepit.common.controller.MidFlightRequests
 
 trait HttpClientModule extends ScalaModule
 
@@ -26,6 +27,6 @@ case class ProdHttpClientModule() extends HttpClientModule {
 
   @Provides
   def httpClientProvider(airbrake: Provider[AirbrakeNotifier],
-        accessLog: AccessLog, serviceDiscovery: ServiceDiscovery, fastJsonParser: FastJsonParser): HttpClient =
-    new HttpClientImpl(airbrake = airbrake, accessLog = accessLog, serviceDiscovery = serviceDiscovery, fastJsonParser = fastJsonParser)
+        accessLog: AccessLog, serviceDiscovery: ServiceDiscovery, fastJsonParser: FastJsonParser, midFlightRequests: MidFlightRequests): HttpClient =
+    new HttpClientImpl(airbrake = airbrake, accessLog = accessLog, serviceDiscovery = serviceDiscovery, fastJsonParser = fastJsonParser, midFlightRequests = midFlightRequests)
 }
