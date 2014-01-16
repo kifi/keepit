@@ -51,6 +51,8 @@
 		$date.text(days);
 	}
 
+	var EMAIL_REGEX = /^[^@]+@[^@]+$/;
+
 	$('form').on('submit', function (e) {
 		e.preventDefault();
 		var $form = $(this);
@@ -58,6 +60,12 @@
 		$.each($form.serializeArray(), function (i, field) {
 			data[field.name] = field.value || void 0;
 		});
+		var email = data.email = $.trim(data.email);
+		if (!EMAIL_REGEX.test(email)) {
+			win.alert('Invalid email address');
+			return;
+		}
+		
 		$.ajax({
 			url: '/waitlist',
 			type: 'POST',
