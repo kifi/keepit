@@ -3425,19 +3425,18 @@ body[data-view=search] .main-keeps {
   -webkit-font-smoothing: antialiased;
 }
 
-.keep.example {
-  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=75)";
-  filter: alpha(opacity=75);
-  -webkit-opacity: 0.75;
-  -moz-opacity: 0.75;
-  -khtml-opacity: 0.75;
-  opacity: 0.75;
+.keep.example .keep-title a {
+  color: #66b8e6;
 }
 
 .keep-url {
   font-size: 12px;
   line-height: 14px;
   color: #99a3b3;
+}
+
+.keep.example .keep-url {
+  color: #c6cbd3;
 }
 
 .keep-colls {
@@ -3487,7 +3486,7 @@ body[data-view=search] .main-keeps {
 }
 
 .keep-coll.example .keep-coll-a:not(:hover) {
-  color: #bed38c;
+  color: #c3dba8;
 }
 
 .keep-coll-a:not(:hover) {
@@ -3626,7 +3625,7 @@ body[data-view=search] .main-keeps {
   border-radius: 2px;
   margin-right: 4px;
   color: white;
-  background-color: #bed38c;
+  background-color: #c3dba8;
 }
 
 .keep.example .example-tag {
