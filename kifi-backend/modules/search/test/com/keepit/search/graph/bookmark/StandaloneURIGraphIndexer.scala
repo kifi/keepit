@@ -15,7 +15,7 @@ class StandaloneURIGraphIndexer(
   bookmarkStore: BookmarkStore,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends URIGraphIndexer(indexDirectory, indexWriterConfig, bookmarkStore, airbrake, shoeboxClient) {
+) extends URIGraphIndexer(indexDirectory, indexWriterConfig, bookmarkStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()

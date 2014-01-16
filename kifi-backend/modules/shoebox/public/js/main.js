@@ -2243,16 +2243,10 @@ $(function () {
 		friendsTimeout = setTimeout(prepInviteTab, 200);
 	}
 
-	var invitesUpdatedAt;
-	function updateInviteCache() {
-		invitesUpdatedAt = Date.now();
-	}
-	updateInviteCache();
 
 	var friendsToShow = FETCH_SIZE;
 	var friendsShowing = [];
 	var moreFriends = true;
-	var invitesLeft;
 	var inviteEmailTemplate = Handlebars.compile($('#invite-email-tpl').html());
 
 	function alignInviteFriends() {
@@ -2284,8 +2278,7 @@ $(function () {
 			limit: limit,
 			after: moreToShow ? lastValue : void 0,
 			search: search,
-			network: network,
-			updatedAt: invitesUpdatedAt
+			network: network
 		};
 
 		log('[prepInviteTab]', opts);
@@ -2363,10 +2356,6 @@ $(function () {
 		})
 		.always(function () {
 			$nwFriendsLoading.hide();
-		});
-		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
-			invitesLeft = invites.left;
-			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
 
@@ -2447,19 +2436,11 @@ $(function () {
 		}
 
 		$noResults.html(html).show();
-		$noResults.find('.refresh-friends').click(function () {
+		$noResults.find('.refresh-friends').click(function (e) {
 			submitForm('/friends/invite/refresh');
+			$(this).removeAttr('href').text('Now refreshing... This may take a few minutes. Please try your search again later.');
 		});
 	}
-
-	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
-	.on('click', '.more-invites', function (e) {
-		e.preventDefault();
-		$noInvitesDialog.dialog('hide');
-		$.postJson('/site/user/needMoreInvites', {}, function (data) {
-			$noInvitesDialog.dialog('hide');
-		});
-	});
 
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function (e) {
@@ -2471,7 +2452,6 @@ $(function () {
 				log('sent invite');
 				$inviteMessageDialog.dialog('hide');
 			}
-			updateInviteCache();
 			prepInviteTab();
 		});
 	}).on('click', '.invite-cancel', function (e) {
@@ -2482,10 +2462,6 @@ $(function () {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
-		if (!invitesLeft) {
-			$noInvitesDialog.dialog('show');
-			return;
-		}
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {

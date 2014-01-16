@@ -285,10 +285,10 @@ var socketHandlers = {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
-  notification: function(n) {  // a new notification (real-time)
-    log("[socket:notification]", n)();
+  notification: function(n, th) {  // a new notification (real-time)
+    log('[socket:notification]', n, th || '')();
     standardizeNotification(n);
-    if (insertNewNotification(n)) {
+    if (insertNewNotification(th ? standardizeNotification(th) : n)) {
       handleRealTimeNotification(n);
       tellVisibleTabsNoticeCountIfChanged();
     }
@@ -903,6 +903,7 @@ function removeNotificationPopups(threadId) {
 function standardizeNotification(n) {
   n.category = (n.category || 'message').toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
+  return n;
 }
 
 function handleRealTimeNotification(n) {
@@ -1232,11 +1233,7 @@ function searchOnServer(request, respond) {
     respond(resp);
   };
 
-  if (session.experiments.indexOf('tsearch') < 0) {
-    ajax("search", "GET", "/search", params, respHandler);
-  } else {
-    ajax("api", "GET", "/tsearch", params, respHandler);
-  }
+  ajax("search", "GET", "/search", params, respHandler);
   return true;
 }
 
@@ -1617,11 +1614,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 });
 
 api.on.beforeSearch.add(throttle(function () {
-  if (session && ~session.experiments.indexOf('tsearch')) {
-    ajax('GET', '/204');
-  } else {
-    ajax('search', 'GET', '/search/warmUp');
-  }
+  ajax('search', 'GET', '/search/warmUp');
 }, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready

@@ -2556,34 +2556,6 @@ input.user-filter {
   position: relative;
 }
 
-.invites-left {
-  position: absolute;
-  right: 6px;
-  bottom: 5px;
-  font-size: 13px;
-  color: #818692;
-  display: none;
-}
-
-.invites-left>.num-invites {
-  display: inline-block;
-  border: 1px solid #b8c5d2;
-  color: #628196;
-  border-radius: 10.5px;
-  padding: 0 12px;
-  vertical-align: baseline;
-  font-size: 12px;
-  line-height: 20px;
-  height: 19px;
-  margin-left: 6px;
-}
-
-@-moz-document url-prefix() {
-  .invites-left>.num-invites {
-    line-height: 19px;
-  }
-}
-
 .invite-name,
 .user-name {
   font-size: 16px;
@@ -3029,32 +3001,6 @@ button.invite-send {
   text-overflow: ellipsis;
   max-width: 200px;
   white-space: nowrap;
-}
-
-.no-invites-dialog>.dialog-content {
-  height: 200px;
-  margin-top: -100px;
-  width: 400px;
-  margin-left: -200px;
-  padding: 20px 30px;
-  color: #66829b;
-}
-
-.no-invites-dialog>.dialog-content>p {
-  margin: 12px 0;
-}
-
-button.more-invites {
-  display: block;
-  font-size: 14px;
-  border: none;
-  outline: none;
-  border-radius: 5px;
-  padding: 8px 12px;
-  margin: 24px auto;
-  background: #6fa6ef;
-  color: white;
-  cursor: pointer;
 }
 
 .no-results {

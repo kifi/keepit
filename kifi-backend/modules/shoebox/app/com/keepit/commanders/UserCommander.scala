@@ -13,12 +13,13 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{EmailParserUtils, ABookServiceClient}
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
+import akka.actor.Scheduler
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -37,7 +38,7 @@ import scala.Some
 
 
 import securesocial.core.{Identity, UserService, Registry, SocialUser}
-
+import play.api.Play
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -101,6 +102,7 @@ class UserCommander @Inject() (
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
+  scheduler: Scheduler,
   elizaServiceClient: ElizaServiceClient,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander) extends Logging {
@@ -193,6 +195,7 @@ class UserCommander @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
     SafeFuture {
+      createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
@@ -234,16 +237,18 @@ class UserCommander @Inject() (
 
       }
 
-      elizaServiceClient.sendGlobalNotification(
-        userIds = toNotify,
-        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
-        linkText = "Invite more friends to Kifi.",
-        linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = imageUrl,
-        sticky = false,
-        category = NotificationCategory.User.FRIEND_JOINED
-      )
+      delaySend {
+        elizaServiceClient.sendGlobalNotification(
+          userIds = toNotify,
+          title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+          body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+          linkText = "Invite more friends to Kifi.",
+          linkUrl = "https://www.kifi.com/friends/invite",
+          imageUrl = imageUrl,
+          sticky = false,
+          category = NotificationCategory.User.FRIEND_JOINED
+        )
+      }
     }
   }
 
@@ -469,16 +474,18 @@ class UserCommander @Inject() (
 
               }
 
-              elizaServiceClient.sendGlobalNotification(
-                userIds = Set(user.id.get),
-                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                linkText = "Invite more friends to kifi",
-                linkUrl = "https://www.kifi.com/friends/invite",
-                imageUrl = respondingUserImage,
-                sticky = false,
-                category = NotificationCategory.User.FRIEND_ACCEPTED
-              )
+              delaySend {
+                elizaServiceClient.sendGlobalNotification(
+                  userIds = Set(user.id.get),
+                  title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                  body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                  linkText = "Invite more friends to kifi",
+                  linkUrl = "https://www.kifi.com/friends/invite",
+                  imageUrl = respondingUserImage,
+                  sticky = false,
+                  category = NotificationCategory.User.FRIEND_ACCEPTED
+                )
+              }
 
             }
 
@@ -519,7 +526,6 @@ class UserCommander @Inject() (
                 sticky = false,
                 category = NotificationCategory.User.FRIEND_REQUEST
               )
-
             }
 
             (true, "sentRequest")
@@ -591,6 +597,14 @@ class UserCommander @Inject() (
       userCache.remove(SocialUserInfoUserKey(userId))
       val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
       (Some(newLoginUser), "disconnected")
+    }
+  }
+
+
+  def delaySend(f: => Unit) = {
+    import scala.concurrent.duration._
+    scheduler.scheduleOnce(5 seconds) {
+      f
     }
   }
 

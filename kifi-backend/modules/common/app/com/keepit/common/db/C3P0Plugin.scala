@@ -13,6 +13,7 @@ import java.sql.Connection
 import play.api.libs.JNDI
 import com.mchange.v2.c3p0.DataSources
 import play.api.Mode
+import com.keepit.FortyTwoGlobal
 
 class C3P0Plugin(app: Application) extends DBPlugin{
   lazy val dbConfig = app.configuration.getConfig("db").getOrElse(Configuration.empty)

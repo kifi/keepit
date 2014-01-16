@@ -42,21 +42,27 @@ module.exports = function (grunt) {
 		// Store your Package file so you can reference its specific data whenever necessary
 		pkg: grunt.file.readJSON('package.json'),
 
+		p: {
+			client: 'public',
+			js: 'public/js',
+			css: 'public/css'
+		},
+
 		src: {
 			kifi: [
-				'js/**/*.js',
-				'!js/**/*.min.js',
-				'!js/**/jquery*',
-				'!js/handlebars*',
-				'!js/tempo*',
-				'!js/antiscroll*'
+				'<%= p.js %>/**/*.js',
+				'!<%= p.js %>/**/*.min.js',
+				'!<%= p.js %>/**/jquery*',
+				'!<%= p.js %>/handlebars*',
+				'!<%= p.js %>/tempo*',
+				'!<%= p.js %>/antiscroll*'
 			],
 			minify: [
-				'js/util.js',
-				'js/scorefilter.js',
-				'js/kifi.js',
-				'js/main.js',
-				'js/track.js'
+				'<%= p.js %>/util.js',
+				'<%= p.js %>/scorefilter.js',
+				'<%= p.js %>/kifi.js',
+				'<%= p.js %>/main.js',
+				'<%= p.js %>/track.js'
 			]
 		},
 
@@ -126,22 +132,22 @@ module.exports = function (grunt) {
 		less: {
 			statics: {
 				options: {
-					paths: ['css'],
+					paths: ['<%= p.css %>'],
 					compress: true,
 					cleancss: true
 				},
 				files: {
-					'css/landing.css': 'css/landing.less',
-					'css/about.css': 'css/about.less',
-					'css/privacy.css': 'css/privacy.less',
-					'css/auth.css': 'css/auth.less',
-					'css/footer.css': 'css/footer.less',
-					'css/auth-header.css': 'css/auth-header.less',
-					'css/auth-footer.css': 'css/auth-footer.less',
-					'css/onboarding.css': 'css/onboarding.less',
-					'css/landing-mobile.css': 'css/landing-mobile.less',
-					'css/unsupported-footer.css': 'css/unsupported-footer.less',
-					'css/unsupported.css': 'css/unsupported.less'
+					'<%= p.css %>/landing.css': '<%= p.css %>/landing.less',
+					'<%= p.css %>/about.css': '<%= p.css %>/about.less',
+					'<%= p.css %>/privacy.css': '<%= p.css %>/privacy.less',
+					'<%= p.css %>/auth.css': '<%= p.css %>/auth.less',
+					'<%= p.css %>/footer.css': '<%= p.css %>/footer.less',
+					'<%= p.css %>/auth-header.css': '<%= p.css %>/auth-header.less',
+					'<%= p.css %>/auth-footer.css': '<%= p.css %>/auth-footer.less',
+					'<%= p.css %>/onboarding.css': '<%= p.css %>/onboarding.less',
+					'<%= p.css %>/landing-mobile.css': '<%= p.css %>/landing-mobile.less',
+					'<%= p.css %>/unsupported-footer.css': '<%= p.css %>/unsupported-footer.less',
+					'<%= p.css %>/unsupported.css': '<%= p.css %>/unsupported.less'
 				}
 			}
 		},
@@ -206,7 +212,7 @@ module.exports = function (grunt) {
 				tasks: 'default'
 			},
 			statics: {
-				files: ['css/*.less'],
+				files: ['<%= p.css %>/*.less'],
 				tasks: 'less:statics'
 			}
 		}

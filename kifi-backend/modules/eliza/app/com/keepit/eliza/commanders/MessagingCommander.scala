@@ -700,9 +700,9 @@ class MessagingCommander @Inject() (
           }
           Future.sequence(newParticipants.map { userId =>
             recreateNotificationForAddedParticipant(userId, thread)
-          }) map { permanentNotification =>
+          }) map { permanentNotifications =>
 
-            newParticipants.map { userId =>
+            newParticipants.zip(permanentNotifications) map { case (userId, permanentNotification) =>
               notificationRouter.sendToUser(
                 userId,
                 Json.arr("notification", notificationJson, permanentNotification)

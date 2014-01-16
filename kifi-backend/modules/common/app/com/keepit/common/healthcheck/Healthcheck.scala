@@ -194,7 +194,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.System.HEALTHCHECK)
+        category = NotificationCategory.System.HEALTHCHECK)
     if (!isCanary) {
       actor.ref ! email
     }
@@ -206,7 +206,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = PostOffice.Categories.System.HEALTHCHECK)
+        category = NotificationCategory.System.HEALTHCHECK)
     if (!isCanary) {
       actor.ref ! email
     }

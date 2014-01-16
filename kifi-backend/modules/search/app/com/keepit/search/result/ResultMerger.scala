@@ -161,7 +161,7 @@ object ResultMerger {
     jsons.foreach{ json =>
       val scores = (json \ "scores").as[Seq[Float]]
       scores.foreach{ sc =>
-        friendStats.add(ids(i), sc)
+        friendStats.add(idBuf(i), sc)
         i += 1
       }
     }

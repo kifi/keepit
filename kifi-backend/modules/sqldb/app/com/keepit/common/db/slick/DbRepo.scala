@@ -119,7 +119,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exsactly one")
+    if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
     model
   }
 

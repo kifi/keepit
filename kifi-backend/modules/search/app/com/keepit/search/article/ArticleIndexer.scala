@@ -11,12 +11,9 @@ import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.semantic.SemanticVectorBuilder
-import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import com.google.inject.Inject
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.Success
 import com.keepit.search.article.ArticleRecordSerializer._
 import com.keepit.search.index.IndexDirectory
@@ -32,8 +29,7 @@ class ArticleIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   import ArticleIndexer.ArticleIndexable
@@ -49,16 +45,14 @@ class ArticleIndexer(
 
   def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     doUpdate("ArticleIndex" + name) {
+      uris.foreach{ u =>
+        if (!shard.contains(u.id.get)) throw new Exception(s"URI (id=${u.id.get}) does not belong to this shard ($shard)")
+      }
       uris.iterator.map(buildIndexable)
     }
   }
 
   def update(): Int = throw new UnsupportedOperationException()
-
-  def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 30 seconds)
-    buildIndexable(IndexableUri(uri))
-  }
 
   def buildIndexable(uri: IndexableUri): ArticleIndexable = {
     new ArticleIndexable(

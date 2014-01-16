@@ -14,10 +14,7 @@ import com.keepit.search.index._
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
-import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.{Success, Try}
 import scala.math._
 import com.keepit.search.graph.URIList
@@ -50,8 +47,7 @@ class URIGraphIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable

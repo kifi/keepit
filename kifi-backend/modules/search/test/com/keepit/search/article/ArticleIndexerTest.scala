@@ -257,7 +257,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
 
       store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
 
-      val doc = indexer.buildIndexable(uri1.id.get).buildDocument
+      val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
       doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 
