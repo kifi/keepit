@@ -153,7 +153,7 @@ class Database @Inject() (
       var successCnt = 0
       var failure: Failure[T] = null
       val results = batch.foldLeft(Map.empty[D, Try[T]]) { (results, item) =>
-        val oneResult = if (failure != null) {
+        val oneResult = if (failure == null) {
           Try(rw.withTransaction { f(rw, item) }) match {
             case s: Success[T] => successCnt += 1; s
             case f: Failure[T] => failure = f; f
