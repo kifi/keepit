@@ -21,6 +21,7 @@ import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
+import com.keepit.search.graph.SortedBookmarks
 
 object URIGraphFields {
   val userField = "usr"
@@ -32,6 +33,8 @@ object URIGraphFields {
   val stemmedField = "title_stemmed"
   val siteField = "site"
   val homePageField = "home_page"
+
+  val PRIVATE_LIST_MAX_SIZE = 5000
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
@@ -125,7 +128,8 @@ object URIGraphIndexer {
 
     override def buildDocument = {
       val doc = super.buildDocument
-      val (publicBookmarks, privateBookmarks) = URIList.sortBookmarks(bookmarks)
+      val (publicBookmarks, rawPrivateBookmarks) = URIList.sortBookmarks(bookmarks)
+      val privateBookmarks = new SortedBookmarks(rawPrivateBookmarks.toSeq.take(URIGraphFields.PRIVATE_LIST_MAX_SIZE))
       val publicListBytes = URIList.toByteArray(publicBookmarks)
       val privateListBytes = URIList.toByteArray(privateBookmarks)
       val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)
