@@ -25,12 +25,6 @@ import MessagingTypeMappers._
 import com.keepit.common.mail.{PostOffice, ElectronicMailCategory}
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
-case class NotificationCategory(category: String)
-object NotificationCategory {
-  implicit def fromElectronicMailCategory(emailCategory: ElectronicMailCategory): NotificationCategory = NotificationCategory(emailCategory.category)
-  val GLOBAL = NotificationCategory("global")
-  val MESSAGE = NotificationCategory("message")
-}
 
 case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 

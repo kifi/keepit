@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.zookeeper.{DiscoveryModule, ServiceDiscovery}
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Provides
 import com.keepit.inject.AppScoped
@@ -23,7 +23,7 @@ case class ProdAirbrakeModule() extends AirbrakeModule {
 
   @Provides
   def airbrakeProvider(actor: ActorInstance[AirbrakeNotifierActor]): AirbrakeNotifier = {
-    new AirbrakeNotifierImpl(actor)
+    new AirbrakeNotifierImpl(actor, DiscoveryModule.isCanary)
   }
 
 }

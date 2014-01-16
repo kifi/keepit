@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import com.keepit.common.db.State
 import com.keepit.model.UserStates._
 import com.keepit.model.ExperimentType
+import com.keepit.search.IndexInfo
 
 
 object UserIndexer {
@@ -55,6 +56,10 @@ class UserIndexer(
       }
     }
     total
+  }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("UserIndex" + name)
   }
 
   case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType])

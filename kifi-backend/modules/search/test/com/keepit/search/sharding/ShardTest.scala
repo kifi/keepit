@@ -11,10 +11,10 @@ class ShardTest extends Specification {
 
     "generate correct indexn name suffix" in {
       shard(0, 1).indexNameSuffix === ""
-      shard(0, 5).indexNameSuffix === "_0of5"
-      shard(1, 5).indexNameSuffix === "_1of5"
-      shard(2, 5).indexNameSuffix === "_2of5"
-      shard(3, 10).indexNameSuffix === "_3of10"
+      shard(0, 5).indexNameSuffix === "_0_5"
+      shard(1, 5).indexNameSuffix === "_1_5"
+      shard(2, 5).indexNameSuffix === "_2_5"
+      shard(3, 10).indexNameSuffix === "_3_10"
     }
 
     "determine if an id belongs to it" in {

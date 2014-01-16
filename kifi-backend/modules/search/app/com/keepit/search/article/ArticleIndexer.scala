@@ -11,12 +11,9 @@ import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.semantic.SemanticVectorBuilder
-import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import com.google.inject.Inject
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.Success
 import com.keepit.search.article.ArticleRecordSerializer._
 import com.keepit.search.index.IndexDirectory
@@ -32,8 +29,7 @@ class ArticleIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   import ArticleIndexer.ArticleIndexable
@@ -41,44 +37,22 @@ class ArticleIndexer(
   override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
   override val commitBatchSize = 1000
-  private val fetchSize = 2000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
     airbrake.notify(s"Error indexing article from normalized uri ${indexable.id}", e)
     super.onFailure(indexable, e)
   }
 
-  def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = {
+  def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     doUpdate("ArticleIndex" + name) {
+      uris.foreach{ u =>
+        if (!shard.contains(u.id.get)) throw new Exception(s"URI (id=${u.id.get}) does not belong to this shard ($shard)")
+      }
       uris.iterator.map(buildIndexable)
     }
   }
 
-  def update(): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
-
-    var total = 0
-    var done = false
-    while (!done) {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
-      done = uris.isEmpty
-      total += update("", uris, Shard(0,1))
-    }
-    total
-  }
-  def update(fsize: Int): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
-
-    doUpdate("ArticleIndex") {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
-      uris.iterator.map(buildIndexable)
-    }
-  }
-
-  def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 30 seconds)
-    buildIndexable(IndexableUri(uri))
-  }
+  def update(): Int = throw new UnsupportedOperationException()
 
   def buildIndexable(uri: IndexableUri): ArticleIndexable = {
     new ArticleIndexable(

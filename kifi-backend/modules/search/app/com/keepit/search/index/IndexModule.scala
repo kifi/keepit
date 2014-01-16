@@ -79,7 +79,7 @@ trait IndexModule extends ScalaModule with Logging {
       val dir = getIndexDirectory("index.article.directory", shard, backup)
       log.info(s"storing ArticleIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-      new ArticleIndexer(dir, config, articleStore, airbrake, shoeboxClient)
+      new ArticleIndexer(dir, config, articleStore, airbrake)
     }
 
     val indexShards = activeShards.shards.map{ shard => (shard, articleIndexer(shard)) }
@@ -93,13 +93,13 @@ trait IndexModule extends ScalaModule with Logging {
       val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
       log.info(s"storing BookmarkStore${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-      new BookmarkStore(dir, config, airbrake, shoeboxClient)
+      new BookmarkStore(dir, config, airbrake)
     }
     def uriGraphIndexer(shard: Shard[NormalizedURI], store: BookmarkStore): URIGraphIndexer = {
       val dir = getIndexDirectory("index.urigraph.directory", shard, backup)
       log.info(s"storing URIGraphIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-      new URIGraphIndexer(dir, config, store, airbrake, shoeboxClient)
+      new URIGraphIndexer(dir, config, store, airbrake)
     }
 
     val indexShards = activeShards.shards.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
@@ -113,13 +113,13 @@ trait IndexModule extends ScalaModule with Logging {
       val dir = getIndexDirectory("index.collectionName.directory", shard, backup)
       log.info(s"storing CollectionNameIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-      new CollectionNameIndexer(dir, config, airbrake, shoeboxClient)
+      new CollectionNameIndexer(dir, config, airbrake)
     }
     def collectionIndexer(shard: Shard[NormalizedURI], collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
       val dir = getIndexDirectory("index.collection.directory", shard, backup)
       log.info(s"storing CollectionIndex${shard.indexNameSuffix} in $dir")
       val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-      new CollectionIndexer(dir, config, collectionNameIndexer, airbrake, shoeboxClient)
+      new CollectionIndexer(dir, config, collectionNameIndexer, airbrake)
     }
 
     val indexShards = activeShards.shards.map{ shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }

@@ -426,6 +426,10 @@ exports.tabs = {
   get: function(pageId) {
     return pages[pageId];
   },
+  getFocused: function () {
+    var tab = tabs.activeTab;
+    return tab ? pages[tab.id] : null;
+  },
   isFocused: function(page) {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;

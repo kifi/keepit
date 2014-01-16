@@ -170,39 +170,60 @@ var pane = pane || function () {  // idempotent for Chrome
           });
         });
       })
+      .on("dragstart", ".kifi-pane-top-menu-a", function (e) {
+        e.preventDefault();
+      })
       .on("mousedown", ".kifi-pane-top-menu-a", function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
-        var $sett = $(this).addClass("kifi-active");
-        var $menu = $sett.next(".kifi-pane-top-menu").fadeIn(50);
-        var $items = $menu.find('.kifi-pane-top-menu-item')
-          .on("mouseenter", enterItem)
-          .on("mouseleave", leaveItem);
+        var $a = $(this).addClass('kifi-active');
+        var $menu = $a.next('.kifi-pane-top-menu').fadeIn(50)
+          .on('mouseover', '.kifi-pane-top-menu-item', enterItem)
+          .on('mouseout', '.kifi-pane-top-menu-item', leaveItem)
+          .on('kifi:hide', hide);
         document.addEventListener("mousedown", docMouseDown, true);
-        $menu.on("kifi:hide", hide);
         // .kifi-hover class needed because :hover does not work during drag
-        function enterItem() { $(this).addClass("kifi-hover"); }
-        function leaveItem() { $(this).removeClass("kifi-hover"); }
+        function enterItem(e) {
+          $(e.target).closest('.kifi-pane-top-menu-item').addClass('kifi-hover');
+        }
+        function leaveItem(e) {
+          for (var $item = $(e.target); ($item = $item.closest('.kifi-pane-top-menu-item')).length; $item = $item.parent()) {
+            if (!e.relatedTarget || !$item[0].contains(e.relatedTarget)) {
+              $item.removeClass('kifi-hover');
+            }
+          }
+        }
         function docMouseDown(e) {
           if (!$menu[0].contains(e.target)) {
-            $menu.triggerHandler("kifi:hide");
-            if ($sett[0] === e.target) {
+            $menu.triggerHandler('kifi:hide');
+            if ($a[0] === e.target) {
               e.stopPropagation();
             }
           }
         }
         function hide() {
           document.removeEventListener("mousedown", docMouseDown, true);
-          $sett.removeClass("kifi-active");
-          $items.off("mouseenter", enterItem)
-              .off("mouseleave", leaveItem);
-          $menu.off("kifi:hide", hide).fadeOut(50, function () {
+          $a.removeClass('kifi-active');
+          $menu.fadeOut(50, function () {
             $menu.find(".kifi-hover").removeClass("kifi-hover");
-          });
+          })
+          .off('mouseover', '.kifi-pane-top-menu-item', enterItem)
+          .off('mouseout', '.kifi-pane-top-menu-item', leaveItem)
+          .off('kifi:hide', hide);
         }
         api.port.emit("get_suppressed", function (suppressed) {
-          $items.filter('.kifi-hide-on-site').toggleClass('kifi-checked', !!suppressed);
+          $menu.find('.kifi-hide-on-site').toggleClass('kifi-checked', !!suppressed);
         });
+      })
+      .on('mouseup', '.kifi-silence-duration', function (e) {
+        if (e.originalEvent.isTrusted === false) return;
+        this.classList.add('kifi-checked');
+        $(this).siblings('.kifi-checked').removeClass('kifi-checked');
+        var min = $(this).data('min');
+        api.port.emit('silence', min);
+        setTimeout(api.require.bind(api, 'scripts/silenced.js', function () {
+          showSilenced(min);
+        }), 150);
       })
       .on("mouseup", ".kifi-hide-on-site", function (e) {
         if (e.originalEvent.isTrusted === false) return;

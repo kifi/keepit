@@ -35,10 +35,10 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import akka.actor.ActorSystem
 import play.api.libs.json.Json
 
-class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHepler {
+class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   "SearchCommander" should {
-    "generate results the incorrect json format" in {
+    "generate results in the correct json format" in {
       running(application) {
         val (users, uris) = initData(numUsers = 4, numUris = 9)
         val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)), uris(2) -> Seq(users(2)), uris(3) -> Seq(users(3)))
@@ -46,7 +46,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
 
         val store = mkStore(uris)
         val (graph, _, indexer, mainSearcherFactory) = initIndexes(store)
-        graph.update() === users.size
+        graph.update()
         indexer.update() === uris.size
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
@@ -85,23 +85,12 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         res.friendsTotal === 1
         res.othersTotal === 2
 
-        val expected = List(
+        val expected = List( // with neither score nor scoring
           Json.parse(s"""
             {
               "uriId":1,
               "bookmarkCount":3,
               "users":[${users(1).id.get}],
-              "score":2.0015265941619873,
-              "scoring":{
-                "textScore":0.06511083990335464,
-                "normalizedTextScore":1.0,
-                "bookmarkScore":0.6666666269302368,
-                "recencyScore":0.0,
-                "boostedTextScore":2.0,
-                "boostedBookmarkScore":0.3333333134651184,
-                "boostedRecencyScore":0.0,
-                "usefulPage":null
-              },
               "isMyBookmark":true,
               "isFriendsBookmark":true,
               "isPrivate":false,
@@ -119,17 +108,6 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
               "uriId":2,
               "bookmarkCount":1,
               "users":[${users(1).id.get}],
-              "score":1.0007957220077515,
-              "scoring":{
-                "textScore":0.06511083990335464,
-                "normalizedTextScore":1.0,
-                "bookmarkScore":0.34749501943588257,
-                "recencyScore":0.0,
-                "boostedTextScore":1.0,
-                "boostedBookmarkScore":0.17374750971794128,
-                "boostedRecencyScore":0.0,
-                "usefulPage":null
-              },
               "isMyBookmark":false,
               "isFriendsBookmark":true,
               "isPrivate":false,
@@ -144,8 +122,8 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         )
 
         res.hits.size === 2
-        res.hits(0).json === expected(0)
-        res.hits(1).json === expected(1)
+        res.hits(0).json - "score" - "scoring" === expected(0)
+        res.hits(1).json - "score" - "scoring" === expected(1)
       }
     }
   }

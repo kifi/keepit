@@ -82,7 +82,7 @@ a.kifi-compose-snapshot:active {
 .kifi-compose-tip {
   display: inline-block;
   position: relative;
-  margin: -1px 1px -1px 0;
+  margin: -1px 0;
   border: 1px solid transparent;
   padding: 0 8px 0 12px;
   -moz-box-sizing: border-box;
@@ -115,19 +115,19 @@ span.kifi-compose-tip-menu {
   display: inline-block;
   position: relative;
   line-height: 28px;
-  vertical-align: bottom;
+  vertical-align: top;
 }
 span.kifi-compose-tip-alt {
   position: absolute;
   z-index: 101;
-  top: 100%;
-  right: 1px;
+  bottom: 0;
+  right: 0;
   width: auto;
   height: auto;
   padding: 0 22px 0 12px;
   background-color: #fafafa;
   border: 1px solid #d2d2d2;
-  border-top: none;
+  border-bottom: none;
   white-space: nowrap;
   font-size: 11px;
   line-height: inherit;

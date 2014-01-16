@@ -13,12 +13,13 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{EmailParserUtils, ABookServiceClient}
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
+import akka.actor.Scheduler
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -37,7 +38,7 @@ import scala.Some
 
 
 import securesocial.core.{Identity, UserService, Registry, SocialUser}
-
+import play.api.Play
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -101,6 +102,7 @@ class UserCommander @Inject() (
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
+  scheduler: Scheduler,
   elizaServiceClient: ElizaServiceClient,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander) extends Logging {
@@ -193,6 +195,7 @@ class UserCommander @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
     SafeFuture {
+      createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
@@ -228,22 +231,24 @@ class UserCommander @Inject() (
             subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
             htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
             textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-            category = PostOffice.Categories.User.NOTIFICATION)
+            category = NotificationCategory.User.FRIEND_JOINED)
           )
         }
 
       }
 
-      elizaServiceClient.sendGlobalNotification(
-        userIds = toNotify,
-        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
-        linkText = "Invite more friends to Kifi.",
-        linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = imageUrl,
-        sticky = false,
-        categoryOverride = Some("triggered")
-      )
+      delaySend {
+        elizaServiceClient.sendGlobalNotification(
+          userIds = toNotify,
+          title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+          body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+          linkText = "Invite more friends to Kifi.",
+          linkUrl = "https://www.kifi.com/friends/invite",
+          imageUrl = imageUrl,
+          sticky = false,
+          category = NotificationCategory.User.FRIEND_JOINED
+        )
+      }
     }
   }
 
@@ -262,17 +267,19 @@ class UserCommander @Inject() (
 
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
 
-          val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
-            ("Kifi.com | Please confirm your email address",
-              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
+          val (category, subj, body) = if (newUser.state != UserStates.ACTIVE) {
+            (NotificationCategory.User.EMAIL_CONFIRMATION,
+             "Kifi.com | Please confirm your email address",
+             views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
-            ("Let's get started with Kifi",
+            (NotificationCategory.User.WELCOME,
+             "Let's get started with Kifi",
               if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(targetEmailOpt.get),
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            category = category,
             subject = subj,
             htmlBody = body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, verifyUrl, unsubLink).body)
@@ -286,7 +293,7 @@ class UserCommander @Inject() (
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(emailAddr),
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            category = NotificationCategory.User.WELCOME,
             subject = "Let's get started with Kifi",
             htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
@@ -459,7 +466,7 @@ class UserCommander @Inject() (
                   subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
                   htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestAcceptedText(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
-                  category = PostOffice.Categories.User.NOTIFICATION)
+                  category = NotificationCategory.User.FRIEND_ACCEPTED)
                 )(session)
 
                 (respondingUser, respondingUserImage)
@@ -467,16 +474,18 @@ class UserCommander @Inject() (
 
               }
 
-              elizaServiceClient.sendGlobalNotification(
-                userIds = Set(user.id.get),
-                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                linkText = "Invite more friends to kifi",
-                linkUrl = "https://www.kifi.com/friends/invite",
-                imageUrl = respondingUserImage,
-                sticky = false,
-                categoryOverride = Some("triggered")
-              )
+              delaySend {
+                elizaServiceClient.sendGlobalNotification(
+                  userIds = Set(user.id.get),
+                  title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                  body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                  linkText = "Invite more friends to kifi",
+                  linkUrl = "https://www.kifi.com/friends/invite",
+                  imageUrl = respondingUserImage,
+                  sticky = false,
+                  category = NotificationCategory.User.FRIEND_ACCEPTED
+                )
+              }
 
             }
 
@@ -500,7 +509,7 @@ class UserCommander @Inject() (
                   subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
                   htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestText(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body),
-                  category = PostOffice.Categories.User.NOTIFICATION)
+                  category = NotificationCategory.User.FRIEND_REQUEST)
                 )(session)
 
                 (requestingUser, requestingUserImage)
@@ -515,9 +524,8 @@ class UserCommander @Inject() (
                 linkUrl = "https://kifi.com/friends/requests",
                 imageUrl = requestingUserImage,
                 sticky = false,
-                categoryOverride = Some("triggered")
+                category = NotificationCategory.User.FRIEND_REQUEST
               )
-
             }
 
             (true, "sentRequest")
@@ -592,6 +600,14 @@ class UserCommander @Inject() (
     }
   }
 
+
+  def delaySend(f: => Unit) = {
+    import scala.concurrent.duration._
+    scheduler.scheduleOnce(10 seconds) {
+      f
+    }
+  }
+
 }
 
 object DefaultKeeps {
@@ -602,7 +618,7 @@ object DefaultKeeps {
     "Read Later",
     "Funny",
     "Example Keep",
-    "Kifi Support"
+    "kifi Support"
   )
 
   val orderedKeepsWithTags: Seq[(KeepInfo, Seq[String])] = {
@@ -616,10 +632,10 @@ object DefaultKeeps {
       (KeepInfo(title = None, url = "http://www.youtube.com/watch?v=_OBlgSz8sSM", isPrivate = true), Seq(example, funny)),
 
       // Support Keeps
-      (KeepInfo(title = Some("kifi • Install Kifi on Firefox and Chrome"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("kifi • How to Use Kifi"), url = "http://support.kifi.com/customer/portal/articles/1397866-introduction-to-kifi-", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • Install kifi on Firefox and Chrome"), url = "https://www.kifi.com/install", isPrivate = true), Seq(support)),
+      (KeepInfo(title = Some("kifi • How to Use kifi"), url = "http://support.kifi.com/customer/portal/articles/1397866-introduction-to-kifi-", isPrivate = true), Seq(support)),
       (KeepInfo(title = Some("kifi • Contact Us"), url = "http://support.kifi.com/customer/portal/emails/new", isPrivate = true), Seq(support)),
-      (KeepInfo(title = Some("kifi • Find friends your friends on Kifi"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
+      (KeepInfo(title = Some("kifi • Find friends your friends on kifi"), url = "https://www.kifi.com/friends/invite", isPrivate = true), Seq(support))
     )
   }
 }

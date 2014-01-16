@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.common.db.{ExternalId, State}
-import com.keepit.model.{User, ExperimentType}
+import com.keepit.model.{NotificationCategory, User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -75,7 +75,7 @@ class SharedWsMessagingController @Inject() (
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
       if (threadId == "undefined") {
         postOffice.queueMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.JARED),
-          subject = "get_thread undefined", htmlBody = s"user: ${socket.userId}, info: ${socket}", category = PostOffice.Categories.System.ADMIN))
+          subject = "get_thread undefined", htmlBody = s"user: ${socket.userId}, info: ${socket}", category = NotificationCategory.System.ADMIN))
       } else  // TODO: Remove "undefined" check above (and postOffice) once mystery is solved
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
@@ -213,7 +213,7 @@ class SharedWsMessagingController @Inject() (
       val msgExtId = ExternalId[Message](messageId)
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", false)
-      contextBuilder += ("category", NotificationCategory.MESSAGE.category) // TODO: Get category from json
+      contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
       implicit val context = contextBuilder.build
       messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)
@@ -222,7 +222,7 @@ class SharedWsMessagingController @Inject() (
       val msgExtId = ExternalId[Message](messageId)
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", true)
-      contextBuilder += ("category", NotificationCategory.GLOBAL.category)
+      contextBuilder += ("category", NotificationCategory.User.ANNOUNCEMENT.category) // TODO: Get category from json
       implicit val context = contextBuilder.build
       messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)

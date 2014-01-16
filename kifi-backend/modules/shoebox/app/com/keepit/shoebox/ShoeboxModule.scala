@@ -27,7 +27,7 @@ abstract class ShoeboxModule(
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule,
-  val topicModelModule: TopicModelModule,
+//  val topicModelModule: TopicModelModule, //disable for now
   val domainTagImporterModule: DomainTagImporterModule,
   val cacheModule: ShoeboxCacheModule
 ) extends ConfigurationModule with CommonServiceModule {

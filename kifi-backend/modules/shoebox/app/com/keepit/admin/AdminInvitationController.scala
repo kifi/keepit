@@ -99,6 +99,7 @@ class AdminInvitationController @Inject() (
   }
 
   private def notifyAcceptedUser(userId: Id[User]) {
+    // If this method goes away, InvitationMailPlugin can be removed as well
     invitationMailPlugin.notifyAcceptedUser(userId)
   }
 }

@@ -46,7 +46,6 @@ import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
 import com.keepit.search.result.FriendStats
-import com.keepit.search.graph.BookmarkInfoAccessor
 
 
 class MainSearcher(

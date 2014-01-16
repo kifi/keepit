@@ -26,6 +26,9 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.SearcherHit
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.phrasedetector.FakePhraseIndexer
+import com.keepit.search.sharding.Shard
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class ArticleIndexerTest extends Specification with ApplicationInjector {
 
@@ -36,7 +39,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait])
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    var indexer = new ArticleIndexer(ramDir, config, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    var indexer = new StandaloneArticleIndexer(ramDir, config, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
@@ -115,7 +118,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 3
 
-      indexer = new ArticleIndexer(ramDir, config, store, null, inject[ShoeboxServiceClient])
+      indexer = new StandaloneArticleIndexer(ramDir, config, store, null, inject[ShoeboxServiceClient])
       indexer.sequenceNumber.value === currentSeqNum
     })
 
@@ -254,7 +257,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
 
       store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
 
-      val doc = indexer.buildIndexable(uri1.id.get).buildDocument
+      val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
       doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 

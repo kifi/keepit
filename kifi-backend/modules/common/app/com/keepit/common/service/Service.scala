@@ -17,7 +17,7 @@ case class ServiceVersion(val value: String) {
   override def toString(): String = value
 }
 
-sealed abstract class ServiceType(val name: String, val shortName: String) {
+sealed abstract class ServiceType(val name: String, val shortName: String, val isCanary: Boolean = false) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
   override def toString(): String = name
@@ -44,6 +44,10 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
+  case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", true) {
+    override val minInstances = 0
+    override val warnInstances = 0
+  }
 
   def fromString(str: String) = str match {
     case SHOEBOX.name => SHOEBOX
@@ -54,6 +58,7 @@ object ServiceType {
     case SCRAPER.name => SCRAPER
     case DEV_MODE.name => DEV_MODE
     case TEST_MODE.name => TEST_MODE
+    case C_SHOEBOX.name => C_SHOEBOX
   }
 
   implicit def format[T]: Format[ServiceType] = Format(
@@ -77,7 +82,8 @@ class FortyTwoServices(
     ServiceType.ELIZA.name -> ServiceType.ELIZA,
     ServiceType.HEIMDAL.name -> ServiceType.HEIMDAL,
     ServiceType.ABOOK.name -> ServiceType.ABOOK,
-    ServiceType.SCRAPER.name -> ServiceType.SCRAPER
+    ServiceType.SCRAPER.name -> ServiceType.SCRAPER,
+    ServiceType.C_SHOEBOX.name -> ServiceType.C_SHOEBOX
   )
 
   lazy val currentService: ServiceType = playMode match {

@@ -52,7 +52,7 @@ class BookmarkInterner @Inject() (
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
     val count = new AtomicInteger(0)
     val total = bookmarks.size
-    val batchSize = 50
+    val batchSize = 20
 
     db.readWrite { implicit session =>
       // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
@@ -121,7 +121,7 @@ class BookmarkInterner @Inject() (
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       val uri = {
         val initialURI = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
-        if (initialURI.state == NormalizedURIStates.ACTIVE | initialURI.state == NormalizedURIStates.INACTIVE)
+        if (initialURI.state == NormalizedURIStates.ACTIVE || initialURI.state == NormalizedURIStates.INACTIVE)
           uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
         else initialURI
       }

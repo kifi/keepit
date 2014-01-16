@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.commanders.{RawBookmarkRepresentation, BookmarkInterner}
-import com.keepit.model.{BookmarkSource, EmailAddressRepo, User, UserRepo}
+import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
@@ -136,7 +136,7 @@ class MailToKeepActor @Inject() (
         subject = Option(newMessage.getSubject).getOrElse(""),
         htmlBody = htmlBody,
         inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
-        category = PostOffice.Categories.User.EMAIL_KEEP
+        category = NotificationCategory.User.EMAIL_KEEP
       ))
     }
   }

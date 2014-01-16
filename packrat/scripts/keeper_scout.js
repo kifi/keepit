@@ -79,7 +79,11 @@ var tile = tile || function() {  // idempotent for Chrome
         });
       }
     },
-    reset: cleanUpDom.bind(null, true)
+    reset: cleanUpDom.bind(null, true),
+    silence: cleanUpDom.bind(null, true),
+    unsilenced: api.require.bind(api, 'scripts/unsilenced.js', function () {
+      showUnsilenced();
+    })
   });
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
@@ -103,14 +107,17 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 77: // m
+        api.port.emit('unsilence');
         loadAndDo('pane', 'toggle', 'key', '/messages');
         e.preventDefault();
         break;
       case 79: // o
+        api.port.emit('unsilence');
         loadAndDo('pane', 'toggle', 'key', '/messages:all');
         e.preventDefault();
         break;
       case 83: // s
+        api.port.emit('unsilence');
         loadAndDo('pane', 'compose', 'key');
         e.preventDefault();
         break;
@@ -150,8 +157,8 @@ var tile = tile || function() {  // idempotent for Chrome
           document.removeEventListener('scroll', onScroll);
           onScroll = null;
         }
-        if (window.hideKeeperIntro) {
-          hideKeeperIntro();
+        if (window.hideKeeperCallout) {
+          hideKeeperCallout();
         }
         var o = window[name];
         o[methodName].apply(o, args);

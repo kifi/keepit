@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import scala.concurrent.Await
 import scala.slick.util.CloseableIterator
 import com.keepit.common.db.{SequenceNumber, Id}
+import com.keepit.search.IndexInfo
 import com.keepit.search.Lang
 import scala.concurrent.duration._
 
@@ -36,6 +37,10 @@ class PhraseIndexerImpl(
       }
     }
     total
+  }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("PhraseIndex" + name)
   }
 
   override def onFailure(indexable: Indexable[Phrase], e: Throwable): Unit = {

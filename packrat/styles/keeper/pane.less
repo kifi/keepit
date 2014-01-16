@@ -100,7 +100,7 @@ a.kifi-pane-top-menu-a {
   background-repeat: no-repeat;
 }
 a.kifi-pane-top-menu-a::before {
-  content: " ";
+  content: ' ';
   display: inline-block;
   vertical-align: middle;
   margin: 7px 7px 7px 10px;
@@ -112,7 +112,7 @@ a.kifi-pane-top-menu-a::before {
   border-radius: 50%;
 }
 .kifi-pane-top-menu-a::after {
-  content: " ";
+  content: ' ';
   display: inline-block;
   vertical-align: middle;
   font-size: 0;
@@ -138,31 +138,41 @@ a.kifi-pane-top-menu-a.kifi-active {
   left: auto;
   right: 31px;
 }
-.kifi-pane-top-menu {
+.kifi-pane-top-menu,
+.kifi-pane-top-submenu {
+  display: none;
   position: absolute;
   width: auto;
-  right: 6px;
-  top: 44px;
   white-space: nowrap;
-  background: white;
+  background: #fff;
+  color: #000;
   padding: 3px 0;
   font-size: 12px;
   line-height: 1;
   box-shadow: 0 3px 6px 0 rgba(0,0,0,.3);
-  display: none;
   -webkit-user-select: none;
   -moz-user-select: none;
-}
-.kifi-pane-top-menu-item,
-.kifi-pane-top-menu-no-select {
-  padding: 6px 10px 6px 6px;
-  border: 1px solid transparent;
-}
-.kifi-pane-top-menu-no-select {
-  color: #b8b9b9;
   user-select: none;
+}
+.kifi-pane-top-menu {
+  right: 6px;
+  top: 44px;
+}
+.kifi-pane-top-submenu {
+  right: 100%;
+  top: 0;
+}
+.kifi-pane-top-menu-item:hover>.kifi-pane-top-submenu,
+.kifi-pane-top-menu-item.kifi-hover>.kifi-pane-top-submenu {
+  display: block;
+}
+.kifi-pane-top-menu-item {
+  padding: 6px 16px 6px 6px;
+  border: 1px solid transparent;
   cursor: default;
-  margin-left: 12px;
+}
+.kifi-pane-top-menu-item:not(.kifi-no-select) {
+  cursor: pointer;
 }
 .kifi-pane-top-menu-item:hover,
 .kifi-pane-top-menu-item.kifi-hover {
@@ -172,10 +182,9 @@ a.kifi-pane-top-menu-a.kifi-active {
   border-top-color: #5980ef;
   border-bottom-color: #0a54ec;
   color: #fff;
-  cursor: pointer;
 }
 .kifi-pane-top-menu-item::before {
-  content: "\2713";
+  content: '\2713';
   margin-right: 3px;
   visibility: hidden;
 }
@@ -304,18 +313,16 @@ div.kifi-pane-empty>img {
   bottom: 100%;
   opacity: 0;
   transition: opacity .5s ease, bottom 0s .5s;
-  z-index: 3;
+  z-index: 2;
 }
 .kifi-shaded > .kifi-pane-shade {
   opacity: 1;
   bottom: 54px;
   transition-delay: 0s;
 }
-.kifi-pane .kifi-keeper {
-  z-index: 2;
-}
+.kifi-pane .kifi-keeper,
 .kifi-pane .kifi-tagbox {
-  z-index: 3;
+  z-index: 2;
 }
 
 // message box pane

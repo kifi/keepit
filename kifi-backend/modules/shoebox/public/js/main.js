@@ -343,6 +343,7 @@ $(function () {
 	var myTotal;
 	var friendsTotal;
 	var othersTotal;
+	var prefetchedPreviewUrls = {};
 
 	function identity(a) {
 		return a;
@@ -415,11 +416,16 @@ $(function () {
 				}
 
 				if (!skipImage) {
-					$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
-						$pic.css('background-image', 'url(' + data.url + ')');
-					}).fail(function () {
-						$pic.find('.page-pic-soon').addClass('showing');
-					});
+					if (o.url in prefetchedPreviewUrls) {
+						$pic.css('background-image', 'url(' + prefetchedPreviewUrls[o.url] + ')');
+					}
+					else {
+						$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function (data) {
+							$pic.css('background-image', 'url(' + data.url + ')');
+						}).fail(function () {
+							$pic.find('.page-pic-soon').addClass('showing');
+						});
+					}
 				}
 				$chatter.attr({'data-n': 0, 'data-locator': '/messages'});
 				$.postJson(KF.xhrBaseEliza + '/chatter', {url: o.url}, function (data) {
@@ -2237,16 +2243,10 @@ $(function () {
 		friendsTimeout = setTimeout(prepInviteTab, 200);
 	}
 
-	var invitesUpdatedAt;
-	function updateInviteCache() {
-		invitesUpdatedAt = Date.now();
-	}
-	updateInviteCache();
 
 	var friendsToShow = FETCH_SIZE;
 	var friendsShowing = [];
 	var moreFriends = true;
-	var invitesLeft;
 	var inviteEmailTemplate = Handlebars.compile($('#invite-email-tpl').html());
 
 	function alignInviteFriends() {
@@ -2278,8 +2278,7 @@ $(function () {
 			limit: limit,
 			after: moreToShow ? lastValue : void 0,
 			search: search,
-			network: network,
-			updatedAt: invitesUpdatedAt
+			network: network
 		};
 
 		log('[prepInviteTab]', opts);
@@ -2357,10 +2356,6 @@ $(function () {
 		})
 		.always(function () {
 			$nwFriendsLoading.hide();
-		});
-		$.getJSON(xhrBase + '/user/inviteCounts', { updatedAt: invitesUpdatedAt }, function (invites) {
-			invitesLeft = invites.left;
-			$('.num-invites').text(invitesLeft).parent().show();
 		});
 	}
 
@@ -2441,19 +2436,11 @@ $(function () {
 		}
 
 		$noResults.html(html).show();
-		$noResults.find('.refresh-friends').click(function () {
+		$noResults.find('.refresh-friends').click(function (e) {
 			submitForm('/friends/invite/refresh');
+			$(this).removeAttr('href').text('Now refreshing... This may take a few minutes. Please try your search again later.');
 		});
 	}
-
-	var $noInvitesDialog = $('.no-invites-dialog').detach().show()
-	.on('click', '.more-invites', function (e) {
-		e.preventDefault();
-		$noInvitesDialog.dialog('hide');
-		$.postJson('/site/user/needMoreInvites', {}, function (data) {
-			$noInvitesDialog.dialog('hide');
-		});
-	});
 
 	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
 	.on('submit', 'form', function (e) {
@@ -2465,7 +2452,6 @@ $(function () {
 				log('sent invite');
 				$inviteMessageDialog.dialog('hide');
 			}
-			updateInviteCache();
 			prepInviteTab();
 		});
 	}).on('click', '.invite-cancel', function (e) {
@@ -2476,10 +2462,6 @@ $(function () {
 	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
-		if (!invitesLeft) {
-			$noInvitesDialog.dialog('show');
-			return;
-		}
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
 		// TODO(greg): figure out why this doesn't work cross-domain
 		if (/^facebook/.test(fullSocialId)) {
@@ -2834,6 +2816,7 @@ $(function () {
 				if (urls.hasOwnProperty(i)) {
 					var url = urls[i];
 					if (url) {
+						prefetchedPreviewUrls[i] = url;
 						setTimeout((function (url) {
 							return function () {
 								var img = document.createElement('img');
@@ -4223,8 +4206,8 @@ $(function () {
 	$(window).trigger('statechange');
 
 	// bind hover behavior later to avoid slowing down page load
-	var friendCardTmpl = Tempo.prepare('fr-card-template');
-	$('#fr-card-template').remove();
+	var friendCardTmpl = Tempo.prepare('kifi-fr-card-template');
+	$('#kifi-fr-card-template').remove();
 	$.getScript('assets/js/jquery-hoverfu.min.js').done(function () {
 		$(document).hoverfu('.pic:not(.me)', function (configureHover) {
 			var $a = $(this), id = $a.data('id'), $temp = $('<div>');
@@ -4250,7 +4233,7 @@ $(function () {
 		});
 		function show(pos, o) {
 			o.element.element.css(pos).addClass(o.horizontal + ' ' + o.vertical)
-				.find('.fr-card-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
+				.find('.kifi-fr-kcard-tri').css('left', Math.round(o.target.left - o.element.left + 0.5 * o.target.width));
 		}
 	});
 

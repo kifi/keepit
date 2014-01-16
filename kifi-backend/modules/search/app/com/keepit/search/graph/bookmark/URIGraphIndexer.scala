@@ -14,10 +14,7 @@ import com.keepit.search.index._
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
-import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.{Success, Try}
 import scala.math._
 import com.keepit.search.graph.URIList
@@ -50,8 +47,7 @@ class URIGraphIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable
@@ -80,20 +76,9 @@ class URIGraphIndexer(
     super.onFailure(indexable, e)
   }
 
-  def update(): Int = updateLock.synchronized {
-    resetSequenceNumberIfReindex()
+  def update(): Int = throw new UnsupportedOperationException()
 
-    var total = 0
-    var done = false
-    while (!done) {
-      val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
-      done = bookmarks.isEmpty
-      total += update("", bookmarks, Shard(0,1))
-    }
-    total
-  }
-
-  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = {
+  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     val cnt = doUpdate("URIGraphIndex" + name) {
       bookmarkStore.update(name, bookmarks, shard)
 

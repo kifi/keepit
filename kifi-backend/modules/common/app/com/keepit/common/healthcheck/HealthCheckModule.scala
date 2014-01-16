@@ -7,6 +7,7 @@ import java.net.InetAddress
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.zookeeper.DiscoveryModule
 
 trait HealthCheckModule extends ScalaModule
 
@@ -22,6 +23,6 @@ case class ProdHealthCheckModule() extends HealthCheckModule {
   @AppScoped
   def healthcheckProvider(actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices, host: HealthcheckHost, scheduling: SchedulingProperties): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actor, services, host, scheduling)
+    new HealthcheckPluginImpl(actor, services, host, scheduling, isCanary = DiscoveryModule.isCanary)
   }
 }

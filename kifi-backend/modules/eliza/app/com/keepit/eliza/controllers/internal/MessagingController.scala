@@ -3,14 +3,13 @@ package com.keepit.eliza.controllers.internal
 import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.eliza.commanders.{MessagingCommander, MessagingIndexCommander}
-import com.keepit.model.{User, DeepLocator, NormalizedURI}
+import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 
 import scala.concurrent.{Promise, Await, Future}
@@ -39,6 +38,9 @@ import com.keepit.realtime.PushNotification
 import com.keepit.common.KestrelCombinator
 import com.keepit.heimdal.HeimdalContext
 import scala.util.{Failure, Success, Try}
+import play.api.libs.json.JsArray
+import com.keepit.eliza.model.UserThread
+import play.api.libs.json.JsObject
 
 
 //For migration only
@@ -83,7 +85,7 @@ class MessagingController @Inject() (
       val linkUrl  : String         =  (data \ "linkUrl").as[String]
       val imageUrl : String         =  (data \ "imageUrl").as[String]
       val sticky   : Boolean        =  (data \ "sticky").as[Boolean]
-      val category : Option[String] =  (data \ "category").asOpt[String]
+      val category : NotificationCategory =  (data \ "category").as[NotificationCategory]
 
       messagingCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category)
 

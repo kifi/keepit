@@ -484,14 +484,6 @@
 								</nav>
 								<div class="invites-left">Invites Left <span class="num-invites"></span></div>
 							</div>
-							<div class="dialog no-invites-dialog" style="display:none">
-								<div class="dialog-content">
-									<h2>You have no invites left</h2>
-									<p>We are limiting the number of users we accept to Kifi.</p>
-									<p>Need more invites? Tell us.</p>
-									<button class="more-invites">I need more invites</button>
-								</div>
-							</div>
 
 							<div class="dialog invite-message-dialog" style="display:none">
 								<form method="POST" action="/invite" class="dialog-content" data-template>
@@ -517,7 +509,9 @@ Kifi also lets you message your friends about what you keep and find alongside a
 							<div class="have-no-networks">
 								<h2>Please connect some networks to invite your friends to kifi</h2>
 								<a class="connect-network-button facebook" href="javascript:" data-network="facebook"><span class="connect-network-logo"></span>Connect Facebook</a>
+								<div class="clear"></div>
 								<a class="connect-network-button linkedin" href="javascript:" data-network="linkedin"><span class="connect-network-logo"></span>Connect LinkedIn</a>
+								<div class="clear"></div>
 								<a class="connect-network-button email" href="javascript:" data-network="email"><span class="connect-network-logo"></span>Connect Gmail</a>
 							</div>
 
@@ -729,25 +723,16 @@ Kifi also lets you message your friends about what you keep and find alongside a
 		</aside>
 	</div>
 
-	<div id="fr-card-template">
-		<div class="fr-card" data-template style="display:none">
-			<div class="fr-card-top">
-				<img class="fr-card-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
-				<div class="fr-card-info">
-					<div class="fr-card-name">{{name}}</div>
-					<div class="fr-card-label">Relevant interests:</div>
-					<div class="fr-card-interests">Coming soon</div>
-					<div class="fr-card-label">Connected to you through:</div>
-					<div class="friend-networks">
-						<a class="friend-nw friend-nw-kifi"></a>
-						<a class="friend-nw friend-nw-facebook" target="_blank"></a>
-						<a class="friend-nw friend-nw-linkedin" target="_blank"></a>
-						<a class="friend-nw friend-nw-twitter"></a>
-						<a class="friend-nw friend-nw-google"></a>
-					</div>
+	<div id="kifi-fr-card-template">
+		<div class="kifi-fr-kcard" data-template style="display:none">
+			<div class="kifi-fr-kcard-top">
+				<img class="kifi-fr-kcard-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+				<div class="kifi-fr-kcard-info">
+					<div class="kifi-fr-kcard-name">{{name}}</div>
+					<div class="kifi-fr-kcard-desc">Your kifi friend</div>
 				</div>
 			</div>
-			<div class="fr-card-tri"></div>
+			<div class="kifi-fr-kcard-tri"></div>
 		</div>
 	</div>
 

@@ -4,6 +4,7 @@ import java.io.File
 
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
+import com.keepit.common.strings._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
 import com.keepit.common.logging.Logging
@@ -114,45 +115,83 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId)))
   }
 
+  @volatile private var lastAlert: Long = -1
+
+  private def serviceDiscoveryHandleError(): Unit = {
+    val now = System.currentTimeMillis()
+    if (now - lastAlert > 600000) { //10 minute
+      synchronized {
+        if (now - lastAlert > 600000) { //10 minutes - double check after getting into the synchronized block
+          val serviceDiscovery = injector.instance[ServiceDiscovery]
+          serviceDiscovery.changeStatus(ServiceStatus.SICK)
+          serviceDiscovery.startSelfCheck()
+          serviceDiscovery.forceUpdate()
+          lastAlert = System.currentTimeMillis()
+        }
+      }
+    }
+  }
+
   override def onError(request: RequestHeader, ex: Throwable): Result = {
-    val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.changeStatus(ServiceStatus.SICK)
     val errorId: ExternalId[_] = ex match {
       case reported: ReportedException => reported.id
       case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
     }
     System.err.println(s"Play onError handler for ${ex.toString}")
     ex.printStackTrace()
-    serviceDiscovery.startSelfCheck()
-    serviceDiscovery.forceUpdate()
-    allowCrossOrigin(request, InternalServerError("error: %s".format(errorId)))
+    serviceDiscoveryHandleError()
+    val message = if (request.path.startsWith("/internal/")) {
+      //todo(eishay) consider use the original ex.getCause instead
+      s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
+    } else {
+      errorId.id
+    }
+    allowCrossOrigin(request, InternalServerError(message))
+  }
+
+  @volatile private var announcedStopping: Boolean = false
+
+  def announceStopping(app: Application): Unit = if(!announcedStopping) synchronized {
+    if(!announcedStopping) {//double check on entering sync block
+      if (mode == Mode.Prod) {
+        try {
+          val serviceDiscovery = injector.instance[ServiceDiscovery]
+          serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+          println("[announceStopping] about to pause for 10 seconds and let clients and ELB know we're stopping")
+          Thread.sleep(18000)
+          injector.instance[HealthcheckPlugin].reportStop()
+          println("[announceStopping] moving on")
+        } catch {
+          case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
+        }
+      }
+      try {
+        if (mode == Mode.Prod)
+        injector.instance[AppScope].onStop(app)
+      } catch {
+        case e: Throwable =>
+          val errorMessage = "====================== error during onStop ==============================="
+          println(errorMessage)
+          e.printStackTrace
+          log.error(errorMessage, e)
+      } finally {
+        if (mode == Mode.Prod) {
+          println("<<<<<< about to pause and let the system shut down")
+          Thread.sleep(3000)
+          println("<<<<<< done sleeping, continue with termination")
+        }
+      }
+      announcedStopping = true
+    }
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
-    serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+    announceStopping(app)
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
-    try {
-      if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.instance[HealthcheckPlugin].reportStop()
-      injector.instance[AppScope].onStop(app)
-    } catch {
-      case e: Throwable =>
-        val errorMessage = "====================== error during onStop ==============================="
-        println(errorMessage)
-        e.printStackTrace
-        log.error(errorMessage, e)
-    } finally {
-      if (app.mode == Mode.Prod) {
-        println("<<<<<< about to pause and let the system shut down")
-        new Exception("Just Tracing shotdown hook").printStackTrace()
-        Thread.sleep(21000)
-        println("<<<<<< done sleeping, continue with termination")
-        log.info("<<<<<< done sleeping, continue with termination")
-      }
-      serviceDiscovery.unRegister()
-    }
+    serviceDiscovery.unRegister()
   }
 
   private def allowCrossOrigin(request: RequestHeader, result: Result): Result = {  // for kifi.com/site dev

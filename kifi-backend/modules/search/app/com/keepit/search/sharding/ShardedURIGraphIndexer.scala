@@ -20,7 +20,7 @@ class ShardedURIGraphIndexer(
 
     var total = 0
     var done = false
-    while (!done) {
+    while (!done && !closing) {
       val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
       done = bookmarks.isEmpty
 
