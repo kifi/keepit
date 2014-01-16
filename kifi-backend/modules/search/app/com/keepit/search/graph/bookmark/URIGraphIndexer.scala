@@ -22,6 +22,7 @@ import com.keepit.search.graph.Util
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
 import com.keepit.search.graph.SortedBookmarks
+import com.keepit.common.logging.Logging
 
 object URIGraphFields {
   val userField = "usr"
@@ -124,12 +125,18 @@ object URIGraphIndexer {
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
     val bookmarks: Seq[Bookmark]
-  ) extends Indexable[User] with LineFieldBuilder {
+  ) extends Indexable[User] with LineFieldBuilder with Logging{
 
     override def buildDocument = {
       val doc = super.buildDocument
       val (publicBookmarks, rawPrivateBookmarks) = URIList.sortBookmarks(bookmarks)
       val privateBookmarks = new SortedBookmarks(rawPrivateBookmarks.toSeq.take(URIGraphFields.PRIVATE_LIST_MAX_SIZE))
+
+
+      if (rawPrivateBookmarks.toSeq.size > URIGraphFields.PRIVATE_LIST_MAX_SIZE){
+        log.warn(s"trauncating private bookmarks for user: ${id.id}, raw private bookmarks size: ${rawPrivateBookmarks.toSeq.size}")
+      }
+
       val publicListBytes = URIList.toByteArray(publicBookmarks)
       val privateListBytes = URIList.toByteArray(privateBookmarks)
       val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)
