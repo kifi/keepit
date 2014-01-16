@@ -53,6 +53,16 @@
 
 	var EMAIL_REGEX = /^[^@]+@[^@]+$/;
 
+	function verifyEmail(email) {
+		if (!EMAIL_REGEX.test(email)) {
+			return false;
+		}
+		if (email.charAt(email.length - 1) === '.') {
+			return false;
+		}
+		return true;
+	}
+
 	$('form').on('submit', function (e) {
 		e.preventDefault();
 		var $form = $(this);
@@ -61,7 +71,7 @@
 			data[field.name] = field.value || void 0;
 		});
 		var email = data.email = $.trim(data.email);
-		if (!EMAIL_REGEX.test(email)) {
+		if (!verifyEmail(email)) {
 			win.alert('Invalid email address');
 			return;
 		}
