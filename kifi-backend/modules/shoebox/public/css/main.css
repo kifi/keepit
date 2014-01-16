@@ -3,12 +3,12 @@
   outline: none;
 }
 
-.clearfix:before,
-.clearfix:after {
+.clearfix::before,
+.clearfix::after {
     content: "";
     display: table;
 } 
-.clearfix:after {
+.clearfix::after {
     clear: both;
 }
 .clearfix {
@@ -3425,19 +3425,18 @@ body[data-view=search] .main-keeps {
   -webkit-font-smoothing: antialiased;
 }
 
-.keep.example {
-  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=75)";
-  filter: alpha(opacity=75);
-  -webkit-opacity: 0.75;
-  -moz-opacity: 0.75;
-  -khtml-opacity: 0.75;
-  opacity: 0.75;
+.keep.example .keep-title a {
+  color: #66b8e6;
 }
 
 .keep-url {
   font-size: 12px;
   line-height: 14px;
   color: #99a3b3;
+}
+
+.keep.example .keep-url {
+  color: #c6cbd3;
 }
 
 .keep-colls {
@@ -3487,7 +3486,7 @@ body[data-view=search] .main-keeps {
 }
 
 .keep-coll.example .keep-coll-a:not(:hover) {
-  color: #bed38c;
+  color: #c3dba8;
 }
 
 .keep-coll-a:not(:hover) {
@@ -3626,7 +3625,7 @@ body[data-view=search] .main-keeps {
   border-radius: 2px;
   margin-right: 4px;
   color: white;
-  background-color: #bed38c;
+  background-color: #c3dba8;
 }
 
 .keep.example .example-tag {
@@ -5265,8 +5264,8 @@ a.photo-dialog-x {
   position: relative;
 }
 
-.photo-dialog-slider:before,
-.photo-dialog-slider:after {
+.photo-dialog-slider::before,
+.photo-dialog-slider::after {
   content: ' ';
   position: absolute;
   background: #ccc;
@@ -5275,14 +5274,14 @@ a.photo-dialog-x {
   box-shadow: inset 0 0 0 1px #dddddd, inset 0 0 0 2px #ffffff;
 }
 
-.photo-dialog-slider:before {
+.photo-dialog-slider::before {
   left: -28px;
   bottom: -2px;
   width: 12px;
   height: 11px;
 }
 
-.photo-dialog-slider:after {
+.photo-dialog-slider::after {
   right: -33px;
   bottom: -5px;
   width: 20px;
@@ -5435,9 +5434,14 @@ a.photo-dialog-submit:focus {
 }
 
 .search-filters {
-	position: absolute;
-	top: 0;
-	right: 0;
+	display: inline;
+}
+
+.search-filters::before {
+	content: ' | ';
+	color: #cccccc;
+	margin-left: 11px;
+	margin-right: 17px;
 }
 
 .search-filters li {
@@ -5445,13 +5449,14 @@ a.photo-dialog-submit:focus {
 	color: #cccccc;
 }
 
-.search-filters li:after {
+.search-filters li::after {
 	content: '|';
 	color: #cccccc;
 	font-size: 0.9em;
+	margin: 0 5px;
 }
 
-.search-filters li:last-child:after {
+.search-filters li:last-child::after {
 	display: none;
 	content: '';
 }

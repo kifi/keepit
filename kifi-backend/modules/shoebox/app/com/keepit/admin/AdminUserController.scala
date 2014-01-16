@@ -68,8 +68,6 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCommander: UserCommander,
-    bookmarkCommander: BookmarksCommander,
-    collectionCommander: CollectionCommander,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
@@ -537,19 +535,5 @@ class AdminUserController @Inject() (
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }
-  }
-
-  //Migration code for default keeps
-  def createDefaultKeeps(doIt : Boolean = false) = AdminHtmlAction { implicit request =>
-    Async { SafeFuture {
-      val allUsers = db.readOnly { implicit s => userRepo.all() }
-      val sourcesByUser = db.readOnly { implicit s => bookmarkRepo.getSourcesByUser() }.withDefaultValue(Seq.empty)
-      val modifed = allUsers.collect { case user if sourcesByUser(user.id.get).isEmpty || sourcesByUser(user.id.get) == Seq(BookmarkSource.bookmarkImport) =>
-        if (doIt) userCommander.createDefaultKeeps(user.id.get)(HeimdalContext.empty)
-        user.id.get
-      }
-      val json = JsArray(modifed.map(Id.format.writes))
-      Ok(json)
-    }}
   }
 }

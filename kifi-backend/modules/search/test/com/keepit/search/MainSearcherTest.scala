@@ -38,8 +38,8 @@ import akka.actor.ActorSystem
 
 class MainSearcherTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
-  val singleShard = Shard[NormalizedURI](0,1)
-  override val activeShards = ActiveShards(Seq(singleShard))
+  private val singleShard = Shard[NormalizedURI](0,1)
+  implicit private val activeShards = ActiveShards(Seq(singleShard))
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
@@ -212,7 +212,6 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
-
 
         val store = mkStore(uris)
         val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)

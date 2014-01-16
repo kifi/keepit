@@ -80,7 +80,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def deleteCache(user: User): Unit = {
+  override def deleteCache(user: User)(implicit session: RSession): Unit = {
     for (id <- user.id) {
       idCache.remove(UserIdKey(id))
       basicUserCache.remove(BasicUserUserIdKey(id))

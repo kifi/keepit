@@ -38,8 +38,6 @@ import com.keepit.search.sharding._
 
 trait SearchTestHelper { self: SearchApplicationInjector =>
 
-  val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
-
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
 
@@ -53,7 +51,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     (fakeShoeboxClient.saveUsers(users:_*), fakeShoeboxClient.saveURIs(uris:_*))
   }
 
-  def initIndexes(store: ArticleStore) = {
+  def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
 
     val articleIndexers = activeShards.shards.map{ shard =>
       val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)

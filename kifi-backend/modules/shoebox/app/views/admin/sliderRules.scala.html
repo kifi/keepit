@@ -4,8 +4,8 @@
   <input type="checkbox" class="checkbox" name="@name" @if(rules(name).isActive) {checked}>
 }
 
-@admin("Slider Rules", stylesheets = List("admin_slider")) {
-<h3>Rules for Automatically Showing the Slider</h3>
+@admin("Keeper Rules", stylesheets = List("admin_slider")) {
+<h3>Rules for Automatically Showing the Keep Button</h3>
 
 <div><span class="label">Note:</span> Changes take effect immediately for all kifi users when you click <b>Save</b> below.</div>
 
@@ -17,27 +17,18 @@
         <th>On
         <th>Show
         <th>Rule
-        <th>Parameters
+        <th>Notes/Parameters
     </thead>
     <tr>
       <td>@checkbox("message")
       <td class="y">
       <td>new message
-      <td>
+      <td>shows same-page chat pane immediately
     <tr>
       <td>&check;
       <td class="n">
       <td>clicked never for this site
       <td>
-    <tr>
-      <td>@checkbox("comment")
-      <td class="y">
-      <td>new comment
-      <td>
-        <select name="commentParams" style="width:90px">
-          <option value='"friend"' @if(rules("comment").parameters.get(0).as[String] == "friend") {selected}>friend</option>
-          <!--<option value='"anyone"' @if(rules("comment").parameters.get(0).as[String] == "anyone") {selected}>anyone</option>-->
-        </select>
     <tr>
       <td>@checkbox("sensitive")
       <td class="n">

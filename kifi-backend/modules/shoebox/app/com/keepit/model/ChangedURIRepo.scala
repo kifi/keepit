@@ -34,17 +34,20 @@ class ChangedURIRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ oldUriId ~ newUriId ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
   }
-    
+
+  override def invalidateCache(model: ChangedURI)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: ChangedURI)(implicit session: RSession): Unit = {}
+
   override def save(model: ChangedURI)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel)
   }
-  
+
   def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
     val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list
     if (limit == -1) q else q.take(limit)
   }
-  
+
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
     if (highSeq <= lowSeq) Nil
     else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq && r.state === state) yield r).sortBy(_.seq).list
@@ -53,7 +56,7 @@ class ChangedURIRepoImpl @Inject() (
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber] = {
     (for (r <- table) yield r.seq).sortBy(x => x).list.lastOption
   }
-  
+
   override def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI] = {
     val q = for( r <- table if r.state === ChangedURIStates.APPLIED) yield r
     q.sortBy(_.updatedAt desc).drop(pageSize * pageNum).take(pageSize).list
@@ -61,7 +64,7 @@ class ChangedURIRepoImpl @Inject() (
 
   def countState(state: State[ChangedURI])(implicit session: RSession): Int =
     (for( r <- table if r.state === state) yield r).list.size
-  
+
   def saveWithoutIncreSeqnum(model: ChangedURI)(implicit session: RWSession): ChangedURI = {
     super.save(model)
   }

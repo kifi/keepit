@@ -199,8 +199,8 @@ class HomeController @Inject() (
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
-    db.readWrite { implicit session =>
-      val toBeNotified = for {
+    val toBeNotified = db.readWrite { implicit session =>
+      for {
         su <- socialUserRepo.getByUser(request.user.id.get)
         invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
         senderUserId <- {
@@ -208,8 +208,8 @@ class HomeController @Inject() (
           invite.senderUserId
         }
       } yield senderUserId
-      SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
     }
+    SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
     setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }

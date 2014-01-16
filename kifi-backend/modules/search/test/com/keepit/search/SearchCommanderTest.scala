@@ -4,7 +4,6 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.index.DefaultAnalyzer
-
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
@@ -34,8 +33,12 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import akka.actor.ActorSystem
 import play.api.libs.json.Json
+import com.keepit.search.sharding.ActiveShards
+import com.keepit.search.sharding.ActiveShardsSpecParser
 
 class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
+
+  implicit private val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
