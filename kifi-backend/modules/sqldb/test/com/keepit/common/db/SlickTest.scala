@@ -47,6 +47,7 @@ class SlickTest extends Specification with DbTestInjector {
           }
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
+          override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
           override val table = new RepoTable[Bar](db, "foo") {
             def name = column[String]("name")
@@ -183,6 +184,7 @@ class SlickTest extends Specification with DbTestInjector {
           }
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
+          override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
           override val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {
             def name = column[String]("name")

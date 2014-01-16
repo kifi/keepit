@@ -31,6 +31,7 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     def * = id.? ~ createdAt ~ updatedAt ~ initatorUserId.? ~ recipientUserId.? ~ uriId.? ~ urlId.? ~ deepLocator ~ token ~ state <> (DeepLink, DeepLink.unapply _)
   }
 
+  override def invalidateCache(model: DeepLink)(implicit session: RSession): Unit = {}
   override def deleteCache(model: DeepLink)(implicit session: RSession): Unit = {}
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink] =

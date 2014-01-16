@@ -35,6 +35,7 @@ class ChangedURIRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ oldUriId ~ newUriId ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
   }
 
+  override def invalidateCache(model: ChangedURI)(implicit session: RSession): Unit = {}
   override def deleteCache(model: ChangedURI)(implicit session: RSession): Unit = {}
 
   override def save(model: ChangedURI)(implicit session: RWSession) = {

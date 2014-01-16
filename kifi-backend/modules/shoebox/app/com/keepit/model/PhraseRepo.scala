@@ -36,6 +36,7 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   override def save(phrase: Phrase)(implicit session: RWSession): Phrase = super.save(phrase.copy(seq = sequence.incrementAndGet()))
 
   override def deleteCache(model: Phrase)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: Phrase)(implicit session: RSession): Unit = {}
 
   def get(phrase: String, lang: Lang, excludeState: Option[State[Phrase]] = Some(PhraseStates.INACTIVE))(implicit session: RSession): Option[Phrase] =
     (for (f <- table if f.phrase === phrase && f.lang === lang && f.state =!= excludeState.getOrElse(null)) yield f).firstOption

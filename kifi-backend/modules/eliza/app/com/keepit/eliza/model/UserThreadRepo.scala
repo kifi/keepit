@@ -139,6 +139,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: UserThread)(implicit session: RSession): Unit = {}
 
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
     shoebox.getUserOpt(basicUser.externalId) map { userOpt=>
