@@ -20,27 +20,6 @@ trait RemotePostOffice {
 }
 
 object PostOffice {
-  object Categories {
-    val ALL = ElectronicMailCategory("all")
-    object User {
-      val MESSAGE = ElectronicMailCategory("message")
-      val EMAIL_KEEP = ElectronicMailCategory("email_keep")
-      val INVITATION = ElectronicMailCategory("invitation")
-      val EMAIL_CONFIRMATION = ElectronicMailCategory("email_confirmation")
-      val RESET_PASSWORD = ElectronicMailCategory("reset_password")
-      val NOTIFICATION = ElectronicMailCategory("notification")
-      val all = Set(MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD)
-    }
-
-    object System {
-      val HEALTHCHECK = ElectronicMailCategory("healthcheck")
-      val ASANA_HEALTHCHECK = ElectronicMailCategory("asana_healthcheck")
-      val ADMIN = ElectronicMailCategory("admin")
-      val PLAY = ElectronicMailCategory("play")
-      val all = Set(HEALTHCHECK, ASANA_HEALTHCHECK, ADMIN, PLAY)
-    }
-  }
-
   object Headers {
     val ALL = Seq[String]("Reply-To", "List-Unsubscribe", "Precedence")
     val REPLY_TO = "Reply-To"

@@ -231,7 +231,7 @@ class UserCommander @Inject() (
             subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
             htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
             textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-            category = PostOffice.Categories.User.NOTIFICATION)
+            category = NotificationCategory.User.FRIEND_JOINED)
           )
         }
 
@@ -246,7 +246,7 @@ class UserCommander @Inject() (
           linkUrl = "https://www.kifi.com/friends/invite",
           imageUrl = imageUrl,
           sticky = false,
-          categoryOverride = Some("triggered")
+          category = NotificationCategory.User.FRIEND_JOINED
         )
       }
     }
@@ -267,18 +267,19 @@ class UserCommander @Inject() (
 
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
 
-          val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
-            ("Kifi.com | Please confirm your email address",
-              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
+          val (category, subj, body) = if (newUser.state != UserStates.ACTIVE) {
+            (NotificationCategory.User.EMAIL_CONFIRMATION,
+             "Kifi.com | Please confirm your email address",
+             views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
-            ("Let's get started with Kifi",
+            (NotificationCategory.User.WELCOME,
+             "Let's get started with Kifi",
               if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
-            fromName = Some("kifi"),
             to = Seq(targetEmailOpt.get),
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            category = category,
             subject = subj,
             htmlBody = body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, verifyUrl, unsubLink).body)
@@ -292,7 +293,7 @@ class UserCommander @Inject() (
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(emailAddr),
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
+            category = NotificationCategory.User.WELCOME,
             subject = "Let's get started with Kifi",
             htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
@@ -465,7 +466,7 @@ class UserCommander @Inject() (
                   subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
                   htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestAcceptedText(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
-                  category = PostOffice.Categories.User.NOTIFICATION)
+                  category = NotificationCategory.User.FRIEND_ACCEPTED)
                 )(session)
 
                 (respondingUser, respondingUserImage)
@@ -482,7 +483,7 @@ class UserCommander @Inject() (
                   linkUrl = "https://www.kifi.com/friends/invite",
                   imageUrl = respondingUserImage,
                   sticky = false,
-                  categoryOverride = Some("triggered")
+                  category = NotificationCategory.User.FRIEND_ACCEPTED
                 )
               }
 
@@ -508,26 +509,23 @@ class UserCommander @Inject() (
                   subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
                   htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestText(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body),
-                  category = PostOffice.Categories.User.NOTIFICATION)
+                  category = NotificationCategory.User.FRIEND_REQUEST)
                 )(session)
 
                 (requestingUser, requestingUserImage)
 
               }
 
-              delaySend {
-                elizaServiceClient.sendGlobalNotification(
-                  userIds = Set(user.id.get),
-                  title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
-                  body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-                  linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-                  linkUrl = "https://kifi.com/friends/requests",
-                  imageUrl = requestingUserImage,
-                  sticky = false,
-                  categoryOverride = Some("triggered")
-                )
-              }
-
+              elizaServiceClient.sendGlobalNotification(
+                userIds = Set(user.id.get),
+                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
+                body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
+                linkText = s"Respond to ${requestingUser.firstName}'s friend request",
+                linkUrl = "https://kifi.com/friends/requests",
+                imageUrl = requestingUserImage,
+                sticky = false,
+                category = NotificationCategory.User.FRIEND_REQUEST
+              )
             }
 
             (true, "sentRequest")
@@ -605,7 +603,7 @@ class UserCommander @Inject() (
 
   def delaySend(f: => Unit) = {
     import scala.concurrent.duration._
-    scheduler.scheduleOnce(5 seconds) {
+    scheduler.scheduleOnce(10 seconds) {
       f
     }
   }

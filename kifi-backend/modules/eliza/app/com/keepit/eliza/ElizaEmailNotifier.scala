@@ -8,7 +8,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.model.{UserStates, User}
+import com.keepit.model.{NotificationCategory, UserStates, User}
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
@@ -84,7 +84,7 @@ class ElizaEmailNotifierActor @Inject() (
             subject = s"""New messages on "${formattedTitle}" with $authorFirst""",
             htmlBody = emailBody,
             textBody = Some(textBody),
-            category = PostOffice.Categories.User.MESSAGE
+            category = NotificationCategory.User.MESSAGE
           )
 
           val userIsActive = Await.result(userIsActiveFuture, 5 seconds)
