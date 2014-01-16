@@ -41,6 +41,7 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
   }
 
   override def deleteCache(model: PasswordReset)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: PasswordReset)(implicit session: RSession): Unit = {}
 
   def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset] =
     if (getPotentiallyExpired) {

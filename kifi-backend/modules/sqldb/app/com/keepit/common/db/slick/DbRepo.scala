@@ -54,9 +54,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   lazy val dbLog = Logger("com.keepit.db")
 
-  //todo(martin) remove this default implementation so we force repos to implement it
-  override def invalidateCache(model: M)(implicit session: RSession): Unit = {}
-
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 

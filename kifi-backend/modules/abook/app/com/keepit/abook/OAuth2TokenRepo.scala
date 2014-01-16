@@ -41,4 +41,5 @@ class OAuth2TokenRepoImpl @Inject() (val db:DataBaseComponent, val clock: Clock)
   }
 
   override def deleteCache(model: OAuth2Token)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: OAuth2Token)(implicit session: RSession): Unit = {}
 }

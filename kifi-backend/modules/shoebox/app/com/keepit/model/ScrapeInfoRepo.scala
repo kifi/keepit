@@ -43,6 +43,7 @@ class ScrapeInfoRepoImpl @Inject() (
   }
 
   override def deleteCache(model: ScrapeInfo)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: ScrapeInfo)(implicit session: RSession): Unit = {}
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
     (for {

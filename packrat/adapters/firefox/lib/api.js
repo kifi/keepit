@@ -67,6 +67,21 @@ exports.isPackaged = function() {
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
 
+const prefs = require('sdk/simple-prefs');
+exports.mode = {
+  isDev: function () {
+    return prefs.mode === 'dev';
+  },
+  toggle: function () {
+    if (prefs.mode) {
+      delete prefs.mode;
+    } else {
+      prefs.mode = 'dev';
+    }
+    // TODO: reload extension
+  }
+};
+
 const hexRe = /^#[0-9a-f]{3}$/i;
 exports.log = function() {
   var d = new Date, ds = d.toString(), t = "[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]";
@@ -180,30 +195,6 @@ function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
   portHandlers[type](data, this.port.emit.bind(this.port, 'api:respond', callbackId), page);
 }
-
-const {prefs} = require("sdk/simple-prefs");
-exports.prefs = {
-  get: function get(key) {
-    if (arguments.length > 1) {
-      for (var o = {}, i = 0; i < arguments.length; i++) {
-        key = arguments[i];
-        o[key] = get(key);
-      }
-      return o;
-    }
-    return prefs[key];
-  },
-  set: function set(key, value) {
-    if (typeof key === "object") {
-      Object.keys(key).forEach(function(k) {
-        set(k, key[k]);
-      });
-    } else if (value == null) {
-      delete prefs[key];
-    } else {
-      prefs[key] = value;
-    }
-  }};
 
 exports.request = function(method, url, data, done, fail) {
   var options = {
@@ -601,7 +592,7 @@ function onPageHide(tabId) {
       contentStyleFile: o.styles.map(url),
       contentScriptFile: o.scripts.map(url),
       contentScriptWhen: arr[2] ? "start" : "ready",
-      contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development", version: self.version},
+      contentScriptOptions: {dataUriPrefix: url(''), dev: exports.mode.isDev(), version: self.version},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
         const tab = worker.tab, page = pages[tab.id];
@@ -676,3 +667,10 @@ exports.onUnload = function(reason) {
     removeFromWindow(win);
   }
 };
+
+// TODO: remove Feb 20
+delete prefs.maxResults;
+delete prefs.suppressLog;
+delete prefs.showSlider;
+delete prefs.showScores;
+delete prefs.env;

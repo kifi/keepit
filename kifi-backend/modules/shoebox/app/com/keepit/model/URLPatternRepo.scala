@@ -37,6 +37,7 @@ class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock,
   }
 
   override def deleteCache(model: URLPattern)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: URLPattern)(implicit session: RSession): Unit = {}
 
   def getActivePatterns()(implicit session: RSession): Seq[String] =
     Option(activePatternsCache.get()).getOrElse {

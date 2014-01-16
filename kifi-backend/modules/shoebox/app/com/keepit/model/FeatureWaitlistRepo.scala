@@ -34,5 +34,6 @@ class FeatureWaitlistRepo @Inject() (val db: DataBaseComponent, val clock: Clock
   }
 
   override def deleteCache(model: FeatureWaitlistEntry)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: FeatureWaitlistEntry)(implicit session: RSession): Unit = {}
 
 }

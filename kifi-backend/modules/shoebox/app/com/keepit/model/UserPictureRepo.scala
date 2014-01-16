@@ -35,6 +35,7 @@ class UserPictureRepoImpl @Inject() (
   }
 
   override def deleteCache(model: UserPicture)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: UserPicture)(implicit session: RSession): Unit = {}
 
   def getByName(userId: Id[User], name: String)(implicit session: RSession): Option[UserPicture] = {
     (for (up <- table if up.userId === userId && up.name === name) yield up).firstOption

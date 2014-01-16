@@ -104,6 +104,7 @@ abstract class UriTopicRepoBase (
   }
 
   override def deleteCache(model: UriTopic)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: UriTopic)(implicit session: RSession): Unit = {}
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[UriTopic] = {
     (for(r <- table if r.uriId === uriId) yield r).firstOption

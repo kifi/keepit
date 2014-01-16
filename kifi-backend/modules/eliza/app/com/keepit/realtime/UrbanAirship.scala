@@ -72,6 +72,7 @@ class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
   }
 
   override def deleteCache(model: Device)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: Device)(implicit session: RSession): Unit = {}
 
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]])(implicit s: RSession): Seq[Device] = {
     (for (t <- table if t.userId === userId && t.state =!= excludeState.orNull) yield t).list
