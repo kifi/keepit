@@ -44,7 +44,6 @@ object ExperimentType {
   val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val DEMO = ExperimentType("demo")
-  val TSEARCH = ExperimentType("tsearch")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
 
   val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE)
@@ -61,7 +60,6 @@ object ExperimentType {
     case CAN_CONNECT.value => CAN_CONNECT
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
     case DEMO.value => DEMO
-    case TSEARCH.value => TSEARCH
     case EXTENSION_LOGGING.value => EXTENSION_LOGGING
   }
 
