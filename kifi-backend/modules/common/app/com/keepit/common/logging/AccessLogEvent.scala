@@ -38,7 +38,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
 
   val startTime = clock.now()
 
-  def duration: Int = {
+  lazy val duration: Int = {
     val now = clock.now()
     (now.getMillis - startTime.getMillis).toInt
   }
