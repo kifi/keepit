@@ -496,11 +496,11 @@ var api = function() {
           }
           return o;
         }
-        var v = localStorage[":" + key];
+        var v = localStorage[':' + key];
         if (v != null) try {
           return JSON.parse(v);
         } catch (e) {}
-        return {showScores: false}[key] || v;  // TODO: factor our default settings out of this API
+        return v;
       },
       set: function set(key, value) {
         if (typeof key === "object") {
@@ -702,5 +702,7 @@ var api = function() {
     version: chrome.app.getDetails().version};
 }();
 
-delete localStorage[':suppressLog'];  // TODO: remove in Jan 2014
-delete localStorage[':showSlider'];  // TODO: remove in Feb 2014
+
+delete localStorage[':suppressLog']; // TODO: remove Jan 31
+delete localStorage[':showSlider'];  // TODO: remove Feb 20
+delete localStorage[':showScores'];  // TODO: remove Feb 20

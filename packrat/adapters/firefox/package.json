@@ -21,12 +21,6 @@
         {"value": "development", "label": "Development"}],
       "name": "env",
       "value": "production"
-    },
-    {
-      "title": "Show search result scores",
-      "type": "bool",
-      "name": "showScores",
-      "value": false
     }
   ]
 }
