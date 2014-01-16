@@ -124,9 +124,9 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def newUserState: State[User] = UserStates.ACTIVE // This is the default user state for new accounts
 
-  private def createUser(socialUser: SocialUser, isComplete: Boolean): User = timing(s"create user ${identity.identityId}") {
+  private def createUser(identity: Identity, isComplete: Boolean): User = timing(s"create user ${identity.identityId}") {
     val u = userCommander.createUser(
-      socialUser,
+      identity,
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")

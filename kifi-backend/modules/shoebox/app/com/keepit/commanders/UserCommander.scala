@@ -31,13 +31,7 @@ import java.text.Normalizer
 
 import scala.concurrent.Future
 import scala.util.Try
-import scala.Some
-
-
-
-
-
-import securesocial.core.{Identity, UserService, Registry, SocialUser}
+import securesocial.core.{Identity, UserService, Registry}
 import play.api.Play
 
 
@@ -182,7 +176,7 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(socialUser: SocialUser, state: State[User]) = {
+  def createUser(socialUser: Identity, state: State[User]) = {
     val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = socialUser.firstName, lastName = socialUser.lastName, state = state)) }
     SafeFuture {
       val contextBuilder = eventContextBuilder()
