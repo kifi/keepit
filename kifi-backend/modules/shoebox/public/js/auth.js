@@ -175,11 +175,7 @@ kifi.form = (function () {
       fail: function() {
         clearTimeout(progressTimeout), progressTimeout = null;
         $progress.css('width', 0);
-        $button.one('transitionend', function () {
-          $progress.css('width', 0);
-          $button.removeClass('submit-fail');
-          $button.prop('disabled', false);
-        }).addClass('submit-fail');
+        $button.prop('disabled', false);
       },
       success: function() {
         clearTimeout(progressTimeout), progressTimeout = null;
@@ -189,6 +185,7 @@ kifi.form = (function () {
   }
 
   var $signup1Form = $('.signup-1').submit(function (e) {
+    e.preventDefault();
     var $form = $(this);
     var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
@@ -247,6 +244,7 @@ kifi.form = (function () {
   }
 
   var $signup2EmailForm = $('.signup-2-email').submit(function (e) {
+    e.preventDefault();
     var $form = $(this);
     var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
@@ -284,6 +282,7 @@ kifi.form = (function () {
     return false;
   });
   var $signup2SocialForm = $('.signup-2-social').submit(function (e) {
+    e.preventDefault();
     var $form = $(this);
     var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
