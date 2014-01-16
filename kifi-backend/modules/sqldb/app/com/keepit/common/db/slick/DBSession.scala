@@ -64,7 +64,10 @@ object DBSession {
           if (open && !done || doRollback) {
             conn.rollback()
             transaction.get.failure(new Exception("Transaction was rolled back."))
-          } else transaction.get.success()
+          } else {
+            conn.commit()
+            transaction.get.success()
+          }
         }
       } finally {
         if (open) conn.setAutoCommit(true)
