@@ -35,6 +35,10 @@ class DomainRepoImpl @Inject()(
     domainCache.set(DomainKey(domain.hostname), domain)
   }
 
+  override def deleteCache(domain: Domain)(implicit session: RSession): Unit = {
+    domainCache.remove(DomainKey(domain.hostname))
+  }
+
   override val table = new RepoTable[Domain](db, "domain") {
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
@@ -66,7 +70,7 @@ class DomainRepoImpl @Inject()(
     domainIds foreach { id => invalidateCache(get(id)) }
     count
   }
-    
+
   def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
     (for (d <- table if d.hostname.startsWith(prefix) && d.state =!= excludeState.orNull) yield d).sortBy(_.hostname).list
   }

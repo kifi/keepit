@@ -38,6 +38,8 @@ abstract class TopicNameRepoBase(
     def * = id.? ~ createdAt ~ updatedAt ~ topicName <> (TopicName.apply _, TopicName.unapply _)
   }
 
+  override def deleteCache(model: TopicName)(implicit session: RSession): Unit = {}
+
   def getAllNames()(implicit session: RSession): Seq[String] = {
     (for(r <- table) yield r.topicName).list
   }

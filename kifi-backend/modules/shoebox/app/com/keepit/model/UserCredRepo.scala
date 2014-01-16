@@ -31,6 +31,8 @@ class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ext
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ loginName ~ provider ~ salt ~ credentials <> (UserCred.apply _, UserCred.unapply _)
   }
 
+  override def deleteCache(model: UserCred)(implicit session: RSession): Unit = {}
+
   def findByUserIdOpt(id: Id[User])(implicit session: RSession): Option[UserCred] = {
     val q = for { c <- table if c.userId === id } yield c
     q.firstOption
@@ -41,5 +43,4 @@ class UserCredRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ext
     q.firstOption
   }
 
-  def deleteCache(cred: UserCred) {}
 }

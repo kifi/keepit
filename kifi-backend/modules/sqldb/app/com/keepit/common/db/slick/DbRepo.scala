@@ -24,10 +24,10 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): Unit
+  def deleteCache(model: M)(implicit session: RSession): Unit
 }
 
 trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
-  def deleteCache(model: M): Unit
   def delete(model: M)(implicit session:RWSession):Int
 
   // potentially more efficient variant but we currently depend on having the model available for our caches

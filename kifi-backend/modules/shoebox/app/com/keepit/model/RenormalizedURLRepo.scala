@@ -24,9 +24,9 @@ class RenormalizedURLRepoImpl @Inject()(
 ) extends DbRepo[RenormalizedURL] with RenormalizedURLRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
-  
+
   private val sequence = db.getSequence("renormalized_url_sequence")
-  
+
   override val table = new RepoTable[RenormalizedURL](db, "renormalized_url"){
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
@@ -34,34 +34,36 @@ class RenormalizedURLRepoImpl @Inject()(
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ urlId ~ oldUriId ~ newUriId ~ state ~ seq <> (RenormalizedURL.apply _, RenormalizedURL.unapply _)
   }
-  
+
   override def save(model: RenormalizedURL)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel)
   }
-  
+
+  override def deleteCache(model: RenormalizedURL)(implicit session: RSession): Unit = {}
+
   def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[RenormalizedURL])(implicit session: RSession): Seq[RenormalizedURL] = {
     val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list
     if (limit == -1) q else q.take(limit)
   }
-  
+
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[RenormalizedURL])(implicit session: RSession): Seq[RenormalizedURL] = {
     if (highSeq <= lowSeq) Nil
     else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq && r.state === state) yield r).sortBy(_.seq).list
   }
-  
+
   def saveWithoutIncreSeqnum(model: RenormalizedURL)(implicit session: RWSession): RenormalizedURL = {
     super.save(model)
   }
-  
+
   def pageView(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[RenormalizedURL] = {
-    (for { 
+    (for {
       r <- table if r.state =!= RenormalizedURLStates.INACTIVE
-      s <- urlRepo.table if r.urlId === s.id 
+      s <- urlRepo.table if r.urlId === s.id
     } yield (r, s)).sortBy(_._2.url).drop(pageNum * pageSize).take(pageSize).map{_._1}.list
-    
+
   }
-  
+
   def activeCount()(implicit session: RSession): Int = {
     (for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).list.size
   }

@@ -73,6 +73,11 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
   }
 
+  override def deleteCache(uri: NormalizedURI)(implicit session: RSession): Unit = {
+    uri.id map {id => idCache.remove(NormalizedURIKey(id))}
+    urlHashCache.remove(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)))
+  }
+
   override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
     idCache.getOrElse(NormalizedURIKey(id)) {
       (for(f <- table if f.id is id) yield f).first

@@ -97,6 +97,11 @@ class SocialConnectionRepoImpl @Inject() (
     super.invalidateCache(conn)
   }
 
+  override def deleteCache(conn: SocialConnection)(implicit session: RSession): Unit = {
+    socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser1))
+    socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser2))
+  }
+
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
     val suidSQL = """
         select

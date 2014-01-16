@@ -39,4 +39,6 @@ class OAuth2TokenRepoImpl @Inject() (val db:DataBaseComponent, val clock: Clock)
   def getById(id: Id[OAuth2Token])(implicit session: RSession): Option[OAuth2Token] = {
     (for(t <- table if t.id === id) yield t).firstOption
   }
+
+  override def deleteCache(model: OAuth2Token)(implicit session: RSession): Unit = {}
 }
