@@ -95,7 +95,7 @@ class BookmarkInterner @Inject() (
 
     if (failed.nonEmpty) {
       airbrake.notify(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks of user $userId from $source: look app.log for urls")
-      bms.foreach{ b => log.error("failed to persist raw bookmarks of user $userId from $source: ${b.url}") }
+      bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${b.url}") }
     }
 
     persisted.values.map(_.get).flatten.toSeq
