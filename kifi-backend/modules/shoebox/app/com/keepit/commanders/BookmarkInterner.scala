@@ -102,6 +102,28 @@ class BookmarkInterner @Inject() (
     persisted
   }
 
+  private def internUriBatch(bms: Seq[RawBookmarkRepresentation]) = {
+    db.readWrite(attempts = 3) { implicit session =>
+      bms.map { rawBookmark =>
+        if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
+          (rawBookmark, None)
+        } else {
+          val uri = {
+            val initialURI = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+            if (initialURI.state == NormalizedURIStates.ACTIVE || initialURI.state == NormalizedURIStates.INACTIVE)
+              uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
+            else initialURI
+          }
+          (rawBookmark, Some(uri))
+        }
+      }
+    }
+  }
+
+  private def internBookmarkBatch(rawBookmarksWithNormalizedUris: Seq[(RawBookmarkRepresentation, NormalizedURI)]) = {
+
+  }
+
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
     bookmarkRepo.getByUriAndUser(uri.id.get, userId, excludeState = None) match {
