@@ -9,9 +9,6 @@ $(function() {
     chrome.runtime.reload();
   });
 
-  $("[name=show_keeper]").prop("checked", api.prefs.get("showSlider")).click(function() {
-    api.prefs.set("showSlider", this.checked);
-  });
   $("[name=show_scores]").prop("checked", api.prefs.get("showScores")).click(function() {
     api.prefs.set("showScores", this.checked);
   });
