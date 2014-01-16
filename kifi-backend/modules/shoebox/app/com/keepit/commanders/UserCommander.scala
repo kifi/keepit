@@ -603,7 +603,7 @@ class UserCommander @Inject() (
 
   def delaySend(f: => Unit) = {
     import scala.concurrent.duration._
-    scheduler.scheduleOnce(5 seconds) {
+    scheduler.scheduleOnce(10 seconds) {
       f
     }
   }
