@@ -242,7 +242,7 @@ class AdminUserController @Inject() (
       userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
     }
     val userCount = db.readOnly { implicit s => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None))
+    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None, "Total Users"))
   }
 
   def realUsersView(page: Int = 0) = AdminHtmlAction { implicit request =>
@@ -252,7 +252,7 @@ class AdminUserController @Inject() (
       userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
     }
     val userCount = db.readOnly { implicit s => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None))
+    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None, "Real Users"))
   }
 
   def fakeUsersView(page: Int = 0) = AdminHtmlAction { implicit request =>
@@ -262,7 +262,7 @@ class AdminUserController @Inject() (
       userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
     }
     val userCount = db.readOnly { implicit s => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None))
+    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None, "Fake Users"))
   }
 
   def searchUsers() = AdminHtmlAction { implicit request =>
@@ -275,7 +275,7 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
+        Ok(html.admin.users(users, 0, users.size, 1, searchTerm, "Total Users"))
     }
   }
 
