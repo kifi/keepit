@@ -1,12 +1,12 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{LocalPostOffice, PostOffice, EmailAddresses, ElectronicMail, ElectronicMailRepo}
+import com.keepit.common.mail.{LocalPostOffice, EmailAddresses, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
-import com.keepit.heimdal.{UserEventTypes, HeimdalContext, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.common.performance.timing
-import com.keepit.model.{NotificationCategory, EmailAddress, EmailAddressRepo}
-import play.api.Logger
+import com.keepit.model.{NotificationCategory, EmailAddressRepo}
+import com.keepit.common.logging.Logging
 
 class SendgridCommander @Inject() (
   db: Database,
@@ -14,9 +14,8 @@ class SendgridCommander @Inject() (
   heimdalClient: HeimdalServiceClient,
   emailAddressRepo: EmailAddressRepo,
   electronicMailRepo: ElectronicMailRepo,
-  heimdalContextBuilder: HeimdalContextBuilderFactory,
-  implicit val logger: Logger
-  ) {
+  heimdalContextBuilder: HeimdalContextBuilderFactory
+) extends Logging {
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report
