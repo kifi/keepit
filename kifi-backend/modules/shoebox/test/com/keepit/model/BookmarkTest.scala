@@ -156,6 +156,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
          db.readWrite{ implicit s =>
            val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
            bookmarkRepo.save(bm.get.withActive(false))
+         }
+         db.readOnly{ implicit s =>
            bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
            bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get, excludeState = None).size === 1
         }
@@ -164,22 +166,33 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
 
     "get the latest updated bookmark for a specific uri" in {
       withDb() { implicit injector =>
-        db.readWrite{ implicit s =>
+        val (uri, uriId, url, firstUserId, secondUserId) = db.readWrite{ implicit s =>
           val uri = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com"))
           val uriId = uri.id.get
           val url = uri.url
           val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi")).id.get
           val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith")).id.get
-
+          (uri, uriId, url, firstUserId, secondUserId)
+        }
+        db.readOnly{ implicit s =>
           bookmarkRepo.latestBookmark(uriId) === None
-
-          val firstUserBookmark = bookmarkRepo.save(Bookmark(userId = firstUserId, uriId = uriId, url = url, source = hover))
+        }
+        val firstUserBookmark = db.readWrite{ implicit s =>
+          bookmarkRepo.save(Bookmark(userId = firstUserId, uriId = uriId, url = url, source = hover))
+        }
+        db.readOnly{ implicit s =>
           bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === firstUserBookmark.id
-
-          val secondUserBookmark = bookmarkRepo.save(Bookmark(userId = secondUserId, uriId = uriId, url = url, source = hover))
+        }
+        val secondUserBookmark = db.readWrite{ implicit s =>
+          bookmarkRepo.save(Bookmark(userId = secondUserId, uriId = uriId, url = url, source = hover))
+        }
+        db.readOnly{ implicit s =>
           bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === secondUserBookmark.id
-
-          val latestBookmark = bookmarkRepo.save(firstUserBookmark)
+        }
+        val latestBookmark = db.readWrite{ implicit s =>
+          bookmarkRepo.save(firstUserBookmark)
+        }
+        db.readOnly{ implicit s =>
           bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === latestBookmark.id
         }
       }

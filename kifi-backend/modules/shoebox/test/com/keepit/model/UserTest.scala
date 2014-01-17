@@ -18,13 +18,15 @@ class UserTest extends Specification with ShoeboxTestInjector {
     "Use the cache" in {
       withDb() { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
-        db.readWrite { implicit session =>
+        val user = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
-          val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
-
+          userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+        }
+        val updatedUser = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
-          val updatedUser = userRepo.save(user.copy(lastName = "NotMyLastName"))
-
+          userRepo.save(user.copy(lastName = "NotMyLastName"))
+        }
+        db.readOnly { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get !== user
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === updatedUser
         }
