@@ -6,6 +6,7 @@ import com.keepit.search.index.WrappedSubReader
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
+import scala.collection.mutable.ArrayBuffer
 
 class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
@@ -29,6 +30,12 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
     URIList.empty
   }
 
+  def getExtraLongURIList(field: String, docid: Int): URIList = {
+    if (docid < 0) return URIList.empty
+    val allBytes = getAllBytes(field, docid)
+    URIList(allBytes.toArray, 0, allBytes.length)
+  }
+
   def getLongArray(field: String, docid: Int): Array[Long] = {
     if (docid >= 0) {
       var docValues = reader.getBinaryDocValues(field)
@@ -43,6 +50,51 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
       }
     }
     Array.empty[Long]
+  }
+
+  def getExtraLongArray(field: String, docid: Int): Array[Long] = {
+    if (docid < 0) return Array.empty[Long]
+    val allBytes = getAllBytes(field, docid)
+    Util.unpackLongArray(allBytes, 0, allBytes.length)
+  }
+
+  private def getAllBytes(field: String, docid: Int): Array[Byte] = {
+    import com.keepit.search.index.Indexable._
+
+    val allBytes = new ArrayBuffer[Byte]()
+    var done = false
+    var iter = 0
+
+     while (!done){
+      val fieldName = field + numberSuffix(iter)
+      val docValues = reader.getBinaryDocValues(fieldName)
+
+      if (docValues != null){
+        var ref = new BytesRef()
+        docValues.get(docid, ref)
+        if (ref.length > 0){
+          val offset = ref.offset
+          if (ref.length == MAX_BINARY_FIELD_LENGTH){
+            // there is something left. extra byte is EOF symbol and is dropped
+            for( j <- 0 until (ref.length -1)){
+              allBytes.append(ref.bytes(offset + j))
+            }
+          } else{
+            for(j <- 0 until ref.length){
+              allBytes.append(ref.bytes(offset + j))                 // all bytes are good
+            }
+            done = true                                              // nothing left
+          }
+        } else {
+          log.error(s"missing uri list data: ${field + numberSuffix(iter)}")
+        }
+        iter += 1
+      } else {
+        done = true
+      }
+    }
+
+    allBytes.toArray
   }
 
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
