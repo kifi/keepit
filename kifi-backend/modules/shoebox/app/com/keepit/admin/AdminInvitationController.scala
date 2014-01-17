@@ -4,8 +4,8 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.InvitationMailPlugin
 import com.keepit.model._
+import com.keepit.commanders.UserCommander
 
 import views.html
 
@@ -14,8 +14,8 @@ class AdminInvitationController @Inject() (
   db: Database,
   invitationRepo: InvitationRepo,
   socialUserRepo: SocialUserInfoRepo,
-  invitationMailPlugin: InvitationMailPlugin,
-  userRepo: UserRepo)
+  userRepo: UserRepo,
+  userCommander: UserCommander)
     extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
@@ -67,7 +67,7 @@ class AdminInvitationController @Inject() (
     }
 
     if(result.isDefined) {
-      notifyAcceptedUser(result.get.id.get)
+      notifyAcceptedUser(result.get)
       Redirect(routes.AdminInvitationController.displayInvitations())
     } else {
       Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")
@@ -98,7 +98,7 @@ class AdminInvitationController @Inject() (
     }
   }
 
-  private def notifyAcceptedUser(userId: Id[User]) {
-    invitationMailPlugin.notifyAcceptedUser(userId)
+  private def notifyAcceptedUser(user: User): Unit = {
+    userCommander.sendWelcomeEmail(user)
   }
 }

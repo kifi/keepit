@@ -300,15 +300,18 @@ panes.notices = function () {
   }
 
   function onMarkAllRead(e) {
-    var o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
-      var t = el.dataset.createdAt;
-      if (o.time < new Date(t)) {
-        o.time = t;
-        o.id = el.dataset.id;
-      }
-      return o;
-    }, {time: 0});
-    api.port.emit('set_all_threads_read', o);
+    var o;
+    if ($list.data('kind') === 'all') {
+      o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
+        var t = el.dataset.createdAt;
+        if (o.time < new Date(t)) {
+          o.time = t;
+          o.id = el.dataset.id;
+        }
+        return o;
+      }, {time: 0});
+    }
+    api.port.emit('set_all_threads_read', o && o.id);
     // not updating DOM until response received due to bulk nature of action
   }
 

@@ -12,6 +12,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import securesocial.core._
 import com.keepit.social.{SocialNetworks, SocialId}
+import org.joda.time._
 
 class SocialUserInfoTest extends Specification with ShoeboxTestInjector with TestAkkaSystem {
 
@@ -154,8 +155,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     }
 
     "import friends" in {
-      withDb() { implicit injector =>
-
+      withDb(FakeClockModule()) { implicit injector =>
         val none_unprocessed = db.readOnly { implicit s =>
           socialUserInfoRepo.getUnprocessed()
         }
@@ -163,6 +163,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
         none_unprocessed.size === 0
 
         setup()
+        inject[Clock].asInstanceOf[FakeClock] += Hours.ONE
         val unprocessed = db.readOnly { implicit s =>
           socialUserInfoRepo.getUnprocessed()
         }

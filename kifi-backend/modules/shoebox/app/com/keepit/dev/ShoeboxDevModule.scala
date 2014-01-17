@@ -20,7 +20,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
 
   // Shoebox Functional Modules
   analyticsModule = DevAnalyticsModule(),
-  topicModelModule = DevTopicModelModule(),
+//  topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
 ) with CommonDevModule

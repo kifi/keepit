@@ -16,7 +16,7 @@ class StandaloneCollectionIndexer(
   collectionNameIndexer: CollectionNameIndexer,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends CollectionIndexer(indexDirectory, indexWriterConfig, collectionNameIndexer, airbrake, shoeboxClient) {
+) extends CollectionIndexer(indexDirectory, indexWriterConfig, collectionNameIndexer, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
@@ -24,9 +24,9 @@ class StandaloneCollectionIndexer(
     var total = 0
     var done = false
     while (!done) {
-      val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, 1000), 180 seconds)
-      done = collections.isEmpty
-      total += update("CollectionIndex", collections, Shard(0, 1))
+      val data = CollectionIndexer.fetchData(sequenceNumber, 1000, shoeboxClient)
+      done = data.isEmpty
+      total += update("CollectionIndex", data, Shard(0, 1))
     }
     total
   }

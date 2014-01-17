@@ -2,13 +2,12 @@ package com.keepit.model
 
 
 import com.google.inject.{Inject, Singleton}
-
 import com.keepit.common.db.slick.{DbRepo, DataBaseComponent, ExternalIdColumnDbFunction}
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.common.time._
-
 import org.joda.time.DateTime
+import com.keepit.common.db.slick.DBSession.RSession
 
 case class FeatureWaitlistEntry(
   id: Option[Id[FeatureWaitlistEntry]] = None,
@@ -33,5 +32,8 @@ class FeatureWaitlistRepo @Inject() (val db: DataBaseComponent, val clock: Clock
     def userAgent = column[String]("user_agent", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ email ~ feature ~ userAgent <> (FeatureWaitlistEntry.apply _, FeatureWaitlistEntry.unapply _)
   }
+
+  override def deleteCache(model: FeatureWaitlistEntry)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: FeatureWaitlistEntry)(implicit session: RSession): Unit = {}
 
 }

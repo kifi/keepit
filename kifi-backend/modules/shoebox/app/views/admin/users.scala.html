@@ -1,4 +1,4 @@
-@(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics], page: Int, count: Int, pageCount: Int, searchTerm: Option[String])
+@(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics], page: Int, count: Int, pageCount: Int, searchTerm: Option[String], userSetDescription: String)
 @import com.keepit.controllers.admin.routes
 
 @kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
@@ -61,7 +61,7 @@
   </div>
 }
 
-@admin(count + " Total Users") {
+@admin(count + " " + userSetDescription) {
   <h2> Showing @userStatisticsList.length (page @(page + 1)) </h2>
 
   @pagination(page, pageCount)
@@ -95,7 +95,7 @@
       <td>@adminHelper.userDisplay(userStatistics.user)</td>
       <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
       <td>@userStatistics.bookmarksCount</td>
-      <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
+      <td>@{adminHelper.dateTimeDisplay(userStatistics.user.createdAt)}</td>
       <td>@userStatistics.experiments.mkString(", ")</td>
       <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
     </tr>

@@ -484,14 +484,6 @@
 								</nav>
 								<div class="invites-left">Invites Left <span class="num-invites"></span></div>
 							</div>
-							<div class="dialog no-invites-dialog" style="display:none">
-								<div class="dialog-content">
-									<h2>You have no invites left</h2>
-									<p>We are limiting the number of users we accept to Kifi.</p>
-									<p>Need more invites? Tell us.</p>
-									<button class="more-invites">I need more invites</button>
-								</div>
-							</div>
 
 							<div class="dialog invite-message-dialog" style="display:none">
 								<form method="POST" action="/invite" class="dialog-content" data-template>
@@ -657,77 +649,82 @@ Kifi also lets you message your friends about what you keep and find alongside a
 				</div>
 
 
-				<div class="detail"><div data-template data-kept="{{howKept}}">
-						<a class="page-x" href="javascript:"></a>
-						<div class="page-meta" data-n="{{numKeeps}}">
-							<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
-							{% if numKeeps == 1 %}
-							<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
-							<div class="page-pic-wrap">
-								<div class="page-pic-special"></div>
-								<a class="page-pic" href="{{url}}" target="_blank">
-									<div class="page-pic-1">
-										<div class="page-pic-2">
-											<div class="page-pic-3">
-												<div class="page-pic-soon">Preview of this page<br>not yet available</div>
-												<span class="page-pic-tip">Visit page</span>
-											</div>
-										</div>
-									</div>
-								</a>
-								<div class="page-how {{howKept}}">
-									<div class="page-how-0">
-										<div class="page-how-pub">
-											<div class="page-how-1">
-												<div class="page-how-2">
-													<div class="page-how-3">Public</div>
+				<div class="detail">
+					<div class="antiscroll-inner">
+						<div class="detail-inner" data-template data-kept="{{howKept}}">
+							<a class="page-x" href="javascript:"></a>
+							<div class="page-meta" data-n="{{numKeeps}}">
+								<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
+								{% if numKeeps == 1 %}
+								<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
+								<div class="page-pic-wrap">
+									<div class="page-pic-special"></div>
+									<a class="page-pic" href="{{url}}" target="_blank">
+										<div class="page-pic-1">
+											<div class="page-pic-2">
+												<div class="page-pic-3">
+													<div class="page-pic-soon">Preview of this page<br>not yet available</div>
+													<span class="page-pic-tip">Visit page</span>
 												</div>
 											</div>
 										</div>
-										<div class="page-how-pri">
-											<div class="page-how-1">
-												<div class="page-how-2">
-													<div class="page-how-3">Private</div>
+									</a>
+								<div class="page-how {{howKept}}">
+										<div class="page-how-0">
+											<div class="page-how-pub">
+												<div class="page-how-1">
+													<div class="page-how-2">
+														<div class="page-how-3">Public</div>
+													</div>
+												</div>
+											</div>
+											<div class="page-how-pri">
+												<div class="page-how-1">
+													<div class="page-how-2">
+														<div class="page-how-3">Private</div>
+													</div>
 												</div>
 											</div>
 										</div>
 									</div>
 								</div>
+								{% endif %}
+								<a class="page-keep" href="javascript:"></a>
+								<a class="page-priv" href="javascript:"></a>
+							</div>
+							{% if numKeeps == 1 %}
+							<div class="page-who">
+								<h2>Who kept this:</h2>
+								<div class="page-who-pics"></div>
+								<div class="page-who-text"></div>
+							</div>
+							<div class="page-chatter">
+								<h2>Talking about this Keep:</h2>
+								<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
 							</div>
 							{% endif %}
-							<a class="page-keep" href="javascript:"></a>
-							<a class="page-priv" href="javascript:"></a>
-						</div>
-						{% if numKeeps == 1 %}
-						<div class="page-who">
-							<h2>Who kept this:</h2>
-							<div class="page-who-pics"></div>
-							<div class="page-who-text"></div>
-						</div>
-						<div class="page-chatter">
-							<h2>Talking about this Keep:</h2>
-							<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
-						</div>
-						{% endif %}
-						<div class="page-colls{% if collections.length %} some{% endif %}">
-							<h2>Tags:</h2>
-							<ul class="page-coll-list">
-								<li class="page-coll" data-template data-id="{{id}}">
-								<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
-								</li>
-								<li class="page-coll-new" data-after-template>
-								<a class="page-coll-add" href="javascript:"></a>
-								<span class="page-coll-sizer" style="display:none"></span>
-								<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
-								<ul class="page-coll-opts" style="display:none">
-									<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
+							<div class="page-colls{% if collections.length %} some{% endif %}">
+								<h2>Tags:</h2>
+								<ul class="page-coll-list">
+									<li class="page-coll" data-template data-id="{{id}}">
+									<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+									</li>
+									<li class="page-coll-new" data-after-template>
+									<a class="page-coll-add" href="javascript:"></a>
+									<span class="page-coll-sizer" style="display:none"></span>
+									<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
+									<ul class="page-coll-opts" style="display:none">
+										<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
+									</ul>
+									</li>
 								</ul>
-								</li>
-							</ul>
+							</div>
 						</div>
 					</div>
 				</div>
+				<!-- end of detail -->
 			</div>
+			<!-- end of page-col-inner -->
 		</aside>
 	</div>
 

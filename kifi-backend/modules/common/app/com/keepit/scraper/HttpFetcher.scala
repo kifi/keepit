@@ -21,6 +21,7 @@ import java.io.IOException
 import scala.util.Try
 import org.apache.http.util.EntityUtils
 import com.keepit.common.time._
+import com.keepit.common.performance.timing
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -114,7 +115,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
 
   val httpClient = httpClientBuilder.build()
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch: url=$url,proxy=$proxy") {
     val ts = System.currentTimeMillis
     val httpGet = new HttpGet(url)
     val httpContext = new BasicHttpContext()

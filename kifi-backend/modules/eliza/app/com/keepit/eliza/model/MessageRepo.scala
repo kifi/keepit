@@ -69,6 +69,11 @@ class MessageRepoImpl @Inject() (
     messagesForThreadIdCache.remove(key)
   }
 
+  override def deleteCache(model: Message)(implicit session: RSession): Unit = {
+    val key = MessagesForThreadIdKey(model.thread)
+    messagesForThreadIdCache.remove(key)
+  }
+
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {
     (for (row <- table if row.id === message.id) yield row.sentOnUriId).update(uriId)
     invalidateCache(message)

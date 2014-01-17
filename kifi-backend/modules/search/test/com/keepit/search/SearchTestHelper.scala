@@ -36,10 +36,8 @@ import com.keepit.search.tracker.ProbablisticLRU
 import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding._
 
-trait SearchTestHepler { self: SearchApplicationInjector =>
+trait SearchTestHelper { self: SearchApplicationInjector =>
 
-  val singleShard = Shard[NormalizedURI](0,1)
-  val activeShards = ActiveShards(Seq(singleShard))
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
 
@@ -53,32 +51,34 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
     (fakeShoeboxClient.saveUsers(users:_*), fakeShoeboxClient.saveURIs(uris:_*))
   }
 
-  def initIndexes(store: ArticleStore) = {
-    val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+  def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
 
-    val articleIndexer = new StandaloneArticleIndexer(new VolatileIndexDirectoryImpl, articleConfig, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val shardedArticleIndexer = new ShardedArticleIndexer(
-      Map(singleShard -> articleIndexer),
-      store,
-      inject[ShoeboxServiceClient]
-    )
-    val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val articleIndexers = activeShards.shards.map{ shard =>
+      val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, articleConfig, store, inject[AirbrakeNotifier])
+      (shard -> articleIndexer)
+    }
+    val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[ShoeboxServiceClient])
+
+    val uriGraphIndexers = activeShards.shards.map{ shard =>
+      val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier])
+      val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier])
+      (shard -> uriGraphIndexer)
+    }
+    val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])
+
+    val collectionIndexers = activeShards.shards.map{ shard =>
+      val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier])
+      val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier])
+      (shard -> collectionIndexer)
+    }
+    val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[ShoeboxServiceClient])
+
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-
-    val uriGraphIndexer = new StandaloneURIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val shardedUriGraphIndexer = new ShardedURIGraphIndexer(Map(singleShard -> uriGraphIndexer), inject[ShoeboxServiceClient])
-
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val collectionIndexer = new StandaloneCollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val shardedCollectionIndexer = new ShardedCollectionIndexer(
-      Map(singleShard -> collectionIndexer),
-      inject[ShoeboxServiceClient]
-    )
-
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -98,7 +98,7 @@ trait SearchTestHepler { self: SearchApplicationInjector =>
       inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
-    (uriGraphIndexer, collectionIndexer, articleIndexer, mainSearcherFactory)
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, mainSearcherFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {

@@ -136,7 +136,7 @@ var mixpanel = {
   enabled: true,
   queue: [],
   batch: [],
-  sendBatch: function(){
+  sendBatch: function () {
     if (this.batch.length > 0) {
       var json = JSON.stringify(this.batch);
       var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
@@ -144,7 +144,7 @@ var mixpanel = {
       this.batch.length = 0;
     }
   },
-  augmentAndBatch: function(data) {
+  augmentAndBatch: function (data) {
     data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
     data.properties.distinct_id = session.user.id;
     data.properties.browser = api.browser.name;
@@ -154,7 +154,7 @@ var mixpanel = {
       this.sendBatch();
     }
   },
-  track: function(eventName, properties) {
+  track: function (eventName, properties) {
     if (this.enabled) {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
@@ -172,7 +172,7 @@ var mixpanel = {
       }
     }
   },
-  catchUp: function() {
+  catchUp: function () {
     var that = this;
     this.queue.forEach(function (data) {
       that.augmentAndBatch(data);
@@ -181,14 +181,13 @@ var mixpanel = {
   }
 };
 
-
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (eventFamily !== 'slider') {
     log("#800", "[logEvent] invalid event family:", eventFamily)();
     return;
   }
   var ev = {
-    installId: getStored("kifi_installation_id"), // ExternalId[KifiInstallation]
+    installId: stored('installation_id'), // ExternalId[KifiInstallation]
     eventFamily: eventFamily, // Category (see eventFamilies)
     eventName: eventName}; // Any key for this event
   if (metaData) {
@@ -285,10 +284,10 @@ var socketHandlers = {
     log("[socket:url_patterns]", patterns)();
     urlPatterns = compilePatterns(patterns);
   },
-  notification: function(n) {  // a new notification (real-time)
-    log("[socket:notification]", n)();
+  notification: function(n, th) {  // a new notification (real-time)
+    log('[socket:notification]', n, th || '')();
     standardizeNotification(n);
-    if (insertNewNotification(n)) {
+    if (insertNewNotification(th ? standardizeNotification(th) : n)) {
       handleRealTimeNotification(n);
       tellVisibleTabsNoticeCountIfChanged();
     }
@@ -703,9 +702,15 @@ api.port.on({
       tabsByLocator[o.new] = arr || [tab];
     }
   },
-  set_all_threads_read: function(o) {
+  set_all_threads_read: function (msgId) {
     // not updating local cache until server responds due to bulk nature of action
-    socket.send(['set_all_notifications_visited', o.id]);
+    if (!msgId) {
+      var threadId = threadLists.all && threadLists.all.ids[0];
+      msgId = threadId && threadsById[threadId].id;
+    }
+    if (msgId) {
+      socket.send(['set_all_notifications_visited', msgId]);
+    }
   },
   session: function(_, respond) {
     respond(session);
@@ -828,7 +833,7 @@ api.port.on({
     threadsById[threadId].muted = false;
   },
   get_bookmark_count_if_should_import: function(_, respond) {
-    if (getStored('prompt_to_import_bookmarks')) {
+    if (stored('prompt_to_import_bookmarks')) {
       api.bookmarks.getAll(function(bms) {
         respond(bms.length);
       });
@@ -844,6 +849,11 @@ api.port.on({
   report_error: function(data, _, tag) {
     // TODO: filter errors and improve fidelity/completeness of information
     //reportError(data.message, data.url, data.lineNo);
+  },
+  toggle_mode: function () {
+    if (!api.isPackaged()) {
+      api.mode.toggle();
+    }
   }
 });
 
@@ -903,6 +913,7 @@ function removeNotificationPopups(threadId) {
 function standardizeNotification(n) {
   n.category = (n.category || 'message').toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
+  return n;
 }
 
 function handleRealTimeNotification(n) {
@@ -1221,7 +1232,6 @@ function searchOnServer(request, respond) {
     resp.filter = request.filter;
     resp.session = session;
     resp.admBaseUri = admBaseUri();
-    resp.showScores = api.prefs.get('showScores');
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.othersTotal = resp.othersTotal || 0;
@@ -1232,11 +1242,7 @@ function searchOnServer(request, respond) {
     respond(resp);
   };
 
-  if (session.experiments.indexOf('tsearch') < 0) {
-    ajax("search", "GET", "/search", params, respHandler);
-  } else {
-    ajax("api", "GET", "/tsearch", params, respHandler);
-  }
+  ajax("search", "GET", "/search", params, respHandler);
   return true;
 }
 
@@ -1257,14 +1263,6 @@ function ymd(d) {  // yyyy-mm-dd local date
   return new Date(d - d.getTimezoneOffset() * 60000).toISOString().substr(0, 10);
 }
 
-// kifi icon in location bar
-api.icon.on.click.add(function (tab) {
-  if (silence) {
-    unsilence(tab);
-  } else {
-    api.tabs.emit(tab, 'button_click', null, {queue: 1});
-  }
-});
 
 function kifify(tab) {
   log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', session ? '' : 'no session')();
@@ -1275,7 +1273,7 @@ function kifify(tab) {
   }
 
   if (!session) {
-    if (!getStored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
+    if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
       ajax("GET", "/ext/authed", function(loggedIn) {
         if (loggedIn !== false) {
           startSession(function() {
@@ -1363,7 +1361,7 @@ function kififyWithPageData(tab, d) {
       } else if (ruleSet.rules.shown && d.shown) {
         log("[initTab]", tab.id, "shown before")();
       } else {
-        if (api.prefs.get("showSlider") && ruleSet.rules.scroll) {
+        if (ruleSet.rules.scroll) {
           api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
         }
         tab.autoShowSec = (ruleSet.rules.focus || [])[0];
@@ -1552,6 +1550,15 @@ function whenTabFocused(tab, key, callback) {
 }
 // ===== Browser event listeners
 
+// kifi icon in location bar
+api.icon.on.click.add(function (tab) {
+  if (silence) {
+    unsilence(tab);
+  } else {
+    api.tabs.emit(tab, 'button_click', null, {queue: 1});
+  }
+});
+
 api.tabs.on.focus.add(function(tab) {
   log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab)();
 
@@ -1617,11 +1624,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 });
 
 api.on.beforeSearch.add(throttle(function () {
-  if (session && ~session.experiments.indexOf('tsearch')) {
-    ajax('GET', '/204');
-  } else {
-    ajax('search', 'GET', '/search/warmUp');
-  }
+  ajax('search', 'GET', '/search/warmUp');
 }, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
@@ -1666,24 +1669,66 @@ function getPrefetched(request, cb) {
   }
 }
 
+api.on.install.add(function() {
+  log('[api.on.install]')();
+});
+api.on.update.add(function() {
+  log('[api.on.update]')();
+});
+
+// ===== Local storage
+
+function stored(key) {
+  return api.storage[qualify(key)];
+}
+
+function store(key, value) {
+  var qKey = qualify(key), prev = api.storage[qKey];
+  if (value != null && prev !== String(value)) {
+    log('[store] %s = %s (was %s)', key, value, prev)();
+    api.storage[qKey] = value;
+  }
+}
+
+function unstore(key) {
+  delete api.storage[qualify(key)];
+}
+
+function qualify(key) {
+  return api.mode.isDev() ? key + '@dev' : key;
+}
+
+// TODO: delete this code for migrating storage keys Feb 20
+(function (keys) {
+  delete api.storage.development_kifi_installation_id;
+  for (var old in keys) {
+    var qOld = 'production_' + old;
+    if (qOld in api.storage) {
+      var val = api.storage[qOld];
+      if (val != null) {
+        api.storage[keys[old] || old] = val;
+      }
+      delete api.storage[qOld];
+    }
+  }
+}({kifi_installation_id: 'installation_id', prompt_to_import_bookmarks: null, logout: null}));
+
+// ===== Helper functions
+
 function scheduleAutoShow(tab) {
   log("[scheduleAutoShow] scheduling tab:", tab.id)();
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
-  if (api.prefs.get("showSlider")) {
-    tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
-      delete tab.autoShowSec;
-      delete tab.autoShowTimer;
-      if (api.prefs.get("showSlider")) {
-        log("[autoShow]", tab.id)();
-        api.tabs.emit(tab, "auto_show", null, {queue: 1});
-      }
-    }, tab.autoShowSec * 1000);
-  }
+  tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
+    delete tab.autoShowSec;
+    delete tab.autoShowTimer;
+    log('[autoShow]', tab.id)();
+    api.tabs.emit(tab, 'auto_show', null, {queue: 1});
+  }, tab.autoShowSec * 1000);
 }
 
 function compilePatterns(arr) {
   for (var i = 0; i < arr.length; i++) {
-    arr[i] = new RegExp(arr[i], "");
+    arr[i] = new RegExp(arr[i], '');
   }
   return arr;
 }
@@ -1708,7 +1753,7 @@ function idToThread(id) {
 }
 
 function devUriOr(uri) {
-  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : uri;
+  return api.mode.isDev() ? 'http://dev.ezkeep.com:9000' : uri;
 }
 function apiUri(service) {
   return "https://" + (service === "" ? "api" : service) + ".kifi.com";
@@ -1730,33 +1775,6 @@ var elizaBaseUri = devUriOr.bind(0, apiUri("eliza"));
 
 var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
 var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
-
-function getFullyQualifiedKey(key) {
-  return (api.prefs.get("env") || "production") + "_" + key;
-}
-
-function getStored(key) {
-  return api.storage[getFullyQualifiedKey(key)];
-}
-
-function store(key, value) {
-  var qKey = getFullyQualifiedKey(key), prev = api.storage[qKey];
-  if (value != null && prev !== String(value)) {
-    log("[store] %s = %s (was %s)", key, value, prev)();
-    api.storage[qKey] = value;
-  }
-}
-
-function unstore(key) {
-  delete api.storage[getFullyQualifiedKey(key)];
-}
-
-api.on.install.add(function() {
-  log('[api.on.install]')();
-});
-api.on.update.add(function() {
-  log('[api.on.update]')();
-});
 
 function getFriends() {
   ajax("GET", "/ext/user/friends", function(fr) {
@@ -1842,7 +1860,7 @@ function connectSync() {
 }
 
 function authenticate(callback, retryMs) {
-  if (api.prefs.get("env") === "development") {
+  if (api.mode.isDev()) {
     openLogin(callback, retryMs);
   } else {
     startSession(callback, retryMs);
@@ -1851,7 +1869,7 @@ function authenticate(callback, retryMs) {
 
 function startSession(callback, retryMs) {
   ajax("POST", "/kifi/start", {
-    installation: getStored("kifi_installation_id"),
+    installation: stored('installation_id'),
     version: api.version},
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
@@ -1889,7 +1907,7 @@ function startSession(callback, retryMs) {
 
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
-    store("kifi_installation_id", data.installationId);
+    store('installation_id', data.installationId);
     delete session.rules;
     delete session.patterns;
     delete session.installationId;
@@ -1904,7 +1922,7 @@ function startSession(callback, retryMs) {
       if (retryMs) {
         api.timers.setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
-    } else if (getStored("kifi_installation_id")) {
+    } else if (stored('installation_id')) {
       openLogin(callback, retryMs);
     } else {
       var tab = api.tabs.anyAt(webBaseUri() + "/");
@@ -2003,14 +2021,14 @@ authenticate(function() {
       api.tabs.open(webBaseUri() + "/getting-started");
     }
   }
-  if (api.loadReason === 'install' || api.prefs.get('env') === 'development') {
+  if (api.loadReason === 'install' || api.mode.isDev()) {
     store('prompt_to_import_bookmarks', true);
   }
 }, 3000);
 
 function reportError(errMsg, url, lineNo) {
   log('Reporting error "%s" in %s line %s', errMsg, url, lineNo)();
-  if ((api.prefs.get("env") === "production") === api.isPackaged()) {
+  if (api.mode.isDev() !== api.isPackaged()) {
     ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }
 }

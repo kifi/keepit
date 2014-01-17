@@ -1,7 +1,6 @@
 package com.keepit.scraper
 
 import com.google.inject._
-import play.api.Play
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -10,7 +9,7 @@ import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
 import java.io.File
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
@@ -21,8 +20,12 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.routing.SmallestMailboxRouter
-import play.api.Play.current
+import com.keepit.common.performance.timing
+import java.util.concurrent._
+import java.util.concurrent.atomic.AtomicInteger
 import scala.util.Success
+import java.util.concurrent.ForkJoinPool.ForkJoinWorkerThreadFactory
+import org.joda.time.format.DateTimeFormatter
 
 
 @ProvidedBy(classOf[ScrapeProcessorProvider])
@@ -35,11 +38,12 @@ trait ScrapeProcessor {
 @Singleton
 class ScrapeProcessorProvider @Inject() (
   scraperConfig: ScraperConfig,
+  queuedScrapeProcessor:QueuedScrapeProcessor,
   asyncScrapeProcessor:AsyncScrapeProcessor,
   syncScrapeProcessor:SyncScrapeProcessor
 ) extends Provider[ScrapeProcessor] with Logging {
 
-  lazy val processor = if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor // config-based toggle
+  lazy val processor = if (scraperConfig.queued) queuedScrapeProcessor else if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor // config-based toggle
   log.info(s"[ScrapeProcessorProvider] created with config:$scraperConfig proc:$processor")
 
   def get = processor
@@ -109,7 +113,7 @@ class SyncScraperActor @Inject() (
       log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
       sender ! res
     }
-    case AsyncScrape(nuri, info, proxyOpt) => {
+    case AsyncScrape(nuri, info, proxyOpt) => timing(s"AsyncScrape: uri=(${nuri.id}, ${nuri.url}) info=(${info.id},${info.destinationUrl}) proxy=$proxyOpt") {
       log.info(s"[AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
       val (uri, a) = syncScraper.safeProcessURI(nuri, info, proxyOpt)
@@ -117,6 +121,79 @@ class SyncScraperActor @Inject() (
     }
   }
 
+}
+
+
+import java.util.concurrent.{Future => JFuture, Callable => JCallable}
+
+@Singleton
+class QueuedScrapeProcessor @Inject() (
+  airbrake:AirbrakeNotifier,
+  config: ScraperConfig,
+  httpFetcher: HttpFetcher,
+  extractorFactory: ExtractorFactory,
+  articleStore: ArticleStore,
+  s3ScreenshotStore: S3ScreenshotStore,
+  helper: SyncShoeboxDbCallbacks
+) extends ScrapeProcessor with Logging {
+
+  val pSize = Runtime.getRuntime.availableProcessors * 256
+  val fjPool = new ForkJoinPool(pSize)
+
+  log.info(s"[QSP.ctr] nrInstances=$pSize, pool=$fjPool")
+
+  def worker = new SyncScraper(airbrake, config, httpFetcher, extractorFactory, articleStore, s3ScreenshotStore, helper)
+
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit = {
+    log.info(s"[QSP.asyncScrape($fjPool)] uri=$uri info=$info proxy=$proxyOpt")
+    val w = worker
+    try {
+      fjPool.execute(new Runnable {
+        def run(): Unit = {
+          val name = Thread.currentThread.getName
+          val dt = currentDateTime.toLocalTime
+          Thread.currentThread().setName(s"$name##$dt##(${uri.id},${info.id},${uri.url})")
+          try {
+            val res = timing(s"QSP.safeProcessURI(${uri.id}),${uri.url}") {
+              w.safeProcessURI(uri, info, proxyOpt)
+            }
+            // log.info(s"[QSP.asyncScrape($fjPool)] result=$res")
+            res
+          } finally {
+            Thread.currentThread().setName(name)
+          }
+        }
+      })
+    } catch {
+      case t:Throwable =>
+        log.info(s"Caught exception ${t.getMessage}; cause=${t.getCause}; QPS.asyncScrape($fjPool): uri=$uri info=$info")
+        airbrake.notify(t)
+    }
+  }
+
+  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
+    log.info(s"[ScrapeArticle] message received; url=${uri.url}")
+    val ts = System.currentTimeMillis
+    val res = worker.safeProcessURI(uri, info, proxyOpt)
+    log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
+    Future.successful(res)
+  }
+
+  def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    log.info(s"[FetchArticle] message received; url=$url")
+    val ts = System.currentTimeMillis
+    val extractor = extractorProviderTypeOpt match {
+      case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
+      case _ => extractorFactory(url)
+    }
+    val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
+    val res = fetchStatus.statusCode match {
+      case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(worker.basicArticle(url, extractor))
+      case _ => None
+    }
+    log.info(s"[FetchArticle] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$res")
+    Future.successful(res)
+  }
 }
 
 // straight port from original (local) code

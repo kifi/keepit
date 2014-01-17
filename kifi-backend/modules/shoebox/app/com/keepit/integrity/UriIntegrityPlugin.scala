@@ -47,13 +47,13 @@ class UriIntegrityActor @Inject()(
       bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
-          bookmarkRepo.removeFromCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+          bookmarkRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
           bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
         }
         case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
           if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
           bookmarkRepo.save(oldBm.withActive(false));
-          bookmarkRepo.removeFromCache(oldBm); Some(oldBm, bm)
+          bookmarkRepo.deleteCache(oldBm); Some(oldBm, bm)
         } else None
       }
     }
@@ -104,9 +104,9 @@ class UriIntegrityActor @Inject()(
       if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
     } else {
       val oldUri = uriRepo.get(oldUriId)
-      val newUri = uriRepo.get(newUriId) match {
+      uriRepo.get(newUriId) match {
         case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
-        case uri => uri
+        case _ =>
       }
 
       urlRepo.getByNormUri(oldUriId).foreach{ url =>
@@ -150,7 +150,14 @@ class UriIntegrityActor @Inject()(
           handleURIMigration(change)
         } catch {
           case e: Exception => {
-            airbrake.notify(e)
+            airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
+
+            try{
+              List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache}
+            } catch {
+              case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
+            }
+
             changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
           }
         }

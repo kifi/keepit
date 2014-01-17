@@ -4,6 +4,7 @@ import com.keepit.test._
 import play.api.templates.Html
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
+import com.keepit.model.NotificationCategory
 
 class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
 
@@ -17,7 +18,7 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
               to = List(EmailAddresses.ENG),
               subject = "Email from test case",
               htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
-              category = PostOffice.Categories.System.HEALTHCHECK))
+              category = NotificationCategory.System.HEALTHCHECK))
         }
         mail.htmlBody.trim === """<!DOCTYPE html>
 

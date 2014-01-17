@@ -24,10 +24,10 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): Unit
+  def deleteCache(model: M)(implicit session: RSession): Unit
 }
 
 trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
-  def deleteCache(model: M): Unit
   def delete(model: M)(implicit session:RWSession):Int
 
   // potentially more efficient variant but we currently depend on having the model available for our caches
@@ -53,9 +53,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   import db.Driver.Table
 
   lazy val dbLog = Logger("com.keepit.db")
-
-  //todo(martin) remove this default implementation so we force repos to implement it
-  override def invalidateCache(model: M)(implicit session: RSession): Unit = {}
 
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
@@ -119,7 +116,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exsactly one")
+    if (count != 1) {
+      deleteCache(model)
+      throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    }
     model
   }
 

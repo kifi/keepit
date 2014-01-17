@@ -53,10 +53,16 @@ class LoggingFilter() extends EssentialFilter {
             url = rh.uri,
             statusCode = result.header.status
           ))
-          result.withHeaders(
-            CommonHeaders.ResponseTime -> event.duration.toString,
-            CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N"),
-            CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA"))
+          val headers = (CommonHeaders.ResponseTime -> event.duration.toString) ::
+                        (CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N")) ::
+                        (CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA")) ::
+                        Nil
+          val headersWithCount = if (event.duration > 1000) {
+            (CommonHeaders.MidFlightRequestCount -> midFlightRequests.count.toString) :: headers
+          } else {
+            headers
+          }
+          result.withHeaders(headersWithCount: _*)
         }
         try {
           next(rh).map {

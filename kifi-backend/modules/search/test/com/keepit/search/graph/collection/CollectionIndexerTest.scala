@@ -239,7 +239,8 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         saveBookmarksToCollection(collection, bookmarks)
 
         val collectionIndexer = mkCollectionIndexer()
-        val doc = collectionIndexer.buildIndexable(collection, Shard(0, 1)).buildDocument
+        val (col, bm) = CollectionIndexer.fetchData(collection.id.get, user.id.get, shoeboxClient)
+        val doc = collectionIndexer.buildIndexable(col, bm).buildDocument
         doc.getFields.forall{ f => collectionIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }

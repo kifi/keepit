@@ -4,6 +4,7 @@ import com.google.inject.Singleton
 import com.keepit.common.mail.{PostOffice, ElectronicMail}
 import com.keepit.common.mail.EmailAddresses.ENG
 import scala.collection.mutable.MutableList
+import com.keepit.model.NotificationCategory
 
 
 case class FakeHealthcheckModule() extends HealthCheckModule {
@@ -37,6 +38,6 @@ class FakeHealthcheck extends HealthcheckPlugin {
     error
   }
 
-  def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "start", htmlBody = "", category = PostOffice.Categories.System.HEALTHCHECK)
-  def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "stop", htmlBody = "", category = PostOffice.Categories.System.HEALTHCHECK)
+  def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "start", htmlBody = "", category = NotificationCategory.System.HEALTHCHECK)
+  def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "stop", htmlBody = "", category = NotificationCategory.System.HEALTHCHECK)
 }
