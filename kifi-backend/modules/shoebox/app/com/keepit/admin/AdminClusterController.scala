@@ -1,11 +1,11 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster, ServiceInstanceId}
+import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstanceId}
 import com.keepit.common.service.{ServiceUri, ServiceType, ServiceStatus, ServiceVersion}
-import com.keepit.common.amazon.{AmazonInstanceInfo}
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.routes.Common
-import com.keepit.common.net.{HttpClient, DirectUrl}
+import com.keepit.common.net.HttpClient
 import com.google.inject.Inject
 import views.html
 import java.net.InetAddress
