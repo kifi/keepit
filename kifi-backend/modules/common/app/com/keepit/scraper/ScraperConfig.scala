@@ -12,6 +12,7 @@ case class ScraperConfig(
   maxRandomDelay: Int = 300, // seconds
   changeThreshold: Double = 0.05,
   scrapePendingFrequency: Int = sys.props.getOrElse("scraper.pending.freq", "10").toInt, // seconds
+  queued: Boolean = sys.props.getOrElse("scraper.plugin.queued", "true").toBoolean,
   async: Boolean = sys.props.getOrElse("scraper.plugin.async", "true").toBoolean,
   actorTimeout: Int = sys.props.getOrElse("scraper.actor.timeout", "20000").toInt,
   syncAwaitTimeout: Int = sys.props.getOrElse("scraper.plugin.sync.await.timeout", "20000").toInt,
