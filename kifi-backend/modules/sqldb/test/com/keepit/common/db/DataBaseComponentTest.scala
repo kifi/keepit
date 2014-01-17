@@ -115,6 +115,74 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
       }
     }
 
+    "do batch update using readWriteBatch" in {
+      withDb() { implicit injector: Injector =>
+        val result = (inject[Database].readWriteBatch(Seq(0, 1, 2, 3, 4)) { (s, i) =>
+          if (i == 2) throw new SQLException("i'm bad")
+          true
+        })
 
+        result.size === 5
+        result(0).isSuccess === true
+        result(1).isSuccess === true
+        result(2).get must throwA[SQLException]
+        result(3).get must throwA[ExecutionSkipped]
+        result(4).get must throwA[ExecutionSkipped]
+      }
+    }
+
+    "attempt retry batch update using readWriteBatch" in {
+      withDb() { implicit injector: Injector =>
+        var willSuccess = Array(false, false, false, false, false)
+        var success = Array(false, false, false, false, false)
+        def exec(attempts: Int) = (inject[Database].readWriteBatch(Seq(0, 1, 2, 3, 4), attempts) { (s, i) =>
+          if (!willSuccess(i)) {
+            willSuccess(i) = true // will succeed next time
+            throw new SQLException("i'm bad")
+          }
+          success(i) = true
+          true
+        })
+
+        var result = exec(3)
+        result.size === 5
+        success.count(flag => flag) === 2
+        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+
+        willSuccess = Array(false, false, false, false, false)
+        success = Array(false, false, false, false, false)
+        result = exec(5)
+        result.size === 5
+        success.count(flag => flag) === 4
+        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+      }
+    }
+
+    "attempt retry batch update using readWriteBatch (with MySQLIntegrityConstraintViolationException)" in {
+      withDb() { implicit injector: Injector =>
+        var willSuccess = Array(false, false, false, false, false)
+        var success = Array(false, false, false, false, false)
+        def exec(attempts: Int) = (inject[Database].readWriteBatch(Seq(0, 1, 2, 3, 4), attempts) { (s, i) =>
+          if (!willSuccess(i)) {
+            willSuccess(i) = true // will succeed next time if not MySQLIntegrityConstraintViolationException
+            throw new MySQLIntegrityConstraintViolationException("i'm really bad")
+          }
+          success(i) = true
+          true
+        })
+
+        var result = exec(3)
+        result.size === 5
+        success.count(flag => flag) === 0
+        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+
+        willSuccess = Array(false, false, false, false, false)
+        success = Array(false, false, false, false, false)
+        result = exec(5)
+        result.size === 5
+        success.count(flag => flag) === 0
+        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+      }
+    }
   }
 }
