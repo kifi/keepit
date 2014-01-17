@@ -669,10 +669,10 @@ kifi.form = (function () {
     function onDialogClick(e) {
       if (e.which !== 1) return;
       var $el = $(e.target);
-      var submitted = $el.hasClass('photo-dialog-submit');
-      if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.dialog-cell')) {
+      var submitButton = $el.hasClass('photo-dialog-submit');
+      if (submitButton || $el.is('.photo-dialog-cancel,.photo-dialog-x')) {
         var o = $image.data();
-        if (submitted) {
+        if (submitButton) {
           var scale = o.naturalWidth / o.width;
           deferred.resolve({
             width: o.naturalWidth,

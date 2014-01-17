@@ -103,7 +103,7 @@ class AdminBookmarksController @Inject() (
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
+    val PAGE_SIZE = 25
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
@@ -132,10 +132,11 @@ class AdminBookmarksController @Inject() (
     val bookmarkTotalCountFuture = searchServiceClient.uriGraphIndexInfo() map { infos =>
       (infos find (_.name == "BookmarkStore")).get.numDocs
     }
-    val bookmarkTodayCountFuture = future { timing("load bookmarks counts from today") { db.readOnly { implicit s =>
-      val imported = bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
-      val others = bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now())
-      (others, imported)
+    val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
+      bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
+    }}}
+    val bookmarkTodayOthersCountFuture = future { timing("load bookmarks other counts from today") { db.readOnly { implicit s =>
+      bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now())
     }}}
 
 
@@ -143,10 +144,11 @@ class AdminBookmarksController @Inject() (
       for {
         bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
         count <- bookmarkTotalCountFuture
-        todayCount <- bookmarkTodayCountFuture
+        todayImportedCount <- bookmarkTodayImportedCountFuture
+        todayOthersCount <- bookmarkTodayOthersCountFuture
       } yield {
         val pageCount: Int = count / PAGE_SIZE + 1
-        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayCount._1, todayCount._2))
+        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
       }
     }
 

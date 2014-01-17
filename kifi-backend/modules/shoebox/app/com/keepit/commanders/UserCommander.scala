@@ -203,37 +203,37 @@ class UserCommander @Inject() (
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    val guardKey = "friendsNotifiedAboutJoining"
-    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, guardKey).exists(_=="true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
-      val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
-        val newUser = userRepo.get(newUserId)
-        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
-        val id2Email = toNotify.map { userId =>
-          (userId, emailRepo.getByUser(userId))
-        }.toMap
-        (newUser, toNotify, id2Email)
-      }
-      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
-      toNotify.foreach { userId =>
-        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
-        db.readWrite{ implicit session =>
-          val user = userRepo.get(userId)
-          postOffice.sendMail(ElectronicMail(
-            senderUserId = None,
-            from = EmailAddresses.NOTIFICATIONS,
-            fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
-            to = List(id2Email(userId)),
-            subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
-            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
-            textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-            category = NotificationCategory.User.FRIEND_JOINED)
-          )
+    delay {
+      val guardKey = "friendsNotifiedAboutJoining"
+      if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, guardKey).exists(_=="true") }) {
+        db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
+        val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
+          val newUser = userRepo.get(newUserId)
+          val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
+          val id2Email = toNotify.map { userId =>
+            (userId, emailRepo.getByUser(userId))
+          }.toMap
+          (newUser, toNotify, id2Email)
+        }
+        val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
+        toNotify.foreach { userId =>
+          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
+          db.readWrite{ implicit session =>
+            val user = userRepo.get(userId)
+            postOffice.sendMail(ElectronicMail(
+              senderUserId = None,
+              from = EmailAddresses.NOTIFICATIONS,
+              fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
+              to = List(id2Email(userId)),
+              subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
+              htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
+              textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
+              category = NotificationCategory.User.FRIEND_JOINED)
+            )
+          }
+
         }
 
-      }
-
-      delaySend {
         elizaServiceClient.sendGlobalNotification(
           userIds = toNotify,
           title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
@@ -470,18 +470,16 @@ class UserCommander @Inject() (
 
               }
 
-              delaySend {
-                elizaServiceClient.sendGlobalNotification(
-                  userIds = Set(user.id.get),
-                  title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                  body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                  linkText = "Invite more friends to kifi",
-                  linkUrl = "https://www.kifi.com/friends/invite",
-                  imageUrl = respondingUserImage,
-                  sticky = false,
-                  category = NotificationCategory.User.FRIEND_ACCEPTED
-                )
-              }
+              elizaServiceClient.sendGlobalNotification(
+                userIds = Set(user.id.get),
+                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                linkText = "Invite more friends to kifi",
+                linkUrl = "https://www.kifi.com/friends/invite",
+                imageUrl = respondingUserImage,
+                sticky = false,
+                category = NotificationCategory.User.FRIEND_ACCEPTED
+              )
 
             }
 
@@ -597,7 +595,7 @@ class UserCommander @Inject() (
   }
 
 
-  def delaySend(f: => Unit) = {
+  def delay(f: => Unit) = {
     import scala.concurrent.duration._
     scheduler.scheduleOnce(10 seconds) {
       f
