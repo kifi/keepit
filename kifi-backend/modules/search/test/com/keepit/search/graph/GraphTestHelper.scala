@@ -23,7 +23,7 @@ import play.api.test.Helpers._
 trait GraphTestHelper extends ApplicationInjector {
 
   val source = BookmarkSource("test")
-  val bigDataSize = 20000
+  val bigDataSize = 8000
 
   def initData = {
     val users = saveUsers(
