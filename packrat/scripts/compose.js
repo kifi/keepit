@@ -159,7 +159,7 @@ function initCompose($c, enterToSend, opts) {
     var $a = $(this);
     render('html/keeper/titled_tip', {
       title: 'Microfind',
-      html: 'Click to mark something on<br>the page and reference it in<br>your message.'
+      html: 'Click to mark something on<br/>the page and reference it in<br/>your message.'
     }, function (html) {
       configureHover(html, {
         mustHoverFor: 500,
