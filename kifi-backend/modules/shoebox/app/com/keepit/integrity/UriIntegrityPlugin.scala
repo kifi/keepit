@@ -104,9 +104,9 @@ class UriIntegrityActor @Inject()(
       if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
     } else {
       val oldUri = uriRepo.get(oldUriId)
-      val newUri = uriRepo.get(newUriId) match {
+      uriRepo.get(newUriId) match {
         case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
-        case uri => uri
+        case _ =>
       }
 
       urlRepo.getByNormUri(oldUriId).foreach{ url =>
@@ -150,7 +150,14 @@ class UriIntegrityActor @Inject()(
           handleURIMigration(change)
         } catch {
           case e: Exception => {
-            airbrake.notify(e)
+            airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
+
+            try{
+              List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache}
+            } catch {
+              case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
+            }
+
             changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
           }
         }
