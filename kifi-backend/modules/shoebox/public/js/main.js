@@ -3553,6 +3553,9 @@ $(function () {
 	var splashScroller = $splash.antiscroll({x: false, width: '100%'}).data('antiscroll');
 	$(window).resize(splashScroller.refresh.bind(splashScroller));
 
+	var detailScroller = $detail.antiscroll({x: false, width: '100%'}).data('antiscroll');
+	$(window).resize(detailScroller.refresh.bind(detailScroller));
+
 	$splash.on('click', '.kifi-tutorial', function (e) {
 		e.preventDefault();
 		initOnboarding(true);
