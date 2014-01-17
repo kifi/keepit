@@ -96,6 +96,11 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   def configure() {}
 
+
+  @Singleton
+  @Provides
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyAmazonInstanceInfo = MyAmazonInstanceInfo(info)
+
   @Singleton
   @Provides
   def amazonInstanceInfo: AmazonInstanceInfo = DiscoveryModule.LOCAL_AMZN_INFO
