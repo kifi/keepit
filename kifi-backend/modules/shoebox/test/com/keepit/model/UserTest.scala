@@ -18,13 +18,15 @@ class UserTest extends Specification with ShoeboxTestInjector {
     "Use the cache" in {
       withDb() { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
-        db.readWrite { implicit session =>
+        val user = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
-          val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
-
+          userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+        }
+        val updatedUser = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
-          val updatedUser = userRepo.save(user.copy(lastName = "NotMyLastName"))
-
+          userRepo.save(user.copy(lastName = "NotMyLastName"))
+        }
+        db.readOnly { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get !== user
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === updatedUser
         }
@@ -40,21 +42,28 @@ class UserTest extends Specification with ShoeboxTestInjector {
     "Distinguish real and fake users" in {
       withDb() { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
-        db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "Martin", lastName = "Raison"))
+
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "Martin", lastName = "Raison"))
+        }
+
+        db.readOnly { implicit session =>
           userRepoImpl.pageExcludingWithoutExp()(ExperimentType.FAKE)().head === user
           userRepoImpl.pageExcludingWithExp()(ExperimentType.FAKE)().length === 0
           userRepoImpl.countExcludingWithoutExp()(ExperimentType.FAKE) === 1
           userRepoImpl.countExcludingWithExp()(ExperimentType.FAKE) === 0
+        }
 
-          user.id foreach { id =>
-            userExperimentRepo.save(UserExperiment(userId = id, experimentType = ExperimentType.FAKE))
-            val updatedUser = userRepo.get(id)
-            userRepoImpl.pageExcludingWithoutExp()(ExperimentType.FAKE)().length === 0
-            userRepoImpl.pageExcludingWithExp()(ExperimentType.FAKE)().head === updatedUser
-            userRepoImpl.countExcludingWithoutExp()(ExperimentType.FAKE) === 0
-            userRepoImpl.countExcludingWithExp()(ExperimentType.FAKE) === 1
-          }
+        db.readWrite { implicit session =>
+          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.FAKE))
+        }
+
+        db.readOnly { implicit session =>
+          val updatedUser = userRepo.get(user.id.get)
+          userRepoImpl.pageExcludingWithoutExp()(ExperimentType.FAKE)().length === 0
+          userRepoImpl.pageExcludingWithExp()(ExperimentType.FAKE)().head === updatedUser
+          userRepoImpl.countExcludingWithoutExp()(ExperimentType.FAKE) === 0
+          userRepoImpl.countExcludingWithExp()(ExperimentType.FAKE) === 1
         }
       }
     }

@@ -15,19 +15,19 @@ class HttpProxyTest extends Specification with ShoeboxTestInjector {
 
         httpProxyCache.get(HttpProxyAllKey()).isDefined === false
 
-        inject[Database].readWrite { implicit session =>
+        db.readWrite { implicit session =>
           httpProxyRepo.save(HttpProxy(alias = "xxx", hostname = "x.x.x.x", scheme = "http", port = 80, username = Some("FortyTwo"), password = Some("ChangeMe")))
-
-          httpProxyCache.get(HttpProxyAllKey()).isDefined === false
-
-          httpProxyRepo.allActive().length === 1
-          httpProxyCache.get(HttpProxyAllKey()).isDefined
-          httpProxyCache.get(HttpProxyAllKey()).get.length === 1
-
-          httpProxyRepo.save(HttpProxy(alias = "yyy", hostname = "y.y.y.y", scheme = "http", port = 80, username = Some("FortyTwo"), password = Some("ChangeMe")))
-
-          httpProxyCache.get(HttpProxyAllKey()).isDefined === false
         }
+
+        httpProxyCache.get(HttpProxyAllKey()).isDefined === false
+
+        db.readOnly { implicit session => httpProxyRepo.allActive().length === 1 }
+        httpProxyCache.get(HttpProxyAllKey()).isDefined
+        httpProxyCache.get(HttpProxyAllKey()).get.length === 1
+
+        db.readWrite { implicit session => httpProxyRepo.save(HttpProxy(alias = "yyy", hostname = "y.y.y.y", scheme = "http", port = 80, username = Some("FortyTwo"), password = Some("ChangeMe"))) }
+
+        httpProxyCache.get(HttpProxyAllKey()).isDefined === false
       }
     }
   }
