@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import java.net.URLEncoder
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId, State}
@@ -49,7 +49,7 @@ class InviteController @Inject() (db: Database,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander
-) extends WebsiteController(actionAuthenticator) {
+) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite = AuthenticatedHtmlAction { implicit request =>
     Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly

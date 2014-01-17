@@ -1,28 +1,22 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.WebsiteController
-import play.api.Play.current
+import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import play.api.mvc._
 import com.keepit.model._
 import com.keepit.common.db.slick._
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.commanders.EmailOptOutCommander
 import com.google.inject.Inject
-import com.keepit.common.mail.{PostOffice, GenericEmailAddress, EmailAddressHolder}
-import scala.util.{Success, Try, Failure}
+import com.keepit.common.mail.GenericEmailAddress
+import scala.util.{Success, Failure}
 import play.api.data.Form
-import play.api.data.Forms.{tuple, text, checked, optional}
-import play.api.libs.json.Json
-import com.keepit.common.KestrelCombinator
+import play.api.data.Forms.{tuple, text, optional}
 
 class EmailOptOutController @Inject() (
   db: Database,
   actionAuthenticator: ActionAuthenticator,
   emailOptOutRepo: EmailOptOutRepo,
   commander: EmailOptOutCommander)
-  extends WebsiteController(actionAuthenticator) {
-
+  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def optOut(optOutToken: String) = Action { implicit request =>
     val email = commander.getEmailFromOptOutToken(optOutToken)
