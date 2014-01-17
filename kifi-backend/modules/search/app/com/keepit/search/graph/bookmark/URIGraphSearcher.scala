@@ -192,14 +192,15 @@ object UserToUriEdgeSet {
     val set = LongArraySet.fromSorted(uriList.ids)
 
     new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
-      override protected val longArraySet = set
+      override val longArraySet = set
 
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
-        override protected def createdAtByIndex(idx:Int): Long = {
+        override def createdAtByIndex(idx:Int): Long = {
           val datetime = uriList.createdAt(idx)
           Util.unitToMillis(datetime)
         }
-        override protected def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
+        override def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
+        override def bookmarkIdByIndex(idx: Int): Long =  throw new UnsupportedOperationException
       }
     }
   }
@@ -215,14 +216,15 @@ object UserToUriEdgeSet {
       val pubListSize = publicIds.length
 
       new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
-        override protected val longArraySet = set
+        override val longArraySet = set
         override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
 
-          override protected def createdAtByIndex(idx:Int): Long = {
+          override def createdAtByIndex(idx:Int): Long = {
             val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
             Util.unitToMillis(datetime)
           }
-          override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
+          override def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
+          override def bookmarkIdByIndex(idx: Int): Long =  throw new UnsupportedOperationException
         }
       }
     }
