@@ -25,6 +25,7 @@ import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicInteger
 import scala.util.Success
 import java.util.concurrent.ForkJoinPool.ForkJoinWorkerThreadFactory
+import org.joda.time.format.DateTimeFormatter
 
 
 @ProvidedBy(classOf[ScrapeProcessorProvider])
@@ -150,7 +151,8 @@ class QueuedScrapeProcessor @Inject() (
       fjPool.execute(new Runnable {
         def run(): Unit = {
           val name = Thread.currentThread.getName
-          Thread.currentThread().setName(s"$name##(${uri.id},${info.id},${uri.url})")
+          val dt = currentDateTime.toLocalTime
+          Thread.currentThread().setName(s"$name##$dt##(${uri.id},${info.id},${uri.url})")
           try {
             val res = timing(s"QSP.safeProcessURI(${uri.id}),${uri.url}") {
               w.safeProcessURI(uri, info, proxyOpt)
