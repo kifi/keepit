@@ -117,21 +117,26 @@ class AdminBookmarksController @Inject() (
         val urisFuture = future { timing("load uris") { db.readOnly { implicit s =>
           bookmarks map (_.uriId) map uriRepo.get
         }}}
+        val scrapesFuture = future { timing("load scrape info") { db.readOnly { implicit s =>
+          bookmarks map (_.uriId) map scrapeRepo.getByUriId
+        }}}
 
         for {
           users <- usersFuture
           uris <- urisFuture
-        } yield (users.toList.seq, (bookmarks, uris).zipped.toList.seq).zipped.toList.seq
+          scrapes <- scrapesFuture
+        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
     val bookmarkTotalCountFuture = searchServiceClient.uriGraphIndexInfo() map { infos =>
       (infos find (_.name == "BookmarkStore")).get.numDocs
     }
-    val bookmarkTodayCountFuture = future { timing("load bookmarks counts from today") { db.readOnly { implicit s =>
-      val imported = bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
-      val others = bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now())
-      (others, imported)
+    val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
+      bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
+    }}}
+    val bookmarkTodayOthersCountFuture = future { timing("load bookmarks other counts from today") { db.readOnly { implicit s =>
+      bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now())
     }}}
 
 
@@ -139,10 +144,11 @@ class AdminBookmarksController @Inject() (
       for {
         bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
         count <- bookmarkTotalCountFuture
-        todayCount <- bookmarkTodayCountFuture
+        todayImportedCount <- bookmarkTodayImportedCountFuture
+        todayOthersCount <- bookmarkTodayOthersCountFuture
       } yield {
         val pageCount: Int = count / PAGE_SIZE + 1
-        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayCount._1, todayCount._2))
+        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
       }
     }
 

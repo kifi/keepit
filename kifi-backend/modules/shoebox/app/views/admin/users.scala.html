@@ -95,7 +95,7 @@
       <td>@adminHelper.userDisplay(userStatistics.user)</td>
       <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
       <td>@userStatistics.bookmarksCount</td>
-      <td>@{adminHelper.dateDisplay(userStatistics.user.createdAt) + " " + adminHelper.timeDisplay(userStatistics.user.createdAt)}</td>
+      <td>@{adminHelper.dateTimeDisplay(userStatistics.user.createdAt)}</td>
       <td>@userStatistics.experiments.mkString(", ")</td>
       <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
     </tr>
