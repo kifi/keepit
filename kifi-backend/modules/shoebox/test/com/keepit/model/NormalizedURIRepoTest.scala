@@ -183,10 +183,12 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
     "Create a uri that does not exist" in {
       withDb() { implicit injector =>
-        db.readWrite { implicit s =>
+        val blowup = db.readWrite { implicit s =>
           uriRepo.count === 0
           uriRepo.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
-          val blowup = uriRepo.internByUri("http://www.arte.tv/fr/3482046.html")
+          uriRepo.internByUri("http://www.arte.tv/fr/3482046.html")
+        }
+        db.readOnly { implicit s =>
           uriRepo.count === 1
           blowup.url === "http://www.arte.tv/fr/3482046.html"
         }
@@ -195,11 +197,11 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
     "redirect works" in {
       withDb() { implicit injector =>
+        val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (uri0, uri1, uri2) = db.readWrite { implicit s =>
           val uri0 = createUri(title = "too_old", url = "http://www.keepit.com/too_old")
           val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
           val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
-          val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           uriRepo.save(uri0.withRedirect(uri2.id.get, t))
           uriRepo.save(uri1.withRedirect(uri2.id.get, t))
           (uri0, uri1, uri2)
