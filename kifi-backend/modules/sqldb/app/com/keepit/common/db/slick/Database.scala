@@ -45,12 +45,14 @@ case class DbExecutionContext(context: ExecutionContext)
 
 case class SlickDatabaseWrapper (slickDatabase: SlickDatabase, masterSlave: Database.DBMasterSlave)
 
+class ExecutionSkipped extends Exception("skipped. try again! (this is not a real exception)")
+
 object Database {
   sealed trait DBMasterSlave
   case object Master extends DBMasterSlave
   case object Slave extends DBMasterSlave
 
-  private[slick] val tryAgain = Failure(new Exception("try again! (this is not a real exception)"))
+  private[slick] val executionSkipped = Failure(new ExecutionSkipped)
 }
 
 class Database @Inject() (
@@ -159,7 +161,7 @@ class Database @Inject() (
             case f: Failure[T] => failure = f; f
           }
         } else {
-          Database.tryAgain
+          Database.executionSkipped
         }
         results + (item -> oneResult)
       }
@@ -180,6 +182,7 @@ class Database @Inject() (
         partialResults(d) match {
           case Failure(e: MySQLIntegrityConstraintViolationException) => false // do not retry if an integrity constraint violation occurred for this item
           case Failure(e: SQLException) => true                                // retry for other SQLException
+          case Failure(e: ExecutionSkipped) => true                            // retry skipped items
           case _ => false                                                      // no retry for all other cases
         }
       }.toSeq
