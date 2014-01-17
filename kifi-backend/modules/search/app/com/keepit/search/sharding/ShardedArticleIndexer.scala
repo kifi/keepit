@@ -33,4 +33,18 @@ class ShardedArticleIndexer(
     }
     total
   }
+
+  def update(fsize: Int): Int = updateLock.synchronized { // for testing
+    resetSequenceNumberIfReindex()
+
+    var total = 0
+    val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
+    indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
+      val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
+      total += indexer.update(shard.indexNameSuffix, next, shard)
+      rest
+    }
+    if (uris.nonEmpty) sequenceNumber = uris.last.seq
+    total
+  }
 }

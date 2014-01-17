@@ -52,13 +52,14 @@ class SocialUserInfoRepoImpl @Inject() (
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
 
-  def deleteCache(socialUser: SocialUserInfo):Unit = {
+  override def deleteCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
     socialUser.userId map { userId =>
       userCache.remove(SocialUserInfoUserKey(userId))
       socialUserCache.remove(SocialUserKey(userId))
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
+    countCache.remove(SocialUserInfoCountKey())
   }
 
   override def count(implicit session: RSession): Int = {
@@ -87,12 +88,12 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
     val UNPROCESSED_STATE = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
-    (for(f <- table if (f.state.inSet(UNPROCESSED_STATE) && f.credentials.isNotNull)) yield f).list
+    (for(f <- table if (f.state.inSet(UNPROCESSED_STATE) && f.credentials.isNotNull && f.createdAt < clock.now.minusMinutes(15))) yield f).list
   }
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
     (for(f <- table if f.userId.isNotNull && f.credentials.isNotNull && f.networkType.inSet(SocialNetworks.REFRESHING) &&
-      (f.lastGraphRefresh.isNull || f.lastGraphRefresh < currentDateTime.minusDays(15))) yield f).list
+      (f.lastGraphRefresh.isNull || f.lastGraphRefresh < clock.now.minusDays(15))) yield f).list
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {

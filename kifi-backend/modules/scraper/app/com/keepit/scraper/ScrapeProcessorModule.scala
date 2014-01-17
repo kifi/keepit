@@ -35,7 +35,7 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
   @Singleton
   @Provides
   def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor]):SyncScrapeProcessor = {
-    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors * 32)
+    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors * 128)
   }
 }
 

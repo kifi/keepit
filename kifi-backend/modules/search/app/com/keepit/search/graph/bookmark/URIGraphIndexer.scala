@@ -14,16 +14,15 @@ import com.keepit.search.index._
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
-import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.{Success, Try}
 import scala.math._
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
+import com.keepit.search.graph.SortedBookmarks
+import com.keepit.common.logging.Logging
 
 object URIGraphFields {
   val userField = "usr"
@@ -35,6 +34,8 @@ object URIGraphFields {
   val stemmedField = "title_stemmed"
   val siteField = "site"
   val homePageField = "home_page"
+
+  val PRIVATE_LIST_MAX_SIZE = 5000
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
@@ -50,8 +51,7 @@ class URIGraphIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
-    airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient)
+    airbrake: AirbrakeNotifier)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable
@@ -125,11 +125,18 @@ object URIGraphIndexer {
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
     val bookmarks: Seq[Bookmark]
-  ) extends Indexable[User] with LineFieldBuilder {
+  ) extends Indexable[User] with LineFieldBuilder with Logging{
 
     override def buildDocument = {
       val doc = super.buildDocument
-      val (publicBookmarks, privateBookmarks) = URIList.sortBookmarks(bookmarks)
+      val (publicBookmarks, rawPrivateBookmarks) = URIList.sortBookmarks(bookmarks)
+      val privateBookmarks = new SortedBookmarks(rawPrivateBookmarks.toSeq.take(URIGraphFields.PRIVATE_LIST_MAX_SIZE))
+
+
+      if (rawPrivateBookmarks.toSeq.size > URIGraphFields.PRIVATE_LIST_MAX_SIZE){
+        log.warn(s"trauncating private bookmarks for user: ${id.id}, raw private bookmarks size: ${rawPrivateBookmarks.toSeq.size}")
+      }
+
       val publicListBytes = URIList.toByteArray(publicBookmarks)
       val privateListBytes = URIList.toByteArray(privateBookmarks)
       val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)

@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.{UserEventTypes, HeimdalContext, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.model.{EmailAddress, EmailAddressRepo}
 import com.keepit.common.performance.timing
+import com.keepit.model.{NotificationCategory, EmailAddress, EmailAddressRepo}
 
 class SendgridCommander @Inject() (
   db: Database,
@@ -45,7 +46,7 @@ class SendgridCommander @Inject() (
               to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
               subject = s"Sendgrid event [$eventType]",
               htmlBody = htmlBody,
-              category = PostOffice.Categories.System.ADMIN))
+              category = NotificationCategory.System.ADMIN))
         }
       }
     }
@@ -58,7 +59,7 @@ class SendgridCommander @Inject() (
       address <- event.email
       email <- emailOpt
     } yield {
-      if (PostOffice.Categories.User.all.contains(email.category)) {
+      if (NotificationCategory.User.all.contains(email.category)) {
         val emailAddresses = db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }(Database.Slave)
         emailAddresses foreach { emailAddress =>
           val contextBuilder =  heimdalContextBuilder()

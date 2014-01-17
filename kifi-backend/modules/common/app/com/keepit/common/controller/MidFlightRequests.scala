@@ -1,7 +1,7 @@
 package com.keepit.common.controller
 
 import com.google.common.collect.MapMaker
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{Provider, Inject, Singleton}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.mvc.RequestHeader
 import java.util.concurrent.ConcurrentMap
@@ -9,7 +9,7 @@ import scala.collection.JavaConversions._
 
 //todo(eishay): add alerts/stats on the longest outstanding request and/or average time using the value of the currentRequests map
 @Singleton
-class MidFlightRequests @Inject() (airbrake: AirbrakeNotifier) {
+class MidFlightRequests @Inject() (airbrake: Provider[AirbrakeNotifier]) {
   private val currentRequests: ConcurrentMap[RequestHeader, Long] = new MapMaker().concurrencyLevel(4).weakKeys().makeMap()
 
   def count: Int = currentRequests.size()
@@ -29,7 +29,7 @@ class MidFlightRequests @Inject() (airbrake: AirbrakeNotifier) {
     if (now - lastAlert > 600000) { //10 minutes
       synchronized {
         if (now - lastAlert > 600000) { //10 minutes - double check after getting into the synchronized block
-          airbrake.notify(s"$count concurrent requests: $topRequests")
+          airbrake.get.notify(s"$count concurrent requests: $topRequests")
           lastAlert = System.currentTimeMillis()
         }
       }

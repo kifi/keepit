@@ -23,6 +23,7 @@ import akka.util.Timeout
 import akka.routing.SmallestMailboxRouter
 import play.api.Play.current
 import scala.util.Success
+import com.keepit.common.performance.timing
 
 
 @ProvidedBy(classOf[ScrapeProcessorProvider])
@@ -109,7 +110,7 @@ class SyncScraperActor @Inject() (
       log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
       sender ! res
     }
-    case AsyncScrape(nuri, info, proxyOpt) => {
+    case AsyncScrape(nuri, info, proxyOpt) => timing(s"AsyncScrape: uri=(${nuri.id}, ${nuri.url}) info=(${info.id},${info.destinationUrl}) proxy=$proxyOpt") {
       log.info(s"[AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
       val (uri, a) = syncScraper.safeProcessURI(nuri, info, proxyOpt)

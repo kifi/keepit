@@ -35,6 +35,9 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
 
   import db.Driver.Implicit._
 
+  override def deleteCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
+
   def getCurrentSequenceNumber()(implicit session: RSession): Long = {
     Query(table.map(_.sequenceNumber).max).first.getOrElse(0)
   }

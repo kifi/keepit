@@ -38,6 +38,9 @@ class UserToDomainRepoImpl @Inject()(
     def * = id.? ~ userId ~ domainId ~ kind ~ value ~ state ~ createdAt ~ updatedAt <> (UserToDomain, UserToDomain.unapply _)
   }
 
+  override def deleteCache(model: UserToDomain)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: UserToDomain)(implicit session: RSession): Unit = {}
+
   def get(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
           excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
          (implicit session: RSession): Option[UserToDomain] =

@@ -11,13 +11,13 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
 import com.keepit.common.strings
-import com.keepit.common.mail.{ElectronicMailCategory, PostOffice, EmailAddressHolder}
+import com.keepit.common.mail.{EmailAddressHolder}
 import com.keepit.common.mail.ElectronicMailCategory
 
 @ImplementedBy(classOf[EmailOptOutRepoImpl])
 trait EmailOptOutRepo extends Repo[EmailOptOut] {
   def getByEmailAddress(address: EmailAddressHolder, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut]
-  def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = PostOffice.Categories.ALL)(implicit session: RSession): Boolean
+  def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = NotificationCategory.ALL)(implicit session: RSession): Boolean
   def optOut(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RWSession): Unit
   def optIn(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RWSession): Unit
 }
@@ -34,15 +34,19 @@ class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
     def * = id.? ~ createdAt ~ updatedAt ~ address ~ category ~ state <> (EmailOptOut, EmailOptOut.unapply _)
   }
 
+  override def deleteCache(model: EmailOptOut)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: EmailOptOut)(implicit session: RSession): Unit = {}
+
   def getByEmailAddress(address: EmailAddressHolder, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut] = {
     (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
   }
 
-  def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = PostOffice.Categories.ALL)(implicit session: RSession): Boolean = {
-    val q = if (category == PostOffice.Categories.ALL) {
+  def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = NotificationCategory.ALL)(implicit session: RSession): Boolean = {
+    val all : ElectronicMailCategory = NotificationCategory.ALL
+    val q = if (category == all) {
       for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE) yield f
     } else {
-      for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === PostOffice.Categories.ALL)) yield f
+      for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === all)) yield f
     }
     q.firstOption.exists(_ => true)
   }

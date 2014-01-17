@@ -9,7 +9,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.graph.bookmark.BookmarkRecord
-import com.keepit.search.graph.EdgeAccessor
+import com.keepit.search.graph.EdgeSetAccessor
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.bookmark.UserToUriEdgeSet

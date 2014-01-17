@@ -113,6 +113,10 @@ abstract  class UserTopicRepoBase(
     userTopicCache.set(UserTopicKey(topic.userId, flag), topic)
   }
 
+  override def deleteCache(topic: UserTopic)(implicit session: RSession): Unit = {
+    userTopicCache.remove(UserTopicKey(topic.userId, flag))
+  }
+
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
     userTopicCache.getOrElseOpt(UserTopicKey(userId, flag)){
       (for(r <- table if r.userId === userId) yield r).firstOption

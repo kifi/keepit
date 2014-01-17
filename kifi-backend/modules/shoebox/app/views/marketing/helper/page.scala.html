@@ -1,7 +1,7 @@
-@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", earlyScripts: Html = Html(""), isLoggedIn: Boolean = false)
+@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", trackViewEvent: String = "viewed_external_page", trackClickEvent: String = "clicked_external_page", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", earlyScripts: Html = Html(""), isLoggedIn: Boolean = false)
 
 <!DOCTYPE html>
-<html class="@if(!isLoggedIn){guest }@htmlClass"@if(dataTrack!=""){ data-track-type="@dataTrack"}>
+<html class="@if(!isLoggedIn){guest }@htmlClass"@if(dataTrack!=""){ data-track-view-event="@trackViewEvent" data-track-click-event="@trackClickEvent" data-track-type="@dataTrack"}>
   <head>
     <meta charset="utf-8">
 <!--

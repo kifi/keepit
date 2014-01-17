@@ -8,9 +8,10 @@
 
 	var year = 2014,
 		month = 2,
-		day = 1;
+		day = 15,
+		hour = 11;
 
-	var relTime = new Date(year, month - 1, day);
+	var relTime = new Date(Date.UTC(year, month - 1, day, hour + 8, 0, 0, 0));
 	if (relTime > new Date()) {
 		updateTime();
 		var tid = win.setInterval(updateTime, 250);
@@ -50,6 +51,18 @@
 		$date.text(days);
 	}
 
+	var EMAIL_REGEX = /^[^@]+@[^@]+$/;
+
+	function verifyEmail(email) {
+		if (!EMAIL_REGEX.test(email)) {
+			return false;
+		}
+		if (email.charAt(email.length - 1) === '.') {
+			return false;
+		}
+		return true;
+	}
+
 	$('form').on('submit', function (e) {
 		e.preventDefault();
 		var $form = $(this);
@@ -57,6 +70,12 @@
 		$.each($form.serializeArray(), function (i, field) {
 			data[field.name] = field.value || void 0;
 		});
+		var email = data.email = $.trim(data.email);
+		if (!verifyEmail(email)) {
+			win.alert('Invalid email address');
+			return;
+		}
+		
 		$.ajax({
 			url: '/waitlist',
 			type: 'POST',
@@ -65,6 +84,10 @@
 			data: JSON.stringify(data)
 		})
 		.complete(function (resp) {
+			var focused = win.document.activeElement;
+			if (focused && focused.blur) {
+				focused.blur();
+			}
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
@@ -105,7 +128,7 @@
 		resizeWistiaEmbed(true);
 
 		if ($win.width() >= 700) {
-			win.setTimout(playVideo, 600);
+			win.setTimeout(playVideo, 600);
 		}
 		else {
 			playVideo();

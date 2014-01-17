@@ -167,7 +167,7 @@ class InviteCommander @Inject() (
       subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
       htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
       textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
-      category = PostOffice.Categories.User.INVITATION,
+      category = NotificationCategory.User.INVITATION,
       extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address))
     )
 
@@ -184,7 +184,7 @@ class InviteCommander @Inject() (
           sendEmailInvitation(c, alreadyInvited, user, url, inviteInfo)
         }
         case inactiveOpt => {
-          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20)
+          val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(1000)
           val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
           if (currentInvitations.length < totalAllowedInvites) {
             val invite = inactiveOpt map {
@@ -249,7 +249,7 @@ class InviteCommander @Inject() (
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserInfo.id.get) match {
           case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE => cb(socialUserInfo, currInvite)
           case inactiveOpt =>
-            val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(20) // todo: removeme
+            val totalAllowedInvites = userValueRepo.getValue(userId, "availableInvites").map(_.toInt).getOrElse(1000) // todo: removeme
             val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)
             if (currentInvitations.length < totalAllowedInvites) {
               val invite = inactiveOpt map {

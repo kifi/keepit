@@ -264,7 +264,7 @@ class AuthHelper @Inject() (
                 to = Seq(resetEmailAddress),
                 subject = "Kifi.com | Password reset requested",
                 htmlBody = views.html.email.resetPassword(resetUrl).body,
-                category = PostOffice.Categories.User.RESET_PASSWORD
+                category = NotificationCategory.User.RESET_PASSWORD
               ))
             }
           }

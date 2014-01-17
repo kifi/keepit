@@ -1,39 +1,25 @@
 package com.keepit.common.cache
 
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.concurrent._
-import scala.concurrent.duration._
 
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 import java.util.{Map=>JMap}
 
 
-
-import net.codingwell.scalaguice.ScalaModule
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
 
-import net.spy.memcached.auth.{PlainCallbackHandler, AuthDescriptor}
-import net.spy.memcached.{CachedData, ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
+import net.spy.memcached.{CachedData, MemcachedClient}
 import net.spy.memcached.transcoders.{Transcoder, SerializingTranscoder}
-import net.spy.memcached.compat.log.{Level, AbstractLogger}
 import net.spy.memcached.internal.BulkFuture
 import net.spy.memcached.internal.GetFuture
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging._
-import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
-import com.keepit.common.logging.{AccessLogTimer, AccessLog}
-import com.keepit.common.logging.Access._
 
 import play.api.Logger
 import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-import play.modules.statsd.api.Statsd
 
 import scala.collection.JavaConverters._
 
@@ -175,7 +161,9 @@ class MemcachedCache @Inject() (
   }
   
   override def onStop(): Unit = {
-    client.shutdown()
+    super.onStop()
+    //shutting down the cache plugin will cause problems to mid flight requests
+    //client.shutdown()
   }
 
   protected def toOption(any: Any): Option[Any] = {
@@ -216,7 +204,11 @@ class EhCacheCache @Inject() (
     (manager, cache)
   }
   override def onStart() { cache }
-  override def onStop() { manager. shutdown() }
+  override def onStop() {
+    super.onStop()
+    //shutting down the cache plugin will cause problems to mid flight requests
+    //manager.shutdown()
+  }
   override def onError(error: AirbrakeError) { airbrake.notify(error) }
 
   def get(key: String): Option[Any] = Option(cache.get(key)).map(_.getObjectValue)

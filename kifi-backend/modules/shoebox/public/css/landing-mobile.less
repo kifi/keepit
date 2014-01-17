@@ -492,10 +492,13 @@ body {
 	z-index: 11;
 
 	&.shown {
-		@media @tablet {
-			top: 0;
-			left: 0;
-		}
+		top: 0;
+		left: 0;
+	}
+
+	html.iphone &.shown {
+		top: -10000px;
+		left: -10000px;
 	}
 
 	&.visible {

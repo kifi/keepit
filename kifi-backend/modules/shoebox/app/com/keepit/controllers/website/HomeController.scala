@@ -136,21 +136,16 @@ class HomeController @Inject() (
     } else {
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
-      if(request.cookies.get("newdesign").isDefined) {
-        log.info(request.headers.toSimpleMap.toString)
-        val agentOpt = request.headers.get("User-Agent").map { agent =>
-          UserAgent.fromString(agent)
-        }
-        if (agentOpt.exists(_.isMobile)) {
-          val ua = agentOpt.get.userAgent
-          val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-          val agentClass = if (isIphone) "iphone" else ""
-          Ok(views.html.marketing.mobileLanding(false, agentClass))
-        } else {
-          Ok(views.html.marketing.landing())
-        }
+      val agentOpt = request.headers.get("User-Agent").map { agent =>
+        UserAgent.fromString(agent)
+      }
+      if (agentOpt.exists(_.isMobile)) {
+        val ua = agentOpt.get.userAgent
+        val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
+        val agentClass = if (isIphone) "iphone" else ""
+        Ok(views.html.marketing.mobileLanding(false, agentClass))
       } else {
-        Ok(views.html.auth.auth())
+        Ok(views.html.marketing.landing())
       }
     }
   }
@@ -204,8 +199,8 @@ class HomeController @Inject() (
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
-    db.readWrite { implicit session =>
-      val toBeNotified = for {
+    val toBeNotified = db.readWrite { implicit session =>
+      for {
         su <- socialUserRepo.getByUser(request.user.id.get)
         invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
         senderUserId <- {
@@ -213,8 +208,8 @@ class HomeController @Inject() (
           invite.senderUserId
         }
       } yield senderUserId
-      SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
     }
+    SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
     setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }

@@ -9,6 +9,8 @@ import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.model.NormalizedURI
+import com.keepit.model.Collection
 
 class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter, monitoredAwait: MonitoredAwait) {
 
@@ -27,9 +29,9 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
           filter.collections match {
             case Some(collections) =>
               collections.foldLeft(Set.empty[Long]){ (s, collId) =>
-                s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+                s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).accessor.asInstanceOf[BookmarkInfoAccessor[Collection, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
               }
-            case _ => myUriEdges.filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+            case _ => myUriEdges.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
           }
         // no time range
         case _ =>
@@ -61,7 +63,7 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
         filter.timeRange match {
           case Some(timeRange) =>
             filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
-              s ++ friendsUriEdgeSets(f.id).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+              s ++ friendsUriEdgeSets(f.id).accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
             }
           case _ =>
             filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
@@ -72,6 +74,6 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
 
     val time: Long = System.currentTimeMillis - startTime
 
-    (myUriEdges.accessor, friendsUriEdgeSets.mapValues{ _.accessor }, mySearchUris, friendSearchUris, relevantFriendEdgeSet, time)
+    (myUriEdges.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]], friendsUriEdgeSets.mapValues{ _.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]] }, mySearchUris, friendSearchUris, relevantFriendEdgeSet, time)
   }
 }

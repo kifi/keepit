@@ -282,7 +282,7 @@ class UserController @Inject() (
                   to = Seq(GenericEmailAddress(address)),
                   subject = "Kifi.com | Please confirm your email address",
                   htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-                  category = PostOffice.Categories.User.EMAIL_CONFIRMATION
+                  category = NotificationCategory.User.EMAIL_CONFIRMATION
                 ))
               }
             }
@@ -386,7 +386,7 @@ class UserController @Inject() (
 
   def getInviteCounts() = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s =>
-      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(20)
+      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(1000)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
       Ok(Json.obj(
         "total" -> availableInvites,
@@ -402,7 +402,7 @@ class UserController @Inject() (
         to = Seq(EmailAddresses.EFFI),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
-        category = PostOffice.Categories.User.INVITATION))
+        category = NotificationCategory.User.INVITATION))
     }
     Ok
   }
@@ -471,7 +471,7 @@ class UserController @Inject() (
             to = Seq(GenericEmailAddress(email)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
+            category = NotificationCategory.User.EMAIL_CONFIRMATION
           ))
           Ok("0")
         case _ =>
