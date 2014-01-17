@@ -189,7 +189,6 @@ class BookmarkInterner @Inject() (
     val bookmarks = deduped.sortWith { case (a, b) => a.url < b.url }
     keepsAbuseMonitor.inspect(userId, bookmarks.size)
     log.info(s"[internBookmarks-$referenceId] Parsing took: ${System.currentTimeMillis - parseStart}ms")
-    val count = new AtomicInteger(0)
     val total = bookmarks.size
     val batchSize = 20
 
@@ -201,17 +200,17 @@ class BookmarkInterner @Inject() (
       userValueRepo.setValue(userId, "bookmark_import_total", total.toString)
     }
 
-    val persistedBookmarksWithUris: List[InternedUriAndBookmark] = bookmarks.grouped(batchSize).map { bms =>
+    val persistedBookmarksWithUris: Seq[InternedUriAndBookmark] = {
       val startTime = System.currentTimeMillis
-      log.info(s"[internBookmarks-$referenceId] Persisting $batchSize bookmarks: ${count.get}/$total")
-      val persisted = internUriAndBookmarkBatch(bms, userId, source, mutatePrivacy, total, count)
-      val newCount = count.addAndGet(bms.size)
+      log.info(s"[internBookmarks-$referenceId] Persisting $total bookmarks")
+      val persisted = internUriAndBookmarkBatch(bookmarks, userId, source, mutatePrivacy)
+      val newCount = persisted.size
       log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
       db.readWrite { implicit session =>
         userValueRepo.setValue(userId, "bookmark_import_done", (newCount / total).toString)
       }
       persisted
-    }.flatten.toList
+    }
 
     db.readWrite { implicit session =>
       userValueRepo.clearValue(userId, "bookmark_import_done")
@@ -228,17 +227,17 @@ class BookmarkInterner @Inject() (
     persistedBookmarks
   }
 
-  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, total: Int, count: AtomicInteger) = {
-    val persisted = try {
-      db.readWrite(attempts = 3) { implicit session =>
-        bms.map { bm => internUriAndBookmark(bm, userId, source, mutatePrivacy) }.flatten
-      }
-    } catch {
-      case e: Exception =>
-        airbrake.notify(s"failed to persist a batch of ${bms.size} of $total so far ${count.get} raw bookmarks of user $userId from $source: ${bms map {b => b.url} mkString ","}", e)
-        Seq()
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean) = {
+    val (persisted, failed) = db.readWriteBatch(bms, attempts = 3) { (session, bm) =>
+      internUriAndBookmark(bm, userId, source, mutatePrivacy)(session)
+    }.partition{ case (bm, res) => res.isSuccess }
+
+    if (failed.nonEmpty) {
+      airbrake.notify(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks of user $userId from $source: look app.log for urls")
+      bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${b.url}") }
     }
-    persisted
+
+    persisted.values.map(_.get).flatten.toSeq
   }
 
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
@@ -269,8 +268,6 @@ class BookmarkInterner @Inject() (
       if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
         Try(scraper.scheduleScrape(uri))
       }
-
-      session.conn.commit()
 
       Some(InternedUriAndBookmark(bookmark, uri, isNewKeep))
     } else {
