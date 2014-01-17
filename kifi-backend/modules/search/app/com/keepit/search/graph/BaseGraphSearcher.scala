@@ -26,31 +26,25 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
     Util.unpackLongArray(allBytes, 0, allBytes.length)
   }
 
-  private def getAllBytes(field: String, docid: Int): Array[Byte] = {
+  private def getAllBytesRefs(field: String, docid: Int): ArrayBuffer[(BytesRef, Int)] = {
     import com.keepit.search.index.Indexable._
 
-    val allBytes = new ArrayBuffer[Byte]()
+    val bytesRefs = new ArrayBuffer[(BytesRef, Int)]()
     var done = false
     var iter = 0
 
-     while (!done){
+    while (!done){
       val fieldName = field + numberSuffix(iter)
       val docValues = reader.getBinaryDocValues(fieldName)
       if (docValues != null){
         var ref = new BytesRef()
         docValues.get(docid, ref)
         if (ref.length > 0){
-          val offset = ref.offset
           if (ref.length == MAX_BINARY_FIELD_LENGTH){
-            // there is something left. extra byte is EOF symbol and is dropped
-            for( j <- 0 until (ref.length -1)){
-              allBytes.append(ref.bytes(offset + j))
-            }
+            bytesRefs.append((ref, ref.length - 1))        //last byte is EOF symbol and is dropped. We still have something left
           } else{
-            for(j <- 0 until ref.length){
-              allBytes.append(ref.bytes(offset + j))                 // all bytes are good
-            }
-            done = true                                              // nothing left
+            bytesRefs.append((ref, ref.length))            // all bytes are good
+            done = true                                    // nothing left
           }
         } else {
           log.error(s"missing uri list data: ${field + numberSuffix(iter)}")
@@ -60,7 +54,22 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
         done = true
       }
     }
-    allBytes.toArray
+
+    bytesRefs
+  }
+
+  private def getAllBytes(field: String, docid: Int): Array[Byte] = {
+    val bytesRefs = getAllBytesRefs(field, docid)
+    val counts = bytesRefs.map{_._2}.foldLeft(0)(_+_)
+    val allBytes = new Array[Byte](counts)
+
+    var i = 0
+    bytesRefs.map{ case (ref, count) =>
+      val offset = ref.offset
+      (0 until count).foreach{ j => allBytes(i) = ref.bytes(offset + j); i += 1 }
+    }
+
+    allBytes
   }
 
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
