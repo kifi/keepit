@@ -3900,6 +3900,13 @@ html[data-kifi-ext] .install-kifi {
   padding: 20px;
 }
 
+.detail h2 {
+  color: inherit;
+  font-size: 16px;
+  line-height: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+
 a.page-x[href] {
   position: absolute;
   top: 8px;
