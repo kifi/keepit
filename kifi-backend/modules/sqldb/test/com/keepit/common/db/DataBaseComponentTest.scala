@@ -131,57 +131,90 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
       }
     }
 
+    "do large batch update using readWriteBatch" in {
+      withDb() { implicit injector: Injector =>
+        val result = (inject[Database].readWriteBatch(0 until 3000) { (s, i) =>
+          if (i == 2014) throw new SQLException("i'm bad")
+          i * 10
+        })
+
+        result.size === 3000
+        result.foreach{ case (d, r) =>
+          if (d >= 2014){
+            r.isFailure === true
+          }
+          else {
+            r.isSuccess === true
+            d * 10 === r.get
+          }
+        }
+      }
+    }
+
     "attempt retry batch update using readWriteBatch" in {
       withDb() { implicit injector: Injector =>
         var willSuccess = Array(false, false, false, false, false)
-        var success = Array(false, false, false, false, false)
+        var success = Array(0, 0, 0, 0, 0)
+        var executed = Array(0, 0, 0, 0, 0)
         def exec(attempts: Int) = (inject[Database].readWriteBatch(Seq(0, 1, 2, 3, 4), attempts) { (s, i) =>
+          executed(i) += 1
           if (!willSuccess(i)) {
             willSuccess(i) = true // will succeed next time
             throw new SQLException("i'm bad")
           }
-          success(i) = true
+          success(i) += 1
           true
         })
 
         var result = exec(3)
         result.size === 5
-        success.count(flag => flag) === 2
-        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+        executed.max === 2
+        executed.sum === 5
+        success.max === 1
+        success.count(_ > 0) === 2
+        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
 
         willSuccess = Array(false, false, false, false, false)
-        success = Array(false, false, false, false, false)
+        success = Array(0, 0, 0, 0, 0)
+        executed = Array(0, 0, 0, 0, 0)
         result = exec(5)
         result.size === 5
-        success.count(flag => flag) === 4
-        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+        success.count(_ > 0) === 4
+        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
       }
     }
 
     "attempt retry batch update using readWriteBatch (with MySQLIntegrityConstraintViolationException)" in {
       withDb() { implicit injector: Injector =>
         var willSuccess = Array(false, false, false, false, false)
-        var success = Array(false, false, false, false, false)
+        var success = Array(0, 0, 0, 0, 0)
+        var executed = Array(0, 0, 0, 0, 0)
         def exec(attempts: Int) = (inject[Database].readWriteBatch(Seq(0, 1, 2, 3, 4), attempts) { (s, i) =>
+          executed(i) += 1
           if (!willSuccess(i)) {
             willSuccess(i) = true // will succeed next time if not MySQLIntegrityConstraintViolationException
             throw new MySQLIntegrityConstraintViolationException("i'm really bad")
           }
-          success(i) = true
+          success(i) += 1
           true
         })
 
         var result = exec(3)
         result.size === 5
-        success.count(flag => flag) === 0
-        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+        executed.max === 1
+        executed.sum === 3
+        success.count(_ > 0) === 0
+        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
 
         willSuccess = Array(false, false, false, false, false)
-        success = Array(false, false, false, false, false)
+        success = Array(0, 0, 0, 0, 0)
+        executed = Array(0, 0, 0, 0, 0)
         result = exec(5)
         result.size === 5
-        success.count(flag => flag) === 0
-        (0 until 5).foreach{ i => result(i).isSuccess === success(i) }
+        executed.max === 1
+        executed.sum === 5
+        success.count(_ > 0) === 0
+        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
       }
     }
   }

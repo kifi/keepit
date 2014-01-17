@@ -149,27 +149,30 @@ class Database @Inject() (
     readWrite(f)
   }
 
-  def readWriteBatch[D, T](batch: Seq[D])(f: (RWSession, D) => T): Map[D, Try[T]] = {
-    val rw = createReadWriteSession
-    try {
-      var successCnt = 0
-      var failure: Failure[T] = null
-      val results = batch.foldLeft(Map.empty[D, Try[T]]) { (results, item) =>
-        val oneResult = if (failure == null) {
-          Try(rw.withTransaction { f(rw, item) }) match {
-            case s: Success[T] => successCnt += 1; s
-            case f: Failure[T] => failure = f; f
-          }
-        } else {
-          Database.executionSkipped
-        }
-        results + (item -> oneResult)
-      }
-      if (failure != null)
-        log.warn(s"Failed ({fail.exception.getClass.getSimpleName}) readWrite transaction, processed ${successCnt} out of ${batch.size}")
+  private[this] val READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL = 500
 
-      results
-    } finally { rw.close() }
+  def readWriteBatch[D, T](batch: Seq[D])(f: (RWSession, D) => T): Map[D, Try[T]] = {
+    var successCnt = 0
+    var failure: Failure[T] = null
+
+    val results = batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foldLeft(Map.empty[D, Try[T]]){ (results, chunk) =>
+      val rw = createReadWriteSession
+      try {
+        results ++ chunk.map{ item =>
+          val oneResult = if (failure == null) {
+            Try(rw.withTransaction { f(rw, item) }) match {
+              case s: Success[T] => successCnt += 1; s
+              case f: Failure[T] => failure = f; f
+            }
+          } else {
+            Database.executionSkipped
+          }
+          (item -> oneResult)
+        }
+      } finally { rw.close() }
+    }
+    if (failure != null) log.warn(s"Failed ({fail.exception.getClass.getSimpleName}) readWrite transaction, processed ${successCnt} out of ${batch.size}")
+    results
   }
 
   def readWriteBatch[D, T](batch: Seq[D], attempts: Int)(f: (RWSession, D) => T): Map[D, Try[T]] = {
@@ -177,9 +180,10 @@ class Database @Inject() (
     var pending = batch
     1 to attempts - 1 foreach { attempt =>
       val partialResults = readWriteBatch(pending)(f)
+      println(partialResults)
       results ++= partialResults
-      pending = partialResults.keys.filter{ d =>
-        partialResults(d) match {
+      pending = batch.filter{ d =>
+        results(d) match {
           case Failure(e: MySQLIntegrityConstraintViolationException) => false // do not retry if an integrity constraint violation occurred for this item
           case Failure(e: SQLException) => true                                // retry for other SQLException
           case Failure(e: ExecutionSkipped) => true                            // retry skipped items
