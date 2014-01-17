@@ -24,6 +24,7 @@ import com.keepit.common.performance.timing
 import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicInteger
 import scala.util.Success
+import java.util.concurrent.ForkJoinPool.ForkJoinWorkerThreadFactory
 
 
 @ProvidedBy(classOf[ScrapeProcessorProvider])
@@ -135,7 +136,7 @@ class QueuedScrapeProcessor @Inject() (
   helper: SyncShoeboxDbCallbacks
 ) extends ScrapeProcessor with Logging {
 
-  val pSize = Runtime.getRuntime.availableProcessors * 128
+  val pSize = Runtime.getRuntime.availableProcessors * 256
   val fjPool = new ForkJoinPool(pSize)
 
   log.info(s"[QSP.ctr] nrInstances=$pSize, pool=$fjPool")
@@ -148,11 +149,17 @@ class QueuedScrapeProcessor @Inject() (
     try {
       fjPool.execute(new Runnable {
         def run(): Unit = {
-          val res = timing(s"safeProcessURI(${uri.id}) ${uri.url}") {
-            w.safeProcessURI(uri, info, proxyOpt)
+          val name = Thread.currentThread.getName
+          Thread.currentThread().setName(s"$name##(${uri.id},${info.id},${uri.url})")
+          try {
+            val res = timing(s"QSP.safeProcessURI(${uri.id}),${uri.url}") {
+              w.safeProcessURI(uri, info, proxyOpt)
+            }
+            // log.info(s"[QSP.asyncScrape($fjPool)] result=$res")
+            res
+          } finally {
+            Thread.currentThread().setName(name)
           }
-          log.info(s"[QSP.asyncScrape($fjPool)] result=$res")
-          res
         }
       })
     } catch {
