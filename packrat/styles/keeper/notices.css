@@ -280,6 +280,7 @@
   -webkit-font-smoothing: antialiased;
   position: relative;
   top: -2px;
+  left: 0;
   transition: left .16s ease-in-out;
 }
 :not(.kifi-notice-visited)>.kifi-notice-kicker,
