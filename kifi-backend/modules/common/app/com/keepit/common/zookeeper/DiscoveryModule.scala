@@ -69,6 +69,10 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyAmazonInstanceInfo = MyAmazonInstanceInfo(info)
+
+  @Singleton
+  @Provides
   def zooKeeperClient(): ZooKeeperClient = {
     val servers = current.configuration.getString("zookeeper.servers").get
     new ZooKeeperClientImpl(servers, 2000, Some({zk1 => println(s"in callback, got $zk1")}))
