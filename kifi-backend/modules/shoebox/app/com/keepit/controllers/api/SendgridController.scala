@@ -3,7 +3,7 @@ package com.keepit.controllers.api
 import com.google.inject.Inject
 import play.api.mvc.Action
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import com.keepit.commanders.{SendgridCommander, SendgridEvent}
 import scala.Exception
@@ -17,7 +17,7 @@ import scala.Exception
 class SendgridController  @Inject() (
   actionAuthenticator:ActionAuthenticator,
   sendgridCommander: SendgridCommander)
-    extends WebsiteController(actionAuthenticator) with Logging {
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   def parseEvent() = Action(parse.json) { request =>
     val events: Seq[SendgridEvent] = try {

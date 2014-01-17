@@ -5,7 +5,7 @@ import com.keepit.search._
 import com.keepit.reports._
 import com.keepit.common.zookeeper._
 import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
-import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.controller.{ServiceController, ShoeboxServiceController}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailModule, MailToKeepServerSettings}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
@@ -35,7 +35,11 @@ import com.keepit.abook.TestABookServiceClientModule
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
   private def isShoeboxController(clazz: Class[_]): Boolean = {
-    classOf[ShoeboxServiceController] isAssignableFrom clazz
+    if (classOf[Controller] isAssignableFrom clazz) {
+      if (classOf[ServiceController] isAssignableFrom clazz) {
+        classOf[ShoeboxServiceController] isAssignableFrom clazz
+      } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
+    } else false
   }
 
   "Module" should {
