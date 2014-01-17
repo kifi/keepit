@@ -24,8 +24,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
-import com.keepit.learning.topicmodel.FakeWordTopicModule
-import com.keepit.learning.topicmodel.DevTopicModelModule
+import com.keepit.learning.topicmodel.{TopicUpdater, FakeWordTopicModule, DevTopicModelModule}
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -73,7 +72,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         for (c <- classes) inject(classType[Controller](c), injector)
         val bindings = injector.getAllBindings
         val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[QuartzActor],
-          classOf[MailToKeepServerSettings], classOf[MemcachedClient])
+          classOf[MailToKeepServerSettings], classOf[MemcachedClient], classOf[TopicUpdater])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
           val fail = exclude exists { badKalazz =>
