@@ -2,7 +2,7 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ShoeboxServiceController, AuthenticatedRequest, WebsiteController, ActionAuthenticator}
 import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -24,6 +24,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
+import com.keepit.controllers.internal.ShoeboxController
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -48,7 +49,7 @@ class AuthController @Inject() (
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
     kifiInstallationRepo: KifiInstallationRepo
-  ) extends WebsiteController(actionAuthenticator) with Logging {
+  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private val PopupKey = "popup"
 

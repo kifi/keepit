@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
@@ -58,7 +58,7 @@ class ExtBookmarksController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo,
   rawBookmarkFactory: RawBookmarkFactory,
   clock: Clock)
-    extends BrowserExtensionController(actionAuthenticator) {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController{
 
   def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]

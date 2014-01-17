@@ -17,9 +17,12 @@ import scala.reflect.ManifestFactory.classType
 
 class ElizaModuleTest extends Specification with Logging with ApplicationInjector {
 
-  
   private def isElizaController(clazz: Class[_]): Boolean = {
-    classOf[ElizaServiceController] isAssignableFrom clazz
+    if (classOf[Controller] isAssignableFrom clazz) {
+      if (classOf[ServiceController] isAssignableFrom clazz) {
+        classOf[ElizaServiceController] isAssignableFrom clazz
+      } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
+    } else false
   }
 
   "Module" should {

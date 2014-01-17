@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.commanders.FeatureWaitlistCommander
 import com.keepit.model.FeatureWaitlistEntry
 import com.keepit.common.db.ExternalId
@@ -12,7 +12,10 @@ import com.google.inject.Inject
 
 import play.api.mvc.Action
 
-class FeatureWaitlistController @Inject() (actionAuthenticator: ActionAuthenticator, commander: FeatureWaitlistCommander) extends WebsiteController(actionAuthenticator) {
+class FeatureWaitlistController @Inject() (
+    actionAuthenticator: ActionAuthenticator,
+    commander: FeatureWaitlistCommander)
+  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def waitList() = Action(parse.tolerantJson) { request =>
     try {

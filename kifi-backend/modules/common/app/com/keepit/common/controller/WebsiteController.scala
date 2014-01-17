@@ -6,7 +6,7 @@ import play.api.mvc._
 import play.api.libs.json._
 
 
-class WebsiteController(override val actionAuthenticator: ActionAuthenticator) extends Controller with JsonActions with Logging {
+abstract class WebsiteController(override val actionAuthenticator: ActionAuthenticator) extends ServiceController with JsonActions with Logging {
 
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AuthenticatedHtmlAction(false)(action)
 

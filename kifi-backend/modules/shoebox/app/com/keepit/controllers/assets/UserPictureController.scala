@@ -4,7 +4,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{S3ImageConfig, S3UserPictureConfig, S3ImageStore}
@@ -24,9 +24,8 @@ class UserPictureController @Inject() (
   suiRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
   imageStore: S3ImageStore,
-  val config: S3ImageConfig,
-  s3Client: AmazonS3)
-  extends WebsiteController(actionAuthenticator) {
+  val config: S3ImageConfig)
+  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action { request =>
     val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName
