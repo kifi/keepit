@@ -103,7 +103,7 @@ class AdminBookmarksController @Inject() (
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
+    val PAGE_SIZE = 25
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
@@ -117,15 +117,11 @@ class AdminBookmarksController @Inject() (
         val urisFuture = future { timing("load uris") { db.readOnly { implicit s =>
           bookmarks map (_.uriId) map uriRepo.get
         }}}
-        val scrapesFuture = future { timing("load scrape info") { db.readOnly { implicit s =>
-          bookmarks map (_.uriId) map scrapeRepo.getByUriId
-        }}}
 
         for {
           users <- usersFuture
           uris <- urisFuture
-          scrapes <- scrapesFuture
-        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+        } yield (users.toList.seq, (bookmarks, uris).zipped.toList.seq).zipped.toList.seq
       }
     }
 

@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[(User, (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int, todayUserCount: Int, todayImportCount: Int)
+@(bookmarksAndUsers: Seq[(User, (Bookmark, NormalizedURI))], page: Int, count: Long, pageCount: Int, todayUserCount: Int, todayImportCount: Int)
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 
@@ -68,9 +68,8 @@
       <th>Source</th>
       <th>Creation</th>
       <th>State</th>
-      <th>Last Scrape</th>
     </tr>
-  @for(((user, (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for(((user, (bookmark, uri)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
@@ -102,7 +101,6 @@
       </td>
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       <td>@adminHelper.uriStateDisplay(uri)</td>
-      <td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
     </tr>
   }
   </table>
