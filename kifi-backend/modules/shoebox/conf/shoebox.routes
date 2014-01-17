@@ -437,7 +437,7 @@ GET     /admin/server               @com.keepit.controllers.admin.AdminHealthCon
 GET     /admin/benchmark            @com.keepit.controllers.admin.AdminBenchmarkController.benchmarks()
 GET     /admin/healthcheck/error    @com.keepit.controllers.admin.AdminHealthController.causeError()
 GET     /admin/healthcheck/reportDeployment    @com.keepit.controllers.admin.AdminHealthController.reportDeployment()
-GET     /admin/healthcheck/causeHandbrakeError @com.keepit.controllers.admin.AdminHealthController.causeHandbrakeError(param: String)
+GET     /admin/healthcheck/causeAirbrakeError @com.keepit.controllers.admin.AdminHealthController.causeAirbrakeError(message: String ?= "[No Worry] Fake Airbrake Exception triggered from admin")
 GET     /admin/healthcheck/emailErrors         @com.keepit.controllers.admin.AdminHealthController.reportErrors()
 GET     /admin/healthcheck/errors              @com.keepit.controllers.admin.AdminHealthController.getErrors()
 GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.AdminHealthController.resetErrorCount()

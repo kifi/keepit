@@ -107,4 +107,5 @@ class SearchController @Inject()(
         Ok("shard not found")
     }
   }
+}
 
