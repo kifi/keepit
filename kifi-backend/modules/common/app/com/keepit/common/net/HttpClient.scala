@@ -17,7 +17,7 @@ import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
 import com.keepit.common.concurrent.ExecutionContext.immediate
-import com.keepit.common.controller.CommonHeaders
+import com.keepit.common.controller.{MidFlightRequests, CommonHeaders}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
@@ -35,11 +35,11 @@ case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientR
   override def toString(): String = getMessage
 }
 
-case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int)
+case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int, midFlightRequestCount: Int, listOfMidFlightRequests: String, remoteMidFlightRequestCount: Option[Int])
     extends Exception(
       s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
       s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms remote-time:${remoteTime}ms " +
-      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
+      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status} remoteMidFlight[$remoteMidFlightRequestCount] localMidFlight[$midFlightRequestCount]:$listOfMidFlightRequests"){
   override def toString(): String = getMessage
 }
 
@@ -96,6 +96,7 @@ case class HttpClientImpl(
     fastJsonParser: FastJsonParser,
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
+    midFlightRequests: MidFlightRequests,
     silentFail: Boolean = false) extends HttpClient with Logging {
 
   private val validResponseClass = 2
@@ -205,6 +206,7 @@ case class HttpClientImpl(
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
     val remoteUp = res.isUp
     val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
+    val remoteMidFlightRequestCount: Option[Int] = res.res.header(CommonHeaders.MidFlightRequestCount).map(_.toInt)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
@@ -221,7 +223,7 @@ case class HttpClientImpl(
 
     e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
-        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime))
+        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,

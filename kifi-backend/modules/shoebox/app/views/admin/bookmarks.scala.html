@@ -70,7 +70,7 @@
       <th>State</th>
       <th>Last Scrape</th>
     </tr>
-  @for(((user, (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+    @for(((user, (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
