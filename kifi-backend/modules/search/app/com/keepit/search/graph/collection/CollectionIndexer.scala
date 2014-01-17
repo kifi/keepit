@@ -133,9 +133,9 @@ object CollectionIndexer {
       val doc = super.buildDocument
 
       val collListBytes = URIList.toByteArray(normalizedUris)
-      val collListField = buildURIListField(uriListField, collListBytes)
+      val collListFields = buildURIListField(uriListField, collListBytes)
       val collList = URIList(collListBytes)
-      doc.add(collListField)
+      collListFields.foreach{doc.add}
 
       val uri = buildURIIdField(collList)
       doc.add(uri)
@@ -153,7 +153,7 @@ object CollectionIndexer {
     }
 
     private def buildURIListField(field: String, uriListBytes: Array[Byte]) = {
-      new BinaryDocValuesField(field, new BytesRef(uriListBytes))
+      buildExtraLongBinaryDocValuesField(field, uriListBytes)
     }
 
     private def buildURIIdField(uriList: URIList) = {
