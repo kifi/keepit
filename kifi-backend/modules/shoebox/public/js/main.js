@@ -4399,17 +4399,41 @@ $(function () {
 
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
+			var step = 1;
+			mixpanel.track('user_viewed_internal_page', {
+				type: 'bookmarkImport',
+				origin: window.location.origin
+			});
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
+				mixpanel.track('user_clicked_internal_page', {
+					type: 'bookmarkImport',
+					action: $(this).is('.cancel-import') ? 'cancel' : 'x',
+					step: step,
+					origin: window.location.origin
+				});
 				$bookmarkImportDialog.dialog('hide');
 				$bookmarkImportDialog = null;
 				// don't open again!
 				event.source.postMessage('import_bookmarks_declined', event.origin);
 			}).on('click', 'button.do-import', function () {
+				mixpanel.track('user_clicked_internal_page', {
+					type: 'bookmarkImport',
+					action: 'approved',
+					step: step,
+					origin: window.location.origin
+				});
 				$bookmarkImportDialog.find('.import-step-1').hide();
 				$bookmarkImportDialog.find('.import-step-2').show();
+				step = 2;
 				$bookmarkImportDialog.on('click', 'button', function () {
 					$bookmarkImportDialog.dialog('hide');
 					$bookmarkImportDialog = null;
+					mixpanel.track('user_clicked_internal_page', {
+						type: 'bookmarkImport',
+						action: 'done',
+						step: step,
+						origin: window.location.origin
+					});
 					window.location = "https://www.kifi.com/?m=2";
 				});
 				event.source.postMessage('import_bookmarks', event.origin);
