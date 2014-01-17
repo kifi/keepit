@@ -40,7 +40,14 @@ class UserConnectionCreator @Inject() (
     if (socialIds.isEmpty) {
       // An empty sequence of socialIds may indicate that the auth token is out of date and we missed that for some reason,
       // In this case we don't want to disable all of the user's connections
-      airbrake.notify(AirbrakeError(new IllegalArgumentException(s"[Suspicious] Social user ${socialUserInfo.id.get} of user ${socialUserInfo.userId.get} doesn't have any connection.")))
+      val isTestUser = {
+        for {
+          socialUser <- socialUserInfo.credentials
+          email <- socialUser.email
+        } yield EmailAddress(address = email, userId = Id(-1)).isTestEmail()
+      } getOrElse false
+
+      if (!isTestUser) airbrake.notify(AirbrakeError(new IllegalArgumentException(s"[Suspicious] Social user ${socialUserInfo.id.get} of user ${socialUserInfo.userId.get} doesn't have any connection.")))
       Seq.empty
     } else {
       disableOldConnections(socialUserInfo, socialIds, network)
