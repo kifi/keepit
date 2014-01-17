@@ -135,7 +135,7 @@ class QueuedScrapeProcessor @Inject() (
   helper: SyncShoeboxDbCallbacks
 ) extends ScrapeProcessor with Logging {
 
-  val pSize = Runtime.getRuntime.availableProcessors * 64
+  val pSize = Runtime.getRuntime.availableProcessors * 128
   val fjPool = new ForkJoinPool(pSize)
 
   log.info(s"[QSP.ctr] nrInstances=$pSize, pool=$fjPool")
