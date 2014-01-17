@@ -29,8 +29,8 @@ var getTextFormatter = (function () {
           var scheme = bits[j+1];
           var escapedUri = Mustache.escape(uri);
           var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
-          bits[j] = '<a target=_blank href="' + escapedUrl + '">' +
-            (imageUrlRe.test(uri) ? '<img class=kifi-image-in-message src="' + escapedUrl + '">' : escapedUri) +
+          bits[j] = '<a target="_blank" href="' + escapedUrl + '">' +
+            (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" src="' + escapedUrl + '"/>' : escapedUri) +
             '</a>';
           bits[j+1] = '';
         }
