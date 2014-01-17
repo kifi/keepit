@@ -11,16 +11,5 @@
   "icon64": "data/icons/kifi.64.png",
   "permissions": {
     "cross-domain-content": ["https://www.kifi.com"]
-  },
-  "preferences": [
-    {
-      "title": "Environment",
-      "type": "radio",
-      "options": [
-        {"value": "production", "label": "Production"},
-        {"value": "development", "label": "Development"}],
-      "name": "env",
-      "value": "production"
-    }
-  ]
+  }
 }

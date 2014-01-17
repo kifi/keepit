@@ -84,6 +84,10 @@
 			data: JSON.stringify(data)
 		})
 		.complete(function (resp) {
+			var focused = win.document.activeElement;
+			if (focused && focused.blur) {
+				focused.blur();
+			}
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');

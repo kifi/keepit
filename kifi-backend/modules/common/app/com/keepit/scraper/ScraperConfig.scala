@@ -19,8 +19,8 @@ case class ScraperConfig(
   numInstances: Int = sys.props.getOrElse("scraper.service.instances", (Runtime.getRuntime.availableProcessors * 32).toString).toInt,
   batchSize: Int = sys.props.getOrElse("scraper.service.batch.size", "10").toInt,
   batchMax: Int = sys.props.getOrElse("scraper.service.batch.max", "50").toInt,
-  pendingOverdueThreshold: Int = sys.props.getOrElse("scraper.service.pending.overdue.threshold", "3600").toInt,
-  pendingSkipThreshold: Int = sys.props.getOrElse("scraper.service.pending.skip.threshold", "500").toInt
+  pendingOverdueThreshold: Int = sys.props.getOrElse("scraper.service.pending.overdue.threshold", "60").toInt,
+  pendingSkipThreshold: Int = sys.props.getOrElse("scraper.service.pending.skip.threshold", "1000").toInt
 ) {
 
   private[this] val rnd = new Random

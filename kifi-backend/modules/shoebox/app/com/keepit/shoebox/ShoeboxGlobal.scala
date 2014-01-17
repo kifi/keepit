@@ -4,7 +4,7 @@ import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
-import com.keepit.common.mail.{InvitationMailPlugin, MailToKeepPlugin, MailSenderPlugin}
+import com.keepit.common.mail.{MailToKeepPlugin, MailSenderPlugin}
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.scraper._
@@ -40,7 +40,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ImageDataIntegrityPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[InvitationMailPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
   }
