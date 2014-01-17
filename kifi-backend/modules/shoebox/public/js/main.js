@@ -474,6 +474,7 @@ $(function () {
 			}
 		}
 	});
+
 	var profileTmpl = Tempo.prepare('profile-template');
 
 	function editProfileInput($target, e) {
@@ -1226,6 +1227,7 @@ $(function () {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
+
 			updateMe(me);
 
 			var $emails = $('.profile-email-accounts tbody').empty();
@@ -1315,6 +1317,9 @@ $(function () {
 					});
 				}
 			});
+
+			var profileScroller = $('.profile').antiscroll({x: false, width: '100%'}).data('antiscroll');
+			$(window).resize(profileScroller.refresh.bind(profileScroller));
 		});
 	}
 
