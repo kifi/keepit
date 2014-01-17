@@ -3890,18 +3890,14 @@ html[data-kifi-ext] .install-kifi {
 
 .detail {
   display: none;
-  padding: 20px 20px 0;
   background: #eff2f7;
   color: #556179;
   -webkit-transition: -webkit-transform .2s;
   transition: -webkit-transform .2s, transform .2s;
 }
 
-.detail h2 {
-  color: inherit;
-  font-size: 16px;
-  line-height: 24px;
-  -webkit-font-smoothing: antialiased;
+.detail-inner {
+  padding: 20px;
 }
 
 a.page-x[href] {
