@@ -121,7 +121,7 @@ class Database @Inject() (
     readOnly(f)
   }
 
-  def createReadWriteSession = new RWSession({//always master
+  private def createReadWriteSession = new RWSession({//always master
     Statsd.increment("db.write.Master")
     sessionProvider.createReadWriteSession(db.masterDb)
   })
