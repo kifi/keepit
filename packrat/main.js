@@ -702,9 +702,15 @@ api.port.on({
       tabsByLocator[o.new] = arr || [tab];
     }
   },
-  set_all_threads_read: function(o) {
+  set_all_threads_read: function (msgId) {
     // not updating local cache until server responds due to bulk nature of action
-    socket.send(['set_all_notifications_visited', o.id]);
+    if (!msgId) {
+      var threadId = threadLists.all && threadLists.all.ids[0];
+      msgId = threadId && threadsById[threadId].id;
+    }
+    if (msgId) {
+      socket.send(['set_all_notifications_visited', msgId]);
+    }
   },
   session: function(_, respond) {
     respond(session);
