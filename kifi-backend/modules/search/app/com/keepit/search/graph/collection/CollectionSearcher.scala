@@ -40,7 +40,7 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
 
   def getCollectionToUriEdgeSet(sourceId: Id[Collection]): CollectionToUriEdgeSet = {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
-    val uriList = getExtraLongURIList(uriListField, sourceDocId)
+    val uriList = getURIList(uriListField, sourceDocId)
     CollectionToUriEdgeSet(sourceId, uriList)
   }
 

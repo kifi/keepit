@@ -15,44 +15,12 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
   def getDocId(id: Long) = reader.getIdMapper.getDocId(id)
 
   def getURIList(field: String, docid: Int): URIList = {
-    if (docid >= 0) {
-      var docValues = reader.getBinaryDocValues(field)
-      if (docValues != null) {
-        var ref = new BytesRef()
-        docValues.get(docid, ref)
-        if (ref.length > 0) {
-          return URIList(ref.bytes, ref.offset, ref.length)
-        } else {
-          log.error(s"missing uri list data: ${field}")
-        }
-      }
-    }
-    URIList.empty
-  }
-
-  def getExtraLongURIList(field: String, docid: Int): URIList = {
     if (docid < 0) return URIList.empty
     val allBytes = getAllBytes(field, docid)
     URIList(allBytes.toArray, 0, allBytes.length)
   }
 
   def getLongArray(field: String, docid: Int): Array[Long] = {
-    if (docid >= 0) {
-      var docValues = reader.getBinaryDocValues(field)
-      if (docValues != null) {
-        var ref = new BytesRef()
-        docValues.get(docid, ref)
-        if (ref.length > 0) {
-          return Util.unpackLongArray(ref.bytes, ref.offset, ref.length)
-        } else {
-          log.error(s"missing long array data: ${field}")
-        }
-      }
-    }
-    Array.empty[Long]
-  }
-
-  def getExtraLongArray(field: String, docid: Int): Array[Long] = {
     if (docid < 0) return Array.empty[Long]
     val allBytes = getAllBytes(field, docid)
     Util.unpackLongArray(allBytes, 0, allBytes.length)
@@ -68,7 +36,6 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
      while (!done){
       val fieldName = field + numberSuffix(iter)
       val docValues = reader.getBinaryDocValues(fieldName)
-
       if (docValues != null){
         var ref = new BytesRef()
         docValues.get(docid, ref)
@@ -93,7 +60,6 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
         done = true
       }
     }
-
     allBytes.toArray
   }
 

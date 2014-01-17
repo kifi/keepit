@@ -53,8 +53,8 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
 
   def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSet = {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
-    val publicList = getExtraLongURIList(publicListField, sourceDocId)
-    val privateList = if (publicOnly) None else Some(getExtraLongURIList(privateListField, sourceDocId))
+    val publicList = getURIList(publicListField, sourceDocId)
+    val privateList = if (publicOnly) None else Some(getURIList(privateListField, sourceDocId))
     privateList match {
       case Some(privateList) =>
         if (publicList.size > 0) {
@@ -87,9 +87,9 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
-    val publicList = getExtraLongURIList(publicListField, docid)
-    val privateList = getExtraLongURIList(privateListField, docid)
-    val bookmarkIdArray = getExtraLongArray(bookmarkIdField, docid)
+    val publicList = getURIList(publicListField, docid)
+    val privateList = getURIList(privateListField, docid)
+    val bookmarkIdArray = getLongArray(bookmarkIdField, docid)
     new UserInfo(myUserId, publicList, privateList, bookmarkIdArray)
   }
 
