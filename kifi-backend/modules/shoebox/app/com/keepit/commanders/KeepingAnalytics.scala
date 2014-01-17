@@ -61,7 +61,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     val keptAt = currentDateTime
 
     SafeFuture {
-      keeps.foreach { bookmark =>
+      keeps.collect { case bookmark if bookmark.source != BookmarkSource.default =>
         val contextBuilder = new HeimdalContextBuilder
         contextBuilder.data ++= existingContext.data
         contextBuilder += ("action", "keptPage")
@@ -71,7 +71,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
         contextBuilder += ("uriId", bookmark.uriId.toString)
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
-        if (bookmark.source.value != BookmarkSource.bookmarkImport) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
+        if (bookmark.source != BookmarkSource.bookmarkImport) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
 
         // Anonymized event with page information
         anonymise(contextBuilder)
