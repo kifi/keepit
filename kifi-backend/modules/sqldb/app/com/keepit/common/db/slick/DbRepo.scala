@@ -74,7 +74,12 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
       case Some(id) => update(toUpdate)
       case None => toUpdate.withId(insert(toUpdate))
     }
-    session.onTransactionSuccess(invalidateCache(result))(ExecutionContext.immediate) // invalidate the cache immediately after commit
+    session.onTransactionSuccess({
+      model match {
+        case _: ModelWithState[M] => deleteCache(result)
+        case _ => invalidateCache(result)
+      }
+    })(ExecutionContext.immediate) // invalidate the cache immediately after commit
     result
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>

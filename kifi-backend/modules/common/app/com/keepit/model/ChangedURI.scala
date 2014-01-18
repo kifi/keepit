@@ -11,7 +11,7 @@ case class ChangedURI(
   newUriId: Id[NormalizedURI],
   state: State[ChangedURI] = ChangedURIStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
-) extends Model[ChangedURI] {
+) extends ModelWithState[ChangedURI] {
   def withId(id: Id[ChangedURI]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[ChangedURI]) = copy(state = state)
