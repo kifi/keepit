@@ -16,8 +16,7 @@
 	var Tracker = win.Tracker = {
 		trackClick: function (el) {
 			var $el = $(el),
-				data = $el.data(),
-				trackAction = data.trackAction;
+				trackAction = getDataFromAncestors($el, 'trackAction');
 			if (trackAction) {
 				track(getClickEventName(), {
 					action: trackAction,

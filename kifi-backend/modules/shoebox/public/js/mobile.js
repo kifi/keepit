@@ -65,6 +65,7 @@
 
 	$('form').on('submit', function (e) {
 		e.preventDefault();
+		Tracker.trackClick(this);
 		var $form = $(this);
 		var data = {};
 		$.each($form.serializeArray(), function (i, field) {
@@ -116,7 +117,7 @@
 
 	$shadow.on('click', function (e) {
 		if (!$(e.target).closest('.wistia_video_wrapper').length) {
-			Tracker.trackClick($(e.target).closest('.wistia_shadow')[0]);
+			Tracker.trackClick(e.target);
 			closeVideo();
 		}
 	});
