@@ -76,7 +76,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     }
     session.onTransactionSuccess({
       model match {
-        case _: ModelWithState[M] => deleteCache(result)
+        case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
         case _ => invalidateCache(result)
       }
     })(ExecutionContext.immediate) // invalidate the cache immediately after commit
