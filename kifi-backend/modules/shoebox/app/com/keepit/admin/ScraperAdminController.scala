@@ -9,6 +9,7 @@ import com.keepit.model._
 import com.keepit.search.ArticleStore
 
 import views.html
+import com.keepit.common.db.slick.Database.Slave
 
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -18,6 +19,13 @@ class ScraperAdminController @Inject() (
   articleStore: ArticleStore,
   httpProxyRepo: HttpProxyRepo)
     extends AdminController(actionAuthenticator) {
+
+  def scraperView = AdminHtmlAction { implicit request =>
+    val pending = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+      scrapeInfoRepo.getPendingList()
+    }
+    Ok(html.admin.scraperView(pending))
+  }
 
   def searchScraper = AdminHtmlAction {implicit request =>
     Ok(html.admin.searchScraper())

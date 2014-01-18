@@ -1,0 +1,26 @@
+@(pending:Seq[ScrapeInfo])
+
+@admin("Scraper Status")  {
+  <table class="table table-condensed table-striped">
+      <thead>
+      <th>Id</th><th>uriId</th><th>lastScrape</th><th>nextScrape</th><th>interval</th><th>failures</th><th>state</th><th>signature</th><th>destUrl</th>
+      @for(info <- pending) {
+        <tr>
+            <td>@info.id</td>
+            <td>@info.uriId</td>
+            <td>@info.lastScrape</td>
+            <td>@info.nextScrape</td>
+            <td>@info.interval</td>
+            <td>@info.failures</td>
+            <td>@info.state</td>
+            <td>@info.signature.take(20)</td>
+            <td>@info.destinationUrl</td>
+        </tr>
+      }
+      </thead>
+  </table>
+  <script>
+      setInterval(function(){location.reload();}, 5000);
+  </script>
+
+}
