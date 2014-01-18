@@ -124,6 +124,7 @@ kifi.form = (function () {
   });
 
   $('.cancel-signup a').on('mousedown click', function(e) {
+    Tracker.trackClick(this);
     e.preventDefault();
     if ($('body').hasClass('finalizing')) {
       $.post($(this).data('cancelUri'), function(e) {
@@ -136,6 +137,7 @@ kifi.form = (function () {
   });
 
   $('.cancel-signup-login').on('mousedown click', function(e) {
+    Tracker.trackClick(this);
     e.preventDefault();
     if ($('body').hasClass('finalizing')) {
       $.post($(this).data('cancelUri'), function(e) {
