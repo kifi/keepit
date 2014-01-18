@@ -270,26 +270,7 @@ var socketHandlers = {
   },
   thread_muted: function(threadId, muted) {
     log("[socket:thread_muted]", threadId, muted)();
-    var thread = threadsById[threadId];
-    if (thread) {
-      thread.muted = muted;
-      if (thread.unread) {
-        var tlKeys = ['all', thread.url];
-        if (isSent(thread)) {
-          tlKeys.push('sent');
-        }
-        tlKeys.forEach(function (key) {
-          var tl = threadLists[key];
-          if (tl) {
-            tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted']();
-          }
-        });
-        tellVisibleTabsNoticeCountIfChanged();
-      }
-    }
-    forEachTabAtLocator('/messages/' + threadId, function(tab) {
-      api.tabs.emit(tab, 'muted', muted);  // TODO: send threadId too
-    });
+    setMuted(threadId, muted);
   },
   url_patterns: function(patterns) {
     log("[socket:url_patterns]", patterns)();
@@ -822,29 +803,27 @@ api.port.on({
       url: tab.url
     }, [onClearTagsResponse.bind(tab), respond]);
   },
-  add_participants: function(data, respond, tab) {
-    var threadId = data.threadId,
-      userIds = data.userIds;
-    socket.send(['add_participants_to_thread', threadId, userIds]);
+  add_participants: function(data) {
+    socket.send(['add_participants_to_thread', data.threadId, data.userIds]);
   },
-  is_muted: function(threadId, respond, tab) {
+  is_muted: function(threadId, respond) {
     var th = threadsById[threadId];
     respond({
       success: Boolean(th),
       response: Boolean(th && th.muted)
     });
   },
-  mute_thread: function(threadId, respond, tab) {
+  mute_thread: function(threadId) {
     socket.send(['mute_thread', threadId]);
-    threadsById[threadId].muted = true;
+    setMuted(threadId, true);
   },
-  unmute_thread: function(threadId, respond, tab) {
+  unmute_thread: function(threadId) {
     socket.send(['unmute_thread', threadId]);
-    threadsById[threadId].muted = false;
+    setMuted(threadId, false);
   },
   get_bookmark_count_if_should_import: function(_, respond) {
     if (stored('prompt_to_import_bookmarks')) {
-      api.bookmarks.getAll(function(bms) {
+      api.bookmarks.getAll(function (bms) {
         respond(bms.length);
       });
     }
@@ -1097,6 +1076,29 @@ function markAllThreadsRead(messageId, time) {  // .id and .time of most recent 
   });
 
   tellVisibleTabsNoticeCountIfChanged();
+}
+
+function setMuted(threadId, muted) {
+  var thread = threadsById[threadId];
+  if (thread && thread.muted !== muted) {
+    thread.muted = muted;
+    if (thread.unread) {
+      var tlKeys = ['all', thread.url];
+      if (isSent(thread)) {
+        tlKeys.push('sent');
+      }
+      tlKeys.forEach(function (key) {
+        var tl = threadLists[key];
+        if (tl) {
+          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted']();
+        }
+      });
+      tellVisibleTabsNoticeCountIfChanged();
+    }
+    forEachTabAtLocator('/messages/' + threadId, function (tab) {
+      api.tabs.emit(tab, 'muted', {threadId: threadId, muted: muted});
+    });
+  }
 }
 
 function sendUnreadThreadCount(tab) {
