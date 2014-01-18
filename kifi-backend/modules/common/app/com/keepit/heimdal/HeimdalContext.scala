@@ -10,6 +10,8 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.net.{Host, URI, UserAgent}
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.common.mail.ElectronicMail
+import com.keepit.social.SocialNetworkType
+import scala.util.Try
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -115,6 +117,7 @@ class HeimdalContextBuilder {
       case authRequest: AuthenticatedRequest[_] =>
         authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(authRequest.experiments)
+        Try(SocialNetworkType(authRequest.identity.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
       case _ =>
     }
   }

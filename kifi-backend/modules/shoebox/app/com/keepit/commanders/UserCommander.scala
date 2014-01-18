@@ -177,12 +177,13 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, state: State[User]) = {
     val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
-      createDefaultKeeps(newUser.id.get)(HeimdalContext.empty)
+      createDefaultKeeps(newUser.id.get)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
+      ()
     }
     newUser
   }
@@ -285,9 +286,8 @@ class UserCommander @Inject() (
     }
   }
 
-  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
+  def createDefaultKeeps(userId: Id[User]): Unit = {
     val contextBuilder = new HeimdalContextBuilder()
-    contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
     val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
