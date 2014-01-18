@@ -167,9 +167,16 @@ abstract class Indexer[T](
     Seq(IndexInfo(
       name = name,
       numDocs = numDocs,
-      sequenceNumber = Some(commitSequenceNumber),
-      committedAt = committedAt
+      sequenceNumber = commitSequenceNumber,
+      committedAt = committedAt,
+      indexSize = indexSize
     ))
+  }
+
+  def indexSize = {
+    Some(searcher.indexReader.inner.getIndexCommit().getFileNames().map{ filename =>
+      if (indexDirectory.fileExists(filename)) indexDirectory.fileLength(filename) else 0L
+    }.sum)
   }
 
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
