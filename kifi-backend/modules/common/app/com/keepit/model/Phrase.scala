@@ -17,7 +17,7 @@ case class Phrase (
   source: String,
   state: State[Phrase] = PhraseStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
-  ) extends Model[Phrase] {
+  ) extends ModelWithState[Phrase] {
   def withId(id: Id[Phrase]): Phrase = copy(id = Some(id))
   def withUpdateTime(now: DateTime): Phrase = this.copy(updatedAt = now)
   def isActive: Boolean = state == PhraseStates.ACTIVE

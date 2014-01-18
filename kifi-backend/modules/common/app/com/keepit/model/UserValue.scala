@@ -16,7 +16,7 @@ case class UserValue(
   name: String,
   value: String,
   state: State[UserValue] = UserValueStates.ACTIVE
-) extends Model[UserValue] {
+) extends ModelWithState[UserValue] {
 
   def withId(id: Id[UserValue]) = this.copy(id = Some(id))
   def withState(newState: State[UserValue]) = this.copy(state = newState)
