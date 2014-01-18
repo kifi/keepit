@@ -69,8 +69,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession): Unit = {
-    uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
-    urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
+    if (uri.state == NormalizedURIStates.INACTIVE){
+      deleteCache(uri)
+    } else{
+      uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
+      urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
+    }
   }
 
   override def deleteCache(uri: NormalizedURI)(implicit session: RSession): Unit = {

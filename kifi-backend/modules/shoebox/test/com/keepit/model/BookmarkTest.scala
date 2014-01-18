@@ -157,9 +157,10 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
            val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
            bookmarkRepo.save(bm.get.withActive(false))
          }
+
          db.readOnly{ implicit s =>
            bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
-           bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get, excludeState = None).size === 1
+           bookmarkRepo.getByUriAndUserAllStates(uri1.id.get, user1.id.get).size === 1
         }
       }
     }
