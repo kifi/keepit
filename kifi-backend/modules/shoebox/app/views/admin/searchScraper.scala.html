@@ -1,17 +1,49 @@
-@()(implicit flash: Flash)
+@(pending:Seq[ScrapeInfo])(implicit flash: Flash)
 
 @import com.keepit.controllers.admin.routes
 
 @admin("Scraper") {
+    <h2>Pending Queue</h2>
 
-<h2>Rescrape Documents</h2>
+    <table class="table table-condensed table-striped">
+        <tr>
+            <th class="span1">Id</th>
+            <th class="span1">uriId</th>
+            <th class="span2">lastScrape</th>
+            <th class="span2">nextScrape</th>
+            <th class="span1">interval</th>
+            <th class="span1">failures</th>
+            <th class="span1">state</th>
+            <th class="span1">signature</th>
+            <th class="span2">destUrl</th>
+        </tr>
+        @for(info <- pending) {
+        <tr>
+            <td>@info.id</td>
+            <td>@info.uriId</td>
+            <td>@info.lastScrape</td>
+            <td>@info.nextScrape</td>
+            <td>@info.interval</td>
+            <td>@info.failures</td>
+            <td>@info.state</td>
+            <td>@info.signature.take(20)</td>
+            <td>@info.destinationUrl</td>
+        </tr>
+        }
+    </table>
 
-<form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "GET">
-      <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
-      <input type="number" min="0" name="withinMinutes" placeholder="Within 30 minutes">
-    <button type="submit" class="btn">Rescrape</button>
-  <div class="text-success">
-    @flash.get("success").getOrElse("")
-  </div>
-</form>
+    <h2>Rescrape Documents</h2>
+
+    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "GET">
+        <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
+        <input type="number" min="0" name="withinMinutes" placeholder="Within 30 minutes">
+        <button type="submit" class="btn">Rescrape</button>
+        <div class="text-success">
+            @flash.get("success").getOrElse("")
+        </div>
+    </form>
+
+    <script>
+            setInterval(function(){location.reload();}, 5000);
+    </script>
 }
