@@ -117,6 +117,8 @@ object CollectionToUriEdgeSet {
           val datetime = uriList.createdAt(idx)
           Util.unitToMillis(datetime)
         }
+        protected def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
+        protected def isPublicByIndex(idx: Int): Boolean = throw new UnsupportedOperationException
       }
 
     }

@@ -43,12 +43,12 @@ trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
   def filterByTimeRange(start: Long, end: Long): EdgeSet[S, D]
 }
 
-class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet)
+abstract class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet)
   extends LongArrayBasedEdgeInfoAccessor[S, D] with BookmarkInfoAccessor[S, D] with Logging{
 
-  protected def createdAtByIndex(idx: Int): Long = throw new UnsupportedOperationException
-  protected def isPublicByIndex(idx: Int): Boolean = throw new UnsupportedOperationException
-  protected def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
+  protected def createdAtByIndex(idx: Int): Long
+  protected def isPublicByIndex(idx: Int): Boolean
+  protected def bookmarkIdByIndex(idx: Int): Long
 
   override def createdAt: Long = if (index >= 0) createdAtByIndex(index) else throw new IllegalStateException("accessor is not positioned")
   override def isPublic: Boolean = if (index >= 0) isPublicByIndex(index) else throw new IllegalStateException("accessor is not positioned")

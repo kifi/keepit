@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ActionAuthenticator, AuthenticatedRequest, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
@@ -45,7 +45,7 @@ class HomeController @Inject() (
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
   inviteCommander: InviteCommander)
-  extends WebsiteController(actionAuthenticator) with Logging {
+  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }

@@ -44,7 +44,7 @@ class UriIntegrityActor @Inject()(
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
-      bookmarkRepo.getByUriAndUser(newUriId, userId, excludeState = None) match {
+      bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
           bookmarkRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line

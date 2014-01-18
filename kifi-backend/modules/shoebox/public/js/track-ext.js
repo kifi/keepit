@@ -11,21 +11,27 @@
 		track($html.data('trackViewEvent'));
 	});
 
-
 	var DEFAULT_SOURCE_VALUE = 'body';
+
+	var Tracker = win.Tracker = {
+		trackClick: function (el) {
+			var $el = $(el),
+				data = $el.data(),
+				trackAction = data.trackAction;
+			if (trackAction) {
+				track(getClickEventName(), {
+					action: trackAction,
+					source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
+				});
+			}
+		}
+	};
 
 	// on clicking on links, track click event
 	$(document).on('click', 'a[href]', function () {
-		var $el = $(this),
-			data = $el.data(),
-			trackAction = data.trackAction;
-		if (trackAction) {
-			track(getClickEventName(), {
-				action: trackAction,
-				source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
-			});
-		}
+		Tracker.trackClick(this);
 	});
+
 
 	function getClickEventName() {
 		return $html.data('trackClickEvent');

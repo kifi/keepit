@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.{ServiceType, FortyTwoServices}
 import com.keepit.common.time.RichDateTime
 import scala.util.Random
 
@@ -16,8 +16,11 @@ import com.keepit.common.controller.{WebsiteController,ActionAuthenticator}
 
 class WebsiteHealthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  service: FortyTwoServices)
     extends WebsiteController(actionAuthenticator) {
+
+  override lazy val serviceType: ServiceType = service.currentService
 
   def ping() = Action { implicit request =>
     Ok(healthcheckPlugin.errorCount.toString)

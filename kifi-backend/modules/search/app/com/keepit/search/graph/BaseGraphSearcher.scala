@@ -6,6 +6,7 @@ import com.keepit.search.index.WrappedSubReader
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
+import scala.collection.mutable.ArrayBuffer
 
 class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
@@ -14,35 +15,61 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
   def getDocId(id: Long) = reader.getIdMapper.getDocId(id)
 
   def getURIList(field: String, docid: Int): URIList = {
-    if (docid >= 0) {
-      var docValues = reader.getBinaryDocValues(field)
-      if (docValues != null) {
-        var ref = new BytesRef()
-        docValues.get(docid, ref)
-        if (ref.length > 0) {
-          return URIList(ref.bytes, ref.offset, ref.length)
-        } else {
-          log.error(s"missing uri list data: ${field}")
-        }
-      }
-    }
-    URIList.empty
+    if (docid < 0) return URIList.empty
+    val allBytes = getAllBytes(field, docid)
+    URIList(allBytes.toArray, 0, allBytes.length)
   }
 
   def getLongArray(field: String, docid: Int): Array[Long] = {
-    if (docid >= 0) {
-      var docValues = reader.getBinaryDocValues(field)
-      if (docValues != null) {
+    if (docid < 0) return Array.empty[Long]
+    val allBytes = getAllBytes(field, docid)
+    Util.unpackLongArray(allBytes, 0, allBytes.length)
+  }
+
+  private def getAllBytesRefs(field: String, docid: Int): ArrayBuffer[(BytesRef, Int)] = {
+    import com.keepit.search.index.Indexable._
+
+    val bytesRefs = new ArrayBuffer[(BytesRef, Int)]()
+    var done = false
+    var iter = 0
+
+    while (!done){
+      val fieldName = field + numberSuffix(iter)
+      val docValues = reader.getBinaryDocValues(fieldName)
+      if (docValues != null){
         var ref = new BytesRef()
         docValues.get(docid, ref)
-        if (ref.length > 0) {
-          return Util.unpackLongArray(ref.bytes, ref.offset, ref.length)
+        if (ref.length > 0){
+          if (ref.length == MAX_BINARY_FIELD_LENGTH){
+            bytesRefs.append((ref, ref.length - 1))        //last byte is EOF symbol and is dropped. We still have something left
+          } else{
+            bytesRefs.append((ref, ref.length))            // all bytes are good
+            done = true                                    // nothing left
+          }
         } else {
-          log.error(s"missing long array data: ${field}")
+          log.error(s"missing uri list data: ${field + numberSuffix(iter)}")
         }
+        iter += 1
+      } else {
+        done = true
       }
     }
-    Array.empty[Long]
+
+    bytesRefs
+  }
+
+  private def getAllBytes(field: String, docid: Int): Array[Byte] = {
+    val bytesRefs = getAllBytesRefs(field, docid)
+    val counts = bytesRefs.map{_._2}.foldLeft(0)(_+_)
+    val allBytes = new Array[Byte](counts)
+
+    var i = 0
+    bytesRefs.map{ case (ref, count) =>
+      val offset = ref.offset
+      (0 until count).foreach{ j => allBytes(i) = ref.bytes(offset + j); i += 1 }
+    }
+
+    allBytes
   }
 
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {

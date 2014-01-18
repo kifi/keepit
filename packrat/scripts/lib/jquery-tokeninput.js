@@ -1,7 +1,7 @@
 /*
  * jaredQuery Better Tokenizing Autocomplete Text Entry
  * See: https://raw.github.com/2is10/jquery-tokeninput/packrat/src/jquery.tokeninput.js
- * 
+ *
  * Originally based on:
  *  Tokenizing Autocomplete Text Entry v 1.6.1
  * until they decided to not merge in wonderful pull requests.
@@ -32,7 +32,7 @@ var DEFAULT_SETTINGS = {
     hintText: "Type in a search term",
     noResultsText: "No results",
     searchingText: "Searching...",
-    deleteText: "&times;",
+    deleteText: "×",
     animateDropdown: true,
     placeholder: null,
     theme: null,
@@ -248,7 +248,7 @@ $.TokenList = function (input, url_or_data, settings) {
     var input_val;
 
     // Create a new text input an attach keyup events
-    var input_box = $("<input type=\"text\"  autocomplete=\"off\" autocapitalize=\"off\">")
+    var input_box = $("<input type=\"text\"  autocomplete=\"off\" autocapitalize=\"off\"/>")
         .css({
             outline: "none"
         })
@@ -433,7 +433,7 @@ $.TokenList = function (input, url_or_data, settings) {
         .append(input_box);
 
     // The list to store the dropdown items in
-    var dropdown = $("<div>")
+    var dropdown = $("<div/>")
         .addClass($(input).data("settings").classes.dropdown)
         .appendTo($("body")[0] || "html")
         .hide();
@@ -845,7 +845,7 @@ $.TokenList = function (input, url_or_data, settings) {
     function populate_dropdown (query, results) {
         if(results && results.length) {
             dropdown.empty();
-            var dropdown_ul = $("<ul>")
+            var dropdown_ul = $("<ul/>")
                 .appendTo(dropdown)
                 .mouseover(function (event) {
                     select_dropdown_item($(event.target).closest("li"));

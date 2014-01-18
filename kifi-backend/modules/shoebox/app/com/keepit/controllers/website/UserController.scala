@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
@@ -73,7 +73,7 @@ class UserController @Inject() (
   airbrakeNotifier: AirbrakeNotifier,
   authCommander: AuthCommander,
   emailAddressRepo: EmailAddressRepo
-) extends WebsiteController(actionAuthenticator) {
+) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // hotspot -- need optimization; gather timing info for analysis
   def friends() = AuthenticatedJsonAction { request =>

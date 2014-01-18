@@ -28,9 +28,8 @@
       }
 
       // insert in chronological order
-      var time = new Date(nNew.time);
       for (var iNew = 0; iNew < this.ids.length; iNew++) {
-        if (new Date(this.allById[this.ids[iNew]].time) <= time) {
+        if (this.allById[this.ids[iNew]].time <= nNew.time) {
           break;
         }
       }

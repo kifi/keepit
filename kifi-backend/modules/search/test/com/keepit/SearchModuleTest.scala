@@ -2,7 +2,7 @@ package com.keepit.search
 
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
-import com.keepit.common.controller.SearchServiceController
+import com.keepit.common.controller.{ShoeboxServiceController, ServiceController, SearchServiceController}
 import com.keepit.common.logging.Logging
 import com.keepit.test.DeprecatedSearchApplication
 import org.specs2.mutable.Specification
@@ -18,7 +18,11 @@ import scala.reflect.ManifestFactory.classType
 class SearchModuleTest extends Specification with Logging with ApplicationInjector {
 
   private def isSearchController(clazz: Class[_]): Boolean = {
-    classOf[SearchServiceController] isAssignableFrom clazz
+    if (classOf[Controller] isAssignableFrom clazz) {
+      if (classOf[ServiceController] isAssignableFrom clazz) {
+        classOf[SearchServiceController] isAssignableFrom clazz
+      } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
+    } else false
   }
 
   "Module" should {

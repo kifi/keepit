@@ -12,9 +12,8 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark]
-  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
-                      excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
-                     (implicit session: RSession): Option[Bookmark]
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
+  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark]
@@ -86,12 +85,17 @@ class BookmarkRepoImpl @Inject() (
   override def deleteCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(BookmarkUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    latestBookmarkUriCache.remove(LatestBookmarkUriKey(bookmark.uriId))
   }
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
-    bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-    countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
-    latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
+    if (bookmark.state == BookmarkStates.INACTIVE) {
+      deleteCache(bookmark)
+    } else {
+      bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
+      countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+      latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
+    }
   }
 
   override def count(implicit session: RSession): Int = {
@@ -100,14 +104,16 @@ class BookmarkRepoImpl @Inject() (
     }
   }
 
-  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
-                      excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
-                     (implicit session: RSession): Option[Bookmark] =
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
     bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
-      val bookmarks = (for(b <- table if b.uriId === uriId && b.userId === userId) yield b).list
+      val bookmarks = (for(b <- table if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
-    }.filter { b => excludeState.map(_ != b.state).getOrElse(true) }
+    }
+
+  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] ={
+    (for(b <- table if b.uriId === uriId && b.userId === userId ) yield b).firstOption
+  }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.title === title) yield b).list
