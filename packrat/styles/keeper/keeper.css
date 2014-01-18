@@ -574,7 +574,7 @@
   cursor: pointer;
   position: relative;
 }
-.kifi-dock-inbox {
+.kifi-dock-messages {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAWCAQAAAB5nzR5AAAAq0lEQVR4AeXOPw6CMBTH8ccRCAmYeiMOoKPxHByAVep1CAteQydjBxZdGL5LHYx/mhLTOrjwvuv7JD9xjx7LdD3ymeD0BR58GJ8P/zZVcWOLBLThyuING3Tw1D27J1QMFMFTCwbUA2pqJKKaBhGWGNIomGJQgqZCIqvQwoh1asm9x5wW6zQK1qsjcVhC539NQcvKgWtsKDySvVjGKRD6zRdefoJGKDHR7Ex5B8Nlwkq31w0LAAAAAElFTkSuQmCC);
   background-size: auto 22px;
   background-position: 18px 10px;
@@ -585,7 +585,7 @@
   background-position: 16px 10px;
 }
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-.kifi-dock-inbox {
+.kifi-dock-messages {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAAsCAQAAACayLMYAAABYUlEQVR4Ae3UsUrDUBSH8dOQuHTyKdoX6CB2VKSddLZCpVTtQ4hPlCcQJQ5CwEFBnDR1kdatWAfpV+E4lEDFJm3k3kAh99vz4w+HSNqjwQDN2IAGkpyQUmYuJnMGh/8Hmwwzc28000ELrRFYXOm6XalLiHKLGCxECXEXg20UJTAK3qAo7UWgS4RyavxKeyjPuH/BDsoLnvEr9YjmN/7e17JypUcoUbxxft8jjpUrdXhCOZ4HPfoo+4ilDuKNMdhFCSlZA0vcoXRicLZvF7HYHkofD4n3XSOWC2YbhQ1eUbasg9uzjcIJyiWbCTlIxpzEb12hdIU+mtKUgPrKWJ2AKZpSJOjSphyuxLX4Rpe1CqhMqC3lakxQU6Byj5vKuTygJkHlLBXsoabBAeVErsy7eVA5TwQvUBvgFzsJv61JdtBmBViABViAH7mCn4KfK+gLVUa5cSOqglDBZ2wdG+NTQX4Afb8ZYDYTlbEAAAAASUVORK5CYII=);
 }
 .kifi-dock-compose {

@@ -3,7 +3,13 @@
 @admin("Index Infos") {
   <table class="table table-condensed table-striped">
     <thead>
-      <th> ZK Id</th> <th>IPs</th> <th>Name</th> <th>Number of Docs</th> <th>Committed At</th> <th>SequenceNummbr</th>
+      <th> ZK Id</th>
+      <th>IPs</th>
+      <th>Name</th>
+      <th>Number of Docs</th>
+      <th>Size</th>
+      <th>Committed At</th>
+      <th>Sequence#</th>
     </thead>
     @indexInfos.map{ case (cmi, indexInfo) =>
       <tr>
@@ -11,8 +17,9 @@
         <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
         <td>@{indexInfo.name}</td>
         <td>@{indexInfo.numDocs}</td>
+        <td>@{indexInfo.indexSize.getOrElse("NA")}</td>
         <td>@{indexInfo.committedAt.getOrElse("NA")}</td>
-        <td>@{indexInfo.sequenceNumber.getOrElse("NA")}<td>
+        <td>@{indexInfo.sequenceNumber}</td>
       </tr>
     }
   </table>

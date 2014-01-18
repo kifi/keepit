@@ -120,6 +120,8 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
 
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
+        }
+        db.readOnly { implicit s =>
           domainRepo.get("cnn.com").get.sensitive === Some(true)
         }
 
@@ -130,6 +132,8 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
 
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))
+        }
+        db.readOnly { implicit s =>
           domainRepo.get("cnn.com").get.sensitive === Some(false)
         }
       }

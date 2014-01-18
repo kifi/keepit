@@ -114,7 +114,7 @@ class ShoeboxActionAuthenticator @Inject() (
       (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
-      Forbidden(message)
+      Redirect("/logout")
     } else {
       try {
         action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {

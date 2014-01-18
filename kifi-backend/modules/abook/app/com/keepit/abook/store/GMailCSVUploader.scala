@@ -5,7 +5,7 @@ import com.keepit.model.{ABookOrigins, ABookInfo, Contact, User}
 import java.io.File
 import scala.collection.mutable
 import scala.io.Source
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ABookServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick.Database
 import com.keepit.abook._
 import scala.Some
@@ -21,7 +21,7 @@ class GMailCSVUploader @Inject() (actionAuthenticator:ActionAuthenticator,
   contactRepo: ContactRepo,
   econtactRepo: EContactRepo,
   contactsUpdater: ContactsUpdaterPlugin
-) extends WebsiteController(actionAuthenticator) with Logging {
+) extends WebsiteController(actionAuthenticator) with ABookServiceController with Logging {
 
   object GMailCSVFields { // tied to Gmail CSV format
   val FIRST_NAME = "First Name"

@@ -1,7 +1,7 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.Logging
 import java.net.URLEncoder
 import play.api.mvc.{Action, Results}
@@ -96,7 +96,7 @@ class OAuth2Controller @Inject() (
   db: Database,
   actionAuthenticator:ActionAuthenticator,
   abookServiceClient:ABookServiceClient
-) extends WebsiteController(actionAuthenticator) with Logging {
+) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   val approvalPrompt = sys.props.getOrElse("oauth2.approval.prompt", "force")
 

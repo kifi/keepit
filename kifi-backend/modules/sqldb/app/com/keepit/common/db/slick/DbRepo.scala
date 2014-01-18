@@ -3,15 +3,14 @@ package com.keepit.common.db.slick
 import com.keepit.common.strings._
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.inject._
-
 import org.joda.time.DateTime
 import play.api.Play.current
 import scala.slick.driver._
 import scala.slick.session._
 import scala.slick.lifted._
 import DBSession._
-
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Logger
@@ -75,7 +74,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
       case Some(id) => update(toUpdate)
       case None => toUpdate.withId(insert(toUpdate))
     }
-    invalidateCache(result)
+    session.onTransactionSuccess(invalidateCache(result))(ExecutionContext.immediate) // invalidate the cache immediately after commit
     result
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
@@ -116,7 +115,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    if (count != 1) {
+      deleteCache(model)
+      throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    }
     model
   }
 

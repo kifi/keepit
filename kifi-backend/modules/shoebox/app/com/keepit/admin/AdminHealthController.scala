@@ -62,14 +62,14 @@ class AdminHealthController @Inject() (
     (new Array[Int](1))(Random.nextInt + 1) = 1
   }
 
-  def causeHandbrakeError(param: String) = Action { implicit request =>
+  def causeAirbrakeError(message: String) = Action { implicit request =>
     try {
       throwException()
       Ok("Should not see that!")
     } catch {
       case e: Throwable =>
-        airbrake.notify(AirbrakeError.incoming(request, e))
-        Ok(s"handbrake error sent for $e")
+        airbrake.notify(AirbrakeError.incoming(request, e, message))
+        Ok(s"airbrake error sent for $e")
     }
   }
 
