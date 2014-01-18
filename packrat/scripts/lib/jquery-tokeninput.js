@@ -433,7 +433,7 @@ $.TokenList = function (input, url_or_data, settings) {
         .append(input_box);
 
     // The list to store the dropdown items in
-    var dropdown = $("<div>")
+    var dropdown = $("<div/>")
         .addClass($(input).data("settings").classes.dropdown)
         .appendTo($("body")[0] || "html")
         .hide();
@@ -845,7 +845,7 @@ $.TokenList = function (input, url_or_data, settings) {
     function populate_dropdown (query, results) {
         if(results && results.length) {
             dropdown.empty();
-            var dropdown_ul = $("<ul>")
+            var dropdown_ul = $("<ul/>")
                 .appendTo(dropdown)
                 .mouseover(function (event) {
                     select_dropdown_item($(event.target).closest("li"));
