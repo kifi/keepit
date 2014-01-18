@@ -18,6 +18,7 @@ case class RawKeep(
   isPrivate: Boolean = true,
   importId: Option[String] = None,
   source: BookmarkSource,
+  installationId: Option[Id[KifiInstallation]],
   originalJson: Option[JsValue] = None,
   state: State[RawKeep] = RawKeepStates.ACTIVE) extends Model[RawKeep] {
   def withId(id: Id[RawKeep]) = this.copy(id = Some(id))
@@ -27,8 +28,8 @@ case class RawKeep(
 class RawKeepFactory @Inject() (
                                      airbrake: AirbrakeNotifier) {
 
-  def toRawKeep(userId: Id[User], source: BookmarkSource, keepInfos: Seq[KeepInfo], importId: Option[String] = None): Seq[RawKeep] =
-    keepInfos map {k => RawKeep(userId = userId, title = k.title, url = k.url, isPrivate = k.isPrivate, importId = importId, source = source) }
+  def toRawKeep(userId: Id[User], source: BookmarkSource, keepInfos: Seq[KeepInfo], importId: Option[String] = None, installationId: Option[Id[KifiInstallation]] = None): Seq[RawKeep] =
+    keepInfos map {k => RawKeep(userId = userId, title = k.title, url = k.url, isPrivate = k.isPrivate, importId = importId, source = source, installationId = installationId) }
 
   private[commanders] def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
@@ -40,13 +41,13 @@ class RawKeepFactory @Inject() (
       Seq()
   }
 
-  def toRawKeep(userId: Id[User], source: BookmarkSource, value: JsValue, importId: Option[String] = None): Seq[RawKeep] = getBookmarkJsonObjects(value) map { json =>
+  def toRawKeep(userId: Id[User], source: BookmarkSource, value: JsValue, importId: Option[String] = None, installationId: Option[Id[KifiInstallation]] = None): Seq[RawKeep] = getBookmarkJsonObjects(value) map { json =>
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json))
+    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId)
   }
 }
 

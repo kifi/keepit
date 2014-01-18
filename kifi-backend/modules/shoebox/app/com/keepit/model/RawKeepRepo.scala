@@ -33,15 +33,19 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def isPrivate = column[Boolean]("is_private", O.NotNull)
     def importId = column[String]("import_id", O.Nullable)
     def source = column[BookmarkSource]("bookmark_source", O.NotNull)
+    def kifiInstallationId = column[Id[KifiInstallation]]("installation_id", O.Nullable)
     def originalJson = column[JsValue]("original_json", O.Nullable)
 
-    def * = id.? ~ userId ~ createdAt ~ updatedAt ~ url ~ title.? ~ isPrivate ~ importId.? ~ source ~ originalJson.? ~ state <> (RawKeep, RawKeep.unapply _)
+    def * = id.? ~ userId ~ createdAt ~ updatedAt ~ url ~ title.? ~ isPrivate ~ importId.? ~ source ~ kifiInstallationId.? ~ originalJson.? ~ state <> (RawKeep, RawKeep.unapply _)
 
-    def forInsert = userId ~ createdAt ~ updatedAt ~ url ~ title.? ~ isPrivate ~ importId.? ~ source ~ originalJson.? ~ state <> (
-      { t => RawKeep(None, t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8, t._9, t._10)},
-      {(c: RawKeep) => Some((c.userId, c.createdAt, c.updatedAt, c.url, c.title, c.isPrivate, c.importId, c.source, c.originalJson, c.state))}
+    def forInsert = userId ~ createdAt ~ updatedAt ~ url ~ title.? ~ isPrivate ~ importId.? ~ source ~ kifiInstallationId.? ~ originalJson.? ~ state <> (
+      { t => RawKeep(None, t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8, t._9, t._10, t._11)},
+      {(c: RawKeep) => Some((c.userId, c.createdAt, c.updatedAt, c.url, c.title, c.isPrivate, c.importId, c.source, c.installationId, c.originalJson, c.state))}
     )
   }
+
+  def invalidateCache(rawKeep: RawKeep)(session: RSession): Unit = ()
+  def deleteCache(rawKeep: RawKeep)(session: RSession): Unit = ()
 
   private def sanitizeRawKeep(rawKeep: RawKeep): RawKeep = {
     val titleTrimmed = if (rawKeep.title.map(_.length).getOrElse(0) > 2048) {

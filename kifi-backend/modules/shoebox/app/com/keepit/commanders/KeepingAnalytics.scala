@@ -83,15 +83,16 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       val keptPublic = kept - keptPrivate
       heimdal.incrementUserProperties(userId, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
       heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
+    }
+  }
 
-      val importedBookmarks = keeps.count(_.source == BookmarkSource.bookmarkImport)
-      if (importedBookmarks > 0) {
-        val contextBuilder = new HeimdalContextBuilder
-        contextBuilder.data ++= existingContext.data
-        contextBuilder += ("action", "importedBookmarks")
-        contextBuilder += ("importedBookmarks", importedBookmarks)
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, keptAt))
-      }
+  def keepImport(userId: Id[User], keptAt: DateTime, existingContext: HeimdalContext, countImported: Int): Unit = {
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= existingContext.data
+      contextBuilder += ("action", "importedBookmarks")
+      contextBuilder += ("importedBookmarks", countImported)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, keptAt))
     }
   }
 
