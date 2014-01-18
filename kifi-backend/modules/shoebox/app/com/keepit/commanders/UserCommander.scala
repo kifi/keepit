@@ -18,7 +18,7 @@ import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal._
+import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import akka.actor.Scheduler
 
 import play.api.Play.current
@@ -91,8 +91,6 @@ class UserCommander @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   bookmarkCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
-  eventContextBuilder: HeimdalContextBuilderFactory,
-  heimdalServiceClient: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
@@ -176,28 +174,15 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(socialUser: Identity, state: State[User]) = {
-    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = socialUser.firstName, lastName = socialUser.lastName, state = state)) }
+  def createUser(firstName: String, lastName: String, state: State[User]) = {
+    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
-      val contextBuilder = eventContextBuilder()
-      socialUser.email.foreach { address =>
-        val testExperiments = ExperimentType.getTestExperiments(EmailAddress(userId = newUser.id.get, address = address))
-        contextBuilder.addExperiments(testExperiments)
-      }
-
-      createDefaultKeeps(newUser.id.get)(contextBuilder.build)
-
+      createDefaultKeeps(newUser.id.get)(HeimdalContext.empty)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
-
-      contextBuilder += ("action", "registered")
-      contextBuilder += ("identityId", socialUser.identityId.userId)
-      contextBuilder += ("identityProvider", socialUser.identityId.providerId)
-      contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
-      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
     }
     newUser
   }
