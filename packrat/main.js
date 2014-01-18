@@ -273,6 +273,19 @@ var socketHandlers = {
     var thread = threadsById[threadId];
     if (thread) {
       thread.muted = muted;
+      if (thread.unread) {
+        var tlKeys = ['all', thread.url];
+        if (isSent(thread)) {
+          tlKeys.push('sent');
+        }
+        tlKeys.forEach(function (key) {
+          var tl = threadLists[key];
+          if (tl) {
+            tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted']();
+          }
+        });
+        tellVisibleTabsNoticeCountIfChanged();
+      }
     }
     forEachTabAtLocator('/messages/' + threadId, function(tab) {
       api.tabs.emit(tab, 'muted', muted);  // TODO: send threadId too
