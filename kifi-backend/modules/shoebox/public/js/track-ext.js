@@ -18,7 +18,6 @@
 			var $el = $(el),
 				data = $el.data(),
 				trackAction = data.trackAction;
-			win.alert('trackClick', trackAction);
 			if (trackAction) {
 				track(getClickEventName(), {
 					action: trackAction,
