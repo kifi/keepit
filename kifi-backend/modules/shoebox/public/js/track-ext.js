@@ -28,7 +28,7 @@
 	};
 
 	// on clicking on links, track click event
-	$(document).on('click', 'a[href]', function () {
+	$(document).on('click', 'a[href], *[data-track-click]', function () {
 		Tracker.trackClick(this);
 	});
 

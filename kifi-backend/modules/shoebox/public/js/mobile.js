@@ -75,7 +75,7 @@
 			win.alert('Invalid email address');
 			return;
 		}
-		
+
 		$.ajax({
 			url: '/waitlist',
 			type: 'POST',
@@ -116,6 +116,7 @@
 
 	$shadow.on('click', function (e) {
 		if (!$(e.target).closest('.wistia_video_wrapper').length) {
+			Tracker.trackClick($(e.target).closest('.wistia_shadow')[0]);
 			closeVideo();
 		}
 	});
@@ -184,5 +185,5 @@
 			$('html').toggleClass('scroll', scrolling);
 		});
 	});
-	
+
 })(this);
