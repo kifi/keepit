@@ -54,6 +54,9 @@ private[integration] class AutogenReaper @Inject() (
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   emailAddressRepo: EmailAddressRepo,
+  bookmarkRepo: BookmarkRepo,
+  collectionRepo: CollectionRepo,
+  k2cRepo: KeepToCollectionRepo,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
@@ -100,7 +103,16 @@ private[integration] class AutogenReaper @Inject() (
             }
             val user = userRepo.get(exp.userId)
             log.info(s"[reap] processing $user")
-            // todo: userRepo.delete(user) -- not there yet (bookmarks/keeps, etc.)
+            // bookmarks, collections & k2c
+            for (bookmark <- bookmarkRepo.getByUser(exp.userId)) {
+              bookmarkRepo.save(bookmark.withActive(false))
+            }
+            for (collection <- collectionRepo.getByUser(exp.userId)) {
+              for (k2c <- k2cRepo.getByCollection(collection.id.get)) {
+                k2cRepo.save(k2c.inactivate)
+              }
+              collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
+            }
             userRepo.save(user.withState(UserStates.INACTIVE))
           }
           dues foreach { exp =>
