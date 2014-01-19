@@ -294,6 +294,7 @@ POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.sa
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
 GET     /admin/data/scrape        @com.keepit.controllers.admin.ScraperAdminController.searchScraper
+GET     /admin/data/scraper_pending        @com.keepit.controllers.admin.ScraperAdminController.pendingScraperRequests
 GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
