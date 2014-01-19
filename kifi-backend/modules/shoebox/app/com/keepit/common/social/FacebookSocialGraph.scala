@@ -18,7 +18,7 @@ import play.api.libs.json._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 object FacebookSocialGraph {
-  val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture"
+  val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
 
   object ErrorSubcodes {
     val AppNotInstalled = 458
