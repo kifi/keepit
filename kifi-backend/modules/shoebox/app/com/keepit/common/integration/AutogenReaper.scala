@@ -81,7 +81,10 @@ private[integration] class AutogenReaper @Inject() (
           for (exp <- dues) {
             userSessionRepo.invalidateByUser(exp.userId)
             userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
-              userExperimentRepo.delete(exp)
+              exp.experimentType match {
+                case ExperimentType.AUTO_GEN => userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
+                case _ => userExperimentRepo.delete(exp)
+              }
             }
             for (emailAddr <- emailAddressRepo.getAllByUser(exp.userId)) {
               emailAddressRepo.delete(emailAddr)
