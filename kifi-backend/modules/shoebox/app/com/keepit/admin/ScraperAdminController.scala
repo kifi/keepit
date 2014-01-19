@@ -20,12 +20,20 @@ class ScraperAdminController @Inject() (
   httpProxyRepo: HttpProxyRepo)
     extends AdminController(actionAuthenticator) {
 
-  def searchScraper = AdminHtmlAction { implicit request =>
-    val pending = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+  def getPendingScraperRequests: Seq[ScrapeInfo] = {
+    db.readOnly(dbMasterSlave = Slave) { implicit ro =>
       scrapeInfoRepo.getPendingList()
     }
-    Ok(html.admin.searchScraper(pending))
   }
+
+  def searchScraper = AdminHtmlAction { implicit request =>
+    Ok(html.admin.searchScraper(getPendingScraperRequests))
+  }
+
+  def pendingScraperRequests = AdminHtmlAction { implicit request =>
+    Ok(html.admin.pendingScraperRequests(getPendingScraperRequests))
+  }
+
 
   def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction { implicit request =>
     val updateCount = db.readWrite { implicit session =>

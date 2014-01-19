@@ -5,32 +5,15 @@
 @admin("Scraper") {
     <h2>Pending Queue</h2>
 
-    <table class="table table-condensed table-striped">
-        <tr>
-            <th class="span1">Id</th>
-            <th class="span1">uriId</th>
-            <th class="span2">lastScrape</th>
-            <th class="span2">nextScrape</th>
-            <th class="span1">interval</th>
-            <th class="span1">failures</th>
-            <th class="span1">state</th>
-            <th class="span1">signature</th>
-            <th class="span2">destUrl</th>
-        </tr>
-        @for(info <- pending) {
-        <tr>
-            <td>@info.id</td>
-            <td>@info.uriId</td>
-            <td>@info.lastScrape</td>
-            <td>@info.nextScrape</td>
-            <td>@info.interval</td>
-            <td>@info.failures</td>
-            <td>@info.state</td>
-            <td>@info.signature.take(20)</td>
-            <td>@info.destinationUrl</td>
-        </tr>
-        }
-    </table>
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="autoreload" checked/> Enable autoreload
+        </label>
+    </div>
+
+    <div id="pending-requests">
+        @pendingScraperRequests(pending)
+    </div>
 
     <h2>Rescrape Documents</h2>
 
@@ -44,6 +27,23 @@
     </form>
 
     <script>
-            setInterval(function(){location.reload();}, 5000);
+        var refresh = function(){
+            if ($("#autoreload").is(":checked")) {
+                $.ajax({
+                    url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
+                    dataType: "html",
+                    success : function(data){
+                        document.getElementById("pending-requests").innerHTML = data;
+                    },
+                    complete: function(){
+                        setTimeout(refresh, 5000);
+                    }
+                });
+            }
+        };
+        $("#autoreload").change(function() {
+            if (this.checked) { refresh(); }
+        });
+        refresh();
     </script>
 }
