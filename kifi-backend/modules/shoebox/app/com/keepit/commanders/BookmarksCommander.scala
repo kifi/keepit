@@ -42,7 +42,7 @@ object KeepInfo {
     (__ \ 'id).formatNullable(ExternalId.format[Bookmark]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse false, Some(_))
+    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_))
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
 
   def fromBookmark(bookmark: Bookmark): KeepInfo = {
@@ -102,7 +102,7 @@ class BookmarksCommander @Inject() (
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
+    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = false)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
