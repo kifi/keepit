@@ -138,7 +138,7 @@ class FacebookSocialGraph @Inject() (
   }
 
   private def url(id: SocialId, accessToken: String) =
-    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.FULL_PROFILE},friends.fields(${FacebookSocialGraph.FULL_PROFILE}),limit=250"
+    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.FULL_PROFILE},friends.fields(${FacebookSocialGraph.FULL_PROFILE})"
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(
