@@ -30,7 +30,7 @@
         var refresh = function(){
             if ($("#autoreload").is(":checked")) {
                 $.ajax({
-                    url : "/admin/data/scraper_pending",
+                    url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
                     dataType: "html",
                     success : function(data){
                         document.getElementById("pending-requests").innerHTML = data;
