@@ -102,7 +102,7 @@ class BookmarksCommander @Inject() (
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = false)
+    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
