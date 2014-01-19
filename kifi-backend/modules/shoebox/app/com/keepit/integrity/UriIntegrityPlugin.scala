@@ -109,14 +109,14 @@ class UriIntegrityActor @Inject()(
         case _ =>
       }
 
-      urlRepo.getByNormUri(oldUriId).foreach{ url =>
-        handleURLMigration(url, newUriId)
-      }
-
       uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
+
+      urlRepo.getByNormUri(oldUriId).foreach{ url =>
+        handleURLMigration(url, newUriId)
+      }
 
       changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
     }
