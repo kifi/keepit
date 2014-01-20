@@ -42,6 +42,22 @@ case class UserStatistics(
     experiments: Set[ExperimentType],
     kifiInstallations: Seq[KifiInstallation])
 
+case class UserStatisticsPage(
+  userViewType: UserViewType,
+  count: Int,
+  users: Seq[UserStatistics],
+  page: Int,
+  pageCount: Int,
+  pageSize: Int)
+
+sealed trait UserViewType
+object UserViewTypes {
+  case object AllUsersViewType extends UserViewType
+  case object RealUsersViewType extends UserViewType
+  case object FakeUsersViewType extends UserViewType
+}
+import UserViewTypes._
+
 class AdminUserController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
@@ -235,34 +251,39 @@ class AdminUserController @Inject() (
       kifiInstallations)
   }
 
-  def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
+  private def numPages(count: Int, pageSize: Int): Int = {
+    Math.ceil(count.toFloat / pageSize.toFloat).toInt
+  }
 
+  def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
+    val PAGE_SIZE: Int = 50
     val users = db.readOnly { implicit s =>
-      userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
+      userViewType match {
+        case AllUsersViewType => userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
+        case RealUsersViewType => userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
+        case FakeUsersViewType => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
+      }
     }
-    val userCount = db.readOnly { implicit s => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None, "Total Users"))
+    val userCount = db.readOnly { implicit s =>
+      userViewType match {
+        case AllUsersViewType => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)
+        case RealUsersViewType => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
+        case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
+      }
+    }
+    UserStatisticsPage(userViewType, userCount, users, page, numPages(userCount, PAGE_SIZE), PAGE_SIZE)
+  }
+
+  def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, AllUsersViewType), None))
   }
 
   def realUsersView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
-
-    val users = db.readOnly { implicit s =>
-      userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
-    }
-    val userCount = db.readOnly { implicit s => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None, "Real Users"))
+    Ok(html.admin.users(userStatisticsPage(page, RealUsersViewType), None))
   }
 
   def fakeUsersView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
-
-    val users = db.readOnly { implicit s =>
-      userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
-    }
-    val userCount = db.readOnly { implicit s => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None, "Fake Users"))
+    Ok(html.admin.users(userStatisticsPage(page, FakeUsersViewType), None))
   }
 
   def searchUsers() = AdminHtmlAction { implicit request =>
@@ -275,7 +296,7 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(users, 0, users.size, 1, searchTerm, "Total Users"))
+        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users.size, users, 0, 1, users.size), searchTerm))
     }
   }
 
