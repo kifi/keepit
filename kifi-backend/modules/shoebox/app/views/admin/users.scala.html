@@ -1,5 +1,22 @@
-@(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics], page: Int, count: Int, pageCount: Int, searchTerm: Option[String], userSetDescription: String)
+@(userData: com.keepit.controllers.admin.UserStatisticsPage, searchTerm: Option[String])
 @import com.keepit.controllers.admin.routes
+@import com.keepit.controllers.admin.UserViewTypes._
+
+@userSetDescription = {
+    @userData.userViewType match {
+        case AllUsersViewType => {Total Users}
+        case RealUsersViewType => {Real Users}
+        case FakeUsersViewType => {Fake Users}
+    }
+}
+
+@otherPagesRoute(page: Int) = {
+    @userData.userViewType match {
+        case AllUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.usersView(page)}
+        case RealUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.realUsersView(page)}
+        case FakeUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.fakeUsersView(page)}
+    }
+}
 
 @kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
   <ul>
@@ -20,7 +37,7 @@
     <ul>
       <li>
         @if(page > 0) {
-          <a href="@routes.AdminUserController.usersView(page - 1)">
+          <a href="@otherPagesRoute(page - 1)">
         } else {
          <a href="#">
         }
@@ -29,28 +46,28 @@
       </li>
       @if(page - 20 > 0) {
         <li class="disabled">
-          <a href="@routes.AdminUserController.usersView(0)">...</a>
+          <a href="@otherPagesRoute(0)">...</a>
         </li>
       }
       @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
           <li class="disabled">
-            <a href="@routes.AdminUserController.usersView(i)">@{i + 1}</a>
+            <a href="@otherPagesRoute(i)">@{i + 1}</a>
           </li>
         } else {
           <li class="active">
-            <a href="@routes.AdminUserController.usersView(i)">@{i + 1}</a>
+            <a href="@otherPagesRoute(i)">@{i + 1}</a>
           </li>
         }
       }
       @if(page + 20 < pageCount - 1) {
         <li class="disabled">
-          <a href="@routes.AdminUserController.usersView(pageCount - 1)">...</a>
+          <a href="@otherPagesRoute(pageCount - 1)">...</a>
         </li>
       }
       <li>
-        @if(userStatisticsList.size > 0 && page < pageCount - 1) {
-          <a href="@routes.AdminUserController.usersView(page + 1)">
+        @if(userData.users.size > 0 && page < pageCount - 1) {
+          <a href="@otherPagesRoute(page + 1)">
         } else {
          <a href="#">
         }
@@ -61,10 +78,10 @@
   </div>
 }
 
-@admin(count + " " + userSetDescription) {
-  <h2> Showing @userStatisticsList.length (page @(page + 1)) </h2>
+@admin(userData.count + " " + userSetDescription) {
+  <h2> Showing @userData.users.length (page @(userData.page + 1)) </h2>
 
-  @pagination(page, pageCount)
+  @pagination(userData.page, userData.pageCount)
 
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.searchUsers()" method="POST">
     @if(searchTerm.isDefined){
@@ -74,7 +91,7 @@
     }
     <input type="submit" value="Search"/></br>
     @if(searchTerm.isDefined){
-      <a href="@com.keepit.controllers.admin.routes.AdminUserController.usersView(0)">Clear search</a>
+      <a href="@otherPagesRoute(0)">Clear search</a>
     }
   </form>
   <table class="table table-bordered">
@@ -88,7 +105,7 @@
       <th>Experiments</th>
       <th>Version</th>
     </tr>
-  @for((userStatistics, i) <- userStatisticsList.zipWithIndex) {
+  @for((userStatistics, i) <- userData.users.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td><span class="badge">@userStatistics.user.id.get.id</span></td>
@@ -101,6 +118,6 @@
     </tr>
   }
   </table>
-  @pagination(page, pageCount)
+  @pagination(userData.page, userData.pageCount)
 
 }
