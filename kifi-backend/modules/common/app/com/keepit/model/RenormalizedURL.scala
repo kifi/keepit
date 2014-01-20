@@ -12,7 +12,7 @@ case class RenormalizedURL(
   newUriId: Id[NormalizedURI],
   state: State[RenormalizedURL] = RenormalizedURLStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
-) extends Model[RenormalizedURL] {
+) extends ModelWithState[RenormalizedURL] {
   def withId(id: Id[RenormalizedURL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[RenormalizedURL]) = copy(state = state)

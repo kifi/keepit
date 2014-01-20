@@ -261,6 +261,9 @@ GET     /admin                      @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 
+GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.abookInfos()
+GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int, size:Int ?= 50)
+
 GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
 GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.getEventDescriptors()
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
@@ -294,6 +297,7 @@ POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.sa
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
 GET     /admin/data/scrape        @com.keepit.controllers.admin.ScraperAdminController.searchScraper
+GET     /admin/data/scraper_pending        @com.keepit.controllers.admin.ScraperAdminController.pendingScraperRequests
 GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index

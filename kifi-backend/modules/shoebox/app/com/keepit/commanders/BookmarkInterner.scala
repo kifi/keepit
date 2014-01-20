@@ -103,7 +103,7 @@ class BookmarkInterner @Inject() (
 
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    bookmarkRepo.getByUriAndUser(uri.id.get, userId, excludeState = None) match {
+    bookmarkRepo.getByUriAndUserAllStates(uri.id.get, userId) match {
       case Some(bookmark) =>
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(true).copy(createdAt = clock.now) } else keepWithPrivate

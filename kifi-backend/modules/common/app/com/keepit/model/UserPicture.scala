@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{States, Model, State, Id}
+import com.keepit.common.db.{States, ModelWithState, State, Id}
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
@@ -22,7 +22,7 @@ case class UserPicture(
   origin: UserPictureSource,
   state: State[UserPicture] = UserPictureStates.ACTIVE,
   attributes: Option[JsObject]
-  ) extends Model[UserPicture] {
+  ) extends ModelWithState[UserPicture] {
   def withId(id: Id[UserPicture]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserPicture]) = copy(state = state)

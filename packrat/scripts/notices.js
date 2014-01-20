@@ -240,15 +240,14 @@ panes.notices = function () {
     markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]');
   }
 
-  function markAllRead(id, timeStr) {
-    markEachRead(id, timeStr, '.kifi-notice');
+  function markAllRead(id, time) {
+    markEachRead(id, time, '.kifi-notice');
   }
 
-  function markEachRead(id, timeStr, sel) {
-    var time = new Date(timeStr);
+  function markEachRead(id, time, sel) {
     var discard = $list.data('kind') === 'unread';
     $list.find(sel + ':not(.kifi-notice-visited)').each(function () {
-      if (id === this.dataset.id || time >= new Date(this.dataset.createdAt)) {
+      if (id === this.dataset.id || time >= this.dataset.createdAt) {
         if (discard) {
           $(this).remove();
         } else {
@@ -304,12 +303,12 @@ panes.notices = function () {
     if ($list.data('kind') === 'all') {
       o = $list.find('.kifi-notice').toArray().reduce(function (o, el) {
         var t = el.dataset.createdAt;
-        if (o.time < new Date(t)) {
+        if (o.time < t) {
           o.time = t;
           o.id = el.dataset.id;
         }
         return o;
-      }, {time: 0});
+      }, {time: new Date(0).toISOString()});
     }
     api.port.emit('set_all_threads_read', o && o.id);
     // not updating DOM until response received due to bulk nature of action

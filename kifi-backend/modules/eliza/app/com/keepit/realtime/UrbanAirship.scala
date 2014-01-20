@@ -33,7 +33,7 @@ case class Device(
    state: State[Device] = DeviceStates.ACTIVE,
    createdAt: DateTime = currentDateTime,
    updatedAt: DateTime = currentDateTime
-   ) extends Model[Device] {
+   ) extends ModelWithState[Device] {
 
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
