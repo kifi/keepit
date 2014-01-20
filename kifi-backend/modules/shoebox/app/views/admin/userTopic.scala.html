@@ -1,7 +1,7 @@
 @(userId: Option[String], topic: Option[String])
 
 @admin("User Topic"){
-  <form action = "@com.keepit.controllers.admin.routes.TopicModelController.getUserTopic" method = "POST">
+  <form action = "com.keepit.controllers.admin.routes.TopicModelController.getUserTopic" method = "POST">
     <div>
       <label for = "user">Type userId </label>
       <input type="text" id="user" name="user" 

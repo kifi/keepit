@@ -1,7 +1,7 @@
 @(word: Option[String], topic: Option[String])
 
 @admin("Word Topic"){
-  <form action = "@com.keepit.controllers.admin.routes.TopicModelController.getWordTopic" method = "POST">
+  <form action = "com.keepit.controllers.admin.routes.TopicModelController.getWordTopic" method = "POST">
     <div>
       <label for = "word">Type your word </label>
       <input type="text" id="word" name="word" value = "@word.getOrElse("")" ></input>
