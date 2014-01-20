@@ -87,7 +87,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
         url.contains("/internal/shoebox/database/getUriIdsInCollection") ||
         url.contains("graph.facebook.com/") ||
         url.contains("api.linkedin.com/")) {
-      5000 / trackTimeThresholdFactor //ms
+      10000 / trackTimeThresholdFactor //ms
     } else {
       1000 / trackTimeThresholdFactor //ms
     }
