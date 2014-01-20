@@ -131,7 +131,7 @@ class OAuth2Controller @Inject() (
     log.info(s"[oauth2.callback] state=$state stateFromSession=$stateFromSession")
     if (state.isEmpty || state(0) != stateFromSession) {
       log.warn(s"[oauth2.callback] state token mismatch")
-      throw new IllegalStateException("state token mismatch")
+//      throw new IllegalStateException("state token mismatch")
     }
 
     val code = request.queryString.get("code").getOrElse(Seq(""))(0)

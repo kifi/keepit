@@ -261,6 +261,8 @@ GET     /admin                      @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 
+GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.abookInfos()
+
 GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
 GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.getEventDescriptors()
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
