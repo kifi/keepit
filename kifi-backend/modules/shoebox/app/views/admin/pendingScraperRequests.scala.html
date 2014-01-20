@@ -17,14 +17,14 @@
     @for(info <- pending) {
     <tr>
         <td>@info.id</td>
-        <td>@info.uriId</td>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.editFirstBookmarkForUri(info.uriId)">@info.uriId</a></td>
         <td>@info.lastScrape</td>
         <td>@info.nextScrape</td>
         <td>@info.interval</td>
         <td>@info.failures</td>
         <td>@info.state</td>
         <td>@info.signature.take(20)</td>
-        <td>@info.destinationUrl</td>
+        <td><a href="@info.destinationUrl">@info.destinationUrl</a></td>
     </tr>
     }
 </table>
