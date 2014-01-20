@@ -18,6 +18,7 @@ import java.math.BigInteger
 import com.keepit.model.{ABookInfo, User, OAuth2Token}
 import com.keepit.common.db.Id
 import scala.concurrent._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -94,6 +95,7 @@ object OAuth2AccessTokenResponse {
 
 class OAuth2Controller @Inject() (
   db: Database,
+  airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
   abookServiceClient:ABookServiceClient
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
@@ -124,13 +126,15 @@ class OAuth2Controller @Inject() (
 
   // redirect/GET
   def callback(provider:String) = AuthenticatedJsonAction { implicit request =>
-    log.info(s"[oauth2.callback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
+    log.info(s"[oauth2.callback(${request.userId}, $provider)] request.hdrs=${request.headers} request.session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val state = request.queryString.get("state").getOrElse(Seq.empty[String]) // see oauth2
     val stateFromSession = request.session.get("stateToken").getOrElse("")
-    log.info(s"[oauth2.callback] state=$state stateFromSession=$stateFromSession")
+    log.info(s"[oauth2.callback(${request.userId}, $provider)] state=$state stateFromSession=$stateFromSession")
     if (state.isEmpty || state(0) != stateFromSession) {
-      log.warn(s"[oauth2.callback] state token mismatch")
+      val msg = s"[oauth2.callback(${request.userId}, $provider)] state token mismatch: callback-state=$state session-stateToken=$stateFromSession"
+      log.warn(msg)
+      airbrake.notify(msg)
 //      throw new IllegalStateException("state token mismatch")
     }
 
@@ -146,22 +150,24 @@ class OAuth2Controller @Inject() (
       "grant_type" -> "authorization_code"
     )
     val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
-    log.info(s"[oauth2.callback($provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
+    log.info(s"[oauth2.callback(${request.userId},$provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
     val redirectHomeF = Future { Redirect(com.keepit.controllers.website.routes.HomeController.home) }
 
     val tokenRespOptF = call.map { resp =>
-      log.info(s"[oauth2.callback] body=${resp.body}")
+      log.info(s"[oauth2.callback(${request.userId},$provider)] body=${resp.body}")
       provider match {
         case "google" => {
           if (resp.status == OK) {
             val json = resp.json
-            log.info(s"[oauth2.callback] $resp json=${Json.prettyPrint(json)}")
+            log.info(s"[oauth2.callback(${request.userId},$provider)] $resp json=${Json.prettyPrint(json)}")
             val tokenResp = json.asOpt[OAuth2AccessTokenResponse]
-            log.info(s"[oauth2.callback] tokenResp=$tokenResp")
+            log.info(s"[oauth2.callback(${request.userId},$provider)] tokenResp=$tokenResp")
             tokenResp
           } else {
-            log.warn(s"OAuth2 failure from $provider: $resp") // TODO: retry
+            val msg = s"[oauth2.callback(${request.userId},$provider)] failure from $provider: $resp"
+            log.warn(msg) // TODO: retry
+            airbrake.notify(msg)
             None
           }
         }
@@ -279,7 +285,7 @@ class OAuth2Controller @Inject() (
       "/friends/invite$" + new BigInteger(130, new SecureRandom()).toString(32)
     }
     val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
-    log.info(s"[importContacts($provider, $approvalPromptOpt)] redirect to $route")
+    log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")
     Redirect(route).withSession(session + ("stateToken" -> stateToken))
   }
 
