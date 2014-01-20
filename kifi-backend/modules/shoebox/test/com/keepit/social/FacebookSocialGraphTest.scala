@@ -26,7 +26,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val graph = new FacebookSocialGraph(new FakeHttpClient(), db, socialUserInfoRepo, null)
         val eishay1Json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min_page1.json")).mkString)
-        graph.nextPageUrl(eishay1Json) === Some("https://graph.facebook.com/646386018/friends?fields=name,first_name,middle_name,last_name,gender,username,email,picture&access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&limit=5000&offset=5000&__after_id=100004067535411")
+        graph.nextPageUrl(eishay1Json) === Some("https://graph.facebook.com/646386018/friends?fields=name,gender,username,email,picture&access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&limit=5000&offset=5000&__after_id=100004067535411")
       }
     }
 
@@ -40,7 +40,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
     "fetch from facebook" in {
       withDb() { implicit injector =>
-        val expectedUrl = DirectUrl("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,email,picture,friends.fields(name,first_name,middle_name,last_name,gender,username,email,picture)")
+        val expectedUrl = DirectUrl("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,email,picture,friends.fields(name,gender,username,picture)")
         val json = io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString
         val httpClient = new FakeHttpClient(Some(Map(expectedUrl -> json)))
 
@@ -85,6 +85,21 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    //This is really large! Disable by default
+    "fetch from facebook using grimland" in {
+      skipped("json is very large, stress test only")
+      withDb() { implicit injector =>
+        val data = io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/large.json")).mkString
+        val httpClient = new FakeHttpClient(Some({ case _ => data}))
+        val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
+
+        val graph = new FacebookSocialGraph(httpClient, db, socialUserInfoRepo, null) {
+          override def getAccessToken(socialUserInfo: SocialUserInfo): String = ""
+        }
+        val rawInfo = graph.fetchSocialUserRawInfo(info).get
+        rawInfo.socialId.id === "627689"
+      }
+    }
   }
 
 }

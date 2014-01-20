@@ -7,7 +7,6 @@ import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.model.{Gender, SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 import com.keepit.common.performance._
@@ -18,7 +17,8 @@ import play.api.libs.json._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 object FacebookSocialGraph {
-  val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
+  val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
+  val FRIEND_PROFILE = "name,gender,username,picture"
 
   object ErrorSubcodes {
     val AppNotInstalled = 458
@@ -122,6 +122,7 @@ class FacebookSocialGraph @Inject() (
 
   private def fetchJsons(url: String): Seq[JsValue] = {
     val jsons = get(url)
+    log.info(s"downloaded FB json using $url")
     jsons +: nextPageUrl(jsons).toSeq.flatMap(fetchJsons)
   }
 
@@ -138,7 +139,7 @@ class FacebookSocialGraph @Inject() (
   }
 
   private def url(id: SocialId, accessToken: String) =
-    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.FULL_PROFILE},friends.fields(${FacebookSocialGraph.FULL_PROFILE})"
+    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.PERSONAL_PROFILE},friends.fields(${FacebookSocialGraph.FRIEND_PROFILE})"
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(
