@@ -37,7 +37,7 @@ trait ClientResponse {
 class ClientResponseException(message: String, cause: Throwable) extends Exception(message, cause)
 
 
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser) extends ClientResponse with Logging {
+class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, trackTimeThresholdFactor: Int) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
@@ -79,6 +79,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   lazy val json: JsValue = {
     val url = request.httpUri.url
     //todo: this list should be taken from some config or some smarter mechanizem then that
+    //trackTimeThresholdFactor is basically a proxy to the machine speed (ECU). more ECU, faster the machine should be
     val trackTimeThreshold = if(
         url.contains("/getEContacts") ||
         url.contains("/getContacts") ||
@@ -86,9 +87,9 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
         url.contains("/internal/shoebox/database/getUriIdsInCollection") ||
         url.contains("graph.facebook.com/") ||
         url.contains("api.linkedin.com/")) {
-      5000//ms
+      5000 / trackTimeThresholdFactor //ms
     } else {
-      200//ms
+      1000 / trackTimeThresholdFactor //ms
     }
     try {
       val (json, time, tracking) = jsonParser.parse(bytes, trackTimeThreshold)
