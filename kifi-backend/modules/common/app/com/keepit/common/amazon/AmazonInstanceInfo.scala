@@ -50,6 +50,7 @@ case class AmazonInstanceInfo (
     case AmazonInstanceType.M1Medium.name => AmazonInstanceType.M1Medium
     case AmazonInstanceType.M1Small.name => AmazonInstanceType.M1Small
     case AmazonInstanceType.T1Micro.name => AmazonInstanceType.T1Micro
+    case _ => AmazonInstanceType.UNKNOWN //we don't want to kill a cluster because we can't parse a machine type
   }
 
 }
@@ -63,5 +64,6 @@ object AmazonInstanceType {
   case object M1Medium extends AmazonInstanceType("m1.medium", 1, 2)
   case object M1Small  extends AmazonInstanceType("m1.small", 1, 1)
   case object T1Micro  extends AmazonInstanceType("t1.micro", 1, 1)//actually 1/2 of an ecu
+  case object UNKNOWN  extends AmazonInstanceType("UNKNOWN", 2, 4)
 }
 
