@@ -20,7 +20,7 @@ class MidFlightRequests @Inject() (
   @volatile private var lastAlert: Long = -1
 
   private lazy val MaxMidFlightRequests = {
-    val max = myInstanceInfo.get.info.instantTypeInfo.ecu * 10
+    val max = myInstanceInfo.get.info.instantTypeInfo.ecu * 7
     log.info(s"allowing $max mid flight requests before blowing the whistle")
     max
   }
