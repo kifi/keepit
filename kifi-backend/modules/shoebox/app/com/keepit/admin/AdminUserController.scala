@@ -223,8 +223,6 @@ class AdminUserController @Inject() (
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
     val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
-    val state = new BigInteger(130, new SecureRandom()).toString(32)
-
     Async {
       for {
         abookInfos <- abookInfoF
@@ -233,7 +231,7 @@ class AdminUserController @Inject() (
       } yield {
         Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
           fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
-          collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+          collections, collectionFilter))
       }
     }
   }
