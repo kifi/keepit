@@ -6,23 +6,23 @@
         <tr>
             <th class="span1">Id</th>            
             <th class="span2">createdAt</th>
-            <th class="span2">updatedAt</th>
             <th class="span1">state</th>
             <th class="span1">user ID</th>
             <th class="span1">owner Email</th>
             <th class="span1">origin</th>
             <th class="span1"># contacts</th>
+            <th class="span1"># processed</th>
         </tr>
         @for(abook <- abooks) {
         <tr>
             <td>@abook.id</td>
             <td>@abook.createdAt</td>
-            <td>@abook.updatedAt</td>
             <td>@abook.state</td>
             <td>@abook.userId</td>
             <td>@abook.ownerEmail</td>
             <td>@abook.origin</td>
             <td>@abook.numContacts</td>
+            <td>@abook.numProcessed</td>
         </tr>
         }
     </table>
