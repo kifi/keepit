@@ -208,6 +208,7 @@ object ABook extends Service {
     def uploadDirect(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/uploadDirect")
     def getABookInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfos")
     def getAllABookInfos() = ServiceRoute(GET, s"/internal/abooks")
+    def getPagedABookInfos(page:Int, size:Int) = ServiceRoute(GET, s"/internal/abooks/page/${page}?size=${size}")
     def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfo", Param("userId", userId), Param("id", id))
     def getContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContacts", Param("maxRows", maxRows))
     def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
