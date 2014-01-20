@@ -97,7 +97,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
           override def getAccessToken(socialUserInfo: SocialUserInfo): String = ""
         }
         val rawInfo = graph.fetchSocialUserRawInfo(info).get
-        rawInfo.socialId.id === "627689"
+        rawInfo.socialId.id === "grimland"
       }
     }
   }
