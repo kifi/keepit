@@ -19,7 +19,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.Play.current
 
 import scala.Some
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Await, Future, Promise}
+import play.api.libs.ws.WS
+import scala.concurrent.duration._
 
 trait DiscoveryModule extends ScalaModule
 
@@ -47,22 +49,27 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def amazonInstanceInfo(httpClient: HttpClient): AmazonInstanceInfo = {
-    val metadataUrl: String = "http://169.254.169.254/latest/meta-data/"
+  def amazonInstanceInfo(): AmazonInstanceInfo = {
 
-    val instance = if (DiscoveryModule.isCanary && DiscoveryModule.isLocal) DiscoveryModule.LOCAL_AMZN_INFO
-    else AmazonInstanceInfo(
-      instanceId = AmazonInstanceId(httpClient.get(DirectUrl(metadataUrl + "instance-id")).body),
-      localHostname = httpClient.get(DirectUrl(metadataUrl + "local-hostname")).body,
-      publicHostname = httpClient.get(DirectUrl(metadataUrl + "public-hostname")).body,
-      localIp = IpAddress(httpClient.get(DirectUrl(metadataUrl + "local-ipv4")).body),
-      publicIp = IpAddress(httpClient.get(DirectUrl(metadataUrl + "public-ipv4")).body),
-      instanceType = httpClient.get(DirectUrl(metadataUrl + "instance-type")).body,
-      availabilityZone = httpClient.get(DirectUrl(metadataUrl + "placement/availability-zone")).body,
-      securityGroups = httpClient.get(DirectUrl(metadataUrl + "security-groups")).body,
-      amiId = httpClient.get(DirectUrl(metadataUrl + "ami-id")).body,
-      amiLaunchIndex = httpClient.get(DirectUrl(metadataUrl + "ami-launch-index")).body
-    )
+    val instance = if (DiscoveryModule.isCanary && DiscoveryModule.isLocal) {
+      DiscoveryModule.LOCAL_AMZN_INFO
+    } else {
+      def get(path: String): String = {
+        Await.result(WS.url("http://169.254.169.254/latest/meta-data/" + path).get(), 1 minute).body
+      }
+      AmazonInstanceInfo(
+        instanceId = AmazonInstanceId(get("instance-id")),
+        localHostname = get("local-hostname"),
+        publicHostname = get("public-hostname"),
+        localIp = IpAddress(get("local-ipv4")),
+        publicIp = IpAddress(get("public-ipv4")),
+        instanceType = get("instance-type"),
+        availabilityZone = get("placement/availability-zone"),
+        securityGroups = get("security-groups"),
+        amiId = get("ami-id"),
+        amiLaunchIndex = get("ami-launch-index")
+      )
+    }
     log.info(s"my amazon instance is ${instance.toString}")
     instance
   }
