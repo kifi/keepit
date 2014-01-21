@@ -146,15 +146,6 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 # Website
 ##########################################
 
-#### NEW ENDPOINTS
-GET     /newdesign                  @com.keepit.controllers.website.HomeController.newDesignCookie
-GET     /beta                       @com.keepit.controllers.website.HomeController.newHome
-GET     /about                      @com.keepit.controllers.website.HomeController.about
-GET     /terms                      @com.keepit.controllers.website.HomeController.newTerms
-GET     /privacy                    @com.keepit.controllers.website.HomeController.newPrivacy
-GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
-GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
-####
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
 GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
@@ -170,10 +161,13 @@ GET     /profile                    @com.keepit.controllers.website.HomeControll
 GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
+GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
-GET     /terms2                      @com.keepit.controllers.website.HomeController.termsOfService
-GET     /privacy2                    @com.keepit.controllers.website.HomeController.privacyPolicy
+GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
+GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
+GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
+GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
