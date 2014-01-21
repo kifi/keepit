@@ -6,6 +6,8 @@ import com.keepit.search.article.ArticleIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.common.db.SequenceNumber
+import com.keepit.model.NormalizedURIStates
 
 class ShardedArticleIndexer(
   override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
@@ -17,11 +19,14 @@ class ShardedArticleIndexer(
 
   def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-
     var total = 0
     var done = false
     while (!done && !closing) {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
+      val uris =  if (sequenceNumber.value >= catchUpSeqNumber.value) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
+      else {
+        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fetchSize), 180 seconds)
+        if (uris.nonEmpty) uris else  Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)   // prevent stuck, in case the uri with catchUpSeqNumber is active/inactive
+      }
       done = uris.isEmpty
 
       indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
@@ -38,7 +43,11 @@ class ShardedArticleIndexer(
     resetSequenceNumberIfReindex()
 
     var total = 0
-    val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
+    val uris = if (sequenceNumber.value >= catchUpSeqNumber.value) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
+      else {
+        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fsize), 180 seconds)
+        if (uris.nonEmpty) uris else Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)   // prevent stuck, in case the uri with catchUpSeqNumber is active/inactive
+      }
     indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
       val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
       total += indexer.update(shard.indexNameSuffix, next, shard)
@@ -46,5 +55,12 @@ class ShardedArticleIndexer(
     }
     if (uris.nonEmpty) sequenceNumber = uris.last.seq
     total
+  }
+
+  override def reindex(): Unit = {
+    super.reindex()
+    val seqNum: SequenceNumber = SequenceNumber(Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds))
+    indexShards.valuesIterator.foreach{_.catchUpSeqNumber_=(seqNum)}
+    catchUpSeqNumber_=(seqNum)
   }
 }
