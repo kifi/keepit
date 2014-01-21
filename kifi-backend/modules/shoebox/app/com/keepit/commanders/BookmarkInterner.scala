@@ -72,45 +72,18 @@ private class RawKeepImporterActor @Inject() (
     }
   }
 
-  def processBatch(rawKeeps: Seq[RawKeep]): (Seq[Bookmark], Seq[RawKeep]) = {
+  def processBatch(rawKeeps: Seq[RawKeep]): Unit = {
     rawKeeps.groupBy(rk => (rk.userId, rk.importId)).map { case ((userId, importIdOpt), rawKeepGroup) =>
       val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
-      bookmarkInterner.internRawKeeps(rawKeepGroup, userId, mutatePrivacy = true)(context)
-    }
-    val persistedBookmarksWithUris: Seq[InternedUriAndBookmark] = {
-      val startTime = System.currentTimeMillis
-      val persisted = internUriAndBookmarkBatch(rawKeeps, mutatePrivacy = true)
-      val newCount = persisted.size
-      log.info(s"[internBookmarks-$referenceId] Done with $newCount/$total. Took ${System.currentTimeMillis - startTime}ms")
-      db.readWrite { implicit session =>
-        userValueRepo.setValue(userId, "bookmark_import_done", (newCount / total).toString)
-      }
-      persisted
-    }
-
-    db.readWrite { implicit session =>
-      userValueRepo.clearValue(userId, "bookmark_import_done")
-    }
-
-    log.info(s"[internBookmarks-$referenceId] Requesting scrapes")
-    val newKeeps = persistedBookmarksWithUris collect {
-      case InternedUriAndBookmark(bm, uri, isNewBookmark) if isNewBookmark => bm
-    }
-    keptAnalytics.keptPages(userId, newKeeps, context)
-
-    val persistedBookmarks = persistedBookmarksWithUris.map(_.bookmark)
-
-    val failedResults: Option[_] = ???
-    val userToImportedCount = new TrieMap[Id[User], Int]()
-
-    if (failedResults.nonEmpty) {
-      db.readWrite { implicit session =>
-        failedResults.map { failed =>
-          rawKeepRepo.setState(failed.id.get, RawKeepStates.FAILED)
+      val (successes, failures) = bookmarkInterner.internRawKeeps(rawKeepGroup, userId, mutatePrivacy = true)(context)
+      if (failures.nonEmpty) {
+        db.readWrite { implicit session =>
+          failures.map { failed =>
+            rawKeepRepo.setState(failed.id.get, RawKeepStates.FAILED)
+          }
         }
       }
     }
-    ???
   }
 
   def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
@@ -222,8 +195,8 @@ class BookmarkInterner @Inject() (
     }
   }
 
-  def internRawKeeps(rawKeeps: Seq[RawKeep], userId: Id[User], mutatePrivacy: Boolean)(implicit context: HeimdalContext): Seq[Bookmark] = {
-    val persistedBookmarksWithUris: Seq[InternedUriAndBookmark] = internUriAndBookmarkBatch(rawKeeps, mutatePrivacy)
+  def internRawKeeps(rawKeeps: Seq[RawKeep], userId: Id[User], mutatePrivacy: Boolean)(implicit context: HeimdalContext): (Seq[Bookmark], Seq[RawKeep]) = {
+    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawKeeps, mutatePrivacy)
     val newKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndBookmark(bm, uri, isNewBookmark) if isNewBookmark => bm
     }
@@ -231,8 +204,7 @@ class BookmarkInterner @Inject() (
       keptAnalytics.keptPages(userId, newKeeps, context)
     }
 
-    val persistedBookmarks = persistedBookmarksWithUris.map(_.bookmark)
-    persistedBookmarks
+    (persistedBookmarksWithUris.map(_.bookmark), failures)
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawKeep], mutatePrivacy: Boolean) = {
@@ -245,7 +217,7 @@ class BookmarkInterner @Inject() (
       bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user ${b.userId} from ${b.source}: ${b.url}") }
     }
 
-    persisted.values.map(_.get).flatten.toSeq
+    (persisted.values.map(_.get).flatten.toSeq, failed.keys.toList)
   }
 
   private def internUriAndBookmark(rawBookmark: RawKeep, userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
@@ -277,7 +249,7 @@ class BookmarkInterner @Inject() (
 
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    bookmarkRepo.getByUriAndUser(uri.id.get, userId, excludeState = None) match {
+    bookmarkRepo.getByUriAndUserAllStates(uri.id.get, userId) match {
       case Some(bookmark) =>
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
