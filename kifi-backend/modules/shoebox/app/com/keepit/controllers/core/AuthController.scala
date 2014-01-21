@@ -47,8 +47,7 @@ class AuthController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     emailAddressRepo: EmailAddressRepo,
     inviteCommander: InviteCommander,
-    passwordResetRepo: PasswordResetRepo,
-    kifiInstallationRepo: KifiInstallationRepo
+    passwordResetRepo: PasswordResetRepo
   ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private val PopupKey = "popup"
