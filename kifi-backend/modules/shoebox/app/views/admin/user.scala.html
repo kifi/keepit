@@ -198,12 +198,14 @@
       <!--</form>-->
   <!--</div>-->
   @if(abookEP != null) {
+    <p/>
     <b>File-based uploads -- 42-internal testing only!</b>
     <b>IOS JSON file upload (UTF-8)</b>
     <form class="form-inline" action=@{abookEP} enctype="multipart/form-data" method="POST">
     IOS JSON file to upload: <input type=file name="abook_json">
     <input type=submit value="Upload">
     </form>
+    <p/>
   }
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
