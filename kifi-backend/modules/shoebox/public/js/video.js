@@ -20,16 +20,28 @@ $(function () {
     $popup[0].offsetHeight;  // force layout
     $popup.addClass('showing');
     $popup.click(click);
+    $(document).on('keydown.video-popup-' + $popup[0][$.expando], keydown.bind($popup[0]));
   }
 
   function click(e) {
     var $target = $(e.target);
     if ($target.is('.video-popup,.video-x')) {
       e.preventDefault();
-      $target.closest('.video-popup')
-        .on('transitionend', remove)
-        .removeClass('showing');
+      $target.closest('.video-popup').each(hide);
     }
+  }
+
+  function keydown(e) {
+    if (e.which === 27 && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey && !e.isDefaultPrevented()) {
+      e.preventDefault();
+      hide.call(this);
+    }
+  }
+
+  function hide() {
+    $(document).off('keydown.video-popup-' + this[$.expando]);
+    $(this).on('transitionend', remove)
+      .removeClass('showing');
   }
 
   function remove() {
