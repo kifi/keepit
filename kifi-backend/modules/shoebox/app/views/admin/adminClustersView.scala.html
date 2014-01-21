@@ -2,7 +2,7 @@
 
     @randomColor(randomNumber: Int) = {
         val colors = Array[String]("0000cd", "006400", "b8860b", "cd5c5c", "ff0000", "9400d3", "8b8989", "000000", "8b4513", "ff8c00", "4682b4")
-        colors(colors.length % randomNumber)
+        colors(randomNumber % colors.length)
     }
 
     @showInstanceInfo(amazonInstanceInfo: com.keepit.common.amazon.AmazonInstanceInfo) = {
