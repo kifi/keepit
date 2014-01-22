@@ -237,27 +237,27 @@ panes.notices = function () {
   }
 
   function markOneRead(timeStr, threadId, id) {
-    markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]');
+    var data = $list.data();
+    markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]', data.kind);
+    if (data.kind === 'unread' && !data.showingOldest && $list[0].scrollHeight <= $list[0].clientHeight) {
+      getOlderThreads();
+    }
   }
 
   function markAllRead(id, time) {
-    markEachRead(id, time, '.kifi-notice');
+    markEachRead(id, time, '.kifi-notice', $list.data('kind'));
   }
 
-  function markEachRead(id, time, sel) {
-    var discard = $list.data('kind') === 'unread';
+  function markEachRead(id, time, sel, kind) {
     $list.find(sel + ':not(.kifi-notice-visited)').each(function () {
       if (id === this.dataset.id || time >= this.dataset.createdAt) {
-        if (discard) {
+        if (kind === 'unread') {
           $(this).remove();
         } else {
           this.classList.add('kifi-notice-visited');
         }
       }
     });
-    if (discard && !$list.data('showingOldest') && $list[0].scrollHeight <= $list[0].clientHeight) {
-      getOlderThreads();
-    }
   }
 
   function onMenuBtnMouseDown(e) {
