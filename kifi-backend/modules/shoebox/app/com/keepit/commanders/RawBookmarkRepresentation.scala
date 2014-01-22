@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json.{JsArray, JsObject, JsValue}
-import com.keepit.model.Normalization
+import com.keepit.model.{URLFactory, Normalization}
 
 case class RawBookmarkRepresentation(title: Option[String] = None, url: String, isPrivate: Boolean, canonical: Option[String] = None, openGraph: Option[String] = None)
 
@@ -24,8 +24,8 @@ class RawBookmarkFactory @Inject() (
   }
 
   def toRawBookmark(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
-    val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
+    val title = (json \ "title").asOpt[String].map(_.take(URLFactory.MAX_URL_SIZE))
+    val url = (json \ "url").asOpt[String].map(_.take(URLFactory.MAX_URL_SIZE)).getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
