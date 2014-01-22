@@ -47,6 +47,7 @@ abstract class ShoeboxModule(
   val sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
+  val keepImportsModule = KeepImportsModule()
 
   val mailerModule = PlayMailerModule()
 }

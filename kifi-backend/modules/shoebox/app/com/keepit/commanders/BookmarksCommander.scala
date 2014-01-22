@@ -102,7 +102,7 @@ class BookmarksCommander @Inject() (
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: BookmarkSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val keeps = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
+    val (keeps, _) = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -182,8 +182,8 @@ class BookmarksCommander @Inject() (
   }
 
   def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val bookmark = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
-    addToCollection(tag, bookmark)
+    val (bookmarks, _) = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
+    addToCollection(tag, bookmarks)
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
@@ -213,13 +213,16 @@ class BookmarksCommander @Inject() (
 
 
   def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: BookmarkSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
-    val keepsByUrl = bookmarkInterner.internRawBookmarks(
+    val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
       rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
       userId,
       mutatePrivacy = true,
       installationId = None,
       source = BookmarkSource.default
-    ).map(keep => keep.url -> keep).toMap
+    )
+
+    val keepsByUrl = bookmarks.map(keep => keep.url -> keep).toMap
+
 
     val keepsByTagName = keepsWithTags.flatMap { case (keepInfo, tags) =>
       tags.map(tagName => (tagName, keepsByUrl(keepInfo.url)))

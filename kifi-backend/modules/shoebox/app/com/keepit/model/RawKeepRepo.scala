@@ -3,8 +3,8 @@ package com.keepit.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.db.{State, Id}
-import com.keepit.common.time.Clock
+import com.keepit.common.db.{ExternalId, State, Id}
+import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import play.api.libs.json.JsValue
 import scala.util.Try
 import scala.slick.jdbc.StaticQuery
@@ -16,7 +16,7 @@ trait RawKeepRepo extends Repo[RawKeep] {
   def getOldUnprocessed(batchSize: Int, before: DateTime)(implicit session: RSession): Seq[RawKeep]
   def setState(rawKeepId: Id[RawKeep], state: State[RawKeep])(implicit session: RWSession): Boolean
   def insertAll(rawKeeps: Seq[RawKeep])(implicit session: RWSession): Try[Int]
-  def insert(rawKeep: RawKeep)(implicit session: RWSession): Try[Boolean]
+  def insertOne(rawKeep: RawKeep)(implicit session: RWSession): Try[Boolean]
 }
 
 @Singleton
@@ -32,8 +32,8 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def title = column[String]("title", O.Nullable)
     def isPrivate = column[Boolean]("is_private", O.NotNull)
     def importId = column[String]("import_id", O.Nullable)
-    def source = column[BookmarkSource]("bookmark_source", O.NotNull)
-    def kifiInstallationId = column[Id[KifiInstallation]]("installation_id", O.Nullable)
+    def source = column[BookmarkSource]("source", O.NotNull)
+    def kifiInstallationId = column[ExternalId[KifiInstallation]]("installation_id", O.Nullable)
     def originalJson = column[JsValue]("original_json", O.Nullable)
 
     def * = id.? ~ userId ~ createdAt ~ updatedAt ~ url ~ title.? ~ isPrivate ~ importId.? ~ source ~ kifiInstallationId.? ~ originalJson.? ~ state <> (RawKeep, RawKeep.unapply _)
@@ -44,8 +44,9 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     )
   }
 
-  def invalidateCache(rawKeep: RawKeep)(session: RSession): Unit = ()
-  def deleteCache(rawKeep: RawKeep)(session: RSession): Unit = ()
+  def deleteCache(model: com.keepit.model.RawKeep)(implicit session: com.keepit.common.db.slick.DBSession.RSession): Unit = { }
+  def invalidateCache(model: com.keepit.model.RawKeep)(implicit session: com.keepit.common.db.slick.DBSession.RSession): Unit = { }
+
 
   private def sanitizeRawKeep(rawKeep: RawKeep): RawKeep = {
     val titleTrimmed = if (rawKeep.title.map(_.length).getOrElse(0) > 2048) {
@@ -60,7 +61,7 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
   }
 
   def setState(rawKeepId: Id[RawKeep], state: State[RawKeep])(implicit session: RWSession): Boolean = {
-    (for (row <- table if row.id === rawKeepId) yield row.state).update(state) == 1
+    (for (row <- table if row.id === rawKeepId) yield row.updatedAt ~ row.state).update((clock.now, state)) == 1
   }
 
   def getUnprocessedAndMarkAsImporting(batchSize: Int)(implicit session: RSession): Seq[RawKeep] = {
@@ -84,7 +85,7 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     Try(table.forInsert.insertAll(rawKeeps.map(sanitizeRawKeep): _*).getOrElse(0))
   }
 
-  def insert(rawKeep: RawKeep)(implicit session: RWSession): Try[Boolean] = {
+  def insertOne(rawKeep: RawKeep)(implicit session: RWSession): Try[Boolean] = {
     Try(table.forInsert.insert(sanitizeRawKeep(rawKeep)) == 1)
   }
 }
