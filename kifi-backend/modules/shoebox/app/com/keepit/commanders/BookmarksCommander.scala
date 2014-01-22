@@ -159,6 +159,8 @@ class BookmarksCommander @Inject() (
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
+      collectionRepo.collectionChanged(collection.id.get, (created.size + activated.size) > 0)
+
       searchClient.updateURIGraph()
       val tagged = (activated ++ created).toSet
       val taggingAt = currentDateTime

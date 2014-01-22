@@ -104,6 +104,7 @@ class ExtBookmarksController @Inject() (
         ktc <- keepToCollectionRepo.getByBookmark(b.id.get)
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        collectionRepo.collectionChanged(ktc.collectionId)
       }
     }
     Ok(Json.obj())

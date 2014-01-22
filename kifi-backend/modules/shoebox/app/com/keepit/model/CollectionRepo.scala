@@ -76,8 +76,6 @@ class CollectionRepoImpl @Inject() (
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
-    val st = Thread.currentThread().getStackTrace.drop(3).take(15).filter(_.getClassName.startsWith("com.keepit")).map(v => v.getFileName + ":" + v.getLineNumber).mkString("\n\t")
-    log.info(s"^^^\n$st")
     Try {
       if (model.state == CollectionStates.INACTIVE) {
         elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", SendableTag.from(model)))
