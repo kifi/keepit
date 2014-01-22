@@ -43,7 +43,7 @@ class QueuedScrapeProcessor @Inject() (
   s3ScreenshotStore: S3ScreenshotStore,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging {
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (10 * 1000 * 60)
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   val pSize = Runtime.getRuntime.availableProcessors * 1024
@@ -91,7 +91,7 @@ class QueuedScrapeProcessor @Inject() (
               else if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc isDone=true; remove from q"))
               else {
                 val runMillis = curr - sc.callTS.get
-                if (runMillis > LONG_RUNNING_THRESHOLD * 3) {
+                if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
                   log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
