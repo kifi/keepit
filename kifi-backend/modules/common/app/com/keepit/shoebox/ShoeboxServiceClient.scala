@@ -292,11 +292,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicUsersNoCache(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
     call(Shoebox.internal.getBasicUsersNoCache(), JsArray(userIds.map(x => JsNumber(x.id)))).map{ res =>
-      res.json.as[Map[String, BasicUser]].map{ u =>
-        val id = Id[User](u._1.toLong)
-        (BasicUserUserIdKey(id), u._2)
-      }
-    }.map{ m => m.map{ case (k, v) => (k.userId, v) } }
+      res.json.as[Map[String, BasicUser]].map { u => Id[User](u._1.toLong) -> u._2}
+    }
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
