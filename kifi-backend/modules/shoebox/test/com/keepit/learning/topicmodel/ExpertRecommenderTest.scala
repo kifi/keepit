@@ -198,12 +198,14 @@ trait DbSetupHelper extends ShoeboxTestInjector {
       // make bookmarks: uri 1 - 10 kept by user 1, 2; uri 11 - 20 kept by user 3, 4; etc
       // thus, user 1, 2 are experts on topic 1, user 3, 4 are experts on topic 2, etc.
 
-      db.readWrite { implicit s =>
-        val m = numUris / numTopics
-        for( t <- 0 until numTopics){
-          val experts = users.slice(2*t, 2*t + 2)
-          val keeps = uris.slice(t*m, (t+1)*m)
-          for(expert <- experts){
+
+      val m = numUris / numTopics
+      for( t <- 0 until numTopics){
+        val experts = users.slice(2*t, 2*t + 2)
+        val keeps = uris.slice(t*m, (t+1)*m)
+        for(expert <- experts){
+
+          db.readWrite { implicit s =>
             for(keep <- keeps){
               val url = URLFactory(url = keep.url, normalizedUriId = keep.id.get)
               val url1 = urlRepo.get(keep.url).getOrElse( urlRepo.save(URLFactory(url = keep.url, normalizedUriId = keep.id.get)))
@@ -223,6 +225,7 @@ trait DbSetupHelper extends ShoeboxTestInjector {
               }
             }
           }
+
         }
       }
       (users, uris)
