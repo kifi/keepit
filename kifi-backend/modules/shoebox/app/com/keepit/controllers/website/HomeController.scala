@@ -28,6 +28,10 @@ import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
 import com.keepit.common.net.UserAgent
+import com.keepit.heimdal._
+import scala.Some
+import play.api.mvc.DiscardingCookie
+import com.keepit.common.controller.AuthenticatedRequest
 
 class HomeController @Inject() (
   db: Database,
@@ -44,7 +48,8 @@ class HomeController @Inject() (
   fortyTwoServices: FortyTwoServices,
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
-  inviteCommander: InviteCommander)
+  inviteCommander: InviteCommander,
+  heimdalServiceClient: HeimdalServiceClient)
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -119,6 +124,7 @@ class HomeController @Inject() (
       val agentOpt = request.headers.get("User-Agent").map { agent =>
         UserAgent.fromString(agent)
       }
+      temporaryReportLandingLoad()
       if (agentOpt.exists(_.isMobile)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
@@ -129,6 +135,13 @@ class HomeController @Inject() (
       }
     }
   }
+
+  private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
+    val context = new HeimdalContextBuilder()
+    context.addRequestInfo(request)
+    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
+  }
+
 
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
@@ -189,7 +202,13 @@ class HomeController @Inject() (
         }
       } yield senderUserId
     }
-    SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
+    SafeFuture {
+      userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq)
+      // Temporary event for debugging purpose
+      val context = new HeimdalContextBuilder()
+      context.addRequestInfo(request)
+      heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
+    }
     setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }
