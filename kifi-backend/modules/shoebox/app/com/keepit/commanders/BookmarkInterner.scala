@@ -79,8 +79,7 @@ private class RawKeepImporterActor @Inject() (
   }
 
   def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
-    log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps: ${rawKeeps.take(10).map(_.id.get).mkString(",")}. ${rawKeeps.headOption.map(_.url)}")
-    log.info("The states are: " + rawKeeps.take(10).map(_.state.value).mkString(","))
+    log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
     rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId)).map { case ((userId, importIdOpt, source, installationId), rawKeepGroup) =>
       val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
@@ -92,11 +91,11 @@ private class RawKeepImporterActor @Inject() (
       val (successes, failures) = bookmarkInterner.internRawBookmarks(rawBookmarks, userId, source, mutatePrivacy = true)(context)
       val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
 
-      val successesRawKeep = successes.map(s => rawKeepByUrl.get(s.url)).flatten
-      val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten
+      val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten.toSet
+      val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
 
       if (failuresRawKeep.nonEmpty) {
-        db.readWriteBatch(failuresRawKeep) { case (session, rk) =>
+        db.readWriteBatch(failuresRawKeep.toSeq) { case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
         }
       }
@@ -115,11 +114,7 @@ private class RawKeepImporterActor @Inject() (
         searchClient.updateURIGraph()
 
         db.readWriteBatch(successesRawKeep) { case (session, rk) =>
-          val res = rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
-          if (rk.url.contains("shop.outlier.cc")) {
-            println(s"YO!  ${res}\n")
-            println(rk)
-          }
+          rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
         }
       }
       log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
@@ -238,7 +233,7 @@ class BookmarkInterner @Inject() (
       }
 
       deduped.grouped(500).toList.map { rawKeepGroup =>
-      // insertAll fails (with an exception) if any of the inserts failed
+      // insertAll fails if any of the inserts failed
         log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
         val bulkAttempt = db.readWrite(attempts = 2) { implicit session =>
           rawKeepRepo.insertAll(rawKeepGroup)
