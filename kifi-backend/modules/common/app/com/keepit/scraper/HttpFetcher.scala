@@ -124,12 +124,13 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
   val httpClient = httpClientBuilder.build()
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
-  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (200)
+  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   case class Fetch(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
     val killCount = new AtomicInteger()
     val respRef = new AtomicReference[CloseableHttpResponse]()
-    override def toString = s"[Fetch($url,$ts,$thread)] isAborted=${htpGet.isAborted} killCount=$killCount respRef=$respRef"
+    val exRef = new AtomicReference[Throwable]()
+    override def toString = s"[Fetch($url,${ts},${thread.getName})] isAborted=${htpGet.isAborted} killCount=${killCount} respRef=${respRef} exRef=${exRef}"
   }
 
   private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String] = None) {
@@ -157,6 +158,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
             val ref = iter.next
             ref.get map { case ft:Fetch =>
               if (ft.respRef.get() != null) removeRef(iter, Some(s"[enforcer] $ft is done; resp=${ft.respRef.get}; remove from q"))
+              else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] $ft caught error ${ft.exRef.get}; remove from q"))
               else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] $ft is aborted; remove from q"))
               else {
                 val runMillis = curr - ft.ts
@@ -238,27 +240,27 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
-    val (fetchTaskOpt, responseOpt) =
-    try {
-      val fetchTask = Fetch(url, System.currentTimeMillis, httpGet, Thread.currentThread())
+    val fetchTask = Fetch(url, System.currentTimeMillis, httpGet, Thread.currentThread())
+    val responseOpt = try {
       q.offer(WeakReference(fetchTask))
       val response = httpClient.execute(httpGet, httpContext)
       fetchTask.respRef.set(response)
       log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
-      (Some(fetchTask), Some(response))
+      Some(response)
     } catch {
       case t:Throwable =>
         val msg = s"[fetch] Caught exception (${t.getMessage}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
         log.error(msg)
         airbrake.notify(msg)
-        (None, None)
+        fetchTask.exRef.set(t)
+        None
     }
 
     responseOpt match {
       case None =>
-        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request($url) FAILED to execute"), httpContext)
+        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) FAILED to execute ($fetchTask)"), httpContext)
       case Some(response) if (httpGet.isAborted) =>
-        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request($url) has been ABORTED ($fetchTaskOpt)"), httpContext)
+        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) has been ABORTED ($fetchTask)"), httpContext)
       case Some(response) => {
         val statusCode = response.getStatusLine.getStatusCode
         val entity = response.getEntity
