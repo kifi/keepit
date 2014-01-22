@@ -2,7 +2,7 @@
 
 @otherPagesRoute(page: Int) = {@com.keepit.controllers.admin.routes.ABookAdminController.abooksView(page)}
 
-@admin(abooks.length + " Address Books") {
+@admin(abooksCount + " Address Books") {
     <h2> Showing @abooks.length address books (page @(page + 1)) </h2>
 
     @adminHelper.pagination(page, abooksCount, pageSize, otherPagesRoute _) {
