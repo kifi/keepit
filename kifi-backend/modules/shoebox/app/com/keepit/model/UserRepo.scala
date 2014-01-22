@@ -24,6 +24,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int
   def countExcludingWithExp(excludeStates: State[User]*)(includeExp: ExperimentType)(implicit session: RSession): Int
   def countExcludingWithoutExp(excludeStates: State[User]*)(excludeExp: ExperimentType)(implicit session: RSession): Int
+  def getNoCache(id: Id[User])(implicit session: RSession): User
   def getOpt(id: Id[User])(implicit session: RSession): Option[User]
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
   def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User]
@@ -162,6 +163,10 @@ class UserRepoImpl @Inject() (
     idCache.getOrElse(UserIdKey(id)) {
       (for(f <- table if f.id is id) yield f).firstOption.getOrElse(throw NotFoundException(id))
     }
+  }
+
+  def getNoCache(id: Id[User])(implicit session: RSession): User = {
+    (for(f <- table if f.id is id) yield f).firstOption.getOrElse(throw NotFoundException(id))
   }
 
   def getOpt(id: Id[User])(implicit session: RSession): Option[User] = {

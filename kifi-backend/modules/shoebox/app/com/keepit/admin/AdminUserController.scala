@@ -372,6 +372,7 @@ class AdminUserController @Inject() (
         eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
         heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
       }
+      userRepo.save(userRepo.get(userId)) // update user index sequence number
     }
     Ok(Json.obj(experiment -> true))
   }
@@ -450,6 +451,7 @@ class AdminUserController @Inject() (
         eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
         heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
       }
+      userRepo.save(userRepo.get(userId)) // update user index sequence number
     }
     Ok(Json.obj(experiment -> false))
   }
