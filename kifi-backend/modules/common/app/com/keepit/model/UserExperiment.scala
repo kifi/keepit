@@ -16,7 +16,7 @@ case class UserExperiment (
   userId: Id[User],
   experimentType: ExperimentType,
   state: State[UserExperiment] = UserExperimentStates.ACTIVE
-) extends Model[UserExperiment] {
+) extends ModelWithState[UserExperiment] {
   def withId(id: Id[UserExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserExperiment]) = this.copy(state = state)

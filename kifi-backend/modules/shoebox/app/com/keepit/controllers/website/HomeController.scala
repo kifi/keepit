@@ -1,18 +1,22 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
 import com.keepit.model._
-import com.keepit.social.{SocialGraphPlugin}
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.commanders.{InviteCommander, UserCommander}
+import com.keepit.common.db.ExternalId
+import com.keepit.common.KestrelCombinator
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 
 import play.api.Play.current
 import play.api._
+import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -24,11 +28,7 @@ import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
 import com.keepit.common.net.UserAgent
-import com.keepit.heimdal._
-import scala.Some
-import play.api.mvc.DiscardingCookie
-import play.api.mvc.Cookie
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.heimdal.{HeimdalServiceClient, EventType, AnonymousEvent, HeimdalContextBuilder}
 
 class HomeController @Inject() (
   db: Database,
@@ -62,38 +62,17 @@ class HomeController @Inject() (
   }
 
   // Start post-launch stuff!
-
-  // temp! if I'm still here post-launch, sack whoever is responsible for things around here.
-  def newDesignCookie = Action { request =>
-    Ok.withCookies(Cookie("newdesign","yep"))
-  }
-
-
-  def newHome = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = newHomeNotAuthed(_))
-
-  private def newHomeNotAuthed(implicit request: Request[_]): Result = {
-    if (request.identityOpt.isDefined) {
-      // User needs to sign up or (social) finalize
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    } else {
-      // TODO: Redirect to /login if the path is not /
-      // Non-user landing page
-      temporaryReportLandingLoad()
-      Ok(views.html.marketing.landing())
-    }
-  }
-
   def about = HtmlAction(true)(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.about(isLoggedIn))
   }
 
-  def newTerms = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  def termsOfService = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.terms(isLoggedIn))
   }
 
-  def newPrivacy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  def privacyPolicy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.privacy(isLoggedIn))
   }
@@ -159,6 +138,7 @@ class HomeController @Inject() (
     context.addRequestInfo(request)
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
   }
+
 
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
@@ -252,17 +232,9 @@ class HomeController @Inject() (
     }
   }
 
-  // Do not remove until a while past Jan 7 2014. The extension sends users to this URL after installation.
+  // Do not remove until at least 1 Mar 2014. The extension sends users to this URL after installation.
   def gettingStarted = Action { request =>
-    Redirect("/")
-  }
-
-  def termsOfService = Action { implicit request =>
-    Ok(views.html.website.termsOfService())
-  }
-
-  def privacyPolicy = Action { implicit request =>
-    Ok(views.html.website.privacyPolicy())
+    MovedPermanently("/")
   }
 
 }

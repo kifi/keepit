@@ -23,7 +23,7 @@ case class DeepLink(
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
   state: State[DeepLink] = DeepLinkStates.ACTIVE
-) extends Model[DeepLink] {
+) extends ModelWithState[DeepLink] {
   def withId(id: Id[DeepLink]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 

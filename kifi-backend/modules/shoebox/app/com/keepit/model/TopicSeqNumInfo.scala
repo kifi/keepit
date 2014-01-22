@@ -1,13 +1,11 @@
 package com.keepit.model
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.db.Id
-import com.keepit.common.db.Model
+import com.keepit.common.db.{Id, Model, SequenceNumber}
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.FortyTwoTypeMappers.SequenceNumberTypeMapper
 
 /**

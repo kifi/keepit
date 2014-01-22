@@ -410,7 +410,11 @@ class UserCommander @Inject() (
   def friend(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { user =>
-        if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
+        val openFriendRequests = friendRequestRepo.getBySender(userId, Set(FriendRequestStates.ACTIVE))
+
+        if (openFriendRequests.size > 40){
+          (false, "tooManySent")
+        } else if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
           (true, "alreadySent")
         } else {
           friendRequestRepo.getBySenderAndRecipient(user.id.get, userId) map { friendReq =>
@@ -517,7 +521,7 @@ class UserCommander @Inject() (
   }
 
   def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
-    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } map { user =>
+    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
       val success = db.readWrite(attempts = 2) { implicit s =>
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
@@ -528,7 +532,7 @@ class UserCommander @Inject() (
         }
       }
       success
-    } getOrElse false
+    }
   }
 
   def ignoreFriendRequest(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {

@@ -11,7 +11,7 @@ case class SocialConnection(
   socialUser1: Id[SocialUserInfo],
   socialUser2: Id[SocialUserInfo],
   state: State[SocialConnection] = SocialConnectionStates.ACTIVE
-) extends Model[SocialConnection] {
+) extends ModelWithState[SocialConnection] {
   def withId(id: Id[SocialConnection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SocialConnection]) = copy(state = state)

@@ -290,6 +290,27 @@ class ABookController @Inject() (
     Ok(rawInfos)
   }
 
+  def getAllABookInfos() = Action { request =>
+    val abookInfos = db.readOnly(attempts = 2) { implicit session =>
+      abookInfoRepo.all()
+    }
+    Ok(Json.toJson(abookInfos))
+  }
+
+  def getPagedABookInfos(page:Int, size:Int) = Action { request =>
+    val abookInfos = db.readOnly(attempts = 2) { implicit session =>
+      abookInfoRepo.page(page, size)
+    }
+    Ok(Json.toJson(abookInfos))
+  }
+
+  def getABooksCount() = Action { request =>
+    val count = db.readOnly(attempts = 2) { implicit session =>
+      abookInfoRepo.count
+    }
+    Ok(JsNumber(count))
+  }
+
   def getABookInfos(userId:Id[User]) = Action { request =>
     val abookInfos = db.readOnly(attempts = 2) { implicit session =>
       abookInfoRepo.findByUserId(userId)
