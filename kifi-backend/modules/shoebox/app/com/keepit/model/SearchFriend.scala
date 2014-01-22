@@ -2,7 +2,7 @@ package com.keepit.model
 
 import org.joda.time.DateTime
 
-import com.keepit.common.db._
+import com.keepit.common.db.{States, Model, State, Id}
 import com.keepit.common.time._
 
 case class SearchFriend(
@@ -12,7 +12,7 @@ case class SearchFriend(
     state: State[SearchFriend] = SearchFriendStates.EXCLUDED,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime
-    ) extends ModelWithState[SearchFriend] {
+    ) extends Model[SearchFriend] {
   def withId(id: Id[SearchFriend]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SearchFriend]) = copy(state = state)

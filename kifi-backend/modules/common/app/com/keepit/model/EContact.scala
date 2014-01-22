@@ -20,7 +20,7 @@ case class EContact(
   firstName: Option[String] = None,
   lastName:  Option[String] = None,
   state:     State[EContact] = EContactStates.ACTIVE
-) extends ModelWithState[EContact] {
+) extends Model[EContact] {
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
   def withName(name: Option[String]) = this.copy(name = name)
   def withEmail(email: String) = this.copy(email = email)

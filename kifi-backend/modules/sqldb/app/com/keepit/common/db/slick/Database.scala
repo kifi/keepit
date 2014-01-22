@@ -180,6 +180,7 @@ class Database @Inject() (
     var pending = batch
     1 to attempts - 1 foreach { attempt =>
       val partialResults = readWriteBatch(pending)(f)
+      println(partialResults)
       results ++= partialResults
       pending = batch.filter{ d =>
         results(d) match {

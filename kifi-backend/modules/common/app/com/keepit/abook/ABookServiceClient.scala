@@ -28,8 +28,6 @@ trait ABookServiceClient extends ServiceClient {
   def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
-  def getAllABookInfos():Future[Seq[ABookInfo]]
-  def getPagedABookInfos(page:Int, size:Int):Future[Seq[ABookInfo]]
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Future[Option[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
@@ -80,18 +78,6 @@ class ABookServiceClientImpl @Inject() (
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = {
     call(ABook.internal.getABookInfos(userId)).map { r =>
-      Json.fromJson[Seq[ABookInfo]](r.json).get
-    }
-  }
-
-  def getAllABookInfos(): Future[Seq[ABookInfo]] = {
-    call(ABook.internal.getAllABookInfos()).map { r =>
-      Json.fromJson[Seq[ABookInfo]](r.json).get
-    }
-  }
-
-  def getPagedABookInfos(page:Int, size:Int):Future[Seq[ABookInfo]] = {
-    call(ABook.internal.getPagedABookInfos(page, size)).map { r =>
       Json.fromJson[Seq[ABookInfo]](r.json).get
     }
   }
@@ -181,10 +167,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
 
   def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
-
-  def getAllABookInfos(): Future[Seq[ABookInfo]] = ???
-
-  def getPagedABookInfos(page: Int, size: Int): Future[Seq[ABookInfo]] = ???
 
   def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 

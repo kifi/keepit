@@ -21,7 +21,7 @@ case class ScrapeInfo(
   state: State[ScrapeInfo] = ScrapeInfoStates.ACTIVE,
   signature: String = "",
   destinationUrl: Option[String] = None
-) extends ModelWithState[ScrapeInfo] with Logging {
+) extends Model[ScrapeInfo] with Logging {
   def withId(id: Id[ScrapeInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this
   def withState(state: State[ScrapeInfo]) = {

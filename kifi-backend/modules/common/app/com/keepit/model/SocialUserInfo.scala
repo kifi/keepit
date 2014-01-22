@@ -28,7 +28,7 @@ case class SocialUserInfo(
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None,
   lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
-) extends ModelWithState[SocialUserInfo] {
+) extends Model[SocialUserInfo] {
   def withId(id: Id[SocialUserInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def reset() = copy(state = SocialUserInfoStates.CREATED, credentials = None)

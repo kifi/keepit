@@ -23,7 +23,6 @@ import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
 import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
-import com.keepit.common.amazon.MyAmazonInstanceInfo
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
@@ -98,11 +97,9 @@ case class HttpClientImpl(
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
     midFlightRequests: MidFlightRequests,
-    myInstanceInfo: MyAmazonInstanceInfo,
     silentFail: Boolean = false) extends HttpClient with Logging {
 
   private val validResponseClass = 2
-  private lazy val trackTimeThresholdFactor = myInstanceInfo.info.instantTypeInfo.ecu
 
   override val defaultFailureHandler: FailureHandler = { req =>
     {
@@ -167,7 +164,7 @@ case class HttpClientImpl(
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, trackTimeThresholdFactor)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser)
     val status = response.status
     if (status / 100 != validResponseClass) {
       val exception = if (status == Status.SERVICE_UNAVAILABLE) {

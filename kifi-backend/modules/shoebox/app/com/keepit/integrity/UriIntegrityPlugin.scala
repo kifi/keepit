@@ -41,8 +41,7 @@ class UriIntegrityActor @Inject()(
 ) extends FortyTwoActor(airbrake) with Logging {
 
   /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(urlId: Id[URL], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
-    val oldUserBookmarks = bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
       bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
@@ -110,19 +109,14 @@ class UriIntegrityActor @Inject()(
         case _ =>
       }
 
-      val url = urlRepo.getByNormUri(oldUriId)
-      url.foreach{ url =>
-        handleURLMigrationNoBookmarks(url, newUriId)
+      urlRepo.getByNormUri(oldUriId).foreach{ url =>
+        handleURLMigration(url, newUriId)
       }
 
       uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
         uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
       }
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
-
-      url.foreach{ url =>
-        handleBookmarks(url.id.get, newUriId)
-      }
 
       changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
     }
@@ -132,11 +126,6 @@ class UriIntegrityActor @Inject()(
    * url now pointing to a new uri, any entity related to that url should update its uri reference.
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    handleURLMigrationNoBookmarks(url, newUriId)
-    handleBookmarks(url.id.get, newUriId)
-  }
-
-  private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
       log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
 
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
@@ -144,6 +133,8 @@ class UriIntegrityActor @Inject()(
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
 
       handleScrapeInfo(oldUri, newUri)
+      val oldUserBms = bookmarkRepo.getByUrlId(url.id.get).groupBy(_.userId)
+      handleBookmarks(oldUserBms, newUriId)
 
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUriId))

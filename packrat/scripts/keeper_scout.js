@@ -104,7 +104,7 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 76: // l
         api.port.emit('toggle_mode');
-        // not claiming this key binding for all users, so no e.preventDefault()
+        e.preventDefault();
         break;
       case 77: // m
         api.port.emit('unsilence');

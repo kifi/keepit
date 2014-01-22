@@ -15,8 +15,6 @@ import com.keepit.search.SearchTestHelper
 import com.keepit.search.SearchFilter
 import com.keepit.test._
 import scala.math._
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 
 class IndexShardingTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
@@ -176,37 +174,6 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
       }
     }
-
-    "correctly reindex" in {
-       running(application){
-        val numUris = 5
-        val (uris, shoebox) = {
-          val uris =   (0 until numUris).map {n => NormalizedURI.withHash(title = Some("a" + n),
-          normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)}.toList
-          val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-          (fakeShoeboxClient.saveURIs(uris:_*), fakeShoeboxClient)
-        }
-        val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
-        indexer.update() === 5
-        shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))
-        indexer.update() === 1
-        indexer.reindex()
-
-        shoebox.saveURIs(uris(2).withState(NormalizedURIStates.ACTIVE),
-            NormalizedURI.withHash(title = Some("a6"), normalizedUrl = "http://www.keepit.com/article6", state = SCRAPED)  )
-
-        indexer.update() === 3      // skipped the active ones. catch up done.
-        indexer.catchUpSeqNumber.value === 6
-        indexer.sequenceNumber.value === 6
-
-        indexer.update() === 2     // two changes after reindex()
-        indexer.sequenceNumber.value === 8
-
-      }
-    }
-
   }
 }
 

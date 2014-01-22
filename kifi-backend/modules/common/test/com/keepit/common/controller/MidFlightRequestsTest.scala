@@ -3,9 +3,6 @@ package com.keepit.common.controller
 import org.specs2.mutable._
 import play.api.mvc.{RequestHeader, Headers}
 import java.util.concurrent.atomic.AtomicLong
-import com.google.inject.util.Providers
-import com.keepit.common.amazon.MyAmazonInstanceInfo
-import com.keepit.common.zookeeper.DiscoveryModule
 
 case class DummyRequestHeader(id: Long, path: String) extends RequestHeader{
   def tags = Map()
@@ -21,7 +18,7 @@ class MidFlightRequestsTest extends Specification {
 
   "MidFlightRequests" should {
     "list largest paths" in {
-      val req = new MidFlightRequests(null, Providers.of(MyAmazonInstanceInfo(DiscoveryModule.LOCAL_AMZN_INFO)))
+      val req = new MidFlightRequests(null)
       val i = new AtomicLong(0)
       val fr1 = DummyRequestHeader(i.incrementAndGet(), "/foo/aar")
       val fr2 = DummyRequestHeader(i.incrementAndGet(), "/foo/bar")

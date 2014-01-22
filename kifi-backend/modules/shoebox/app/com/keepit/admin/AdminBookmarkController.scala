@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import com.google.inject.Inject
 
 import com.keepit.search.{IndexInfo, SearchServiceClient}
-import com.keepit.common.controller.{AuthenticatedRequest, AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -21,7 +21,6 @@ import views.html
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import play.api.mvc.{AnyContent, Action}
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -39,36 +38,19 @@ class AdminBookmarksController @Inject() (
 
   implicit val dbMasterSlave = Database.Slave
 
-  private def editBookmark(bookmark: Bookmark)(implicit request: AuthenticatedRequest[AnyContent]) = {
-    db.readOnly { implicit session =>
-      val uri = uriRepo.get(bookmark.uriId)
-      val user = userRepo.get(bookmark.userId)
-      val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
-      Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, screenshotUrl))
-    }
-  }
-
-  def edit(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
+  def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
     Async {
       db.readOnlyAsync { implicit session =>
         val bookmark = bookmarkRepo.get(id)
-        editBookmark(bookmark)
+        val uri = uriRepo.get(bookmark.uriId)
+        val user = userRepo.get(bookmark.userId)
+        val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
+        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, screenshotUrl))
       }
     }
   }
 
-  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        val bookmarkOpt = bookmarkRepo.getByUri(id).headOption
-        bookmarkOpt match {
-          case Some(bookmark) => editBookmark(bookmark)
-          case None => NotFound(s"No bookmark for id $id")
-        }
-      }
-    }
-  }
 
   def rescrape = AdminJsonAction { request =>
     val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])

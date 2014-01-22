@@ -16,7 +16,8 @@
 	var Tracker = win.Tracker = {
 		trackClick: function (el) {
 			var $el = $(el),
-				trackAction = getDataFromAncestors($el, 'trackAction');
+				data = $el.data(),
+				trackAction = data.trackAction;
 			if (trackAction) {
 				track(getClickEventName(), {
 					action: trackAction,
@@ -27,7 +28,7 @@
 	};
 
 	// on clicking on links, track click event
-	$(document).on('click', 'a[href], *[data-track-click]', function () {
+	$(document).on('click', 'a[href]', function () {
 		Tracker.trackClick(this);
 	});
 

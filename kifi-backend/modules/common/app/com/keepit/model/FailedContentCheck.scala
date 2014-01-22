@@ -15,7 +15,7 @@ case class FailedContentCheck(
   state: State[FailedContentCheck] = FailedContentCheckStates.ACTIVE,
   counts: Int,
   lastContentCheck: DateTime
-) extends ModelWithState[FailedContentCheck] {
+) extends Model[FailedContentCheck] {
   def withId(id: Id[FailedContentCheck]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[FailedContentCheck]) = copy(state = state)

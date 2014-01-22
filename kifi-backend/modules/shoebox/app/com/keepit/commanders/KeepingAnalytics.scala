@@ -30,8 +30,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   def createdTag(newTag: Collection, context: HeimdalContext): Unit = {
     val createdAt = currentDateTime
-    val isDefaultTag = context.get[String]("source").map(_ == BookmarkSource.default.value) getOrElse false
-    if (!isDefaultTag) SafeFuture {
+    SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "createdTag")
@@ -147,11 +146,8 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   }
 
-  def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
-    val isDefaultTag = context.get[String]("source").map(_ == BookmarkSource.default.value) getOrElse false
-    if (!isDefaultTag) changedTag(tag, keep, "taggedPage", context, taggedAt)
-  }
-
+  def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit =
+    changedTag(tag, keep, "taggedPage", context, taggedAt)
   def untaggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, untaggedAt: DateTime = currentDateTime): Unit =
     changedTag(tag, keep, "untaggedPage", context, untaggedAt)
 

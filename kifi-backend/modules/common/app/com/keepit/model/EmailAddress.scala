@@ -19,7 +19,7 @@ case class EmailAddress (
   verifiedAt: Option[DateTime] = None,
   lastVerificationSent: Option[DateTime] = None,
   verificationCode: Option[String] = None
-) extends ModelWithState[EmailAddress] with EmailAddressHolder {
+) extends Model[EmailAddress] with EmailAddressHolder {
   def withId(id: Id[EmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def sameAddress(otherAddress: String) = otherAddress == address

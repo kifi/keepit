@@ -38,7 +38,6 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
 import scala.concurrent.Future
-import com.keepit.heimdal.HeimdalContextBuilderFactory
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -60,8 +59,7 @@ class AuthHelper @Inject() (
   s3ImageStore: S3ImageStore,
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander,
-  userCommander: UserCommander,
-  heimdalContextBuilder: HeimdalContextBuilderFactory
+  userCommander: UserCommander
 ) extends HeaderNames with Results with Status with Logging {
 
   def authHandler(request:Request[_], res:SimpleResult[_])(f : => (Seq[Cookie], Session) => Result) = {
@@ -202,12 +200,9 @@ class AuthHelper @Inject() (
     socialFinalizeAccountForm.bindFromRequest.fold(
     formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
     { case sfi:SocialFinalizeInfo =>
-      require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
-      val identity = request.identityOpt.get
       val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
-      val emailConfirmedBySocialNetwork = identity.email.exists(_.trim == sfi.email.trim)
+      val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, request.userIdOpt, request.identityOpt, inviteExtIdOpt)
+      val emailConfirmedBySocialNetwork = request.identityOpt.flatMap(_.email).exists(_.trim == sfi.email.trim)
       finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
     })
   }
@@ -227,7 +222,6 @@ class AuthHelper @Inject() (
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
       { case efi:EmailPassFinalizeInfo =>
         val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
         authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map { case (user, email, newIdentity) =>
           sw.stop()
