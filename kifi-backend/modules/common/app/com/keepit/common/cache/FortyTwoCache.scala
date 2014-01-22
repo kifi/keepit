@@ -15,7 +15,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Access.CACHE
 import com.keepit.common.logging._
 import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
+import com.keepit.serializer.Serializer
 import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 
@@ -201,34 +201,3 @@ class FortyTwoCacheImpl[K <: Key[T], T](
       (innermostPluginSettings._1, innermostPluginSettings._2, serializer), innerToOuterPluginSettings.map {case (plugin, ttl) => (plugin, ttl, serializer)}:_*)
 }
 
-abstract class JsonCacheImpl[K <: Key[T], T] private(cache: ObjectCache[K, T]) extends TransactionalCache(cache) {
-  def this(
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T]) =
-      this(new FortyTwoCacheImpl(stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter)))
-}
-
-abstract class BinaryCacheImpl[K <: Key[T], T] private(cache: ObjectCache[K, T]) extends TransactionalCache(cache) {
-  def this(
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T]) =
-      this(new FortyTwoCacheImpl[K, T](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter)))
-}
-
-abstract class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal] private(cache: ObjectCache[K, P]) extends TransactionalCache(cache) {
-  def this(
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*) =
-      this(new FortyTwoCacheImpl[K, P](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P]))
-}
-
-abstract class StringCacheImpl[K <: Key[String]] private(cache: ObjectCache[K, String]) extends TransactionalCache(cache) {
-  def this(
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*) =
-      this(new FortyTwoCacheImpl[K, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string))
-}
