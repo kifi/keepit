@@ -22,7 +22,7 @@
      <tr>
        <td>@uri.id.get.id</td>
        <td><a href="@uri.url">@uri.title</a></td>
-       <td>@uri.createdAt</td>
+       <td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>
        <td>@uri.state.value</td>
         <td>@{articleOpt match {
           case Some(article) => {

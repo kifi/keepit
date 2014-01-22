@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import org.joda.time.DateTime
 import scala.Some
 import scala.slick.jdbc.StaticQuery
@@ -156,14 +156,14 @@ class BookmarkRepoImpl @Inject() (
     } else Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE && !b.isPrivate) yield b).length).first
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
-    val q = StaticQuery.queryNA[Int](
-      s"select count(*) from bookmark where updated_at between '$from' and '$to' and state='${BookmarkStates.ACTIVE.value}'")
+    val sql = s"select count(*) from bookmark where updated_at between '${SQL_DATETIME_FORMAT.print(from)}' and '${SQL_DATETIME_FORMAT.print(to)}' and state='${BookmarkStates.ACTIVE.value}'"
+    val q = StaticQuery.queryNA[Int](sql)
     q.first
   }
 
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int = {
-    val q = StaticQuery.queryNA[Int](
-      s"select count(*) from bookmark where updated_at between '$from' and '$to' and state='${BookmarkStates.ACTIVE.value}' and source='${source.value}'")
+    val sql = s"select count(*) from bookmark where updated_at between '${SQL_DATETIME_FORMAT.print(from)}' and '${SQL_DATETIME_FORMAT.print(to)}' and state='${BookmarkStates.ACTIVE.value}' and source='${source.value}'"
+    val q = StaticQuery.queryNA[Int](sql)
     q.first
   }
 

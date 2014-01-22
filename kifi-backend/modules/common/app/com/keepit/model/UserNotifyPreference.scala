@@ -12,7 +12,7 @@ case class UserNotifyPreference(
   name: String,
   canSend: Boolean,
   state: State[UserNotifyPreference] = UserNotifyPreferenceStates.ACTIVE
-  ) extends Model[UserNotifyPreference] {
+  ) extends ModelWithState[UserNotifyPreference] {
   def withId(id: Id[UserNotifyPreference]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserNotifyPreference]) = copy(state = state)

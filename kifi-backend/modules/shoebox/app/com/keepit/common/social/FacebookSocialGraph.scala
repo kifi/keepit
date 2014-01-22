@@ -7,14 +7,24 @@ import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
-import com.keepit.model.{Gender, SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
-import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
+import com.keepit.model._
+import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialGraph}
+import com.keepit.common.performance._
+import com.keepit.common.net._
+
 
 import play.api.libs.json._
+import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.net.NonOKResponseException
+import play.api.libs.json.JsArray
+import com.keepit.common.net.DirectUrl
+import scala.Some
+import com.keepit.social.SocialId
 
 object FacebookSocialGraph {
-  val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture"
+  val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
+  val FRIEND_PROFILE = "name,gender,username,picture"
 
   object ErrorSubcodes {
     val AppNotInstalled = 458
@@ -27,7 +37,9 @@ object FacebookSocialGraph {
 class FacebookSocialGraph @Inject() (
     httpClient: HttpClient,
     db: Database,
-    socialRepo: SocialUserInfoRepo
+    postOffice: LocalPostOffice,
+    socialRepo: SocialUserInfoRepo,
+    airbrake: AirbrakeNotifier
   ) extends SocialGraph with Logging {
 
   val TWO_MINUTES = 2 * 60 * 1000
@@ -35,7 +47,7 @@ class FacebookSocialGraph @Inject() (
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
     val jsonsOpt = try {
-      Some(fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))))
+      Some(fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)), socialUserInfo))
     } catch {
       case e @ NonOKResponseException(url, response, _) =>
         import FacebookSocialGraph.ErrorSubcodes._
@@ -115,17 +127,36 @@ class FacebookSocialGraph @Inject() (
     (json \ "gender").asOpt[String].map(Gender.key -> Gender(_).toString)
   ).flatten.toMap
 
-  private def fetchJsons(url: String): Seq[JsValue] = {
-    val jsons = get(url)
-    jsons +: nextPageUrl(jsons).toSeq.flatMap(fetchJsons)
+  private def fetchJsons(url: String, socialUserInfo: SocialUserInfo): Seq[JsValue] = {
+    val jsons = get(url, socialUserInfo)
+    log.info(s"downloaded FB json using $url")
+    jsons +: nextPageUrl(jsons).toSeq.flatMap { u => fetchJsons(u, socialUserInfo) }
   }
 
   private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
 
-  private def get(url: String): JsValue = httpClient.withTimeout(TWO_MINUTES).get(DirectUrl(url), httpClient.ignoreFailure).json
+  private def get(url: String, socialUserInfo: SocialUserInfo): JsValue = timing(s"fetching FB JSON using $url") {
+    val client = httpClient.withTimeout(TWO_MINUTES)
+    val tracer = new StackTrace()
+    val myFailureHandler: Request => PartialFunction[Throwable, Unit] = { url => {
+        case nonOkRes: NonOKResponseException =>
+          val user = s"${socialUserInfo.id.getOrElse("NO_ID")}:${socialUserInfo.fullName}"
+          db.readWrite{ implicit s =>
+            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.EISHAY, EmailAddresses.ANDREW, EmailAddresses.EFFI),
+              subject =  s"fail getting Facebook json for $user",
+              htmlBody = s"user: $socialUserInfo\nurl: https://admin.kifi.com/admin/social_user/${socialUserInfo.id.getOrElse("NO_ID")}\nexception: $nonOkRes",
+              category = NotificationCategory.System.ADMIN))
+          }
+        case ex: Exception =>
+          val user = s"${socialUserInfo.id.getOrElse("NO_ID")}:${socialUserInfo.fullName}"
+          airbrake.notify(s"fail getting json for social user $user using $url", tracer.withCause(ex))
+      }
+    }
+    client.get(DirectUrl(url), myFailureHandler).json
+  }
 
-  private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
-      id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)
+  private def url(id: SocialId, accessToken: String) =
+    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.PERSONAL_PROFILE},friends.fields(${FacebookSocialGraph.FRIEND_PROFILE})"
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(

@@ -114,7 +114,15 @@ class SendgridMailProvider @Inject() (
     if (mail.isReadyToSend) {
       val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).map(_.isReadyToSend).getOrElse(false)
       if(checkAgain) {
-        val message = createMessage(mail)
+        val message = try {
+          createMessage(mail)
+        } catch {
+          case t: Throwable =>
+            db.readWrite { implicit s =>
+              mailRepo.save(mail.error(t.toString))
+            }
+            throw t
+        }
         val transport = getLiveTransport()
         try {
           transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))

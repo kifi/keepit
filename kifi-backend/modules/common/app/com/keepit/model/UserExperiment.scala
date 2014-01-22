@@ -16,7 +16,7 @@ case class UserExperiment (
   userId: Id[User],
   experimentType: ExperimentType,
   state: State[UserExperiment] = UserExperimentStates.ACTIVE
-) extends Model[UserExperiment] {
+) extends ModelWithState[UserExperiment] {
   def withId(id: Id[UserExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserExperiment]) = this.copy(state = state)
@@ -47,9 +47,6 @@ object ExperimentType {
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
 
-  val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE)
-  val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
-
   def get(str: String): ExperimentType = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
     case AUTO_GEN.value => AUTO_GEN
@@ -66,8 +63,7 @@ object ExperimentType {
   }
 
   def getUserStatus(experiments: Set[ExperimentType]): String =
-    if (experiments.contains(AUTO_GEN)) AUTO_GEN.value
-    else if (experiments.contains(FAKE)) FAKE.value
+    if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
 
