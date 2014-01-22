@@ -100,8 +100,11 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         setup()
         val clock = inject[FakeClock]
         db.readOnly {implicit s =>
-          bookmarkRepo.getCountByTime(clock.now.minusHours(3), clock.now) === 3
-          bookmarkRepo.getCountByTime(clock.now.minusHours(6), clock.now.minusHours(3)) === 0
+          println(bookmarkRepo.all.map(_.updatedAt).map(SQL_DATETIME_FORMAT.print).mkString("\n"))
+          val now = clock.now
+          println("now = " + now + " = " + SQL_DATETIME_FORMAT.print(now))
+          bookmarkRepo.getCountByTime(now.minusHours(3), now.plusMinutes(1)) === 3
+          bookmarkRepo.getCountByTime(now.minusHours(6), now.minusHours(3)) === 0
         }
       }
     }
