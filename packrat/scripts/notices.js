@@ -237,27 +237,27 @@ panes.notices = function () {
   }
 
   function markOneRead(timeStr, threadId, id) {
-    markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]');
+    var data = $list.data();
+    markEachRead(id, timeStr, '.kifi-notice[data-thread="' + threadId + '"]', data.kind);
+    if (data.kind === 'unread' && !data.showingOldest && $list[0].scrollHeight <= $list[0].clientHeight) {
+      getOlderThreads();
+    }
   }
 
   function markAllRead(id, time) {
-    markEachRead(id, time, '.kifi-notice');
+    markEachRead(id, time, '.kifi-notice', $list.data('kind'));
   }
 
-  function markEachRead(id, time, sel) {
-    var discard = $list.data('kind') === 'unread';
+  function markEachRead(id, time, sel, kind) {
     $list.find(sel + ':not(.kifi-notice-visited)').each(function () {
       if (id === this.dataset.id || time >= this.dataset.createdAt) {
-        if (discard) {
+        if (kind === 'unread') {
           $(this).remove();
         } else {
           this.classList.add('kifi-notice-visited');
         }
       }
     });
-    if (discard && !$list.data('showingOldest') && $list[0].scrollHeight <= $list[0].clientHeight) {
-      getOlderThreads();
-    }
   }
 
   function onMenuBtnMouseDown(e) {
@@ -365,10 +365,13 @@ panes.notices = function () {
     var now = Date.now();
     if (now - ($list.data('pendingOlderReqTime') || 0) > 10000) {
       $list.data('pendingOlderReqTime', now);
-      api.port.emit('get_older_threads', {
-        time: $list.find('.kifi-notice').last().data('createdAt'),
-        kind: $list.data('kind')
-      }, gotOlderThreads.bind(null, now));
+      var $last = $list.find('.kifi-notice').last();
+      if ($last.length) {
+        api.port.emit('get_older_threads', {
+          time: $last.data('createdAt'),
+          kind: $list.data('kind')
+        }, gotOlderThreads.bind(null, now));
+      }
     }
   }
 
