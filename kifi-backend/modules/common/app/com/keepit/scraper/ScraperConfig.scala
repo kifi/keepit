@@ -19,7 +19,7 @@ case class ScraperConfig(
   serviceCallTimeout: Int = sys.props.getOrElse("scraper.service.call.timeout", "20000").toInt,
   batchSize: Int = sys.props.getOrElse("scraper.service.batch.size", "10").toInt,
   batchMax: Int = sys.props.getOrElse("scraper.service.batch.max", "50").toInt,
-  pendingOverdueThreshold: Int = sys.props.getOrElse("scraper.service.pending.overdue.threshold", "60").toInt,
+  pendingOverdueThreshold: Int = sys.props.getOrElse("scraper.service.pending.overdue.threshold", "600").toInt,
   pendingSkipThreshold: Int = sys.props.getOrElse("scraper.service.pending.skip.threshold", "1000").toInt
 ) {
 

@@ -123,13 +123,13 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
   val httpClient = httpClientBuilder.build()
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
-  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (50)
+  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (200)
 
   val q = new ConcurrentLinkedQueue[WeakReference[(Long, HttpGet)]]()
   val enforcer = new Runnable {
     def run():Unit = {
       try {
-        log.info(s"[enforcer] checking for long running fetch requests ... ${q.size}")
+        log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
         if (q.isEmpty) {
           log.info(s"[enforcer] queue is empty")
         } else {
@@ -142,7 +142,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
               if (curr - ts > LONG_RUNNING_THRESHOLD) {
                 val msg = s"[enforcer] ABORT long (${curr - ts} ms) fetch task: ${htpGet.getURI}"
                 log.warn(msg)
-                htpGet.abort()
+                htpGet.abort() // inform scraper
                 log.info(s"[enforcer] ${htpGet.getURI} isAborted=${htpGet.isAborted}")
                 if (!htpGet.isAborted)
                   airbrake.notify(s"Failed to abort long (${curr - ts} ms) fetch task ${htpGet.getURI}")
@@ -158,7 +158,9 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
           }
         }
         if (q.size > Q_SIZE_THRESHOLD) {
-          airbrake.notify(s"[enforcer] queue size (${q.size}) crossed set threshold ($Q_SIZE_THRESHOLD)") // warning
+          airbrake.notify(s"[enforcer] q.size (${q.size}) crossed threshold ($Q_SIZE_THRESHOLD)")
+        } else if (q.size > Q_SIZE_THRESHOLD/2) {
+          log.warn(s"[enforcer] q.size (${q.size}) crossed threshold/2 ($Q_SIZE_THRESHOLD)")
         }
       } catch {
         case t:Throwable =>
