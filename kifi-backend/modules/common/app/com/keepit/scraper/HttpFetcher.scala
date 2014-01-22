@@ -123,7 +123,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
   val httpClient = httpClientBuilder.build()
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
-  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
+  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (200)
 
   val q = new ConcurrentLinkedQueue[WeakReference[(Long, HttpGet)]]()
   val enforcer = new Runnable {
@@ -158,7 +158,9 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
           }
         }
         if (q.size > Q_SIZE_THRESHOLD) {
-          airbrake.notify(s"[enforcer] q.size (${q.size}) crossed set threshold ($Q_SIZE_THRESHOLD)") // warning
+          airbrake.notify(s"[enforcer] q.size (${q.size}) crossed threshold ($Q_SIZE_THRESHOLD)")
+        } else if (q.size > Q_SIZE_THRESHOLD/2) {
+          log.warn(s"[enforcer] q.size (${q.size}) crossed threshold/2 ($Q_SIZE_THRESHOLD)")
         }
       } catch {
         case t:Throwable =>
