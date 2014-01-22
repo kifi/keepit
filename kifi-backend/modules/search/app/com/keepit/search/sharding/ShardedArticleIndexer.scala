@@ -8,12 +8,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURIStates
+import com.keepit.common.logging.Logging
 
 class ShardedArticleIndexer(
   override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
   articleStore: ArticleStore,
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[NormalizedURI, ArticleIndexer] {
+) extends ShardedIndexer[NormalizedURI, ArticleIndexer] with Logging{
 
   private val fetchSize = 2000
 
@@ -24,8 +25,9 @@ class ShardedArticleIndexer(
     while (!done && !closing) {
       val uris =  if (sequenceNumber.value >= catchUpSeqNumber.value) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
       else {
+        log.info(s"ShardedArticleIndexer in catch up mode: skip active uris until seq number passes ${catchUpSeqNumber.value}")
         val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fetchSize), 180 seconds)
-        if (uris.nonEmpty) uris else  Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)   // prevent stuck, in case the uri with catchUpSeqNumber is active/inactive
+        if (uris.nonEmpty) uris else  { sequenceNumber = catchUpSeqNumber; return total }
       }
       done = uris.isEmpty
 
@@ -46,7 +48,7 @@ class ShardedArticleIndexer(
     val uris = if (sequenceNumber.value >= catchUpSeqNumber.value) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
       else {
         val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fsize), 180 seconds)
-        if (uris.nonEmpty) uris else Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)   // prevent stuck, in case the uri with catchUpSeqNumber is active/inactive
+        if (uris.nonEmpty) uris else { sequenceNumber = catchUpSeqNumber; return total }
       }
     indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
       val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }

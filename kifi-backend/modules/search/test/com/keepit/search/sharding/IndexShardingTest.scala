@@ -193,7 +193,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))
         indexer.update() === 1
         indexer.reindex()
-        indexer.update() === 5
+        indexer.update() === 4
         indexer.catchUpSeqNumber.value === 6
       }
     }
