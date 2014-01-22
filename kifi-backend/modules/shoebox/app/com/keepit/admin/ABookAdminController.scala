@@ -10,6 +10,7 @@ import com.keepit.common.time._
 import com.keepit.model.ABookInfo
 import com.keepit.common.db.Id
 import org.joda.time.DateTime
+import scala.concurrent.Future
 
 
 class ABookAdminController @Inject() (
@@ -18,20 +19,17 @@ class ABookAdminController @Inject() (
   abookServiceClient: ABookServiceClient)
 extends AdminController(actionAuthenticator) {
 
-  // temporary; see abooksView
-  def abookInfos = AdminHtmlAction { implicit request =>
-    Async {
-      abookServiceClient.getAllABookInfos() map { abookInfos =>
-        Ok(views.html.admin.abook(abookInfos sortBy (_.createdAt) reverse))
-      }
-    }
-  }
+  def allABooksView = abooksView(0)
 
-  def abooksView(page:Int, size:Int = 50) = AdminHtmlAction { implicit request =>
+  def abooksView(page:Int) = AdminHtmlAction { implicit request =>
+    val PAGE_SIZE = 50
     Async {
-      abookServiceClient.getPagedABookInfos(page, size) map { abookInfos =>
-        Ok(views.html.admin.abook(abookInfos))
-      }
+      val abookInfosFuture: Future[Seq[ABookInfo]] = abookServiceClient.getPagedABookInfos(page, PAGE_SIZE)
+      val abooksCountFuture: Future[Int] = abookServiceClient.getABooksCount()
+      for {
+        abookInfos <- abookInfosFuture
+        abooksCount <- abooksCountFuture
+      } yield Ok(views.html.admin.abook(abookInfos, page, abooksCount, PAGE_SIZE))
     }
   }
 
