@@ -44,10 +44,9 @@ case class UserStatistics(
 
 case class UserStatisticsPage(
   userViewType: UserViewType,
-  count: Int,
   users: Seq[UserStatistics],
   page: Int,
-  pageCount: Int,
+  userCount: Int,
   pageSize: Int)
 
 sealed trait UserViewType
@@ -249,10 +248,6 @@ class AdminUserController @Inject() (
       kifiInstallations)
   }
 
-  private def numPages(count: Int, pageSize: Int): Int = {
-    Math.ceil(count.toFloat / pageSize.toFloat).toInt
-  }
-
   def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
     val PAGE_SIZE: Int = 50
     val users = db.readOnly { implicit s =>
@@ -269,7 +264,7 @@ class AdminUserController @Inject() (
         case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
       }
     }
-    UserStatisticsPage(userViewType, userCount, users, page, numPages(userCount, PAGE_SIZE), PAGE_SIZE)
+    UserStatisticsPage(userViewType, users, page, userCount, PAGE_SIZE)
   }
 
   def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
@@ -294,7 +289,7 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users.size, users, 0, 1, users.size), searchTerm))
+        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, 0, users.size, users.size), searchTerm))
     }
   }
 
