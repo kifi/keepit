@@ -43,6 +43,7 @@
     }
 
     @admin("Clusters Overview") {
+        <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
               <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Version</th> <th>Instance</th> <th>AWS Details</th>
@@ -75,7 +76,11 @@
         </table>
         Leaders in Bold
         <script>
-            setInterval(function(){location.reload();}, 5000);
+            setInterval(function(){
+              if (document.getElementById("autoRefresh").checked) {
+                location.reload();
+              }
+            }, 5000);
         </script>
     }
 
