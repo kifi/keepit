@@ -365,10 +365,13 @@ panes.notices = function () {
     var now = Date.now();
     if (now - ($list.data('pendingOlderReqTime') || 0) > 10000) {
       $list.data('pendingOlderReqTime', now);
-      api.port.emit('get_older_threads', {
-        time: $list.find('.kifi-notice').last().data('createdAt'),
-        kind: $list.data('kind')
-      }, gotOlderThreads.bind(null, now));
+      var $last = $list.find('.kifi-notice').last();
+      if ($last.length) {
+        api.port.emit('get_older_threads', {
+          time: $last.data('createdAt'),
+          kind: $list.data('kind')
+        }, gotOlderThreads.bind(null, now));
+      }
     }
   }
 
