@@ -28,7 +28,10 @@ import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
 import com.keepit.common.net.UserAgent
-import com.keepit.heimdal.{HeimdalServiceClient, EventType, AnonymousEvent, HeimdalContextBuilder}
+import com.keepit.heimdal._
+import scala.Some
+import play.api.mvc.DiscardingCookie
+import com.keepit.common.controller.AuthenticatedRequest
 
 class HomeController @Inject() (
   db: Database,
