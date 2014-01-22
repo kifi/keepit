@@ -1,22 +1,18 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
 import com.keepit.model._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
+import com.keepit.social.{SocialGraphPlugin}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{InviteCommander, UserCommander}
-import com.keepit.common.db.ExternalId
-import com.keepit.common.KestrelCombinator
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 
 import play.api.Play.current
 import play.api._
-import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -28,6 +24,11 @@ import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
 import com.keepit.common.net.UserAgent
+import com.keepit.heimdal._
+import scala.Some
+import play.api.mvc.DiscardingCookie
+import play.api.mvc.Cookie
+import com.keepit.common.controller.AuthenticatedRequest
 
 class HomeController @Inject() (
   db: Database,
@@ -44,7 +45,8 @@ class HomeController @Inject() (
   fortyTwoServices: FortyTwoServices,
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
-  inviteCommander: InviteCommander)
+  inviteCommander: InviteCommander,
+  heimdalServiceClient: HeimdalServiceClient)
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -76,6 +78,7 @@ class HomeController @Inject() (
     } else {
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
+      temporaryReportLandingLoad()
       Ok(views.html.marketing.landing())
     }
   }
@@ -145,9 +148,16 @@ class HomeController @Inject() (
         val agentClass = if (isIphone) "iphone" else ""
         Ok(views.html.marketing.mobileLanding(false, agentClass))
       } else {
+        temporaryReportLandingLoad()
         Ok(views.html.marketing.landing())
       }
     }
+  }
+
+  private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
+    val context = new HeimdalContextBuilder()
+    context.addRequestInfo(request)
+    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
   }
 
   def agent = Action { request =>
@@ -209,7 +219,13 @@ class HomeController @Inject() (
         }
       } yield senderUserId
     }
-    SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
+    SafeFuture {
+      userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq)
+      // Temporary event for debugging purpose
+      val context = new HeimdalContextBuilder()
+      context.addRequestInfo(request)
+      heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
+    }
     setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }

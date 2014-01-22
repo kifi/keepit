@@ -24,7 +24,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
-import com.keepit.controllers.internal.ShoeboxController
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient}
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -47,7 +49,8 @@ class AuthController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     emailAddressRepo: EmailAddressRepo,
     inviteCommander: InviteCommander,
-    passwordResetRepo: PasswordResetRepo
+    passwordResetRepo: PasswordResetRepo,
+    heimdalServiceClient: HeimdalServiceClient
   ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private val PopupKey = "popup"
@@ -174,6 +177,11 @@ class AuthController @Inject() (
   // Finalize account
   def signupPage() = HtmlAction(allowPending = true)(authenticatedAction = doSignupPage(_), unauthenticatedAction = doSignupPage(_))
 
+  private def temporaryReportSignupLoad()(implicit request: RequestHeader): Unit = SafeFuture {
+    val context = new HeimdalContextBuilder()
+    context.addRequestInfo(request)
+    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_signup_page")))
+  }
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
@@ -239,6 +247,7 @@ class AuthController @Inject() (
             network = Some(SocialNetworkType(identity.identityId.providerId))
           ))
         case (None, None) =>
+          temporaryReportSignupLoad()
           Ok(views.html.auth.authGrey("signup"))
       }
     }
