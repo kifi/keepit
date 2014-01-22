@@ -33,8 +33,8 @@ object ServiceType {
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
   case object ABOOK extends ServiceType("ABOOK", "AB")
   case object SCRAPER extends ServiceType("SCRAPER", "SC") {
-    override val minInstances  = 3
-    override val warnInstances = 4
+    override val minInstances  = 2
+    override val warnInstances = 3
   }
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
