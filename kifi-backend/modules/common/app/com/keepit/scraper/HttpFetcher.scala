@@ -129,7 +129,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
   val enforcer = new Runnable {
     def run():Unit = {
       try {
-        log.info(s"[enforcer] checking for long running fetch requests ... ${q.size}")
+        log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
         if (q.isEmpty) {
           log.info(s"[enforcer] queue is empty")
         } else {
@@ -142,7 +142,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
               if (curr - ts > LONG_RUNNING_THRESHOLD) {
                 val msg = s"[enforcer] ABORT long (${curr - ts} ms) fetch task: ${htpGet.getURI}"
                 log.warn(msg)
-                htpGet.abort()
+                htpGet.abort() // inform scraper
                 log.info(s"[enforcer] ${htpGet.getURI} isAborted=${htpGet.isAborted}")
                 if (!htpGet.isAborted)
                   airbrake.notify(s"Failed to abort long (${curr - ts} ms) fetch task ${htpGet.getURI}")
@@ -158,7 +158,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
           }
         }
         if (q.size > Q_SIZE_THRESHOLD) {
-          airbrake.notify(s"[enforcer] queue size (${q.size}) crossed set threshold ($Q_SIZE_THRESHOLD)") // warning
+          airbrake.notify(s"[enforcer] q.size (${q.size}) crossed set threshold ($Q_SIZE_THRESHOLD)") // warning
         }
       } catch {
         case t:Throwable =>
