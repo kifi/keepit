@@ -155,7 +155,7 @@ class InviteCommander @Inject() (
   def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
     val acceptLink = url + routes.InviteController.acceptInvite(invite.externalId).url
 
-    val message = inviteInfo.message getOrElse s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi"
+    val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
     val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(GenericEmailAddress(c.email)))}"
 
