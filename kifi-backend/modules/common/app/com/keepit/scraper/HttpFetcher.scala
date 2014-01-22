@@ -30,6 +30,7 @@ import collection.JavaConversions._
 import scala.concurrent.duration.Duration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
+import java.net.SocketTimeoutException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -157,9 +158,9 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
             val curr = System.currentTimeMillis
             val ref = iter.next
             ref.get map { case ft:Fetch =>
-              if (ft.respRef.get() != null) removeRef(iter, Some(s"[enforcer] $ft is done; resp=${ft.respRef.get}; remove from q"))
-              else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] $ft caught error ${ft.exRef.get}; remove from q"))
-              else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] $ft is aborted; remove from q"))
+              if (ft.respRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} is done; resp.status=${ft.respRef.get.getStatusLine}; remove from q"))
+              else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
+              else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
               else {
                 val runMillis = curr - ft.ts
                 if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
@@ -248,6 +249,10 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
       log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
+      case e:SocketTimeoutException =>
+        log.warn(s"[fetch] Caught exception (${e.getMessage}) while fetching $url; cause:${e.getCause} stack:${e.getStackTraceString}")
+        fetchTask.exRef.set(e)
+        None
       case t:Throwable =>
         val msg = s"[fetch] Caught exception (${t.getMessage}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
         log.error(msg)
