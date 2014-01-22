@@ -5,9 +5,7 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
-import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.heimdal.HeimdalContextBuilder
+import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -17,8 +15,10 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.util.Random
 import views.html
-import com.keepit.heimdal.SystemEvent
-import com.keepit.heimdal.SystemEventTypes
+import com.keepit.controllers.admin.MinimalHit
+import scala.Some
+import com.keepit.controllers.admin.ArticleSearchResultHitMeta
+import com.keepit.controllers.admin.ConfigIdAndHits
 
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
@@ -76,10 +76,11 @@ class AdminSearchController @Inject() (
     log.info(s"two configs: $id1, $id2, voting result: $vote")
 
     val builder = new HeimdalContextBuilder()
-    builder += ("search_blind_test_ids", Seq(id1, id2))
-    builder += ("search_blind_test_vote", vote)
+    builder += ("subject", "Search Experiment Blind Test")
+    builder += ("options", Seq(id1, id2))
+    builder += ("vote", vote)
 
-    heimdal.trackEvent(SystemEvent(builder.build, SystemEventTypes.SEARCH_TEST_VOTED))
+    heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.VOTED))
     Ok
   }
 

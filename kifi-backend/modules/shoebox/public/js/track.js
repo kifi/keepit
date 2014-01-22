@@ -3,7 +3,9 @@
 (function() {
   'use strict';
 
+  var userInfo;
   var lastLocation;
+  var identifiedViewEventQueue = [];
 
   var thingsToTrack = {
     preview: {
@@ -70,29 +72,76 @@
   }
 
   function defaultClickHandler(action) {
+    var oldId;
+    if (userInfo && userInfo.id) {
+      oldId = mixpanel.get_distinct_id();
+      mixpanel.identify(userInfo.id);
+    }
     mixpanel.track('user_clicked_internal_page',{
       type: getLocation(),
       action: action,
       origin: window.location.origin
     });
+    if (oldId) {
+      mixpanel.identify(oldId);
+    }
   }
 
-  function defaultViewHandler(path) {
-    mixpanel.track('user_viewed_internal_page',{
+  function getUserStatus() {
+    var userStatus = "standard";
+    if (userInfo && userInfo.experiments) {
+      if (userInfo.experiments.indexOf("fake") > -1) {
+        userStatus = "fake";
+      }
+      else if (userInfo.experiments.indexOf("admin") > -1) {
+        userStatus = "admin";
+      }
+    }
+    return userStatus;
+  }
+
+  function sendIdentifiedView(path) {
+    if (userInfo && userInfo.id) {
+      var oldId = mixpanel.get_distinct_id();
+      mixpanel.identify(userInfo.id);
+      mixpanel.track('user_viewed_page',{
+        type: getLocation(path),
+        origin: window.location.origin,
+        userStatus: getUserStatus()
+      });
+      mixpanel.identify(oldId);
+    } else {
+      identifiedViewEventQueue.push(path);
+    }
+  }
+
+  function sendView(path) {
+    sendIdentifiedView(path);
+    mixpanel.track('visitor_viewed_page',{
       type: getLocation(path),
       origin: window.location.origin
     });
   }
 
-  kifiViewTracker.forEach(function(path){
-    defaultViewHandler(path);
+  userInfo = kifiTracker._user;
+  kifiTracker._views.forEach(function(path) {
+    sendView(path);
   });
-  kifiViewTracker = {
-    push: function(path){
-      lastLocation = path;
-      defaultViewHandler(path);
+
+
+  kifiTracker = {
+    view: function(path) {
+      sendView(path);
+    },
+    setUserInfo: function(user) {
+      userInfo = user;
+      var toSend = identifiedViewEventQueue.slice();
+      identifiedViewEventQueue.length=0;
+      toSend.forEach(function(path) {
+        sendIdentifiedView(path);
+      });
     }
-  };
+  }
 
   for (var action in thingsToTrack) {
     var spec = thingsToTrack[action];

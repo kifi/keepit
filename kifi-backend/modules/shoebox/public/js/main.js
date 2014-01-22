@@ -3439,7 +3439,7 @@ $(function () {
 			return;
 		}
 		hideKeepDetails();
-		kifiViewTracker.push('/' + hash);
+		kifiTracker.view('/' + hash);
 	});
 
 	function navigate(uri, opts) {
@@ -4133,7 +4133,7 @@ $(function () {
 	function updateMe(data) {
 		log('[updateMe]', data);
 		me = data;
-		mixpanel.alias(me.id);
+		kifiTracker.setUserInfo(me);
 		$('.my-pic').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.profile-image').css('background-image', 'url(' + formatPicUrl(data.id, data.pictureName, 200) + ')');
 		$('.my-name').text(data.firstName + ' ' + data.lastName);

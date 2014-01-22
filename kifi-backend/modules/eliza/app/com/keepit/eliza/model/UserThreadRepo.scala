@@ -77,6 +77,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
+  def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
+
   def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
@@ -426,11 +428,15 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    Query((for (row <- table if row.user === userId && row.unread && !row.muted) yield row).length).first
+    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted").first
+  }
+
+  def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
+    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending").first
   }
 
   def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    Query((for (row <- table if row.user === userId && row.unread) yield row).length).first
+    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending").first
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
