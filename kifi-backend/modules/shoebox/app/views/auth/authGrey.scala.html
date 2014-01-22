@@ -26,8 +26,7 @@
 
 @if(inviteVideo) {
 <h3 class="intro-header">Watch a quick introduction to Kifi</h3>
-<a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still video-frame" data-track-action="clickvideo"></a>
-<script charset="ISO-8859-1" src="https://fast.wistia.com/assets/external/popover-v1.js" async></script>
+<a href="javascript:" class="video-still" onclick="this.setAttribute('data-clicked','');void 0" data-uri="//player.vimeo.com/video/84696926?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="clickvideo"></a>
 }
 
 <div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
@@ -158,6 +157,7 @@
 <script src="/assets/js/jquery-ui-slider.min.js"></script>
 <script src="/assets/js/auth.js"></script>
 <script src="/assets/js/auth-footer.js"></script>
+<script src="/assets/js/video.js"></script>
 <script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
 <script src="//platform.linkedin.com/in.js">
 api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
