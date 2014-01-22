@@ -38,6 +38,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def reindex(): Unit = {}
 
+  override def reindexUsers: Unit = {}
+
   override def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = ???
 
   override def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] =
