@@ -177,9 +177,9 @@ case class HttpClientImpl(
             log.error(msg)
             new NonOKResponseException(request.httpUri, clientResponse, requestBody)
           case s: ServiceUri =>
+            s.serviceInstance.reportServiceUnavailable()
             val msg = s"service ${s.serviceInstance} is not available, reported ${s.serviceInstance.reportedSentServiceUnavailableCount} times"
             log.error(msg)
-            s.serviceInstance.reportServiceUnavailable()
             val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
             airbrake.get.notify(err)
             new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse)
