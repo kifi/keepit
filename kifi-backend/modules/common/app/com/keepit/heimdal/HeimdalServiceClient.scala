@@ -84,6 +84,7 @@ class HeimdalClientActor @Inject() (
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
   private var events: Vector[HeimdalEvent] = Vector()
   private var closing = false
+  private var flushIsPending = false
 
   def receive = {
     case event: HeimdalEvent =>
@@ -96,7 +97,8 @@ class HeimdalClientActor @Inject() (
         events.size match {
           case s if s >= EventQueueConsts.MaxBatchSize =>
             flush() //flushing without taking in account events in the mailbox
-          case s if s >= EventQueueConsts.LowWatermarkBatchSize =>
+          case s if s >= EventQueueConsts.LowWatermarkBatchSize && !flushIsPending =>
+            flushIsPending = true
             self ! FlushEventQueue //flush with the events in the actor mailbox
           case _ =>
             //ignore
@@ -112,6 +114,7 @@ class HeimdalClientActor @Inject() (
   }
 
   def flush() = {
+    flushIsPending = false
     val batchId = EventQueueConsts.batchId.incrementAndGet
     events.size match {
       case 0 =>

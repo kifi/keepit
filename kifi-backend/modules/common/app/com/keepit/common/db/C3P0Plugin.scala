@@ -57,11 +57,11 @@ class C3P0Plugin(app: Application) extends DBPlugin{
         ds._1.getConnection.close()
         app.mode match {
           case Mode.Test =>
-          case mode => Logger("play").info("aaadatabase [" + ds._2 + "] connected at " + dbURL(ds._1.getConnection))
+          case mode => Logger("play").info("database [" + ds._2 + "] connected at " + dbURL(ds._1.getConnection))
         }
       } catch {
         case e: Exception => {
-          throw dbConfig.reportError(ds._2 + ".url", "aaCannot connect to database [" + ds._2 + "]", Some(e.getCause))
+          throw dbConfig.reportError(ds._2 + ".url", "Cannot connect to database [" + ds._2 + "]", Some(e.getCause))
         }
       }
     }

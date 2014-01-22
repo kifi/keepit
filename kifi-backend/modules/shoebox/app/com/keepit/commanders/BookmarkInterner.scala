@@ -54,12 +54,12 @@ private class RawKeepImporterActor @Inject() (
     case ProcessKeeps =>
       log.info(s"[RawKeepImporterActor] Running raw keep process")
       val activeBatch = fetchActiveBatch()
-      processBatch(activeBatch)
+      processBatch(activeBatch, "active")
       val oldBatch = fetchOldBatch()
-      processBatch(oldBatch)
+      processBatch(oldBatch, "old")
 
       val totalProcessed = activeBatch.length + oldBatch.length
-      if (totalProcessed > 0) { // batch was non-empty, so there may be more to process
+      if (totalProcessed >= batchSize) { // batch was non-empty, so there may be more to process
         log.info(s"[RawKeepImporterActor] Looks like there may be more. Self-calling myself.")
         self ! ProcessKeeps
       }
@@ -78,8 +78,10 @@ private class RawKeepImporterActor @Inject() (
     }
   }
 
-  def processBatch(rawKeeps: Seq[RawKeep]): Unit = {
-    log.info(s"[RawKeepImporterActor] Processing ${rawKeeps.length} keeps")
+  def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
+    log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps: ${rawKeeps.take(10).map(_.id.get).mkString(",")}. ${rawKeeps.headOption.map(_.url)}")
+    log.info("The states are: " + rawKeeps.take(10).map(_.state.value).mkString(","))
+
     rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId)).map { case ((userId, importIdOpt, source, installationId), rawKeepGroup) =>
       val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
       val rawBookmarks = rawKeepGroup.map { rk =>
@@ -94,12 +96,11 @@ private class RawKeepImporterActor @Inject() (
       val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten
 
       if (failuresRawKeep.nonEmpty) {
-        db.readWrite { implicit session =>
-          failuresRawKeep.map { failed =>
-            rawKeepRepo.setState(failed.id.get, RawKeepStates.FAILED)
-          }
+        db.readWriteBatch(failuresRawKeep) { case (session, rk) =>
+          rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
         }
       }
+
       if (successes.nonEmpty) {
         if (source == BookmarkSource.bookmarkImport && installationId.isDefined) {
           // User selected to import Léo
@@ -112,6 +113,14 @@ private class RawKeepImporterActor @Inject() (
         //the bookmarks list may be very large!
         searchClient.updateBrowsingHistory(userId, successes.map(_.uriId): _*)
         searchClient.updateURIGraph()
+
+        db.readWriteBatch(successesRawKeep) { case (session, rk) =>
+          val res = rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
+          if (rk.url.contains("shop.outlier.cc")) {
+            println(s"YO!  ${res}\n")
+            println(rk)
+          }
+        }
       }
       log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
@@ -133,13 +142,6 @@ private class RawKeepImporterActor @Inject() (
               userValueRepo.setValue(userId, "bookmark_import_done", (done + rawKeepGroup.length).toString)
             }
           case _ =>
-        }
-
-        successesRawKeep.map { rk =>
-          rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)
-        }
-        failuresRawKeep.map { rk =>
-          rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)
         }
       }
 
