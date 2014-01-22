@@ -2024,11 +2024,11 @@ api.timers.setTimeout(function() {
 authenticate(function() {
   if (api.loadReason === 'install') {
     log("[main] fresh install")();
-    var tab = api.tabs.anyAt(webBaseUri() + "/install");
+    var tab = api.tabs.anyAt(webBaseUri() + '/install');
     if (tab) {
-      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+      api.tabs.navigate(tab.id, webBaseUri() + '/');
     } else {
-      api.tabs.open(webBaseUri() + "/getting-started");
+      api.tabs.open(webBaseUri() + '/');
     }
   }
   if (api.loadReason === 'install' || api.mode.isDev()) {
