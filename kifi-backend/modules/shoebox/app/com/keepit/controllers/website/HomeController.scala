@@ -121,13 +121,13 @@ class HomeController @Inject() (
       val agentOpt = request.headers.get("User-Agent").map { agent =>
         UserAgent.fromString(agent)
       }
+      temporaryReportLandingLoad()
       if (agentOpt.exists(_.isMobile)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         val agentClass = if (isIphone) "iphone" else ""
         Ok(views.html.marketing.mobileLanding(false, agentClass))
       } else {
-        temporaryReportLandingLoad()
         Ok(views.html.marketing.landing())
       }
     }
