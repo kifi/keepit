@@ -902,6 +902,9 @@ function removeNotificationPopups(threadId) {
 function standardizeNotification(n) {
   n.category = (n.category || 'message').toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
+  if (n.time[n.time.length - 1] !== 'Z') {
+    n.time = new Date(n.time).toISOString();
+  }
   return n;
 }
 
