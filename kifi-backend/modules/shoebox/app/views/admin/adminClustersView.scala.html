@@ -3,7 +3,7 @@
     @randomColor(serviceVersion: com.keepit.common.service.ServiceVersion) = {
         <font color="@{
             val colors = Array[String]("0000cd", "006400", "b8860b", "cd5c5c", "ff0000", "9400d3", "8b8989", "000000", "8b4513", "ff8c00", "4682b4")
-            colors(serviceVersion.hashCode % colors.length)
+            colors(Math.abs(serviceVersion.hashCode) % colors.length)
         }">@serviceVersion</font>
     }
 
