@@ -127,33 +127,38 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
   val q = new ConcurrentLinkedQueue[WeakReference[(Long, HttpGet)]]()
   val enforcer = new Runnable {
     def run():Unit = {
-      log.info(s"[enforcer] checking for long running fetch requests ... ${q.size}")
-      if (q.isEmpty) {
-        log.info(s"[enforcer] queue is empty")
-      } else {
-        val iter = q.iterator
-        while (iter.hasNext) {
-          val curr = System.currentTimeMillis
-          val ref = iter.next
-          ref.get map { case (ts, htpGet) =>
-            log.info(s"[enforcer] ${htpGet.getURI} has been running for ${curr - ts} ms")
-            if (curr - ts > LONG_RUNNING_THRESHOLD) {
-              val msg = s"[enforcer] ABORT long (${curr - ts} ms) fetch task: ${htpGet.getURI}"
-              log.warn(msg)
-              htpGet.abort()
-              log.info(s"[enforcer] ${htpGet.getURI} isAborted=${htpGet.isAborted}")
-              if (!htpGet.isAborted)
-                airbrake.notify(s"Failed to abort long (${curr - ts} ms) fetch task ${htpGet.getURI}")
+      try {
+        log.info(s"[enforcer] checking for long running fetch requests ... ${q.size}")
+        if (q.isEmpty) {
+          log.info(s"[enforcer] queue is empty")
+        } else {
+          val iter = q.iterator
+          while (iter.hasNext) {
+            val curr = System.currentTimeMillis
+            val ref = iter.next
+            ref.get map { case (ts, htpGet) =>
+              log.info(s"[enforcer] ${htpGet.getURI} has been running for ${curr - ts} ms")
+              if (curr - ts > LONG_RUNNING_THRESHOLD) {
+                val msg = s"[enforcer] ABORT long (${curr - ts} ms) fetch task: ${htpGet.getURI}"
+                log.warn(msg)
+                htpGet.abort()
+                log.info(s"[enforcer] ${htpGet.getURI} isAborted=${htpGet.isAborted}")
+                if (!htpGet.isAborted)
+                  airbrake.notify(s"Failed to abort long (${curr - ts} ms) fetch task ${htpGet.getURI}")
+              }
+            } orElse {
+              log.info(s"[enforcer] remove collected entry $ref from queue")
+              try { iter.remove() } catch {
+                case t:Throwable =>
+                  log.error(s"[enforcer] Caught exception $t; (cause=${t.getCause}) while attempting to remove collected entry $ref from queue; stack=${t.getStackTraceString}")
+              }
+              None
             }
-          } orElse {
-            log.info(s"[enforcer] remove collected entry $ref from queue")
-            try { iter.remove() } catch {
-              case t:Throwable =>
-                log.error(s"[enforcer] Caught exception $t; (cause=${t.getCause}) while attempting to remove collected entry $ref from queue; stack=${t.getStackTraceString}")
-            }
-            None
           }
         }
+      } catch {
+        case t:Throwable =>
+          airbrake.notify(s"[enforcer] Caught exception $t; queue=$q; cause=${t.getCause}; stack=${t.getStackTraceString}")
       }
     }
   }
