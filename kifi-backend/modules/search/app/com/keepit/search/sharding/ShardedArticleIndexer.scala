@@ -26,7 +26,7 @@ class ShardedArticleIndexer(
       val uris =  if (sequenceNumber.value >= catchUpSeqNumber.value) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
       else {
         log.info(s"ShardedArticleIndexer in catch up mode: skip active uris until seq number passes ${catchUpSeqNumber.value}")
-        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fetchSize), 180 seconds)
+        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fetchSize), 180 seconds).filter(_.seq.value <= catchUpSeqNumber.value)
         if (uris.nonEmpty) uris else  { sequenceNumber = catchUpSeqNumber; return total }
       }
       done = uris.isEmpty
@@ -47,7 +47,7 @@ class ShardedArticleIndexer(
     var total = 0
     val uris = if (sequenceNumber.value >= catchUpSeqNumber.value) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
       else {
-        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fsize), 180 seconds)
+        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fsize), 180 seconds).filter(_.seq.value <= catchUpSeqNumber.value)
         if (uris.nonEmpty) uris else { sequenceNumber = catchUpSeqNumber; return total }
       }
     indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>

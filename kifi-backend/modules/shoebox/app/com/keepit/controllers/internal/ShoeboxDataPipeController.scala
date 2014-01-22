@@ -46,7 +46,7 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-  def getHightestUriSeq() = Action { request =>
+  def getHighestUriSeq() = Action { request =>
     val seq = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getCurrentSeqNum()
     }
