@@ -144,7 +144,7 @@ class FacebookSocialGraph @Inject() (
           db.readWrite{ implicit s =>
             postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.EISHAY, EmailAddresses.ANDREW, EmailAddresses.EFFI),
               subject =  s"fail getting Facebook json for $user",
-              htmlBody = s"user: $socialUserInfo\nurl: https://admin.kifi.com/admin/social_user/${socialUserInfo.id.getOrElse("NO_ID")}\nexception: $nonOkRes",
+              htmlBody = s"user: $socialUserInfo\n</br>url: https://admin.kifi.com/admin/social_user/${socialUserInfo.id.getOrElse("NO_ID")}\n</br>exception: $nonOkRes",
               category = NotificationCategory.System.ADMIN))
           }
         case ex: Exception =>
