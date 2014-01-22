@@ -95,6 +95,7 @@ kifi.form = (function () {
     var isLogin = $(this).hasClass('curtain-login');
     var $signup = $('.signup').css('display', isLogin ? 'none' : 'block');
     var $login = $('.login').css('display', !isLogin ? 'none' : 'block');
+    $('html').data('trackType', isLogin ? 'login' : 'signup');
     var $form = isLogin ? $login : $('.signup-1');
     $('.page-title').text($form.data('title')).layout();
     $('body').addClass('curtains-drawn');
@@ -114,6 +115,7 @@ kifi.form = (function () {
       $body.removeClass('finalizing');
       $.post($(this).data('cancelUri'));
       $('.signup-1').show();
+      $('html').data('trackType', 'signup');
       setTimeout(function() {
         $signup2EmailForm.hide();
         $signup2SocialForm.hide();
@@ -212,6 +214,7 @@ kifi.form = (function () {
           $signup2EmailForm.css('display', 'block').layout();
           $('body').addClass('finalizing droppable');
           $('.signup-1').hide();
+          $('html').data('trackType', 'signup2Email');
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
       }).fail(function (xhr) {
