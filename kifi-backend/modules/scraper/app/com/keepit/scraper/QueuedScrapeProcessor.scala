@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicInteger, AtomicReference, AtomicLong}
 import com.keepit.model.{HttpProxy, ScrapeInfo, NormalizedURI}
 import java.util.concurrent._
 import com.keepit.search.{ArticleStore, Article}
@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.extractor.{LinkedInIdExtractor, ExtractorProviderTypes, ExtractorProviderType, ExtractorFactory}
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.logging.Logging
-import play.api.Play
+import play.api.{Logger, Play}
 import scala.ref.WeakReference
 import com.keepit.common.performance._
 import scala.Some
@@ -21,11 +21,13 @@ import play.api.Play.current
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
+  val killCount = new AtomicInteger()
+  val threadRef = new AtomicReference[Thread]()
   lazy val submitLocalTime = new DateTime(submitTS).toLocalTime
   def callLocalTime = new DateTime(callTS.get).toLocalTime
   def runMillis(curr:Long) = curr - callTS.get
   def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
-  override def toString = s"[Task:([$submitLocalTime],[${callLocalTime}],${uri.id.getOrElse("")},${info.id.getOrElse("")},${uri.url})]"
+  override def toString = s"[Task:([$submitLocalTime],[${callLocalTime}],[$killCount],${uri.id.getOrElse("")},${info.id.getOrElse("")},${uri.url})]"
 }
 
 @Singleton
@@ -41,10 +43,21 @@ class QueuedScrapeProcessor @Inject() (
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.long.threshold") map (_.toInt) getOrElse (10 * 1000 * 60)
 
   val pSize = Runtime.getRuntime.availableProcessors * 1024
-  val fjPool = new ForkJoinPool(pSize)
+  val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[(NormalizedURI, Option[Article])])]]()
 
   log.info(s"[QScraper.ctr] nrInstances=$pSize, pool=$fjPool")
+
+  private def safeRemove(iter:java.util.Iterator[_], msgOpt:Option[String]) {
+    try {
+      for (msg <- msgOpt)
+        log.info(msg)
+      iter.remove()
+    } catch {
+      case t:Throwable =>
+        log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove entry from queue")
+    }
+  }
 
   val terminator = new Runnable {
     def run(): Unit = {
@@ -58,25 +71,34 @@ class QueuedScrapeProcessor @Inject() (
             val curr = System.currentTimeMillis
             val ref = iter.next
             ref.get map { case (sc, fjTask) =>
-              if (sc.callTS.get == 0) {
-                log.info(s"[terminator] $sc has not yet started")
-              } else {
-                log.info(s"[terminator] $sc has been running for ${curr - sc.callTS.get}ms")
-                if (curr - sc.callTS.get > LONG_RUNNING_THRESHOLD * 3) { // tweak this
-                val msg = s"[terminator] kill LONG (${Duration(curr - sc.callTS.get, TimeUnit.MILLISECONDS)}) running task: $sc; ${fjTask}"
-                  airbrake.notify(msg)
-                  log.warn(msg)
-                  fjTask.cancel(true) // wire up HttpGet.abort
+              if (sc.callTS.get == 0) log.info(s"[terminator] $sc has not yet started")
+              else if (fjTask.isDone) safeRemove(iter, Some(s"[terminator] $sc is done; remove from queue"))
+              else {
+                val runMillis = curr - sc.callTS.get
+                if (runMillis > LONG_RUNNING_THRESHOLD * 3) {
+                  log.error(s"[terminator] attempt to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
+                  fjTask.cancel(true)
+                  val killCount = sc.killCount.incrementAndGet()
+                  if (fjTask.isDone) safeRemove(iter, Some(s"[terminator] $sc is terminated; remove from queue"))
+                  else {
+                    sc.threadRef.get.interrupt
+                    if (sc.threadRef.get.isInterrupted) {
+                      log.info(s"[terminator] thread ${sc.threadRef.get} is now interrupted")
+                      // safeRemove -- later
+                    } else { // may consider hard-stop
+                      if ((killCount > 5) && (killCount % 5 == 0)) { // reduce noise
+                        airbrake.notify(s"[terminator] ($killCount) attempts failed to terminate LONG ($runMillis ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
+                      }
+                    }
+                  }
+                } else if (runMillis > LONG_RUNNING_THRESHOLD) {
+                  log.warn(s"[terminator] potential long ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
+                } else {
+                  log.info(s"[terminator] $sc has been running for ($runMillis ms)")
                 }
               }
             } orElse {
-              log.info(s"[terminator] remove collected entry $ref from queue")
-              try {
-                iter.remove()
-              } catch {
-                case t:Throwable =>
-                  log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove collected entry $ref from queue")
-              }
+              safeRemove(iter, Some(s"[terminator] remove collected entry $ref from queue"))
               None
             }
           }
@@ -100,8 +122,9 @@ class QueuedScrapeProcessor @Inject() (
           val name = Thread.currentThread.getName
           callTS.set(System.currentTimeMillis)
           Thread.currentThread().setName(s"$name##${toString}")
+          threadRef.set(Thread.currentThread())
           try {
-            val res = timing(s"QScraper.safeProcessURI(${uri.id}),${uri.url}") {
+            val res = timing(s"QScraper.safeProcessURI(${uri.id}),${uri.url})") {
               worker.safeProcessURI(uri, info, proxyOpt)
             }
             val ts = System.currentTimeMillis
@@ -109,6 +132,7 @@ class QueuedScrapeProcessor @Inject() (
               log.warn(s"[QScraper] LONG (${runDuration(ts)}) running scraping task:${toString}; ${fjPool}")
             res
           } finally {
+            threadRef.set(null)
             Thread.currentThread().setName(name)
           }
         }
