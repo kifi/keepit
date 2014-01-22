@@ -14,7 +14,7 @@ import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
 import org.apache.http.HttpHeaders._
 import scala.Some
 import org.apache.http.client.entity.{DeflateDecompressingEntity, GzipDecompressingEntity}
-import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
 import org.apache.http.client.protocol.HttpClientContext
 import java.io.IOException
@@ -29,6 +29,7 @@ import Play.current
 import collection.JavaConversions._
 import scala.concurrent.duration.Duration
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -125,34 +126,67 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
   val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (200)
 
-  val q = new ConcurrentLinkedQueue[WeakReference[(Long, HttpGet)]]()
+  case class Fetch(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
+    val killCount = new AtomicInteger()
+    val respRef = new AtomicReference[CloseableHttpResponse]()
+    override def toString = s"[Fetch($url,$ts,$thread)] isAborted=${htpGet.isAborted} killCount=$killCount respRef=$respRef"
+  }
+
+  private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String] = None) {
+    try {
+      for (msg <- msgOpt)
+        log.info(msg)
+      iter.remove()
+    } catch {
+      case t:Throwable =>
+        log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove entry from queue")
+    }
+  }
+
+  val q = new ConcurrentLinkedQueue[WeakReference[Fetch]]()
   val enforcer = new Runnable {
     def run():Unit = {
       try {
         log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
         if (q.isEmpty) {
-          log.info(s"[enforcer] queue is empty")
+          // log.info(s"[enforcer] queue is empty")
         } else {
           val iter = q.iterator
           while (iter.hasNext) {
             val curr = System.currentTimeMillis
             val ref = iter.next
-            ref.get map { case (ts, htpGet) =>
-              log.info(s"[enforcer] ${htpGet.getURI} has been running for ${curr - ts} ms")
-              if (curr - ts > LONG_RUNNING_THRESHOLD) {
-                val msg = s"[enforcer] ABORT long (${curr - ts} ms) fetch task: ${htpGet.getURI}"
-                log.warn(msg)
-                htpGet.abort() // inform scraper
-                log.info(s"[enforcer] ${htpGet.getURI} isAborted=${htpGet.isAborted}")
-                if (!htpGet.isAborted)
-                  airbrake.notify(s"Failed to abort long (${curr - ts} ms) fetch task ${htpGet.getURI}")
+            ref.get map { case ft:Fetch =>
+              if (ft.respRef.get() != null) removeRef(iter, Some(s"[enforcer] $ft is done; resp=${ft.respRef.get}; remove from q"))
+              else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] $ft is aborted; remove from q"))
+              else {
+                val runMillis = curr - ft.ts
+                if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
+                  val msg = s"[enforcer] attempt# ${ft.killCount.get} to abort long ($runMillis ms) fetch task: ${ft.htpGet.getURI}"
+                  log.warn(msg)
+                  ft.htpGet.abort() // inform scraper
+                  ft.killCount.incrementAndGet()
+                  log.info(s"[enforcer] ${ft.htpGet.getURI} isAborted=${ft.htpGet.isAborted}")
+                  if (!ft.htpGet.isAborted) {
+                    log.warn(s"[enforcer] failed to abort long ($runMillis ms) fetch task ${ft}; calling interrupt ...")
+                    ft.thread.interrupt
+                    if (ft.thread.isInterrupted) {
+                      log.warn(s"[enforcer] thread ${ft.thread} has been interrupted for fetch task ${ft}")
+                      // removeRef -- maybe later
+                    } else {
+                      val msg = s"[enforcer] attempt# ${ft.killCount.get} failed to interrupt ${ft.thread} for fetch task ${ft}"
+                      log.error(msg)
+                      if (ft.killCount.get % 5 == 0)
+                        airbrake.notify(msg)
+                    }
+                  }
+                } else if (runMillis > LONG_RUNNING_THRESHOLD) {
+                  log.warn(s"[enforcer] potential long ($runMillis ms) running task: $ft; stackTrace=${ft.thread.getStackTrace.mkString("\n")}")
+                } else {
+                  log.info(s"[enforcer] $ft has been running for $runMillis ms")
+                }
               }
             } orElse {
-              log.info(s"[enforcer] remove collected entry $ref from queue")
-              try { iter.remove() } catch {
-                case t:Throwable =>
-                  log.error(s"[enforcer] Caught exception $t; (cause=${t.getCause}) while attempting to remove collected entry $ref from queue; stack=${t.getStackTraceString}")
-              }
+              removeRef(iter)
               None
             }
           }
@@ -175,7 +209,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
       thread
     }
   })
-  scheduler.scheduleWithFixedDelay(enforcer, 10, 10, TimeUnit.SECONDS)
+  scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch: url=$url,proxy=$proxy") {
     val ts = System.currentTimeMillis
@@ -204,57 +238,76 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
-    q.offer(WeakReference((System.currentTimeMillis, httpGet)))
-    val response = httpClient.execute(httpGet, httpContext)
-    log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
+    val (fetchTaskOpt, responseOpt) =
+    try {
+      val fetchTask = Fetch(url, System.currentTimeMillis, httpGet, Thread.currentThread())
+      q.offer(WeakReference(fetchTask))
+      val response = httpClient.execute(httpGet, httpContext)
+      fetchTask.respRef.set(response)
+      log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
+      (Some(fetchTask), Some(response))
+    } catch {
+      case t:Throwable =>
+        val msg = s"[fetch] Caught exception (${t.getMessage}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
+        log.error(msg)
+        airbrake.notify(msg)
+        (None, None)
+    }
 
-    val statusCode = response.getStatusLine.getStatusCode
+    responseOpt match {
+      case None =>
+        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request($url) FAILED to execute"), httpContext)
+      case Some(response) if (httpGet.isAborted) =>
+        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request($url) has been ABORTED ($fetchTaskOpt)"), httpContext)
+      case Some(response) => {
+        val statusCode = response.getStatusLine.getStatusCode
+        val entity = response.getEntity
 
-    val entity = response.getEntity
+        // If the response does not enclose an entity, there is no need to bother about connection release
+        if (entity != null) {
 
-    // If the response does not enclose an entity, there is no need to bother about connection release
-    if (entity != null) {
+          val input = new HttpInputStream(entity.getContent)
 
-      val input = new HttpInputStream(entity.getContent)
+          Option(response.getHeaders(CONTENT_TYPE)).foreach{ headers =>
+            if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
+          }
 
-      Option(response.getHeaders(CONTENT_TYPE)).foreach{ headers =>
-        if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
-      }
-
-      try {
-        statusCode match {
-          case HttpStatus.SC_OK =>
-            f(input)
-            HttpFetchStatus(statusCode, None, httpContext)
-          case HttpStatus.SC_NOT_MODIFIED =>
-            HttpFetchStatus(statusCode, None, httpContext)
-          case _ =>
-            log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
-            HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
-        }
-      } catch {
-        case ex: IOException =>
-          // in case of an IOException the connection will be released back to the connection manager automatically
-          throw ex
-        case ex :Exception =>
-          // unexpected exception. abort the request in order to shut down the underlying connection immediately.
+          try {
+            statusCode match {
+              case HttpStatus.SC_OK =>
+                f(input)
+                HttpFetchStatus(statusCode, None, httpContext)
+              case HttpStatus.SC_NOT_MODIFIED =>
+                HttpFetchStatus(statusCode, None, httpContext)
+              case _ =>
+                log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+                HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+            }
+          } catch {
+            case ex: IOException =>
+              // in case of an IOException the connection will be released back to the connection manager automatically
+              throw ex
+            case ex :Exception =>
+              // unexpected exception. abort the request in order to shut down the underlying connection immediately.
+              httpGet.abort()
+              throw ex
+          } finally {
+            Try(EntityUtils.consumeQuietly(entity))
+            Try(input.close())
+          }
+        } else {
           httpGet.abort()
-          throw ex
-      } finally {
-        Try(EntityUtils.consumeQuietly(entity))
-        Try(input.close())
-      }
-    } else {
-      httpGet.abort()
-      statusCode match {
-        case HttpStatus.SC_OK =>
-          log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
-          HttpFetchStatus(-1, Some("no entity found"), httpContext)
-        case HttpStatus.SC_NOT_MODIFIED =>
-          HttpFetchStatus(statusCode, None, httpContext)
-        case _ =>
-          log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
-          HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+          statusCode match {
+            case HttpStatus.SC_OK =>
+              log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+              HttpFetchStatus(-1, Some("no entity found"), httpContext)
+            case HttpStatus.SC_NOT_MODIFIED =>
+              HttpFetchStatus(statusCode, None, httpContext)
+            case _ =>
+              log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+              HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+          }
+        }
       }
     }
   }

@@ -43,7 +43,8 @@ class QueuedScrapeProcessor @Inject() (
   s3ScreenshotStore: S3ScreenshotStore,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging {
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.long.threshold") map (_.toInt) getOrElse (10 * 1000 * 60)
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (10 * 1000 * 60)
+  val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   val pSize = Runtime.getRuntime.availableProcessors * 1024
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
@@ -51,7 +52,7 @@ class QueuedScrapeProcessor @Inject() (
 
   log.info(s"[QScraper.ctr] nrInstances=$pSize, pool=$fjPool")
 
-  private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String]) {
+  private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String] = None) {
     try {
       for (msg <- msgOpt)
         log.info(msg)
@@ -77,7 +78,7 @@ class QueuedScrapeProcessor @Inject() (
   val terminator = new Runnable {
     def run(): Unit = {
       try {
-        log.info(s"[terminator] checking for long-running tasks to kill ${submittedQ.size} ${fjPool.getQueuedSubmissionCount} ${fjPool.getQueuedTaskCount} ...")
+        log.info(s"[terminator] checking for long-running tasks to kill q.size=${submittedQ.size} fj(#submit)=${fjPool.getQueuedSubmissionCount} fj(#task)=${fjPool.getQueuedTaskCount} ...")
         if (submittedQ.isEmpty) { // some low threshold
           // check fjPool; do something useful
         } else {
@@ -87,34 +88,36 @@ class QueuedScrapeProcessor @Inject() (
             val ref = iter.next
             ref.get map { case (sc, fjTask) =>
               if (sc.callTS.get == 0) log.info(s"[terminator] $sc has not yet started")
-              else if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is done; remove from queue"))
+              else if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc isDone=true; remove from q"))
               else {
                 val runMillis = curr - sc.callTS.get
                 if (runMillis > LONG_RUNNING_THRESHOLD * 3) {
-                  log.error(s"[terminator] attempt to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
+                  log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
                   doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))
-                  if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from queue"))
+                  if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
                   else {
                     sc.threadRef.get.interrupt
                     if (sc.threadRef.get.isInterrupted) {
                       log.info(s"[terminator] thread ${sc.threadRef.get} is now interrupted")
                       // safeRemove -- later
                     } else { // may consider hard-stop
-                      if ((killCount > 5) && (killCount % 5 == 0)) { // reduce noise
-                        airbrake.notify(s"[terminator] ($killCount) attempts failed to terminate LONG ($runMillis ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
+                      val msg = s"[terminator] ($killCount) attempts failed to terminate LONG ($runMillis ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}"
+                      log.error(msg)
+                      if (killCount % 5 == 0) { // reduce noise
+                        airbrake.notify(msg)
                       }
                     }
                   }
                 } else if (runMillis > LONG_RUNNING_THRESHOLD) {
                   log.warn(s"[terminator] potential long ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                 } else {
-                  log.info(s"[terminator] $sc has been running for ($runMillis ms)")
+                  log.info(s"[terminator] $sc has been running for $runMillis ms")
                 }
               }
             } orElse {
-              removeRef(iter, Some(s"[terminator] remove collected entry $ref from queue"))
+              removeRef(iter) // Some(s"[terminator] remove collected entry $ref from queue")
               None
             }
           }
