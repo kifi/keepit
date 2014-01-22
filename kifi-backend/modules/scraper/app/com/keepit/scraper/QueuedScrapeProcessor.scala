@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference, AtomicLong}
-import com.keepit.model.{HttpProxy, ScrapeInfo, NormalizedURI}
+import com.keepit.model._
 import java.util.concurrent._
 import com.keepit.search.{ArticleStore, Article}
 import org.joda.time.DateTime
@@ -18,6 +18,9 @@ import scala.Some
 import scala.concurrent.Future
 import org.apache.http.HttpStatus
 import play.api.Play.current
+import scala.concurrent._
+import scala.util.Try
+import scala.Some
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
@@ -48,7 +51,7 @@ class QueuedScrapeProcessor @Inject() (
 
   log.info(s"[QScraper.ctr] nrInstances=$pSize, pool=$fjPool")
 
-  private def safeRemove(iter:java.util.Iterator[_], msgOpt:Option[String]) {
+  private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String]) {
     try {
       for (msg <- msgOpt)
         log.info(msg)
@@ -56,6 +59,18 @@ class QueuedScrapeProcessor @Inject() (
     } catch {
       case t:Throwable =>
         log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove entry from queue")
+    }
+  }
+
+  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String]) {
+    try {
+      for (msg <- msgOpt)
+        log.info(msg)
+      helper.syncSaveScrapeInfo(sc.info.withState(ScrapeInfoStates.INACTIVE))
+      helper.syncGetNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // consider adding DO_NOT_SCRAPE
+    } catch {
+      case t:Throwable =>
+        log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to deactivate $sc")
     }
   }
 
@@ -72,14 +87,15 @@ class QueuedScrapeProcessor @Inject() (
             val ref = iter.next
             ref.get map { case (sc, fjTask) =>
               if (sc.callTS.get == 0) log.info(s"[terminator] $sc has not yet started")
-              else if (fjTask.isDone) safeRemove(iter, Some(s"[terminator] $sc is done; remove from queue"))
+              else if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is done; remove from queue"))
               else {
                 val runMillis = curr - sc.callTS.get
                 if (runMillis > LONG_RUNNING_THRESHOLD * 3) {
                   log.error(s"[terminator] attempt to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
-                  if (fjTask.isDone) safeRemove(iter, Some(s"[terminator] $sc is terminated; remove from queue"))
+                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))
+                  if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from queue"))
                   else {
                     sc.threadRef.get.interrupt
                     if (sc.threadRef.get.isInterrupted) {
@@ -98,7 +114,7 @@ class QueuedScrapeProcessor @Inject() (
                 }
               }
             } orElse {
-              safeRemove(iter, Some(s"[terminator] remove collected entry $ref from queue"))
+              removeRef(iter, Some(s"[terminator] remove collected entry $ref from queue"))
               None
             }
           }
