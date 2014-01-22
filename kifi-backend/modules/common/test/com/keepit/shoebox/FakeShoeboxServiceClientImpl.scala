@@ -369,7 +369,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getHighestUriSeq(): Future[Long] = {
-    val seq = allNormalizedURIs.values.map{_.seq.value}.reduce(_ max _)
+    val seq = allNormalizedURIs.values.map{_.seq.value}.max
     Future.successful(seq)
   }
 
