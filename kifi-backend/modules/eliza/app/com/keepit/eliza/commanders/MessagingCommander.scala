@@ -918,6 +918,12 @@ class MessagingCommander @Inject() (
     }
   }
 
+  def getUnreadThreadCounts(userId: Id[User]): (Int, Int) = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getUnreadThreadCounts(userId)
+    }
+  }
+
   def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject], Int, Int)] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap { nUriOrPrenorm =>
       nUriOrPrenorm match {
