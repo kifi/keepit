@@ -5,18 +5,18 @@ import scala.slick.session.ResultSetConcurrency
 import scala.slick.session.Session
 import scala.slick.session.{Database => SlickDatabase}
 import scala.util.DynamicVariable
-
 import com.google.inject.{Singleton, ImplementedBy, Inject, Provider}
-
 import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.logging.Logging
-
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
-
 import play.api.Mode.Mode
 import play.api.Mode.Test
 import play.modules.statsd.api.Statsd
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
 
 class InSessionException(message: String) extends Exception(message)
 
@@ -45,10 +45,14 @@ case class DbExecutionContext(context: ExecutionContext)
 
 case class SlickDatabaseWrapper (slickDatabase: SlickDatabase, masterSlave: Database.DBMasterSlave)
 
+class ExecutionSkipped extends Exception("skipped. try again! (this is not a real exception)")
+
 object Database {
   sealed trait DBMasterSlave
   case object Master extends DBMasterSlave
   case object Slave extends DBMasterSlave
+
+  private[slick] val executionSkipped = Failure(new ExecutionSkipped)
 }
 
 class Database @Inject() (
@@ -119,11 +123,13 @@ class Database @Inject() (
     readOnly(f)
   }
 
+  private def createReadWriteSession = new RWSession({//always master
+    Statsd.increment("db.write.Master")
+    sessionProvider.createReadWriteSession(db.masterDb)
+  })
+
   def readWrite[T](f: RWSession => T): T = enteringSession {
-    val rw = new RWSession({//always master
-      Statsd.increment("db.write.Master")
-      sessionProvider.createReadWriteSession(db.masterDb)
-    })
+    val rw = createReadWriteSession
     try rw.withTransaction { f(rw) } finally rw.close()
   }
 
@@ -141,6 +147,52 @@ class Database @Inject() (
       }
     }
     readWrite(f)
+  }
+
+  private[this] val READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL = 500
+
+  def readWriteBatch[D, T](batch: Seq[D])(f: (RWSession, D) => T): Map[D, Try[T]] = {
+    var successCnt = 0
+    var failure: Failure[T] = null
+
+    val results = batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foldLeft(Map.empty[D, Try[T]]){ (results, chunk) =>
+      val rw = createReadWriteSession
+      try {
+        results ++ chunk.map{ item =>
+          val oneResult = if (failure == null) {
+            Try(rw.withTransaction { f(rw, item) }) match {
+              case s: Success[T] => successCnt += 1; s
+              case f: Failure[T] => failure = f; f
+            }
+          } else {
+            Database.executionSkipped
+          }
+          (item -> oneResult)
+        }
+      } finally { rw.close() }
+    }
+    if (failure != null) log.warn(s"Failed ({fail.exception.getClass.getSimpleName}) readWrite transaction, processed ${successCnt} out of ${batch.size}")
+    results
+  }
+
+  def readWriteBatch[D, T](batch: Seq[D], attempts: Int)(f: (RWSession, D) => T): Map[D, Try[T]] = {
+    var results = Map.empty[D, Try[T]]
+    var pending = batch
+    1 to attempts - 1 foreach { attempt =>
+      val partialResults = readWriteBatch(pending)(f)
+      results ++= partialResults
+      pending = batch.filter{ d =>
+        results(d) match {
+          case Failure(e: MySQLIntegrityConstraintViolationException) => false // do not retry if an integrity constraint violation occurred for this item
+          case Failure(e: SQLException) => true                                // retry for other SQLException
+          case Failure(e: ExecutionSkipped) => true                            // retry skipped items
+          case _ => false                                                      // no retry for all other cases
+        }
+      }.toSeq
+      if (pending.isEmpty) return results
+    }
+    val partialResults = readWriteBatch(pending)(f)
+    results ++ partialResults
   }
 }
 

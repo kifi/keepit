@@ -51,13 +51,32 @@
 		$date.text(days);
 	}
 
+	var EMAIL_REGEX = /^[^@]+@[^@]+$/;
+
+	function verifyEmail(email) {
+		if (!EMAIL_REGEX.test(email)) {
+			return false;
+		}
+		if (email.charAt(email.length - 1) === '.') {
+			return false;
+		}
+		return true;
+	}
+
 	$('form').on('submit', function (e) {
 		e.preventDefault();
+		Tracker.trackClick(this);
 		var $form = $(this);
 		var data = {};
 		$.each($form.serializeArray(), function (i, field) {
 			data[field.name] = field.value || void 0;
 		});
+		var email = data.email = $.trim(data.email);
+		if (!verifyEmail(email)) {
+			win.alert('Invalid email address');
+			return;
+		}
+
 		$.ajax({
 			url: '/waitlist',
 			type: 'POST',
@@ -66,6 +85,10 @@
 			data: JSON.stringify(data)
 		})
 		.complete(function (resp) {
+			var focused = win.document.activeElement;
+			if (focused && focused.blur) {
+				focused.blur();
+			}
 			$('.kifi-added-email').text(data.email);
 			$('input[name=email]').val(data.email);
 			$('html').addClass('submitted');
@@ -94,6 +117,7 @@
 
 	$shadow.on('click', function (e) {
 		if (!$(e.target).closest('.wistia_video_wrapper').length) {
+			Tracker.trackClick(e.target);
 			closeVideo();
 		}
 	});
@@ -162,5 +186,5 @@
 			$('html').toggleClass('scroll', scrolling);
 		});
 	});
-	
+
 })(this);

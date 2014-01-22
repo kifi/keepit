@@ -48,6 +48,12 @@ class KeepToCollectionRepoImpl @Inject() (
       yield c.bookmarkId).list)
   }
 
+  override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
+    collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
+    bookmarksForCollectionCache.remove(BookmarksForCollectionKey(ktc.collectionId))
+  }
+
+
   override val table = new RepoTable[KeepToCollection](db, "keep_to_collection") {
     def bookmarkId = column[Id[Bookmark]]("bookmark_id", O.NotNull)
     def collectionId = column[Id[Collection]]("collection_id", O.NotNull)

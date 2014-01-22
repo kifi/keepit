@@ -17,6 +17,7 @@ import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
 import com.keepit.test.{DeprecatedTestRemoteGlobal, DeprecatedTestApplication}
 import java.io.File
+import com.keepit.common.controller.{ScraperServiceController, ShoeboxServiceController, ServiceController}
 
 case class ScraperTestModule() extends ScraperServiceModule (
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
@@ -32,7 +33,11 @@ class DeprecatedScraperApplication(global: DeprecatedTestRemoteGlobal)
 class ScraperModuleTest extends Specification with Logging with ApplicationInjector {
 
   private def isScraperController(clazz: Class[_]): Boolean = {
-    classOf[ScraperController] isAssignableFrom clazz
+    if (classOf[Controller] isAssignableFrom clazz) {
+      if (classOf[ServiceController] isAssignableFrom clazz) {
+        classOf[ScraperServiceController] isAssignableFrom clazz
+      } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
+    } else false
   }
 
   val global = new DeprecatedTestRemoteGlobal(ScraperTestModule())

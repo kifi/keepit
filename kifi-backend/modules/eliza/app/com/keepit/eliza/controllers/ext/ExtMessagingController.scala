@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.common.db.ExternalId
-import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ElizaServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -39,8 +39,7 @@ class ExtMessagingController @Inject() (
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory
-  )
-  extends BrowserExtensionController(actionAuthenticator) {
+  ) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
 
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val tStart = currentDateTime

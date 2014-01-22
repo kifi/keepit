@@ -1,10 +1,10 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.Logging
 import java.net.URLEncoder
-import play.api.mvc.{Action, Results}
+import play.api.mvc.{AnyContent, Request, Action, Results}
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
@@ -18,8 +18,13 @@ import java.math.BigInteger
 import com.keepit.model.{ABookInfo, User, OAuth2Token}
 import com.keepit.common.db.Id
 import scala.concurrent._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
+
+object OAuth2 {
+  val STATE_TOKEN_KEY="stateToken"
+}
 
 object OAuth2Providers { // TODO: wire-in (securesocial) config
   val GOOGLE = OAuth2Config(
@@ -92,120 +97,140 @@ object OAuth2AccessTokenResponse {
 
 }
 
+object OAuth2Controller {
+  implicit class RequestWithQueryVal[T](val underlying:Request[T]) extends AnyVal {
+    def queryVal(key:String) = underlying.queryString.get(key).flatMap(_.headOption)
+  }
+}
+
+import OAuth2._
 class OAuth2Controller @Inject() (
   db: Database,
+  airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
   abookServiceClient:ABookServiceClient
-) extends WebsiteController(actionAuthenticator) with Logging {
+) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   val approvalPrompt = sys.props.getOrElse("oauth2.approval.prompt", "force")
 
   import OAuth2Providers._
   def start(provider:String, stateTokenOpt:Option[String], approvalPromptOpt:Option[String]) = AuthenticatedJsonAction { implicit request =>
-    log.info(s"[oauth2.start($provider, $stateTokenOpt, $approvalPromptOpt)]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
-    val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
+    log.info(s"[oauth2.start(${request.userId}, $provider, $stateTokenOpt, $approvalPromptOpt)] headers=${request.headers} session=${request.session}")
+    val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE) // may enforce stricter check
     val authUrl = providerConfig.authUrl
-    val stateToken:String = stateTokenOpt.getOrElse(request.session.get("stateToken").getOrElse(throw new IllegalStateException("stateToken not set")))
-    val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
-    val params = Map(
-      "response_type" -> "code",
-      "client_id" -> providerConfig.clientId,
-      "redirect_uri" -> redirectUri,
-      "scope" -> providerConfig.scope,
-      "state" -> stateToken,
-      "access_type" -> "offline",
-      "login_hint" -> "email address",
-      "approval_prompt" -> approvalPromptOpt.getOrElse(approvalPrompt)
-    )
-    val url = authUrl + params.foldLeft("?"){(a,c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&"}
-    log.info(s"[oauth2start($provider, $stateToken)] REDIRECT to: $url with params: $params")
-    Results.Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2))))
+    stateTokenOpt match {
+      case None =>
+        val msg = s"[oauth2.start(${request.userId}, $provider, $stateTokenOpt, $approvalPrompt)] state token is not provided; body=${request.body} headers=${request.headers}"
+        log.warn(msg)
+        Redirect("/").withSession(session - STATE_TOKEN_KEY)
+      case Some(stateToken) =>
+        val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
+        val params = Map(
+          "response_type" -> "code",
+          "client_id" -> providerConfig.clientId,
+          "redirect_uri" -> redirectUri,
+          "scope" -> providerConfig.scope,
+          "state" -> stateToken,
+          "access_type" -> "offline",
+          "login_hint" -> "email address",
+          "approval_prompt" -> approvalPromptOpt.getOrElse(approvalPrompt)
+        )
+        val url = authUrl + params.foldLeft("?"){(a,c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&"}
+        log.info(s"[oauth2start(${request.userId},$provider, $stateToken)] REDIRECT to: $url with params: $params")
+        Results.Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(session + (STATE_TOKEN_KEY -> stateToken))
+    }
   }
 
   // redirect/GET
   def callback(provider:String) = AuthenticatedJsonAction { implicit request =>
-    log.info(s"[oauth2.callback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
+    log.info(s"[oauth2.callback(${request.userId}, $provider)] headers=${request.headers} session=${request.session}")
+    val redirectHome   = Redirect(com.keepit.controllers.website.routes.HomeController.home).withSession(session - STATE_TOKEN_KEY)
+    val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
+
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
-    val state = request.queryString.get("state").getOrElse(Seq.empty[String]) // see oauth2
-    val stateFromSession = request.session.get("stateToken").getOrElse("")
-    log.info(s"[oauth2.callback] state=$state stateFromSession=$stateFromSession")
-    if (state.isEmpty || state(0) != stateFromSession) {
-      log.warn(s"[oauth2.callback] state token mismatch")
-      throw new IllegalStateException("state token mismatch")
-    }
+    val stateOpt = request.queryString.get("state").flatMap(_.headOption)
+    val codeOpt  = request.queryString.get("code").flatMap(_.headOption)
+    val stateOptFromSession = request.session.get("stateToken") orElse Some("")
+    log.info(s"[oauth2.callback(${request.userId}, $provider)] code=$codeOpt state=$stateOpt stateFromSession=$stateOptFromSession")
 
-    val code = request.queryString.get("code").getOrElse(Seq(""))(0)
-    log.info(s"code=$code")
+    if (stateOpt.isEmpty || stateOpt.get != stateOptFromSession.get) {
+      log.warn(s"[oauth2.callback(${request.userId}, $provider)] state token mismatch: callback-state=$stateOpt session-stateToken=$stateOptFromSession headers=${request.headers}")
+      redirectInvite
+    } else if (codeOpt.isEmpty) {
+      log.warn(s"[oauth2.callback(${request.userId}, $provider)] code is empty; consent might not have been granted") // for server app
+      redirectInvite
+    } else {
+      val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
+      val params = Map(
+        "code" -> codeOpt.get,
+        "client_id" -> providerConfig.clientId,
+        "client_secret" -> providerConfig.clientSecret,
+        "redirect_uri" -> redirectUri,
+        "grant_type" -> "authorization_code"
+      )
+      val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
+      log.info(s"[oauth2.callback(${request.userId},$provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-    val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
-    val params = Map(
-      "code" -> code,
-      "client_id" -> providerConfig.clientId,
-      "client_secret" -> providerConfig.clientSecret,
-      "redirect_uri" -> redirectUri,
-      "grant_type" -> "authorization_code"
-    )
-    val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
-    log.info(s"[oauth2.callback($provider)] POST to: ${providerConfig.accessTokenUrl} with params: $params")
-
-    val redirectHomeF = Future { Redirect(com.keepit.controllers.website.routes.HomeController.home) }
-
-    val tokenRespOptF = call.map { resp =>
-      log.info(s"[oauth2.callback] body=${resp.body}")
-      provider match {
-        case "google" => {
-          if (resp.status == OK) {
-            val json = resp.json
-            log.info(s"[oauth2.callback] $resp json=${Json.prettyPrint(json)}")
-            val tokenResp = json.asOpt[OAuth2AccessTokenResponse]
-            log.info(s"[oauth2.callback] tokenResp=$tokenResp")
-            tokenResp
-          } else {
-            log.warn(s"OAuth2 failure from $provider: $resp") // TODO: retry
-            None
-          }
-        }
-        case "facebook" => {
-          if (Play.maybeApplication.isDefined && !Play.isProd) { // not supported in prod
-            val splitted = resp.body.split("=")
-            log.info(s"[oauth2.callback] splitted=${splitted.mkString}")
-            if (splitted.length > 1)
-              Some(OAuth2AccessTokenResponse(splitted(1)))
-            else
+      val tokenRespOptF = call.map { resp =>
+        log.info(s"[oauth2.callback(${request.userId},$provider)] body=${resp.body}")
+        provider match {
+          case "google" => {
+            if (resp.status == OK) {
+              val json = resp.json
+              log.info(s"[oauth2.callback(${request.userId},$provider)] body=$json")
+              val tokenResp = json.asOpt[OAuth2AccessTokenResponse]
+              log.info(s"[oauth2.callback(${request.userId},$provider)] tokenResp=$tokenResp")
+              tokenResp
+            } else {
+              val msg = s"[oauth2.callback(${request.userId},$provider)] failure from $provider: status=${resp.status} body=${resp.body}"
+              log.warn(msg) // TODO: retry
+              airbrake.notify(msg)
               None
-          } else None
-        }
-      }
-    }
-
-    Async {
-      tokenRespOptF flatMap { tokenRespOpt =>
-        tokenRespOpt match {
-          case Some(tokenResp) => {
-            provider match {
-              case "google" => {
-                val resF = abookServiceClient.importContactsP(request.userId, tokenResp.toOAuth2Token(request.userId))
-                resF map { res =>
-                  log.info(s"[google] abook import $res")
-                  // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // todo: for admin page
-                  Redirect("/friends/invite/email") // @see InviteController.invite
-                }
-              }
-              case "facebook" => {
-                if (Play.maybeApplication.isDefined && !Play.isProd) {
-                  val friendsUrl = "https://graph.facebook.com/me/friends"
-                  val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken),("fields","id,name,first_name,last_name,username,picture,email")).get
-                  friendsF.map { friendsResp =>
-                    val friends = friendsResp.json
-                    log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-                    Ok(friends)
-                  }
-                } else redirectHomeF
-              }
-              case _ => redirectHomeF
             }
           }
-          case None => redirectHomeF
+          case "facebook" => {
+            if (Play.maybeApplication.isDefined && !Play.isProd) { // not supported in prod
+            val splitted = resp.body.split("=")
+              log.info(s"[oauth2.callback] splitted=${splitted.mkString}")
+              if (splitted.length > 1)
+                Some(OAuth2AccessTokenResponse(splitted(1)))
+              else
+                None
+            } else None
+          }
+        }
+      }
+
+      Async {
+        val redirectHomeF = Future { redirectHome }
+        tokenRespOptF flatMap { tokenRespOpt =>
+          tokenRespOpt match {
+            case Some(tokenResp) => {
+              provider match {
+                case "google" => {
+                  val resF = abookServiceClient.importContactsP(request.userId, tokenResp.toOAuth2Token(request.userId))
+                  resF map { res =>
+                    log.info(s"[google] abook import $res")
+                    // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // todo: for admin page
+                    redirectInvite // forces one consent per acct; may need to be revisited
+                  }
+                }
+                case "facebook" => {
+                  if (Play.maybeApplication.isDefined && !Play.isProd) {
+                    val friendsUrl = "https://graph.facebook.com/me/friends"
+                    val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken),("fields","id,name,first_name,last_name,username,picture,email")).get
+                    friendsF.map { friendsResp =>
+                      val friends = friendsResp.json
+                      log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
+                      Ok(friends).withSession(session - STATE_TOKEN_KEY)
+                    }
+                  } else redirectHomeF
+                }
+                case _ => redirectHomeF
+              }
+            }
+            case None => redirectHomeF
+          }
         }
       }
     }
@@ -273,14 +298,11 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  // TODO: move out
   def importContacts(provider:Option[String], approvalPromptOpt:Option[String]) = AuthenticatedHtmlAction { implicit request =>
-    val stateToken = request.session.get("stateToken").getOrElse {
-      "/friends/invite$" + new BigInteger(130, new SecureRandom()).toString(32)
-    }
+    val stateToken = "/friends/invite$" + new BigInteger(130, new SecureRandom()).toString(32)
     val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
-    log.info(s"[importContacts($provider, $approvalPromptOpt)] redirect to $route")
-    Redirect(route).withSession(session + ("stateToken" -> stateToken))
+    log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")
+    Redirect(route).withSession(session - STATE_TOKEN_KEY)
   }
 
 }

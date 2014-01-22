@@ -306,18 +306,16 @@ div.kifi-pane-empty > img {
   bottom: 100%;
   opacity: 0;
   transition: opacity .5s ease, bottom 0s .5s;
-  z-index: 3;
+  z-index: 2;
 }
 .kifi-shaded > .kifi-pane-shade {
   opacity: 1;
   bottom: 54px;
   transition-delay: 0s;
 }
-.kifi-pane .kifi-keeper {
-  z-index: 2;
-}
+.kifi-pane .kifi-keeper,
 .kifi-pane .kifi-tagbox {
-  z-index: 3;
+  z-index: 2;
 }
 .kifi-notices-head {
   -moz-box-sizing: border-box;

@@ -21,6 +21,8 @@ import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
+import com.keepit.search.graph.SortedBookmarks
+import com.keepit.common.logging.Logging
 
 object URIGraphFields {
   val userField = "usr"
@@ -121,26 +123,28 @@ object URIGraphIndexer {
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
     val bookmarks: Seq[Bookmark]
-  ) extends Indexable[User] with LineFieldBuilder {
+  ) extends Indexable[User] with LineFieldBuilder with Logging{
 
     override def buildDocument = {
       val doc = super.buildDocument
       val (publicBookmarks, privateBookmarks) = URIList.sortBookmarks(bookmarks)
+
       val publicListBytes = URIList.toByteArray(publicBookmarks)
       val privateListBytes = URIList.toByteArray(privateBookmarks)
-      val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)
-      val privateListField = buildURIListField(URIGraphFields.privateListField, privateListBytes)
+
+      val publicListFields = buildURIListField(URIGraphFields.publicListField, publicListBytes)
+      val privateListFields = buildURIListField(URIGraphFields.privateListField, privateListBytes)
       val publicList = URIList(publicListBytes)
       val privateList = URIList(privateListBytes)
 
-      doc.add(publicListField)
-      doc.add(privateListField)
+      publicListFields.foreach{doc.add}
+      privateListFields.foreach{doc.add}
 
       val uri = buildURIIdField(publicList)
       doc.add(uri)
 
-      val bookmarkIds = buildBookmarkIdField(publicBookmarks.toSeq, privateBookmarks.toSeq)
-      doc.add(bookmarkIds)
+      val bookmarkIdsFields = buildBookmarkIdField(publicBookmarks.toSeq, privateBookmarks.toSeq)
+      bookmarkIdsFields.foreach{doc.add}
 
       val titles = buildBookmarkTitleList(publicBookmarks.toSeq, privateBookmarks.toSeq, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
@@ -181,7 +185,7 @@ object URIGraphIndexer {
     }
 
     private def buildURIListField(field: String, uriListBytes: Array[Byte]) = {
-      buildBinaryDocValuesField(field, uriListBytes)
+      buildExtraLongBinaryDocValuesField(field, uriListBytes)
     }
 
     private def buildURIIdField(uriList: URIList) = {
@@ -226,10 +230,10 @@ object URIGraphIndexer {
       sites
     }
 
-    private def buildBookmarkIdField(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): Field = {
+    private def buildBookmarkIdField(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): Seq[Field] = {
       val arr = (publicBookmarks.map(_.id.get.id) ++ privateBookmarks.map(_.id.get.id)).toArray
       val packedBookmarkIds = Util.packLongArray(arr)
-      buildBinaryDocValuesField(URIGraphFields.bookmarkIdField, packedBookmarkIds)
+      buildExtraLongBinaryDocValuesField(URIGraphFields.bookmarkIdField, packedBookmarkIds)
     }
   }
 }

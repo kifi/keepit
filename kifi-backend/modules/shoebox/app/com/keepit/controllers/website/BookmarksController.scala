@@ -7,8 +7,7 @@ import com.keepit.heimdal._
 import com.keepit.commanders._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders.KeepInfo._
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.WebsiteController
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{Id, ExternalId}
@@ -43,7 +42,7 @@ class BookmarksController @Inject() (
     clock: Clock,
     heimdalContextBuilder: HeimdalContextBuilderFactory
   )
-  extends WebsiteController(actionAuthenticator) {
+  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   implicit val writesKeepInfo = new FullKeepInfoWriter()
 

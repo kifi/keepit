@@ -5,11 +5,15 @@ import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.model.{BookmarkSource, ExperimentType}
+import com.keepit.model.{NotificationCategory, BookmarkSource, ExperimentType}
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.net.{Host, URI, UserAgent}
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.common.mail.ElectronicMail
+import com.keepit.social.SocialNetworkType
+import scala.util.Try
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.amazon.{MyAmazonInstanceInfo, AmazonInstanceInfo}
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -98,12 +102,10 @@ class HeimdalContextBuilder {
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build : HeimdalContext = HeimdalContext(data.toMap)
 
-  def addServiceInfo(serviceDiscovery: ServiceDiscovery): Unit = {
-    this += ("serviceVersion", serviceDiscovery.myVersion.value)
-    serviceDiscovery.thisInstance.map { instance =>
-      this += ("serviceInstance", instance.instanceInfo.instanceId.id)
-      this += ("serviceZone", instance.instanceInfo.availabilityZone)
-    }
+  def addServiceInfo(thisService: FortyTwoServices, myAmazonInstanceInfo: MyAmazonInstanceInfo): Unit = {
+    this += ("serviceVersion", thisService.currentVersion.value)
+    this += ("serviceInstance", myAmazonInstanceInfo.info.instanceId.id)
+    this += ("serviceZone", myAmazonInstanceInfo.info.availabilityZone)
   }
 
   def addRequestInfo(request: RequestHeader): Unit = {
@@ -115,6 +117,7 @@ class HeimdalContextBuilder {
       case authRequest: AuthenticatedRequest[_] =>
         authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(authRequest.experiments)
+        Try(SocialNetworkType(authRequest.identity.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
       case _ =>
     }
   }
@@ -162,13 +165,19 @@ class HeimdalContextBuilder {
 
   def addEmailInfo(email: ElectronicMail): Unit = {
     this += ("channel", "email")
-    this += ("category", email.category.category)
     this += ("emailId", email.id.map(_.id.toString).getOrElse(email.externalId.id))
     this += ("subject", email.subject)
     this += ("from", email.from.address)
     this += ("fromName", email.fromName.getOrElse(""))
+    this.addNotificationCategory(email.category)
     email.inReplyTo.foreach { previousEmailId => this += ("inReplyTo", previousEmailId.id) }
     email.senderUserId.foreach { id => this += ("senderUserId", id.id) }
+  }
+
+  def addNotificationCategory(category: NotificationCategory): Unit = {
+    val camelledCategory = category.category.toLowerCase().split("_") match { case Array(h, q @ _*)  => h + q.map(_.capitalize).mkString }
+    this += ("category", camelledCategory)
+    NotificationCategory.User.parentCategory.get(category).foreach { parentCategory => this += ("parentCategory", parentCategory) }
   }
 
   def anonymise(toBeRemoved: String*): Unit = {
@@ -182,10 +191,13 @@ class HeimdalContextBuilder {
 }
 
 @Singleton
-class HeimdalContextBuilderFactory @Inject() (serviceDiscovery: ServiceDiscovery) {
+class HeimdalContextBuilderFactory @Inject() (
+    thisService: FortyTwoServices,
+    myAmazonInstanceInfo: MyAmazonInstanceInfo) {
+
   def apply(): HeimdalContextBuilder = {
     val contextBuilder = new HeimdalContextBuilder()
-    contextBuilder.addServiceInfo(serviceDiscovery)
+    contextBuilder.addServiceInfo(thisService, myAmazonInstanceInfo)
     contextBuilder
   }
 

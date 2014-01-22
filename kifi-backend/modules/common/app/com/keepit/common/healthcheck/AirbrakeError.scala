@@ -141,7 +141,7 @@ object AirbrakeError {
   import scala.collection.JavaConverters._
 
   val MaxMessageSize = 10 * 1024 //10KB
-  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError =
+  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String): AirbrakeError =
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),

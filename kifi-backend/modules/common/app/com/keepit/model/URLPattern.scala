@@ -11,7 +11,7 @@ case class URLPattern (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   state: State[URLPattern] = URLPatternStates.ACTIVE
-) extends Model[URLPattern] {
+) extends ModelWithState[URLPattern] {
   def withId(id: Id[URLPattern]): URLPattern = copy(id = Some(id))
   def withPattern(pattern: String): URLPattern = copy(pattern = pattern)
   def withExample(example: Option[String]): URLPattern = copy(example = example)

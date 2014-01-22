@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.model.{FeatureWaitlistEntry, FeatureWaitlistRepo}
+import com.keepit.model.{NotificationCategory, FeatureWaitlistEntry, FeatureWaitlistRepo}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, GenericEmailAddress, EmailAddresses}
@@ -26,7 +26,7 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
           subject = s"You're on the wait list",
           htmlBody = template._1(unsubLink).body,
           textBody = Some(template._2(unsubLink).body),
-          category = PostOffice.Categories.User.NOTIFICATION)
+          category = NotificationCategory.User.WAITLIST)
         )
       }
     }

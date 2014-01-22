@@ -167,8 +167,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
         } else {
           render('html/keeper/titled_tip', {
             title: (o.kept ? 'Unkeep' : 'Keep') + ' (' + CO_KEY + '+Shift+K)',
-            html: o.kept ? 'Un-keeping this page will<br>remove it from your keeps.' :
-              'Keeping this page helps you<br>easily find it later.'
+            html: o.kept ? 'Un-keeping this page will<br/>remove it from your keeps.' :
+              'Keeping this page helps you<br/>easily find it later.'
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
@@ -191,9 +191,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
         'Make Private' :
         'Make Public';
       var html = !kept ?
-        'Keeping this privately allows you<br>to find this page easily without<br>letting anyone know you kept it.' : publicly ?
-        'This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it.' :
-        'This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.';
+        'Keeping this privately allows you<br/>to find this page easily without<br/>letting anyone know you kept it.' : publicly ?
+        'This keep is public. Making it private<br/>allows you to find it easily without<br/>letting anyone know you kept it.' :
+        'This keep is private. Making it<br/>public allows your friends to<br/>discover that you kept it.';
       render('html/keeper/titled_tip', {title: title, html: html}, function (html) {
         configureHover(html, {
           suppressed: isSticky,
@@ -216,7 +216,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       render('html/keeper/titled_tip', {
         cssClass: 'kifi-tag-tip',
         title: 'Tags', //'Tags (' + CO_KEY + '+Shift+A)', TODO: key binding
-        html: 'You can tag a keep to<br>make it easier to find.'
+        html: 'You can tag a keep to<br/>make it easier to find.'
       }, function (html) {
         configureHover(html, {
           suppressed: isSticky,
@@ -250,8 +250,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }).hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
-        i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br>New ones are highlighted.'],
-        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br>and start a discussion.']
+        i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br/>New ones are highlighted.'],
+        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br/>and start a discussion.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
@@ -567,7 +567,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     onPaneChange: function (locator) {
       $slider.find('.kifi-at').removeClass('kifi-at');
       if (locator) {
-        $slider.find('.kifi-dock-' + locator.split('/')[1]).addClass('kifi-at');
+        $slider.find('.kifi-dock-' + locator.split(/[\/:]/)[1]).addClass('kifi-at');
         idleTimer.kill();
         $slider.data().stickiness |= 2;
       } else {  // dislodge from pane and prepare for x transition

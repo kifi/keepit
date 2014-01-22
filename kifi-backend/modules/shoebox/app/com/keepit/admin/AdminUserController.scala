@@ -42,6 +42,22 @@ case class UserStatistics(
     experiments: Set[ExperimentType],
     kifiInstallations: Seq[KifiInstallation])
 
+case class UserStatisticsPage(
+  userViewType: UserViewType,
+  count: Int,
+  users: Seq[UserStatistics],
+  page: Int,
+  pageCount: Int,
+  pageSize: Int)
+
+sealed trait UserViewType
+object UserViewTypes {
+  case object AllUsersViewType extends UserViewType
+  case object RealUsersViewType extends UserViewType
+  case object FakeUsersViewType extends UserViewType
+}
+import UserViewTypes._
+
 class AdminUserController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
@@ -68,8 +84,6 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCommander: UserCommander,
-    bookmarkCommander: BookmarksCommander,
-    collectionCommander: CollectionCommander,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
@@ -209,8 +223,6 @@ class AdminUserController @Inject() (
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
     val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
-    val state = new BigInteger(130, new SecureRandom()).toString(32)
-
     Async {
       for {
         abookInfos <- abookInfoF
@@ -219,12 +231,14 @@ class AdminUserController @Inject() (
       } yield {
         Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
           fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
-          collections, collectionFilter, state)).withSession(session + ("stateToken" -> state ))
+          collections, collectionFilter))
       }
     }
   }
 
   def allUsersView = usersView(0)
+  def allRealUsersView = realUsersView(0)
+  def allFakeUsersView = fakeUsersView(0)
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
@@ -235,14 +249,39 @@ class AdminUserController @Inject() (
       kifiInstallations)
   }
 
-  def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 50
+  private def numPages(count: Int, pageSize: Int): Int = {
+    Math.ceil(count.toFloat / pageSize.toFloat).toInt
+  }
 
+  def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
+    val PAGE_SIZE: Int = 50
     val users = db.readOnly { implicit s =>
-      userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
+      userViewType match {
+        case AllUsersViewType => userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
+        case RealUsersViewType => userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
+        case FakeUsersViewType => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
+      }
     }
-    val userCount = db.readOnly { implicit s => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED) }
-    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt, None))
+    val userCount = db.readOnly { implicit s =>
+      userViewType match {
+        case AllUsersViewType => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)
+        case RealUsersViewType => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
+        case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
+      }
+    }
+    UserStatisticsPage(userViewType, userCount, users, page, numPages(userCount, PAGE_SIZE), PAGE_SIZE)
+  }
+
+  def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, AllUsersViewType), None))
+  }
+
+  def realUsersView(page: Int = 0) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, RealUsersViewType), None))
+  }
+
+  def fakeUsersView(page: Int = 0) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, FakeUsersViewType), None))
   }
 
   def searchUsers() = AdminHtmlAction { implicit request =>
@@ -255,7 +294,7 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
+        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users.size, users, 0, 1, users.size), searchTerm))
     }
   }
 
@@ -453,7 +492,8 @@ class AdminUserController @Inject() (
       "category" -> optional(text)
     ))
 
-    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, categoryOverride) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, categoryOpt) = notifyForm.bindFromRequest.get
+    val category = categoryOpt.map(NotificationCategory.apply) getOrElse NotificationCategory.User.ANNOUNCEMENT
 
     val usersOpt : Option[Seq[Id[User]]] = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
     val isSticky : Boolean = sticky.map(_ => true).getOrElse(false)
@@ -461,12 +501,12 @@ class AdminUserController @Inject() (
     log.info("Sending global notification via Eliza!")
     usersOpt.map {
       users =>
-        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, categoryOverride)
+        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
     } getOrElse {
       val users = db.readOnly {
         implicit session => userRepo.getAllIds()
       } //Note: Need to revisit when we have >50k users.
-      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, categoryOverride)
+      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
     }
 
 
@@ -536,19 +576,5 @@ class AdminUserController @Inject() (
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }
-  }
-
-  //Migration code for default keeps
-  def createDefaultKeeps(doIt : Boolean = false) = AdminHtmlAction { implicit request =>
-    Async { SafeFuture {
-      val allUsers = db.readOnly { implicit s => userRepo.all() }
-      val sourcesByUser = db.readOnly { implicit s => bookmarkRepo.getSourcesByUser() }.withDefaultValue(Seq.empty)
-      val modifed = allUsers.collect { case user if sourcesByUser(user.id.get).isEmpty || sourcesByUser(user.id.get) == Seq(BookmarkSource.bookmarkImport) =>
-        if (doIt) userCommander.createDefaultKeeps(user.id.get)(HeimdalContext.empty)
-        user.id.get
-      }
-      val json = JsArray(modifed.map(Id.format.writes))
-      Ok(json)
-    }}
   }
 }

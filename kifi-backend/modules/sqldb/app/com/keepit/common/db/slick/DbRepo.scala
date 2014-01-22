@@ -3,15 +3,14 @@ package com.keepit.common.db.slick
 import com.keepit.common.strings._
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.inject._
-
 import org.joda.time.DateTime
 import play.api.Play.current
 import scala.slick.driver._
 import scala.slick.session._
 import scala.slick.lifted._
 import DBSession._
-
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Logger
@@ -24,10 +23,10 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): Unit
+  def deleteCache(model: M)(implicit session: RSession): Unit
 }
 
 trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
-  def deleteCache(model: M): Unit
   def delete(model: M)(implicit session:RWSession):Int
 
   // potentially more efficient variant but we currently depend on having the model available for our caches
@@ -54,9 +53,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   lazy val dbLog = Logger("com.keepit.db")
 
-  //todo(martin) remove this default implementation so we force repos to implement it
-  override def invalidateCache(model: M)(implicit session: RSession): Unit = {}
-
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
@@ -78,7 +74,12 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
       case Some(id) => update(toUpdate)
       case None => toUpdate.withId(insert(toUpdate))
     }
-    invalidateCache(result)
+    session.onTransactionSuccess({
+      model match {
+        case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
+        case _ => invalidateCache(result)
+      }
+    })(ExecutionContext.immediate) // invalidate the cache immediately after commit
     result
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
@@ -119,7 +120,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    if (count != 1) throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    if (count != 1) {
+      deleteCache(model)
+      throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    }
     model
   }
 

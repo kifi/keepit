@@ -39,6 +39,10 @@ class UserSessionRepoImpl @Inject() (
     externalIdCache.set(UserSessionExternalIdKey(userSession.externalId), userSession)
   }
 
+  override def deleteCache(userSession: UserSession)(implicit session: RSession): Unit = {
+    externalIdCache.remove(UserSessionExternalIdKey(userSession.externalId))
+  }
+
   override def getOpt(id: ExternalId[UserSession])(implicit session: RSession): Option[UserSession] = {
     externalIdCache.getOrElseOpt(UserSessionExternalIdKey(id)) {
       (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption

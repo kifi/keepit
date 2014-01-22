@@ -113,6 +113,22 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       }
     }
 
+    "generate UserToUriEdgeSet in extreme case" in {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule){
+        val (users, uris) = superBigData
+        val expectedUriToUserEdges = uris.dropRight(1).map{ uri => (uri, Seq(users(0)))}.toList ::: List((uris.last, Seq(users(1))))
+        expectedUriToUserEdges.size == bigDataSize
+        val bookmarks = saveBookmarksByURI(expectedUriToUserEdges, mixPrivate = false)
+        val indexer = mkURIGraphIndexer()
+        indexer.update()
+
+        val searcher = URIGraphSearcher(indexer)
+        searcher.getUserToUriEdgeSet(users(0).id.get, publicOnly = false).destIdSet.size === bigDataSize - 1
+        searcher.getUserToUriEdgeSet(users(1).id.get, publicOnly = false).destIdSet.size === 1
+      }
+
+    }
+
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData

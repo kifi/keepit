@@ -135,7 +135,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def onError(request: RequestHeader, ex: Throwable): Result = {
     val errorId: ExternalId[_] = ex match {
       case reported: ReportedException => reported.id
-      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
+      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex, s"Unreported Exception $ex")).id
     }
     System.err.println(s"Play onError handler for ${ex.toString}")
     ex.printStackTrace()

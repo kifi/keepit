@@ -363,22 +363,38 @@ $(function () {
 	}
 
 	function showKeepDetails() {
-		var $r = $detail.off('transitionend'), d;
+		var $r = $detail.off('transitionend'),
+			d;
 		if ($r.css('display') === 'block') {
 			d = $r[0].getBoundingClientRect().left - $main[0].getBoundingClientRect().right;
 		} else {
-			$r.css({display: 'block', visibility: 'hidden', transform: ''});
+			$r.css({
+				display: 'block',
+				visibility: 'hidden',
+				transform: ''
+			});
 			d = $(window).width() - $r[0].getBoundingClientRect().left;
 		}
-		$r.css({visibility: '', transform: 'translate(' + d + 'px,0)', transition: 'none'});
+		$r.css({
+			visibility: '',
+			transform: 'translate(' + d + 'px,0)',
+			transition: 'none'
+		});
 		$r.layout();
-		$r.css({transform: '', transition: '', 'transition-timing-function': 'ease-out'});
+		$r.css({
+			transform: '',
+			transition: '',
+			'transition-timing-function': 'ease-out'
+		});
 	}
 	function hideKeepDetails() {
 		var d = $(window).width() - $main[0].getBoundingClientRect().right;
 		$detail.on('transitionend', function end(e) {
 			if (e.target === this) {
-				$(this).off('transitionend').css({display: '', transform: ''});
+				$(this).off('transitionend').css({
+					display: '',
+					transform: ''
+				});
 			}
 		}).css({transform: 'translate(' + d + 'px,0)', 'transition-timing-function': 'ease-in'});
 	}
@@ -458,6 +474,7 @@ $(function () {
 			}
 		}
 	});
+
 	var profileTmpl = Tempo.prepare('profile-template');
 
 	function editProfileInput($target, e) {
@@ -1210,6 +1227,7 @@ $(function () {
 	function showProfile() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
+
 			updateMe(me);
 
 			var $emails = $('.profile-email-accounts tbody').empty();
@@ -1299,6 +1317,9 @@ $(function () {
 					});
 				}
 			});
+
+			var profileScroller = $('.profile').antiscroll({x: false, width: '100%'}).data('antiscroll');
+			$(window).resize(profileScroller.refresh.bind(profileScroller));
 		});
 	}
 
@@ -2436,8 +2457,9 @@ $(function () {
 		}
 
 		$noResults.html(html).show();
-		$noResults.find('.refresh-friends').click(function () {
+		$noResults.find('.refresh-friends').click(function (e) {
 			submitForm('/friends/invite/refresh');
+			$(this).removeAttr('href').text('Now refreshing... This may take a few minutes. Please try your search again later.');
 		});
 	}
 
@@ -3536,6 +3558,9 @@ $(function () {
 	var splashScroller = $splash.antiscroll({x: false, width: '100%'}).data('antiscroll');
 	$(window).resize(splashScroller.refresh.bind(splashScroller));
 
+	var detailScroller = $detail.antiscroll({x: false, width: '100%'}).data('antiscroll');
+	$(window).resize(detailScroller.refresh.bind(detailScroller));
+
 	$splash.on('click', '.kifi-tutorial', function (e) {
 		e.preventDefault();
 		initOnboarding(true);
@@ -3864,25 +3889,50 @@ $(function () {
 		e.preventDefault();
 		removeFromCollection($(this.parentNode).data('id'), $main.find('.keep.detailed'));
 	}).on('click', '.page-coll-add', function () {
-		var $btn = $(this), $in = $('.page-coll-input').css('width', $btn.outerWidth());
+		var $btn = $(this),
+			$in = $('.page-coll-input').css('width', $btn.outerWidth());
+
 		$btn.hide();
 		$in.add('.page-coll-sizer').show();
-		$in.layout().css('width', '').prop('disabled', false).focus().select().trigger('input');
+		$in.layout()
+			.css('width', '')
+			.prop('disabled', false)
+			.focus()
+			.select()
+			.trigger('input');
 	}).on('blur', '.page-coll-input', function (e) {
 		var input = this;
 		hideAddCollTimeout = setTimeout(hide, 50);
+
 		function hide() {
 			clearTimeout(hideAddCollTimeout);
 			hideAddCollTimeout = null;
-			var $btn = $('.page-coll-add').css({display: '', visibility: 'hidden', position: 'absolute'}), width = $btn.outerWidth();
-			$btn.css({display: 'none', visibility: '', position: ''});
-			var $in = $(input).val('').on('transitionend', function end() {
-				$in.off('transitionend', end).prop('disabled', true).add('.page-coll-sizer').hide().css('width', '');
-				$btn.show();
-			}).layout().css('width', width);
-			$('.page-coll-opts').slideUp(120, function () {
-				$(this).empty();
+
+			var $btn = $('.page-coll-add')
+				.css({
+					display: '',
+					visibility: 'hidden',
+					position: 'absolute'
+				}),
+				width = $btn.outerWidth();
+
+			$btn.css({
+				display: 'none',
+				visibility: '',
+				position: ''
 			});
+
+			var $in = $(input)
+				.val('')
+				.layout()
+				.css('width', width)
+				.prop('disabled', true)
+				.add('.page-coll-sizer')
+				.hide()
+				.css('width', '');
+			$btn.show();
+
+			$('.page-coll-opts').empty().hide();
 		}
 	}).on('focus', '.page-coll-input', function (e) {
 		clearTimeout(hideAddCollTimeout);
@@ -4349,17 +4399,41 @@ $(function () {
 
 		function showBookmarkImportDialog(event) {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
+			var step = 1;
+			mixpanel.track('user_viewed_internal_page', {
+				type: 'bookmarkImport',
+				origin: window.location.origin
+			});
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
+				mixpanel.track('user_clicked_internal_page', {
+					type: 'bookmarkImport',
+					action: $(this).is('.cancel-import') ? 'cancel' : 'x',
+					step: step,
+					origin: window.location.origin
+				});
 				$bookmarkImportDialog.dialog('hide');
 				$bookmarkImportDialog = null;
 				// don't open again!
 				event.source.postMessage('import_bookmarks_declined', event.origin);
 			}).on('click', 'button.do-import', function () {
+				mixpanel.track('user_clicked_internal_page', {
+					type: 'bookmarkImport',
+					action: 'approved',
+					step: step,
+					origin: window.location.origin
+				});
 				$bookmarkImportDialog.find('.import-step-1').hide();
 				$bookmarkImportDialog.find('.import-step-2').show();
+				step = 2;
 				$bookmarkImportDialog.on('click', 'button', function () {
 					$bookmarkImportDialog.dialog('hide');
 					$bookmarkImportDialog = null;
+					mixpanel.track('user_clicked_internal_page', {
+						type: 'bookmarkImport',
+						action: 'done',
+						step: step,
+						origin: window.location.origin
+					});
 					window.location = "https://www.kifi.com/?m=2";
 				});
 				event.source.postMessage('import_bookmarks', event.origin);

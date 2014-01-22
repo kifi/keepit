@@ -1,4 +1,5 @@
 
+
 GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
 GET     /ss/login                   securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
@@ -260,6 +261,9 @@ GET     /admin                      @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 
+GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.abookInfos()
+GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int, size:Int ?= 50)
+
 GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
 GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.getEventDescriptors()
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
@@ -267,6 +271,7 @@ GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyti
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
+GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
@@ -293,6 +298,7 @@ POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.sa
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
 GET     /admin/data/scrape        @com.keepit.controllers.admin.ScraperAdminController.searchScraper
+GET     /admin/data/scraper_pending        @com.keepit.controllers.admin.ScraperAdminController.pendingScraperRequests
 GET     /admin/data/scrape/regex  @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
@@ -313,8 +319,12 @@ GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIG
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRealUsersView
+GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
+GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.realUsersView(page: Int)
+GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
@@ -340,7 +350,6 @@ POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserCon
 GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
-GET     /admin/defaultKeeps          @com.keepit.controllers.admin.AdminUserController.createDefaultKeeps(doIt: Boolean ?= false)
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
@@ -406,23 +415,6 @@ POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitatio
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
-GET     /admin/learning/docTopic        @com.keepit.controllers.admin.TopicModelController.documentTopic(content: Option[String] ?= None, topicId: Option[String] ?= None)
-POST    /admin/learning/inferDocTopic   @com.keepit.controllers.admin.TopicModelController.inferTopic
-GET     /admin/learning/wordTopic       @com.keepit.controllers.admin.TopicModelController.wordTopic(word: Option[String] ?= None, topic: Option[String] ?= None)
-POST    /admin/learning/getWordTopic    @com.keepit.controllers.admin.TopicModelController.getWordTopic
-GET     /admin/learning/userTopic       @com.keepit.controllers.admin.TopicModelController.userTopic(userId: Option[String] ?= None, topic: Option[String] ?= None)
-POST    /admin/learning/getUserTopic    @com.keepit.controllers.admin.TopicModelController.getUserTopic
-GET     /admin/learning/topic/remodel   @com.keepit.controllers.admin.TopicModelController.remodel()
-GET     /admin/learning/topics          @com.keepit.controllers.admin.TopicModelController.topicsViewDefault
-GET     /admin/learning/topics/:flag/:page            @com.keepit.controllers.admin.TopicModelController.topicsView(flag: String, page: Int)
-POST    /admin/learning/topics/updateTopicName/:id    @com.keepit.controllers.admin.TopicModelController.updateTopicName(id: Id[TopicName])
-GET     /admin/learning/addTopics/:flag               @com.keepit.controllers.admin.TopicModelController.addTopics(flag: String)
-POST    /admin/learning/saveAddedTopics/:flag         @com.keepit.controllers.admin.TopicModelController.saveAddedTopics(flag: String)
-GET     /admin/learning/genTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
-GET     /admin/learning/viewTopicWords/:flag          @com.keepit.controllers.admin.TopicModelController.viewTopicWords(flag: String)
-GET     /admin/learning/topicDetails/:flag/:index     @com.keepit.controllers.admin.TopicModelController.viewTopicDetails(flag: String, index: Int)
-GET     /admin/learning/topic/summary                 @com.keepit.controllers.admin.TopicModelController.summary
-
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 
 ##########################################
@@ -433,7 +425,7 @@ GET     /admin/server               @com.keepit.controllers.admin.AdminHealthCon
 GET     /admin/benchmark            @com.keepit.controllers.admin.AdminBenchmarkController.benchmarks()
 GET     /admin/healthcheck/error    @com.keepit.controllers.admin.AdminHealthController.causeError()
 GET     /admin/healthcheck/reportDeployment    @com.keepit.controllers.admin.AdminHealthController.reportDeployment()
-GET     /admin/healthcheck/causeHandbrakeError @com.keepit.controllers.admin.AdminHealthController.causeHandbrakeError(param: String)
+GET     /admin/healthcheck/causeAirbrakeError @com.keepit.controllers.admin.AdminHealthController.causeAirbrakeError(message: String ?= "[No Worry] Fake Airbrake Exception triggered from admin")
 GET     /admin/healthcheck/emailErrors         @com.keepit.controllers.admin.AdminHealthController.reportErrors()
 GET     /admin/healthcheck/errors              @com.keepit.controllers.admin.AdminHealthController.getErrors()
 GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.AdminHealthController.resetErrorCount()
@@ -476,6 +468,8 @@ GET     /internal/shoebox/database/getUriIdsInCollection @com.keepit.controllers
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.internal.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()

@@ -2,7 +2,7 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import com.keepit.common.controller.{AuthenticatedRequest, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ShoeboxServiceController, AuthenticatedRequest, WebsiteController, ActionAuthenticator}
 import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -24,6 +24,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
+import com.keepit.controllers.internal.ShoeboxController
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -46,9 +47,8 @@ class AuthController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     emailAddressRepo: EmailAddressRepo,
     inviteCommander: InviteCommander,
-    passwordResetRepo: PasswordResetRepo,
-    kifiInstallationRepo: KifiInstallationRepo
-  ) extends WebsiteController(actionAuthenticator) with Logging {
+    passwordResetRepo: PasswordResetRepo
+  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private val PopupKey = "popup"
 
@@ -160,7 +160,9 @@ class AuthController @Inject() (
     request.request.headers.get(USER_AGENT) map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (agent.isMobile) {
+      if (agent.name == "IE" || agent.name == "Safari") {
+        Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
+      } else if (agent.isMobile) {
         Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
       } else if (!agent.isSupportedDesktop) {
         Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
