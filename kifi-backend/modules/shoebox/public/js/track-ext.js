@@ -15,13 +15,21 @@
 
 	var Tracker = win.Tracker = {
 		trackClick: function (el) {
-			var $el = $(el),
-				trackAction = getDataFromAncestors($el, 'trackAction');
-			if (trackAction) {
-				track(getClickEventName(), {
-					action: trackAction,
-					source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
-				});
+			try {
+				var $el = $(el),
+					trackAction = getDataFromAncestors($el, 'trackAction');
+				if (trackAction) {
+					track(getClickEventName(), {
+						type: getType(),
+						action: trackAction,
+						source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
+					});
+				}
+			}
+			catch (e) {
+				if (win.console && win.console.log) {
+					win.console.log('could not track', e, e.stack);
+				}
 			}
 		}
 	};

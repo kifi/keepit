@@ -1,30 +1,34 @@
-@(abooks:Seq[ABookInfo])(implicit flash: Flash)
+@(abooks:Seq[ABookInfo], page: Int, abooksCount: Int, pageSize: Int)(implicit flash: Flash)
 
-@admin(abooks.length + " Address Books") {
+@otherPagesRoute(page: Int) = {@com.keepit.controllers.admin.routes.ABookAdminController.abooksView(page)}
 
-    <table class="table table-condensed table-striped">
-        <tr>
-            <th class="span1">Id</th>            
-            <th class="span2">createdAt</th>
-            <th class="span1">state</th>
-            <th class="span1">user ID</th>
-            <th class="span1">owner Email</th>
-            <th class="span1">origin</th>
-            <th class="span1"># contacts</th>
-            <th class="span1"># processed</th>
-        </tr>
-        @for(abook <- abooks) {
-        <tr>
-            <td>@abook.id</td>
-            <td>@abook.createdAt</td>
-            <td>@abook.state</td>
-            <td>@abook.userId</td>
-            <td>@abook.ownerEmail</td>
-            <td>@abook.origin</td>
-            <td>@abook.numContacts</td>
-            <td>@abook.numProcessed</td>
-        </tr>
-        }
-    </table>
+@admin(abooksCount + " Address Books") {
+    <h2> Showing @abooks.length address books (page @(page + 1)) </h2>
 
+    @adminHelper.pagination(page, abooksCount, pageSize, otherPagesRoute _) {
+        <table class="table table-condensed table-striped">
+            <tr>
+                <th class="span1">Id</th>
+                <th class="span2">createdAt</th>
+                <th class="span1">state</th>
+                <th class="span1">user ID</th>
+                <th class="span1">owner Email</th>
+                <th class="span1">origin</th>
+                <th class="span1"># contacts</th>
+                <th class="span1"># processed</th>
+            </tr>
+            @for(abook <- abooks) {
+            <tr>
+                <td>@abook.id</td>
+                <td>@adminHelper.dateTimeDisplay(abook.createdAt)</td>
+                <td>@abook.state</td>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(abook.userId)">@abook.userId</a></td>
+                <td>@abook.ownerEmail</td>
+                <td>@abook.origin</td>
+                <td>@abook.numContacts</td>
+                <td>@abook.numProcessed</td>
+            </tr>
+            }
+        </table>
+    }
 }

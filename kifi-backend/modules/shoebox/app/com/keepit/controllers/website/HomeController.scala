@@ -28,6 +28,10 @@ import securesocial.core.{SecureSocial, Authenticator}
 
 import com.google.inject.Inject
 import com.keepit.common.net.UserAgent
+import com.keepit.heimdal._
+import scala.Some
+import play.api.mvc.DiscardingCookie
+import com.keepit.common.controller.AuthenticatedRequest
 
 class HomeController @Inject() (
   db: Database,
@@ -44,7 +48,8 @@ class HomeController @Inject() (
   fortyTwoServices: FortyTwoServices,
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
-  inviteCommander: InviteCommander)
+  inviteCommander: InviteCommander,
+  heimdalServiceClient: HeimdalServiceClient)
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -60,37 +65,17 @@ class HomeController @Inject() (
   }
 
   // Start post-launch stuff!
-
-  // temp! if I'm still here post-launch, sack whoever is responsible for things around here.
-  def newDesignCookie = Action { request =>
-    Ok.withCookies(Cookie("newdesign","yep"))
-  }
-
-
-  def newHome = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = newHomeNotAuthed(_))
-
-  private def newHomeNotAuthed(implicit request: Request[_]): Result = {
-    if (request.identityOpt.isDefined) {
-      // User needs to sign up or (social) finalize
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    } else {
-      // TODO: Redirect to /login if the path is not /
-      // Non-user landing page
-      Ok(views.html.marketing.landing())
-    }
-  }
-
   def about = HtmlAction(true)(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.about(isLoggedIn))
   }
 
-  def newTerms = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  def termsOfService = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.terms(isLoggedIn))
   }
 
-  def newPrivacy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  def privacyPolicy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     Ok(views.html.marketing.privacy(isLoggedIn))
   }
@@ -139,6 +124,7 @@ class HomeController @Inject() (
       val agentOpt = request.headers.get("User-Agent").map { agent =>
         UserAgent.fromString(agent)
       }
+      temporaryReportLandingLoad()
       if (agentOpt.exists(_.isMobile)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
@@ -149,6 +135,13 @@ class HomeController @Inject() (
       }
     }
   }
+
+  private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
+    val context = new HeimdalContextBuilder()
+    context.addRequestInfo(request)
+    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
+  }
+
 
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
@@ -209,7 +202,13 @@ class HomeController @Inject() (
         }
       } yield senderUserId
     }
-    SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
+    SafeFuture {
+      userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq)
+      // Temporary event for debugging purpose
+      val context = new HeimdalContextBuilder()
+      context.addRequestInfo(request)
+      heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
+    }
     setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }
@@ -236,17 +235,9 @@ class HomeController @Inject() (
     }
   }
 
-  // Do not remove until a while past Jan 7 2014. The extension sends users to this URL after installation.
+  // Do not remove until at least 1 Mar 2014. The extension sends users to this URL after installation.
   def gettingStarted = Action { request =>
-    Redirect("/")
-  }
-
-  def termsOfService = Action { implicit request =>
-    Ok(views.html.website.termsOfService())
-  }
-
-  def privacyPolicy = Action { implicit request =>
-    Ok(views.html.website.privacyPolicy())
+    MovedPermanently("/")
   }
 
 }

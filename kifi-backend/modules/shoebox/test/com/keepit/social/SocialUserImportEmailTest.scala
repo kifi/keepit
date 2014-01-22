@@ -9,12 +9,13 @@ import com.keepit.test._
 import play.api.libs.json.Json
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail.FakeMailModule
 
 class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
 
   "SocialUserImportEmail" should {
     "import email" in {
-      withDb(FakeHttpClientModule()) { implicit injector =>
+      withDb(FakeHttpClientModule(), FakeMailModule()) { implicit injector =>
         val graphs = List(
             ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )

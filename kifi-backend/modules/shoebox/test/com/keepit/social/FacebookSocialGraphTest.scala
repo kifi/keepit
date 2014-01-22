@@ -24,7 +24,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
     "find pagination url" in {
       withDb() { implicit injector =>
-        val graph = new FacebookSocialGraph(new FakeHttpClient(), db, socialUserInfoRepo, null)
+        val graph = new FacebookSocialGraph(new FakeHttpClient(), db, null, socialUserInfoRepo, null)
         val eishay1Json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min_page1.json")).mkString)
         graph.nextPageUrl(eishay1Json) === Some("https://graph.facebook.com/646386018/friends?fields=name,gender,username,email,picture&access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&limit=5000&offset=5000&__after_id=100004067535411")
       }
@@ -32,7 +32,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
     "not find pagination url" in {
       withDb() { implicit injector =>
-        val graph = new FacebookSocialGraph(new FakeHttpClient(), db, socialUserInfoRepo, null)
+        val graph = new FacebookSocialGraph(new FakeHttpClient(), db, null, socialUserInfoRepo, null)
         val eishay2Json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min_page2.json")).mkString)
         graph.nextPageUrl(eishay2Json) === None
       }
@@ -62,7 +62,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
         socialUserInfo.socialId.id === "eishay"
         socialUserInfo.credentials.get === socialUser
 
-        val graph = new FacebookSocialGraph(httpClient, db, socialUserInfoRepo, null)
+        val graph = new FacebookSocialGraph(httpClient, db, null, socialUserInfoRepo, null)
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo).get
         rawInfo.fullName === "Eishay Smith"
         rawInfo.userId === socialUserInfo.userId
@@ -77,7 +77,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
         val httpClient = new FakeHttpClient(Some({ case _ => data}))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
-        val graph = new FacebookSocialGraph(httpClient, db, socialUserInfoRepo, null) {
+        val graph = new FacebookSocialGraph(httpClient, db, null, socialUserInfoRepo, null) {
           override def getAccessToken(socialUserInfo: SocialUserInfo): String = ""
         }
         val rawInfo = graph.fetchSocialUserRawInfo(info).get
@@ -93,7 +93,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
         val httpClient = new FakeHttpClient(Some({ case _ => data}))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
-        val graph = new FacebookSocialGraph(httpClient, db, socialUserInfoRepo, null) {
+        val graph = new FacebookSocialGraph(httpClient, db, null, socialUserInfoRepo, null) {
           override def getAccessToken(socialUserInfo: SocialUserInfo): String = ""
         }
         val rawInfo = graph.fetchSocialUserRawInfo(info).get

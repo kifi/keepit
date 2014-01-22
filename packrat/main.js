@@ -902,6 +902,9 @@ function removeNotificationPopups(threadId) {
 function standardizeNotification(n) {
   n.category = (n.category || 'message').toLowerCase();
   n.unread = n.unread || (n.unreadAuthors > 0);
+  if (n.time[n.time.length - 1] !== 'Z') {
+    n.time = new Date(n.time).toISOString();
+  }
   return n;
 }
 
@@ -1040,25 +1043,13 @@ function markRead(threadId, messageId, time) {
 
 function markAllThreadsRead(messageId, time) {  // .id and .time of most recent thread to mark
   var timeDate = new Date(time);
-  var markedThreads = {};
   for (var id in threadsById) {
     var th = threadsById[id];
     if (th.unread && (th.id === messageId || th.time <= time)) {
       th.unread = false;
       th.unreadAuthors = th.unreadMessages = 0;
-      markedThreads[id] = th;
       if (timeDate - new Date(th.time) < 180000) {
         removeNotificationPopups(id);
-      }
-    }
-  }
-  for (var key in threadLists) {
-    var tl = threadLists[key];
-    for (var i = tl.ids.length; i--;) {
-      var id = tl.ids[i];
-      var th = markedThreads[id];
-      if (th && !th.muted) {
-        tl.decNumUnreadUnmuted();
       }
     }
   }
@@ -1069,6 +1060,7 @@ function markAllThreadsRead(messageId, time) {  // .id and .time of most recent 
     }
   }
   threadLists.unread.numTotal = threadLists.unread.ids.length;  // any not loaded are older and now marked read
+  threadLists.all.numUnreadUnmuted = threadLists.all.countUnreadUnmuted();
 
   forEachTabAtThreadList(function (tab) {
     api.tabs.emit(tab, 'all_threads_read', {id: messageId, time: time});
@@ -2021,11 +2013,11 @@ api.timers.setTimeout(function() {
 authenticate(function() {
   if (api.loadReason === 'install') {
     log("[main] fresh install")();
-    var tab = api.tabs.anyAt(webBaseUri() + "/install");
+    var tab = api.tabs.anyAt(webBaseUri() + '/install');
     if (tab) {
-      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+      api.tabs.navigate(tab.id, webBaseUri() + '/');
     } else {
-      api.tabs.open(webBaseUri() + "/getting-started");
+      api.tabs.open(webBaseUri() + '/');
     }
   }
   if (api.loadReason === 'install' || api.mode.isDev()) {

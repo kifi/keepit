@@ -304,6 +304,13 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfos))
   }
 
+  def getABooksCount() = Action { request =>
+    val count = db.readOnly(attempts = 2) { implicit session =>
+      abookInfoRepo.count
+    }
+    Ok(JsNumber(count))
+  }
+
   def getABookInfos(userId:Id[User]) = Action { request =>
     val abookInfos = db.readOnly(attempts = 2) { implicit session =>
       abookInfoRepo.findByUserId(userId)

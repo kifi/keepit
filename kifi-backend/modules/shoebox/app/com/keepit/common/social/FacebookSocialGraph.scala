@@ -7,14 +7,20 @@ import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.{Gender, SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
-import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
+import com.keepit.model._
+import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialGraph}
 import com.keepit.common.performance._
 import com.keepit.common.net._
 
 
 import play.api.libs.json._
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.net.NonOKResponseException
+import play.api.libs.json.JsArray
+import com.keepit.common.net.DirectUrl
+import scala.Some
+import com.keepit.social.SocialId
 
 object FacebookSocialGraph {
   val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
@@ -31,6 +37,7 @@ object FacebookSocialGraph {
 class FacebookSocialGraph @Inject() (
     httpClient: HttpClient,
     db: Database,
+    postOffice: LocalPostOffice,
     socialRepo: SocialUserInfoRepo,
     airbrake: AirbrakeNotifier
   ) extends SocialGraph with Logging {
@@ -40,7 +47,7 @@ class FacebookSocialGraph @Inject() (
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
     val jsonsOpt = try {
-      Some(fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))))
+      Some(fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)), socialUserInfo))
     } catch {
       case e @ NonOKResponseException(url, response, _) =>
         import FacebookSocialGraph.ErrorSubcodes._
@@ -120,19 +127,29 @@ class FacebookSocialGraph @Inject() (
     (json \ "gender").asOpt[String].map(Gender.key -> Gender(_).toString)
   ).flatten.toMap
 
-  private def fetchJsons(url: String): Seq[JsValue] = {
-    val jsons = get(url)
+  private def fetchJsons(url: String, socialUserInfo: SocialUserInfo): Seq[JsValue] = {
+    val jsons = get(url, socialUserInfo)
     log.info(s"downloaded FB json using $url")
-    jsons +: nextPageUrl(jsons).toSeq.flatMap(fetchJsons)
+    jsons +: nextPageUrl(jsons).toSeq.flatMap { u => fetchJsons(u, socialUserInfo) }
   }
 
   private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
 
-  private def get(url: String): JsValue = timing(s"fetching FB JSON using $url") {
+  private def get(url: String, socialUserInfo: SocialUserInfo): JsValue = timing(s"fetching FB JSON using $url") {
     val client = httpClient.withTimeout(TWO_MINUTES)
+    val tracer = new StackTrace()
     val myFailureHandler: Request => PartialFunction[Throwable, Unit] = { url => {
+        case nonOkRes: NonOKResponseException =>
+          val user = s"${socialUserInfo.id.getOrElse("NO_ID")}:${socialUserInfo.fullName}"
+          db.readWrite{ implicit s =>
+            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.EISHAY, EmailAddresses.ANDREW, EmailAddresses.EFFI),
+              subject =  s"fail getting Facebook json for $user",
+              htmlBody = s"user: $socialUserInfo\n</br>url: https://admin.kifi.com/admin/social_user/${socialUserInfo.id.getOrElse("NO_ID")}\n</br>exception: $nonOkRes",
+              category = NotificationCategory.System.ADMIN))
+          }
         case ex: Exception =>
-          airbrake.notify(s"fail getting json using $url", ex)
+          val user = s"${socialUserInfo.id.getOrElse("NO_ID")}:${socialUserInfo.fullName}"
+          airbrake.notify(s"fail getting json for social user $user using $url", tracer.withCause(ex))
       }
     }
     client.get(DirectUrl(url), myFailureHandler).json
