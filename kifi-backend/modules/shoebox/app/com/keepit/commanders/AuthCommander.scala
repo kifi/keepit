@@ -24,6 +24,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common._
 import com.keepit.common.performance.timing
 import scala.concurrent.Future
+import com.keepit.heimdal._
+import securesocial.core.IdentityId
+import scala.Some
+import securesocial.core.PasswordInfo
+import com.keepit.social.SocialId
+import com.keepit.social.UserIdentity
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
@@ -95,7 +101,9 @@ class AuthCommander @Inject()(
   passwordResetRepo: PasswordResetRepo,
   s3ImageStore: S3ImageStore,
   postOffice: LocalPostOffice,
-  inviteCommander: InviteCommander
+  inviteCommander: InviteCommander,
+  userExperimentRepo: UserExperimentRepo,
+  heimdalServiceClient: HeimdalServiceClient
 ) extends Logging {
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
@@ -117,7 +125,8 @@ class AuthCommander @Inject()(
         passwordInfo = Some(passwordInfo)
       ),
       allowSignup = true,
-      isComplete = isComplete)
+      isComplete = isComplete
+    )
 
     UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
 
@@ -132,13 +141,15 @@ class AuthCommander @Inject()(
       userId
     }
 
-    val user = userIdFromEmailIdentity.orElse {
-      db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO).map(_.userId).flatten
-      }
+    val confusedCompilerUserId = userIdFromEmailIdentity getOrElse {
+      val userIdOpt = for {
+        socialUserInfo <- db.readOnly { implicit s =>socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO) }
+        userId <- socialUserInfo.userId
+      } yield userId
+      userIdOpt.get
     }
 
-    (newIdentity, user.get)
+    (newIdentity, confusedCompilerUserId)
   }
 
   private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
@@ -151,32 +162,35 @@ class AuthCommander @Inject()(
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  def finalizeSocialAccount(sfi:SocialFinalizeInfo, userIdOpt: Option[Id[User]], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]) = timing(s"[finalizeSocialAccount($userIdOpt)]") {
-    log.info(s"[finalizeSocialAccount] sfi=$sfi userId=$userIdOpt identity=$identityOpt extId=$inviteExtIdOpt")
-    require(AuthHelper.validatePwd(sfi.password), "invalid password")
-    val currentHasher = Registry.hashers.currentHasher
-    val pInfo = timing(s"[finalizeSocialAccount] hash") {
-      currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
+  def finalizeSocialAccount(sfi:SocialFinalizeInfo, socialIdentity: Identity, inviteExtIdOpt:Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext) =
+    timing(s"[finalizeSocialAccount(${socialIdentity.identityId.providerId + "#" + socialIdentity.identityId.userId})]") {
+      log.info(s"[finalizeSocialAccount] sfi=$sfi identity=$socialIdentity extId=$inviteExtIdOpt")
+      require(AuthHelper.validatePwd(sfi.password), "invalid password")
+      val currentHasher = Registry.hashers.currentHasher
+      val pInfo = timing(s"[finalizeSocialAccount] hash") {
+        currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
+      }
+
+      val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
+        email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
+
+      SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
+
+      val user = db.readOnly { implicit session =>
+        userRepo.get(userId)
+      }
+
+      reportUserRegistration(user, inviteExtIdOpt)
+
+      val cropAttributes = parseCropForm(sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
+      sfi.picToken.map { token =>
+        s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
+      }
+
+      (user, emailPassIdentity)
     }
 
-    val (emailPassIdentity, userId) = saveUserPasswordIdentity(userIdOpt, identityOpt,
-      email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
-
-    SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
-
-    val user = db.readOnly { implicit session =>
-      userRepo.get(userId)
-    }
-
-    val cropAttributes = parseCropForm(sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
-    sfi.picToken.map { token =>
-      s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
-    }
-
-    (user, emailPassIdentity)
-  }
-
-  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]]): Future[(User, String, Identity)] = {
+  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, String, Identity)] = {
     require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
@@ -189,6 +203,9 @@ class AuthCommander @Inject()(
       val email = identity.email.get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
       val user = db.readOnly(userRepo.get(userId)(_))
+
+      reportUserRegistration(user, inviteExtIdOpt)
+
       (user, email, newIdentity)
     }
 
@@ -211,4 +228,15 @@ class AuthCommander @Inject()(
     } yield result
   }
 
+  private def reportUserRegistration(user: User, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext): Unit = SafeFuture {
+    val userId = user.id.get
+    val contextBuilder = new HeimdalContextBuilder
+    contextBuilder.data ++= existingContext.data
+    contextBuilder += ("action", "registered")
+    val experiments = db.readOnly() { implicit session => userExperimentRepo.getUserExperiments(userId) }
+    contextBuilder.addExperiments(experiments)
+    inviteExtIdOpt.foreach { invite => contextBuilder += ("acceptedInvite", invite.id) }
+
+    heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
+  }
 }

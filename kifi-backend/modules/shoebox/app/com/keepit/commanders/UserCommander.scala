@@ -18,7 +18,7 @@ import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal._
+import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import akka.actor.Scheduler
 
 import play.api.Play.current
@@ -91,8 +91,6 @@ class UserCommander @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   bookmarkCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
-  eventContextBuilder: HeimdalContextBuilderFactory,
-  heimdalServiceClient: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
@@ -176,28 +174,16 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(socialUser: Identity, state: State[User]) = {
-    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = socialUser.firstName, lastName = socialUser.lastName, state = state)) }
+  def createUser(firstName: String, lastName: String, state: State[User]) = {
+    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
-      val contextBuilder = eventContextBuilder()
-      socialUser.email.foreach { address =>
-        val testExperiments = ExperimentType.getTestExperiments(EmailAddress(userId = newUser.id.get, address = address))
-        contextBuilder.addExperiments(testExperiments)
-      }
-
-      createDefaultKeeps(newUser.id.get)(contextBuilder.build)
-
+      createDefaultKeeps(newUser.id.get)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
-
-      contextBuilder += ("action", "registered")
-      contextBuilder += ("identityId", socialUser.identityId.userId)
-      contextBuilder += ("identityProvider", socialUser.identityId.providerId)
-      contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
-      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
+      ()
     }
     newUser
   }
@@ -300,9 +286,8 @@ class UserCommander @Inject() (
     }
   }
 
-  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
+  def createDefaultKeeps(userId: Id[User]): Unit = {
     val contextBuilder = new HeimdalContextBuilder()
-    contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
     val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
@@ -425,7 +410,11 @@ class UserCommander @Inject() (
   def friend(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { user =>
-        if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
+        val openFriendRequests = friendRequestRepo.getBySender(userId, Set(FriendRequestStates.ACTIVE))
+
+        if (openFriendRequests.size > 40){
+          (false, "tooManySent")
+        } else if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
           (true, "alreadySent")
         } else {
           friendRequestRepo.getBySenderAndRecipient(user.id.get, userId) map { friendReq =>
@@ -532,7 +521,7 @@ class UserCommander @Inject() (
   }
 
   def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
-    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } map { user =>
+    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
       val success = db.readWrite(attempts = 2) { implicit s =>
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
@@ -543,7 +532,7 @@ class UserCommander @Inject() (
         }
       }
       success
-    } getOrElse false
+    }
   }
 
   def ignoreFriendRequest(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {

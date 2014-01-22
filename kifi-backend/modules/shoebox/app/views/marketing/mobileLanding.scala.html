@@ -66,21 +66,21 @@
         is coming soon</h1>
       <div class="kifi-lab-img"></div>
     </div>
-    <form class="kifi-add-form" method="POST" action="/waitlist">
+    <form class="kifi-add-form" method="POST" action="/waitlist" data-track-source="formTop" data-track-action="submit">
       <input type="hidden" name="feature" value="mobile_app">
       <input type="hidden" name="extId" value="">
       <div class="kifi-waiting-list">
         <div class="kifi-waiting-text">Add me to the waitlist</div>
         <div class="kifi-waiting-input-box">
-          <input class="kifi-waiting-email" type="email" name="email" placeholder="Enter your email here">
+          <input class="kifi-waiting-email" type="email" name="email" placeholder="Enter your email here" data-track-click data-track-action="clickEmailInput">
         </div>
       </div>
-      <button class="hidden" type="submit"></button>
+      <button class="hidden" type="submit" data-track-action="clickSubmitButton"></button>
     </form>
     <div class="kifi-added">
       <h1>You are on the list</h1>
       <div class="kifi-added-email"></div>
-      <a class="kifi-change-email" href="javascript:">Change email</a>
+      <a class="kifi-change-email" href="javascript:" data-track-action="clickChangeEmail">Change email</a>
     </div>
     <span class="kifi-arrow-down"><span class="kifi-arrow-cover"></span></span>
   </div>
@@ -95,7 +95,7 @@
     <h2 class="phone-only">Search like normal<br>Find like never before</h1>
     <h2 class="tablet-only">Search like normal, Find like never before</h1>
     <div class="kifi-watch-bg">
-      <a class="kifi-play" href="javascript:"></a>
+      <a class="kifi-play" href="javascript:" data-track-action="clickPlay"></a>
     </div>
   </div>
   <div class="kifi-desktop">
@@ -106,18 +106,18 @@
       & notify me when<br>
       it's ready on mobile
     </div>
-    <form class="kifi-add-form-2" method="POST" action="/waitlist">
+    <form class="kifi-add-form-2" method="POST" action="/waitlist" data-track-source="formBottom" data-track-action="submit">
       <input type="hidden" name="feature" value="mobile_app">
       <input type="hidden" name="extId" value="">
       <div class="kifi-waiting-input-box">
-        <input class="kifi-desktop-email" type="email" name="email" placeholder="Enter your email here">
+        <input class="kifi-desktop-email" type="email" name="email" placeholder="Enter your email here" data-track-click data-track-action="clickEmailInput">
       </div>
-      <button type="submit" class="kifi-desktop-button">Send Instructions</button>
+      <button type="submit" class="kifi-desktop-button" data-track-action="clickSubmitButton">Send Instructions</button>
     </form>
     <div class="kifi-added-2">
       <h1>Instructions sent to:</h1>
       <div class="kifi-added-email"></div>
-      <a class="kifi-change-email" href="javascript:">Send to another email</a>
+      <a class="kifi-change-email" href="javascript:" data-track-action="clickChangeEmail">Send to another email</a>
     </div>
   </div>
 </div>
@@ -139,10 +139,10 @@
 </div>
 
 <div class="wistia_shade"></div>
-<div class="wistia_shadow">
+<div class="wistia_shadow" data-track-source="video" data-track-action="clickOutsideVideo">
   <div class="wistia_video_wrapper">
     <div id="wistia_arn4nh8il4" class="wistia_embed" allowtransparency="true" data-video-width="150" data-video-height="150"></div>
-    <a class="wistia_close" href="javascript:">&times;<a>
+    <a class="wistia_close" href="javascript:" data-track-action="clickCloseVideo">&times;<a>
   </div>
 </div>
 

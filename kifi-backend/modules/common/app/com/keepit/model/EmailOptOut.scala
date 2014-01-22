@@ -12,7 +12,7 @@ case class EmailOptOut(
   address: EmailAddressHolder,
   category: ElectronicMailCategory,
   state: State[EmailOptOut] = EmailOptOutStates.ACTIVE
-) extends Model[EmailOptOut] {
+) extends ModelWithState[EmailOptOut] {
   def withId(id: Id[EmailOptOut]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[EmailOptOut]) = copy(state = state)

@@ -56,14 +56,14 @@ class ExtAuthController @Inject() (
        })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, sliderRuleGroup, urlPatterns, firstTime, isUpgrade) = db.readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
       val user: User = userRepo.get(userId)
-      val (installation, firstTime, isUpgrade): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
+      val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
         case None =>
           val inst = installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
-          (inst, true, true)
+          (inst, true, false)
         case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
           (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
         case Some(install) =>
@@ -71,19 +71,26 @@ class ExtAuthController @Inject() (
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, sliderRuleGroup, urlPatterns, firstTime, isUpgrade)
+      (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate)
     }
 
-    if (isUpgrade) {
+    if (isUpdate || isInstall) {
       SafeFuture {
         val contextBuilder = heimdalContextBuilder()
         contextBuilder.addRequestInfo(request)
-        contextBuilder += ("action", "installedExtension")
         contextBuilder += ("extensionVersion", installation.version.toString)
         contextBuilder += ("kifiInstallationId", installation.id.get.toString)
-        contextBuilder += ("firstTime", firstTime)
+
+        if (isInstall) {
+          contextBuilder += ("action", "installedExtension")
+          val installedExtensions = db.readOnly { implicit session => installationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).length }
+          contextBuilder += ("installation", installedExtensions)
+          heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
+        } else
+          contextBuilder += ("action", "updatedExtension")
+
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
-        heimdal.setUserProperties(userId, "installedExtension" -> ContextStringData(installation.version.toString))
+        heimdal.setUserProperties(userId, "latestExtension" -> ContextStringData(installation.version.toString))
       }
     }
 

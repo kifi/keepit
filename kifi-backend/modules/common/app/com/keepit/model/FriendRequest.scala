@@ -2,7 +2,7 @@ package com.keepit.model
 
 import scala.Some
 import org.joda.time.DateTime
-import com.keepit.common.db.{Model, State, Id}
+import com.keepit.common.db.{ModelWithState, State, Id}
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -15,7 +15,7 @@ case class FriendRequest(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[FriendRequest] = FriendRequestStates.ACTIVE
-    ) extends Model[FriendRequest] {
+    ) extends ModelWithState[FriendRequest] {
   def withId(id: Id[FriendRequest]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
