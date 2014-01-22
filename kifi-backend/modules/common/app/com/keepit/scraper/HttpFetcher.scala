@@ -122,7 +122,8 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
 
   val httpClient = httpClientBuilder.build()
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60)
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
+  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (50)
 
   val q = new ConcurrentLinkedQueue[WeakReference[(Long, HttpGet)]]()
   val enforcer = new Runnable {
@@ -156,6 +157,9 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
             }
           }
         }
+        if (q.size > Q_SIZE_THRESHOLD) {
+          airbrake.notify(s"[enforcer] queue size (${q.size}) crossed set threshold ($Q_SIZE_THRESHOLD)") // warning
+        }
       } catch {
         case t:Throwable =>
           airbrake.notify(s"[enforcer] Caught exception $t; queue=$q; cause=${t.getCause}; stack=${t.getStackTraceString}")
@@ -169,7 +173,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
       thread
     }
   })
-  scheduler.scheduleWithFixedDelay(enforcer, 5, 5, TimeUnit.SECONDS)
+  scheduler.scheduleWithFixedDelay(enforcer, 10, 10, TimeUnit.SECONDS)
 
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch: url=$url,proxy=$proxy") {
     val ts = System.currentTimeMillis
