@@ -69,6 +69,8 @@ case class ElectronicMail (
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
+  def error(message: String): ElectronicMail = copy(state = ElectronicMailStates.ERROR_CREATING, responseMessage = Some(message))
+
   def errorSending(message: String): ElectronicMail = copy(state = ElectronicMailStates.ERROR_SENDING, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
 }
 
@@ -118,4 +120,5 @@ object ElectronicMailStates {
   val READY_TO_SEND = State[ElectronicMail]("ready_to_send")
   val SENT = State[ElectronicMail]("sent")
   val ERROR_SENDING = State[ElectronicMail]("error_sending")
+  val ERROR_CREATING = State[ElectronicMail]("error_creating")
 }

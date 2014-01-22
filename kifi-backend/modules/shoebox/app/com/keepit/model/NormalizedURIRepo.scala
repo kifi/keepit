@@ -20,6 +20,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getChanged(sequenceNumber: SequenceNumber, includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getCurrentSeqNum()(implicit session: RSession): SequenceNumber
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
@@ -66,6 +67,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def getChanged(sequenceNumber: SequenceNumber, states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     val q = (for (f <- table if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
+  }
+
+  override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber = {
+    val q = (for( r <- table ) yield r.seq)
+    val m = q.list.map{_.value}.max
+    SequenceNumber(m)
   }
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession): Unit = {

@@ -63,7 +63,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         case Some(em) =>
           em
         case None =>
-          all.head
+          all.headOption.getOrElse(throw new Exception(s"no emails for user $userId"))
       }
     }
   }

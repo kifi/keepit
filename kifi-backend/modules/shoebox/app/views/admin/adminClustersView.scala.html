@@ -1,8 +1,10 @@
 @(data: Seq[com.keepit.controllers.admin.ClusterMemberInfo])
 
-    @randomColor(randomNumber: Int) = {
-        val colors = Array[String]("0000cd", "006400", "b8860b", "cd5c5c", "ff0000", "9400d3", "8b8989", "000000", "8b4513", "ff8c00", "4682b4")
-        colors(randomNumber % colors.length)
+    @randomColor(serviceVersion: com.keepit.common.service.ServiceVersion) = {
+        <font color="@{
+            val colors = Array[String]("0000cd", "006400", "b8860b", "cd5c5c", "ff0000", "9400d3", "8b8989", "000000", "8b4513", "ff8c00", "4682b4")
+            colors(Math.abs(serviceVersion.hashCode) % colors.length)
+        }">@serviceVersion</font>
     }
 
     @showInstanceInfo(amazonInstanceInfo: com.keepit.common.amazon.AmazonInstanceInfo) = {
@@ -41,6 +43,7 @@
     }
 
     @admin("Clusters Overview") {
+        <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
               <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Version</th> <th>Instance</th> <th>AWS Details</th>
@@ -52,7 +55,7 @@
                     <td>@cmi.zkid</td>
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
-                    <td><font color="@{randomColor(cmi.version.hashCode)}">@cmi.version</font></td>
+                    <td>@{randomColor(cmi.version)}</td>
                     <td>@cmi.name</td>
                     <td>
                       <div id="@cmi.instanceInfo.instanceId" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -73,7 +76,11 @@
         </table>
         Leaders in Bold
         <script>
-            setInterval(function(){location.reload();}, 5000);
+            setInterval(function(){
+              if (document.getElementById("autoRefresh").checked) {
+                location.reload();
+              }
+            }, 5000);
         </script>
     }
 

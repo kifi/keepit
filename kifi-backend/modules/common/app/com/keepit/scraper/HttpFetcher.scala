@@ -22,6 +22,13 @@ import scala.util.Try
 import org.apache.http.util.EntityUtils
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
+import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ConcurrentLinkedQueue}
+import scala.ref.WeakReference
+import play.api.Play
+import Play.current
+import collection.JavaConversions._
+import scala.concurrent.duration.Duration
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -52,7 +59,7 @@ object HttpRedirect {
 }
 
 
-class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging {
+class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging {
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
@@ -115,6 +122,59 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
 
   val httpClient = httpClientBuilder.build()
 
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
+  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (50)
+
+  val q = new ConcurrentLinkedQueue[WeakReference[(Long, HttpGet)]]()
+  val enforcer = new Runnable {
+    def run():Unit = {
+      try {
+        log.info(s"[enforcer] checking for long running fetch requests ... ${q.size}")
+        if (q.isEmpty) {
+          log.info(s"[enforcer] queue is empty")
+        } else {
+          val iter = q.iterator
+          while (iter.hasNext) {
+            val curr = System.currentTimeMillis
+            val ref = iter.next
+            ref.get map { case (ts, htpGet) =>
+              log.info(s"[enforcer] ${htpGet.getURI} has been running for ${curr - ts} ms")
+              if (curr - ts > LONG_RUNNING_THRESHOLD) {
+                val msg = s"[enforcer] ABORT long (${curr - ts} ms) fetch task: ${htpGet.getURI}"
+                log.warn(msg)
+                htpGet.abort()
+                log.info(s"[enforcer] ${htpGet.getURI} isAborted=${htpGet.isAborted}")
+                if (!htpGet.isAborted)
+                  airbrake.notify(s"Failed to abort long (${curr - ts} ms) fetch task ${htpGet.getURI}")
+              }
+            } orElse {
+              log.info(s"[enforcer] remove collected entry $ref from queue")
+              try { iter.remove() } catch {
+                case t:Throwable =>
+                  log.error(s"[enforcer] Caught exception $t; (cause=${t.getCause}) while attempting to remove collected entry $ref from queue; stack=${t.getStackTraceString}")
+              }
+              None
+            }
+          }
+        }
+        if (q.size > Q_SIZE_THRESHOLD) {
+          airbrake.notify(s"[enforcer] queue size (${q.size}) crossed set threshold ($Q_SIZE_THRESHOLD)") // warning
+        }
+      } catch {
+        case t:Throwable =>
+          airbrake.notify(s"[enforcer] Caught exception $t; queue=$q; cause=${t.getCause}; stack=${t.getStackTraceString}")
+      }
+    }
+  }
+  val scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory {
+    def newThread(r: Runnable): Thread = {
+      val thread = new Thread(r, "HttpFetcher-Enforcer")
+      log.info(s"[HttpFetcher] $thread created")
+      thread
+    }
+  })
+  scheduler.scheduleWithFixedDelay(enforcer, 10, 10, TimeUnit.SECONDS)
+
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch: url=$url,proxy=$proxy") {
     val ts = System.currentTimeMillis
     val httpGet = new HttpGet(url)
@@ -142,6 +202,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
+    q.offer(WeakReference((System.currentTimeMillis, httpGet)))
     val response = httpClient.execute(httpGet, httpContext)
     log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
 
