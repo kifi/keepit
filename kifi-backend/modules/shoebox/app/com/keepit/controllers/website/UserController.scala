@@ -327,7 +327,7 @@ class UserController @Inject() (
 //            val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
 //            userRepo.save(updatedUser)
 //          }
-          userRepo.save(userRepo.get(request.userId)) // update user index sequence number
+          userRepo.save(userRepo.getNoCache(request.userId)) // update user index sequence number
         }
         getUserInfo(request.userId)
       }
