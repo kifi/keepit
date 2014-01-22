@@ -112,10 +112,14 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
         val bookmarks = bookmarkInterner.internRawBookmarks(raw, user.id.get, BookmarkSource.email, true)
         println("airbrake errors:")
         println(fakeAirbrake.errors mkString "\n")
-        fakeAirbrake.errorCount() === 1
-        bookmarks.size === 2
+        fakeAirbrake.errorCount() === 0
+        bookmarks.size === 3
         db.readWrite { implicit session =>
-          bookmarkRepo.all.size === 2
+          bookmarkRepo.all.size === 3
+          bookmarkRepo.all.map(_.url).toSet === Set[String](
+            "http://42go.com",
+            ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString).take(URLFactory.MAX_URL_SIZE),
+            "http://kifi.com")
         }
       }
     }
