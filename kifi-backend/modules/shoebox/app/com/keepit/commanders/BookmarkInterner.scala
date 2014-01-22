@@ -151,7 +151,7 @@ class BookmarkInterner @Inject() (
     rawKeeps.map(b => (b.url, b)).toMap.values.toList
 
   // Persists keeps to RawKeep, which will be batch processed. Very minimal pre-processing.
-  def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext) = {
+  def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit = {
     log.info(s"[persistRawKeeps] persisting batch of ${rawKeeps.size} keeps")
     val newImportId = importId.getOrElse(UUID.randomUUID.toString)
 
