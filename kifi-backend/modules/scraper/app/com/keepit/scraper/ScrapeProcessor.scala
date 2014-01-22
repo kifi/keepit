@@ -195,8 +195,6 @@ class QueuedScrapeProcessor @Inject() (
       } catch {
         case t:Throwable =>
           log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}); (stack=${t.getStackTraceString}")
-      } finally {
-        submittedQ.clear
       }
     }
   }
