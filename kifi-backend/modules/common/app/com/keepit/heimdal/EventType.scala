@@ -35,6 +35,7 @@ object UserEventTypes {
   // Search
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
   val SEARCHED = EventType("searched")
+  val VOTED = EventType("voted")
 
   // Maintenance
   val EXT_ERROR = EventType("ext_error")
@@ -42,7 +43,6 @@ object UserEventTypes {
 
 object SystemEventTypes {
   val IMPORTED_DOMAIN_TAGS = EventType("imported_domain_tags")
-  val SEARCH_TEST_VOTED = EventType("search_test_voted")
 }
 
 object AnonymousEventTypes {
