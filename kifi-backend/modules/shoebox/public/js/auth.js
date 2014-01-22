@@ -200,6 +200,7 @@ kifi.form = (function () {
     var email = kifi.form.validateEmailAddress($email);
     var password = email && kifi.form.validateNewPassword($password);
     if (email && password) {
+      Tracker.trackClick($form.find('button')[0]);
       $form.data('promise', $.postJson(this.action, {
         email: email,
         password: password
@@ -260,6 +261,7 @@ kifi.form = (function () {
       var pic = $photo.data();
       $form.data('promise', $.when(pic.uploadPromise).always(function (upload) {
           animation.update(50)
+         Tracker.trackClick($form.find('button')[0]);
          $form.data('promise', $.postJson($form.attr('action'), {
           firstName: first,
           lastName: last,
@@ -296,6 +298,7 @@ kifi.form = (function () {
     var email = kifi.form.validateEmailAddress($email);
     var password = kifi.form.validateNewPassword($form.find('.form-password'));
     if (password) {
+      Tracker.trackClick($form.find('button')[0]);
       $form.data('promise', $.postJson(this.action, {
         firstName: $form.data('first'),
         lastName: $form.data('last'),
@@ -344,6 +347,7 @@ kifi.form = (function () {
     resetPasswordDialog.show($(this).closest('form').find('.form-email-addr').val());
   });
   function onLoginFormSubmit(e) {
+    e.preventDefault();
     var $form = $(this);
     var promise = $form.data('promise');
     if (promise && promise.state() === 'pending') {
@@ -355,6 +359,7 @@ kifi.form = (function () {
     var email = kifi.form.validateEmailAddress($email);
     var password = email && kifi.form.validatePassword($password);
     if (email && password) {
+      Tracker.trackClick($form.find('button')[0]);
       $form.data('promise', $.postJson(this.action, {
         username: email,
         password: password
@@ -724,6 +729,7 @@ kifi.form = (function () {
       var $email = $form.find('.reset-password-email');
       var email = kifi.form.validateEmailAddress($email);
       if (email) {
+        Tracker.trackClick($form.find('button')[0]);
         promise = $.postJson(this.action, {email: email})
         .done(function (data) {
           $dialog.find('.reset-password-addresses').append($.map(data.addresses, function (addr) {
