@@ -18,12 +18,13 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.social.{SocialNetworks, SocialId, SocialUserRawInfo, SocialUserRawInfoStore}
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.FakeMailModule
 
 class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector {
 
   "SocialUserImportFriends" should {
     "import friends" in {
-      withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule()) { implicit injector =>
+      withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeMailModule()) { implicit injector =>
         val graphs = List(
             ("facebook_graph_andrew_min.json", 7),
             ("facebook_graph_eishay_super_min.json", 5),
