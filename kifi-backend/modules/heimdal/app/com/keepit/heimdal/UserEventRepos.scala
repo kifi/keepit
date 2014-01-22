@@ -4,6 +4,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import reactivemongo.bson.{BSONDocument, BSONLong}
 import reactivemongo.api.collections.default.BSONCollection
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

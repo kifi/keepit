@@ -10,6 +10,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
+import com.keepit.common.cache.TransactionalCaching
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
@@ -66,8 +67,8 @@ object ActiveExperimentsKey extends ActiveExperimentsKey
 
 class ActiveExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*) {
-    def getOrElseUpdate(value: => Seq[SearchConfigExperiment]): Seq[SearchConfigExperiment] = getOrElse(ActiveExperimentsKey)(value)
-    def remove(): Unit = remove(ActiveExperimentsKey)
+    def getOrElseUpdate(value: => Seq[SearchConfigExperiment])(implicit txn: TransactionalCaching): Seq[SearchConfigExperiment] = this.getOrElse(ActiveExperimentsKey)(value)
+    def remove()(implicit txn: TransactionalCaching): Unit = this.remove(ActiveExperimentsKey)
 }
 
 object SearchConfigExperimentStates extends States[SearchConfigExperiment] {

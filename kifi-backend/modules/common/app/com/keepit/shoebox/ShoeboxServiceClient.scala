@@ -39,6 +39,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.usersegment.UserSegmentKey
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX

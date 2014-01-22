@@ -11,9 +11,9 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
     "create, update, delete using the cache (and invalidate properly)" in {
       withDb() { implicit injector =>
         val userValueRepo = inject[UserValueRepoImpl]
-        userValueRepo.valueCache.get(UserValueKey(Id[User](1), "test")).isDefined === false
 
         val (user1, uv) = db.readWrite { implicit session =>
+          userValueRepo.valueCache.get(UserValueKey(Id[User](1), "test")).isDefined === false
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
           userValueRepo.getValue(user1.id.get, "test").isDefined === false
 

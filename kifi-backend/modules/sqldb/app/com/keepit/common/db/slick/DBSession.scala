@@ -5,13 +5,14 @@ import scala.collection.mutable
 import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.concurrent._
 import scala.util.{Success, Failure, Try}
-
 import play.api.Logger
 import com.keepit.common.time._
 import scala.Some
+import com.keepit.common.cache.TransactionalCaching
+import com.keepit.common.logging.Logging
 
 object DBSession {
-  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session with Logging with TransactionalCaching {
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
@@ -61,6 +62,7 @@ object DBSession {
       if (open) conn.setAutoCommit(false)
       transaction = Some(Promise())
       transactionFuture = transaction.map(_.future)
+      beginCacheTransaction()
       try {
         var done = false
         try {
@@ -70,9 +72,11 @@ object DBSession {
         } finally {
           if (open && !done || doRollback) {
             conn.rollback()
+            rollbackCacheTransaction()
             transaction.get.failure(new Exception("Transaction was rolled back."))
           } else if (open) {
             conn.commit()
+            commitCacheTransaction()
             transaction.get.success()
           }
         }

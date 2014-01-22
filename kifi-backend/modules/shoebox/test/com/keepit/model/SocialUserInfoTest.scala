@@ -107,10 +107,12 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
 
         val networkCache = inject[SocialUserInfoRepoImpl].networkCache
         val cacheKey = SocialUserInfoNetworkKey(SocialNetworks.FACEBOOK, SocialId("eishay"))
-        networkCache.get(cacheKey) === None
-        val sui = db.readOnly { implicit s => socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK) }
-        sui.fullName === "John Smith"
-        networkCache.get(cacheKey).isDefined === true
+        db.readOnly { implicit s =>
+          networkCache.get(cacheKey) === None
+          val sui = socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK)
+          sui.fullName === "John Smith"
+          networkCache.get(cacheKey).isDefined === true
+        }
         val socialUserOpt = inject[TestSlickSessionProvider].doWithoutCreatingSessions {
           db.readOnly { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
         }

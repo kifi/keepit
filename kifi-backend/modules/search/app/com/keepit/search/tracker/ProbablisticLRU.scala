@@ -1,6 +1,7 @@
 package com.keepit.search.tracker
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import scala.math._
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
