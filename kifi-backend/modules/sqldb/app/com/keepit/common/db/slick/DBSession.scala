@@ -4,7 +4,7 @@ import java.sql._
 import scala.collection.mutable
 import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.concurrent._
-import scala.util.{Success, Failure, Try}
+import scala.util.Try
 
 import play.api.Logger
 import com.keepit.common.time._
@@ -15,7 +15,6 @@ object DBSession {
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
-    private var transactionFuture: Option[Future[Unit]] = None
     private var startTime: Long = -1
     lazy val session = {
       val s = _session
@@ -25,6 +24,11 @@ object DBSession {
       s
     }
     lazy val clock = new SystemClock
+
+    private def transactionFuture: Future[Unit] = {
+      require(inTransaction, "Not in a transaction.")
+      transaction.get.future
+    }
 
     private val dbLog = Logger("com.keepit.db")
     def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave)
@@ -41,26 +45,15 @@ object DBSession {
     }
 
     def rollback() { doRollback = true }
-    def inTransaction = transaction.isDefined
+    def inTransaction = transaction.nonEmpty
 
-    private def requireTransaction = require(inTransaction, "Not in a transaction.")
-    def onTransactionSuccess[U](f: => U)(implicit executor: ExecutionContext): Unit = {
-      requireTransaction
-      transactionFuture = transactionFuture.map(_.andThen { case Success(_) => f })
-    }
-    def onTransactionFailure [U](f: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = {
-      requireTransaction
-      transactionFuture = transactionFuture.map(_.andThen { case Failure(throwable) => f(throwable) })
-    }
-    def onTransactionComplete[U](f: Function[Try[Unit], U])(implicit executor: ExecutionContext): Unit = {
-      requireTransaction
-      transactionFuture = transactionFuture.map(_.andThen { case tryU => f(tryU) })
-    }
+    def onTransactionSuccess[U](f: => U)(implicit executor: ExecutionContext): Unit = transactionFuture.onSuccess { case _: Unit => f }
+    def onTransactionFailure [U](f: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = transactionFuture.onFailure(f)
+    def onTransactionComplete[U](f: Function[Try[Unit], U])(implicit executor: ExecutionContext): Unit = transactionFuture.onComplete(f)
 
     def withTransaction[T](f: => T): T = if (inTransaction) f else {
       if (open) conn.setAutoCommit(false)
       transaction = Some(Promise())
-      transactionFuture = transaction.map(_.future)
       try {
         var done = false
         try {
@@ -71,15 +64,11 @@ object DBSession {
           if (open && !done || doRollback) {
             conn.rollback()
             transaction.get.failure(new Exception("Transaction was rolled back."))
-          } else if (open) {
-            conn.commit()
-            transaction.get.success()
-          }
+          } else transaction.get.success()
         }
       } finally {
         if (open) conn.setAutoCommit(true)
         transaction = None
-        transactionFuture = None
       }
     }
 

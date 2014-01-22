@@ -11,7 +11,7 @@ import play.api.Mode
 import play.api.Mode._
 import play.api.libs.json._
 import scala.concurrent.{Future, promise}
-import com.keepit.common.amazon.{AmazonInstanceType, AmazonInstanceInfo}
+import com.keepit.common.amazon.AmazonInstanceInfo
 
 case class ServiceVersion(val value: String) {
   override def toString(): String = value
@@ -32,15 +32,12 @@ object ServiceType {
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
   case object ABOOK extends ServiceType("ABOOK", "AB")
-  case object SCRAPER extends ServiceType("SCRAPER", "SC") {
-    override val minInstances  = 3
-    override val warnInstances = 4
-  }
+  case object SCRAPER extends ServiceType("SCRAPER", "SC")
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
   case object SEARCH extends ServiceType("SEARCH", "SR") {
-    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = instance.instantTypeInfo match {
-      case AmazonInstanceType.M1Small => ServiceStatus.BACKING_UP
+    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = instance.instanceType match {
+      case AmazonInstanceInfo.small => ServiceStatus.BACKING_UP
       case _ => ServiceStatus.UP
     }
 

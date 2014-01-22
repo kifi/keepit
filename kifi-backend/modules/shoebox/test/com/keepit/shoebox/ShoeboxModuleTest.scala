@@ -5,7 +5,7 @@ import com.keepit.search._
 import com.keepit.reports._
 import com.keepit.common.zookeeper._
 import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
-import com.keepit.common.controller.{ServiceController, ShoeboxServiceController}
+import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailModule, MailToKeepServerSettings}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
@@ -24,7 +24,8 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
-import com.keepit.learning.topicmodel.{TopicUpdater, FakeWordTopicModule, DevTopicModelModule}
+import com.keepit.learning.topicmodel.FakeWordTopicModule
+import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -34,11 +35,7 @@ import com.keepit.abook.TestABookServiceClientModule
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
   private def isShoeboxController(clazz: Class[_]): Boolean = {
-    if (classOf[Controller] isAssignableFrom clazz) {
-      if (classOf[ServiceController] isAssignableFrom clazz) {
-        classOf[ShoeboxServiceController] isAssignableFrom clazz
-      } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
-    } else false
+    classOf[ShoeboxServiceController] isAssignableFrom clazz
   }
 
   "Module" should {
@@ -72,7 +69,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         for (c <- classes) inject(classType[Controller](c), injector)
         val bindings = injector.getAllBindings
         val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[QuartzActor],
-          classOf[MailToKeepServerSettings], classOf[MemcachedClient], classOf[TopicUpdater])
+          classOf[MailToKeepServerSettings], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
           val fail = exclude exists { badKalazz =>

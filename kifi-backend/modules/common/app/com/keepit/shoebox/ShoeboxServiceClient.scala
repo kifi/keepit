@@ -65,8 +65,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]]
-  def getScrapedUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]]
-  def getHighestUriSeq(): Future[Long]
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
@@ -447,23 +445,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getScrapedUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize)).map { r =>
-      Json.fromJson[Seq[IndexableUri]](r.json).get
-    }
-  }
-
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
     call(Shoebox.internal.getUserIndexable(seqNum, fetchSize)).map{ r =>
       r.json.as[JsArray].value.map{ x => Json.fromJson[User](x).get }
     }
   }
 
-  def getHighestUriSeq(): Future[Long] = {
-    call(Shoebox.internal.getHighestUriSeq()).map{ r =>
-      r.json.as[Long]
-    }
-  }
 
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
     cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {

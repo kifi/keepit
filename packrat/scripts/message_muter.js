@@ -20,10 +20,8 @@ var messageMuter = this.messageMuter = (function ($, win) {
 	var kifiUtil = win.kifiUtil;
 
 	var portHandlers = {
-		muted: function (o) {
-			if (o.threadId === (messageMuter && messageMuter.parent.threadId)) {
-				messageMuter.updateMuted(o.muted);
-			}
+		muted: function (muted) {
+			messageMuter.updateMuted(muted);
 		}
 	};
 

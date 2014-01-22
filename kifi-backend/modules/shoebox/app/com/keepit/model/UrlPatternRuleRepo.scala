@@ -46,11 +46,6 @@ class UrlPatternRuleRepoImpl @Inject() (
     allMemCache = None
   }
 
-  override def deleteCache(urlPatternRule: UrlPatternRule)(implicit session: RSession): Unit = {
-    urlPatternRuleAllCache.remove(UrlPatternRuleAllKey())
-    allMemCache = None
-  }
-
   def allActive()(implicit session: RSession): Seq[UrlPatternRule] =
     allMemCache.getOrElse {
       val result = urlPatternRuleAllCache.getOrElse(UrlPatternRuleAllKey()) {

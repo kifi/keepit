@@ -13,7 +13,7 @@ case class SliderRule (
   state: State[SliderRule] = SliderRuleStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
-) extends ModelWithState[SliderRule] {
+) extends Model[SliderRule] {
   def withId(id: Id[SliderRule]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SliderRule]) = this.copy(state = state)

@@ -76,7 +76,7 @@ case class ABookInfo(
     oauth2TokenId: Option[Id[OAuth2Token]] = None,
     numContacts: Option[Int] = None,
     numProcessed: Option[Int] = None
-  ) extends ModelWithState[ABookInfo] {
+  ) extends Model[ABookInfo] {
   def withId(id: Id[ABookInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]) = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
@@ -149,7 +149,7 @@ case class OAuth2Token(
   lastRefreshedAt: Option[DateTime] = None,
   idToken: Option[String] = None,
   rawToken: Option[String] = None
-) extends ModelWithState[OAuth2Token] {
+) extends Model[OAuth2Token] {
   def withId(id: Id[OAuth2Token]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[OAuth2Token]) = this.copy(state = state)

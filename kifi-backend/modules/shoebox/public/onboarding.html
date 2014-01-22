@@ -1,17 +1,11 @@
-<html data-track-view-event="viewed_internal_page" data-track-click-event="clicked_internal_page" data-track-type="onboarding">
+<html>
 	<head>
 		<link href="//fonts.googleapis.com/css?family=Raleway:100,200,300,400|Open+Sans:100,200,300,400" rel="stylesheet" type="text/css">
 		<link rel="stylesheet" href="/assets/css/onboarding.css">
-		<script>
-		if (/^Mac/.test(navigator.platform)) document.documentElement.className += ' mac';
-		var kifiViewTracker = [];
-		(function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
-		mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
-		</script>
 	</head>
 	<body>
 		<div class="kifi-onboarding-shade"></div>
-		<div class="kifi-onboarding-modal page-1" data-page="1" data-track-source="onboarding1">
+		<div class="kifi-onboarding-modal page-1" data-page="1">
 			<img class="kifi-onboarding-pic" src="">
 			<div class="kifi-onboarding-header-container">
 				<div class="kifi-onboarding-header">
@@ -125,24 +119,14 @@
 				</div>
 			</div>
 			<div class="kifi-onboarding-buttons">
-				<a class="kifi-onboarding-prev" href="javascript:" data-track-action="clickedBack">No, not now</a>
-				<a class="kifi-onboarding-next" href="javascript:" data-track-action="clickedNext"><span class="kifi-onboarding-button-text">Yep, show me</span><span class="kifi-onboarding-next-icon"></span></a>
+				<a class="kifi-onboarding-prev" href="javascript:">No, not now</a>
+				<a class="kifi-onboarding-next" href="javascript:"><span class="kifi-onboarding-button-text">Yep, show me</span><span class="kifi-onboarding-next-icon"></span></a>
 			</div>
-			<a href="javascript:" class="kifi-onboarding-close" data-track-action="clickedClose"></a>
+			<a href="javascript:" class="kifi-onboarding-close"></a>
 		</div>
 		<script type="text/javascript" src="/assets/js/retina-1.1.0.js"></script>
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 		<script>window.$||document.write('<script src=/assets/js/jquery.min.js><\/script>');if(location.port&&location.port!=9000)window.History={options:{html4Mode:true}};</script>
-		<script type="text/javascript" src="/assets/js/track-ext.js"></script>
 		<script type="text/javascript" src="/assets/js/onboarding.js"></script>
-		<script>
-		var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
-		!function(d, t) {
-			var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
-			g.async = true;
-			g.src = ('https:' == location.protocol ? '//ssl' : '//www') + '.google-analytics.com/ga.js';
-			s.parentNode.insertBefore(g, s);
-		}(document, 'script');
-		</script>
 	</body>
 </html>

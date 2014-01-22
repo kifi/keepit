@@ -1,16 +1,24 @@
 package com.keepit.eliza.model
 
+import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.db.slick.{StringMapperDelegate, Repo, DbRepo, DataBaseComponent}
+import com.keepit.common.db.slick.FortyTwoTypeMappers._
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.db._
-import com.keepit.model.{EContact, NormalizedURI}
+import com.keepit.common.db.{States, State, Model, Id}
+import com.keepit.model.{EContact, User, NormalizedURI}
 import play.api.libs.json._
-import com.keepit.common.mail.EmailAddressHolder
-import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind}
-import play.api.libs.json.JsSuccess
+import scala.slick.lifted.{BaseTypeMapper, Query}
+import com.keepit.eliza._
+import play.api.libs.functional.syntax._
 import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
+import scala.slick.driver.BasicProfile
+import MessagingTypeMappers._
+import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind, BasicUserLikeEntity}
 
 sealed trait NonUserParticipant {
   val identifier: String
@@ -63,7 +71,7 @@ case class NonUserThread(
   threadUpdatedAt: Option[DateTime],
   muted: Boolean,
   state: State[NonUserThread] = NonUserThreadStates.ACTIVE
-) extends ModelWithState[NonUserThread] {
+) extends Model[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)

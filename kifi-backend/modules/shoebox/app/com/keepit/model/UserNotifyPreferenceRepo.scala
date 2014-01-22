@@ -28,9 +28,6 @@ class UserNotifyPreferenceRepoImpl @Inject() (val db: DataBaseComponent, val clo
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ canSend ~ state <> (UserNotifyPreference, UserNotifyPreference.unapply _)
   }
 
-  override def deleteCache(model: UserNotifyPreference)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: UserNotifyPreference)(implicit session: RSession): Unit = {}
-
   def getByUser(userId: Id[User], excludeState: Option[State[UserNotifyPreference]] = Some(UserNotifyPreferenceStates.INACTIVE))(implicit session: RSession): Seq[UserNotifyPreference] = {
     (for(f <- table if f.userId === userId && f.state =!= excludeState.orNull) yield f).list
   }

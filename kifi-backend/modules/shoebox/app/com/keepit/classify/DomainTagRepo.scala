@@ -28,9 +28,6 @@ class DomainTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) e
     def * = id.? ~ name ~ sensitive ~ state ~ createdAt ~ updatedAt <> (DomainTag, DomainTag.unapply _)
   }
 
-  override def deleteCache(model: DomainTag)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: DomainTag)(implicit session: RSession): Unit = {}
-
   def getTags(tagIds: Seq[Id[DomainTag]], excludeState: Option[State[DomainTag]] = Some(DomainTagStates.INACTIVE))
       (implicit session: RSession): Seq[DomainTag] =
     (for (t <- table if t.state =!= excludeState.getOrElse(null) && t.id.inSet(tagIds)) yield t).list

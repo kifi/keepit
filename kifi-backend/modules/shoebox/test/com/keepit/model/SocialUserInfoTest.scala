@@ -86,25 +86,20 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "use cache properly" in {
       withDb() { implicit injector =>
         val user = setup()
-        def isInCache = db.readOnly { implicit c => inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined }
-
-        val origSocialUser = db.readOnly { implicit c =>
-          socialUserInfoRepo.getByUser(user.id.get).head
-        }
-        isInCache === true
-
         db.readWrite { implicit c =>
+          def isInCache = inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined
+
+          val origSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
+          isInCache === true
+
           socialUserInfoRepo.save(origSocialUser.copy(fullName = "John Smith"))
+          isInCache must beFalse
+
+          val newSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
+          isInCache === true
+
+          newSocialUser.fullName === "John Smith"
         }
-        isInCache must beFalse
-
-        val newSocialUser = db.readOnly { implicit c =>
-         socialUserInfoRepo.getByUser(user.id.get).head
-        }
-        isInCache === true
-
-        newSocialUser.fullName === "John Smith"
-
         val networkCache = inject[SocialUserInfoRepoImpl].networkCache
         val cacheKey = SocialUserInfoNetworkKey(SocialNetworks.FACEBOOK, SocialId("eishay"))
         networkCache.get(cacheKey) === None

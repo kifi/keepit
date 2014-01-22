@@ -4,6 +4,7 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.search.index.DefaultAnalyzer
+
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
@@ -33,12 +34,8 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import akka.actor.ActorSystem
 import play.api.libs.json.Json
-import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.sharding.ActiveShardsSpecParser
 
-class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
-
-  implicit private val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
+class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHepler {
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
@@ -49,7 +46,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
 
         val store = mkStore(uris)
         val (graph, _, indexer, mainSearcherFactory) = initIndexes(store)
-        graph.update()
+        graph.update() === users.size
         indexer.update() === uris.size
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
@@ -88,12 +85,23 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         res.friendsTotal === 1
         res.othersTotal === 2
 
-        val expected = List( // with neither score nor scoring
+        val expected = List(
           Json.parse(s"""
             {
               "uriId":1,
               "bookmarkCount":3,
               "users":[${users(1).id.get}],
+              "score":2.0015265941619873,
+              "scoring":{
+                "textScore":0.06511083990335464,
+                "normalizedTextScore":1.0,
+                "bookmarkScore":0.6666666269302368,
+                "recencyScore":0.0,
+                "boostedTextScore":2.0,
+                "boostedBookmarkScore":0.3333333134651184,
+                "boostedRecencyScore":0.0,
+                "usefulPage":null
+              },
               "isMyBookmark":true,
               "isFriendsBookmark":true,
               "isPrivate":false,
@@ -111,6 +119,17 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
               "uriId":2,
               "bookmarkCount":1,
               "users":[${users(1).id.get}],
+              "score":1.0007957220077515,
+              "scoring":{
+                "textScore":0.06511083990335464,
+                "normalizedTextScore":1.0,
+                "bookmarkScore":0.34749501943588257,
+                "recencyScore":0.0,
+                "boostedTextScore":1.0,
+                "boostedBookmarkScore":0.17374750971794128,
+                "boostedRecencyScore":0.0,
+                "usefulPage":null
+              },
               "isMyBookmark":false,
               "isFriendsBookmark":true,
               "isPrivate":false,
@@ -125,8 +144,8 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         )
 
         res.hits.size === 2
-        res.hits(0).json - "score" - "scoring" === expected(0)
-        res.hits(1).json - "score" - "scoring" === expected(1)
+        res.hits(0).json === expected(0)
+        res.hits(1).json === expected(1)
       }
     }
   }

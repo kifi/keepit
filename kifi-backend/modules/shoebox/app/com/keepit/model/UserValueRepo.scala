@@ -10,7 +10,6 @@ import scala.Some
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
   def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String]
-  def getUserValue(userId: Id[User], key: String)(implicit session: RSession): Option[UserValue]
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String
   def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean
 }
@@ -48,15 +47,11 @@ class UserValueRepoImpl @Inject() (
     valueCache.remove(UserValueKey(userValue.userId, userValue.name))
   }
 
-  override def deleteCache(userValue: UserValue)(implicit session: RSession): Unit = {
-    valueCache.remove(UserValueKey(userValue.userId, userValue.name))
+  def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] = {
+    valueCache.getOrElseOpt(UserValueKey(userId, name)) {
+      (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f.value).firstOption.map(_.value)
+    }
   }
-
-  def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] =
-    valueCache.getOrElseOpt(UserValueKey(userId, name)) { getUserValue(userId, name).map(_.value) }
-
-  def getUserValue(userId: Id[User], name: String)(implicit session: RSession): Option[UserValue] =
-    (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f).firstOption
 
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String = {
     (for (v <- table if v.userId === userId && v.name === name) yield v).firstOption.map { v =>

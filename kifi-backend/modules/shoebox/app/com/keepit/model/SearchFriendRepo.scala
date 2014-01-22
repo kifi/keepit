@@ -42,10 +42,6 @@ class SearchFriendRepoImpl @Inject() (
     searchFriendsCache.remove(SearchFriendsKey(model.userId))
   }
 
-  override def deleteCache(model: SearchFriend)(implicit session: RSession): Unit = {
-    searchFriendsCache.remove(SearchFriendsKey(model.userId))
-  }
-
   def getSearchFriends(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
     searchFriendsCache.get(SearchFriendsKey(userId)) match {
       case Some(friends) => friends.map(Id[User]).toSet

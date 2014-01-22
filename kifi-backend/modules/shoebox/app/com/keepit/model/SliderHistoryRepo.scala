@@ -41,10 +41,6 @@ class SliderHistoryRepoImpl @Inject() (
     browsingCache.set(SliderHistoryUserIdKey(sliderHistory.userId), sliderHistory)
   }
 
-  override def deleteCache(sliderHistory: SliderHistory)(implicit session: RSession): Unit = {
-    browsingCache.remove(SliderHistoryUserIdKey(sliderHistory.userId))
-  }
-
   override def save(model: SliderHistory)(implicit session: RWSession): SliderHistory = {
     super.save(model.copy(updatesCount = model.updatesCount + 1))
   }

@@ -23,7 +23,6 @@ import akka.util.Timeout
 
 import play.api.Mode._
 import play.api.templates.Html
-import com.keepit.model.NotificationCategory
 
 
 object Healthcheck {
@@ -96,9 +95,9 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     val last = history.lastError
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
     val subject = "([0-9]+)".r.replaceAllIn(subjectWithNumerics, "*").abbreviate(512)
-    val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
+    val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
     sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-      subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
+      subject = subject, htmlBody = body, category = PostOffice.Categories.System.HEALTHCHECK))
   }
 }
 
@@ -194,7 +193,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = NotificationCategory.System.HEALTHCHECK)
+        category = PostOffice.Categories.System.HEALTHCHECK)
     if (!isCanary) {
       actor.ref ! email
     }
@@ -206,7 +205,7 @@ class HealthcheckPluginImpl @Inject() (
     val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
-        category = NotificationCategory.System.HEALTHCHECK)
+        category = PostOffice.Categories.System.HEALTHCHECK)
     if (!isCanary) {
       actor.ref ! email
     }

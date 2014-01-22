@@ -38,8 +38,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         verificationCode <> (EmailAddress, EmailAddress.unapply _)
   }
 
-  override def deleteCache(emailAddr: EmailAddress)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: EmailAddress)(implicit session: RSession): Unit = {}
+  def deleteCache(emailAddr: EmailAddress) {}
 
   def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[EmailAddress] =

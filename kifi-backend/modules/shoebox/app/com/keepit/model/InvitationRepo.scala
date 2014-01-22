@@ -42,8 +42,7 @@ class InvitationRepoImpl @Inject() (
   private implicit val userIdTypeMapper = userRepo.idMapper
   private implicit val userStateMapper = userRepo.stateTypeMapper
 
-  override def deleteCache(model: Invitation)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: Invitation)(implicit session: RSession): Unit = {}
+  def deleteCache(model: Invitation) = {}
 
   // TODO: add support for econtactId
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)

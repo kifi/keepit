@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import java.text.Normalizer
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
@@ -73,7 +73,7 @@ class UserController @Inject() (
   airbrakeNotifier: AirbrakeNotifier,
   authCommander: AuthCommander,
   emailAddressRepo: EmailAddressRepo
-) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+) extends WebsiteController(actionAuthenticator) {
 
   // hotspot -- need optimization; gather timing info for analysis
   def friends() = AuthenticatedJsonAction { request =>
@@ -282,7 +282,7 @@ class UserController @Inject() (
                   to = Seq(GenericEmailAddress(address)),
                   subject = "Kifi.com | Please confirm your email address",
                   htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-                  category = NotificationCategory.User.EMAIL_CONFIRMATION
+                  category = PostOffice.Categories.User.EMAIL_CONFIRMATION
                 ))
               }
             }
@@ -402,7 +402,7 @@ class UserController @Inject() (
         to = Seq(EmailAddresses.EFFI),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
-        category = NotificationCategory.User.INVITATION))
+        category = PostOffice.Categories.User.INVITATION))
     }
     Ok
   }
@@ -471,7 +471,7 @@ class UserController @Inject() (
             to = Seq(GenericEmailAddress(email)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-            category = NotificationCategory.User.EMAIL_CONFIRMATION
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION
           ))
           Ok("0")
         case _ =>

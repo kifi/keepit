@@ -13,13 +13,12 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import akka.pattern.ask
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
+import scala.util.Try
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
 import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient}
 import com.google.inject.Singleton
 import com.keepit.common.performance.timing
-import com.keepit.common.time.Clock
-import com.keepit.common.time._
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -35,8 +34,7 @@ private[social] class SocialGraphActor @Inject() (
   socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator,
   userValueRepo: UserValueRepo,
-  heimdal: HeimdalServiceClient,
-  clock: Clock)
+  heimdal: HeimdalServiceClient)
   extends FortyTwoActor(airbrake) with Logging {
 
   private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
@@ -112,16 +110,9 @@ private[social] class SocialGraphActor @Inject() (
 
   private def isImportAlreadyInProcess(userId: Id[User], networkType: SocialNetworkType): Boolean = {
     val stateOpt = db.readOnly { implicit session =>
-      userValueRepo.getUserValue(userId, s"import_in_progress_${networkType.name}")
+      userValueRepo.getValue(userId, s"import_in_progress_${networkType.name}")
     }
-    stateOpt match {
-      case None => false
-      case Some(stateValue) if stateValue.value == "false" => false
-      case Some(stateValue) if stateValue.updatedAt.isBefore(clock.now.minusHours(1)) =>
-          markGraphImportUserValue(userId, networkType, "false")
-          false
-      case _ => true
-    }
+    stateOpt.map(_ != "false") getOrElse false
   }
 }
 

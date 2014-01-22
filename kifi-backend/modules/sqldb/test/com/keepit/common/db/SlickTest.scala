@@ -46,9 +46,6 @@ class SlickTest extends Specification with DbTestInjector {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
 
-          override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
-          override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
-
           override val table = new RepoTable[Bar](db, "foo") {
             def name = column[String]("name")
             def * = id.? ~ name <> (Bar, Bar.unapply _)
@@ -182,9 +179,6 @@ class SlickTest extends Specification with DbTestInjector {
           implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
-
-          override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
-          override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
           override val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {
             def name = column[String]("name")

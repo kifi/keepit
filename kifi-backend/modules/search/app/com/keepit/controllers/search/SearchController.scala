@@ -107,5 +107,31 @@ class SearchController @Inject()(
         Ok("shard not found")
     }
   }
-}
 
+  //randomly creates one of two exceptions, each time with a random exception message
+  def causeError() = Action { implicit request =>
+    throwException()
+    Ok("You cannot see this :-P ")
+  }
+
+  private def throwException(): Unit = {
+    if (Random.nextBoolean) {
+      // throwing a X/0 exception. its a fixed stack exception with random message text
+      (Random.nextInt) / 0
+    }
+    // throwing an array out bound exception. its a fixed stack exception with random message text
+    (new Array[Int](1))(Random.nextInt + 1) = 1
+  }
+
+  def causeHandbrakeError() = Action { implicit request =>
+    try {
+      throwException()
+      Ok("Should not see that!")
+    } catch {
+      case e: Throwable =>
+        airbrake.notify(AirbrakeError.incoming(request, e))
+        Ok(s"handbrake error sent for $e")
+    }
+  }
+
+}

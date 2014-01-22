@@ -68,7 +68,7 @@ var notifier = function () {
   function add(params) {
     var $wrap = $('#kifi-notify-notice-wrapper');
     if (!$wrap.length) {
-      $wrap = $('<kifi id="kifi-notify-notice-wrapper" class="kifi-root">').appendTo($('body')[0] || 'html');
+      $wrap = $('<kifi id=kifi-notify-notice-wrapper class=kifi-root>').appendTo($('body')[0] || 'html');
     }
 
     var $item = $(render('html/notify_box', {
@@ -77,7 +77,7 @@ var notifier = function () {
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,
       triggered: params.triggered,
-      image: params.image ? '<img src="' + params.image + '" class="kifi-notify-image"/>' : '',
+      image: params.image ? '<img src="' + params.image + '" class=kifi-notify-image>' : '',
       popupClass: '',
       innerClass: params.image ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
       link: params.link,

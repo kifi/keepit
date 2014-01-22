@@ -395,5 +395,13 @@ LAST UPDATED: November 25, 2013
     </div>
 }
 @scripts = {
+  <script>
+  !function(d, t) {
+    var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+    g.async = true;
+    g.src = '//fast.wistia.com/assets/external/popover-v1.js';
+    s.parentNode.insertBefore(g, s);
+  }(document, 'script');
+  </script>
 }
 @views.html.marketing.helper.page(title = "Kifi • Terms", styles = styles, content = content, scripts = scripts, dataTrack="terms", htmlClass="terms", isLoggedIn = isLoggedIn)

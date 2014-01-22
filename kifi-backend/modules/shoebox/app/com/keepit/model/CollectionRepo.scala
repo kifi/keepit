@@ -53,10 +53,6 @@ class CollectionRepoImpl @Inject() (
       (for (c <- table if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
   }
 
-  override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
-    userCollectionsCache.remove(UserCollectionsKey(model.userId))
-  }
-
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     (userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
       (for (c <- table if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list

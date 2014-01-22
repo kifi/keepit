@@ -1,7 +1,7 @@
 package com.keepit.classify
 
 import org.joda.time.DateTime
-import com.keepit.common.db.{State, States, ModelWithState, Id}
+import com.keepit.common.db.{State, States, Model, Id}
 import com.keepit.common.time._
 
 
@@ -12,7 +12,7 @@ case class DomainTag(
   state: State[DomainTag] = DomainTagStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
-) extends ModelWithState[DomainTag] {
+) extends Model[DomainTag] {
   def withId(id: Id[DomainTag]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withSensitive(sensitive: Option[Boolean]) = this.copy(sensitive = sensitive)

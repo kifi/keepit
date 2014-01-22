@@ -1,11 +1,13 @@
 package com.keepit.model
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.db.{Id, Model, SequenceNumber}
+import com.keepit.common.db.Id
+import com.keepit.common.db.Model
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.FortyTwoTypeMappers.SequenceNumberTypeMapper
 
 /**
@@ -42,9 +44,6 @@ abstract class TopicSeqNumInfoRepoBase(
     def bookmarkSeq = column[SequenceNumber]("bookmark_seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ uriSeq ~ bookmarkSeq <> (TopicSeqNumInfo.apply _, TopicSeqNumInfo.unapply _)
   }
-
-  override def deleteCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
 
   def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)] = {
     (for( r <- table ) yield (r.uriSeq, r.bookmarkSeq)).firstOption

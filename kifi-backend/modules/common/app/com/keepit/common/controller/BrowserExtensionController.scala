@@ -5,7 +5,7 @@ import play.api.http.ContentTypes
 import play.api.mvc._
 import play.api.libs.json._
 
-abstract class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) extends ServiceController with Logging {
+class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) extends Controller with Logging {
   def AuthenticatedJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     AuthenticatedJsonAction(parse.anyContent)(action)
 

@@ -43,9 +43,6 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
 
   override def save(mail: ElectronicMail)(implicit session: RWSession) = super.save(mail.clean())
 
-  override def deleteCache(model: ElectronicMail)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: ElectronicMail)(implicit session: RSession): Unit = {}
-
   def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
 
   def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =

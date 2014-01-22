@@ -1,9 +1,9 @@
 @(email: String, opts: Seq[com.keepit.common.mail.ElectronicMailCategory], msg: Option[String])
 
-@import com.keepit.model.NotificationCategory
-@invite = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.INVITATION) }
-@message = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.MESSAGE) }
-@all = @{ !opts.contains(NotificationCategory.ALL) }
+@import com.keepit.common.mail.PostOffice.Categories
+@invite = @{ !opts.contains(Categories.ALL) && !opts.contains(Categories.User.INVITATION) }
+@message = @{ !opts.contains(Categories.ALL) && !opts.contains(Categories.User.MESSAGE) }
+@all = @{ !opts.contains(Categories.ALL) }
 
 @content = {
 <main>

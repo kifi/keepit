@@ -4,7 +4,7 @@ import com.keepit.common.cache.{JsonCacheImpl, Key, FortyTwoCachePlugin}
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
-import com.keepit.common.db.{ModelWithState, State, States}
+import com.keepit.common.db.{Model, State, States}
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -20,7 +20,7 @@ case class SearchConfigExperiment(
     state: State[SearchConfigExperiment] = SearchConfigExperimentStates.CREATED,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime
-    ) extends ModelWithState[SearchConfigExperiment] {
+    ) extends Model[SearchConfigExperiment] {
   def withId(id: Id[SearchConfigExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SearchConfigExperiment]) = {

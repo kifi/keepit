@@ -11,5 +11,28 @@
   "icon64": "data/icons/kifi.64.png",
   "permissions": {
     "cross-domain-content": ["https://www.kifi.com"]
-  }
+  },
+  "preferences": [
+    {
+      "title": "Environment",
+      "type": "radio",
+      "options": [
+        {"value": "production", "label": "Production"},
+        {"value": "development", "label": "Development"}],
+      "name": "env",
+      "value": "production"
+    },
+    {
+      "title": "Show slider automatically",
+      "type": "bool",
+      "name": "showSlider",
+      "value": true
+    },
+    {
+      "title": "Show search result scores",
+      "type": "bool",
+      "name": "showScores",
+      "value": false
+    }
+  ]
 }

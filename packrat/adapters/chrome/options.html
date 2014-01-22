@@ -1,0 +1,32 @@
+<!doctype html>
+<title>Kifi Extension Options</title>
+<style>
+h1 { margin: 10px; font-size: 20px; }
+select { position: absolute; top: -35px; right: 0; display: none }
+fieldset {
+  margin: 10px;
+  border: 2px groove threedface;
+  padding: 10px 12px 10px;
+  width: 360px;
+  position: relative;
+}
+input[type=text] {width: 2.5ex; text-align: center; padding-left: 0; padding-right: 0}
+label>input[type=checkbox],
+label>input[type=radio],
+label>span {vertical-align: text-bottom}
+button {padding: 4px 10px; margin-top: 6px}
+</style>
+
+<h1>Kifi Extension Options</h1>
+
+<fieldset>
+  <select name="env">
+    <option value="production">Production</option>
+    <option value="development">Development</option>
+  </select>
+  <label><input type="checkbox" name="show_keeper"> <span>Show Keeper Automatically</span></label><br>
+  <label><input type="checkbox" name="show_scores"> <span>Show Search Result Scores</span></label><br>
+</fieldset>
+
+<script src="scripts/lib/jquery.js"></script>
+<script src="options.js"></script>

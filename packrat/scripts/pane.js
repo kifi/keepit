@@ -162,7 +162,7 @@ var pane = pane || function () {  // idempotent for Chrome
           dir: "below",
           cssClass: 'kifi-pane-settings-tip',
           title: "Settings",
-          html: "Customize your Kifi<br/>experience."
+          html: "Customize your Kifi<br>experience."
         }, function (html) {
           configureHover(html, {
             mustHoverFor: 700, hideAfter: 3000, click: "hide",
@@ -245,7 +245,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         api.port.emit("deauthenticate");
         setTimeout(function () {
-          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/k_gray.png') + '"/> button above.</kifi>')
+          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/k_gray.png') + '"> button above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
         }, 150);
       })

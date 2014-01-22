@@ -38,8 +38,4 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   override def invalidateCache(kifiInstallation: KifiInstallation)(implicit session: RSession): Unit = {
     versionCache.set(ExtensionVersionInstallationIdKey(kifiInstallation.externalId), kifiInstallation.version.toString)
   }
-
-  override def deleteCache(model: KifiInstallation)(implicit session: RSession): Unit = {
-    versionCache.remove(ExtensionVersionInstallationIdKey(model.externalId))
-  }
 }

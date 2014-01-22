@@ -39,8 +39,7 @@
           </p>
         </div>
         <div class="kifi-about-page-more">
-          Missed the video?
-          <a href="javascript:" class="video-still" onclick="this.setAttribute('data-clicked','');void 0" data-uri="//player.vimeo.com/video/84696926?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="playVideo"><span class="kifi-about-page-more-icon"></span><span class="kifi-link-text">Watch it here</span></a>
+          Missed the video? <a href="//fast.wistia.net/embed/iframe/arn4nh8il4?popover=true" class="wistia-popover[height=540,playerColor=7b796a,width=960] video-still" data-track-action="playVideo"><span class="kifi-about-page-more-icon"></span><span class="kifi-link-text">Watch it here</span></a>
         </div>
       </div>
       <div class="kifi-available">
@@ -102,9 +101,9 @@
     </div>
 }
 @earlyScripts = {
+  <script type="text/javascript" src="//fast.wistia.com/assets/external/popover-v1.js"></script>
 }
 @scripts = {
-  <script src="/assets/js/video.js"></script>
-  <script src="/assets/js/header.js"></script>
+  <script type="text/javascript" src="/assets/js/header.js"></script>
 }
 @views.html.marketing.helper.page(title = "Kifi • About", styles = styles, content = content, scripts = scripts, dataTrack="about", htmlClass="about", earlyScripts = earlyScripts, isLoggedIn = isLoggedIn)

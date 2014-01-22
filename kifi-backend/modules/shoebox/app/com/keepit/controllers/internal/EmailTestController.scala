@@ -10,7 +10,6 @@ import com.keepit.common.db.slick.Database
 import play.api.mvc.Action
 
 import play.api.templates.Html
-import com.keepit.model.NotificationCategory
 
 class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) extends ShoeboxServiceController {
 
@@ -25,7 +24,7 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
           to = Seq(GenericEmailAddress(email)),
           subject = "Email Template Test: " + name,
           htmlBody = result.body,
-          category = NotificationCategory.ALL)
+          category = PostOffice.Categories.ALL)
         )
       }
     }

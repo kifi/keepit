@@ -33,7 +33,7 @@ case class Device(
    state: State[Device] = DeviceStates.ACTIVE,
    createdAt: DateTime = currentDateTime,
    updatedAt: DateTime = currentDateTime
-   ) extends ModelWithState[Device] {
+   ) extends Model[Device] {
 
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
@@ -70,9 +70,6 @@ class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
     def deviceType = column[DeviceType]("device_type", O.NotNull)
     def * = id.? ~ userId ~ token ~ deviceType ~ state ~ createdAt ~ updatedAt <> (Device.apply _, Device.unapply _)
   }
-
-  override def deleteCache(model: Device)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: Device)(implicit session: RSession): Unit = {}
 
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]])(implicit s: RSession): Seq[Device] = {
     (for (t <- table if t.userId === userId && t.state =!= excludeState.orNull) yield t).list

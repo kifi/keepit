@@ -4,12 +4,9 @@ import com.keepit.common.logging.Logging
 import play.api.mvc._
 import com.keepit.common.akka.SafeFuture
 import scala.concurrent.ExecutionContext
-import com.keepit.common.service.ServiceType
 
 
 trait ServiceController extends Controller with Logging {
-
-  def serviceType: ServiceType
   
   def SafeAsyncAction(f: Request[AnyContent] => Result)(implicit ex: ExecutionContext) = Action{ request =>  
     Async{ 
@@ -31,21 +28,9 @@ trait ServiceController extends Controller with Logging {
 
 }
 
-trait SearchServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.SEARCH
-}
-trait ShoeboxServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.SHOEBOX
-}
-trait ElizaServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.ELIZA
-}
-trait HeimdalServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.HEIMDAL
-}
-trait ABookServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.ABOOK
-}
-trait ScraperServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.SCRAPER
-}
+trait SearchServiceController extends ServiceController
+trait ShoeboxServiceController extends ServiceController
+trait ElizaServiceController extends ServiceController
+trait HeimdalServiceController extends ServiceController
+trait ABookServiceController extends ServiceController
+trait ScraperServiceController extends ServiceController

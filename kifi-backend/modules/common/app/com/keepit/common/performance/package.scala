@@ -2,7 +2,6 @@ package com.keepit.common
 
 import com.keepit.common.logging.Logging
 import play.modules.statsd.api.Statsd
-import play.api.Logger
 
 package object performance {
 
@@ -17,12 +16,12 @@ package object performance {
 
     override def toString = s"[$tag] elapsed milliseconds: ${(elapsedTime/1000000d)}"
 
-    def logTime()(implicit logger:Logger = log) {
-      logger.info(toString)
+    def logTime() {
+      log.info(toString)
     }
   }
 
-  def timing[A](tag: String)(f: => A)(implicit logger:Logger): A = {
+  def timing[A](tag: String)(f: => A): A = {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()
@@ -30,7 +29,7 @@ package object performance {
     res
   }
 
-  def timeWithStatsd[A](tag: String, statsdTag: String)(f: => A)(implicit logger:Logger): A = {
+  def timeWithStatsd[A](tag: String, statsdTag: String)(f: => A): A = {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()

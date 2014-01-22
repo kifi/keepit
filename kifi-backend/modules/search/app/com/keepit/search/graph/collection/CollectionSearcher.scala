@@ -16,13 +16,11 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.DocIdSetEdgeSet
 import com.keepit.search.graph.EdgeSet
-import com.keepit.search.graph.LongSetEdgeSet
+import com.keepit.search.graph.LongSetEdgeSetWithAttributes
 import com.keepit.search.graph.LuceneBackedEdgeSet
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.collection.CollectionFields._
-import com.keepit.search.graph.BookmarkInfoAccessor
-import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 
 object CollectionSearcher {
   def apply(collectionIndexer: CollectionIndexer): CollectionSearcher = new CollectionSearcher(collectionIndexer.getSearcher)
@@ -105,22 +103,18 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
 }
 
 abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends EdgeSet[Collection, NormalizedURI]
+
 object CollectionToUriEdgeSet {
   def apply(sourceId: Id[Collection], uriList: URIList): CollectionToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSet[Collection, NormalizedURI] {
+    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[Collection, NormalizedURI] {
       override protected val longArraySet = set
-
-      override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet){
-        override protected def createdAtByIndex(idx:Int): Long = {
-          val datetime = uriList.createdAt(idx)
-          Util.unitToMillis(datetime)
-        }
-        protected def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
-        protected def isPublicByIndex(idx: Int): Boolean = throw new UnsupportedOperationException
+      override protected def createdAtByIndex(idx:Int): Long = {
+        val datetime = uriList.createdAt(idx)
+        Util.unitToMillis(datetime)
       }
-
+      override protected def isPublicByIndex(idx: Int): Boolean = false
     }
   }
 }

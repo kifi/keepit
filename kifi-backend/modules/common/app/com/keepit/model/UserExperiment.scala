@@ -16,7 +16,7 @@ case class UserExperiment (
   userId: Id[User],
   experimentType: ExperimentType,
   state: State[UserExperiment] = UserExperimentStates.ACTIVE
-) extends ModelWithState[UserExperiment] {
+) extends Model[UserExperiment] {
   def withId(id: Id[UserExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserExperiment]) = this.copy(state = state)
@@ -44,8 +44,8 @@ object ExperimentType {
   val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val DEMO = ExperimentType("demo")
+  val TSEARCH = ExperimentType("tsearch")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
-  val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
 
   val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE)
   val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
@@ -61,8 +61,8 @@ object ExperimentType {
     case CAN_CONNECT.value => CAN_CONNECT
     case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
     case DEMO.value => DEMO
+    case TSEARCH.value => TSEARCH
     case EXTENSION_LOGGING.value => EXTENSION_LOGGING
-    case SHOW_HIT_SCORES.value => SHOW_HIT_SCORES
   }
 
   def getUserStatus(experiments: Set[ExperimentType]): String =
@@ -70,14 +70,6 @@ object ExperimentType {
     else if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
-
-  def getTestExperiments(email: EmailAddress): Set[ExperimentType] = {
-    if (email.isTestEmail()) {
-      if (email.isAutoGenEmail()) Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
-      else Set(ExperimentType.FAKE)
-    } else
-      Set.empty
-  }
 }
 
 object UserExperimentStates extends States[UserExperiment] {

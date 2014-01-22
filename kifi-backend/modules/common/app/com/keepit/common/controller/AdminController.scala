@@ -7,7 +7,7 @@ import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.mvc._
 
-class AdminController(actionAuthenticator: ActionAuthenticator) extends Logging with ShoeboxServiceController {
+class AdminController(actionAuthenticator: ActionAuthenticator) extends Controller with Logging with ShoeboxServiceController {
 
   def AdminHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AdminAction(false, action)
 

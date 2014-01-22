@@ -97,7 +97,7 @@ class UrlController @Inject() (
       val msg = s"domainRegex = ${domainRegex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
       db.readWrite{ implicit s =>
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
+        subject = title, htmlBody = msg, category = PostOffice.Categories.System.ADMIN))
       }
     }
 
@@ -107,7 +107,7 @@ class UrlController @Inject() (
         val title = "Renormalization Report: " + s"part ${i+1} of ${batchChanges.size}. ReadOnly Mode = ${readOnly}. Num of affected URL: ${changes.size}"
         val msg = batch.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN))
+        subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = PostOffice.Categories.System.ADMIN))
       }
     }
 

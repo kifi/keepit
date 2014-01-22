@@ -18,7 +18,6 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import java.io.IOException
 import java.io.StringReader
-import com.keepit.common.logging.Logging
 
 
 object Indexable {
@@ -48,15 +47,6 @@ object Indexable {
     ft
   }
 
-  val MAX_BINARY_FIELD_LENGTH = 32766             // DON'T CHANGE THESE CONSTS UNLESS YOU KNOW WHAT YOU ARE DOING
-  val MAX_BINARY_FIELD_LENGTH_MINUS1 = 32765
-  val END_OF_BINARY_FIELD = 0.toByte
-
-  def numberSuffix(n: Int): String = {
-    if (n < 0) throw new IllegalArgumentException(s"suffix number must be non-negative, input = ${n}")
-    if (n == 0) "" else s"_${n}"
-  }
-
   class IteratorTokenStream[A](iterator: Iterator[A], toToken: (A=>String)) extends TokenStream {
     val termAttr = addAttribute(classOf[CharTermAttribute])
     val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute]);
@@ -77,7 +67,7 @@ object Indexable {
 }
 
 
-trait Indexable[T] extends Logging{
+trait Indexable[T] {
   import Indexable._
 
   val sequenceNumber: SequenceNumber
@@ -149,20 +139,6 @@ trait Indexable[T] extends Logging{
 
   def buildBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Field = {
     new BinaryDocValuesField(fieldName, new BytesRef(bytes))
-  }
-
-  def buildExtraLongBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Seq[Field] = {
-    val batchSize = MAX_BINARY_FIELD_LENGTH_MINUS1
-    val batches = bytes.grouped(batchSize).toArray
-    val rounds = batches.size
-
-    if (rounds > 1) log.warn(s"\n==\nbuilding extra long binary docValues field: num of rounds: ${rounds}")
-
-    batches.zipWithIndex.map{ case (subBytes, idx) =>
-      val currentFieldName = fieldName + numberSuffix(idx)
-      if (idx == rounds - 1) new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes))        // nothing left
-      else new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes :+ END_OF_BINARY_FIELD))   // the extra byte indicates we have more
-    }
   }
 
   def buildTokenizedDomainField(fieldName: String, host: Seq[String], analyzer: Analyzer = DefaultAnalyzer.defaultAnalyzer): Field = {

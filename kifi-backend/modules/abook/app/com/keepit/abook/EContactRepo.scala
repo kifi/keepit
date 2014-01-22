@@ -46,9 +46,6 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
       {(c:EContact) => Some((c.createdAt, c.updatedAt, c.userId, c.email, c.name, c.firstName, c.lastName, c.state))})
   }
 
-  override def deleteCache(model: EContact)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: EContact)(implicit session: RSession): Unit = {}
-
   def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
     (for(f <- table if f.id === econtactId) yield f).firstOption
   }

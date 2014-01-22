@@ -124,7 +124,6 @@ kifi.form = (function () {
   });
 
   $('.cancel-signup a').on('mousedown click', function(e) {
-    Tracker.trackClick(this);
     e.preventDefault();
     if ($('body').hasClass('finalizing')) {
       $.post($(this).data('cancelUri'), function(e) {
@@ -137,7 +136,6 @@ kifi.form = (function () {
   });
 
   $('.cancel-signup-login').on('mousedown click', function(e) {
-    Tracker.trackClick(this);
     e.preventDefault();
     if ($('body').hasClass('finalizing')) {
       $.post($(this).data('cancelUri'), function(e) {
@@ -177,7 +175,11 @@ kifi.form = (function () {
       fail: function() {
         clearTimeout(progressTimeout), progressTimeout = null;
         $progress.css('width', 0);
-        $button.prop('disabled', false);
+        $button.one('transitionend', function () {
+          $progress.css('width', 0);
+          $button.removeClass('submit-fail');
+          $button.prop('disabled', false);
+        }).addClass('submit-fail');
       },
       success: function() {
         clearTimeout(progressTimeout), progressTimeout = null;
@@ -187,7 +189,6 @@ kifi.form = (function () {
   }
 
   var $signup1Form = $('.signup-1').submit(function (e) {
-    e.preventDefault();
     var $form = $(this);
     var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
@@ -246,7 +247,6 @@ kifi.form = (function () {
   }
 
   var $signup2EmailForm = $('.signup-2-email').submit(function (e) {
-    e.preventDefault();
     var $form = $(this);
     var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
@@ -284,7 +284,6 @@ kifi.form = (function () {
     return false;
   });
   var $signup2SocialForm = $('.signup-2-social').submit(function (e) {
-    e.preventDefault();
     var $form = $(this);
     var animation = animateButton($form.find('.form-submit-sexy'));
     var promise = $form.data('promise');
@@ -671,10 +670,10 @@ kifi.form = (function () {
     function onDialogClick(e) {
       if (e.which !== 1) return;
       var $el = $(e.target);
-      var submitButton = $el.hasClass('photo-dialog-submit');
-      if (submitButton || $el.is('.photo-dialog-cancel,.photo-dialog-x')) {
+      var submitted = $el.hasClass('photo-dialog-submit');
+      if (submitted || $el.is('.photo-dialog-cancel,.photo-dialog-x,.dialog-cell')) {
         var o = $image.data();
-        if (submitButton) {
+        if (submitted) {
           var scale = o.naturalWidth / o.width;
           deferred.resolve({
             width: o.naturalWidth,

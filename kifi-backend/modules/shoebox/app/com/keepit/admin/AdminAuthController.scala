@@ -31,7 +31,7 @@ class AdminAuthController @Inject() (
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject =  s"${request.user.firstName} impersonating user $user",
         htmlBody = s"we know that ${request.user.firstName} ${request.user.lastName} is a good guy, won't abuse it",
-        category = NotificationCategory.System.ADMIN))
+        category = PostOffice.Categories.System.ADMIN))
     }
     Ok(Json.obj("userId" -> id.toString)).withCookies(impersonateCookie.encodeAsCookie(Some(user.externalId)))
   }

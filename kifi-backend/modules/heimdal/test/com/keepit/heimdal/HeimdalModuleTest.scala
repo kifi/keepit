@@ -19,13 +19,8 @@ class HeimdalModuleTest extends Specification with Logging with ApplicationInjec
 
   
   private def isHeimdalController(clazz: Class[_]): Boolean = {
-    if (classOf[Controller] isAssignableFrom clazz) {
-      if (classOf[ServiceController] isAssignableFrom clazz) {
-        classOf[HeimdalServiceController] isAssignableFrom clazz
-      } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
-    } else false
+    classOf[HeimdalServiceController] isAssignableFrom clazz
   }
-
 
   "Module" should {
     "instantiate controllers" in {

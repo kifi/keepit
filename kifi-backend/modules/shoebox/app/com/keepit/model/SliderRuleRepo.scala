@@ -39,9 +39,6 @@ class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
     newRule
   }
 
-  override def deleteCache(model: SliderRule)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: SliderRule)(implicit session: RSession): Unit = {}
-
   def getGroup(groupName: String)(implicit session: RSession): SliderRuleGroup =
     groupCache.getOrElseUpdate(groupName, SliderRuleGroup((for(r <- table if r.groupName === groupName) yield r).list))
 

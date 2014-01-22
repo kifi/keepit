@@ -1,7 +1,7 @@
 
 <div class="kifi-notify-item-wrapper {{popupClass}}" style="display:none" data-thread-id="{{threadId}}">
   <div class="kifi-notify-item">
-    <div class="kifi-notify-close">×</div>
+    <div class="kifi-notify-close">&times;</div>
     {{{image}}}
     <div class="{{innerClass}}">
       <div class="kifi-notify-title">{{title}}</div>
@@ -14,7 +14,7 @@
       <div class="kifi-notify-triggered">{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}</div>
       {{/triggered}}
       {{^triggered}}
-      <div class="kifi-notify-text">“{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}”</div>
+      <div class="kifi-notify-text">&ldquo;{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}&rdquo;</div>
       {{/triggered}}
       <div class="kifi-notify-footer">Kifi</div>
     </div>

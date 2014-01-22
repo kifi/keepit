@@ -18,20 +18,14 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
           userValueRepo.getValue(user1.id.get, "test").isDefined === false
 
           val uv = userValueRepo.save(UserValue(userId = user1.id.get, name = "test", value = "this right here!"))
-
-          (user1, uv)
-        }
-
-        db.readOnly { implicit s =>
           userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).isDefined === false
           userValueRepo.getValue(user1.id.get, "test").isDefined === true
           userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).get === "this right here!"
-        }
-        db.readWrite { implicit s =>
+
           userValueRepo.save(userValueRepo.get(uv.id.get).withState(UserValueStates.INACTIVE))
-        }
-        db.readOnly { implicit s =>
           userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).isDefined === false
+
+          (user1, uv)
         }
 
         db.readWrite { implicit s =>

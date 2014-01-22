@@ -1,18 +1,19 @@
 .kifi-toaster {
   position: absolute;
-  z-index: 1;
   top: 44px;
   bottom: 54px;
   left: 6px;
   right: 6px;
+  z-index: 2; /* for Enter-to-send menu to cover keeper */
   background: rgba(255,255,255,.94);
-  transition: background-color .2s linear, visibility 0s;
+  transition: background-color .2s linear, visibility 0s, z-index 0s .2s;
   overflow: hidden;
 }
 .kifi-toaster.kifi-down {
+  z-index: 1;
   background: rgba(255,255,255,0);
   visibility: hidden;
-  transition-delay: 0s, .2s;
+  transition-delay: 0s, .2s, .2s;
 }
 .kifi-toast {
   position: absolute;

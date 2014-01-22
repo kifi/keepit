@@ -1,49 +1,17 @@
-@(pending:Seq[ScrapeInfo])(implicit flash: Flash)
+@()(implicit flash: Flash)
 
 @import com.keepit.controllers.admin.routes
 
 @admin("Scraper") {
-    <h2>Pending Queue</h2>
 
-    <div class="checkbox">
-        <label>
-            <input type="checkbox" id="autoreload" checked/> Enable autoreload
-        </label>
-    </div>
+<h2>Rescrape Documents</h2>
 
-    <div id="pending-requests">
-        @pendingScraperRequests(pending)
-    </div>
-
-    <h2>Rescrape Documents</h2>
-
-    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "GET">
-        <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
-        <input type="number" min="0" name="withinMinutes" placeholder="Within 30 minutes">
-        <button type="submit" class="btn">Rescrape</button>
-        <div class="text-success">
-            @flash.get("success").getOrElse("")
-        </div>
-    </form>
-
-    <script>
-        var refresh = function(){
-            if ($("#autoreload").is(":checked")) {
-                $.ajax({
-                    url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
-                    dataType: "html",
-                    success : function(data){
-                        document.getElementById("pending-requests").innerHTML = data;
-                    },
-                    complete: function(){
-                        setTimeout(refresh, 5000);
-                    }
-                });
-            }
-        };
-        $("#autoreload").change(function() {
-            if (this.checked) { refresh(); }
-        });
-        refresh();
-    </script>
+<form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "GET">
+      <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
+      <input type="number" min="0" name="withinMinutes" placeholder="Within 30 minutes">
+    <button type="submit" class="btn">Rescrape</button>
+  <div class="text-success">
+    @flash.get("success").getOrElse("")
+  </div>
+</form>
 }

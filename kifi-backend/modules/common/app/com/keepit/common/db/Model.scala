@@ -9,10 +9,6 @@ trait Model[M] {
   def withUpdateTime(now: DateTime): M
 }
 
-trait ModelWithState[M] extends Model[M]{ self: Model[M] =>
-  val state: State[M]
-}
-
 trait ModelWithExternalId[M] extends Model[M] { self: Model[M] =>
   def externalId: ExternalId[M]
 }

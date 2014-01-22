@@ -49,9 +49,6 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
       )
   }
 
-  override def deleteCache(model: Contact)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: Contact)(implicit session: RSession): Unit = {}
-
   def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[Contact] =
     (for(f <- table if f.userId === userId) yield f).elementsTo(maxRows)
 

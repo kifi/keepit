@@ -5,10 +5,9 @@ import com.keepit.model.User
 import play.api.libs.json._
 case class IndexInfo(
   name: String,
-  sequenceNumber: SequenceNumber,
+  sequenceNumber: Option[SequenceNumber],
   numDocs: Int,
-  committedAt: Option[String],
-  indexSize: Option[Long]
+  committedAt: Option[String]
 )
 
 object IndexInfo {

@@ -1,10 +1,10 @@
 @(flag: String)
 
 @admin("Set Topic Names"){
-  <form action = "com.keepit.controllers.admin.routes.TopicModelController.saveAddedTopics(flag)" method = "POST">
+  <form action = "@com.keepit.controllers.admin.routes.TopicModelController.saveAddedTopics(flag)" method = "POST">
   <h4>
-    Set topic names for model @flag.
-    For model @{if (flag == "a") "b" else "a"}, click <a href = "com.keepit.controllers.admin.routes.TopicModelController.addTopics({if (flag == "a") "b" else "a"})"> here </a>
+    Set topic names for model @flag. 
+    For model @{if (flag == "a") "b" else "a"}, click <a href = "@com.keepit.controllers.admin.routes.TopicModelController.addTopics({if (flag == "a") "b" else "a"})"> here </a> 
   </h4>
   
   <div>
@@ -12,7 +12,7 @@
     <br>
     <b>NOTE: Existing topic names will all be removed.</b>
     <br>
-    To edit topic names, click <a href = "com.keepit.controllers.admin.routes.TopicModelController.topicsView(flag, 0)">here</a>
+    To edit topic names, click <a href = "@com.keepit.controllers.admin.routes.TopicModelController.topicsView(flag, 0)">here</a>
     </label>
     <textarea id="topics" name="topics" rows="20"></textarea>
   </div>    

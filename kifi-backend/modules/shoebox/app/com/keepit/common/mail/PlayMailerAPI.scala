@@ -6,7 +6,6 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.typesafe.plugin.MailerAPI
-import com.keepit.model.NotificationCategory
 
 class PlayMailerAPI @Inject()(
     db: Database,
@@ -17,7 +16,7 @@ class PlayMailerAPI @Inject()(
     from = EmailAddresses.NOTIFICATIONS,
     subject = "",
     htmlBody = "",
-    category = NotificationCategory.System.PLAY))
+    category = PostOffice.Categories.System.PLAY))
 
   private def reportErrors[A](block: => A): A = try block catch {
     case e: Throwable =>

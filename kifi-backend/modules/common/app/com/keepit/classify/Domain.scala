@@ -1,7 +1,7 @@
 package com.keepit.classify
 
 import org.joda.time.DateTime
-import com.keepit.common.db.{State, States, ModelWithState, Id}
+import com.keepit.common.db.{State, States, Model, Id}
 import com.keepit.common.time._
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.Normalization
@@ -18,7 +18,7 @@ case class Domain(
   state: State[Domain] = DomainStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
-) extends ModelWithState[Domain] {
+) extends Model[Domain] {
   def withId(id: Id[Domain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAutoSensitive(sensitive: Option[Boolean]) = this.copy(autoSensitive = sensitive)

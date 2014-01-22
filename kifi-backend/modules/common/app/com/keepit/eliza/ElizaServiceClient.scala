@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.model.{NotificationCategory, User}
+import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
@@ -26,7 +26,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) : Unit
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -64,7 +64,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) : Unit = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj(
       "userIds"   -> userIds.toSeq,
@@ -74,7 +74,7 @@ class ElizaServiceClientImpl @Inject() (
       "linkUrl"   -> linkUrl,
       "imageUrl"  -> imageUrl,
       "sticky"    -> sticky,
-      "category"  -> category
+      "category"  -> categoryOverride
     )
     call(Eliza.internal.sendGlobalNotification, payload)
   }
@@ -107,7 +107,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
     p.future
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit = {}
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) : Unit = {}
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())

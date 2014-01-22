@@ -71,8 +71,7 @@ class TopicModelController  @Inject() (
       case (None, Some(b)) => makeString(b, topic(b))
       case (Some(a), Some(b)) => makeString(a, topic(a)) + ", " + makeString(b, topic(b))
     }
-//    Redirect(com.keepit.controllers.admin.routes.TopicModelController.documentTopic(Some(content), Some(topics)))
-    throw new IllegalStateException("should be disabled")
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.documentTopic(Some(content), Some(topics)))
   }
 
   def wordTopic(word: Option[String] = None, topic: Option[String] = None) = AdminHtmlAction { implicit request =>
@@ -97,8 +96,7 @@ class TopicModelController  @Inject() (
       case None => ""
     }
 
-//   Redirect(com.keepit.controllers.admin.routes.TopicModelController.wordTopic(Some(word), Some(topic)))
-    throw new IllegalStateException("should be disabled")
+   Redirect(com.keepit.controllers.admin.routes.TopicModelController.wordTopic(Some(word), Some(topic)))
   }
 
   def userTopic(userId: Option[String] = None, topic: Option[String] = None) = AdminHtmlAction { implicit request =>
@@ -123,8 +121,7 @@ class TopicModelController  @Inject() (
     }
 
     val rv = buildString(topic)
-//    Redirect(com.keepit.controllers.admin.routes.TopicModelController.userTopic(Some(userId.id.toString), Some(rv)))
-    throw new IllegalStateException("should be disabled")
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.userTopic(Some(userId.id.toString), Some(rv)))
   }
 
   def updateTopicName(id: Id[TopicName]) = AdminHtmlAction{ implicit request =>
@@ -167,8 +164,7 @@ class TopicModelController  @Inject() (
       topics.foreach{accessor.topicNameRepo.save(_)}
     }
 
-//    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsView(flag, 0))
-    throw new IllegalStateException("should be disabled")
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsView(flag, 0))
   }
 
   def genModelFiles(flag: String) = AdminHtmlAction{ implicit request =>

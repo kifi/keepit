@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{UserAgent, URI}
+import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
@@ -114,7 +114,7 @@ class ShoeboxActionAuthenticator @Inject() (
       (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
-      Redirect("/logout")
+      Forbidden(message)
     } else {
       try {
         action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
@@ -124,7 +124,7 @@ class ShoeboxActionAuthenticator @Inject() (
       } catch {
         case e: Throwable =>
         val globalError = airbrake.notify(AirbrakeError.incoming(request, e,
-            s"Error executing with user https://admin.kifi.com/admin/user/$userId ${identity.fullName}, ${request.headers.get(USER_AGENT).getOrElse("NO USER AGENT")}"))
+            s"Error executing with userId $userId, experiments [${experiments.mkString(",")}], installation ${kifiInstallationId.getOrElse("NA")}"))
         log.error(s"error reported [${globalError.id}]", e)
           throw ReportedException(globalError.id, e)
       }

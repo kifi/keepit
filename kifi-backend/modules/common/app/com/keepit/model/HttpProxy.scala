@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
-import com.keepit.common.db.ModelWithState
+import com.keepit.common.db.Model
 import com.keepit.common.db.State
 import com.keepit.common.db.States
 import com.keepit.common.time._
@@ -24,7 +24,7 @@ case class HttpProxy(
   scheme: String,
   username: Option[String],
   password: Option[String]
-  ) extends ModelWithState[HttpProxy] {
+  ) extends Model[HttpProxy] {
 
   def withId(id: Id[HttpProxy]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)

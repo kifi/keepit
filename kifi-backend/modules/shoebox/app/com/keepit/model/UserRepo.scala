@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State, SequenceNumber, NotFoundException}
@@ -19,11 +19,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
   def allActiveTimes()(implicit session: RSession): Seq[DateTime]
   def pageExcluding(excludeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
-  def pageExcludingWithExp(excludeStates: State[User]*)(includeExp: ExperimentType)(page: Int, size: Int)(implicit session: RSession): Seq[User]
-  def pageExcludingWithoutExp(excludeStates: State[User]*)(excludeExp: ExperimentType)(page: Int, size: Int)(implicit session: RSession): Seq[User]
   def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int
-  def countExcludingWithExp(excludeStates: State[User]*)(includeExp: ExperimentType)(implicit session: RSession): Int
-  def countExcludingWithoutExp(excludeStates: State[User]*)(excludeExp: ExperimentType)(implicit session: RSession): Int
   def getOpt(id: Id[User])(implicit session: RSession): Option[User]
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
   def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User]
@@ -36,8 +32,7 @@ class UserRepoImpl @Inject() (
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
     basicUserCache: BasicUserUserIdCache,
-    heimdal: HeimdalServiceClient,
-    expRepoProvider: Provider[UserExperimentRepoImpl])
+    heimdal: HeimdalServiceClient)
   extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -47,8 +42,6 @@ class UserRepoImpl @Inject() (
 
   private val sequence = db.getSequence("user_sequence")
 
-  private lazy val expRepo = expRepoProvider.get
-  implicit val userExperimentStateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[UserExperiment]
 
   override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
@@ -82,48 +75,12 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageExcludingWithExp(excludeStates: State[User]*)(includeExp: ExperimentType)(page: Int = 0, size: Int = 20)
-                          (implicit session: RSession): Seq[User] = {
-    val q = for {
-      u <- table if !(u.state inSet excludeStates)
-      e <- expRepo.table if e.userId === u.id && e.experimentType === includeExp && e.state === UserExperimentStates.ACTIVE
-    } yield u
-    q.sortBy(_.id desc).drop(page * size).take(size).list
-  }
-
-  def pageExcludingWithoutExp(excludeStates: State[User]*)(excludeExp: ExperimentType)(page: Int = 0, size: Int = 20)
-                             (implicit session: RSession): Seq[User] = {
-    val q = for {
-      u <- table if !((u.state inSet excludeStates) ||
-        (for { e <- expRepo.table if u.id === e.userId && e.experimentType === excludeExp && e.state === UserExperimentStates.ACTIVE } yield e).exists)
-    } yield u
-    q.sortBy(_.id desc).drop(page * size).take(size).list
-  }
-
   def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int = {
     val q = (for (u <- table if !(u.state inSet excludeStates)) yield u)
     Query(q.length).first
   }
 
-  def countExcludingWithExp(excludeStates: State[User]*)(includeExp: ExperimentType)
-                           (implicit session: RSession): Int = {
-    val q = for {
-      u <- table if !(u.state inSet excludeStates)
-      e <- expRepo.table if e.userId === u.id && e.experimentType === includeExp && e.state === UserExperimentStates.ACTIVE
-    } yield u
-    Query(q.length).first
-  }
-
-  def countExcludingWithoutExp(excludeStates: State[User]*)(excludeExp: ExperimentType)
-                           (implicit session: RSession): Int = {
-    val q = for {
-      u <- table if !((u.state inSet excludeStates) ||
-        (for { e <- expRepo.table if u.id === e.userId && e.experimentType === excludeExp && e.state === UserExperimentStates.ACTIVE } yield e).exists)
-    } yield u
-    Query(q.length).first
-  }
-
-  override def deleteCache(user: User)(implicit session: RSession): Unit = {
+  def deleteCache(user: User): Unit = {
     for (id <- user.id) {
       idCache.remove(UserIdKey(id))
       basicUserCache.remove(BasicUserUserIdKey(id))

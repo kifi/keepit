@@ -10,7 +10,13 @@ import play.api.Play.current
 
 case class AuthHelperModule() extends ScalaModule {
 
-  def configure() {}
+  def configure() {
+  }
+
+  @Provides
+  @Singleton
+  def authHelper(db: Database, socialUserInfoRepo: SocialUserInfoRepo, userRepo: UserRepo): AuthHelper =
+    new AuthHelper(db, socialUserInfoRepo, userRepo)
 
   @Provides
   @Singleton

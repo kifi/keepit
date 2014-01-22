@@ -44,9 +44,7 @@ private[scraper] class ScrapeScheduler @Inject() (
     val pendingSkipThreshold = scraperConfig.pendingSkipThreshold // todo: adjust dynamically
     val adjPendingCount = (pendingCount - pendingOverdues.length) // assuming overdue ones are no longer being worked on
     val infos = if (adjPendingCount > pendingSkipThreshold) {
-        val msg = s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $pendingSkipThreshold. Skip a round."
-        log.warn(msg)
-        airbrake.notify(msg)
+        log.warn(s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $pendingSkipThreshold. Skip a round.")
         Seq.empty[ScrapeInfo]
       } else {
         activeOverdues.take(batchMax) ++ pendingOverdues.take(batchMax)
@@ -107,7 +105,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     val uriId = uri.id.get
     val info = scrapeInfoRepo.getByUriId(uriId)
     val toSave = info match {
-      case Some(s) => s.withState(ScrapeInfoStates.PENDING).withNextScrape(currentDateTime)
+      case Some(s) => s.withState(ScrapeInfoStates.PENDING)
       case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
     }
     val saved = scrapeInfoRepo.save(toSave)

@@ -23,7 +23,6 @@ import play.api.test.Helpers._
 trait GraphTestHelper extends ApplicationInjector {
 
   val source = BookmarkSource("test")
-  val bigDataSize = 8000
 
   def initData = {
     val users = saveUsers(
@@ -41,20 +40,6 @@ trait GraphTestHelper extends ApplicationInjector {
       NormalizedURI.withHash(title = Some("4"), normalizedUrl = "http://www.findit.com/article4", state = SCRAPED),
       NormalizedURI.withHash(title = Some("5"), normalizedUrl = "http://www.findit.com/article5", state = SCRAPED),
       NormalizedURI.withHash(title = Some("6"), normalizedUrl = "http://www.findit.org/article6", state = SCRAPED)
-    )
-    (users, uris)
-  }
-
-  def superBigData = {
-    val users = saveUsers(
-      User(firstName = "rich", lastName = ""),
-      User(firstName = "poor", lastName = "")
-    )
-
-    val uris = saveURIs(
-      (1 to bigDataSize).map{ i =>
-        NormalizedURI.withHash(title = Some(s"${i}"), normalizedUrl = s"http://www.keepit.com/article${i}", state = SCRAPED)
-      } :_*
     )
     (users, uris)
   }

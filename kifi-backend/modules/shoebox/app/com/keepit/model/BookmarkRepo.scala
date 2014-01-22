@@ -7,13 +7,15 @@ import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import scala.Some
+import com.keepit.common.mail.ElectronicMail
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark]
-  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
-  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
+                      excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
+                     (implicit session: RSession): Option[Bookmark]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark]
@@ -25,9 +27,10 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
-  def delete(id: Id[Bookmark])(implicit session: RWSession): Unit
+  def delete(id: Id[Bookmark])(implicit session: RSession): Unit
   def save(model: Bookmark)(implicit session: RWSession): Bookmark
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
+  def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark]
   def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean
@@ -82,20 +85,15 @@ class BookmarkRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  override def deleteCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
+  def removeFromCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(BookmarkUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
-    latestBookmarkUriCache.remove(LatestBookmarkUriKey(bookmark.uriId))
   }
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
-    if (bookmark.state == BookmarkStates.INACTIVE) {
-      deleteCache(bookmark)
-    } else {
-      bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-      countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
-      latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
-    }
+    bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
+    countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
   }
 
   override def count(implicit session: RSession): Int = {
@@ -104,16 +102,14 @@ class BookmarkRepoImpl @Inject() (
     }
   }
 
-  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
+                      excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
+                     (implicit session: RSession): Option[Bookmark] =
     bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
-      val bookmarks = (for(b <- table if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+      val bookmarks = (for(b <- table if b.uriId === uriId && b.userId === userId) yield b).list
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
-    }
-
-  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] ={
-    (for(b <- table if b.uriId === uriId && b.userId === userId ) yield b).firstOption
-  }
+    }.filter { b => excludeState.map(_ != b.state).getOrElse(true) }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.title === title) yield b).list
@@ -155,17 +151,11 @@ class BookmarkRepoImpl @Inject() (
       }
     } else Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE && !b.isPrivate) yield b).length).first
 
-  def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
-    val q = StaticQuery.queryNA[Int](
-      s"select count(*) from bookmark where updated_at between '$from' and '$to' and state='${BookmarkStates.ACTIVE.value}'")
-    q.first
-  }
+  def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int =
+    Query((for(b <- table if b.updatedAt >= from && b.updatedAt <= to && b.state === BookmarkStates.ACTIVE) yield b).length).first
 
-  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int = {
-    val q = StaticQuery.queryNA[Int](
-      s"select count(*) from bookmark where updated_at between '$from' and '$to' and state='${BookmarkStates.ACTIVE.value}' and source='${source.value}'")
-    q.first
-  }
+  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int =
+    Query((for(b <- table if b.updatedAt >= from && b.updatedAt <= to && b.state === BookmarkStates.ACTIVE && b.source === source) yield b).length).first
 
   def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] =
     (for (b <- table if b.seq > num) yield b).sortBy(_.seq).take(limit).list
@@ -179,9 +169,9 @@ class BookmarkRepoImpl @Inject() (
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
 
-  def delete(id: Id[Bookmark])(implicit sesion: RWSession): Unit = {
+  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = {
     val q = (for(b <- table if b.id === id) yield b)
-    q.firstOption.map{ bm => deleteCache(bm) }
+    q.firstOption.map{ bm => removeFromCache(bm) }
     q.delete
   }
 

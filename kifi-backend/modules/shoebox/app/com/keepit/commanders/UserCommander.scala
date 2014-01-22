@@ -18,7 +18,7 @@ import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
+import com.keepit.heimdal._
 import akka.actor.Scheduler
 
 import play.api.Play.current
@@ -31,7 +31,13 @@ import java.text.Normalizer
 
 import scala.concurrent.Future
 import scala.util.Try
-import securesocial.core.{Identity, UserService, Registry}
+import scala.Some
+
+
+
+
+
+import securesocial.core.{Identity, UserService, Registry, SocialUser}
 import play.api.Play
 
 
@@ -91,6 +97,8 @@ class UserCommander @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   bookmarkCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
+  eventContextBuilder: HeimdalContextBuilderFactory,
+  heimdalServiceClient: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
@@ -177,49 +185,59 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, state: State[User]) = {
     val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
     SafeFuture {
-      createDefaultKeeps(newUser.id.get)
+      val contextBuilder = eventContextBuilder()
+      contextBuilder += ("action", "registered")
+      // more properties to be added after some refactoring in SecureSocialUserServiceImpl
+      // requestInfo ???
+      // val socialUser: SocialUser = ???
+      // contextBuilder += ("identityProvider", socialUser.identityId.providerId)
+      // contextBuilder += ("authenticationMethod", socialUser.authMethod.method)
+      heimdalServiceClient.trackEvent(UserEvent(newUser.id.get, contextBuilder.build, UserEventTypes.JOINED, newUser.createdAt))
+    }
+    SafeFuture {
+      createDefaultKeeps(newUser.id.get)(eventContextBuilder().build)
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
-      ()
+      Unit
     }
     newUser
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    delay {
-      val guardKey = "friendsNotifiedAboutJoining"
-      if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, guardKey).exists(_=="true") }) {
-        db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
-        val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
-          val newUser = userRepo.get(newUserId)
-          val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
-          val id2Email = toNotify.map { userId =>
-            (userId, emailRepo.getByUser(userId))
-          }.toMap
-          (newUser, toNotify, id2Email)
-        }
-        val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
-        toNotify.foreach { userId =>
-          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
-          db.readWrite{ implicit session =>
-            val user = userRepo.get(userId)
-            postOffice.sendMail(ElectronicMail(
-              senderUserId = None,
-              from = EmailAddresses.NOTIFICATIONS,
-              fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
-              to = List(id2Email(userId)),
-              subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
-              htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
-              textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-              category = NotificationCategory.User.FRIEND_JOINED)
-            )
-          }
-
+    val guardKey = "friendsNotifiedAboutJoining"
+    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, guardKey).exists(_=="true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
+      val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
+        val newUser = userRepo.get(newUserId)
+        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
+        val id2Email = toNotify.map { userId =>
+          (userId, emailRepo.getByUser(userId))
+        }.toMap
+        (newUser, toNotify, id2Email)
+      }
+      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
+      toNotify.foreach { userId =>
+        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
+        db.readWrite{ implicit session =>
+          val user = userRepo.get(userId)
+          postOffice.sendMail(ElectronicMail(
+            senderUserId = None,
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
+            to = List(id2Email(userId)),
+            subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
+            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
+            textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
+            category = PostOffice.Categories.User.NOTIFICATION)
+          )
         }
 
+      }
+
+      delaySend {
         elizaServiceClient.sendGlobalNotification(
           userIds = toNotify,
           title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
@@ -228,7 +246,7 @@ class UserCommander @Inject() (
           linkUrl = "https://www.kifi.com/friends/invite",
           imageUrl = imageUrl,
           sticky = false,
-          category = NotificationCategory.User.FRIEND_JOINED
+          categoryOverride = Some("triggered")
         )
       }
     }
@@ -249,19 +267,18 @@ class UserCommander @Inject() (
 
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
 
-          val (category, subj, body) = if (newUser.state != UserStates.ACTIVE) {
-            (NotificationCategory.User.EMAIL_CONFIRMATION,
-             "Kifi.com | Please confirm your email address",
-             views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
+          val (subj, body) = if (newUser.state != UserStates.ACTIVE) {
+            ("Kifi.com | Please confirm your email address",
+              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
-            (NotificationCategory.User.WELCOME,
-             "Let's get started with Kifi",
+            ("Let's get started with Kifi",
               if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("kifi"),
             to = Seq(targetEmailOpt.get),
-            category = category,
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = subj,
             htmlBody = body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, verifyUrl, unsubLink).body)
@@ -275,7 +292,7 @@ class UserCommander @Inject() (
           val mail = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
             to = Seq(emailAddr),
-            category = NotificationCategory.User.WELCOME,
+            category = PostOffice.Categories.User.EMAIL_CONFIRMATION,
             subject = "Let's get started with Kifi",
             htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
             textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
@@ -286,8 +303,9 @@ class UserCommander @Inject() (
     }
   }
 
-  def createDefaultKeeps(userId: Id[User]): Unit = {
+  def createDefaultKeeps(userId: Id[User])(implicit context: HeimdalContext): Unit = {
     val contextBuilder = new HeimdalContextBuilder()
+    contextBuilder.data ++= context.data
     contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
     val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
@@ -410,11 +428,7 @@ class UserCommander @Inject() (
   def friend(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { user =>
-        val openFriendRequests = friendRequestRepo.getBySender(userId, Set(FriendRequestStates.ACTIVE))
-
-        if (openFriendRequests.size > 40){
-          (false, "tooManySent")
-        } else if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
+        if (friendRequestRepo.getBySenderAndRecipient(userId, user.id.get).isDefined) {
           (true, "alreadySent")
         } else {
           friendRequestRepo.getBySenderAndRecipient(user.id.get, userId) map { friendReq =>
@@ -451,7 +465,7 @@ class UserCommander @Inject() (
                   subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
                   htmlBody = views.html.email.friendRequestAcceptedInlined(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestAcceptedText(user.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
-                  category = NotificationCategory.User.FRIEND_ACCEPTED)
+                  category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
 
                 (respondingUser, respondingUserImage)
@@ -459,16 +473,18 @@ class UserCommander @Inject() (
 
               }
 
-              elizaServiceClient.sendGlobalNotification(
-                userIds = Set(user.id.get),
-                title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
-                body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-                linkText = "Invite more friends to kifi",
-                linkUrl = "https://www.kifi.com/friends/invite",
-                imageUrl = respondingUserImage,
-                sticky = false,
-                category = NotificationCategory.User.FRIEND_ACCEPTED
-              )
+              delaySend {
+                elizaServiceClient.sendGlobalNotification(
+                  userIds = Set(user.id.get),
+                  title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
+                  body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
+                  linkText = "Invite more friends to kifi",
+                  linkUrl = "https://www.kifi.com/friends/invite",
+                  imageUrl = respondingUserImage,
+                  sticky = false,
+                  categoryOverride = Some("triggered")
+                )
+              }
 
             }
 
@@ -492,23 +508,26 @@ class UserCommander @Inject() (
                   subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
                   htmlBody = views.html.email.friendRequestInlined(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body,
                   textBody = Some(views.html.email.friendRequestText(user.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body),
-                  category = NotificationCategory.User.FRIEND_REQUEST)
+                  category = PostOffice.Categories.User.NOTIFICATION)
                 )(session)
 
                 (requestingUser, requestingUserImage)
 
               }
 
-              elizaServiceClient.sendGlobalNotification(
-                userIds = Set(user.id.get),
-                title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
-                body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-                linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-                linkUrl = "https://kifi.com/friends/requests",
-                imageUrl = requestingUserImage,
-                sticky = false,
-                category = NotificationCategory.User.FRIEND_REQUEST
-              )
+              delaySend {
+                elizaServiceClient.sendGlobalNotification(
+                  userIds = Set(user.id.get),
+                  title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
+                  body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
+                  linkText = s"Respond to ${requestingUser.firstName}'s friend request",
+                  linkUrl = "https://kifi.com/friends/requests",
+                  imageUrl = requestingUserImage,
+                  sticky = false,
+                  categoryOverride = Some("triggered")
+                )
+              }
+
             }
 
             (true, "sentRequest")
@@ -521,7 +540,7 @@ class UserCommander @Inject() (
   }
 
   def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
-    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
+    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } map { user =>
       val success = db.readWrite(attempts = 2) { implicit s =>
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
@@ -532,7 +551,7 @@ class UserCommander @Inject() (
         }
       }
       success
-    }
+    } getOrElse false
   }
 
   def ignoreFriendRequest(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
@@ -584,9 +603,9 @@ class UserCommander @Inject() (
   }
 
 
-  def delay(f: => Unit) = {
+  def delaySend(f: => Unit) = {
     import scala.concurrent.duration._
-    scheduler.scheduleOnce(10 seconds) {
+    scheduler.scheduleOnce(5 seconds) {
       f
     }
   }

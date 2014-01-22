@@ -69,7 +69,7 @@ class UserExperimentRepoImpl @Inject()(
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
   }
 
-  override def deleteCache(model: UserExperiment)(implicit session: RSession):Unit = {
+  def deleteCache(model: UserExperiment):Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
   }
 

@@ -12,7 +12,7 @@ case class DuplicateDocument (
   uri2Id: Id[NormalizedURI],
   percentMatch: Double,
   state: State[DuplicateDocument] = DuplicateDocumentStates.NEW
-) extends ModelWithState[DuplicateDocument] {
+) extends Model[DuplicateDocument] {
 
   assert(uri1Id.id < uri2Id.id, "uri1Id ≥ uri2Id")
 

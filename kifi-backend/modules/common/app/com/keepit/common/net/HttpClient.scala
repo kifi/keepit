@@ -17,13 +17,12 @@ import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
 import com.keepit.common.concurrent.ExecutionContext.immediate
-import com.keepit.common.controller.{MidFlightRequests, CommonHeaders}
+import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
 import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
-import com.keepit.common.amazon.MyAmazonInstanceInfo
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
@@ -36,11 +35,11 @@ case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientR
   override def toString(): String = getMessage
 }
 
-case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int, midFlightRequestCount: Int, listOfMidFlightRequests: String, remoteMidFlightRequestCount: Option[Int])
+case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int)
     extends Exception(
       s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
       s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms remote-time:${remoteTime}ms " +
-      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status} remoteMidFlight[$remoteMidFlightRequestCount] localMidFlight[$midFlightRequestCount]:$listOfMidFlightRequests"){
+      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status}"){
   override def toString(): String = getMessage
 }
 
@@ -97,12 +96,9 @@ case class HttpClientImpl(
     fastJsonParser: FastJsonParser,
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
-    midFlightRequests: MidFlightRequests,
-    myInstanceInfo: MyAmazonInstanceInfo,
     silentFail: Boolean = false) extends HttpClient with Logging {
 
   private val validResponseClass = 2
-  private lazy val trackTimeThresholdFactor = myInstanceInfo.info.instantTypeInfo.ecu
 
   override val defaultFailureHandler: FailureHandler = { req =>
     {
@@ -167,7 +163,7 @@ case class HttpClientImpl(
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withTimeout(timeout), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, trackTimeThresholdFactor)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser)
     val status = response.status
     if (status / 100 != validResponseClass) {
       val exception = if (status == Status.SERVICE_UNAVAILABLE) {
@@ -209,7 +205,6 @@ case class HttpClientImpl(
   private def logSuccess(request: Request, res: ClientResponse): Unit = {
     val remoteUp = res.isUp
     val remoteTime: Int = res.res.header(CommonHeaders.ResponseTime).map(_.toInt).getOrElse(AccessLogTimer.NoIntValue)
-    val remoteMidFlightRequestCount: Option[Int] = res.res.header(CommonHeaders.MidFlightRequestCount).map(_.toInt)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
         remoteTime = remoteTime,
@@ -226,7 +221,7 @@ case class HttpClientImpl(
 
     e.waitTime map { waitTime =>
       if (waitTime > 1000) {//ms
-        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
+        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,

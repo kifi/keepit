@@ -162,20 +162,12 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
   "internByUri" should {
     "Find an existing uri without creating a new one" in {
       withDb() { implicit injector =>
-        db.readOnly { implicit s =>
-          uriRepo.count === 0
-        }
-        val xkcd = db.readWrite { implicit s =>
-          uriRepo.save(NormalizedURI.withHash("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/"))
-        }
         db.readWrite { implicit s =>
+          uriRepo.count === 0
+          val xkcd = uriRepo.save(NormalizedURI.withHash("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/"))
           uriRepo.count === 1
           uriRepo.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
-        }
-        db.readWrite { implicit s =>
           uriRepo.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
-        }
-        db.readOnly { implicit s =>
           uriRepo.count === 1
         }
       }
@@ -183,12 +175,10 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
     "Create a uri that does not exist" in {
       withDb() { implicit injector =>
-        val blowup = db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
           uriRepo.count === 0
           uriRepo.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
-          uriRepo.internByUri("http://www.arte.tv/fr/3482046.html")
-        }
-        db.readOnly { implicit s =>
+          val blowup = uriRepo.internByUri("http://www.arte.tv/fr/3482046.html")
           uriRepo.count === 1
           blowup.url === "http://www.arte.tv/fr/3482046.html"
         }
@@ -197,16 +187,13 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
     "redirect works" in {
       withDb() { implicit injector =>
-        val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val (uri0, uri1, uri2) = db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
           val uri0 = createUri(title = "too_old", url = "http://www.keepit.com/too_old")
           val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
           val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
+          val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           uriRepo.save(uri0.withRedirect(uri2.id.get, t))
           uriRepo.save(uri1.withRedirect(uri2.id.get, t))
-          (uri0, uri1, uri2)
-        }
-        db.readOnly { implicit s =>
           val updated = uriRepo.get(uri1.id.get)
           updated.redirect === uri2.id
           updated.redirectTime === Some(t)

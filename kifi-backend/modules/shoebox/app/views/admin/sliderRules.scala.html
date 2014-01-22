@@ -4,8 +4,8 @@
   <input type="checkbox" class="checkbox" name="@name" @if(rules(name).isActive) {checked}>
 }
 
-@admin("Keeper Rules", stylesheets = List("admin_slider")) {
-<h3>Rules for Automatically Showing the Keep Button</h3>
+@admin("Slider Rules", stylesheets = List("admin_slider")) {
+<h3>Rules for Automatically Showing the Slider</h3>
 
 <div><span class="label">Note:</span> Changes take effect immediately for all kifi users when you click <b>Save</b> below.</div>
 
@@ -17,28 +17,37 @@
         <th>On
         <th>Show
         <th>Rule
-        <th>Notes/Parameters
+        <th>Parameters
     </thead>
     <tr>
       <td>@checkbox("message")
       <td class="y">
       <td>new message
-      <td>shows same-page chat pane immediately
+      <td>
     <tr>
       <td>&check;
       <td class="n">
       <td>clicked never for this site
-      <td>hides keeper entirely
+      <td>
+    <tr>
+      <td>@checkbox("comment")
+      <td class="y">
+      <td>new comment
+      <td>
+        <select name="commentParams" style="width:90px">
+          <option value='"friend"' @if(rules("comment").parameters.get(0).as[String] == "friend") {selected}>friend</option>
+          <!--<option value='"anyone"' @if(rules("comment").parameters.get(0).as[String] == "anyone") {selected}>anyone</option>-->
+        </select>
     <tr>
       <td>@checkbox("sensitive")
       <td class="n">
       <td>sensitive domain
-      <td>hides keeper entirely
+      <td>
     <tr>
       <td>@checkbox("url")
       <td class="n">
       <td>URL pattern
-      <td><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getPatterns">view patterns</a>
+      <td><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns">view patterns</a>
     <tr>
       <td>@checkbox("shown")
       <td class="n">

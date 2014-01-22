@@ -37,9 +37,6 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
           def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
         }
 
-        override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
-        override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
-
         override val table = new RepoTable[Bar](db, "foo") {
           def name = column[String]("name")
           def * = id.? ~ name <> (Bar, Bar.unapply _)

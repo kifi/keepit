@@ -310,7 +310,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "count": richHit.count,
           "users": richHit.users,
           "score": richHit.score,
-          "bookmark": richHit.bookmark
+          "bookmark": richHit.bookmark 
         };
       }
       api.port.emit("log_search_event", [
@@ -669,7 +669,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       boldSearchTerms(hit.bookmark.title, matches.title) :
       formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
-    hit.scoreText = ~response.session.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
+    hit.scoreText = response.showScores === true ? String(Math.round(hit.score * 100) / 100) : '';
     hit.tagsText = (hit.bookmark.tagNames || []).join(', ');
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;

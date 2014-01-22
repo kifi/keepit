@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import play.api.Plugin
-import com.keepit.model._
+import com.keepit.model.{User, EmailAddressRepo, UserNotifyPreferenceRepo, EmailOptOutRepo}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.common.time._
@@ -113,7 +113,7 @@ private[mail] class MailSenderActor @Inject() (
     }
   }
 
-  private def reportEmailNotificationSent(email: ElectronicMail): Unit = if (NotificationCategory.User.all.contains(email.category)) {
+  private def reportEmailNotificationSent(email: ElectronicMail): Unit = if (PostOffice.Categories.User.all.contains(email.category)) {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder =  heimdalContextBuiler()

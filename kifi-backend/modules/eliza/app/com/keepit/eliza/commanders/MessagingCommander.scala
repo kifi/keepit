@@ -3,7 +3,7 @@ package com.keepit.eliza.commanders
 import com.keepit.eliza.controllers.NotificationRouter
 import com.keepit.eliza._
 import com.keepit.eliza.model._
-import com.keepit.model._
+import com.keepit.model.{User, DeepLocator, NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -11,6 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.model.ExperimentType
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.heimdal._
 import com.keepit.common.mail.GenericEmailAddress
@@ -129,7 +130,7 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, categoryOverride: Option[String] = None) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -157,7 +158,7 @@ class MessagingCommander @Inject() (
     val notificationAttempts = userIds.map { userId =>
       Try {
         val (notifJson, userThread) = db.readWrite{ implicit session =>
-          val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
+          val categoryString = categoryOverride.getOrElse(NotificationCategory.GLOBAL.category)
           val notifJson = Json.obj(
             "id"       -> message.externalId.id,
             "time"     -> message.createdAt,
@@ -197,7 +198,7 @@ class MessagingCommander @Inject() (
     }
 
     val notified = notificationAttempts collect { case Success(userId) => userId }
-    messagingAnalytics.sentGlobalNotification(notified, message, thread, category)
+    messagingAnalytics.sentGlobalNotification(notified, message, thread)
 
     val errors = notificationAttempts collect { case Failure(ex) => ex }
     if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
@@ -227,7 +228,7 @@ class MessagingCommander @Inject() (
       "participants"  -> messageWithBasicUser.participants,
       "locator"       -> locator,
       "unread"        -> unread,
-      "category"      -> NotificationCategory.User.MESSAGE.category,
+      "category"      -> NotificationCategory.MESSAGE.category,
       "firstAuthor"   -> originalAuthorIdx,
       "authors"       -> numAuthors, //number of people who have sent messages in this conversation
       "messages"      -> numMessages, //total number of messages in this conversation
@@ -681,7 +682,7 @@ class MessagingCommander @Inject() (
             "participants" -> participants,
             "locator"      -> ("/messages/" + thread.externalId),
             "unread"       -> true,
-            "category"     -> NotificationCategory.User.MESSAGE.category
+            "category"     -> NotificationCategory.MESSAGE.category
           )
           db.readWrite { implicit session =>
             // todo: Add adding non-users

@@ -262,157 +262,153 @@
 				</div>
 				<div id="profile-template">
 					<div class="profile" data-template>
-						<div class="antiscroll-inner">
-							<h2>Settings</h2>
-							<div class="profile-container">
-								<div class="profile-image-wrapper">
-									<div class="profile-image"></div>
-									<label class="profile-image-label">
-										<a class="profile-image-change" href="javascript:">Change photo</a>
-										<input class="profile-image-file" type="file" name="photo">
-									</label>
+						<h2>Settings</h2>
+						<div class="profile-container">
+							<div class="profile-image-wrapper">
+								<div class="profile-image"></div>
+								<label class="profile-image-label">
+									<a class="profile-image-change" href="javascript:">Change photo</a>
+									<input class="profile-image-file" type="file" name="photo">
+								</label>
+							</div>
+							<div class="profile-input-wrapper" data-name="name">
+								<div class="profile-input-title">Name</div>
+								<div class="profile-input-box profile-input-box-name">
+									<span class="profile-input-placeholder">
+										<span class="profile-placeholder-first-name">{{firstName}}</span> <span class="profile-placeholder-last-name">{{lastName}}</span>
+									</span>
+									<input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{firstName}}" required novalidate>
+									<input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{lastName}}" required novalidate>
+									<a class="profile-input-edit" href="javascript:" style="display:none">Edit</a>
+									<a class="profile-input-save" href="javascript:">Save</a>
 								</div>
-								<div class="profile-input-wrapper" data-name="name">
-									<div class="profile-input-title">Name</div>
-									<div class="profile-input-box profile-input-box-name">
-										<span class="profile-input-placeholder">
-											<span class="profile-placeholder-first-name">{{firstName}}</span> <span class="profile-placeholder-last-name">{{lastName}}</span>
-										</span>
-										<input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{firstName}}" required novalidate>
-										<input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{lastName}}" required novalidate>
-										<a class="profile-input-edit" href="javascript:" style="display:none">Edit</a>
-										<a class="profile-input-save" href="javascript:">Save</a>
+							</div>
+							<div class="profile-input-wrapper" data-name="description">
+								<div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
+								<div class="profile-input-box">
+									<input class="profile-input-input" disabled type="text" name="description" placeholder="Enter your description tagline" value="{{description}}" maxlength="50">
+									<a class="profile-input-edit" href="javascript:">Edit</a>
+									<a class="profile-input-save" href="javascript:">Save</a>
+								</div>
+							</div>
+							<div class="profile-input-wrapper profile-email" data-name="email">
+								<div class="profile-input-title">Contact email</div>
+								<div class="profile-input-box">
+									<input class="profile-input-input" disabled type="text" name="email" placeholder="Enter your email address" value="{{email}}" required novalidate>
+									<a class="profile-input-edit" href="javascript:">Edit</a>
+									<a class="profile-input-save" href="javascript:">Save</a>
+								</div>
+							</div>
+							<div class="profile-email-address-unverified">
+								Your email is pending your verification
+								(<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>).
+							</div>
+							<div class="profile-email-address-pending">
+								Your new primary email, <span class="profile-email-address-pending-email">{{email}}</span>, is pending your verification
+								(<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>,
+								<a class="profile-email-pending-cancel" href="javascript:">Cancel</a>).
+							</div>
+							<div class="profile-email-addresses">
+								<a class="profile-email-addresses-title-wrapper" href="javascript:">
+									<span class="profile-email-addresses-arrow"></span>
+									<span class="profile-email-addresses-title">Manage your email addresses</span>
+								</a>
+								<div class="profile-email-address-manage">
+									<div class="profile-email-address-manage-description">
+										These are the email addresses associated with your Kifi account.
+										You may log in with them and Kifi members can find you using these email addresses via search.
+									</div>
+									<ul class="profile-email-address-list">
+									</ul>
+									<a class="profile-email-address-add" href="javascript:">+ add a new email address</a>
+									<div class="profile-email-address-add-box">
+										<input class="profile-email-address-add-input" type="text" name="new_email" placeholder="Type a new email address">
+										<a class="profile-email-address-add-save" href="javascript:">Add</a>
 									</div>
 								</div>
-								<div class="profile-input-wrapper" data-name="description">
-									<div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-									<div class="profile-input-box">
-										<input class="profile-input-input" disabled type="text" name="description" placeholder="Enter your description tagline" value="{{description}}" maxlength="50">
-										<a class="profile-input-edit" href="javascript:">Edit</a>
-										<a class="profile-input-save" href="javascript:">Save</a>
-									</div>
-								</div>
-								<div class="profile-input-wrapper profile-email" data-name="email">
-									<div class="profile-input-title">Contact email</div>
-									<div class="profile-input-box">
-										<input class="profile-input-input" disabled type="text" name="email" placeholder="Enter your email address" value="{{email}}" required novalidate>
-										<a class="profile-input-edit" href="javascript:">Edit</a>
-										<a class="profile-input-save" href="javascript:">Save</a>
-									</div>
-								</div>
-								<div class="profile-email-address-unverified">
-									Your email is pending your verification
-									(<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>).
-								</div>
-								<div class="profile-email-address-pending">
-									Your new primary email, <span class="profile-email-address-pending-email">{{email}}</span>, is pending your verification
-									(<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>,
-									<a class="profile-email-pending-cancel" href="javascript:">Cancel</a>).
-								</div>
-								<div class="profile-email-addresses">
-									<a class="profile-email-addresses-title-wrapper" href="javascript:">
-										<span class="profile-email-addresses-arrow"></span>
-										<span class="profile-email-addresses-title">Manage your email addresses</span>
-									</a>
-									<div class="profile-email-address-manage">
-										<div class="profile-email-address-manage-description">
-											These are the email addresses associated with your Kifi account.
-											You may log in with them and Kifi members can find you using these email addresses via search.
-										</div>
-										<ul class="profile-email-address-list">
+							</div>
+							<div class="dialog email-delete-dialog" style="display:none">
+								<form method="POST" action="{{url}}" class="dialog-content" data-template>
+									<div class="dialog-header">Delete {{email}}?</div>
+									<a href="javascript:" class="dialog-cancel">×</a>
+									<div class="dialog-content-body">
+										<p>Are you sure you want to delete this email address?</p>
+										<ul>
+											<li>You will not be able to login with this email address</li>
+											<li>Your friends will not be able to find you by this email address</li>
 										</ul>
-										<a class="profile-email-address-add" href="javascript:">+ add a new email address</a>
-										<div class="profile-email-address-add-box">
-											<input class="profile-email-address-add-input" type="text" name="new_email" placeholder="Type a new email address">
-											<a class="profile-email-address-add-save" href="javascript:">Add</a>
+										<div class="dialog-buttons">
+											<button class="dialog-submit" type="submit">Delete</button>
+											<button class="dialog-cancel">Cancel</button>
 										</div>
 									</div>
-								</div>
-								<div class="dialog email-delete-dialog" style="display:none">
-									<form method="POST" action="{{url}}" class="dialog-content" data-template>
-										<div class="dialog-header">Delete {{email}}?</div>
-										<a href="javascript:" class="dialog-cancel">×</a>
-										<div class="dialog-content-body">
-											<p>Are you sure you want to delete this email address?</p>
-											<ul>
-												<li>You will not be able to login with this email address</li>
-												<li>Your friends will not be able to find you by this email address</li>
-											</ul>
-											<div class="dialog-buttons">
-												<button class="dialog-submit" type="submit">Delete</button>
-												<button class="dialog-cancel">Cancel</button>
-											</div>
+								</form>
+							</div>
+							<div class="profile-change-password">
+								<a class="profile-change-password-title-wrapper" href="javascript:">
+									<span class="profile-change-password-arrow"></span>
+									<span class="profile-change-password-title">Change your password</span>
+								</a>
+								<div class="profile-change-password-change">
+									<div class="profile-input-wrapper profile-old-password" data-name="old-password">
+										<div class="profile-input-title">Enter your current password</div>
+										<div class="profile-input-box">
+											<input class="profile-input-input" type="password" name="old-password" placeholder="Existing Password" value="" required novalidate>
 										</div>
-									</form>
-								</div>
-								<div class="profile-change-password">
-									<a class="profile-change-password-title-wrapper" href="javascript:">
-										<span class="profile-change-password-arrow"></span>
-										<span class="profile-change-password-title">Change your password</span>
-									</a>
-									<div class="profile-change-password-change">
-										<div class="profile-input-wrapper profile-old-password" data-name="old-password">
-											<div class="profile-input-title">Enter your current password</div>
-											<div class="profile-input-box">
-												<input class="profile-input-input" type="password" name="old-password" placeholder="Existing Password" value="" required novalidate>
-											</div>
-										</div>
-										<div class="profile-input-wrapper profile-new-password" data-name="new-password">
-											<div class="profile-input-title">New Password</div>
-											<div class="profile-input-box">
-												<input class="profile-input-input" type="password" name="new-password1" placeholder="Choose a new password" value="" required novalidate>
-											</div>
-											<div class="profile-input-box">
-												<input class="profile-input-input" type="password" name="new-password2" placeholder="And enter it again" value="" required novalidate>
-											</div>
-										</div>
-										<a class="profile-change-password-save" href="javascript:">Update password</a>
-										<span class="profile-change-password-message"></span>
 									</div>
-									<span class="profile-change-password-success"></span>
+									<div class="profile-input-wrapper profile-new-password" data-name="new-password">
+										<div class="profile-input-title">New Password</div>
+										<div class="profile-input-box">
+											<input class="profile-input-input" type="password" name="new-password1" placeholder="Choose a new password" value="" required novalidate>
+										</div>
+										<div class="profile-input-box">
+											<input class="profile-input-input" type="password" name="new-password2" placeholder="And enter it again" value="" required novalidate>
+										</div>
+									</div>
+									<a class="profile-change-password-save" href="javascript:">Update password</a>
+									<span class="profile-change-password-message"></span>
 								</div>
+								<span class="profile-change-password-success"></span>
 							</div>
-							<div class="profile-section">
-								<h3>Connect your social networks to Kifi</h3>
-								<h5>Find which of your friends are using Kifi</h5>
-								<ul class="profile-networks">
-									<li data-network="facebook">
-										<a class="profile-nw nw-facebook" href="javascript:">Facebook</a>
-										<span class="profile-nw-connected">
-											<span class="profile-placeholder">&nbsp;</span>
-											<span class="profile-connected">Connected</span>
-											<a class="profile-disconnect" href="javascript:">Disconnect?</a>
-										</span>
-									</li>
-									<li data-network="linkedin">
-										<a class="profile-nw nw-linkedin" href="javascript:">LinkedIn</a>
-										<span class="profile-nw-connected">
-											<span class="profile-placeholder">&nbsp;</span>
-											<span class="profile-connected">Connected</span>
-											<a class="profile-disconnect" href="javascript:">Disconnect?</a>
-										</span>
-									</li>
-								</ul>
+						</div>
+						<div class="profile-section">
+							<h3>Connect your social networks to Kifi</h3>
+							<h5>Find which of your friends are using Kifi</h5>
+							<ul class="profile-networks">
+								<li data-network="facebook">
+									<a class="profile-nw nw-facebook" href="javascript:">Facebook</a>
+									<span class="profile-nw-connected">
+										<span class="profile-placeholder">&nbsp;</span>
+										<span class="profile-connected">Connected</span>
+										<a class="profile-disconnect" href="javascript:">Disconnect?</a>
+									</span>
+								</li>
+								<li data-network="linkedin">
+									<a class="profile-nw nw-linkedin" href="javascript:">LinkedIn</a>
+									<span class="profile-nw-connected">
+										<span class="profile-placeholder">&nbsp;</span>
+										<span class="profile-connected">Connected</span>
+										<a class="profile-disconnect" href="javascript:">Disconnect?</a>
+									</span>
+								</li>
+							</ul>
+						</div>
+						<hr class="profile-section-divider">
+						<div class="profile-section">
+							<h3>Import your email contacts to Kifi</h3>
+							<h5>Message your email contact directly from Kifi</h5>
+							<a class="profile-nw nw-email import-gmail" href="javascript:">Import another Gmail account</a>
+							<div class="profile-email-accounts-title">
+								<span>Your imported accounts: </span>
+								<!-- <a class="profile-email-accounts-refresh" href="javascript:">Refresh all</a> -->
 							</div>
-							<hr class="profile-section-divider">
-							<div class="profile-section">
-								<h3>Import your email contacts to Kifi</h3>
-								<h5>Message your email contact directly from Kifi</h5>
-								<a class="profile-nw nw-email import-gmail" href="javascript:">Import another Gmail account</a>
-								<div class="profile-email-accounts-title">
-									<span>Your imported accounts: </span>
-									<!-- <a class="profile-email-accounts-refresh" href="javascript:">Refresh all</a> -->
-								</div>
-								<table class="profile-email-accounts">
-									<tbody>
-									</tbody>
-								</table>
-							</div>
+							<table class="profile-email-accounts">
+								<tbody>
+								</tbody>
+							</table>
 						</div>
 					</div>
 				</div>
-				<!-- end of profile -->
-
 				<div class="dialog disconnect-dialog" style="display:none">
 					<form method="POST" action="{{url}}" class="dialog-content" data-template>
 						<div class="dialog-header">Are you sure you want to disconnect your {{network}} account?</div>
@@ -600,7 +596,6 @@ Kifi also lets you message your friends about what you keep and find alongside a
 						<img class="friend-reqs-loading" src="/assets/img/wait.gif">
 					</div>
 				</div>
-				<!-- end of friends -->
 
 				<div class="blog-outer">
 					<div class="antiscroll-inner">
@@ -654,82 +649,77 @@ Kifi also lets you message your friends about what you keep and find alongside a
 				</div>
 
 
-				<div class="detail">
-					<div class="antiscroll-inner">
-						<div class="detail-inner" data-template data-kept="{{howKept}}">
-							<a class="page-x" href="javascript:"></a>
-							<div class="page-meta" data-n="{{numKeeps}}">
-								<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
-								{% if numKeeps == 1 %}
-								<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
-								<div class="page-pic-wrap">
-									<div class="page-pic-special"></div>
-									<a class="page-pic" href="{{url}}" target="_blank">
-										<div class="page-pic-1">
-											<div class="page-pic-2">
-												<div class="page-pic-3">
-													<div class="page-pic-soon">Preview of this page<br>not yet available</div>
-													<span class="page-pic-tip">Visit page</span>
+				<div class="detail"><div data-template data-kept="{{howKept}}">
+						<a class="page-x" href="javascript:"></a>
+						<div class="page-meta" data-n="{{numKeeps}}">
+							<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} Keeps selected{% endif %}</h2>
+							{% if numKeeps == 1 %}
+							<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
+							<div class="page-pic-wrap">
+								<div class="page-pic-special"></div>
+								<a class="page-pic" href="{{url}}" target="_blank">
+									<div class="page-pic-1">
+										<div class="page-pic-2">
+											<div class="page-pic-3">
+												<div class="page-pic-soon">Preview of this page<br>not yet available</div>
+												<span class="page-pic-tip">Visit page</span>
+											</div>
+										</div>
+									</div>
+								</a>
+								<div class="page-how {{howKept}}">
+									<div class="page-how-0">
+										<div class="page-how-pub">
+											<div class="page-how-1">
+												<div class="page-how-2">
+													<div class="page-how-3">Public</div>
 												</div>
 											</div>
 										</div>
-									</a>
-								<div class="page-how {{howKept}}">
-										<div class="page-how-0">
-											<div class="page-how-pub">
-												<div class="page-how-1">
-													<div class="page-how-2">
-														<div class="page-how-3">Public</div>
-													</div>
-												</div>
-											</div>
-											<div class="page-how-pri">
-												<div class="page-how-1">
-													<div class="page-how-2">
-														<div class="page-how-3">Private</div>
-													</div>
+										<div class="page-how-pri">
+											<div class="page-how-1">
+												<div class="page-how-2">
+													<div class="page-how-3">Private</div>
 												</div>
 											</div>
 										</div>
 									</div>
 								</div>
-								{% endif %}
-								<a class="page-keep" href="javascript:"></a>
-								<a class="page-priv" href="javascript:"></a>
-							</div>
-							{% if numKeeps == 1 %}
-							<div class="page-who">
-								<h2>Who kept this:</h2>
-								<div class="page-who-pics"></div>
-								<div class="page-who-text"></div>
-							</div>
-							<div class="page-chatter">
-								<h2>Talking about this Keep:</h2>
-								<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
 							</div>
 							{% endif %}
-							<div class="page-colls{% if collections.length %} some{% endif %}">
-								<h2>Tags:</h2>
-								<ul class="page-coll-list">
-									<li class="page-coll" data-template data-id="{{id}}">
-									<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
-									</li>
-									<li class="page-coll-new" data-after-template>
-									<a class="page-coll-add" href="javascript:"></a>
-									<span class="page-coll-sizer" style="display:none"></span>
-									<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
-									<ul class="page-coll-opts" style="display:none">
-										<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
-									</ul>
-									</li>
+							<a class="page-keep" href="javascript:"></a>
+							<a class="page-priv" href="javascript:"></a>
+						</div>
+						{% if numKeeps == 1 %}
+						<div class="page-who">
+							<h2>Who kept this:</h2>
+							<div class="page-who-pics"></div>
+							<div class="page-who-text"></div>
+						</div>
+						<div class="page-chatter">
+							<h2>Talking about this Keep:</h2>
+							<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
+						</div>
+						{% endif %}
+						<div class="page-colls{% if collections.length %} some{% endif %}">
+							<h2>Tags:</h2>
+							<ul class="page-coll-list">
+								<li class="page-coll" data-template data-id="{{id}}">
+								<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+								</li>
+								<li class="page-coll-new" data-after-template>
+								<a class="page-coll-add" href="javascript:"></a>
+								<span class="page-coll-sizer" style="display:none"></span>
+								<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
+								<ul class="page-coll-opts" style="display:none">
+									<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
 								</ul>
-							</div>
+								</li>
+							</ul>
 						</div>
 					</div>
 				</div>
-				<!-- end of detail -->
 			</div>
-			<!-- end of page-col-inner -->
 		</aside>
 	</div>
 

@@ -281,6 +281,11 @@ var api = function() {
         runAt: 'document_end'
       });
     },
+    "api:reload": function() {
+      if (!api.isPackaged()) {
+        chrome.runtime.reload();
+      }
+    },
     "api:require": function(data, respond, page) {
       injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
@@ -345,7 +350,7 @@ var api = function() {
           done(n + 1);
         });
       } else {
-        if (api.mode.isDev()) {
+        if (localStorage[":env"] == "development") {
           chrome.tabs.executeScript(page.id, {code: "api.dev=1", runAt: "document_start"}, api.noop);
         }
         api.tabs.emit(page, "api:injected", Object.keys(injected));
@@ -418,8 +423,7 @@ var api = function() {
         chrome.bookmarks.move(id, {parentId: newParentId});
       },
       remove: chrome.bookmarks.remove.bind(chrome.bookmarks),
-      search: chrome.bookmarks.search.bind(chrome.bookmarks)
-    },
+      search: chrome.bookmarks.search.bind(chrome.bookmarks)},
     icon: {
       on: {click: new Listeners},
       set: function(tab, path) {
@@ -438,19 +442,6 @@ var api = function() {
       return !!chrome.runtime.getManifest().update_url;
     },
     loadReason: "enable",  // assuming "enable" by elimination
-    mode: {
-      isDev: function () {
-        return localStorage[':mode'] === 'dev';
-      },
-      toggle: function () {
-        if (localStorage[':mode']) {
-          delete localStorage[':mode'];
-        } else {
-          localStorage[':mode'] = 'dev';
-        }
-        chrome.runtime.reload();
-      }
-    },
     on: {
       beforeSearch: new Listeners,
       search: new Listeners,
@@ -493,6 +484,33 @@ var api = function() {
         for (var k in handlers) {
           if (portHandlers[k]) throw Error(k + " handler already defined");
           portHandlers[k] = handlers[k];
+        }
+      }
+    },
+    prefs: {
+      get: function get(key) {
+        if (arguments.length > 1) {
+          for (var o = {}, i = 0; i < arguments.length; i++) {
+            key = arguments[i];
+            o[key] = get(key);
+          }
+          return o;
+        }
+        var v = localStorage[":" + key];
+        if (v != null) try {
+          return JSON.parse(v);
+        } catch (e) {}
+        return {showSlider: true, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
+      },
+      set: function set(key, value) {
+        if (typeof key === "object") {
+          Object.keys(key).forEach(function(k) {
+            set(k, key[k]);
+          });
+        } else if (value == null) {
+          delete localStorage[":" + key];
+        } else {
+          localStorage[":" + key] = typeof value === "string" ? value : JSON.stringify(value);
         }
       }
     },
@@ -684,9 +702,4 @@ var api = function() {
     version: chrome.app.getDetails().version};
 }();
 
-// TODO: remove Feb 20
-delete localStorage[':maxResults'];
-delete localStorage[':suppressLog'];
-delete localStorage[':showSlider'];
-delete localStorage[':showScores'];
-delete localStorage[':env'];
+delete localStorage[':suppressLog'];  // TODO: remove in Jan 2014

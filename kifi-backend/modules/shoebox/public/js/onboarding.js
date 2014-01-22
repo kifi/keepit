@@ -32,10 +32,6 @@
 			$modal.data('page', val);
 			$modal.removeClass('page-' + prev);
 			$modal.addClass('page-' + val);
-			win.setTimeout(function () {
-				// update after click tracked
-				$modal.data('trackSource', 'onboarding' + val);
-			}, 1);
 		}
 		return val;
 	}

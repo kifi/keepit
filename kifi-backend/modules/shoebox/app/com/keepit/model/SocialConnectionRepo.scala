@@ -94,11 +94,7 @@ class SocialConnectionRepoImpl @Inject() (
   override def invalidateCache(conn: SocialConnection)(implicit session: RSession): Unit = {
     socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser1))
     socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser2))
-  }
-
-  override def deleteCache(conn: SocialConnection)(implicit session: RSession): Unit = {
-    socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser1))
-    socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser2))
+    super.invalidateCache(conn)
   }
 
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]] = {

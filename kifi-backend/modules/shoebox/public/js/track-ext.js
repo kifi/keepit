@@ -3,42 +3,30 @@
 	'use strict';
 
 	var $ = win.jQuery,
-		document = win.document,
-		$html = $('html');
+		document = win.document;
+
+	var EVENT_EXT_VIEW = 'viewed_external_page',
+		EVENT_EXT_CLICK = 'clicked_external_page';
 
 	// on load, track view event
 	$(document).ready(function () {
-		track($html.data('trackViewEvent'));
+		track(EVENT_EXT_VIEW);
 	});
 
 	var DEFAULT_SOURCE_VALUE = 'body';
 
-	var Tracker = win.Tracker = {
-		trackClick: function (el) {
-			var $el = $(el),
-				trackAction = getDataFromAncestors($el, 'trackAction');
-			if (trackAction) {
-				track(getClickEventName(), {
-					action: trackAction,
-					source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
-				});
-			}
-		}
-	};
-
 	// on clicking on links, track click event
-	$(document).on('click', 'a[href], *[data-track-click]', function () {
-		Tracker.trackClick(this);
+	$(document).on('click', 'a[href]', function () {
+		var $el = $(this),
+			data = $el.data(),
+			trackAction = data.trackAction;
+		if (trackAction) {
+			track(EVENT_EXT_CLICK, {
+				action: trackAction,
+				source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
+			});
+		}
 	});
-
-
-	function getClickEventName() {
-		return $html.data('trackClickEvent');
-	}
-
-	function getType() {
-		return $html.data('trackType');
-	}
 
 	function getDataFromAncestors($el, name, defaultValue) {
 		var value;
@@ -51,6 +39,10 @@
 		}
 
 		return defaultValue;
+	}
+
+	function getType() {
+		return $('html').data('trackType');
 	}
 
 	function addDefaultValues(data) {

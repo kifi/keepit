@@ -37,9 +37,6 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ origin ~ ownerId.? ~ ownerEmail.? ~ rawInfoLoc.? ~ oauth2TokenId.? ~ numContacts.? ~ numProcessed.? <> (ABookInfo.apply _, ABookInfo.unapply _)
   }
 
-  override def deleteCache(model: ABookInfo)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: ABookInfo)(implicit session: RSession): Unit = {}
-
   def getById(id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo] = {
     (for { c <- table if c.id === id } yield c).firstOption
   }

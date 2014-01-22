@@ -15,7 +15,6 @@ import play.api.Play
 import play.mvc.Http.Status
 import play.api.libs.iteratee.{Done, Iteratee, Enumerator}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.amazon.MyAmazonInstanceInfo
 
 class LoggingFilter() extends EssentialFilter {
 
@@ -23,13 +22,12 @@ class LoggingFilter() extends EssentialFilter {
   lazy val accessLog = global.injector.instance[AccessLog]
   lazy val discovery = global.injector.instance[ServiceDiscovery]
   lazy val airbrake = global.injector.instance[AirbrakeNotifier]
-  lazy val myAmazonInstanceInfo = global.injector.instance[MyAmazonInstanceInfo]
   lazy val midFlightRequests = global.injector.instance[MidFlightRequests]
 
   def apply(next: EssentialAction) = new EssentialAction {
     def apply(rh: RequestHeader): Iteratee[Array[Byte],play.api.mvc.Result] = {
       if (!discovery.amIUp && (discovery.timeSinceLastStatusChange > 20000L)) {
-        val message = s"Current status of service ${myAmazonInstanceInfo.info.localIp} ${discovery.myStatus.getOrElse("UNKNOWN")}, last changed ${discovery.timeSinceLastStatusChange}ms ago"
+        val message = s"Current status of service ${discovery.thisInstance.map(_.instanceInfo.localIp).getOrElse("UNREGISTERED")} ${discovery.myStatus.getOrElse("UNKNOWN")}, last changed ${discovery.timeSinceLastStatusChange}ms ago"
         //system is going down, maybe the logger, emails, airbrake are gone already
         println(message)
         //we can remove this airbrake once we'll see the system works right
@@ -55,16 +53,10 @@ class LoggingFilter() extends EssentialFilter {
             url = rh.uri,
             statusCode = result.header.status
           ))
-          val headers = (CommonHeaders.ResponseTime -> event.duration.toString) ::
-                        (CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N")) ::
-                        (CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA")) ::
-                        Nil
-          val headersWithCount = if (event.duration > 1000) {
-            (CommonHeaders.MidFlightRequestCount -> midFlightRequests.count.toString) :: headers
-          } else {
-            headers
-          }
-          result.withHeaders(headersWithCount: _*)
+          result.withHeaders(
+            CommonHeaders.ResponseTime -> event.duration.toString,
+            CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N"),
+            CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA"))
         }
         try {
           next(rh).map {

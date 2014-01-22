@@ -15,6 +15,7 @@ case class ProdMailModule() extends MailModule {
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
+    bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
   }
 

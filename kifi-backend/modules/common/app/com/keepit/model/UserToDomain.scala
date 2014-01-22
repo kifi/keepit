@@ -2,7 +2,7 @@ package com.keepit.model
 
 import org.joda.time.DateTime
 
-import com.keepit.common.db.{Id, ModelWithState, State, States}
+import com.keepit.common.db.{Id, Model, State, States}
 import com.keepit.common.time._
 import com.keepit.classify.Domain
 
@@ -17,7 +17,7 @@ case class UserToDomain(
   state: State[UserToDomain] = UserToDomainStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
-) extends ModelWithState[UserToDomain] {
+) extends Model[UserToDomain] {
   def withId(id: Id[UserToDomain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserToDomain]) = this.copy(state = state)

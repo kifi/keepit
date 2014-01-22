@@ -42,9 +42,6 @@ class ScrapeInfoRepoImpl @Inject() (
     def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo.apply _, ScrapeInfo.unapply _)
   }
 
-  override def deleteCache(model: ScrapeInfo)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: ScrapeInfo)(implicit session: RSession): Unit = {}
-
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
     (for {
       (s, u) <- table innerJoin normUriRepo.get.table on (_.uriId is _.id)

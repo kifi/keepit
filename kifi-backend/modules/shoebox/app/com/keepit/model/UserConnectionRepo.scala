@@ -53,15 +53,6 @@ class UserConnectionRepoImpl @Inject() (
     unfriendedCache.remove(UnfriendedConnectionsKey(userId))
   }
 
-  override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
-    List(conn.user1, conn.user2) foreach { userId =>
-      userConnCache.remove(UserConnectionIdKey(userId))
-      connCountCache.remove(UserConnectionCountKey(userId))
-      searchFriendsCache.remove(SearchFriendsKey(userId))
-      unfriendedCache.remove(UnfriendedConnectionsKey(userId))
-    }
-  }
-
   override def invalidateCache(conn: UserConnection)(implicit session: RSession): Unit = {
     Set(conn.user1, conn.user2) foreach invalidateCache
   }

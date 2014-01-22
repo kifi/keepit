@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
+import com.keepit.common.controller.{ActionAuthenticator, AuthenticatedRequest, WebsiteController}
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
@@ -45,7 +45,7 @@ class HomeController @Inject() (
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
   inviteCommander: InviteCommander)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+  extends WebsiteController(actionAuthenticator) with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
     db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
@@ -199,8 +199,8 @@ class HomeController @Inject() (
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
-    val toBeNotified = db.readWrite { implicit session =>
-      for {
+    db.readWrite { implicit session =>
+      val toBeNotified = for {
         su <- socialUserRepo.getByUser(request.user.id.get)
         invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
         senderUserId <- {
@@ -208,8 +208,8 @@ class HomeController @Inject() (
           invite.senderUserId
         }
       } yield senderUserId
+      SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
     }
-    SafeFuture { userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq) }
     setHasSeenInstall()
     Ok(views.html.website.install(request.user))
   }

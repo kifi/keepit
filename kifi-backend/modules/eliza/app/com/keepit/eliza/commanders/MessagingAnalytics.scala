@@ -5,7 +5,7 @@ import com.keepit.heimdal._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{NotificationCategory, User}
+import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -32,7 +32,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", kifi)
-      contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
+      contextBuilder += ("category", NotificationCategory.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageId", message.externalId.id)
@@ -48,7 +48,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("channel", push)
-      contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
+      contextBuilder += ("category", NotificationCategory.MESSAGE.category)
       contextBuilder += ("global", false)
       contextBuilder += ("threadId", notification.id.id)
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
@@ -56,12 +56,12 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread, category: NotificationCategory): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
-      contextBuilder.addNotificationCategory(category)
+      contextBuilder += ("channel", NotificationCategory.GLOBAL.category)
       contextBuilder += ("global", true)
       contextBuilder += ("messageId", message.externalId.id)
       contextBuilder += ("threadId", thread.externalId.id)

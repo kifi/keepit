@@ -5,13 +5,9 @@ import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 import scala.collection.JavaConversions._
-import com.keepit.common.service.{ServiceType, FortyTwoServices}
 
 class ServiceController @Inject() (
-    serviceDiscovery: ServiceDiscovery,
-    service: FortyTwoServices) extends com.keepit.common.controller.ServiceController with Logging {
-
-    override lazy val serviceType: ServiceType = service.currentService
+    serviceDiscovery: ServiceDiscovery) extends Controller with Logging {
 
     def forceRefresh = Action { implicit request =>
         serviceDiscovery.forceUpdate()
