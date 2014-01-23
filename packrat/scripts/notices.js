@@ -12,15 +12,14 @@
 // @require scripts/title_from_url.js
 // @require scripts/prevent_ancestor_scroll.js
 
-// There are several kinds of events that the notifications pane must handle:
-//  - initial rendering (up to 10)
-//  - scrolling down triggers fetching up to 10 older notifications (never highlighted as new)
-//  - receiving a new notification (unseen, unvisited), which may subsume an older notification
-//  - changing the state of a notification to "visited" (referenced message has been read)
-//  - receiving notifications that were created while disconnected from the server
-//  - receiving notification state changes that happened while disconnected
+// There are several kinds of events that this pane must handle:
+//  - initial rendering (roughly 10 threads)
+//  - scrolling down triggers fetching older threads (never highlighted as new)
+//  - receiving a new thread summary (unseen, unvisited) in real time, which may subsume an older one
+//  - changing the state of a thread from read ("visited") to unread or vice versa
+//  - replacing a rendered thread list with the updated list after reconnecting to the server
 //
-// Notifications should only be marked as seen (and new highlight faded away) if the page is visible
+// Threads should only be marked as seen (and new highlight faded away) if the page is visible
 // (TBD whether focus is also required).
 
 panes.notices = function () {
@@ -36,6 +35,15 @@ panes.notices = function () {
         showNew(o.thread);
       } else {
         log('[new_thread] kind mismatch', kind, o)();
+      }
+    },
+    threads: function (o) {
+      log('[message:threads]', $list && $list.data('kind'), o.kind, o.threads.length, o.includesOldest)();
+      if (($list && $list.data('kind')) === o.kind) {
+        $list.removeData('pendingOlderReqTime');
+        $list.find('.kifi-notice').remove();
+        renderIntoList($list, o);
+        $list.closest('.kifi-notices-box').data('antiscroll').refresh();
       }
     },
     thread_unread: function (th) {
@@ -100,24 +108,14 @@ panes.notices = function () {
   }
 
   function renderList($box, $list, o) {
+    renderIntoList($list, o);
     $list
-      .append(o.threads.map(renderOne).join(''))
       .removeClass('kifi-loading')
       .preventAncestorScroll();
-    $list.find('time').timeago();
     $box.antiscroll({x: false});
 
     var scroller = $box.data('antiscroll');
     $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
-
-    if (o.includesOldest) {
-      $list.data('showingOldest', true);
-    } else {
-      $list.scroll(onScroll);
-      if ($list[0].scrollHeight <= $list[0].clientHeight) {
-        getOlderThreads();
-      }
-    }
 
     $list
     .on('mouseover mouseout', '.kifi-notice-state', onMouseOverOrOutState)
@@ -125,6 +123,16 @@ panes.notices = function () {
     .on('click', '.kifi-notice', onClickNotice)
     .hoverfu('.kifi-notice-state', onHoverfuState)
     .hoverfu('.kifi-notice-n-others', onHoverfuOthers);
+  }
+
+  function renderIntoList($list, o) {
+    $list.append(o.threads.map(renderOne).join(''));
+    $list.find('time').timeago();
+    $list.data('showingOldest', !!o.includesOldest);
+    $list[o.includesOldest ? 'off' : 'on']('scroll', onScroll);
+    if (!o.includesOldest && $list[0].scrollHeight <= $list[0].clientHeight) {
+      getOlderThreads();
+    }
   }
 
   function onSubTabClick(e) {
@@ -368,6 +376,7 @@ panes.notices = function () {
       var $last = $list.find('.kifi-notice').last();
       if ($last.length) {
         api.port.emit('get_older_threads', {
+          threadId: $last.data('thread'),
           time: $last.data('createdAt'),
           kind: $list.data('kind')
         }, gotOlderThreads.bind(null, now));
