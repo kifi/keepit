@@ -1,19 +1,18 @@
-@(pending:Seq[ScrapeInfo])(implicit flash: Flash)
+@()(implicit flash: Flash)
 
 @import com.keepit.controllers.admin.routes
 
 @admin("Scraper") {
-    <h2>Pending Queue</h2>
+
+    <div class="page-title"></div>
 
     <div class="checkbox">
         <label>
-            <input type="checkbox" id="autoreload" checked/> Enable autoreload
+            <input type="checkbox" id="autoreload" checked/> Enable autorefresh
         </label>
     </div>
 
-    <div id="pending-requests">
-        @pendingScraperRequests(pending)
-    </div>
+    <div class="request-table"></div>
 
     <h2>Rescrape Documents</h2>
 
@@ -27,23 +26,25 @@
     </form>
 
     <script>
+        var loadrequests = function(){
+            $.ajax({
+                url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
+                dataType: "html",
+                success : function(data){
+                    $("div.page-title").replaceWith($(data).find("div.page-title"))
+                    $("div.request-table").replaceWith($(data).find("div.request-table"))
+                },
+                complete: function(){
+                    setTimeout(refresh, 5000);
+                }
+            });
+        }
         var refresh = function(){
-            if ($("#autoreload").is(":checked")) {
-                $.ajax({
-                    url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
-                    dataType: "html",
-                    success : function(data){
-                        document.getElementById("pending-requests").innerHTML = data;
-                    },
-                    complete: function(){
-                        setTimeout(refresh, 5000);
-                    }
-                });
-            }
+            if ($("#autoreload").is(":checked")) { loadrequests(); }
         };
         $("#autoreload").change(function() {
-            if (this.checked) { refresh(); }
+            if (this.checked) { loadrequests(); }
         });
-        refresh();
+        loadrequests();
     </script>
 }
