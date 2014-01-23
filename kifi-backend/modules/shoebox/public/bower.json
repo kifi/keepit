@@ -1,0 +1,28 @@
+{
+  "name": "kifi",
+  "version": "0.0.0",
+  "homepage": "https://github.com/FortyTwoEng/keepit",
+  "authors": [],
+  "description": "keep it find it",
+  "main": "index.html",
+  "keywords": [
+    "kifi"
+  ],
+  "license": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "1.x.x",
+    "angular": "1.2.x",
+    "normalize-css": "2.x.x"
+  },
+  "devDependencies": {
+    "angular-mocks": "1.2.x"
+  }
+}
