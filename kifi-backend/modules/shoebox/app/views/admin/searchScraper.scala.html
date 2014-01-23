@@ -4,11 +4,11 @@
 
 @admin("Scraper") {
 
-    <div class="page-title"></div>
+    <h2>Pending Queue <span class="title-hint"></span></h2>
 
     <div class="checkbox">
         <label>
-            <input type="checkbox" id="autoreload" checked/> Enable autorefresh
+            <input type="checkbox" id="autorefresh" checked/> Enable autorefresh
         </label>
     </div>
 
@@ -30,9 +30,13 @@
             $.ajax({
                 url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
                 dataType: "html",
-                success : function(data){
-                    $("div.page-title").replaceWith($(data).find("div.page-title"))
-                    $("div.request-table").replaceWith($(data).find("div.request-table"))
+                success: function(data){
+                    $("span.title-hint").replaceWith($(data).find("span.title-hint"));
+                    $("div.request-table").replaceWith($(data).find("div.request-table"));
+                },
+                error: function(){
+                    $("span.title-hint").html("(loading failed)");
+                    $("div.request-table").html("");
                 },
                 complete: function(){
                     setTimeout(refresh, 5000);
@@ -40,9 +44,9 @@
             });
         }
         var refresh = function(){
-            if ($("#autoreload").is(":checked")) { loadrequests(); }
+            if ($("#autorefresh").is(":checked")) { loadrequests(); }
         };
-        $("#autoreload").change(function() {
+        $("#autorefresh").change(function() {
             if (this.checked) { loadrequests(); }
         });
         loadrequests();

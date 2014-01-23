@@ -559,9 +559,9 @@ class UserCommander @Inject() (
   }
 
   def disconnect(userId:Id[User], networkString: String):(Option[SocialUserInfo], String) = {
-    userCache.remove(SocialUserInfoUserKey(userId))
     val network = SocialNetworkType(networkString)
     val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
+      userCache.remove(SocialUserInfoUserKey(userId))
       socialUserInfoRepo.getByUser(userId).partition(_.networkType == network)
     }
     if (otherNetworks.isEmpty) {
@@ -576,8 +576,8 @@ class UserCommander @Inject() (
         socialUserInfoRepo.invalidateCache(sui)
         socialUserInfoRepo.save(sui.copy(credentials = None, userId = None))
         socialUserInfoRepo.getByUser(userId).map(socialUserInfoRepo.invalidateCache)
+        userCache.remove(SocialUserInfoUserKey(userId))
       }
-      userCache.remove(SocialUserInfoUserKey(userId))
       val newLoginUser = otherNetworks.find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(otherNetworks.head)
       (Some(newLoginUser), "disconnected")
     }

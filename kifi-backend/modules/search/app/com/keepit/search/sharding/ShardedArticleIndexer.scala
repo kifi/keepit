@@ -37,6 +37,7 @@ class ShardedArticleIndexer(
         rest
       }
       if (!done) sequenceNumber = uris.last.seq
+      if (sequenceNumber == catchUpSeqNumber) done = true
     }
     total
   }
@@ -59,10 +60,17 @@ class ShardedArticleIndexer(
     total
   }
 
+  private def computeCatchUpSeqNum(): SequenceNumber = {
+    val dbSeq = SequenceNumber(Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds))
+    // if subindexer is empty, dbSeq is safe for it; otherwise, use its own catchUpSeqNum. Take min will be safe for everyone.
+    SequenceNumber(localIndexerInfo.map{case (numDocs, catchUpSeqNum) => if (numDocs == 0) dbSeq.value else catchUpSeqNum}.min)
+  }
+
   override def reindex(): Unit = {
-    super.reindex()
-    val seqNum: SequenceNumber = SequenceNumber(Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds))
-    indexShards.valuesIterator.foreach{_.catchUpSeqNumber_=(seqNum)}
+    val seqNum = computeCatchUpSeqNum()
+    log.info(s"ShardedArticleIndexer reindexing. global catch up seqNum: ${seqNum}")
+    indexShards.valuesIterator.foreach{_.catchUpSeqNumber_=(seqNum) }
     catchUpSeqNumber_=(seqNum)
+    super.reindex()
   }
 }

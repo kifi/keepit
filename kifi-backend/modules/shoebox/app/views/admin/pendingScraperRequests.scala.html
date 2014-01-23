@@ -3,13 +3,13 @@
 @import com.keepit.controllers.admin.routes
 
 <div>
-    <div class="page-title">
+    <span class="title-hint">
         @if(pending.length == count) {
-            <h2>Pending Queue (@count results)</h2>
+            <span>(@count results)</span>
         } else {
-            <h2>Pending Queue (showing @pending.length out of @count results)</h2>
+            <span>(showing @pending.length out of @count results)</span>
         }
-    </div>
+    </span>
 
     <div class="request-table">
         <table class="table table-condensed table-striped">

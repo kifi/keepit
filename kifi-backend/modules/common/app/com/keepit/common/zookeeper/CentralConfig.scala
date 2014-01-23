@@ -5,6 +5,7 @@ import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 
 // //Sample Usage****************************************
 //
@@ -60,6 +61,10 @@ trait ConfigStore {
 }
 
 class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
+
+  private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
+
+  zk.onConnected{ () => watches.foreach{ case (key, handler) => watch(key)(handler) } }
 
   def get(key: CentralConfigKey): Option[String] = {
     try {

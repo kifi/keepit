@@ -28,8 +28,9 @@ import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import java.net.{NoRouteToHostException, UnknownHostException, SocketTimeoutException}
-import org.apache.http.conn.ConnectTimeoutException
+import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
+import javax.net.ssl.SSLHandshakeException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -254,6 +255,8 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
+      case e:SSLHandshakeException      => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:HttpHostConnectException   => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:ClientProtocolException    => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:NoRouteToHostException     => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:UnknownHostException       => logAndSet(fetchInfo, None)(e, "fetch", url)
