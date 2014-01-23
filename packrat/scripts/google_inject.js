@@ -311,7 +311,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "keepers": richHit.users.map(function (u) {return u.id}),
           "tags": richHit.bookmark.tags,
           "title": richHit.bookmark.title,
-          "matches": richHit.bookmark.matches, 
+          "matches": richHit.bookmark.matches
         };
       }
       api.port.emit("log_search_event", [
