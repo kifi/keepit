@@ -120,7 +120,7 @@ abstract class Indexer[T](
     _sequenceNumber = n
   }
 
-  def catchUpSeqNumber_=(n: SequenceNumber) {_catchUpSeqNumber = n}   // this is typically called by some shardedIndexer (who provides global info this local indexer doesn't know about)
+  def catchUpSeqNumber_=(n: SequenceNumber) {_catchUpSeqNumber = n}
 
   private[this] var _catchUpSeqNumber = {
     val v1 = commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong

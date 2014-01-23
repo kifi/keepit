@@ -37,7 +37,7 @@ class ShardedArticleIndexer(
         rest
       }
       if (!done) sequenceNumber = uris.last.seq
-      if (sequenceNumber == catchUpSeqNumber) return total
+      if (sequenceNumber == catchUpSeqNumber) done = true
     }
     total
   }
