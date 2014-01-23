@@ -114,7 +114,7 @@ function ReconnectingWebSocket(opts) {
   function ping() {
     log("#0bf", "[RWS.ping]")();
     clearTimeout(pingTimeout), pingTimeout = null;
-    clearTimeout(disTimeout), disTimeout = setTimeout(disconnect.bind(null, "ping", 2), 2000);  // expecting onMessageN "pong"
+    clearTimeout(disTimeout), disTimeout = setTimeout(disconnect.bind(null, "ping", 2), 3000);  // expecting onMessageN "pong"
     ws.send('["ping"]');
     lastRecOrPingTime = Date.now();
   }

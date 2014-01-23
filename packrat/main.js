@@ -216,7 +216,73 @@ logEvent.catchUp = function() {
   }
 }
 
-// ===== WebSocket handlers
+// ===== WebSocket
+
+function onSocketConnect() {
+  socket.send(['get_latest_threads', THREAD_BATCH_SIZE], gotLatestThreads);
+  threadListCallbacks.all = threadListCallbacks.all || [];
+  threadListCallbacks.sent = threadListCallbacks.sent || [];
+  threadListCallbacks.unread = threadListCallbacks.unread || [];
+
+  // http data refresh
+  getRules();
+  getPrefs();
+  getTags();
+  getFriends();
+}
+
+function onSocketDisconnect(why) {
+  reportError('socket disconnect (' + why + ')');
+}
+
+function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
+  log('[gotLatestThreads]', arr, numUnreadUnmuted, numUnread)();
+
+  var serverTimeDate = new Date(serverTime);
+  var staleMessageIds = (threadLists.all || {ids: []}).ids.reduce(function (o, threadId) {
+    o[threadsById[threadId].id] = true;  // message ID, not thread ID
+    return o;
+  }, {});
+
+  threadsById = {};
+  arr.forEach(function (n) {
+    standardizeNotification(n);
+    threadsById[n.thread] = n;
+    if (serverTimeDate - new Date(n.time) < 60000 && !staleMessageIds[n.id]) {
+      handleRealTimeNotification(n);
+    }
+  });
+
+  threadLists = {};
+  threadLists.all = new ThreadList(threadsById, arr.map(getThreadId), null, numUnreadUnmuted);
+  threadLists.sent = new ThreadList(threadsById, arr.filter(isSent).map(getThreadId));
+  threadLists.unread = new ThreadList(threadsById, arr.filter(isUnread).map(getThreadId), numUnread);
+  threadLists.all.includesOldest = arr.length < THREAD_BATCH_SIZE;
+  threadLists.sent.includesOldest = arr.length < THREAD_BATCH_SIZE;
+  threadLists.unread.includesOldest = threadLists.unread.ids.length >= numUnread;
+
+  ['all', 'sent', 'unread'].forEach(function (kind) {
+    (threadListCallbacks[kind] || []).forEach(function (callback) {
+      callback(threadLists[kind]);
+    });
+    delete threadListCallbacks[kind];
+  });
+
+  tellVisibleTabsNoticeCountIfChanged();
+
+  forEachTabAtThreadList(function (tab, tl, kind) {
+    api.tabs.emit(tab, 'threads', {kind: kind, threads: tl.ids.map(idToThread), includesOldest: tl.includesOldest});
+    sendUnreadThreadCount(tab);
+  });
+
+  var staleMessageData = messageData;
+  messageData = {};
+  forEachThreadOpenInPane(function (threadId) {
+    loadThreadMessagesAndUpdateTabsViewingIt(threadId, (staleMessageData[threadId] || []).length);
+  });
+
+  api.tabs.eachSelected(kifify);
+}
 
 var socketHandlers = {
   denied: function() {
@@ -587,25 +653,13 @@ api.port.on({
     }
   },
   get_unread_thread_count: function(_, __, tab) {
-    if (threadLists.unread) {
-      sendUnreadThreadCount(tab);
-    } else {
-      var cb = threadListCallbacks.unread;
-      if (cb) {
-        cb.push(sendUnreadThreadCount.bind(null, tab));
-      }
-    }
+    sendUnreadThreadCount(tab);  // if not currently known, will be pushed to tab when known
   },
   get_page_thread_count: function(_, __, tab) {
     var list = threadLists[tab.nUri || tab.url];
     if (list) {
       sendPageThreadCount(tab, list);
-    } else {
-      var cb = threadListCallbacks[tab.nUri || tab.url];
-      if (cb) {
-        cb.push(sendPageThreadCount.bind(null, tab));
-      }
-    }
+    } // else will be pushed to tab when known
   },
   get_threads: function(kind, respond, tab) {
     var listKey = kind === 'page' ? tab.nUri || tab.url : kind;
@@ -638,16 +692,15 @@ api.port.on({
   },
   get_older_threads: function(o, respond, tab) {
     var list = threadLists[o.kind === 'page' ? tab.nUri : o.kind];
-    var n = list.ids.length;
+    var n = list ? list.ids.length : 0;
     for (var i = n - 1; i >= 0 && threadsById[list.ids[i]].time < o.time; i--);
-    if (++i < n || list.includesOldest) {
+    if (++i < n || list && list.includesOldest) {
       var threads = list.ids.slice(i, i + THREAD_BATCH_SIZE).map(idToThread);
       respond({
         threads: threads,
         includesOldest: list.includesOldest && i + threads.length === n
       });
     } else {
-      var oldest = list.ids[n - 1];
       var socketMessage = {
         all: ['get_threads_before'],
         unread: ['get_unread_threads_before'],
@@ -655,18 +708,18 @@ api.port.on({
         page: ['get_page_threads_before', tab.nUri]
       }[o.kind];
       socketMessage.push(THREAD_BATCH_SIZE, o.time);
-      socket.send(socketMessage, function(arr) {
+      socket.send(socketMessage, function (arr) {
         arr.forEach(function (th) {
           standardizeNotification(th);
           threadsById[th.thread] = th;
         });
-        if (list.ids[list.ids.length - 1] === oldest) {
+        var includesOldest = arr.length < THREAD_BATCH_SIZE;
+        var list = threadLists[o.kind === 'page' ? tab.nUri : o.kind];
+        if (list && list.ids[list.ids.length - 1] === o.threadId) {
           list.insertOlder(arr.map(getThreadId));
-          if (arr.length < THREAD_BATCH_SIZE) {
-            list.includesOldest = true;
-          }
-          respond({threads: arr, includesOldest: list.includesOldest});
+          list.includesOldest = includesOldest;
         }
+        respond({threads: arr, includesOldest: includesOldest});
       });
     }
   },
@@ -878,23 +931,6 @@ function onTagChangeFromServer(op, tag) {
   }, {op: op, tag: tag});
 }
 
-function gotLatestThreads(kind, arr, num) {  // initial load
-  log('[gotLatestThreads]', kind, arr, num)();
-  arr.forEach(function (n) {
-    standardizeNotification(n);
-    threadsById[n.thread] = n;
-  });
-  var list = threadLists[kind] = new ThreadList(threadsById, arr.map(getThreadId), kind === 'unread' ? num : null, kind === 'all' ? num : null);
-  list.includesOldest = arr.length < THREAD_BATCH_SIZE;
-  threadListCallbacks[kind].forEach(function (callback) {
-    callback(list);
-  });
-  delete threadListCallbacks[kind];
-  if (kind === 'all') {
-    tellVisibleTabsNoticeCountIfChanged();
-  }
-}
-
 function removeNotificationPopups(threadId) {
   emitAllTabs('remove_notification', threadId);
 }
@@ -948,29 +984,6 @@ function insertNewNotification(n) {
     });
     return true;
   }
-}
-
-function requestMissedNotifications() {
-  socket.send([
-    'get_threads_since',
-     threadLists.all.ids.length ? threadsById[threadLists.all.ids[0]].time : new Date(0).toISOString()
-  ], function gotThreadsSince(arr, serverTime) {
-    log('[gotThreadsSince]', arr, serverTime)();
-    var serverTimeDate = new Date(serverTime);
-    for (var i = arr.length; i--;) {
-      var n = arr[i];
-      standardizeNotification(n);
-      if (insertNewNotification(n)) {
-        if (serverTimeDate - new Date(n.time) < 60000) {
-          handleRealTimeNotification(n);
-        }
-        if (messageData[n.thread]) {
-          loadThreadMessagesAndUpdateTabsViewingIt(n);
-        }
-      }
-    }
-    tellVisibleTabsNoticeCountIfChanged();
-  });
 }
 
 // messageId is of last read message
@@ -1053,14 +1066,21 @@ function markAllThreadsRead(messageId, time) {  // .id and .time of most recent 
       }
     }
   }
-  for (var i = threadLists.unread.ids.length; i--;) {
-    var id = threadLists.unread.ids[i];
-    if (!threadsById[id].unread) {
-      threadLists.unread.ids.splice(i, 1);
+
+  var tlUnread = threadLists.unread;
+  if (tlUnread) {
+    for (var i = tlUnread.ids.length; i--;) {
+      var id = tlUnread.ids[i];
+      if (!threadsById[id].unread) {
+        tlUnread.ids.splice(i, 1);
+      }
     }
+    tlUnread.numTotal = tlUnread.ids.length;  // any not loaded are older and now marked read
   }
-  threadLists.unread.numTotal = threadLists.unread.ids.length;  // any not loaded are older and now marked read
-  threadLists.all.numUnreadUnmuted = threadLists.all.countUnreadUnmuted();
+  var tlAll = threadLists.all;
+  if (tlAll) {
+    tlAll.numUnreadUnmuted = tlAll.countUnreadUnmuted();
+  }
 
   forEachTabAtThreadList(function (tab) {
     api.tabs.emit(tab, 'all_threads_read', {id: messageId, time: time});
@@ -1094,7 +1114,10 @@ function setMuted(threadId, muted) {
 }
 
 function sendUnreadThreadCount(tab) {
-  api.tabs.emit(tab, 'unread_thread_count', threadLists.unread.numTotal);
+  var tl = threadLists.unread;
+  if (tl) {
+    api.tabs.emit(tab, 'unread_thread_count', tl.numTotal);
+  }
 }
 
 function sendPageThreadCount(tab, tl) {
@@ -1178,6 +1201,15 @@ function forEachTabAtThreadList(f) {
   }
 }
 
+var threadLocatorRe = /^\/messages\/[a-z0-9-]+$/;
+function forEachThreadOpenInPane(f) {
+  for (var loc in tabsByLocator) {
+    if (threadLocatorRe.test(loc)) {
+      f(loc.substr(10));
+    }
+  }
+}
+
 function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
   var done = {};
   var f = arguments[arguments.length - 1];
@@ -1200,6 +1232,7 @@ function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
 }
 
 function tellVisibleTabsNoticeCountIfChanged() {
+  if (!threadLists.all) return;
   api.tabs.eachSelected(function (tab) {
     if (tab.count !== threadLists.all.numUnreadUnmuted) {
       tab.count = threadLists.all.numUnreadUnmuted;
@@ -1314,7 +1347,7 @@ function kifify(tab) {
 
   // page threads
   var pt = threadLists[uri];
-  if (!pt || pt.stale) {  // TODO: replacement for .stale based on socket.ver
+  if (!pt) {
     var callbacks = threadListCallbacks[uri];
     if (!callbacks) {
       callbacks = threadListCallbacks[uri] = [];
@@ -1405,7 +1438,6 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
   log('[gotPageThreads]', threads.length, 'of', numTotal, uri, nUri !== uri ? nUri : '')();
 
   // incorporating new threads into our cache and noting any changes
-  var numNewThreads = 0;
   var updatedThreads = [];
   threads.forEach(function (th) {
     standardizeNotification(th);
@@ -1421,8 +1453,6 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
       threadsById[th.thread] = th;
       if (oldTh) {
         updatedThreads.push(oldTh);
-      } else {
-        numNewThreads++;
       }
     }
   });
@@ -1444,18 +1474,18 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
   }
   delete threadListCallbacks[uri];
 
-  // sending new page threads and count to tabs on this page
-  if (numNewThreads) {
-    forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
-      api.tabs.emit(tab, 'page_threads', pt.ids.map(idToThread));  // TODO: write handler in notices.js
-    });
-    forEachTabAt(uri, nUri, function(tab) {
-      sendPageThreadCount(tab, pt);
-    });
-  }
+  // sending new page threads and count to any tabs on this page with pane open to page threads
+  forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
+    api.tabs.emit(tab, 'threads', {kind: 'page', threads: pt.ids.map(idToThread), includesOldest: pt.includesOldest});
+  });
+  forEachTabAt(uri, nUri, function(tab) {
+    sendPageThreadCount(tab, pt); // TODO: only if pane is open
+  });
 
   // updating tabs currently displaying any updated threads
-  updatedThreads.forEach(loadThreadMessagesAndUpdateTabsViewingIt);
+  updatedThreads.forEach(function (th) {
+    loadThreadMessagesAndUpdateTabsViewingIt(th.thread, th.messages);
+  });
 
   // prefetch any unread threads
   pt.forEachUnread(function(threadId) {
@@ -1483,22 +1513,23 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
   }
 }
 
-function loadThreadMessagesAndUpdateTabsViewingIt(th) {
-  var tc = threadCallbacks[th.thread];
+function loadThreadMessagesAndUpdateTabsViewingIt(threadId, oldMessageCount) {
+  var tc = threadCallbacks[threadId];
   if (!tc) {
-    tc = threadCallbacks[th.thread] = [];
-    socket.send(['get_thread', th.thread]);
+    tc = threadCallbacks[threadId] = [];
+    socket.send(['get_thread', threadId]);
   }
-  tc.push(updateThreadInTabs.bind(null, th.messages));
+  tc.push(updateThreadInTabs.bind(null, oldMessageCount));
 }
 
 function updateThreadInTabs(oldMessageCount, o) {
+  // TODO: update muted state and possibly participants too?
   forEachTabAtLocator('/messages/' + o.id, function(tab) {
     if (o.messages.length === oldMessageCount + 1) {
       api.tabs.emit(tab, 'message', {
         threadId: o.id,
         message: o.messages[o.messages.length - 1]});
-    } else {
+    } else if (o.messages.length > (oldMessageCount || 0)) {
       api.tabs.emit(tab, 'thread', {id: o.id, messages: o.messages});
     }
   });
@@ -1506,6 +1537,10 @@ function updateThreadInTabs(oldMessageCount, o) {
 
 function isSent(th) {
   return th.firstAuthor != null && th.participants[th.firstAuthor].id === session.user.id;
+}
+
+function isUnread(th) {
+  return th.unread;
 }
 
 function setIcon(tab, kept) {
@@ -1852,13 +1887,6 @@ function throttle(func, wait, opts) {  // underscore.js
 
 var session, socket, silence, onLoadingTemp;
 
-function connectSync() {
-  getRules();
-  getFriends();
-  getTags();
-  getPrefs();
-}
-
 function authenticate(callback, retryMs) {
   if (api.mode.isDev()) {
     openLogin(callback, retryMs);
@@ -1878,29 +1906,9 @@ function startSession(callback, retryMs) {
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     session = data;
     session.prefs = {}; // to come via socket
-    socket = socket || api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws?version=" + api.version + "&eip=" + (session.eip || ""), socketHandlers, function onConnect() {
-      // TODO: better stale thread data management
-      // for (var key in threadLists) {
-      //   threadLists[key].stale = true;
-      // }
-      connectSync();
-      if (!threadLists.all) {
-        var socketRequests = {
-          all: 'get_latest_threads',
-          unread: 'get_unread_threads',
-          sent: 'get_sent_threads'
-        };
-        for (var kind in socketRequests) {
-          socket.send([socketRequests[kind], THREAD_BATCH_SIZE], gotLatestThreads.bind(null, kind));
-          threadListCallbacks[kind] = [];
-        }
-      } else {
-        requestMissedNotifications();
-      }
-      api.tabs.eachSelected(kifify);
-    }, function onDisconnect(why) {
-      reportError("socket disconnect (" + why + ")");
-    });
+    socket = socket || api.socket.open(
+      elizaBaseUri().replace(/^http/, 'ws') + '/eliza/ext/ws?version=' + api.version + (session.eip ? '&eip=' + session.eip : ''),
+      socketHandlers, onSocketConnect, onSocketDisconnect);
     logEvent.catchUp();
     mixpanel.catchUp();
 
