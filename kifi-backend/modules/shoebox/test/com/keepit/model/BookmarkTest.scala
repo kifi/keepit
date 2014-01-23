@@ -25,6 +25,7 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       uriRepo.count === 0
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
+      val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/foo", Some("AmazonFoo")))
 
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
@@ -33,26 +34,26 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
       bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
+      bookmarkRepo.save(Bookmark(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), isPrivate = true))
       bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1)))
 
-      (user1, user2, uri1, uri2, url1, url2)
+      (user1, user2, uri1, uri2, uri3, url1, url2)
     }
   }
 
   "Bookmark" should {
     "load my keeps in pages before and after a given date" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _) = setup()
+        val (user1, user2, uri1, uri2, uri3, _, _) = setup()
         db.readOnly { implicit s =>
-          val marks = bookmarkRepo.getByUser(user1.id.get, None, None, None, 2)
-          marks.map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, None, 5).map(_.uriId) ===
-              Seq(uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), None, None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), None, None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), None, 5).map(_.uriId) ===
-              Seq(uri2.id.get)
+          val marks = bookmarkRepo.getByUser(user1.id.get, None, None, None, 3)
+          marks.map(_.uriId) === Seq(uri3.id.get, uri2.id.get, uri1.id.get)
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, None, 5).map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, None, 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, None, 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), None, 5).map(_.uriId) === Seq(uri3.id.get)
           bookmarkRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), None, 5) must beEmpty
           bookmarkRepo.getByUser(user1.id.get, None, None, None, 0) must beEmpty
         }
@@ -60,27 +61,27 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
     }
     "load all" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _) = setup()
+        val (user1, user2, uri1, uri2, _, _, _) = setup()
         val cxAll = db.readOnly {implicit s =>
           bookmarkRepo.all
         }
         println(cxAll mkString "\n")
         val all = inject[Database].readOnly(implicit session => bookmarkRepo.all)
-        all.map(_.title) === Seq(Some("G1"), Some("A1"), None)
+        all.map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"), None)
       }
     }
     "load by user" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _) = setup()
+        val (user1, user2, uri1, uri2, _, _, _) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"))
+          bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"))
           bookmarkRepo.getByUser(user2.id.get).map(_.title) === Seq(None)
         }
       }
     }
     "load by uri" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _) = setup()
+        val (user1, user2, uri1, uri2, _, _, _) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
           bookmarkRepo.getByUri(uri2.id.get).map(_.title) === Seq(Some("A1"))
@@ -91,7 +92,7 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.count(s) === 3
+          bookmarkRepo.count(s) === 4
         }
       }
     }
@@ -122,16 +123,18 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
     }
     "count by user" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _) = setup()
+        val (user1, user2, _, _, _, _, _) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getCountByUser(user1.id.get) === 2
+          bookmarkRepo.getCountByUser(user1.id.get) === 3
           bookmarkRepo.getCountByUser(user2.id.get) === 1
+          bookmarkRepo.getPrivatePublicCountByUser(user1.id.get) === (1, 2)
+          bookmarkRepo.getPrivatePublicCountByUser(user2.id.get) === (0, 1)
         }
       }
     }
     "count mutual keeps" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _) = setup()
+        val (user1, user2, _, _, _, _, _) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getNumMutual(user1.id.get, user2.id.get) === 1
           bookmarkRepo.getNumMutual(user2.id.get, user1.id.get) === 1
@@ -141,23 +144,34 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
 
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, url1, _) = setup()
+        val (user1, user2, uri1, uri2, _, url1, _) = setup()
         db.readWrite{ implicit s =>
-          bookmarkRepo.count == 3
+          bookmarkRepo.count === 4
           val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
+          println(bm)
+          println(bookmarkRepo.all.mkString("\n"))
           bookmarkRepo.delete(bm.get.id.get)
-          bookmarkRepo.count == 2
+          println("=============================")
+          println(bookmarkRepo.all.mkString("\n"))
+        }
+        db.readWrite{ implicit s =>
+          bookmarkRepo.all.size === 3
+          bookmarkRepo.count === 3
+        }
+        db.readWrite{ implicit s =>
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
           uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-          bookmarkRepo.count == 3
+        }
+        db.readWrite{ implicit s =>
+          bookmarkRepo.count === 4
         }
       }
     }
 
     "get by exclude state should work" in {
        withDb() { implicit injector =>
-         val (user1, user2, uri1, uri2, url1, _) = setup()
+         val (user1, user2, uri1, uri2, url1, _, _) = setup()
          db.readWrite{ implicit s =>
            val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
            bookmarkRepo.save(bm.get.withActive(false))
