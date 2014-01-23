@@ -23,7 +23,7 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ConcurrentLinkedQueue}
 import scala.ref.WeakReference
-import play.api.Play
+import play.api.{Logger, Play}
 import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
@@ -59,7 +59,7 @@ object HttpRedirect {
 }
 
 
-class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging {
+class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging with ScraperUtils {
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
@@ -248,21 +248,19 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
       Some(response)
     } catch {
       case uhe:UnknownHostException =>
-        log.warn(s"[fetch] Caught exception (${uhe}) while fetching $url; cause:${uhe.getCause} stack:${uhe.getStackTraceString}")
+        logErr(uhe, "fetch", url)
         fetchTask.exRef.set(uhe)
         None
       case cte:ConnectTimeoutException =>
-        log.warn(s"[fetch] Caught exception (${cte}) while fetching $url; cause:${cte.getCause} stack:${cte.getStackTraceString}")
+        logErr(cte, "fetch", url)
         fetchTask.exRef.set(cte)
         None
       case ste:SocketTimeoutException =>
-        log.warn(s"[fetch] Caught exception (${ste}) while fetching $url; cause:${ste.getCause} stack:${ste.getStackTraceString}")
+        logErr(ste, "fetch", url)
         fetchTask.exRef.set(ste)
         None
       case t:Throwable =>
-        val msg = s"[fetch] Caught exception (${t}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
-        log.error(msg)
-        airbrake.notify(msg)
+        logErr(t, "fetch", url, true)
         fetchTask.exRef.set(t)
         None
     }
