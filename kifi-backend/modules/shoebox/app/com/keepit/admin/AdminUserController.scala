@@ -38,7 +38,8 @@ import com.keepit.commanders.{CollectionCommander, DefaultKeeps, BookmarksComman
 case class UserStatistics(
     user: User,
     socialUsers: Seq[SocialUserInfo],
-    bookmarksCount: Int,
+    privateKeeps: Int,
+    publicKeeps: Int,
     experiments: Set[ExperimentType],
     kifiInstallations: Seq[KifiInstallation])
 
@@ -241,9 +242,11 @@ class AdminUserController @Inject() (
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
+    val (privateKeeps, publicKeeps) = bookmarkRepo.getPrivatePublicCountByUser(user.id.get)
     UserStatistics(user,
       socialUserInfoRepo.getByUser(user.id.get),
-      bookmarkRepo.getCountByUser(user.id.get),
+      privateKeeps,
+      publicKeeps,
       userExperimentRepo.getUserExperiments(user.id.get),
       kifiInstallations)
   }
