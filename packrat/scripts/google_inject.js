@@ -311,8 +311,8 @@ if (searchUrlRe.test(document.URL)) !function() {
           "keepers": richHit.users.map(function (u) {return u.id}),
           "tags": richHit.bookmark.tags,
           "title": richHit.bookmark.title,
-          "titleMatches": if (richHit.bookmark.matches.title) richHit.bookmark.matches.title.length else 0,
-          "urlMatches": if (richHit.bookmark.matches.url) richHit.bookmark.matches.url.length else 0  
+          "titleMatches": (richHit.bookmark.matches.title || []).length, 
+          "urlMatches": (richHit.bookmark.matches.url || []).length
         };
       }
       api.port.emit("log_search_event", [
