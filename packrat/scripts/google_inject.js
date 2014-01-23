@@ -308,9 +308,10 @@ if (searchUrlRe.test(document.URL)) !function() {
           "isMyBookmark": richHit.isMyBookmark,
           "isPrivate": richHit.isPrivate,
           "count": richHit.count,
-          "users": richHit.users,
-          "score": richHit.score,
-          "bookmark": richHit.bookmark
+          "keepers": richHit.users.map(function (u) {return u.id}),
+          "tags": richHit.bookmark.tags,
+          "title": richHit.bookmark.title,
+          "matches": richHit.bookmark.matches, 
         };
       }
       api.port.emit("log_search_event", [

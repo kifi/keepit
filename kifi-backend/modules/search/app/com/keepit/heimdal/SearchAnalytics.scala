@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import com.keepit.model.User
+import com.keepit.model.{Collection, User}
 import com.keepit.search._
 import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.{ExternalId, Id}
@@ -8,10 +8,9 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{AirbrakeNotifier}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.search.result.KifiSearchHit
 
 case class SearchEngine(name: String) {
   override def toString = name
@@ -76,6 +75,32 @@ object BasicSearchContext {
   }
 }
 
+case class KifiHitContext(
+  isOwnKeep: Boolean,
+  isPrivate: Boolean,
+  keepCount: Int,
+  keepers: Seq[ExternalId[User]],
+  tags: Seq[ExternalId[Collection]],
+  title: Option[String],
+  titleMatches: Int,
+  urlMatches: Int
+)
+
+object KifiHitContext {
+  implicit val reads: Reads[KifiHitContext] = (
+    (__ \ 'isMyBookmark).read[Boolean] and
+    (__ \ 'isPrivate).read[Boolean] and
+    (__ \ 'count).read[Int] and
+    ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[User]].fmap(_.map(_.externalId))) and
+    ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten.map(ExternalId[Collection](_)))) and
+    ((__ \ 'title).read[String].fmap(Option(_)) orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
+    (__ \\ 'matches \ 'title).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0)) and
+    (__ \\ 'matches \ 'url).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0))
+  )(KifiHitContext.apply _)
+
+}
+
+
 @Singleton
 class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
@@ -101,7 +126,7 @@ class SearchAnalytics @Inject() (
     basicSearchContext: BasicSearchContext,
     resultSource: SearchEngine,
     resultPosition: Int,
-    result: Option[KifiSearchHit],
+    kifiHitContext: Option[KifiHitContext],
     contextBuilder: HeimdalContextBuilder
   ) = {
 
@@ -111,22 +136,21 @@ class SearchAnalytics @Inject() (
 
     contextBuilder += ("resultSource", resultSource.toString)
     contextBuilder += ("resultPosition", resultPosition)
-    result.map { result =>
-      val hit = result.bookmark
-      contextBuilder += ("keep", keep(result))
-      contextBuilder += ("keepersShown", result.users.length)
-      contextBuilder += ("keepCount", result.count)
-      contextBuilder += ("isPrivate", result.isPrivate)
+    kifiHitContext.map { hitContext =>
+      contextBuilder += ("keep", keep(hitContext))
+      contextBuilder += ("keepersShown", hitContext.keepers.length)
+      contextBuilder += ("keepCount", hitContext.keepCount)
+      contextBuilder += ("isPrivate", hitContext.isPrivate)
 
-      contextBuilder += ("tags", hit.collections.map(_.length).getOrElse(0))
-      contextBuilder += ("hasTitle", hit.title.isDefined)
+      contextBuilder += ("tags", hitContext.tags.length)
+      contextBuilder += ("hasTitle", hitContext.title.isDefined)
 
-      contextBuilder += ("titleMatches", hit.titleMatches.length)
-      contextBuilder += ("urlMatches", hit.urlMatches.length)
+      contextBuilder += ("titleMatches", hitContext.titleMatches)
+      contextBuilder += ("urlMatches", hitContext.urlMatches)
 
       val queryTermsCount = contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt }.get
-      contextBuilder += ("titleMatchQueryRatio", hit.titleMatches.length.toDouble / queryTermsCount)
-      contextBuilder += ("urlMatchQueryRatio", hit.urlMatches.length.toDouble / queryTermsCount)
+      contextBuilder += ("titleMatchQueryRatio", hitContext.titleMatches.toDouble / queryTermsCount)
+      contextBuilder += ("urlMatchQueryRatio", hitContext.urlMatches.toDouble / queryTermsCount)
     }
 
     heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, clickedAt))
@@ -202,9 +226,9 @@ class SearchAnalytics @Inject() (
     Base64.encodeBase64String(mac.doFinal(userId.toString.getBytes()))
   }
 
-  private def keep(result: KifiSearchHit): String = {
-    if (result.isMyBookmark) own
-    else if (result.users.length > 0) friends
+  private def keep(kifiHitContext: KifiHitContext): String = {
+    if (kifiHitContext.isOwnKeep) own
+    else if (kifiHitContext.keepers.length > 0) friends
     else others
   }
 
