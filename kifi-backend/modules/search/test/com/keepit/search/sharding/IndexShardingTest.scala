@@ -190,18 +190,18 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update() === 5
-        shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))
+        shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))   // a4
         indexer.update() === 1
         indexer.reindex()
 
         shoebox.saveURIs(uris(2).withState(NormalizedURIStates.ACTIVE),
-            NormalizedURI.withHash(title = Some("a6"), normalizedUrl = "http://www.keepit.com/article6", state = SCRAPED)  )
+            NormalizedURI.withHash(title = Some("a5"), normalizedUrl = "http://www.keepit.com/article5", state = SCRAPED)  )
 
         indexer.update() === 3      // skipped the active ones. catch up done.
-        indexer.catchUpSeqNumber.value === 6
-        indexer.sequenceNumber.value === 6
+        indexer.catchUpSeqNumber.value === 4   // min of 4 and 6.
+        indexer.sequenceNumber.value === 4
 
-        indexer.update() === 2     // two changes after reindex()
+        indexer.update() === 3     // 3 uris changed after seqNum 4: a2, a4, a5
         indexer.sequenceNumber.value === 8
 
       }

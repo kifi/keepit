@@ -30,7 +30,7 @@ object Indexer {
   object CommitData {
     val committedAt = "COMMITTED_AT"
     val sequenceNumber = "SEQUENCE_NUMBER"
-    val catchUpSeqNumForReindex = "CATCH_UP_SEQ_NUM_FOR_REINDEX"      // below this number, we can just read scraped uris; beyond this point, need to read every uri.
+    val catchUpSeqNumForReindex = "CATCH_UP_SEQ_NUM_FOR_REINDEX"
   }
 }
 
