@@ -42,7 +42,7 @@ object KeepInfo {
     (__ \ 'id).formatNullable(ExternalId.format[Bookmark]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse false, Some(_))
+    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_))
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
 
   def fromBookmark(bookmark: Bookmark): KeepInfo = {
