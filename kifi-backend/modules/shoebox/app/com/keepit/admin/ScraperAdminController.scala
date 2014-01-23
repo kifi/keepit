@@ -10,6 +10,7 @@ import com.keepit.search.ArticleStore
 
 import views.html
 import com.keepit.common.db.slick.Database.Slave
+import play.api.libs.concurrent.Execution.Implicits._
 
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -20,20 +21,20 @@ class ScraperAdminController @Inject() (
   httpProxyRepo: HttpProxyRepo)
     extends AdminController(actionAuthenticator) {
 
-  def getPendingScraperRequests: Seq[ScrapeInfo] = {
-    db.readOnly(dbMasterSlave = Slave) { implicit ro =>
-      scrapeInfoRepo.getPendingList()
-    }
-  }
+  val MAX_COUNT_DISPLAY = 50
 
-  def searchScraper = AdminHtmlAction { implicit request =>
-    Ok(html.admin.searchScraper(getPendingScraperRequests))
-  }
+  def searchScraper = AdminHtmlAction { implicit request => Ok(html.admin.searchScraper()) }
 
   def pendingScraperRequests = AdminHtmlAction { implicit request =>
-    Ok(html.admin.pendingScraperRequests(getPendingScraperRequests))
+    Async {
+      val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
+      val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
+      for {
+        requests <- requestsFuture
+        count <- countFuture
+      } yield Ok(html.admin.pendingScraperRequests(requests, count))
+    }
   }
-
 
   def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction { implicit request =>
     val updateCount = db.readWrite { implicit session =>
