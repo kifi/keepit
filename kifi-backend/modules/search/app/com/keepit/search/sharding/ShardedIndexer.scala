@@ -11,8 +11,10 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
   protected val updateLock = new AnyRef
   @volatile protected var closing = false
 
+  def hasEmptyIndex: Boolean = indexShards.valuesIterator.map{_.numDocs}.max == 0
+
   def commitSequenceNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
-  def commitCatchUpSeqNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitCatchUpSeqNumber.value).min)
+  def catchUpSeqNumFromLocalIndexers = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.catchUpSeqNumber.value).min)
 
   def committedAt: Option[String] = {
     indexShards.valuesIterator.reduce{ (a, b) =>
@@ -28,7 +30,7 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
     _sequenceNumber = n
   }
 
-  private[this] var _catchUpSeqNumber: SequenceNumber = commitCatchUpSeqNumber
+  private[this] var _catchUpSeqNumber: SequenceNumber = catchUpSeqNumFromLocalIndexers
   def catchUpSeqNumber = _catchUpSeqNumber
   protected def catchUpSeqNumber_=(n: SequenceNumber) { _catchUpSeqNumber = n }
 

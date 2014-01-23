@@ -30,7 +30,7 @@ object Indexer {
   object CommitData {
     val committedAt = "COMMITTED_AT"
     val sequenceNumber = "SEQUENCE_NUMBER"
-    val catchUpSeqNumForLastReindex = "CATCH_UP_SEQ_NUM_FOR_LAST_REINDEX"
+    val catchUpSeqNumForReindex = "CATCH_UP_SEQ_NUM_FOR_REINDEX"      // below this number, we can just read scraped uris; beyond this point, need to read every uri.
   }
 }
 
@@ -120,9 +120,13 @@ abstract class Indexer[T](
     _sequenceNumber = n
   }
 
-  def catchUpSeqNumber_=(n: SequenceNumber) {_catchUpSeqNumber = n}
+  def catchUpSeqNumber_=(n: SequenceNumber) {_catchUpSeqNumber = n}   // this is typically called by some shardedIndexer (who provides global info this local indexer doesn't know about)
 
-  private[this] var _catchUpSeqNumber = SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
+  private[this] var _catchUpSeqNumber = {
+    val v1 = commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong
+    val v2 = commitData.getOrElse(Indexer.CommitData.catchUpSeqNumForReindex, "-1").toLong
+    SequenceNumber(v1 max v2)
+  }
 
   def catchUpSeqNumber = _catchUpSeqNumber
 
@@ -257,10 +261,11 @@ abstract class Indexer[T](
 
   private def commit(seqNum: SequenceNumber = this.sequenceNumber) {
     this.sequenceNumber = seqNum
+    this.catchUpSeqNumber = SequenceNumber(catchUpSeqNumber.value max sequenceNumber.value)
     indexWriter.setCommitData(Map(
           Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
           Indexer.CommitData.sequenceNumber -> sequenceNumber.toString,
-          Indexer.CommitData.catchUpSeqNumForLastReindex -> catchUpSeqNumber.toString
+          Indexer.CommitData.catchUpSeqNumForReindex -> catchUpSeqNumber.toString
     ))
     indexWriter.commit()
     log.info(s"index committed seqNum=${seqNum}")
@@ -304,10 +309,6 @@ abstract class Indexer[T](
 
   def commitSequenceNumber: SequenceNumber = {
     SequenceNumber(commitData.get(Indexer.CommitData.sequenceNumber).map(v => v.toLong).getOrElse(-1L))
-  }
-
-  def commitCatchUpSeqNumber: SequenceNumber = {
-    SequenceNumber(commitData.get(Indexer.CommitData.catchUpSeqNumForLastReindex).map(v => v.toLong).getOrElse(-1L))
   }
 
   def committedAt: Option[String] = {
