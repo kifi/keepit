@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference, AtomicLong}
 import com.keepit.model._
-import java.util.concurrent._
+import java.util.concurrent.{ForkJoinPool, ForkJoinTask, ConcurrentLinkedQueue, Callable, Executors, TimeUnit}
 import com.keepit.search.{ArticleStore, Article}
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
@@ -11,16 +11,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.extractor.{LinkedInIdExtractor, ExtractorProviderTypes, ExtractorProviderType, ExtractorFactory}
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.logging.Logging
-import play.api.{Logger, Play}
+import play.api.Play
 import scala.ref.WeakReference
 import com.keepit.common.performance._
-import scala.Some
-import scala.concurrent.Future
 import org.apache.http.HttpStatus
 import play.api.Play.current
 import scala.concurrent._
-import scala.util.Try
-import scala.Some
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
@@ -155,7 +151,7 @@ class QueuedScrapeProcessor @Inject() (
           } catch {
             case t:Throwable =>
               exRef.set(t)
-              val msg = s"[QScraper] Caught exception ${t.getMessage} while processing fetch request $uri; cause=${t.getCause}; stack=${t.getStackTraceString}"
+              val msg = s"[QScraper] Caught exception ${t} while processing fetch request $uri; cause=${t.getCause}; stack=${t.getStackTraceString}"
               log.error(msg)
               airbrake.notify(msg)
               (nuri, None)
@@ -171,7 +167,7 @@ class QueuedScrapeProcessor @Inject() (
       }
     } catch {
       case t:Throwable =>
-        log.info(s"Caught exception ${t.getMessage}; cause=${t.getCause}; QPS.asyncScrape($fjPool): uri=$nuri info=$scrapeInfo")
+        log.info(s"Caught exception ${t}; cause=${t.getCause}; QPS.asyncScrape($fjPool): uri=$nuri info=$scrapeInfo")
         airbrake.notify(t)
     }
   }

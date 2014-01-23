@@ -3,7 +3,7 @@ package com.keepit.scraper
 import org.joda.time.DateTime
 import com.keepit.model.HttpProxy
 import org.apache.http.protocol.{BasicHttpContext, HttpContext}
-import org.apache.http.{HttpHost, HttpResponse, HttpResponseInterceptor, HttpStatus}
+import org.apache.http._
 import com.keepit.common.net.URI
 import com.keepit.common.logging.Logging
 import org.apache.http.config.RegistryBuilder
@@ -12,9 +12,8 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
 import org.apache.http.HttpHeaders._
-import scala.Some
 import org.apache.http.client.entity.{DeflateDecompressingEntity, GzipDecompressingEntity}
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
+import org.apache.http.client.methods.HttpGet
 import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
 import org.apache.http.client.protocol.HttpClientContext
 import java.io.IOException
@@ -26,8 +25,6 @@ import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ConcurrentLinke
 import scala.ref.WeakReference
 import play.api.Play
 import Play.current
-import collection.JavaConversions._
-import scala.concurrent.duration.Duration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import java.net.SocketTimeoutException
@@ -129,9 +126,9 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
 
   case class Fetch(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
     val killCount = new AtomicInteger()
-    val respRef = new AtomicReference[CloseableHttpResponse]()
+    val respStatusRef = new AtomicReference[StatusLine]()
     val exRef = new AtomicReference[Throwable]()
-    override def toString = s"[Fetch($url,${ts},${thread.getName})] isAborted=${htpGet.isAborted} killCount=${killCount} respRef=${respRef} exRef=${exRef}"
+    override def toString = s"[Fetch($url,${ts},${thread.getName})] isAborted=${htpGet.isAborted} killCount=${killCount} respRef=${respStatusRef} exRef=${exRef}"
   }
 
   private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String] = None) {
@@ -158,7 +155,7 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
             val curr = System.currentTimeMillis
             val ref = iter.next
             ref.get map { case ft:Fetch =>
-              if (ft.respRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} is done; resp.status=${ft.respRef.get.getStatusLine}; remove from q"))
+              if (ft.respStatusRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} is done; resp.status=${ft.respStatusRef.get}; remove from q"))
               else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
               else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
               else {
@@ -245,16 +242,16 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
     val responseOpt = try {
       q.offer(WeakReference(fetchTask))
       val response = httpClient.execute(httpGet, httpContext)
-      fetchTask.respRef.set(response)
+      fetchTask.respStatusRef.set(response.getStatusLine)
       log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
       case e:SocketTimeoutException =>
-        log.warn(s"[fetch] Caught exception (${e.getMessage}) while fetching $url; cause:${e.getCause} stack:${e.getStackTraceString}")
+        log.warn(s"[fetch] Caught exception (${e}) while fetching $url; cause:${e.getCause} stack:${e.getStackTraceString}")
         fetchTask.exRef.set(e)
         None
       case t:Throwable =>
-        val msg = s"[fetch] Caught exception (${t.getMessage}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
+        val msg = s"[fetch] Caught exception (${t}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
         log.error(msg)
         airbrake.notify(msg)
         fetchTask.exRef.set(t)
