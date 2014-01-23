@@ -145,7 +145,7 @@ class SharedWsMessagingController @Inject() (
     "get_latest_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notices =>
         val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-        socket.channel.push(Json.arr(requestId.toLong, notices, numUnreadUnmuted, numUnread))
+        socket.channel.push(Json.arr(requestId.toLong, notices, numUnreadUnmuted, numUnread, currentDateTime))
       }
     },
     "get_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
