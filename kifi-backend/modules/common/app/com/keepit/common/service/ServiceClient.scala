@@ -86,7 +86,6 @@ trait ServiceClient extends Logging {
         url = Some(s"$url")))
     }
     if (ignoreFailure) {
-      println(timeout + "  " + httpUri + "  " + body)
       call match {
         case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(timeout).getFuture(httpUri, httpClient.ignoreFailure)
         case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(timeout).postFuture(httpUri, body, httpClient.ignoreFailure)
