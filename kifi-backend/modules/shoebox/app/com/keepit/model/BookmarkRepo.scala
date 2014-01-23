@@ -20,6 +20,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
+  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
@@ -98,12 +99,6 @@ class BookmarkRepoImpl @Inject() (
     }
   }
 
-  override def count(implicit session: RSession): Int = {
-    countCache.getOrElse(BookmarkCountKey()) {
-      super.count
-    }
-  }
-
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
     bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
       val bookmarks = (for(b <- table if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
@@ -151,9 +146,19 @@ class BookmarkRepoImpl @Inject() (
   def getCountByUser(userId: Id[User], includePrivate: Boolean)(implicit session: RSession): Int =
     if (includePrivate) {
       countCache.getOrElse(BookmarkCountKey(Some(userId))) {
-        Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first
+        val sql = s"select count(*) from bookmark where user_id=${userId.id} and state = '${BookmarkStates.ACTIVE.value}'"
+        StaticQuery.queryNA[Int](sql).first()
       }
-    } else Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE && !b.isPrivate) yield b).length).first
+    } else {
+      val sql = s"select count(*) from bookmark where user_id=${userId.id} and state = '${BookmarkStates.ACTIVE.value}' and is_private = ${includePrivate.toString}"
+      StaticQuery.queryNA[Int](sql).first()
+    }
+
+  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
+      val privateCount = StaticQuery.queryNA[Int](s"select count(*) from bookmark where user_id=${userId.id} and state = '${BookmarkStates.ACTIVE.value}' and is_private = true").first()
+      val publicCount = StaticQuery.queryNA[Int](s"select count(*) from bookmark where user_id=${userId.id} and state = '${BookmarkStates.ACTIVE.value}' and is_private = false").first()
+      (privateCount, publicCount)
+    }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
     val sql = s"select count(*) from bookmark where updated_at between '${SQL_DATETIME_FORMAT.print(from)}' and '${SQL_DATETIME_FORMAT.print(to)}' and state='${BookmarkStates.ACTIVE.value}'"

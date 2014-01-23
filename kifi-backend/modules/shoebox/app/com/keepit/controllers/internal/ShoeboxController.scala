@@ -25,7 +25,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.{BasicUser, SocialNetworkType, SocialId}
 import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
@@ -36,7 +36,6 @@ import play.api.libs.json.JsBoolean
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsNumber
-import com.keepit.social.SocialId
 import com.keepit.normalizer.TrustedCandidate
 import play.api.libs.json.JsObject
 
@@ -389,6 +388,17 @@ class ShoeboxController @Inject() (
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val users = db.readOnly { implicit s => //using cache
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
+    }
+    Ok(Json.toJson(users))
+  }
+
+  def getBasicUsersNoCache() = Action(parse.json) { request =>
+    val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
+    val users = db.readOnly { implicit s => //using cache
+      userIds.map{ userId =>
+        val user = userRepo.getNoCache(userId)
+        userId.id.toString -> Json.toJson(BasicUser.fromUser(user))
+      }.toMap
     }
     Ok(Json.toJson(users))
   }

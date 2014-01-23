@@ -300,6 +300,24 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(basicUsers)
   }
 
+  def getBasicUsersNoCache(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
+    val basicUsers = userIds.map { id =>
+      val dummyUser = User(
+        id = Some(id),
+        firstName = "Douglas",
+        lastName = "Adams-clone-" + id.toString
+      )
+      val user = allUsers.getOrElse(id,dummyUser)
+      id -> BasicUser(
+        externalId = user.externalId,
+        firstName = user.firstName,
+        lastName = user.lastName,
+        pictureName = "fake.jpg" //
+      )
+    }.toMap
+    Future.successful(basicUsers)
+  }
+
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
     val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
     Future.successful(m)

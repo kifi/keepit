@@ -144,8 +144,8 @@ class SharedWsMessagingController @Inject() (
 
     "get_latest_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notices =>
-        val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-        socket.channel.push(Json.arr(requestId.toLong, notices, numUnreadUnmuted))
+        val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
+        socket.channel.push(Json.arr(requestId.toLong, notices, numUnreadUnmuted, numUnread, currentDateTime))
       }
     },
     "get_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
@@ -153,12 +153,12 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
-    "get_threads_since" -> { case JsNumber(requestId) +: JsString(time) +: _ =>
+    "get_threads_since" -> { case JsNumber(requestId) +: JsString(time) +: _ => // deprecated (unused since 2.8.38)
       messagingCommander.getSendableNotificationsSince(socket.userId, parseStandardTime(time)).map { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices, currentDateTime))
       }
     },
-    "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
+    "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>  // deprecated (unused since 2.8.38)
       messagingCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt).map { case (notices, numTotal) =>
         socket.channel.push(Json.arr(requestId.toLong, notices, numTotal))
       }
@@ -178,7 +178,7 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
-    "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
+    "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ => // deprecated (unused since 2.8.38)
       messagingCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt).map { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }

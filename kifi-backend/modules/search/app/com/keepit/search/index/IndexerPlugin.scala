@@ -81,6 +81,7 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
   }
 
   override def reindex(): Unit = {
+    log.info(s"reindexing $name")
     indexer.reindex()
     actor.ref ! UpdateIndex
   }

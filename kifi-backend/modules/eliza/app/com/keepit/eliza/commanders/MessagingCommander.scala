@@ -270,9 +270,9 @@ class MessagingCommander @Inject() (
         thread = thread,
         messageWithBasicUser = messageWithBasicUser,
         locator = locator,
-        unread = !muted,  // TODO: stop automatically marking messages read in muted threads
+        unread = true,
         originalAuthorIdx = authorActivityInfos.filter(_.started).zipWithIndex.head._2,
-        unseenAuthors = if (muted) 0 else unseenAuthors,  // TODO: see TODO above
+        unseenAuthors = unseenAuthors,
         numAuthors = authorActivityInfos.length,
         numMessages = numMessages,
         numUnread = numUnread,
@@ -915,6 +915,12 @@ class MessagingCommander @Inject() (
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
     db.readOnly { implicit session =>
       userThreadRepo.getUnreadUnmutedThreadCount(userId)
+    }
+  }
+
+  def getUnreadThreadCounts(userId: Id[User]): (Int, Int) = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getUnreadThreadCounts(userId)
     }
   }
 

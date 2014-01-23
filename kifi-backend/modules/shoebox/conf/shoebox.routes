@@ -312,6 +312,8 @@ GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGra
 GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
+GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
+
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRealUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
@@ -439,6 +441,7 @@ POST    /internal/shoebox/database/internNormalizedURI                 @com.keep
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.internal.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.internal.ShoeboxController.getUserIdsByExternalIds(ids: String)
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
+POST    /internal/shoebox/database/getBasicUsersNoCache                @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
 POST    /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.internal.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
