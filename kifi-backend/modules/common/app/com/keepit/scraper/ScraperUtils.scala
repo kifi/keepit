@@ -11,7 +11,7 @@ trait ScraperUtils {
   def logErr(t:Throwable, tag:String, ctx:String, notify:Boolean = false)(implicit log:Logger):Unit = {
     val msg = formatErr(t, tag, ctx)
     log.error(msg, t)
-    if (notify) airbrake.notify(msg)
+    if (notify) airbrake.notify(msg, t)
   }
 
 }
