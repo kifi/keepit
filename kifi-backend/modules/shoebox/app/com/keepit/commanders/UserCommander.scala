@@ -223,7 +223,7 @@ class UserCommander @Inject() (
         elizaServiceClient.sendGlobalNotification(
           userIds = toNotify,
           title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-          body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly.",
+          body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly. Invite friends to join Kifi.",
           linkText = "Invite more friends to Kifi.",
           linkUrl = "https://www.kifi.com/friends/invite",
           imageUrl = imageUrl,
