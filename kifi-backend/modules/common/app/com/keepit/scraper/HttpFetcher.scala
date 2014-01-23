@@ -27,7 +27,8 @@ import play.api.Play
 import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
-import java.net.SocketTimeoutException
+import java.net.{UnknownHostException, SocketTimeoutException}
+import org.apache.http.conn.ConnectTimeoutException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -246,9 +247,17 @@ class HttpFetcherImpl(airbrake:AirbrakeNotifier, userAgent: String, connectionTi
       log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
-      case e:SocketTimeoutException =>
-        log.warn(s"[fetch] Caught exception (${e}) while fetching $url; cause:${e.getCause} stack:${e.getStackTraceString}")
-        fetchTask.exRef.set(e)
+      case uhe:UnknownHostException =>
+        log.warn(s"[fetch] Caught exception (${uhe}) while fetching $url; cause:${uhe.getCause} stack:${uhe.getStackTraceString}")
+        fetchTask.exRef.set(uhe)
+        None
+      case cte:ConnectTimeoutException =>
+        log.warn(s"[fetch] Caught exception (${cte}) while fetching $url; cause:${cte.getCause} stack:${cte.getStackTraceString}")
+        fetchTask.exRef.set(cte)
+        None
+      case ste:SocketTimeoutException =>
+        log.warn(s"[fetch] Caught exception (${ste}) while fetching $url; cause:${ste.getCause} stack:${ste.getStackTraceString}")
+        fetchTask.exRef.set(ste)
         None
       case t:Throwable =>
         val msg = s"[fetch] Caught exception (${t}) while fetching $url; cause:${t.getCause} stack:${t.getStackTraceString}"
