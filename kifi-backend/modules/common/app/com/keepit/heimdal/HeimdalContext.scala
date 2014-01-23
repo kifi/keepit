@@ -115,6 +115,7 @@ class HeimdalContextBuilder {
 
     request match {
       case authRequest: AuthenticatedRequest[_] =>
+        this += ("userCreatedAt", authRequest.user.createdAt)
         authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(authRequest.experiments)
         Try(SocialNetworkType(authRequest.identity.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
@@ -187,6 +188,7 @@ class HeimdalContextBuilder {
       this.data.remove("remoteAddress")
     }
     this.data.remove("kifiInstallationId")
+    this.data.remove("userCreatedAt")
   }
 }
 
