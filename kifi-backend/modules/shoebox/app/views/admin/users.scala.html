@@ -53,7 +53,8 @@
           <th>Id</th>
           <th>User</th>
           <th>Networks</th>
-          <th># of bookmarks</th>
+          <th>Private bookmarks</th>
+          <th>Public bookmarks</th>
           <th>Date joined</th>
           <th>Experiments</th>
           <th>Version</th>
@@ -64,7 +65,8 @@
           <td><span class="badge">@userStatistics.user.id.get.id</span></td>
           <td>@adminHelper.userDisplay(userStatistics.user)</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
-          <td>@userStatistics.bookmarksCount</td>
+          <td>@userStatistics.privateKeeps</td>
+          <td>@userStatistics.publicKeeps</td>
           <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
           <td>@userStatistics.experiments.mkString(", ")</td>
           <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
