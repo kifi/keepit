@@ -25,7 +25,7 @@
         <th>Public IP</th><td>@{amazonInstanceInfo.publicIp}</td>
       </tr>
       <tr>
-        <th>Instance Type</th><td><a href="http://aws.amazon.com/ec2/instance-types/">@{amazonInstanceInfo.instanceType}</a></td>
+        <th>Instance Type</th><td><a href="http://www.ec2instances.info/">@{amazonInstanceInfo.instanceType}</a></td>
       </tr>
       <tr>
         <th>AvailabilityZone</th><td><a href="http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html">@{amazonInstanceInfo.availabilityZone}</a></td>
@@ -46,7 +46,7 @@
         <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
-              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Version</th> <th>Instance</th> <th>AWS Details</th>
+              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Version</th> <th>Type</th> <th>AWS Details</th>
             </thead>
             <tbody>
             @for(cmi <- data) {
@@ -56,7 +56,7 @@
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
                     <td>@{randomColor(cmi.version)}</td>
-                    <td>@cmi.name</td>
+                    <td><a href="http://www.ec2instances.info/">@{cmi.amazonInstanceInfo.instanceType}</a></td>
                     <td>
                       <div id="@cmi.instanceInfo.instanceId" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                         <div class="modal-header">
