@@ -14,6 +14,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
+import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 
 case class Path(name: String) {
   override def toString = name
@@ -56,12 +57,12 @@ trait ZooKeeperClient {
 class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
                       watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
   @volatile private[this] var zk : ZooKeeper = null
-  @volatile private[this] var onConnectedHandlers: List[()=>Unit] = Nil
+  private[this] val onConnectedHandlers = new ArrayBuffer[()=>Unit] with SynchronizedBuffer[()=>Unit]
 
   connect()
 
   def onConnected(handler: ()=>Unit): Unit = {
-    onConnectedHandlers = handler::onConnectedHandlers
+    onConnectedHandlers += handler
     if (zk != null && zk.getState() == ZooKeeper.States.CONNECTED) execOnConnectedHandler(handler) // if already connected, execute the handler immediately
   }
 
