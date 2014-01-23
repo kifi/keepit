@@ -26,21 +26,21 @@ import com.keepit.search.SearchServiceClient
 
 private case object ProcessKeeps
 private class RawKeepImporterActor @Inject() (
-                                               db: Database,
-                                               rawKeepRepo: RawKeepRepo,
-                                               bookmarkInternerProvider: Provider[BookmarkInterner],
-                                               bookmarkRepo: BookmarkRepo,
-                                               uriRepo: NormalizedURIRepo,
-                                               userValueRepo: UserValueRepo,
-                                               airbrake: AirbrakeNotifier,
-                                               urlRepo: URLRepo,
-                                               scraper: ScrapeSchedulerPlugin,
-                                               keptAnalytics: KeepingAnalytics,
-                                               kifiInstallationRepo: KifiInstallationRepo,
-                                               bookmarksCommanderProvider: Provider[BookmarksCommander],
-                                               searchClient: SearchServiceClient,
-                                               clock: Clock
-                                               ) extends FortyTwoActor(airbrake) with Logging {
+  db: Database,
+  rawKeepRepo: RawKeepRepo,
+  bookmarkInternerProvider: Provider[BookmarkInterner],
+  bookmarkRepo: BookmarkRepo,
+  uriRepo: NormalizedURIRepo,
+  userValueRepo: UserValueRepo,
+  airbrake: AirbrakeNotifier,
+  urlRepo: URLRepo,
+  scraper: ScrapeSchedulerPlugin,
+  keptAnalytics: KeepingAnalytics,
+  kifiInstallationRepo: KifiInstallationRepo,
+  bookmarksCommanderProvider: Provider[BookmarksCommander],
+  searchClient: SearchServiceClient,
+  clock: Clock
+) extends FortyTwoActor(airbrake) with Logging {
 
   private val batchSize = 500
   def receive = {
