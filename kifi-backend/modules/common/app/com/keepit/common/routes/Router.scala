@@ -138,7 +138,7 @@ object Search extends Service {
     def searchUpdate() = ServiceRoute(POST, "/internal/search/index/update")
     def searchReindex() = ServiceRoute(POST, "/internal/search/index/reindex")
     def getSequenceNumber() = ServiceRoute(GET, "/internal/search/index/sequenceNumber")
-    def userReindex() = ServiceRoute(GET, "/internal/search/user/reindex")
+    def userReindex() = ServiceRoute(POST, "/internal/search/user/reindex")
     def refreshSearcher() = ServiceRoute(POST, "/internal/search/index/refreshSearcher")
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
