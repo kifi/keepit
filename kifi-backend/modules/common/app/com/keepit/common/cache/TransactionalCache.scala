@@ -9,12 +9,12 @@ object TransactionalCache {
   implicit def getObjectCache[K <: Key[T], T](cache: TransactionalCache[K, T])(implicit txn: TransactionalCaching): ObjectCache[K, T] = cache(txn)
 }
 
-abstract class TransactionalCache[K <: Key[T], T](cache: ObjectCache[K, T], name: Option[String] = None) {
+abstract class TransactionalCache[K <: Key[T], T](cache: ObjectCache[K, T], serializer: Serializer[T], name: Option[String] = None) {
   val cacheName = name.getOrElse(this.getClass.getName)
 
   def apply(txn: TransactionalCaching): ObjectCache[K, T] = {
     if (txn.inCacheTransaction) {
-      txn.getOrCreate(cacheName){ new TransactionLocalCache(cache) }
+      txn.getOrCreate(cacheName){ new TransactionLocalCache(cache, serializer) }
     } else {
       cache
     }
@@ -24,35 +24,35 @@ abstract class TransactionalCache[K <: Key[T], T](cache: ObjectCache[K, T], name
 }
 
 
-abstract class JsonCacheImpl[K <: Key[T], T] private(cache: ObjectCache[K, T]) extends TransactionalCache(cache) {
+abstract class JsonCacheImpl[K <: Key[T], T] private(cache: ObjectCache[K, T], serializer: Serializer[T]) extends TransactionalCache(cache, serializer) {
   def this(
     stats: CacheStatistics, accessLog: AccessLog,
     innermostPluginSettings: (FortyTwoCachePlugin, Duration),
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T]) =
-      this(new FortyTwoCacheImpl(stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter)))
+      this(new FortyTwoCacheImpl(stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter)), Serializer(formatter))
 }
 
-abstract class BinaryCacheImpl[K <: Key[T], T] private(cache: ObjectCache[K, T]) extends TransactionalCache(cache) {
+abstract class BinaryCacheImpl[K <: Key[T], T] private(cache: ObjectCache[K, T], serializer: Serializer[T]) extends TransactionalCache(cache, serializer) {
   def this(
     stats: CacheStatistics, accessLog: AccessLog,
     innermostPluginSettings: (FortyTwoCachePlugin, Duration),
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T]) =
-      this(new FortyTwoCacheImpl[K, T](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter)))
+      this(new FortyTwoCacheImpl[K, T](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter)), Serializer(formatter))
 }
 
-abstract class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal] private(cache: ObjectCache[K, P]) extends TransactionalCache(cache) {
+abstract class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal] private(cache: ObjectCache[K, P], serializer: Serializer[P]) extends TransactionalCache(cache, serializer) {
   def this(
     stats: CacheStatistics, accessLog: AccessLog,
     innermostPluginSettings: (FortyTwoCachePlugin, Duration),
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*) =
-      this(new FortyTwoCacheImpl[K, P](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P]))
+      this(new FortyTwoCacheImpl[K, P](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P]), Serializer[P])
 }
 
-abstract class StringCacheImpl[K <: Key[String]] private(cache: ObjectCache[K, String]) extends TransactionalCache(cache) {
+abstract class StringCacheImpl[K <: Key[String]] private(cache: ObjectCache[K, String], serializer: Serializer[String]) extends TransactionalCache(cache, serializer) {
   def this(
     stats: CacheStatistics, accessLog: AccessLog,
     innermostPluginSettings: (FortyTwoCachePlugin, Duration),
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*) =
-      this(new FortyTwoCacheImpl[K, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string))
+      this(new FortyTwoCacheImpl[K, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string), Serializer.string)
 }
 

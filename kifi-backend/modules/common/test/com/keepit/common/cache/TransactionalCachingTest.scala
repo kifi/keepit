@@ -1,9 +1,10 @@
 package com.keepit.common.cache
 
+import com.keepit.common.logging.Logging
+import com.keepit.serializer.Serializer
 import org.specs2.mutable.Specification
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
-import com.keepit.common.logging.Logging
 
 class TransactionalCachingTest extends Specification {
 
@@ -53,8 +54,8 @@ class TransactionalCachingTest extends Specification {
   private val cache1 = new Cache1
   private val cache2 = new Cache2
 
-  class TxnCache1(c: Cache1) extends TransactionalCache(c)
-  class TxnCache2(c: Cache2) extends TransactionalCache(c)
+  class TxnCache1(c: Cache1) extends TransactionalCache(c, Serializer.string)
+  class TxnCache2(c: Cache2) extends TransactionalCache(c, Serializer.string)
 
   val txnCache1 = new TxnCache1(cache1)
   val txnCache2 = new TxnCache2(cache2)

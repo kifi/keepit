@@ -48,7 +48,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     try {
       val objOpt = valueOpt.map(serializer.reads)
       val namespace = key.namespace
-      objOpt match {
+      valueOpt.map(serializer.reads) match {
         case Some(obj) => {
           val duration = if (repo.logAccess) {
             accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "HIT")).duration
@@ -67,8 +67,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           }
           stats.recordMiss(repo.toString, repo.logAccess, namespace, key.toString, duration)
           if (outerCache isEmpty) stats.recordMiss("Cache", false, namespace, key.toString, duration)
+          NotFound()
         }
-        NotFound()
       }
     } catch {
       case e: Throwable =>
