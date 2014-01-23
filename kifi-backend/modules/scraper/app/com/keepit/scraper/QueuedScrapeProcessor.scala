@@ -32,13 +32,13 @@ abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:
 
 @Singleton
 class QueuedScrapeProcessor @Inject() (
-  airbrake:AirbrakeNotifier,
+  val airbrake:AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
-  helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging {
+  helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
@@ -67,8 +67,7 @@ class QueuedScrapeProcessor @Inject() (
       helper.syncSaveScrapeInfo(sc.info.withState(ScrapeInfoStates.INACTIVE))
       helper.syncGetNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // consider adding DO_NOT_SCRAPE
     } catch {
-      case t:Throwable =>
-        log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to deactivate $sc")
+      case t:Throwable => logErr(t, "terminator", s"deactivate $sc")
     }
   }
 
@@ -121,8 +120,7 @@ class QueuedScrapeProcessor @Inject() (
           }
         }
       } catch {
-        case t:Throwable =>
-          log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}); (stack=${t.getStackTraceString}")
+        case t:Throwable => logErr(t, "terminator", submittedQ.toString, true)
       }
     }
   }
@@ -151,9 +149,7 @@ class QueuedScrapeProcessor @Inject() (
           } catch {
             case t:Throwable =>
               exRef.set(t)
-              val msg = s"[QScraper] Caught exception ${t} while processing fetch request $uri; cause=${t.getCause}; stack=${t.getStackTraceString}"
-              log.error(msg)
-              airbrake.notify(msg)
+              logErr(t, "QScraper", uri.toString, true)
               (nuri, None)
           } finally {
             threadRef.set(null)
@@ -166,9 +162,7 @@ class QueuedScrapeProcessor @Inject() (
         submittedQ.offer(WeakReference(callable, fjTask)) // should never return false
       }
     } catch {
-      case t:Throwable =>
-        log.info(s"Caught exception ${t}; cause=${t.getCause}; QPS.asyncScrape($fjPool): uri=$nuri info=$scrapeInfo")
-        airbrake.notify(t)
+      case t:Throwable => logErr(t, "QScraper", s"uri=$nuri, info=$scrapeInfo", true)
     }
   }
 
