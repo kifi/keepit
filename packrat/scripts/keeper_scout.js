@@ -181,7 +181,7 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
-  while (tile = document.getElementById("kifi-tile")) {
+  while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
   tile = document.createElement("kifi");
@@ -245,9 +245,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   function paneCall(methodName) {
     var pane = window.pane;
-    if (pane) {
-      return pane[methodName]();
-    }
+    return pane && pane[methodName]();
   }
 
   setTimeout(function checkIfUseful() {
