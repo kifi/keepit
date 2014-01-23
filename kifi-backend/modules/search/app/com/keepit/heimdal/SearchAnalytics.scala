@@ -94,8 +94,8 @@ object KifiHitContext {
     ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[User]].fmap(_.map(_.externalId))) and
     ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten.map(ExternalId[Collection](_)))) and
     ((__ \ 'title).read[String].fmap(Option(_)) orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
-    (__ \\ 'matches \ 'title).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0)) and
-    (__ \\ 'matches \ 'url).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0))
+    ((__ \ 'titleMatches).read[Int] orElse (__ \'bookmark \ 'matches \ 'title).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0))) and
+    ((__ \ 'urlMatches).read[Int] orElse (__ \'bookmark \ 'matches \ 'url).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0)))
   )(KifiHitContext.apply _)
 
 }
