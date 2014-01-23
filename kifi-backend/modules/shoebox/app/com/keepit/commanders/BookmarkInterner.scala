@@ -89,7 +89,7 @@ class BookmarkInterner @Inject() (
           }
         }
       }
-      rawKeepImporterPlugin.processKeeps()
+      rawKeepImporterPlugin.processKeeps(broadcastToOthers = true)
     }
   }
 
