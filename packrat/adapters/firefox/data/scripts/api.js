@@ -44,6 +44,7 @@ const api = function() {
       },
       on: function(handlers) {
         if (msgHandlers.indexOf(handlers) < 0) {
+          msgHandlers.push(handlers);
           for (var type in handlers) {
             self.port.on(type, handlers[type]);
           }
