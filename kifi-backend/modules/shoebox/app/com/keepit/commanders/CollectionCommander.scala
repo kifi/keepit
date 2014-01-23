@@ -7,9 +7,8 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.search.SearchServiceClient
-
 import play.api.libs.json.Json
-
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
 
@@ -88,12 +87,12 @@ class CollectionCommander @Inject() (
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
           if (existingExternalId.isEmpty || existingExternalId == basicCollection.id) {
+            s.onTransactionSuccess{ searchClient.updateURIGraph() }
             basicCollection.id map { id =>
               //
               collectionRepo.getByUserAndExternalId(userId, id) map { coll =>
                 val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
                 updateCollectionOrdering(userId)
-                searchClient.updateURIGraph()
                 keptAnalytics.renamedTag(coll, newColl, context)
                 Left(BasicCollection.fromCollection(newColl))
               } getOrElse {
@@ -104,7 +103,6 @@ class CollectionCommander @Inject() (
                   map { _.copy(name = name, state = CollectionStates.ACTIVE) }
                   getOrElse Collection(userId = userId, name = name))
               updateCollectionOrdering(userId)
-              searchClient.updateURIGraph()
               keptAnalytics.createdTag(newColl, context)
               Left(BasicCollection.fromCollection(newColl))
             }

@@ -37,7 +37,6 @@ class BookmarksController @Inject() (
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
     bookmarksCommander: BookmarksCommander,
-    val searchClient: SearchServiceClient,
     userValueRepo: UserValueRepo,
     clock: Clock,
     heimdalContextBuilder: HeimdalContextBuilderFactory
