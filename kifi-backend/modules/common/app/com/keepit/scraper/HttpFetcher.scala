@@ -27,8 +27,9 @@ import play.api.{Logger, Play}
 import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
-import java.net.{UnknownHostException, SocketTimeoutException}
+import java.net.{NoRouteToHostException, UnknownHostException, SocketTimeoutException}
 import org.apache.http.conn.ConnectTimeoutException
+import org.apache.http.client.ClientProtocolException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -125,7 +126,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
   val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
 
-  case class Fetch(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
+  case class FetchInfo(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
     val killCount = new AtomicInteger()
     val respStatusRef = new AtomicReference[StatusLine]()
     val exRef = new AtomicReference[Throwable]()
@@ -143,7 +144,13 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     }
   }
 
-  val q = new ConcurrentLinkedQueue[WeakReference[Fetch]]()
+  private def logAndSet[T](fetchInfo:FetchInfo, ret:T)(t:Throwable, tag:String, ctx:String, notify:Boolean = false):T = {
+    logErr(t, tag, ctx, notify)
+    fetchInfo.exRef.set(t)
+    ret
+  }
+
+  val q = new ConcurrentLinkedQueue[WeakReference[FetchInfo]]()
   val enforcer = new Runnable {
     def run():Unit = {
       try {
@@ -155,7 +162,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
           while (iter.hasNext) {
             val curr = System.currentTimeMillis
             val ref = iter.next
-            ref.get map { case ft:Fetch =>
+            ref.get map { case ft:FetchInfo =>
               if (ft.respStatusRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} is done; resp.status=${ft.respStatusRef.get}; remove from q"))
               else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
               else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
@@ -239,37 +246,27 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
-    val fetchTask = Fetch(url, System.currentTimeMillis, httpGet, Thread.currentThread())
+    val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     val responseOpt = try {
-      q.offer(WeakReference(fetchTask))
+      q.offer(WeakReference(fetchInfo))
       val response = httpClient.execute(httpGet, httpContext)
-      fetchTask.respStatusRef.set(response.getStatusLine)
+      fetchInfo.respStatusRef.set(response.getStatusLine)
       log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
-      case uhe:UnknownHostException =>
-        logErr(uhe, "fetch", url)
-        fetchTask.exRef.set(uhe)
-        None
-      case cte:ConnectTimeoutException =>
-        logErr(cte, "fetch", url)
-        fetchTask.exRef.set(cte)
-        None
-      case ste:SocketTimeoutException =>
-        logErr(ste, "fetch", url)
-        fetchTask.exRef.set(ste)
-        None
-      case t:Throwable =>
-        logErr(t, "fetch", url, true)
-        fetchTask.exRef.set(t)
-        None
+      case e:ClientProtocolException    => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:NoRouteToHostException     => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:UnknownHostException       => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:ConnectTimeoutException    => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:SocketTimeoutException     => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case t:Throwable                  => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
 
     responseOpt match {
       case None =>
-        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) FAILED to execute ($fetchTask)"), httpContext)
+        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) FAILED to execute ($fetchInfo)"), httpContext)
       case Some(response) if (httpGet.isAborted) =>
-        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) has been ABORTED ($fetchTask)"), httpContext)
+        HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) has been ABORTED ($fetchInfo)"), httpContext)
       case Some(response) => {
         val statusCode = response.getStatusLine.getStatusCode
         val entity = response.getEntity
