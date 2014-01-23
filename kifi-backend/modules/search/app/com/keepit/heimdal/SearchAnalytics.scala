@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 import com.keepit.common.healthcheck.{AirbrakeNotifier}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.social.BasicUser
 
 case class SearchEngine(name: String) {
   override def toString = name
@@ -91,7 +92,7 @@ object KifiHitContext {
     (__ \ 'isMyBookmark).read[Boolean] and
     (__ \ 'isPrivate).read[Boolean] and
     (__ \ 'count).read[Int] and
-    ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[User]].fmap(_.map(_.externalId))) and
+    ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[BasicUser]].fmap(_.map(_.externalId))) and
     ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten.map(ExternalId[Collection](_)))) and
     ((__ \ 'title).read[String].fmap(Option(_)) orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
     ((__ \ 'titleMatches).read[Int] orElse (__ \'bookmark \ 'matches \ 'title).readNullable[JsArray].fmap(_.map(_.value.length).getOrElse(0))) and
