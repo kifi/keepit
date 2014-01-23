@@ -30,7 +30,7 @@ trait ObjectCache[K <: Key[T], T] {
   val ttl: Duration
   outerCache map {outer => require(ttl <= outer.ttl)}
 
-  protected[cache] def getFromInnerCache(key: K): Option[Option[T]]
+  protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
 
   def remove(key: K): Unit
@@ -47,79 +47,73 @@ trait ObjectCache[K <: Key[T], T] {
 
   def get(key: K): Option[T] = {
     getFromInnerCache(key) match {
-      case Some(valueOpt) => valueOpt
-      case None => outerCache match {
+      case Found(valueOpt) => valueOpt
+      case NotFound() => outerCache match {
         case Some(cache) =>
           val valueOpt = cache.get(key)
           if (valueOpt.isDefined) setInnerCache(key, valueOpt)
           valueOpt
         case None => None
       }
+      case Removed() => None // if removed at a transaction local cache, do not call outer cache
     }
   }
 
   def getOrElse(key: K)(orElse: => T): T = {
-    def fallback: T = {
-      val value = outerCache match {
-        case Some(cache) => cache.getOrElse(key)(orElse)
-        case None => orElse
-      }
-      setInnerCache(key, Some(value))
-      value
+    get(key) match {
+      case Some(value) =>
+        value
+      case None =>
+        val value = orElse
+        set(key, value)
+        value
     }
+  }
 
+  protected[cache] def internalGetOpt(key: K): ObjectState[T] = {
     getFromInnerCache(key) match {
-      case Some(valueOpt) => valueOpt match {
-        case Some(value) => value
-        case None => fallback
+      case state @ Found(_) => state
+      case NotFound() => outerCache match {
+        case Some(cache) =>
+          val state = cache.internalGetOpt(key)
+          state match {
+            case Found(valueOpt) => setInnerCache(key, valueOpt)
+            case _ =>
+          }
+          state
+        case None => NotFound()
       }
-      case None => fallback
-
+      case Removed() => NotFound() // if removed at a transaction local cache, do not call outer cache
     }
   }
 
   def getOrElseOpt(key: K)(orElse: => Option[T]): Option[T] = {
-    getFromInnerCache(key) match {
-      case Some(valueOpt) => valueOpt
-      case None =>
-        val valueOption : Option[T] = outerCache match {
-          case Some(cache) => cache.getOrElseOpt(key)(orElse)
-          case None => orElse
-        }
-        setInnerCache(key, valueOption)
-        valueOption
+    internalGetOpt(key) match {
+      case Found(valueOpt) => valueOpt
+      case _ =>
+        val valueOpt = orElse
+        set(key, valueOpt)
+        valueOpt
     }
   }
 
   def getOrElseFuture(key: K)(orElse: => Future[T]): Future[T] = {
-    def fallback: Future[T] = {
-      val valueFuture = outerCache match {
-        case Some(cache) => cache.getOrElseFuture(key)(orElse)
-        case None => orElse
-      }
-      valueFuture.onSuccess {case value => setInnerCache(key, Some(value))}
-      valueFuture
-    }
-
-    getFromInnerCache(key) match {
-      case Some(valueOpt) => valueOpt match {
-        case Some(value) => Promise.successful(value).future
-        case None => fallback
-      }
-      case None => fallback
+    get(key) match {
+      case Some(value) => Promise.successful(value).future
+      case None =>
+        val valueFuture = orElse
+        valueFuture.onSuccess{ case value => set(key, value) }
+        valueFuture
     }
   }
 
   def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
-    getFromInnerCache(key) match {
-      case Some(valueOpt) => Promise.successful(valueOpt).future
-      case None =>
-        val valueFutureOption = outerCache match {
-          case Some(cache) => cache.getOrElseFutureOpt(key)(orElse)
-          case None => orElse
-        }
-        valueFutureOption.onSuccess {case valueOption => setInnerCache(key, valueOption)}
-        valueFutureOption
+    internalGetOpt(key) match {
+      case Found(valueOpt) => Promise.successful(valueOpt).future
+      case _ =>
+        val valueOptFuture = orElse
+        valueOptFuture.onSuccess{ case valueOpt => set(key, valueOpt) }
+        valueOptFuture
     }
   }
 
@@ -145,20 +139,10 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def bulkGetOrElseFuture(keys: Set[K])(orElse: Set[K] => Future[Map[K, T]]): Future[Map[K, T]] = {
-    val found = bulkGetFromInnerCache(keys).foldLeft(Map.empty[K, T]){ (m, kv) =>
-      kv match {
-        case (k, Some(v)) => m + (k -> v)
-        case _ => m
-      }
-    }
-
+    val found = bulkGet(keys).collect{ case (k, Some(v)) => (k, v) }
     if (keys.size > found.size) {
       val missing = keys -- found.keySet
-      val valueFuture = outerCache match {
-        case Some(cache) => cache.bulkGetOrElseFuture(missing)(orElse)
-        case None => orElse(missing)
-      }
-      valueFuture.map{ valueMap =>
+      orElse(missing).map{ valueMap =>
         valueMap.foreach{ kv => setInnerCache(kv._1, Some(kv._2)) }
         found ++ valueMap
       }
@@ -167,3 +151,9 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 }
+
+sealed trait ObjectState[T]
+case class Found[T](value: Option[T]) extends ObjectState[T]
+case class NotFound[T]() extends ObjectState[T]
+case class Removed[T]() extends ObjectState[T] // used by TransactionLocalCache
+

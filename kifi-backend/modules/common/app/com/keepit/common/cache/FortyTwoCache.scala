@@ -15,7 +15,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Access.CACHE
 import com.keepit.common.logging._
 import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
+import com.keepit.serializer.Serializer
 import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 
@@ -34,7 +34,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val repo: FortyTwoCachePlugin
   val serializer: Serializer[T]
 
-  protected[cache] def getFromInnerCache(key: K): Option[Option[T]] = {
+  protected[cache] def getFromInnerCache(key: K): ObjectState[T] = {
     val timer = accessLog.timer(CACHE)
     val valueOpt = try repo.get(key.toString) catch {
       case e: Throwable =>
@@ -44,12 +44,12 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     decodeValue(key, valueOpt, timer)
   }
 
-  private[this] def decodeValue(key: K, valueOpt: Option[Any], timer: AccessLogTimer): Option[Option[T]] = {
+  private[this] def decodeValue(key: K, valueOpt: Option[Any], timer: AccessLogTimer): ObjectState[T] = {
     try {
       val objOpt = valueOpt.map(serializer.reads)
       val namespace = key.namespace
-      objOpt match {
-        case Some(_) => {
+      valueOpt.map(serializer.reads) match {
+        case Some(obj) => {
           val duration = if (repo.logAccess) {
             accessLog.add(timer.done(space = s"${repo.toString}.${namespace}", key = key.toString, result = "HIT")).duration
           } else {
@@ -57,6 +57,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           }
           stats.recordHit(repo.toString, repo.logAccess, namespace, key.toString, duration)
           stats.recordHit("Cache", false, namespace, key.toString, duration)
+          Found(obj)
         }
         case None => {
           val duration = if (repo.logAccess) {
@@ -66,14 +67,14 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
           }
           stats.recordMiss(repo.toString, repo.logAccess, namespace, key.toString, duration)
           if (outerCache isEmpty) stats.recordMiss("Cache", false, namespace, key.toString, duration)
+          NotFound()
         }
       }
-      objOpt
     } catch {
       case e: Throwable =>
         repo.onError(AirbrakeError(e, Some(s"Failed deserializing key $key from $repo, got raw value $valueOpt")))
         repo.remove(key.toString)
-        None
+        NotFound()
     }
   }
 
@@ -90,10 +91,10 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       }
     }
     keys.foldLeft(Map.empty[K, Option[T]]){ (m, key) =>
-      val objOpt = decodeValue(key, valueMap.get(key.toString), timer)
-      objOpt match {
-        case Some(obj) => m + (key -> obj)
-        case None => m
+      val state = decodeValue(key, valueMap.get(key.toString), timer)
+      state match {
+        case Found(obj) => m + (key -> obj)
+        case _ => m
       }
     }
   }
@@ -200,30 +201,3 @@ class FortyTwoCacheImpl[K <: Key[T], T](
       (innermostPluginSettings._1, innermostPluginSettings._2, serializer), innerToOuterPluginSettings.map {case (plugin, ttl) => (plugin, ttl, serializer)}:_*)
 }
 
-abstract class JsonCacheImpl[K <: Key[T], T](
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T])
-  extends FortyTwoCacheImpl[K, T](stats, accessLog,
-    innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
-
-abstract class BinaryCacheImpl[K <: Key[T], T](
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
-  extends FortyTwoCacheImpl[K, T](stats, accessLog,
-    innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
-
-abstract class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends FortyTwoCacheImpl[K, P](stats, accessLog,
-    innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P])
-
-abstract class StringCacheImpl[K <: Key[String]](
-    stats: CacheStatistics, accessLog: AccessLog,
-    innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends FortyTwoCacheImpl[K, String](stats, accessLog,
-    innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string)

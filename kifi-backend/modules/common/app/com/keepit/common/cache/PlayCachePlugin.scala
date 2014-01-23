@@ -26,6 +26,8 @@ class PlayCachePlugin(app: Application) extends CachePlugin {
 class PlayCacheApi(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
   extends BinaryCacheImpl[PlayCacheKey, Any](stats, accessLog, inner, outer: _*)(PlayBinaryFormat) with CacheAPI with Logging {
 
+  import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
   def set(key: String, value: Any, expiration: Int): Unit = {
     log.info(s"Setting cache key: $key, value: $value")
     set(PlayCacheKey(key), value)
