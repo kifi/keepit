@@ -215,6 +215,7 @@ class ShoeboxController @Inject() (
       normalization <- candidateUri.normalization
     } yield {
         val toBeRedirected = uri.withNormalization(Normalization.MOVED) // should persist here ???
+        db.readWrite { implicit session => normUriRepo.save(toBeRedirected) }
         normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization))
         toBeRedirected
       }
