@@ -41,6 +41,11 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   override def deleteCache(emailAddr: EmailAddress)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: EmailAddress)(implicit session: RSession): Unit = {}
 
+  override def save(model: EmailAddress)(implicit session: RWSession): EmailAddress = {
+    userRepo.save(userRepo.get(model.userId))   //just bump up seqNum
+    super.save(model)
+  }
+
   def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
