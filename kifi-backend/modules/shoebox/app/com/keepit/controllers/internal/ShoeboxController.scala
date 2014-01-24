@@ -224,6 +224,18 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(res))
   }
 
+  def recordTrustedNormalization() = Action(parse.json) { request =>
+    Async {
+      val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+      val candidateUrl = (request.body \ "url").as[String]
+      val candidateNormalization = (request.body \ "normalization").as[Normalization]
+
+      val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
+      val candidate = TrustedCandidate(candidateUrl, candidateNormalization)
+      normalizationServiceProvider.get.update(uri, candidate).map(_ => Ok())
+    }
+  }
+
   def getProxy(url:String) = SafeAsyncAction { request =>
     val httpProxyOpt = db.readOnly(2, Slave) { implicit session =>
       urlPatternRuleRepo.getProxy(url)

@@ -492,6 +492,7 @@ POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.in
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxController.saveNormalizedURI
 POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxController.recordPermanentRedirect
+POST     /internal/shoebox/database/recordTrustedNormalization @com.keepit.controllers.internal.ShoeboxController.recordTrustedNormalization
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxController.getProxy(url:String)
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])

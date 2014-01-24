@@ -108,6 +108,7 @@ object Shoebox extends Service {
     def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
     def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
+    def recordTrustedNormalization() = ServiceRoute(POST, "/internal/shoebox/database/recordTrustedNormalization")
     def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def isUnscrapable(url: String, destinationUrl: Option[String]) = ServiceRoute(GET, "/internal/shoebox/database/isUnscrapable", Param("url", url), Param("destinationUrl", destinationUrl))

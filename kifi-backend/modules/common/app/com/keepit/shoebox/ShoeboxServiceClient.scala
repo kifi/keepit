@@ -112,6 +112,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
+  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -610,6 +611,10 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), timeout = timeout).map { r =>
       r.json.as[NormalizedURI]
     }
+  }
+
+  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit = {
+    call(Shoebox.internal.recordTrustedNormalization(), Json.obj("id" -> uriId.id, "url" -> candidateUrl, "normalization" -> candidateNormalization))
   }
 
   def getProxy(url:String):Future[Option[HttpProxy]] = {
