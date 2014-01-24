@@ -53,6 +53,7 @@
           <th>Id</th>
           <th>User</th>
           <th>kifi Connections</th>
+          <th>Invitations Sent</th>
           <th>Networks</th>
           <th>Private bookmarks</th>
           <th>Public bookmarks</th>
@@ -66,6 +67,7 @@
           <td><span class="badge">@userStatistics.user.id.get.id</span></td>
           <td>@adminHelper.userDisplay(userStatistics.user)</td>
           <td>@userStatistics.connections</td>
+          <td>@userStatistics.invitations</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
           <td>@userStatistics.privateKeeps</td>
           <td>@userStatistics.publicKeeps</td>

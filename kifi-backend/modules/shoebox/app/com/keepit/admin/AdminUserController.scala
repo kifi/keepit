@@ -38,6 +38,7 @@ import com.keepit.commanders.{CollectionCommander, DefaultKeeps, BookmarksComman
 case class UserStatistics(
     user: User,
     connections: Int,
+    invitations: Int,
     socialUsers: Seq[SocialUserInfo],
     privateKeeps: Int,
     publicKeeps: Int,
@@ -246,6 +247,7 @@ class AdminUserController @Inject() (
     val (privateKeeps, publicKeeps) = bookmarkRepo.getPrivatePublicCountByUser(user.id.get)
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
+      invitationRepo.countByUser(user.id.get),
       socialUserInfoRepo.getByUser(user.id.get),
       privateKeeps,
       publicKeeps,
