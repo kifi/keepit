@@ -249,7 +249,7 @@ module.exports = function (grunt) {
 		watch: {
 			// https://github.com/gruntjs/grunt-contrib-watch#settings
 			options: {
-				livereload: true
+				livereload: 8079
 				//atBegin: true
 			},
 			stylusDev: {
@@ -309,6 +309,9 @@ module.exports = function (grunt) {
 			concatDist: {
 				files: ['<%= concat.dist.src %>'],
 				tasks: ['concat:dist']
+			},
+			index: {
+				files: ['index.html']
 			},
 			lib: {
 				files: ['<%= path.client.lib %>/**']
