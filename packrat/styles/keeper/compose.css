@@ -16,7 +16,7 @@
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
-  word-break: break-word;
+  word-wrap: break-word;
 }
 .kifi-compose.kifi-empty .kifi-compose-draft:focus {
   -webkit-animation: paddingLeft10 .16s ease-out;
