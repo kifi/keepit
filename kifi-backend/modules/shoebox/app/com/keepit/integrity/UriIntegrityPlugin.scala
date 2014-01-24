@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -41,9 +41,16 @@ class UriIntegrityActor @Inject()(
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
+  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
+    bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+  }
+
+  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
+    bookmarkRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
+  }
+
   /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(urlId: Id[URL], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
-    val oldUserBookmarks = bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
       bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
@@ -122,8 +129,8 @@ class UriIntegrityActor @Inject()(
         case _ =>
       }
 
-      val url = urlRepo.getByNormUri(oldUriId)
-      url.foreach{ url =>
+      val urls = urlRepo.getByNormUri(oldUriId)
+      urls.foreach{ url =>
         handleURLMigrationNoBookmarks(url, newUriId)
       }
 
@@ -132,9 +139,9 @@ class UriIntegrityActor @Inject()(
       }
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
-      url.foreach{ url =>
-        handleBookmarks(url.id.get, newUriId)
-      }
+      // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
+      val bms = getUserBookmarksByUri(oldUriId)
+      handleBookmarks(bms, newUriId)
 
       changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
     }
@@ -145,13 +152,15 @@ class UriIntegrityActor @Inject()(
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
     handleURLMigrationNoBookmarks(url, newUriId)
-    handleBookmarks(url.id.get, newUriId)
+    val bms = getUserBookmarksByUrl(url.id.get)
+    handleBookmarks(bms, newUriId)
   }
 
   private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
       log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
 
-      urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
+      val oldUriId = url.normalizedUriId
+      urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
 
