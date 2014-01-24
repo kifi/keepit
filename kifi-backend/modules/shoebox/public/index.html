@@ -986,7 +986,7 @@ Kifi also lets you message your friends about what you keep and find alongside a
 	<script src="/assets/js/track.js" async defer></script>
 	<script src="/assets/js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>
-		var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
+		var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview', '/' + (location.pathname.substr(1) || 'keeps') + location.search + location.hash]];
 		!function(d, t) {
 			var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
 			g.async = true;

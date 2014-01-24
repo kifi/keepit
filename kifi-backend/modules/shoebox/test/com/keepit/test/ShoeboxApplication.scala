@@ -24,7 +24,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.shoebox.AbuseControlModule
+import com.keepit.shoebox.{AbuseControlModule, FakeKeepImportsModule}
 import com.keepit.common.actor.TestSchedulerModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
@@ -44,7 +44,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       TestNormalizationServiceModule(),
       FakeActionAuthenticatorModule(),
       AbuseControlModule(),
-      TestSchedulerModule()
+      TestSchedulerModule(),
+      FakeKeepImportsModule()
     ), overridingModules
   ))
 
