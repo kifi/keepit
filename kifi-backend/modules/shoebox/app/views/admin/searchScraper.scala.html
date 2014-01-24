@@ -22,6 +22,12 @@
 
     <h2>Instance Thread Info <span class="thread-details-hint"></span></h2>
 
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="runnable-filter" checked/> Only show running threads
+        </label>
+    </div>
+
     <div class="thread-details"></div>
 
     <h2>Rescrape Documents</h2>
@@ -37,8 +43,13 @@
 
     <script>
         var loadrequests = function(){
+            if ($("#runnable-filter").is(":checked")) {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(Some("WAITING"))"
+            } else {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(None)"
+            }
             $.ajax({
-                url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
+                url : url,
                 dataType: "html",
                 success: function(data){
                     $("span.title-hint").replaceWith($(data).find("span.title-hint"));
