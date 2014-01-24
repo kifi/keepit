@@ -41,7 +41,7 @@ class AdminClusterController @Inject() (
       val versionResp : String = try {
         httpClient.get(new ServiceUri(serviceInstance, "http", 9000, Common.internal.version().url), httpClient.ignoreFailure).body
       } catch {
-        case _: Throwable => "NA"
+        case _: Throwable => "00000000-0000-NANA-0000000"
       }
       val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName
           val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString()).getOrElse("NA")
