@@ -14,6 +14,12 @@
 
     <div class="request-table"></div>
 
+    <h2>Fetch URL Content</h2>
+    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.scrapeArticle()" method="GET">
+        <input  type="text" name="url">
+        <button type="submit" class="btn">Fetch</button>
+    </form>
+
     <h2>Rescrape Documents</h2>
 
     <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "GET">
