@@ -3,7 +3,11 @@
 angular.module('kifi', [
 	'ngCookies',
 	'ngResource',
-	'ngRoute'
+	'ngRoute',
+	'kifi.templates',
+	'kifi.layout.leftCol',
+	'kifi.layout.main',
+	'kifi.layout.rightCol'
 ])
 
 .config([
