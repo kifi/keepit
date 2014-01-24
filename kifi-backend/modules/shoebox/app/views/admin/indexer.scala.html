@@ -6,20 +6,20 @@
       <th> ZK Id</th>
       <th>IPs</th>
       <th>Name</th>
-      <th>Number of Docs</th>
-      <th>Size</th>
+      <th style="text-align:right;">Number of Docs</th>
+      <th style="text-align:right;">Index Size</th>
+      <th style="text-align:right;">Sequence#</th>
       <th>Committed At</th>
-      <th>Sequence#</th>
     </thead>
     @indexInfos.map{ case (cmi, indexInfo) =>
       <tr>
         <td>@{cmi.map(_.zkid).getOrElse("")}</td>
         <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
         <td>@{indexInfo.name}</td>
-        <td>@{indexInfo.numDocs}</td>
-        <td>@{indexInfo.indexSize.getOrElse("NA")}</td>
+        <td style="text-align:right;">@{"%1$,d" format indexInfo.numDocs}</td>
+        <td style="text-align:right;">@{"%1$,d" format indexInfo.indexSize.getOrElse("NA")}</td>
+        <td style="text-align:right;">@{indexInfo.sequenceNumber}</td>
         <td>@{indexInfo.committedAt.getOrElse("NA")}</td>
-        <td>@{indexInfo.sequenceNumber}</td>
       </tr>
     }
   </table>
