@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import java.net.{SocketException, NoRouteToHostException, UnknownHostException, SocketTimeoutException}
 import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
-import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.{SSLException, SSLHandshakeException}
 import HttpStatus._
 
 trait HttpFetcher {
@@ -258,6 +258,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       log.info(s"[fetch($url)] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
+      case e:SSLException               => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:java.io.EOFException       => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:SSLHandshakeException      => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:HttpHostConnectException   => logAndSet(fetchInfo, None)(e, "fetch", url)
