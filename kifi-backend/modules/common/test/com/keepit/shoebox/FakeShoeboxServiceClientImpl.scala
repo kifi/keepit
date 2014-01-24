@@ -462,6 +462,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
 
+  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit = ???
+
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???

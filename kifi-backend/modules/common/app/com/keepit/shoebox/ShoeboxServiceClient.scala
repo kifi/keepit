@@ -102,6 +102,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
@@ -112,7 +113,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
-  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
