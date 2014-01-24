@@ -155,6 +155,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "update sequence number when keeps are added or removed, and when keeps' uriIds are changed" in {
+      skipped("No longer automatically done")
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         val newSeqNum = db.readWrite { implicit s =>
