@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import akka.util.Timeout
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import scala.concurrent.duration._
 import akka.pattern.ask
 import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
@@ -24,13 +24,14 @@ import com.keepit.common.time._
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
+private case object RefreshAll
+private case object FetchAndRefreshAll
 
 private[social] class SocialGraphActor @Inject() (
   airbrake: AirbrakeNotifier,
   graphs: Set[SocialGraph],
   db: Database,
   socialRepo: SocialUserInfoRepo,
-  socialUserRawInfoStore: SocialUserRawInfoStore,
   socialUserImportFriends: SocialUserImportFriends,
   socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator,
@@ -43,6 +44,16 @@ private[social] class SocialGraphActor @Inject() (
     graphs.map(graph => graph.networkType -> graph).toMap
 
   def receive() = {
+    case FetchAndRefreshAll =>
+      self ! FetchAll
+      self ! RefreshAll
+
+    case RefreshAll =>
+      log.info("going to check which SocialUserInfo was not fetched lately")
+      val needToBeRefreshed = db.readOnly { implicit s => socialRepo.getNeedToBeRefreshed }
+      log.info(s"find ${needToBeRefreshed.size} users that need to be refreshed")
+      needToBeRefreshed.foreach(self ! FetchUserInfoQuietly(_))
+
     case FetchAll =>
       val unprocessedUsers = db.readOnly {implicit s =>
         socialRepo.getUnprocessed()
@@ -50,7 +61,6 @@ private[social] class SocialGraphActor @Inject() (
       unprocessedUsers foreach { user =>
         self ! FetchUserInfoQuietly(user)
       }
-      sender ! unprocessedUsers.size
 
     case FetchUserInfo(socialUserInfo) =>
       sender ! fetchUserInfo(socialUserInfo)
@@ -64,8 +74,7 @@ private[social] class SocialGraphActor @Inject() (
   // hotspot: need optimization; gathering timing info for analysis
   def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = timing(s"fetchUserInfo($socialUserInfo)") {
     try {
-      require(socialUserInfo.credentials.isDefined,
-        s"SocialUserInfo's credentials are not defined: $socialUserInfo")
+      require(socialUserInfo.credentials.isDefined, s"SocialUserInfo's credentials are not defined: $socialUserInfo")
       val connectionsOpt = for {
         userId <- socialUserInfo.userId if !isImportAlreadyInProcess(userId, socialUserInfo.networkType)
         graph <- networkTypeToGraph.get(socialUserInfo.networkType)
@@ -75,13 +84,15 @@ private[social] class SocialGraphActor @Inject() (
         }
       } yield {
           markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
-          rawInfo.jsons flatMap graph.extractEmails foreach (socialUserImportEmail.importEmail(userId, _))
 
-          socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
+          val connections = rawInfo.jsons.map { json =>
+            graph.extractEmails(json).map(email => socialUserImportEmail.importEmail(userId, email))
 
-          val friends = rawInfo.jsons flatMap graph.extractFriends
-          socialUserImportFriends.importFriends(socialUserInfo, friends)
-          val connections = socialUserCreateConnections.createConnections(socialUserInfo, friends.map(_._1.socialId), graph.networkType)
+            val friends = graph.extractFriends(json)
+            socialUserImportFriends.importFriends(socialUserInfo, friends)
+
+            socialUserCreateConnections.createConnections(socialUserInfo, friends.map(_.socialId), graph.networkType)
+          }.flatten
 
           val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
           val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
@@ -92,6 +103,7 @@ private[social] class SocialGraphActor @Inject() (
             }
             socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
           }
+
           connections
         }
       connectionsOpt getOrElse Seq.empty
@@ -100,7 +112,17 @@ private[social] class SocialGraphActor @Inject() (
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }
         throw new Exception(s"Error updating SocialUserInfo: ${socialUserInfo.id}, ${socialUserInfo.fullName}", ex)
     } finally {
-      socialUserInfo.userId.foreach { userId => markGraphImportUserValue(userId, socialUserInfo.networkType, "false") }
+      socialUserInfo.userId.foreach { userId =>
+        db.readWrite(attempts = 3) { implicit session =>
+          userValueRepo.clearValue(userId, s"import_in_progress_${socialUserInfo.networkType.name}")
+          val latestSUI = socialRepo.get(socialUserInfo.id.get)
+          if (Set(SocialUserInfoStates.FETCH_FAIL, SocialUserInfoStates.APP_NOT_AUTHORIZED).contains(latestSUI.state)) {
+            userValueRepo.setValue(userId, s"import_${socialUserInfo.networkType.name}_error", latestSUI.state.value)
+          } else {
+            userValueRepo.clearValue(userId, s"import_${socialUserInfo.networkType.name}")
+          }
+        }
+      }
     }
   }
 
@@ -138,14 +160,15 @@ class SocialGraphPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minutes, actor.ref, FetchAll)
+    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minute, actor.ref, FetchAndRefreshAll)
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")
   }
 
   def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
-    graphs.find(_.networkType == socialUserInfo.networkType).get.revokePermissions(socialUserInfo)
+    graphs.find(_.networkType == socialUserInfo.networkType)
+      .map(_.revokePermissions(socialUserInfo)).getOrElse(Promise.successful().future)
   }
 
   override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {

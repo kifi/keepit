@@ -8,7 +8,7 @@ import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
+import com.keepit.common.db.{ModelWithState, ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging

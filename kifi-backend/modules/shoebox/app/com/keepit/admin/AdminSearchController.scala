@@ -15,11 +15,6 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.util.Random
 import views.html
-import com.keepit.controllers.admin.MinimalHit
-import scala.Some
-import com.keepit.controllers.admin.ArticleSearchResultHitMeta
-import com.keepit.controllers.admin.ConfigIdAndHits
-
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 

@@ -38,16 +38,6 @@ class UserConnectionCreator @Inject() (
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
       network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     if (socialIds.isEmpty) {
-      // An empty sequence of socialIds may indicate that the auth token is out of date and we missed that for some reason,
-      // In this case we don't want to disable all of the user's connections
-      val isTestUser = {
-        for {
-          socialUser <- socialUserInfo.credentials
-          email <- socialUser.email
-        } yield EmailAddress(address = email, userId = Id(-1)).isTestEmail()
-      } getOrElse false
-
-      if (!isTestUser) airbrake.notify(AirbrakeError(new IllegalArgumentException(s"[Suspicious] Social user ${socialUserInfo.id.get} of user ${socialUserInfo.userId.get} doesn't have any connection.")))
       Seq.empty
     } else {
       disableOldConnections(socialUserInfo, socialIds, network)
@@ -96,8 +86,8 @@ class UserConnectionCreator @Inject() (
   }
 
   private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
-    log.info(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
+      network: SocialNetworkType): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
+    log.debug(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
       db.readWrite { implicit s =>
         extractFriendsWithConnections(socialUserInfo, socialIds, network) map {
@@ -130,7 +120,7 @@ class UserConnectionCreator @Inject() (
 
   def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
       network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
-    log.info(s"looking for connections to disable for ${socialUserInfo.fullName}")
+    log.debug(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
       val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get) collect {
         case sui if sui.networkType == network => sui.socialId
@@ -138,10 +128,10 @@ class UserConnectionCreator @Inject() (
       val diff = existingSocialUserInfoIds diff socialIds
       log.debug(s"socialUserInfoForAllFriendsIds = $socialIds")
       log.debug(s"existingSocialUserInfoIds = $existingSocialUserInfoIds")
-      log.info(s"size of diff = ${diff.length}")
+      log.debug(s"size of diff = ${diff.length}")
       diff map { socialId =>
         val friendSocialUserInfoId = socialRepo.get(socialId, network).id.get
-        log.info(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
+        log.debug(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
         socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
           case Some(c) if c.state != SocialConnectionStates.INACTIVE =>
             log.info("connection is disabled")
