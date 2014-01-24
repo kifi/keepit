@@ -198,19 +198,20 @@ class UriIntegrityActor @Inject()(
     val toMigrate = getOverDueURLMigrations(batchSize)
     log.info(s"${toMigrate.size} urls need renormalization")
 
-    db.readWrite{ implicit s =>
-      toMigrate.foreach{ renormURL =>
-        try {
+    toMigrate.foreach{ renormURL =>
+      try{
+        db.readWrite{ implicit s =>
           val url = urlRepo.get(renormURL.urlId)
           handleURLMigration(url, renormURL.newUriId)
           renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
-        } catch {
-          case e: Exception =>
-            airbrake.notify(e)
-            renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE))
         }
+      } catch {
+        case e: Exception =>
+          airbrake.notify(e)
+          db.readWrite{ implicit s => renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE)) }
       }
     }
+
     toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
     log.info(s"${toMigrate.size} urls renormalized.")
   }
