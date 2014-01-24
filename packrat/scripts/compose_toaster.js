@@ -140,8 +140,9 @@ var toaster = (function () {
   function onOthersClick(e) {
     if (e.which !== 1) return;
     hide();
-    var threadId = $(this).data('id');
-    pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
+    var data = $(this).data();
+    var threadId = data.id;
+    pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
   }
 
   function onFindFriendsXClick(e) {

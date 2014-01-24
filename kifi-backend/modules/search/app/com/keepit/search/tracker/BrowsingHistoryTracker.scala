@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.search.MultiHashFilter

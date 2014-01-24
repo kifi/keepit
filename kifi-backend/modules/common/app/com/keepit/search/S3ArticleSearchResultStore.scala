@@ -4,6 +4,7 @@ import com.amazonaws.services.s3._
 import com.keepit.common.store._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.cache._
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.store.S3Bucket

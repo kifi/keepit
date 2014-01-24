@@ -1,37 +1,26 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.heimdal.{HeimdalContextBuilderFactory, BasicSearchContext, SearchEngine, SearchAnalytics}
+import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.heimdal._
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.ExperimentType
-import com.keepit.model.{User, NormalizedURI}
-import com.keepit.search.tracker.ClickedURI
-import com.keepit.search.tracker.BrowsedURI
-import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.{Host, URI}
 import com.keepit.common._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.healthcheck._
-import com.typesafe.plugin.MailerPlugin
-import com.keepit.common.healthcheck.Healthcheck.EMAIL
-import com.keepit.common.mail.{PostOffice, EmailAddresses, ElectronicMail}
 import play.api.libs.json._
-import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.search.tracker.ClickedURI
 import scala.Some
 import com.keepit.search.tracker.BrowsedURI
-import com.keepit.search.ArticleSearchResult
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.tracker.BrowsingHistoryTracker
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.result._
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -55,6 +44,7 @@ class ExtSearchEventController @Inject() (
     val basicSearchContext = json.as[BasicSearchContext]
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
+    val searchResultUrl = (json \ "resultUrl").as[String]
     val isDemo = request.experiments.contains(ExperimentType.DEMO)
     val query = basicSearchContext.query
 
@@ -63,18 +53,17 @@ class ExtSearchEventController @Inject() (
       SearchEngine.get(resultSource) match {
 
         case SearchEngine.Kifi => {
-          val hit = KifiSearchHit((json \ "hit").as[JsObject])
-          shoeboxClient.getNormalizedURIByURL(hit.bookmark.url).onSuccess { case Some(uri) =>
+          val kifiHitContext = (json \ "hit").as[KifiHitContext]
+          shoeboxClient.getNormalizedURIByURL(searchResultUrl).onSuccess { case Some(uri) =>
             val uriId = uri.id.get
             clickHistoryTracker.add(userId, ClickedURI(uriId))
-            resultClickedTracker.add(userId, query, uriId, resultPosition, hit.isMyBookmark, isDemo)
-            if (hit.isMyBookmark) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, hit.users.map(_.externalId): _*)
+            resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
+            if (kifiHitContext.isOwnKeep) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, kifiHitContext.keepers: _*)
           }
-          searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(hit), contextBuilder)
+          searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), contextBuilder)
         }
 
         case theOtherGuys => {
-          val searchResultUrl = (json \ "resultUrl").as[String]
 
           getDestinationUrl(searchResultUrl, theOtherGuys).foreach { url =>
             shoeboxClient.getNormalizedURIByURL(url).onSuccess {

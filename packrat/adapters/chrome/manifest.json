@@ -70,20 +70,22 @@
         "styles/google_inject.css",
         "styles/friend_card.css"
       ],
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://*/",
+        "*://*/?*",
+        "*://*/#*",
+        "*://*/search",
+        "*://*/search?*",
+        "*://*/search#*",
+        "*://*/webhp",
+        "*://*/webhp?*",
+        "*://*/webhp#*"
+      ],
       "include_globs": [
-        "*://www.google.c??/",
-        "*://www.google.c??/search*",
-        "*://www.google.c??/webhp*",
-        "*://www.google.com.??/",
-        "*://www.google.com.??/search*",
-        "*://www.google.com.??/webhp*",
-        "*://www.google.co.??/",
-        "*://www.google.co.??/search*",
-        "*://www.google.co.??/webhp*",
-        "*://www.google.??/",
-        "*://www.google.??/search*",
-        "*://www.google.??/webhp*"
+        "*://www.google.c??/*",
+        "*://www.google.com.??/*",
+        "*://www.google.co.??/*",
+        "*://www.google.??/*"
       ],
       "run_at": "document_start"
     }

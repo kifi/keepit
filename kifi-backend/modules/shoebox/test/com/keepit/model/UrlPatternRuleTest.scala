@@ -14,29 +14,27 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
 
         val urlPatternRuleCache = inject[UrlPatternRuleRepoImpl].urlPatternRuleAllCache
 
-        urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
-
         val db = inject[Database]
 
         db.readWrite { implicit session =>
+          urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://www\\.facebook\\.com/login.*$", isUnscrapable = true))
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$", isUnscrapable = true))
         }
-        urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
 
         db.readOnly { implicit session =>
+          urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
           urlPatternRuleRepo.allActive().length === 2
+          urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === true
+          urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.length === 2
         }
-        urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === true
-        urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.length === 2
 
         db.readWrite { implicit session =>
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://app.asana.com.*$", isUnscrapable = true))
         }
 
-        urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
-
         db.readOnly { implicit session =>
+          urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === false
           urlPatternRuleRepo.isUnscrapable("http://www.google.com/") === false
           urlPatternRuleRepo.isUnscrapable("https://www.facebook.com/login.php?bb") === true
         }

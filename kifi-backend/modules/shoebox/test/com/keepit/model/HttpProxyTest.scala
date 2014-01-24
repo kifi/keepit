@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable._
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.db.slick._
 
 class HttpProxyTest extends Specification with ShoeboxTestInjector {

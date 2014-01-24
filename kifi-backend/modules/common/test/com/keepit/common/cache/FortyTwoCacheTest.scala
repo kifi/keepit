@@ -64,6 +64,8 @@ class TestStringCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlu
 
 class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
+  import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
   "JsonCacheImpl Instance" should {
     withInjector(EhCacheCacheModule(), FakeAirbrakeModule()){ implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]

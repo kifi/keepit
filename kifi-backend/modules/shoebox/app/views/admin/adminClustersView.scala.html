@@ -1,10 +1,10 @@
 @(data: Seq[com.keepit.controllers.admin.ClusterMemberInfo])
 
-    @randomColor(serviceVersion: com.keepit.common.service.ServiceVersion) = {
+    @randomColor(hash: String) = {
         <font color="@{
             val colors = Array[String]("0000cd", "006400", "b8860b", "cd5c5c", "ff0000", "9400d3", "8b8989", "000000", "8b4513", "ff8c00", "4682b4")
-            colors(Math.abs(serviceVersion.hashCode) % colors.length)
-        }">@serviceVersion</font>
+            colors(Math.abs(hash.hashCode) % colors.length)
+        }">@hash</font>
     }
 
     @showInstanceInfo(amazonInstanceInfo: com.keepit.common.amazon.AmazonInstanceInfo) = {
@@ -25,7 +25,7 @@
         <th>Public IP</th><td>@{amazonInstanceInfo.publicIp}</td>
       </tr>
       <tr>
-        <th>Instance Type</th><td><a href="http://aws.amazon.com/ec2/instance-types/">@{amazonInstanceInfo.instanceType}</a></td>
+        <th>Instance Type</th><td><a href="http://www.ec2instances.info/">@{amazonInstanceInfo.instanceType}</a></td>
       </tr>
       <tr>
         <th>AvailabilityZone</th><td><a href="http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html">@{amazonInstanceInfo.availabilityZone}</a></td>
@@ -46,7 +46,7 @@
         <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
-              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Version</th> <th>Instance</th> <th>AWS Details</th>
+              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compile Date</th><th>Commit</th> <th>Type</th> <th>AWS Details</th>
             </thead>
             <tbody>
             @for(cmi <- data) {
@@ -55,8 +55,9 @@
                     <td>@cmi.zkid</td>
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
-                    <td>@{randomColor(cmi.version)}</td>
-                    <td>@cmi.name</td>
+                    <td>@{cmi.version.date}</td>
+                    <td><a href="https://github.com/FortyTwoEng/keepit/commit/@{cmi.version.hash}">@{randomColor(cmi.version.hash)}</a></td>
+                    <td><a href="http://www.ec2instances.info/">@{cmi.instanceInfo.instanceType}</a></td>
                     <td>
                       <div id="@cmi.instanceInfo.instanceId" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                         <div class="modal-header">

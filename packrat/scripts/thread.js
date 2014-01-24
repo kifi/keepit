@@ -110,7 +110,11 @@ panes.thread = function () {
             return $(el).data('text') === message.text;
           }))) {
         var $m = renderMessage(message, userId);
-        $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
+        var atBottom = $holder[0].scrollTop + $holder[0].clientHeight === $holder[0].scrollHeight;
+        $holder.append($m);  // should we compare timestamps and insert in order?
+        if (atBottom) {
+          $holder.scrollToBottom();
+        }
       }
       emitRendered(threadId, message);
     }

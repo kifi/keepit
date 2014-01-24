@@ -46,7 +46,7 @@ class UserConnectionRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  def invalidateCache(userId: Id[User]): Unit = {
+  def invalidateCache(userId: Id[User])(implicit session: RSession): Unit = {
     userConnCache.remove(UserConnectionIdKey(userId))
     connCountCache.remove(UserConnectionCountKey(userId))
     searchFriendsCache.remove(SearchFriendsKey(userId))
