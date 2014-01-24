@@ -302,24 +302,12 @@ if (searchUrlRe.test(document.URL)) !function() {
     clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
-      if (isKifi) {
-        var richHit = response.hits[resIdx];
-        var hit = {
-          "isMyBookmark": richHit.isMyBookmark,
-          "isPrivate": richHit.isPrivate,
-          "count": richHit.count,
-          "keepers": richHit.users.map(function (u) {return u.id}),
-          "tags": richHit.bookmark.tags,
-          "title": richHit.bookmark.title,
-          "titleMatches": (richHit.bookmark.matches.title || []).length, 
-          "urlMatches": (richHit.bookmark.matches.url || []).length
-        };
-      }
+      var hit = isKifi ? response.hits[resIdx] : null;
       api.port.emit("log_search_event", [
         "resultClicked",
         {
           "origin": window.location.origin,
-          "uuid": isKifi ? response.hits[resIdx].uuid : response.uuid,
+          "uuid": isKifi ? hit.uuid : response.uuid,
           "filter": filter,
           "maxResults": response.session.prefs.maxResults,
           "experimentId": response.experimentId,
@@ -334,7 +322,16 @@ if (searchUrlRe.test(document.URL)) !function() {
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
           "query": response.query,
-          "hit": isKifi ? hit : null,
+          "hit": isKifi ? {
+            "isMyBookmark": hit.isMyBookmark,
+            "isPrivate": hit.isPrivate,
+            "count": hit.count,
+            "keepers": hit.users.map(function (u) {return u.id}),
+            "tags": hit.bookmark.tags,
+            "title": hit.bookmark.title,
+            "titleMatches": (hit.bookmark.matches.title || []).length,
+            "urlMatches": (hit.bookmark.matches.url || []).length
+          } : null,
           "refinements": refinements,
           "pageSession": pageSession
         }
