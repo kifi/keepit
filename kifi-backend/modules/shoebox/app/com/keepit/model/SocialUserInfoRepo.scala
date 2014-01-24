@@ -14,6 +14,7 @@ import scala.reflect.ClassTag
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
@@ -77,6 +78,9 @@ class SocialUserInfoRepoImpl @Inject() (
     userCache.getOrElse(SocialUserInfoUserKey(userId)) {
       (for(f <- table if f.userId === userId) yield f).list
     }
+
+  def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
+      (for(f <- table if f.userId === userId && f.state === SocialUserInfoStates.APP_NOT_AUTHORIZED) yield f).list
 
   def getSocialUserByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUser] =
     socialUserCache.getOrElse(SocialUserKey(userId)) {

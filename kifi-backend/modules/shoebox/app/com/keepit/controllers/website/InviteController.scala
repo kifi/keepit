@@ -136,7 +136,7 @@ class InviteController @Inject() (db: Database,
       invitation match {
         case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
           if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
-            Redirect(com.keepit.controllers.core.routes.AuthController.signupPage).withCookies(Cookie("inv", invite.externalId.id))
+            Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
           } else {
             Async {
               val nameOpt = (invite.recipientSocialUserId, invite.recipientEContactId) match {
@@ -151,20 +151,15 @@ class InviteController @Inject() (db: Database,
               nameOpt.map {
                 case Some(name) =>
                   val inviter = inviterUserOpt.get.firstName
-                  Ok(views.html.auth.authGrey(
-                    "signup",
-                    titleText = s"$inviter sent you an invite to kifi",
-                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results.",
-                    inviteVideo = true
-                  )).withCookies(Cookie("inv", invite.externalId.id))
+                  Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
                 case None =>
                   log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-                  Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
+                  Redirect(com.keepit.controllers.website.routes.HomeController.home)
               }
             }
           }
         case _ =>
-          Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
+          Redirect(com.keepit.controllers.website.routes.HomeController.home)
       }
   })
 
