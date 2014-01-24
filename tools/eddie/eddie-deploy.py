@@ -29,10 +29,20 @@ def message_irc(msg):
   }
   requests.post("https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/", data=data)
 
-def log(msg):
+def message_hipchat(msg):
+  data = {
+    "room_id": "Deploy",
+    "from": "Deploy",
+    "message": msg,
+    "notify": 1
+  }
+  requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
+
+def log(msg): #ZZZ hipchat with notification
   amsg = "[" + getpass.getuser() + "] " + msg
   print amsg
   message_irc(amsg)
+  message_hipchat(amsg)
 
 def getAllInstances():
   ec2 = boto.ec2.connect_to_region("us-west-1")
@@ -43,7 +53,7 @@ if __name__=="__main__":
   parser.add_argument(
     'serviceType',
     action = 'store',
-    help = "Which service type (shoebox, search, etc.) you which to deploy",
+    help = "Which service type (shoebox, search, etc.) you wish to deploy",
     metavar = "ServiceType"
   )
   parser.add_argument(
