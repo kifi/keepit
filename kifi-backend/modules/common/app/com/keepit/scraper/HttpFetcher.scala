@@ -31,6 +31,7 @@ import java.net.{SocketException, NoRouteToHostException, UnknownHostException, 
 import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.SSLHandshakeException
+import HttpStatus._
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -164,8 +165,10 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
             val curr = System.currentTimeMillis
             val ref = iter.next
             ref.get map { case ft:FetchInfo =>
-              if (ft.respStatusRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} is done; resp.status=${ft.respStatusRef.get}; remove from q"))
-              else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
+              if (ft.respStatusRef.get != null) {
+                val sc = ft.respStatusRef.get.getStatusCode
+                removeRef(iter, if (sc != SC_OK && sc != SC_NOT_MODIFIED) Some(s"[enforcer] ${ft.url} finished with abnormal status:${ft.respStatusRef.get}") else None)
+              } else if (ft.exRef.get != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
               else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
               else {
                 val runMillis = curr - ft.ts
