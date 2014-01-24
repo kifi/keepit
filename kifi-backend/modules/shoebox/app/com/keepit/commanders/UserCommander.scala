@@ -70,7 +70,7 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo)
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
 
 class UserCommander @Inject() (
@@ -84,6 +84,7 @@ class UserCommander @Inject() (
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
+  socialUserRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
   friendRequestRepo: FriendRequestRepo,
   userCache: SocialUserInfoUserCache,
@@ -145,12 +146,13 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, description, emails, pendingPrimary) = db.readOnly { implicit session =>
+    val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnly { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val description =  userValueRepo.getValue(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValue(user.id.get, "pending_primary_email")
-      (basicUser, description, emails, pendingPrimary)
+      val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
+      (basicUser, description, emails, pendingPrimary, notAuthed)
     }
 
     val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
@@ -162,7 +164,7 @@ class UserCommander @Inject() (
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == email.address
       )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)))
+    BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {

@@ -343,14 +343,12 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val (notAuthed, user, experiments) = db.readOnly { implicit session =>
-      val notAuthed = socialUserRepo.getNotAuthorizedByUser(userId).map(_.networkType.name)
-      (notAuthed, userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
+    val (user, experiments) = db.readOnly { implicit session =>
+      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
     }
     val pimpedUser = userCommander.getUserInfo(user)
     Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++
-       Json.obj("notAuthed" -> notAuthed) ++
        Json.obj("experiments" -> experiments.map(_.value)))
   }
 
