@@ -1,3 +1,4 @@
---ignore-dir=lib
 --ignore-dir=node_modules
+--ignore-dir=lib
+--ignore-dir=dist
 --ignore-file=match:/.*.min.(js|css)$/
