@@ -101,15 +101,22 @@ trait ServiceClient extends Logging {
     }
   }
 
+  private def logBroadcast(url: ServiceUri, body: JsValue = JsNull): Unit = {
+    log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
+  }
+
   protected def broadcastWithUrls(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ServiceResponse]] = {
     urls(call.url) map { url =>
-      log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
+      logBroadcast(url, body)
       callUrl(call, url, body) map { ServiceResponse(url,_) }
     }
   }
 
   protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ClientResponse]] = {
-    broadcastWithUrls(call, body) map (_ map (_.response))
+    urls(call.url) map { url =>
+      logBroadcast(url, body)
+      callUrl(call, url, body)
+    }
   }
 
   protected def tee(call: ServiceRoute, body: JsValue = JsNull, teegree: Int = 2): Future[ClientResponse] = {
