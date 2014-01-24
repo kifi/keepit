@@ -32,6 +32,8 @@ class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: I
   lazy val url: String = s"$protocol://${serviceInstance.instanceInfo.localHostname}:${port}$path"
 }
 
+case class ServiceResponse(uri: ServiceUri, response: ClientResponse)
+
 trait ServiceClient extends Logging {
   protected def httpClient: HttpClient
 
@@ -46,9 +48,11 @@ trait ServiceClient extends Logging {
 
   protected def url(path: String): ServiceUri = new ServiceUri(nextInstance(), protocol, port, path)
 
-  protected def urls(path: String): Seq[HttpUri] =
+  protected def urls(path: String): Seq[ServiceUri] =
     serviceCluster.allServices.filter(!_.thisInstance).map(new ServiceUri(_, protocol, port, path)) tap { uris =>
-      if (uris.length == 0) log.warn("Broadcasting/Teeing to no-one!")
+      if (uris.length == 0) {
+        log.warn("Broadcasting/Teeing to no-one!")
+      }
     }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000): Future[ClientResponse] = {
@@ -97,11 +101,23 @@ trait ServiceClient extends Logging {
     }
   }
 
-  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ClientResponse]] =
+  private def logBroadcast(url: ServiceUri, body: JsValue = JsNull): Unit = {
+    log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
+  }
+
+  protected def broadcastWithUrls(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ServiceResponse]] = {
     urls(call.url) map { url =>
-      log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
+      logBroadcast(url, body)
+      callUrl(call, url, body) map { ServiceResponse(url,_) }
+    }
+  }
+
+  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ClientResponse]] = {
+    urls(call.url) map { url =>
+      logBroadcast(url, body)
       callUrl(call, url, body)
     }
+  }
 
   protected def tee(call: ServiceRoute, body: JsValue = JsNull, teegree: Int = 2): Future[ClientResponse] = {
     val futures = Random.shuffle(urls(call.url)).take(teegree).map(callUrl(call, _, body)) //need to shuffle

@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -35,14 +35,22 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
+  collectionRepo: CollectionRepo,
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
+  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
+    bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+  }
+
+  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
+    bookmarkRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
+  }
+
   /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(urlId: Id[URL], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
-    val oldUserBookmarks = bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
       bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
@@ -65,19 +73,31 @@ class UriIntegrityActor @Inject()(
         val co2 = keepToCollectionRepo.getCollectionsForBookmark(newBm.id.get).toSet
         val inter = co1 & co2
         val diff = co1 -- co2
-        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
-          if (inter.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        val collectionsToUpdate = keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).map { ktc =>
+          var collections: Set[Id[Collection]] = Set.empty[Id[Collection]]
+          if (inter.contains(ktc.collectionId)) {
+            collections = collections + ktc.collectionId
+            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+          }
 
           if (diff.contains(ktc.collectionId)) {
             val inactiveKtc = keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId)
-            if (inactiveKtc.isDefined) inactiveKtc foreach { inactiveKtc =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-              keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+            if (inactiveKtc.isDefined) {
+              inactiveKtc.foreach { inactiveKtc =>
+                collections = collections + inactiveKtc.collectionId
+                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+                keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+              }
             } else {
               keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
             }
+            collections = collections + ktc.collectionId
           }
+          collections
+        }.flatten
 
+        collectionsToUpdate.foreach { collId =>
+          collectionRepo.collectionChanged(collId)
         }
       }
     }
@@ -110,8 +130,8 @@ class UriIntegrityActor @Inject()(
         case _ =>
       }
 
-      val url = urlRepo.getByNormUri(oldUriId)
-      url.foreach{ url =>
+      val urls = urlRepo.getByNormUri(oldUriId)
+      urls.foreach{ url =>
         handleURLMigrationNoBookmarks(url, newUriId)
       }
 
@@ -120,9 +140,9 @@ class UriIntegrityActor @Inject()(
       }
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
-      url.foreach{ url =>
-        handleBookmarks(url.id.get, newUriId)
-      }
+      // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
+      val bms = getUserBookmarksByUri(oldUriId)
+      handleBookmarks(bms, newUriId)
 
       changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
     }
@@ -133,13 +153,15 @@ class UriIntegrityActor @Inject()(
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
     handleURLMigrationNoBookmarks(url, newUriId)
-    handleBookmarks(url.id.get, newUriId)
+    val bms = getUserBookmarksByUrl(url.id.get)
+    handleBookmarks(bms, newUriId)
   }
 
   private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
       log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
 
-      urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, newUriId, URLHistoryCause.MIGRATED)))
+      val oldUriId = url.normalizedUriId
+      urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
 
@@ -153,25 +175,24 @@ class UriIntegrityActor @Inject()(
   private def batchURIMigration(batchSize: Int): Int = {
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
-    db.readWrite{ implicit s =>
-      toMerge.map{ change =>
-        try{
-          handleURIMigration(change)
-        } catch {
-          case e: Exception => {
-            airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
 
-            try{
-              List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache}
-            } catch {
-              case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
-            }
+    toMerge.map{ change =>
+      try{
+        db.readWrite{ implicit s => handleURIMigration(change) }
+      } catch {
+        case e: Exception => {
+          airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
+          db.readWrite{ implicit s => changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE))) }
 
-            changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+          try{
+            db.readOnly{ implicit s => List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache} }
+          } catch{
+            case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
         }
       }
     }
+
     toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     toMerge.size
@@ -186,19 +207,20 @@ class UriIntegrityActor @Inject()(
     val toMigrate = getOverDueURLMigrations(batchSize)
     log.info(s"${toMigrate.size} urls need renormalization")
 
-    db.readWrite{ implicit s =>
-      toMigrate.foreach{ renormURL =>
-        try {
+    toMigrate.foreach{ renormURL =>
+      try{
+        db.readWrite{ implicit s =>
           val url = urlRepo.get(renormURL.urlId)
           handleURLMigration(url, renormURL.newUriId)
           renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
-        } catch {
-          case e: Exception =>
-            airbrake.notify(e)
-            renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE))
         }
+      } catch {
+        case e: Exception =>
+          airbrake.notify(e)
+          db.readWrite{ implicit s => renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE)) }
       }
     }
+
     toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
     log.info(s"${toMigrate.size} urls renormalized.")
   }

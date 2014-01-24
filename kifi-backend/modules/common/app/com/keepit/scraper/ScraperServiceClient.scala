@@ -13,12 +13,14 @@ import scala.concurrent.{Future, Promise}
 import play.api.libs.json._
 import com.google.inject.{ImplementedBy, Inject}
 import com.google.inject.util.Providers
-import com.keepit.common.routes.Scraper
+import com.keepit.common.routes.{Common, Scraper}
 import com.keepit.search.Article
 import play.api.libs.json.JsArray
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.scraper.extractor.ExtractorProviderType
+import com.keepit.common.amazon.AmazonInstanceInfo
+import scala.util.matching.Regex
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
 object ScrapeTuple {
@@ -38,6 +40,13 @@ object ScrapeRequest {
   )(ScrapeRequest.apply _, unlift(ScrapeRequest.unapply))
 }
 
+case class ScraperThreadDetails(info:AmazonInstanceInfo, details:String) {
+  lazy val forkJoinThreadDetails: Seq[String] = {
+    val re = """^ForkJoinPool""".r
+    details.lines filter { line => !(re findFirstIn line isEmpty) } toList
+  }
+}
+
 trait ScraperServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SCRAPER
 
@@ -49,6 +58,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
   def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
   def getBasicArticleWithExtractor(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
+  def getThreadDetails:Seq[Future[ScraperThreadDetails]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -107,6 +117,11 @@ class ScraperServiceClientImpl @Inject() (
       r.json.validate[BasicArticle].asOpt
     }
   }
+
+  def getThreadDetails: Seq[Future[ScraperThreadDetails]] = {
+    val call = Common.internal.threadDetails
+    broadcastWithUrls(call) map { _ map {response => ScraperThreadDetails(response.uri.serviceInstance.instanceInfo, response.response.body) } }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ScraperServiceClient {
@@ -130,4 +145,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = ???
 
   def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
+
+  def getThreadDetails: Seq[Future[ScraperThreadDetails]] = ???
 }

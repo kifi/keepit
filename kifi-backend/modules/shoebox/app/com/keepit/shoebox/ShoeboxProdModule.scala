@@ -9,6 +9,7 @@ import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
+import com.keepit.scraper.ProdScrapeSchedulerModule
 
 case class ShoeboxProdModule() extends ShoeboxModule (
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -20,5 +21,6 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   analyticsModule = ProdAnalyticsModule(),
   //topicModelModule = LdaTopicModelModule(), //disable for now
   domainTagImporterModule = ProdDomainTagImporterModule(),
+  scrapeSchedulerModule = ProdScrapeSchedulerModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule

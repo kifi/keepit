@@ -56,7 +56,7 @@ object FlushEventQueue
 object FlushEventQueueAndClose
 
 private[heimdal] object EventQueueConsts extends Logging {
-  val MaxBatchSize = 100
+  val MaxBatchSize = 500
   val LowWatermarkBatchSize = 10
   val BatchFlushTiming = 10 //seconds
   val StaleEventAddTime = 40000 //milli
@@ -84,20 +84,22 @@ class HeimdalClientActor @Inject() (
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
   private var events: Vector[HeimdalEvent] = Vector()
   private var closing = false
+  private var flushIsPending = false
 
   def receive = {
     case event: HeimdalEvent =>
-      log.info(s"Event added to queue: $event")
+      log.debug(s"Event added to queue: $event")
       EventQueueConsts.verifyEventStaleTime(airbrakeNotifier, clock, event, EventQueueConsts.StaleEventAddTime, "added")
       events = events :+ event
       if (closing) {
         flush()
       } else {
         events.size match {
-          case s if s >= EventQueueConsts.LowWatermarkBatchSize =>
-            self ! FlushEventQueue //flush with the events in the actor mailbox
           case s if s >= EventQueueConsts.MaxBatchSize =>
             flush() //flushing without taking in account events in the mailbox
+          case s if s >= EventQueueConsts.LowWatermarkBatchSize && !flushIsPending =>
+            flushIsPending = true
+            self ! FlushEventQueue //flush with the events in the actor mailbox
           case _ =>
             //ignore
         }
@@ -112,6 +114,7 @@ class HeimdalClientActor @Inject() (
   }
 
   def flush() = {
+    flushIsPending = false
     val batchId = EventQueueConsts.batchId.incrementAndGet
     events.size match {
       case 0 =>

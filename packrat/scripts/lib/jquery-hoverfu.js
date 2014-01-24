@@ -79,10 +79,19 @@
     },
     destroy: function () {
       return this.each(function () {
-        var data = getData(this) || {};
-        clearTimeout(data.show || data.hide);
-        data.$h && data.$h.remove();
-      }).off(".hoverfu").removeData("hoverfu");
+        var data = $.data(this);
+        var o = data.hoverfu;
+        if (o) {
+          delete data.hoverfu;
+          clearTimeout(o.show || o.hide);
+          if (o.$a) {
+            o.$a.off('.hoverfu');
+            if (o.$h) {
+              o.$h.remove();
+            }
+          }
+        }
+      });
     }};
 
   function createHover(data, create, showImmediately) {

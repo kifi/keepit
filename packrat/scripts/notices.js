@@ -90,6 +90,7 @@ panes.notices = function () {
       .on('mousedown', '.kifi-notices-menu-a', onMenuBtnMouseDown)
       .on('mouseup', '.kifi-notices-mark-all-read', onMarkAllRead)
       .on('kifi:remove', function () {
+        $list.find('.kifi-notice-state,.kifi-notice-n-others').hoverfu('destroy');
         $list = null;
         $(window).off('resize.notices');
         api.port.off(handlers);
@@ -147,6 +148,7 @@ panes.notices = function () {
     var $cubby = $cart.parent().css('overflow', 'hidden').layout();
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     var $old = $cart.find('.kifi-notices-box');
+    $old.find('.kifi-notice-state,.kifi-notice-n-others').hoverfu('destroy');
 
     var $new = $(renderListHolder(kindNew))[back ? 'prependTo' : 'appendTo']($cart).layout();
     $list = $new.find('.kifi-notices-list');

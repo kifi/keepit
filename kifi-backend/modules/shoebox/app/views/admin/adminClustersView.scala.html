@@ -46,7 +46,7 @@
         <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
-              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compile Date</th><th>Compile Time</th><th>Branch</th><th>Commit</th> <th>Type</th> <th>AWS Details</th>
+              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compiled At</th><th>Commit</th> <th>Type</th> <th>AWS Details</th>
             </thead>
             <tbody>
             @for(cmi <- data) {
@@ -55,9 +55,7 @@
                     <td>@cmi.zkid</td>
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
-                    <td>@{cmi.version.date}</td>
-                    <td>@{cmi.version.time}</td>
-                    <td><a href="https://github.com/FortyTwoEng/keepit/tree/@{cmi.version.branch}">@{cmi.version.branch}</a></td>
+                    <td>@{cmi.version.date}-@{cmi.version.time}</td>
                     <td><a href="https://github.com/FortyTwoEng/keepit/commit/@{cmi.version.hash}">@{randomColor(cmi.version.hash)}</a></td>
                     <td><a href="http://www.ec2instances.info/">@{cmi.instanceInfo.instanceType}</a></td>
                     <td>

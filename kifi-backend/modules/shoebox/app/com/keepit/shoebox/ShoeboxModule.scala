@@ -7,7 +7,7 @@ import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
-import com.keepit.scraper.{ProdScraperServiceClientModule, ProdScrapeSchedulerModule}
+import com.keepit.scraper.{ScrapeSchedulerModule, ProdScraperServiceClientModule, ProdScrapeSchedulerModule}
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
@@ -29,7 +29,8 @@ abstract class ShoeboxModule(
   val analyticsModule: AnalyticsModule,
 //  val topicModelModule: TopicModelModule, //disable for now
   val domainTagImporterModule: DomainTagImporterModule,
-  val cacheModule: ShoeboxCacheModule
+  val cacheModule: ShoeboxCacheModule,
+  val scrapeSchedulerModule: ScrapeSchedulerModule
 ) extends ConfigurationModule with CommonServiceModule {
 
   // Service clients
@@ -42,11 +43,11 @@ abstract class ShoeboxModule(
 
   val abuseControlModule = AbuseControlModule()
   val slickModule = ShoeboxSlickModule()
-  val scrapeSchedulerModule = ProdScrapeSchedulerModule()
   val socialGraphModule = ProdSocialGraphModule()
   val sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
+  val keepImportsModule = KeepImportsModule()
 
   val mailerModule = PlayMailerModule()
 }

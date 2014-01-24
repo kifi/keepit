@@ -28,7 +28,7 @@ import play.api.mvc.Action
 import com.keepit.social.{BasicUser, SocialNetworkType, SocialId}
 import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
 import play.api.libs.json.JsArray
 import com.keepit.model.KifiInstallation
@@ -66,7 +66,8 @@ class ShoeboxController @Inject() (
   friendRequestRepo: FriendRequestRepo,
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
-  kifiInstallationRepo: KifiInstallationRepo
+  kifiInstallationRepo: KifiInstallationRepo,
+  rawKeepImporterPlugin: RawKeepImporterPlugin
 )
   (implicit private val clock: Clock,
    implicit private val scraperConfig: ScraperConfig,
@@ -532,5 +533,10 @@ class ShoeboxController @Inject() (
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = SafeAsyncAction { request =>
     val version = db.readOnly(2, Slave) { implicit session => kifiInstallationRepo.get(installationId).version.toString }
     Ok(JsString(version))
+  }
+
+  def triggerRawKeepImport() = Action { request =>
+    rawKeepImporterPlugin.processKeeps(broadcastToOthers = false)
+    Status(202)("0")
   }
 }
