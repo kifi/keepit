@@ -538,18 +538,11 @@ const stripHashRe = /^[^#]*/;
 const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
 const plusRe = /\+/g;
 
-require('./location').onChange(function(tabId, newPage) {
+require('./location').onChange(function (tabId, newPage) { // called before onAttach for all pages except images
   const tab = tabsById[tabId];
   log('[location:change]', tabId, 'newPage:', newPage, tab.url);
   if (newPage) {
-    onPageHide(tab.id);
-
-    // Note: It’s possible that this page shouldn’t actually be created, since Firefox will grab the actual
-    // page from the bfcache. If we detect that in the PageMod pageshow handler below, we discard this page.
-    // TODO: Find a way to detect at this point whether the page will be coming from the bfcache and recover
-    // our old page object if it is.
-    let page = createPage(tab);
-
+    let page = getPageOrHideOldAndCreatePage(tab);
     let match = googleSearchRe.exec(tab.url);
     if (match) {
       let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
@@ -571,6 +564,22 @@ require('./location').onChange(function(tabId, newPage) {
     }
   }
 });
+
+// This function is needed because location:change and onAttach do not fire in a consistent order.
+// location:change fires first for all pages except images.
+function getPageOrHideOldAndCreatePage(tab) {
+  let page = pages[tab.id];
+  if (page && page.url !== tab.url) {
+    log('[getPageOrHideOldAndCreatePage]', page.url, '!==', tab.url);
+    onPageHide(tab.id);
+    page = null;
+  }
+  // Note: It's possible that this page shouldn't actually be created, since Firefox will grab the actual
+  // page from the bfcache. If we detect that in the PageMod pageshow handler below, we discard this page.
+  // TODO: Find a way to detect at this point whether the page will be coming from the bfcache and recover
+  // our old page object if it is.
+  return page || createPage(tab);
+}
 
 function onPageHide(tabId) {
   const page = pages[tabId];
@@ -594,9 +603,11 @@ function onPageHide(tabId) {
       contentScriptWhen: arr[2] ? "start" : "ready",
       contentScriptOptions: {dataUriPrefix: url(''), dev: exports.mode.isDev(), version: self.version},
       attachTo: ["existing", "top"],
-      onAttach: function(worker) {
-        const tab = worker.tab, page = pages[tab.id];
-        log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
+      onAttach: function (worker) { // called before location:change for pages that are images
+        const tab = worker.tab;
+        const page = getPageOrHideOldAndCreatePage(tab);
+
+        log('[onAttach]', tab.id, this.contentScriptFile, tab.url, page);
         page.injectedCss = mergeArr({}, o.styles);
         const injectedJs = mergeArr({}, o.scripts);
         const workers = workerNs(page).workers;
