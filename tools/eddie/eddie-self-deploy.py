@@ -40,8 +40,14 @@ def message_irc(msg):
   }
   requests.post("https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/", data=data)
 
-def abort(why):
-  pass
+
+def message_hipchat(msg):
+  data = {
+    "room_id": "Deploy",
+    "from": "Deploy",
+    "message": msg
+  }
+  requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
 
 def whoAmI():
   ec2 = boto.ec2.connect_to_region("us-west-1", aws_access_key_id="AKIAINZ2TABEYCFH7SMQ", aws_secret_access_key="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")
@@ -60,6 +66,7 @@ def logger(head):
   def log(msg):
     print head + msg
     message_irc(head + msg)
+    message_hipchat(head + msg)
   return log
 
 def checkUp():
