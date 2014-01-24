@@ -193,7 +193,7 @@ class AdminUserController @Inject() (
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("20").toInt
+      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("1000").toInt
       val emails = emailRepo.getAllByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
@@ -333,7 +333,7 @@ class AdminUserController @Inject() (
   }
 
   def setInvitesCount(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("20")
+    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("1000")
     db.readWrite{ implicit session =>
       userValueRepo.setValue(userId, "availableInvites", count)
     }

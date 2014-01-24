@@ -1,6 +1,6 @@
 package com.keepit.normalizer
 
-import com.keepit.model.Normalization
+import com.keepit.model.{RawKeep, Normalization}
 import play.api.libs.json.JsObject
 import com.keepit.commanders.RawBookmarkRepresentation
 
@@ -31,5 +31,13 @@ object NormalizationCandidate {
 
   def apply(rawBookmark: RawBookmarkRepresentation): Seq[UntrustedCandidate] = {
     (rawBookmark.canonical.map(UntrustedCandidate(_, Normalization.CANONICAL)) :: rawBookmark.openGraph.map(UntrustedCandidate(_, Normalization.OPENGRAPH)) :: Nil).flatten
+  }
+
+  def apply(rawKeep: RawKeep): Seq[UntrustedCandidate] = {
+    rawKeep.originalJson.map { json =>
+      val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
+      val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
+      (canonical.map(UntrustedCandidate(_, Normalization.CANONICAL)) :: openGraph.map(UntrustedCandidate(_, Normalization.OPENGRAPH)) :: Nil).flatten
+    }.getOrElse(Nil)
   }
 }
