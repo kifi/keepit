@@ -16,6 +16,7 @@ import string
 import time
 import portalocker
 import traceback
+import datetime
 from collections import defaultdict
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -24,6 +25,11 @@ from dateutil import tz
 #######################
 #### UTIL #############
 #######################
+
+class DeployAbortException(Exception):
+
+  def __init__(self, reason):
+    self.reason = reason
 
 def message_irc(msg):
   data = {
@@ -50,9 +56,11 @@ def whoAmI():
         instance.add_tag(key, value)
   return ec2.get_only_instances([myID])[0].tags
 
-def log(msg):
-  print msg
-  message_irc(msg)
+def logger(head):
+  def log(msg):
+    print head + msg
+    message_irc(head + msg)
+  return log
 
 def checkUp():
   try:
@@ -61,8 +69,8 @@ def checkUp():
   except:
     return False
 
-#file based locking
 
+#file based locking
 lockFile = None
 
 def aquireLock(): #return truthy when lock aquired
@@ -75,7 +83,6 @@ def aquireLock(): #return truthy when lock aquired
   except:
     return False
 
-
 def releaseLock(): #silently fails if there is no lock
   if lockFile is not None:
     try:
@@ -86,176 +93,228 @@ def releaseLock(): #silently fails if there is no lock
 
 
 #######################
-#### S3 LOAD ##########
+####### ASSETS ########
 #######################
 
-class Asset(object):
+class S3Asset(object):
 
-  def parseAssetName(self, name):
-    return name.split(".")[0].split("-")
-
-  def __init__(self, name, timestamp):
-    self.key = name
-    (kind, date, time, _, chash) = self.parseAssetName(name)
-    self.kind = kind
+  def __init__(self, key):
+    self.key = key
+    self.name = key.name.split(".")[0]
+    (kind, date, time, _, chash) = self.name.split("-")
+    self.serviceType = kind
     self.hash = chash
-    self.timestamp = iso8601.parse_date(timestamp)
+    self.timestamp = datetime.datetime.strptime(date+time, "%Y%m%d%H%M")
 
-  def __str__(self):
-    return "%s at %s from commit %s" % (self.kind.upper(), self.timestamp.astimezone(tz.tzlocal()), self.hash)
+  def download(target):
+    for the_file in os.listdir("/home/fortytwo/repo"): #clean up old zip files
+      os.unlink(os.path.join("/home/fortytwo/repo", the_file))
+    key.get_contents_to_filename(os.path.join("/home/fortytwo/repo", key.name))
+    if subprocess.call('unzip -qq -o %s -d %s' % (os.path.join("/home/fortytwo/repo", os.listdir("/home/fortytwo/repo")[0]), target), shell=True):
+      raise DeployAbortException("Failed to unzip new version")
 
-  def __repr__(self):
-    return "%s(%s)" % (self.kind.upper()[:2], self.hash)
+
+class S3Assets(object):
+
+  def __init__(self, serviceType, bucket):
+    conn = S3Connection("AKIAINZ2TABEYCFH7SMQ", "s0asxMClN0loLUHDXe9ZdPyDxJTGdOiquN/SyDLi")
+    bucket = conn.get_bucket(bucket)
+    allKeys = bucket.list()
+    self.assets = []
+    for key in allKeys:
+      asset = S3Asset(key)
+      if asset.serviceType==serviceType:
+        self.assets.append(asset)
 
 
-def getAllAssetsByKind(bucket):
-  allKeys = bucket.list()
-  byKind = defaultdict(lambda:[])
-  for key in allKeys:
-    asset = Asset(key.name, key.last_modified)
-    byKind[asset.kind].append(asset)
-  for kind in byKind:
-    byKind[kind].sort(key=lambda x: x.timestamp)
-    byKind[kind].reverse()
-  return byKind
+  def latest(self):
+    sorted(self.assets, key = lambda x: x.timestamp)[-1]
 
-def maybeInt(x):
-  try:
-    return int(x)
-  except:
-    return None
+  def byHash(self, chash):
+    return [a for a in self.assets if a.hash==chash][0]
 
-def versionToKey(version, versions):
-  if version=="latest":
-    return versions[0].key
-  versionInt = maybeInt(version)
-  if versionInt and versionInt<0:
-    return versions[-1*versionInt].key
-  else:
-    for v in versions:
-      if v.hash==version:
-        return v.key
 
-def getNewVersion(serviceType, version):
-  conn = S3Connection("AKIAINZ2TABEYCFH7SMQ", "s0asxMClN0loLUHDXe9ZdPyDxJTGdOiquN/SyDLi")
-  bucket = conn.get_bucket("fortytwo-builds")
-  allAssets = getAllAssetsByKind(bucket)
-  def showAvailable():
-    print "Available Versions:"
-    for kind, versions in allAssets.items():
-      print "-------------------" + kind.upper()+ "-------------------"
-      for i, version in enumerate(versions):
-        axx = "latest" if i==0 else str(-1*i)
-        print version, "<" + axx + ">"
-  target = "/home/fortytwo/repo"
-  if not allAssets[serviceType]:
-    print "ERROR => No version for service type:", serviceType
-    showAvailable()
-  else:
-    keyname = versionToKey(version, allAssets[serviceType])
-    if keyname is None:
-      print "ERROR => Not a valid version:", version
-      showAvailable()
-    else:
-      for the_file in os.listdir("/home/fortytwo/repo"):
-        os.unlink(os.path.join("/home/fortytwo/repo", the_file))
-      key = Key(bucket)
-      key.key = keyname
-      key.get_contents_to_filename(target + "/" + keyname)
-      return keyname
+class LocalAsset(object):
+
+  def __init__(self, path):
+    self.path = path
+    folder, filename = os.path.split(path)
+    self.location = folder
+    self.name = filename.split('.')[0]
+    self.alive = True #false when deleted
+
+    try:
+      (kind, date, time, _, chash) = name.split("-")
+      self.serviceType = kind
+      self.hash = chash
+      self.timestamp = datetime.datetime.strptime(date+time, "%Y%m%d%H%M")
+    except ValueError:
+      (kind, date, time, _, chash, _) = name.split("-")
+      self.serviceType = kind
+      self.hash = chash
+      self.timestamp = datetime.datetime.strptime(date+time, "%Y%m%d%H%M")
+
+
+  def move(self, destination, suffix=None):
+    targetName = self.name
+    if suffix is not None:
+      targetName = targetName + "-" + suffix
+    dstpath = os.path.join(destination, targetName)
+    shutil.move(srcpath, dstpath)
+
+  def delete(self):
+    shutil.rmtree(self.path)
+    self.alive = False
+
+class LocalAssets(object):
+
+  def __init__(self, serviceType, folder):
+    paths = [os.path.join(folder, f) for f in os.listdir(folder)]
+    allAssets = []
+    for path in paths:
+      try:
+        allAssets.append(LocalAsset(path))
+      except:
+        pass
+    self.assets = [a for a in allAssets if x.serviceType==serviceType]
+
+  def getByName(self, name):
+    return [a for a in self.assets if a.name==name][0]
+
+  def contains(self, name):
+    return [a for a in self.assets if a.name==name].length > 0
+
+  def after(self, name):
+    reference = getByName(name)
+    return [a for a in self.assets if a.timestamp > reference.timestamp]
+
+  def fromCurrent(self, idx): #find asset from newest backwards (i.e. idx !<= 0)
+    sorted(self.assets, key = lambda x: x.timestamp)[self.assets.length-1-abs(idx)]
+
+  def byHash(self, chash): #looks up an asset by its commit hash
+    return [a for a in self.assets if a.hash==chash][0]
+
+  def keepOnlyNewest(self, howMany):
+    for assets in sorted(self.assets, key = lambda x: x.timestamp)[:-howMany]:
+      asset.delete()
 
 
 #######################
 #### STOP  ############
 #######################
 def stopService(serviceType):
-  return not os.system("/etc/init.d/" + serviceType + " stop")
+  if os.system("/etc/init.d/" + serviceType + " stop"):
+    DeployAbortException("Failed to stop service.")
 
 
 #######################
-#### UNPACK  ##########
+##### OTHER  ##########
 #######################
 
-def setUpCode(serviceType):
+
+def clearSymlink(serviceType):
   try:
     os.remove("/home/fortytwo/run/" + serviceType)
   except:
     print "No symlink to remove"
-  if not os.path.exists("/home/fortytwo/old"):
-    os.makedirs("/home/fortytwo/old")
-  for the_file in os.listdir("/home/fortytwo/old"):
-    shutil.rmtree(os.path.join("/home/fortytwo/old", the_file))
-  for item in os.listdir("/home/fortytwo/run"):
-    srcpath = os.path.join("/home/fortytwo/run", item)
-    dstpath = os.path.join("/home/fortytwo/old", item)
-    shutil.move(srcpath, dstpath)
-  for the_file in os.listdir("/home/fortytwo/run"):
-    shutil.rmtree(os.path.join("/home/fortytwo/run", the_file))
-  if subprocess.call('unzip -qq -o %s -d /home/fortytwo/run' % os.path.join("/home/fortytwo/repo", os.listdir("/home/fortytwo/repo")[0]), shell=True): return False
-  cmd = 'ln -s {0} {1}'.format(os.path.join("/home/fortytwo/run", os.listdir("/home/fortytwo/run")[0]), "/home/fortytwo/run/" + serviceType)
+
+def createSymlink(serviceType, targetFolder):
+  cmd = 'ln -s {0} {1}'.format(os.path.join("/home/fortytwo/run", targetFolder), "/home/fortytwo/run/" + serviceType)
   if os.system(cmd):
-    print "symlink creation failed"
-    return False
-  return True
+    DeployAbortException("Symlink Creation Failed")
 
 
 
 #######################
-#### START  ###########
+#### START ETC. #######
 #######################
 def startService(serviceType):
-  return not os.system("/etc/init.d/" + serviceType + " start")
+  if os.system("/etc/init.d/" + serviceType + " start"):
+    raise DeployAbortException("Failed to start service.")
+
 
 #######################
-#### Insta Rollback ###
+######## Main #########
 #######################
 
-def instaRollback(serviceType):
-  pass #go back to the version in ~/old
-
-
-if __name__=="__main__":
+def isNonPositiveInteger(x):
   try:
+    not int(x) > 0
+  except:
+    False
+
+#makes sure that the given version is installed on the machine, fetching it if needed
+#should return the full qualified version name
+def ensureVersion(serviceType, versionReference):
+  #get all local and remote assets
+  localAssets = LocalAssets(serviceType, "/home/fortytwo/run")
+  s3Assets = S3Assets(serviceType, "fortytwo-builds")
+
+  if versionReference=="latest":
+    latest = s3Assets.latest()
+    if not localAssets.contains(latest.name):
+      latest.download("/home/fortytwo/run")
+    return latest.name
+  elif isNonPositiveInteger(versionReference):
+    return localAssets.fromCurrent(int(versionReference)).name
+  else: #it should be a commit hash in here
+    try:
+      return localAssets.byHash(versionReference).name
+    except:
+      asset = s3Assets.byHash(versionReference)
+      asset.download("/home/fortytwo/run")
+      return asset.name
+
+
+def cleanUp(serviceType, afterVersion):
+  localAssets = LocalAssets(serviceType, "/home/fortytwo/run")
+  if not os.path.exists("/home/fortytwo/old"):
+    os.makedirs("/home/fortytwo/rollback")
+  for asset in localAssets.after(afterVersion):
+    asset.move("/home/fortytwo/rollback", str(time.time()))
+
+  localAssets = LocalAssets(serviceType, "/home/fortytwo/run")
+  rolledbackAssets = LocalAssets(serviceType, "/home/fortytwo/rollback")
+  localAssets.keepOnlyNewest(5)
+  rolledbackAssets.keepOnlyNewest(2)
+
+if __name__ == "__main__":
+  try:
+    #figure out who I am and what to do
     me = whoAmI()
-    print me
     serviceType = me['Service']
     version = sys.argv[1] if (len(sys.argv)>1 and sys.argv[1]!='force') else me.get('Version','latest')
     force = 'force' in sys.argv
     name = me['Name']
     deployId = ''.join(random.choice(string.hexdigits) for i in range(3)).lower()
-    logHead = "[%s:%s:%s]" % (name, serviceType, deployId)
+    logHead = "[%s:%s:%s] " % (name, serviceType, deployId)
+    log = logger(logHead)
+
+    #are we good to deploy?
     if not force and not aquireLock():
-      log(logHead + " Deploy in progress. Aborting this one.")
+      log("Deploy in progress. Aborting this one.")
       releaseLock()
       sys.exit(1)
+    #we now have the lock
+
     try:
-      log(logHead + " Starting self deploy. Target Version: " + version)
+      #step one: make sure we have the requested version on the machine (and fetch it if we don't) -
+      fullVersionName = ensureVersion(serviceType, version)
 
-      versionFileName = getNewVersion(serviceType, version)
-      if not versionFileName:
-        log(logHead + " Failed to retrieve version. Aborting.")
-        releaseLock()
-        sys.exit(1)
-      log(logHead + " Retrieved Version: " + versionFileName)
+      #step two: stop the service + remove the symlink -
+      stopService(serviceType)
+      clearSymlink(serviceType)
+      log("Running Service has been stopped.")
 
-      if not stopService(serviceType):
-        log(logHead + " Failed to stop service. Aborting.")
-        releaseLock()
-        sys.exit(1)
-      log(logHead + " Running service has been stopped.")
+      #step three: Clean up code
+      cleanUp(serviceType, fullVersionName)
 
-      if not setUpCode(serviceType):
-        log(logHead + " Failed to install code. Aborting.")
-        releaseLock()
-        sys.exit(1)
-      log(logHead + " Service has been installed.")
+      #step four: add the symlink + start the service -
+      createSymlink(serviceType, fullVersionName)
+      startService(serviceType)
+      log("Service has been started. Waiting for it to come up.")
 
-      if not startService(serviceType):
-        log(logHead + " Failed to start service. Aborting.")
-        releaseLock()
-        sys.exit(1)
-      log(logHead + " Service has been started. Waiting for it to come up.")
-
+      #step five: wait for service to come up -
       waitStart = time.time()
       maxWaitTime = 1200.0
       waitSoFar = 0
@@ -263,23 +322,28 @@ if __name__=="__main__":
       while (waitSoFar < maxWaitTime and not serviceUp):
         serviceUp = checkUp()
         if not serviceUp:
-          if (waitSoFar>0 and int(waitSoFar)%20==0): log(logHead + " Not up yet. Waited: %ss. Max remaining wait: %ss" %(int(waitSoFar), int(maxWaitTime-waitSoFar)))
+          if (waitSoFar>0 and int(waitSoFar)%20==0): log("Not up yet. Waited: %ss. Max remaining wait: %ss" %(int(waitSoFar), int(maxWaitTime-waitSoFar)))
           time.sleep(1)
           waitSoFar = time.time() - waitStart
         else:
           break
-
       if serviceUp:
-        log(logHead + " Service Up. Deploy Finished.")
+        log("Service Up. Deploy Finished.")
       else:
-        log(logHead + " Service failed to come up. Deployment Failed!")
-      releaseLock()
+        log("Service failed to come up. Deployment Failed! Rollback Advised.")
+
+
+    except DeployAbortException as e:
+      log("ABORT: " + e.reason)
     except Exception as e:
-      traceback.print_exc()
-      log(logHead + " Fatal Error during deploy! Machine may need cleanup. (%s)" %str(e))
+      log("FATAL ERROR: " + str(e))
+    finally:
+      releaseLock()
+
+
   except Exception as e:
-    log("Fatal Error starting deploy! Could not find machine info. (%s)" % str(e))
-    traceback.print_exc()
-  finally:
-    releaseLock()
+    logger("")("Deployment Initialization Fatal Error. (" + str(e) + ")")
+
+
+
 
