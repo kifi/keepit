@@ -202,7 +202,11 @@
   z-index: initial;
   zoom: initial;
 }
-.kifi-root.kifi-root.kifi-root * {
+.kifi-root.kifi-root.kifi-root::before,
+.kifi-root.kifi-root.kifi-root::after,
+.kifi-root.kifi-root.kifi-root *,
+.kifi-root.kifi-root.kifi-root *::before,
+.kifi-root.kifi-root.kifi-root *::after {
   -moz-hyphens: inherit;
   -moz-image-region: inherit;
   -moz-tab-size: inherit;

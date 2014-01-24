@@ -127,11 +127,12 @@ function initCompose($c, enterToSend, opts) {
   $f.keydown(function (e) {
     if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey) && e.originalEvent.isTrusted !== false) {
       e.preventDefault();
-      $f.submit();
+      submit();
     }
-  }).submit(function (e) {
-    e.preventDefault();
-    if ($f.data('submitted') || (e.originalEvent || {}).isTrusted === false) {
+  });
+
+  function submit() {
+    if ($f.data('submitted')) {
       return;
     }
     var text;
@@ -154,8 +155,9 @@ function initCompose($c, enterToSend, opts) {
     } else {
       $f.data('submitted', true);
     }
-  })
-  .hoverfu('.kifi-compose-snapshot', function (configureHover) {
+  }
+
+  $f.hoverfu('.kifi-compose-snapshot', function (configureHover) {
     var $a = $(this);
     render('html/keeper/titled_tip', {
       title: 'Microfind',
@@ -259,13 +261,13 @@ function initCompose($c, enterToSend, opts) {
   .find('.kifi-compose-submit')
   .click(function (e) {
     if (e.originalEvent.isTrusted !== false) {
-      $f.submit();
+      submit();
     }
   })
   .keypress(function (e) {
     if (e.which === 32 && e.originalEvent.isTrusted !== false) {
       e.preventDefault();
-      $f.submit();
+      submit();
     }
   });
 
