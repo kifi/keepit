@@ -262,13 +262,14 @@ abstract class Indexer[T](
   private def commit(seqNum: SequenceNumber = this.sequenceNumber) {
     this.sequenceNumber = seqNum
     this.catchUpSeqNumber = SequenceNumber(catchUpSeqNumber.value max sequenceNumber.value)
-    indexWriter.setCommitData(Map(
-          Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
-          Indexer.CommitData.sequenceNumber -> sequenceNumber.toString,
-          Indexer.CommitData.catchUpSeqNumForReindex -> catchUpSeqNumber.toString
-    ))
+    val commitData = Map(
+      Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
+      Indexer.CommitData.sequenceNumber -> sequenceNumber.toString,
+      Indexer.CommitData.catchUpSeqNumForReindex -> catchUpSeqNumber.toString
+    )
+    indexWriter.setCommitData(commitData)
     indexWriter.commit()
-    log.info(s"index committed seqNum=${seqNum}")
+    log.info(s"index committed: commitData=${commitData}")
   }
 
   def backup(): Unit = {
@@ -303,7 +304,6 @@ abstract class Indexer[T](
     val indexReader = Option(DirectoryReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
     val indexCommit = indexReader.getIndexCommit()
     val mutableMap = indexCommit.getUserData()
-    log.info("commit data =" + mutableMap)
     Map() ++ mutableMap
   }
 
