@@ -4,13 +4,13 @@
 
 @admin("Scraper") {
 
-    <h2>Pending Queue <span class="title-hint"></span></h2>
-
     <div class="checkbox">
         <label>
             <input type="checkbox" id="autorefresh" checked/> Enable autorefresh
         </label>
     </div>
+
+    <h2>Pending Queue <span class="title-hint"></span></h2>
 
     <div class="request-table"></div>
 
@@ -24,7 +24,7 @@
 
     <div class="checkbox">
         <label>
-            <input type="checkbox" id="runnable-filter" checked/> Only show running threads
+            <input type="checkbox" id="runnable-filter"/> Only show runnable threads
         </label>
     </div>
 
@@ -44,7 +44,7 @@
     <script>
         var loadrequests = function(){
             if ($("#runnable-filter").is(":checked")) {
-                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(Some("WAITING"))"
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(Some("RUNNABLE"))"
             } else {
                 var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(None)"
             }
