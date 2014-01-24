@@ -22,15 +22,16 @@ case class Email(local:LocalPart, host:Host) {
     }
   }
 
-  def isKifi = (domain == Email.KIFI_DOMAIN)
-  def isTest = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.AUTOGEN)))
-  def isFake = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.TEST)))
+  def isKifi = (domain == Email.FORTYTWO_DOMAIN) || (domain == Email.KIFI_DOMAIN)
+  def isTest = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.AUTOGEN) || host.name == "tfbnw.net"))
+  def isFake = isKifi && ((local.tag exists (tag => tag.t.startsWith(ETag.TEST))) || host.name == "tfbnw.net")
   def isAutoGen = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.AUTOGEN)))
 }
 
 object Email {
 
-  val KIFI_DOMAIN = "42go.com" // todo: kifi.com
+  val FORTYTWO_DOMAIN = "42go.com" // todo: kifi.com
+  val KIFI_DOMAIN = "kifi.com"
 
   def apply(s:String) = {
     EmailParser.parse[Email](EmailParser.email, s).getOrElse(throw new IllegalArgumentException(s"Cannot parse $s"))

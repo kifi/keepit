@@ -35,6 +35,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
+  collectionRepo: CollectionRepo,
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier
@@ -65,19 +66,30 @@ class UriIntegrityActor @Inject()(
         val co2 = keepToCollectionRepo.getCollectionsForBookmark(newBm.id.get).toSet
         val inter = co1 & co2
         val diff = co1 -- co2
-        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
-          if (inter.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        val collectionsToUpdate = keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).map { ktc =>
+          var collections: Set[Id[Collection]] = Set.empty[Id[Collection]]
+          if (inter.contains(ktc.collectionId)) {
+            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+          }
 
           if (diff.contains(ktc.collectionId)) {
             val inactiveKtc = keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId)
-            if (inactiveKtc.isDefined) inactiveKtc foreach { inactiveKtc =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-              keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+            if (inactiveKtc.isDefined) {
+              inactiveKtc.foreach { inactiveKtc =>
+                collections = collections + inactiveKtc.collectionId
+                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+                keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+              }
             } else {
               keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
             }
+            collections = collections + ktc.collectionId
           }
+          collections
+        }.flatten
 
+        collectionsToUpdate.foreach { collId =>
+          collectionRepo.collectionChanged(collId)
         }
       }
     }
@@ -153,25 +165,24 @@ class UriIntegrityActor @Inject()(
   private def batchURIMigration(batchSize: Int): Int = {
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
-    db.readWrite{ implicit s =>
-      toMerge.map{ change =>
-        try{
-          handleURIMigration(change)
-        } catch {
-          case e: Exception => {
-            airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
 
-            try{
-              List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache}
-            } catch {
-              case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
-            }
+    toMerge.map{ change =>
+      try{
+        db.readWrite{ implicit s => handleURIMigration(change) }
+      } catch {
+        case e: Exception => {
+          airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
+          db.readWrite{ implicit s => changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE))) }
 
-            changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+          try{
+            db.readOnly{ implicit s => List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache} }
+          } catch{
+            case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
         }
       }
     }
+
     toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     toMerge.size
@@ -186,19 +197,20 @@ class UriIntegrityActor @Inject()(
     val toMigrate = getOverDueURLMigrations(batchSize)
     log.info(s"${toMigrate.size} urls need renormalization")
 
-    db.readWrite{ implicit s =>
-      toMigrate.foreach{ renormURL =>
-        try {
+    toMigrate.foreach{ renormURL =>
+      try{
+        db.readWrite{ implicit s =>
           val url = urlRepo.get(renormURL.urlId)
           handleURLMigration(url, renormURL.newUriId)
           renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
-        } catch {
-          case e: Exception =>
-            airbrake.notify(e)
-            renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE))
         }
+      } catch {
+        case e: Exception =>
+          airbrake.notify(e)
+          db.readWrite{ implicit s => renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE)) }
       }
     }
+
     toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
     log.info(s"${toMigrate.size} urls renormalized.")
   }

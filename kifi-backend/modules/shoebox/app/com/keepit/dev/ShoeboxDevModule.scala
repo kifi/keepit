@@ -11,6 +11,7 @@ import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
+import com.keepit.scraper.DevScrapeSchedulerModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -22,6 +23,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   analyticsModule = DevAnalyticsModule(),
 //  topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
+  scrapeSchedulerModule = DevScrapeSchedulerModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
 ) with CommonDevModule
 

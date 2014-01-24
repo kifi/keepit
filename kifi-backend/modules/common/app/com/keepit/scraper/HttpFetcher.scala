@@ -27,7 +27,7 @@ import play.api.{Logger, Play}
 import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
-import java.net.{NoRouteToHostException, UnknownHostException, SocketTimeoutException}
+import java.net.{SocketException, NoRouteToHostException, UnknownHostException, SocketTimeoutException}
 import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.SSLHandshakeException
@@ -124,7 +124,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
 
   val httpClient = httpClientBuilder.build()
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
+  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
   val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   case class FetchInfo(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
@@ -189,7 +189,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
                     }
                   }
                 } else if (runMillis > LONG_RUNNING_THRESHOLD) {
-                  log.warn(s"[enforcer] potential long ($runMillis ms) running task: $ft; stackTrace=${ft.thread.getStackTrace.mkString("\n")}")
+                  log.warn(s"[enforcer] potential long ($runMillis ms) running task: $ft; stackTrace=${ft.thread.getStackTrace.mkString("|")}")
                 } else {
                   log.info(s"[enforcer] $ft has been running for $runMillis ms")
                 }
@@ -242,7 +242,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
-    log.info("[fetch] executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
+    log.info(s"[fetch($url)] executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
 
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
@@ -252,15 +252,17 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       q.offer(WeakReference(fetchInfo))
       val response = httpClient.execute(httpGet, httpContext)
       fetchInfo.respStatusRef.set(response.getStatusLine)
-      log.info(s"[fetch] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
+      log.info(s"[fetch($url)] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
+      case e:java.io.EOFException       => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:SSLHandshakeException      => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:HttpHostConnectException   => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:ClientProtocolException    => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:NoRouteToHostException     => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:UnknownHostException       => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:ConnectTimeoutException    => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:SocketException            => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e:SocketTimeoutException     => logAndSet(fetchInfo, None)(e, "fetch", url)
       case t:Throwable                  => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }

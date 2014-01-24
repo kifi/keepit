@@ -271,7 +271,11 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   tellVisibleTabsNoticeCountIfChanged();
 
   forEachTabAtThreadList(function (tab, tl, kind) {
-    api.tabs.emit(tab, 'threads', {kind: kind, threads: tl.ids.map(idToThread), includesOldest: tl.includesOldest});
+    api.tabs.emit(tab, 'threads', {
+      kind: kind,
+      threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread),
+      includesOldest: tl.includesOldest && tl.ids.length <= THREAD_BATCH_SIZE
+    });
     sendUnreadThreadCount(tab);
   });
 
@@ -675,10 +679,9 @@ api.port.on({
     // Note: This would be a good place to potentially ask the server if there are any new threads
     // if we ever notice that we sometimes don't have them all.
     function reply(tl) {
-      var threads = tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread);
       respond({
-        threads: threads,
-        includesOldest: list.includesOldest && threads.length === tl.ids.length
+        threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread),
+        includesOldest: list.includesOldest && tl.ids.length <= THREAD_BATCH_SIZE
       });
       if (kind === 'page') {  // prefetch
         tl.ids.forEach(function (id) {
@@ -1476,7 +1479,11 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
 
   // sending new page threads and count to any tabs on this page with pane open to page threads
   forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
-    api.tabs.emit(tab, 'threads', {kind: 'page', threads: pt.ids.map(idToThread), includesOldest: pt.includesOldest});
+    api.tabs.emit(tab, 'threads', {
+      kind: 'page',
+      threads: pt.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread),
+      includesOldest: pt.includesOldest && pt.ids.length <= THREAD_BATCH_SIZE
+    });
   });
   forEachTabAt(uri, nUri, function(tab) {
     sendPageThreadCount(tab, pt); // TODO: only if pane is open

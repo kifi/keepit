@@ -57,6 +57,7 @@ class ExtBookmarksController @Inject() (
   airbrake: AirbrakeNotifier,
   kifiInstallationRepo: KifiInstallationRepo,
   rawBookmarkFactory: RawBookmarkFactory,
+  rawKeepFactory: RawKeepFactory,
   clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController{
 
@@ -103,6 +104,7 @@ class ExtBookmarksController @Inject() (
         ktc <- keepToCollectionRepo.getByBookmark(b.id.get)
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        collectionRepo.collectionChanged(ktc.collectionId)
       }
     }
     Ok(Json.obj())
@@ -182,26 +184,20 @@ class ExtBookmarksController @Inject() (
     }
     bookmarkSource match {
       case BookmarkSource("plugin_start") => Forbidden
+      case BookmarkSource.bookmarkImport =>
+        SafeFuture {
+          log.debug("adding bookmarks import of user %s".format(userId))
+
+          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+          bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId))
+        }
+        Status(ACCEPTED)(JsNumber(0))
       case _ =>
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
 
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val bookmarks = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = installationId)
-
-          if (request.kifiInstallationId.isDefined && bookmarkSource == BookmarkSource.bookmarkImport) {
-            // User selected to import Léo
-            val tagName = db.readOnly { implicit session =>
-              s"Imported from ${kifiInstallationRepo.get(request.kifiInstallationId.get).userAgent.name}"
-            }
-            val tag = bookmarksCommander.getOrCreateTag(request.userId, tagName)
-            bookmarksCommander.addToCollection(tag, bookmarks)
-          }
-          //the bookmarks list may be very large!
-          bookmarks.grouped(50) foreach { chunk =>
-            searchClient.updateBrowsingHistory(userId, chunk.map(_.uriId): _*)
-          }
-          searchClient.updateURIGraph()
+          bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)
         }
         Status(ACCEPTED)(JsNumber(0))
     }

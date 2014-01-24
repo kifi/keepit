@@ -3,9 +3,7 @@ package com.keepit.common.controller
 import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import java.net.InetAddress
-
-import com.keepit.common.logging.{AccessLogTimer, AccessLog}
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.logging.Access._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -59,7 +57,7 @@ class LoggingFilter() extends EssentialFilter {
                         (CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N")) ::
                         (CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA")) ::
                         Nil
-          val headersWithCount = if (event.duration > 1000) {
+          val headersWithCount = if (event.duration > 30) {
             (CommonHeaders.MidFlightRequestCount -> midFlightRequests.count.toString) :: headers
           } else {
             headers

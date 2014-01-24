@@ -16,8 +16,8 @@
 }
 .kifi-notices-cart.kifi-back:not(.kifi-roll),
 .kifi-notices-cart.kifi-roll.kifi-forward {
-  -webkit-transform: translate(-316px,0);
-  transform: translate(-316px,0);
+  -webkit-transform: translate3d(-316px,0,0);
+  transform: translate3d(-316px,0,0);
 }
 .kifi-notices-box {
   position: absolute;

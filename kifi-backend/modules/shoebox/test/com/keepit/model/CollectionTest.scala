@@ -56,7 +56,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll2.id.get))
         }
         db.readOnly { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Apparel", "Cooking", "Scala")
+          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
           bookmarkRepo.getByUser(user1.id.get, None, None, coll1.id, 5) must haveLength(2)
           bookmarkRepo.getByUser(user1.id.get, None, None, None, 5) must haveLength(2)
           bookmarkRepo.getByUser(user1.id.get, None, None, coll2.id, 5) must haveLength(1)
@@ -76,7 +76,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit s =>
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
-          collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Cooking", "Scala", "Apparel")
+          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
         }
         db.readWrite { implicit s =>
@@ -155,6 +155,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "update sequence number when keeps are added or removed, and when keeps' uriIds are changed" in {
+      skipped("No longer automatically done")
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         val newSeqNum = db.readWrite { implicit s =>

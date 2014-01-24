@@ -80,12 +80,6 @@ class KeepToCollectionRepoImpl @Inject() (
                      (implicit session: RSession): Seq[KeepToCollection] =
     (for (c <- table if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
 
-  override def save(model: KeepToCollection)(implicit session: RWSession): KeepToCollection = {
-    val ktc = super.save(model)
-    collectionRepo.collectionChanged(ktc.collectionId, ktc.isActive)
-    ktc
-  }
-
   def count(collId: Id[Collection])(implicit session: RSession): Int = {
     import bookmarkRepo.{stateTypeMapper => bookmarkStateMapper}
     Query((for {

@@ -7,27 +7,29 @@
   outline: none;
 }
 
+@pane-width: 322px;
 @pane-color: #34495e;
 .kifi-pane {
   position: fixed;
   top: 0;
-  right: -322px;
+  right: 0;
   bottom: 0;
   left: auto;
-  width: 322px;
+  width: @pane-width;
   height: auto;
   background: @pane-color;
   font: 12px Arial, sans-serif;
   text-align: left;
   direction: ltr;
   z-index: 999999999991;
-  transition: right .25s ease-in;
+  -webkit-transform: translate3d(@pane-width,0,0);
+  transform: translate3d(@pane-width,0,0);
+  transition: -webkit-transform .25s ease-in;
+  transition: transform .25s ease-in;
 }
-.kifi-pane-parent.kifi-with-pane .kifi-pane {
-  right: 0;
-}
-.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-pane {
-  right: -322px;
+.kifi-pane-parent.kifi-with-pane:not(.kifi-snapshot-mode) .kifi-pane {
+  -webkit-transform: none;
+  transform: none;
 }
 
 @media screen {
@@ -40,7 +42,7 @@
     transition: margin-right .25s ease-in;
   }
   html.kifi-pane-parent.kifi-with-pane {
-    margin-right: 322px;
+    margin-right: @pane-width;
   }
   html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
     margin-right: 0;
@@ -237,8 +239,8 @@ a.kifi-pane-top-menu-a.kifi-active {
 }
 .kifi-pane-box-cart.kifi-back:not(.kifi-roll),
 .kifi-pane-box-cart.kifi-roll.kifi-forward {
-  -webkit-transform: translate(-316px,0);
-  transform: translate(-316px,0);
+  -webkit-transform: translate3d(-316px,0,0);
+  transform: translate3d(-316px,0,0);
 }
 .kifi-pane-box {
   position: absolute;
