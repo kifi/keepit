@@ -115,12 +115,6 @@ private[social] class SocialGraphActor @Inject() (
       socialUserInfo.userId.foreach { userId =>
         db.readWrite(attempts = 3) { implicit session =>
           userValueRepo.clearValue(userId, s"import_in_progress_${socialUserInfo.networkType.name}")
-          val latestSUI = socialRepo.get(socialUserInfo.id.get)
-          if (Set(SocialUserInfoStates.FETCH_FAIL, SocialUserInfoStates.APP_NOT_AUTHORIZED).contains(latestSUI.state)) {
-            userValueRepo.setValue(userId, s"import_${socialUserInfo.networkType.name}_error", latestSUI.state.value)
-          } else {
-            userValueRepo.clearValue(userId, s"import_${socialUserInfo.networkType.name}")
-          }
         }
       }
     }
