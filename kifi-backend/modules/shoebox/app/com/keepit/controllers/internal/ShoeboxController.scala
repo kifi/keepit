@@ -209,17 +209,14 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    val toBeRedirected = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        candidateUri <- normUriRepo.getByUri(redirect.newDestination)
-        normalization <- candidateUri.normalization
-      } yield {
-        val toBeRedirected = uri.withNormalization(Normalization.MOVED)
-        // session.onTransactionSuccess(normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
-        normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)) // TODO:revisit
+    val toBeRedirected = for {
+      candidateUri <- db.readOnly { implicit session => normUriRepo.getByUri(redirect.newDestination) }
+      normalization <- candidateUri.normalization
+    } yield {
+        val toBeRedirected = uri.withNormalization(Normalization.MOVED) // should persist here ???
+        normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization))
         toBeRedirected
       }
-    }
     val res = toBeRedirected getOrElse uri
     log.info(s"[recordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$res")
     Ok(Json.toJson(res))
