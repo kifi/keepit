@@ -64,8 +64,12 @@ class MobileUserController @Inject() (
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
     val user = userCommander.getUserInfo(request.user)
+    val notAuthed = db.readOnly { implicit session =>
+      socialUserRepo.getNotAuthorizedByUser(userId).map(_.networkType.name)
+    }
     Ok(toJson(user.basicUser).as[JsObject] ++
        toJson(user.info).as[JsObject] ++
+      Json.obj("notAuthed" -> notAuthed) ++
        Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
