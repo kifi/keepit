@@ -1,4 +1,4 @@
-@(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.IndexInfo)])
+@(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.ReadableIndexInfo)])
 
 @admin("Index Infos") {
   <table class="table table-condensed table-striped">
@@ -17,7 +17,7 @@
         <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
         <td>@{indexInfo.name}</td>
         <td style="text-align:right;">@{"%1$,d" format indexInfo.numDocs}</td>
-        <td style="text-align:right;">@{"%1$,d" format indexInfo.indexSize.getOrElse("NA")}</td>
+        <td style="text-align:right;">@{indexInfo.indexSize.getOrElse("NA")}</td>
         <td style="text-align:right;">@{indexInfo.sequenceNumber}</td>
         <td>@{indexInfo.committedAt.getOrElse("NA")}</td>
       </tr>
