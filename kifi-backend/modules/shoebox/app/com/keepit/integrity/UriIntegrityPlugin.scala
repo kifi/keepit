@@ -153,25 +153,24 @@ class UriIntegrityActor @Inject()(
   private def batchURIMigration(batchSize: Int): Int = {
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
-    db.readWrite{ implicit s =>
-      toMerge.map{ change =>
-        try{
-          handleURIMigration(change)
-        } catch {
-          case e: Exception => {
-            airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
 
-            try{
-              List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache}
-            } catch {
-              case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
-            }
+    toMerge.map{ change =>
+      try{
+        db.readWrite{ implicit s => handleURIMigration(change) }
+      } catch {
+        case e: Exception => {
+          airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
+          db.readWrite{ implicit s => changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE))) }
 
-            changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+          try{
+            db.readOnly{ implicit s => List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache} }
+          } catch{
+            case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
         }
       }
     }
+
     toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq.value) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     toMerge.size
