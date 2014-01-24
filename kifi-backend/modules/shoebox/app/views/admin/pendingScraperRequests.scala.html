@@ -45,17 +45,18 @@
     <span class="thread-details-hint">(@threadDetailsSeq.length @if(threadDetailsSeq.length == 1) {instance} else {instances})</span>
 
     <div class="thread-details">
-        <ul>
+        <table class="table table-bordered">
             @for(threadDetails <- threadDetailsSeq) {
-            <li>
-                <h5>@threadDetails.info</h5>
-                <table class="table table-condensed table-striped">
-                    @for(details <- threadDetails.forkJoinThreadDetails) {
-                    <tr><td>@details</td></tr>
-                    }
-                </table>
-            </li>
+                <tr><td>
+                    @adminHelper.instanceInfoModal(threadDetails.info.instanceId.toString, threadDetails.info)
+                    <h5>Instance ID: <a href="#" onClick="$('#@threadDetails.info.instanceId.toString').modal('show'); return false;">@threadDetails.info.instanceId.toString</a></h5>
+                    <table class="table table-condensed table-bordered table-striped">
+                        @for(details <- threadDetails.forkJoinThreadDetails) {
+                            <tr><td>@details</td></tr>
+                        }
+                    </table>
+                </td></tr>
             }
-        </ul>
+        </table>
     </div>
 </div>
