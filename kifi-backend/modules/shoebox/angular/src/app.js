@@ -5,6 +5,7 @@ angular.module('kifi', [
 	'ngResource',
 	'ngRoute',
 	'kifi.templates',
+	'kifi.profileCard',
 	'kifi.layout.leftCol',
 	'kifi.layout.main',
 	'kifi.layout.rightCol'
