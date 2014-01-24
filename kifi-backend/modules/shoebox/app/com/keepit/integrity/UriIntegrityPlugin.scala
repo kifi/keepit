@@ -76,6 +76,7 @@ class UriIntegrityActor @Inject()(
         val collectionsToUpdate = keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).map { ktc =>
           var collections: Set[Id[Collection]] = Set.empty[Id[Collection]]
           if (inter.contains(ktc.collectionId)) {
+            collections = collections + ktc.collectionId
             keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
           }
 
