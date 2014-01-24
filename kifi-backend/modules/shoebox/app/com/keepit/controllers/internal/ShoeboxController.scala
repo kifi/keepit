@@ -232,7 +232,10 @@ class ShoeboxController @Inject() (
 
       val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
       val candidate = TrustedCandidate(candidateUrl, candidateNormalization)
-      normalizationServiceProvider.get.update(uri, candidate).map(Ok(_))
+      normalizationServiceProvider.get.update(uri, candidate).map { idOpt =>
+        implicit val format = Id.format[NormalizedURI]
+        Ok(Json.toJson(idOpt))
+      }
     }
   }
 
