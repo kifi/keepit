@@ -103,6 +103,7 @@ case class HttpClientImpl(
 
   private val validResponseClass = 2
   private lazy val trackTimeThresholdFactor = myInstanceInfo.info.instantTypeInfo.ecu
+  private lazy val longWaitTimeThreshold = 2000 / myInstanceInfo.info.instantTypeInfo.ecu //means that for c1.medium with 2 cores, 5 ecu its 400ms
 
   override val defaultFailureHandler: FailureHandler = { req =>
     {
@@ -225,7 +226,7 @@ case class HttpClientImpl(
         dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
-      if (waitTime > 1000) {//ms
+      if (waitTime > longWaitTimeThreshold) {//could take in account remote service type
         val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(
           AirbrakeError.outgoing(

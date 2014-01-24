@@ -11,28 +11,48 @@ import com.keepit.search.ArticleStore
 import views.html
 import com.keepit.common.db.slick.Database.Slave
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.scraper.ScrapeSchedulerPlugin
+import play.api.mvc.Action
+import com.keepit.scraper.ScraperServiceClient
+import scala.concurrent.Future
 
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
+  uriRepo: NormalizedURIRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
+  scrapeScheduler: ScrapeSchedulerPlugin,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
-  httpProxyRepo: HttpProxyRepo)
+  httpProxyRepo: HttpProxyRepo,
+  scraperServiceClient:ScraperServiceClient)
     extends AdminController(actionAuthenticator) {
 
   val MAX_COUNT_DISPLAY = 50
 
   def searchScraper = AdminHtmlAction { implicit request => Ok(html.admin.searchScraper()) }
 
-  def pendingScraperRequests = AdminHtmlAction { implicit request =>
+  def pendingScraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction { implicit request =>
     Async {
       val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
       val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
+      val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
       for {
         requests <- requestsFuture
         count <- countFuture
-      } yield Ok(html.admin.pendingScraperRequests(requests, count))
+        threadDetails <- threadDetailsFuture
+      } yield Ok(html.admin.pendingScraperRequests(requests, count, threadDetails))
+    }
+  }
+
+  def scrapeArticle(url:String) = AdminHtmlAction { implicit request =>
+    Async {
+      scrapeScheduler.scrapeBasicArticle(url, None) map { articleOpt =>
+        articleOpt match {
+          case None => Ok(s"Failed to scrape $url")
+          case Some(article) => Ok(s"For $url, article:${article.toString}")
+        }
+      }
     }
   }
 

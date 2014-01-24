@@ -7,6 +7,7 @@ import com.keepit.common.db.{Id, State}
 import com.keepit.common.time.Clock
 import scala.Some
 import scala.collection.mutable
+import scala.slick.jdbc.{StaticQuery => Q}
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] {
@@ -14,6 +15,7 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
                      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
+  def countByUser(urlId: Id[User])(implicit session: RSession): Int
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
   def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
@@ -82,6 +84,10 @@ class InvitationRepoImpl @Inject() (
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
     (for(b <- table if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
+
+  def countByUser(userId: Id[User])(implicit session: RSession): Int = {
+    Q.queryNA[Int](s"select count(*) from invitation where sender_user_id=$userId and state != '${InvitationStates.INACTIVE.value}'").first
+  }
 
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation] = {
     (for(b <- table if b.recipientSocialUserId === socialUserInfoId) yield b).list

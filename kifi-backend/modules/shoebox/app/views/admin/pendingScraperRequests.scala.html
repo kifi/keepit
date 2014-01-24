@@ -1,13 +1,15 @@
-@(pending:Seq[ScrapeInfo], count:Int)(implicit flash: Flash)
+@(pending:Seq[ScrapeInfo], count:Int, threadDetailsSeq:Seq[com.keepit.scraper.ScraperThreadDetails])(implicit flash: Flash)
 
 @import com.keepit.controllers.admin.routes
 
 <div>
     <span class="title-hint">
-        @if(pending.length == count) {
-            <span>(@count results)</span>
-        } else {
-            <span>(showing @pending.length out of @count results)</span>
+        @defining(if (count == 1) "result" else "results") { result =>
+            @if(pending.length == count) {
+                <span>(@count @result)</span>
+            } else {
+                <span>(showing @pending.length out of @count @result)</span>
+            }
         }
     </span>
 
@@ -38,5 +40,22 @@
             </tr>
             }
         </table>
+    </div>
+
+    <span class="thread-details-hint">(@threadDetailsSeq.length @if(threadDetailsSeq.length == 1) {instance} else {instances})</span>
+
+    <div class="thread-details">
+        <ul>
+            @for(threadDetails <- threadDetailsSeq) {
+            <li>
+                <h5>@threadDetails.info</h5>
+                <table class="table table-condensed table-striped">
+                    @for(details <- threadDetails.forkJoinThreadDetails) {
+                    <tr><td>@details</td></tr>
+                    }
+                </table>
+            </li>
+            }
+        </ul>
     </div>
 </div>

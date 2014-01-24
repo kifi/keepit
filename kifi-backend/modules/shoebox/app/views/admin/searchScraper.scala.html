@@ -4,15 +4,31 @@
 
 @admin("Scraper") {
 
-    <h2>Pending Queue <span class="title-hint"></span></h2>
-
     <div class="checkbox">
         <label>
             <input type="checkbox" id="autorefresh" checked/> Enable autorefresh
         </label>
     </div>
 
+    <h2>Pending Queue <span class="title-hint"></span></h2>
+
     <div class="request-table"></div>
+
+    <h2>Fetch URL Content</h2>
+    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.scrapeArticle()" method="GET">
+        <input  type="text" name="url">
+        <button type="submit" class="btn">Fetch</button>
+    </form>
+
+    <h2>Instance Thread Info <span class="thread-details-hint"></span></h2>
+
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="runnable-filter"/> Only show runnable threads
+        </label>
+    </div>
+
+    <div class="thread-details"></div>
 
     <h2>Rescrape Documents</h2>
 
@@ -27,16 +43,25 @@
 
     <script>
         var loadrequests = function(){
+            if ($("#runnable-filter").is(":checked")) {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(Some("RUNNABLE"))"
+            } else {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(None)"
+            }
             $.ajax({
-                url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
+                url : url,
                 dataType: "html",
                 success: function(data){
                     $("span.title-hint").replaceWith($(data).find("span.title-hint"));
                     $("div.request-table").replaceWith($(data).find("div.request-table"));
+                    $("span.thread-details-hint").replaceWith($(data).find("span.thread-details-hint"));
+                    $("div.thread-details").replaceWith($(data).find("div.thread-details"));
                 },
                 error: function(){
                     $("span.title-hint").html("(loading failed)");
                     $("div.request-table").html("");
+                    $("span.thread-details-hint").html("(loading failed)");
+                    $("div.thread-details").html("");
                 },
                 complete: function(){
                     setTimeout(refresh, 5000);
