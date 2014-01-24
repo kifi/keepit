@@ -187,6 +187,9 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1better.id.get, collectionId = c1.id.get))
             keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c1.id.get))
 
+            collectionRepo.collectionChanged(c0.id.get, true)
+            collectionRepo.collectionChanged(c1.id.get, true)
+
             (Array(uri0, uri1, uri2), Array(uri0better, uri1better, uri2better), Array(bm0, bm1, bm2), Array(bm0better, bm1better, bm2better))
           }
         }

@@ -3,6 +3,7 @@ package com.keepit.search
 import com.google.inject.{Singleton, Provides}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.net.{FakeHttpPostClient, FakeHttpClient}
 
 case class TestSearchServiceClientModule() extends SearchServiceClientModule {
 
@@ -11,6 +12,6 @@ case class TestSearchServiceClientModule() extends SearchServiceClientModule {
   @Provides
   @Singleton
   def searchServiceClient(serviceCluster: ServiceCluster, airbrakeNotifier: AirbrakeNotifier): SearchServiceClient = {
-    new SearchServiceClientImpl(serviceCluster, -1, null, airbrakeNotifier)
+    new SearchServiceClientImpl(serviceCluster, -1, new FakeHttpPostClient(None, s => ()), airbrakeNotifier)
   }
 }

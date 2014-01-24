@@ -111,6 +111,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def setUserValue(userId: Id[User], key: String, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
+  def triggerRawKeepImport(): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -699,5 +700,9 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.extensionVersionCache.getOrElseFuture(ExtensionVersionInstallationIdKey(installationId)) {
       call(Shoebox.internal.getExtensionVersion(installationId)).map(_.json.as[String])
     }
+  }
+
+  def triggerRawKeepImport(): Unit = {
+    broadcast(Shoebox.internal.triggerRawKeepImport())
   }
 }
