@@ -13,6 +13,8 @@ import com.keepit.common.db.slick.Database.Slave
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.mvc.Action
+import com.keepit.scraper.ScraperServiceClient
+import scala.concurrent.Future
 
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -22,7 +24,8 @@ class ScraperAdminController @Inject() (
   scrapeScheduler: ScrapeSchedulerPlugin,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
-  httpProxyRepo: HttpProxyRepo)
+  httpProxyRepo: HttpProxyRepo,
+  scraperServiceClient:ScraperServiceClient)
     extends AdminController(actionAuthenticator) {
 
   val MAX_COUNT_DISPLAY = 50
@@ -33,10 +36,12 @@ class ScraperAdminController @Inject() (
     Async {
       val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
       val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
+      val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails)
       for {
         requests <- requestsFuture
         count <- countFuture
-      } yield Ok(html.admin.pendingScraperRequests(requests, count))
+        threadDetails <- threadDetailsFuture
+      } yield Ok(html.admin.pendingScraperRequests(requests, count, threadDetails))
     }
   }
 
