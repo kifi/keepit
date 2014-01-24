@@ -63,7 +63,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeElizaServiceClientModule(),
         FakeAirbrakeModule(),
         TestHeimdalServiceClientModule(),
-        TestABookServiceClientModule()
+        TestABookServiceClientModule(),
+        KeepImportsModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

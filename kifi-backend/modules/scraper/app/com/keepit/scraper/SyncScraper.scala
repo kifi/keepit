@@ -34,7 +34,7 @@ class SyncScraper @Inject() (
     processURI(uri, info, proxyOpt)
   } catch {
     case t: Throwable => {
-      log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+      log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
       airbrake.notify(t)
       val latestUriOpt = helper.syncGetNormalizedUri(uri)
       // update the uri state to SCRAPE_FAILED
@@ -148,7 +148,7 @@ class SyncScraper @Inject() (
       }
     } catch {
       case t: Throwable => {
-        log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString(File.separator)}")
+        log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
         fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
       }
     }
@@ -218,7 +218,7 @@ class SyncScraper @Inject() (
       }
     } catch {
       case e: Throwable => {
-        log.error(s"[fetchArticle] fetch failed ${normalizedUri.url} $info $httpFetcher;\nException: $e; Cause: ${e.getCause};\nStack trace:\n${e.getStackTrace.mkString(File.separator)}")
+        log.error(s"[fetchArticle] fetch failed ${normalizedUri.url} $info $httpFetcher;\nException: $e; Cause: ${e.getCause};\nStack trace:\n${e.getStackTrace.mkString("|")}")
         Error(-1, "fetch failed: %s".format(e.toString))
       }
     }

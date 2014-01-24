@@ -279,11 +279,15 @@ class InviteCommander @Inject() (
     }
   }
 
-  def reportReceivedInvitation(receiverId: Id[User], socialNetwork: SocialNetworkType, invite: Invitation, actuallyAccepted: Boolean): Unit =
+  def reportReceivedInvitation(receiverId: Id[User], socialUserNetwork: SocialNetworkType, invite: Invitation, actuallyAccepted: Boolean): Unit =
     invite.senderUserId.foreach { senderId =>
       SafeFuture {
+        val invitedVia = socialUserNetwork match {
+          case SocialNetworks.FORTYTWO => SocialNetworks.EMAIL
+          case other => other
+        }
         val contextBuilder = new HeimdalContextBuilder
-        contextBuilder += ("socialNetwork", socialNetwork.toString)
+        contextBuilder += ("socialNetwork", invitedVia.toString)
         contextBuilder += ("inviteId", invite.externalId.id)
         invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
         invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }

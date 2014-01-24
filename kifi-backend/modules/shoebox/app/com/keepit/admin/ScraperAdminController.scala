@@ -11,11 +11,15 @@ import com.keepit.search.ArticleStore
 import views.html
 import com.keepit.common.db.slick.Database.Slave
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.scraper.ScrapeSchedulerPlugin
+import play.api.mvc.Action
 
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
+  uriRepo: NormalizedURIRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
+  scrapeScheduler: ScrapeSchedulerPlugin,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
   httpProxyRepo: HttpProxyRepo)
@@ -33,6 +37,17 @@ class ScraperAdminController @Inject() (
         requests <- requestsFuture
         count <- countFuture
       } yield Ok(html.admin.pendingScraperRequests(requests, count))
+    }
+  }
+
+  def scrapeArticle(url:String) = AdminHtmlAction { implicit request =>
+    Async {
+      scrapeScheduler.scrapeBasicArticle(url, None) map { articleOpt =>
+        articleOpt match {
+          case None => Ok(s"Failed to scrape $url")
+          case Some(article) => Ok(s"For $url, article:${article.toString}")
+        }
+      }
     }
   }
 

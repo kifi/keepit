@@ -31,7 +31,6 @@ class BookmarksController @Inject() (
     userRepo: UserRepo,
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
     uriRepo: NormalizedURIRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,

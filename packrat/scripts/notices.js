@@ -27,7 +27,7 @@ panes.notices = function () {
 
   var handlers = {
     new_thread: function (o) {
-      var kind = $list && $list.data('kind');
+      var kind = $list.data('kind');
       if (kind === 'all' ||
           kind === 'page' && o.thisPage ||
           kind === 'unread' && o.thread.unread ||
@@ -38,20 +38,21 @@ panes.notices = function () {
       }
     },
     threads: function (o) {
-      log('[message:threads]', $list && $list.data('kind'), o.kind, o.threads.length, o.includesOldest)();
-      if (($list && $list.data('kind')) === o.kind) {
+      log('[notices:threads]', $list.data('kind'), o.kind, o.threads.length, o.includesOldest)();
+      if ($list.data('kind') === o.kind) {
         $list.removeData('pendingOlderReqTime');
         $list.find('.kifi-notice').remove();
         renderIntoList($list, o);
-        $list.closest('.kifi-notices-box').data('antiscroll').refresh();
+        var scroller = $list.closest('.kifi-notices-box').data('antiscroll');
+        if (scroller) {
+          scroller.refresh();
+        }
       }
     },
     thread_unread: function (th) {
-      if ($list) {
-        var $th = $list.find('.kifi-notice[data-thread="' + th.thread + '"]').removeClass('kifi-notice-visited');
-        if (!$th.length && $list.data('kind') === 'unread') {
-          showNew(th);
-        }
+      var $th = $list.find('.kifi-notice[data-thread="' + th.thread + '"]').removeClass('kifi-notice-visited');
+      if (!$th.length && $list.data('kind') === 'unread') {
+        showNew(th);
       }
     },
     thread_read: function (o) {
@@ -89,6 +90,7 @@ panes.notices = function () {
       .on('mousedown', '.kifi-notices-menu-a', onMenuBtnMouseDown)
       .on('mouseup', '.kifi-notices-mark-all-read', onMarkAllRead)
       .on('kifi:remove', function () {
+        $list.find('.kifi-notice-state,.kifi-notice-n-others').hoverfu('destroy');
         $list = null;
         $(window).off('resize.notices');
         api.port.off(handlers);
@@ -146,6 +148,7 @@ panes.notices = function () {
     var $cubby = $cart.parent().css('overflow', 'hidden').layout();
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     var $old = $cart.find('.kifi-notices-box');
+    $old.find('.kifi-notice-state,.kifi-notice-n-others').hoverfu('destroy');
 
     var $new = $(renderListHolder(kindNew))[back ? 'prependTo' : 'appendTo']($cart).layout();
     $list = $new.find('.kifi-notices-list');
@@ -360,7 +363,7 @@ panes.notices = function () {
       }
       break;
     }
-    return false;
+    e.preventDefault();
   }
 
   function onScroll() {

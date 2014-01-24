@@ -21,7 +21,7 @@ class SendgridCommander @Inject() (
     events foreach report
   }
 
-  private val alertEventTypes = Set("dropped", "bounce", "spamreport")
+  private val alertEventTypes = Set("bounce", "spamreport")
 
   private def emailAlert(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
     timing(s"sendgrid emailAlert eventType(${event.event}}) mailId(${event.mailId}}) ") {

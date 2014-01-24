@@ -35,6 +35,7 @@ class UriIntegrityActor @Inject()(
   scrapeInfoRepo: ScrapeInfoRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
+  collectionRepo: CollectionRepo,
   renormRepo: RenormalizedURLRepo,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier
@@ -65,19 +66,31 @@ class UriIntegrityActor @Inject()(
         val co2 = keepToCollectionRepo.getCollectionsForBookmark(newBm.id.get).toSet
         val inter = co1 & co2
         val diff = co1 -- co2
-        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
-          if (inter.contains(ktc.collectionId)) keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        val collectionsToUpdate = keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).map { ktc =>
+          var collections: Set[Id[Collection]] = Set.empty[Id[Collection]]
+          if (inter.contains(ktc.collectionId)) {
+            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+            collections = collections + ktc.collectionId
+          }
 
           if (diff.contains(ktc.collectionId)) {
             val inactiveKtc = keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId)
-            if (inactiveKtc.isDefined) inactiveKtc foreach { inactiveKtc =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-              keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+            if (inactiveKtc.isDefined) {
+              inactiveKtc.foreach { inactiveKtc =>
+                collections = collections + inactiveKtc.collectionId
+                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+                keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+              }
             } else {
+              collections = collections + ktc.collectionId
               keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
             }
           }
+          collections
+        }.flatten
 
+        collectionsToUpdate.foreach { collId =>
+          collectionRepo.collectionChanged(collId)
         }
       }
     }
