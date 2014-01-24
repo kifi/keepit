@@ -248,10 +248,6 @@ module.exports = function (grunt) {
 		},
 		watch: {
 			// https://github.com/gruntjs/grunt-contrib-watch#settings
-			options: {
-				livereload: 8079
-				//atBegin: true
-			},
 			stylusDev: {
 				files: ['<%= path.client.css %>'],
 				tasks: ['stylus:dev']
@@ -310,20 +306,11 @@ module.exports = function (grunt) {
 				files: ['<%= concat.dist.src %>'],
 				tasks: ['concat:dist']
 			},
-			index: {
-				files: ['index.html']
-			},
-			lib: {
-				files: ['<%= path.client.lib %>/**']
-			},
-			assets: {
-				files: ['<%= path.client.assets %>/**']
-			},
-			html: {
-				files: ['<%= path.client.html %>']
-			},
-			styl: {
-				files: ['<%= path.client.styl %>']
+			livereload: {
+				options: {
+					livereload: 8079
+				},
+				files: ['index.html', '<%= path.dist.dir %>/**/*']
 			}
 		}
 	});
