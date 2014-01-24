@@ -223,8 +223,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   })
   scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch: url=$url,proxy=$proxy") {
-    val ts = System.currentTimeMillis
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map{p => s" via ${p.alias}"}.getOrElse("")}") {
     val httpGet = new HttpGet(url)
     val httpContext = new BasicHttpContext()
 
@@ -245,17 +244,16 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
-    log.info(s"[fetch($url)] executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
-
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
     val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     val responseOpt = try {
+      val ts = System.currentTimeMillis
       q.offer(WeakReference(fetchInfo))
       val response = httpClient.execute(httpGet, httpContext)
       fetchInfo.respStatusRef.set(response.getStatusLine)
-      log.info(s"[fetch($url)] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
+      log.info(s"[fetch($url)] response:${response.getStatusLine.toString} elapsed-milliseconds: ${System.currentTimeMillis - ts}")
       Some(response)
     } catch {
       case e:SSLException               => logAndSet(fetchInfo, None)(e, "fetch", url)
