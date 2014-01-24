@@ -70,7 +70,6 @@ class UriIntegrityActor @Inject()(
           var collections: Set[Id[Collection]] = Set.empty[Id[Collection]]
           if (inter.contains(ktc.collectionId)) {
             keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-            collections = collections + ktc.collectionId
           }
 
           if (diff.contains(ktc.collectionId)) {
@@ -82,9 +81,9 @@ class UriIntegrityActor @Inject()(
                 keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
               }
             } else {
-              collections = collections + ktc.collectionId
               keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
             }
+            collections = collections + ktc.collectionId
           }
           collections
         }.flatten
