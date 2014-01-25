@@ -116,14 +116,14 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
         case _ => // do nothing
       }
-    } else if (uri.state == NormalizedURIStates.SCRAPE_FAILED) {
+    } else if (uri.state == NormalizedURIStates.SCRAPE_FAILED || uri.state == NormalizedURIStates.SCRAPED) {
       scrapeRepo.getByUriId(saved.id.get) match { // do not use saveStateAndNextScrape
-        case Some(scrapeInfo) => if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) { scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE)) }
-        case Some(scrapeInfo) => // do nothing
-        case None => scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
+        case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
+          scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+        case _ => // do nothing
       }
-    } else {
-      // Otherwise, ensure that ScrapeInfo has an active record for it.
+    } else if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
+      // In case of SCRAPE_WANTED, ensure that ScrapeInfo has an active record for it.
       scrapeRepo.getByUriId(saved.id.get) match {
         case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
           scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
@@ -131,7 +131,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
         case None =>
           scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
       }
-    }
+    } else throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
 
     saved
   }
