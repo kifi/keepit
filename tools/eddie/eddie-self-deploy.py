@@ -173,7 +173,7 @@ class LocalAsset(object):
     if suffix is not None:
       targetName = targetName + "-" + suffix
     dstpath = os.path.join(destination, targetName)
-    shutil.move(srcpath, dstpath)
+    shutil.move(self.path, dstpath)
 
   def delete(self):
     shutil.rmtree(self.path)
@@ -211,7 +211,7 @@ class LocalAssets(object):
     return [a for a in self.assets if a.hash==chash][0]
 
   def keepOnlyNewest(self, howMany):
-    for assets in sorted(self.assets, key = lambda x: x.timestamp)[:-howMany]:
+    for asset in sorted(self.assets, key = lambda x: x.timestamp)[:-howMany]:
       asset.delete()
 
 
@@ -348,24 +348,29 @@ if __name__ == "__main__":
         log("Service Up. Deploy Finished.")
       else:
         log("Service failed to come up. Deployment Failed! Rollback Advised.")
+      releaseLock()
 
 
     except DeployAbortException as e:
       import traceback
       traceback.print_exc()
       log("ABORT: " + e.reason)
+      releaseLock()
+      sys.exit(1)
     except Exception as e:
       import traceback
       traceback.print_exc()
       log("FATAL ERROR: " + str(e))
-    finally:
       releaseLock()
+      sys.exit(1)
 
 
   except Exception as e:
     import traceback
     traceback.print_exc()
     logger("")("Deployment Initialization Fatal Error. (" + str(e) + ")")
+    releaseLock()
+    sys.exit(1)
 
 
 
