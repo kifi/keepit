@@ -13,14 +13,14 @@ import org.apache.http.client.config.RequestConfig
 import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
 import org.apache.http.HttpHeaders._
 import org.apache.http.client.entity.{DeflateDecompressingEntity, GzipDecompressingEntity}
-import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
 import org.apache.http.client.protocol.HttpClientContext
 import java.io.IOException
 import scala.util.Try
 import org.apache.http.util.EntityUtils
 import com.keepit.common.time._
-import com.keepit.common.performance.timing
+import com.keepit.common.performance.{timing, timingWithResult}
 import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ConcurrentLinkedQueue}
 import scala.ref.WeakReference
 import play.api.{Logger, Play}
@@ -251,9 +251,8 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     val responseOpt = try {
       val ts = System.currentTimeMillis
       q.offer(WeakReference(fetchInfo))
-      val response = httpClient.execute(httpGet, httpContext)
+      val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r:CloseableHttpResponse => r.getStatusLine.toString }) { httpClient.execute(httpGet, httpContext) }
       fetchInfo.respStatusRef.set(response.getStatusLine)
-      log.info(s"[fetch($url)] response:${response.getStatusLine.toString} elapsed-milliseconds: ${System.currentTimeMillis - ts}")
       Some(response)
     } catch {
       case e:SSLException               => logAndSet(fetchInfo, None)(e, "fetch", url)

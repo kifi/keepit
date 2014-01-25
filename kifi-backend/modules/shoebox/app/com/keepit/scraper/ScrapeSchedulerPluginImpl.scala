@@ -15,6 +15,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
 import play.modules.statsd.api.Statsd
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice}
 
 case object ScheduleScrape
 
@@ -37,7 +38,7 @@ private[scraper] class ScrapeScheduler @Inject() (
 
   def schedule(): Unit = {
     val (activeOverdues, pendingCount, pendingOverdues) = db.readOnly { implicit s =>
-      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList(currentDateTime.minusSeconds(config.pendingOverdueThreshold)))
+      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold)))
     }
     log.info(s"[schedule]: active:${activeOverdues.length} pending:${pendingCount} pending-overdues:${pendingOverdues.length}")
     val batchMax = scraperConfig.batchMax
@@ -64,7 +65,10 @@ private[scraper] class ScrapeScheduler @Inject() (
     val ts = System.currentTimeMillis
     tasks foreach { case (uri, info, proxyOpt) =>
       val request = db.readWrite { implicit s =>
-        if (uri.state == NormalizedURIStates.ACTIVE || uri.state == NormalizedURIStates.INACTIVE) {
+        if (uri.state == NormalizedURIStates.ACTIVE
+          || uri.state == NormalizedURIStates.INACTIVE
+          || uri.state == NormalizedURIStates.UNSCRAPABLE
+        ) {
           scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE)) // no need to scrape
           None
         } else {
@@ -81,6 +85,8 @@ private[scraper] class ScrapeScheduler @Inject() (
 
 class ScrapeSchedulerPluginImpl @Inject() (
     db: Database,
+    airbrake: AirbrakeNotifier,
+    localPostOffice:LocalPostOffice,
     scrapeInfoRepo: ScrapeInfoRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     actor: ActorInstance[ScrapeScheduler],
@@ -107,8 +113,20 @@ class ScrapeSchedulerPluginImpl @Inject() (
     val uriId = uri.id.get
     val info = scrapeInfoRepo.getByUriId(uriId)
     val toSave = info match {
-      case Some(s) => s.withState(ScrapeInfoStates.PENDING).withNextScrape(currentDateTime)
-      case None => ScrapeInfo(uriId = uriId, state = ScrapeInfoStates.PENDING)
+      case Some(s) => s.state match {
+        case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime)
+        case ScrapeInfoStates.PENDING  => s // no change
+        case ScrapeInfoStates.INACTIVE => {
+          val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
+          log.warn(msg)
+          localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
+            subject = s"ScrapeScheduler.scheduleScrape($uri)",
+            htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
+            category = NotificationCategory.System.ADMIN))
+          s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime) // dangerous; revisit
+        }
+      }
+      case None => ScrapeInfo(uriId = uriId)
     }
     val saved = scrapeInfoRepo.save(toSave)
     // todo: It may be nice to force trigger a scrape directly

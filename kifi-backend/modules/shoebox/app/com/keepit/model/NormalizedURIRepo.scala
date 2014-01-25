@@ -13,6 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
+import com.keepit.scraper.ScraperConfig
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -114,6 +115,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
         case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
           scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
         case _ => // do nothing
+      }
+    } else if (uri.state == NormalizedURIStates.SCRAPE_FAILED) {
+      scrapeRepo.getByUriId(saved.id.get) match { // do not use saveStateAndNextScrape
+        case Some(scrapeInfo) => if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) { scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE)) }
+        case Some(scrapeInfo) => // do nothing
+        case None => scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
       }
     } else {
       // Otherwise, ensure that ScrapeInfo has an active record for it.
