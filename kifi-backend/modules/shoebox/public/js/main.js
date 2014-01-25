@@ -4401,7 +4401,7 @@ $(function () {
 			$bookmarkImportDialog.find('.import-bookmark-count').text(event.data.bookmarkCount);
 			kifiTracker.view('bookmarkImport1');
 			$bookmarkImportDialog.dialog('show').on('click', '.cancel-import,.import-dialog-x', function () {
-				mixpanel.track('user_clicked_internal_page', {
+				mixpanel.track('user_clicked_page', {
 					type: 'bookmarkImport1',
 					action: $(this).is('.cancel-import') ? 'cancel' : 'x',
 					origin: window.location.origin
@@ -4411,7 +4411,7 @@ $(function () {
 				// don't open again!
 				event.source.postMessage('import_bookmarks_declined', event.origin);
 			}).on('click', 'button.do-import', function () {
-				mixpanel.track('user_clicked_internal_page', {
+				mixpanel.track('user_clicked_page', {
 					type: 'bookmarkImport1',
 					action: 'approve',
 					origin: window.location.origin
@@ -4422,7 +4422,7 @@ $(function () {
 				$bookmarkImportDialog.on('click', 'button', function () {
 					$bookmarkImportDialog.dialog('hide');
 					$bookmarkImportDialog = null;
-					mixpanel.track('user_clicked_internal_page', {
+					mixpanel.track('user_clicked_page', {
 						type: 'bookmarkImport2',
 						action: 'done',
 						origin: window.location.origin
