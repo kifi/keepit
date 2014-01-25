@@ -19,8 +19,3 @@ class PriorKnowledge @Inject() (urlPatternRuleRepo: UrlPatternRuleRepo, scraperP
   def getPreferredSchemeNormalizer(url: String)(implicit session: RSession): Option[StaticNormalizer] = urlPatternRuleRepo.getPreferredNormalization(url).map(SchemeNormalizer(_))
 
 }
-
-
-sealed trait ContentCheckTrustBehavior
-case object WhiteList extends ContentCheckTrustBehavior
-case object BlackList extends ContentCheckTrustBehavior
