@@ -61,7 +61,7 @@ class FacebookSocialGraph @Inject() (
   ) extends SocialGraph with Logging {
 
   val TWO_MINUTES = 2 * 60 * 1000
-  val FETCH_LIMIT = 100
+  val FETCH_LIMIT = 500
   val networkType = SocialNetworks.FACEBOOK
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
