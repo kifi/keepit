@@ -103,7 +103,7 @@ case class HttpClientImpl(
 
   private val validResponseClass = 2
   private lazy val trackTimeThresholdFactor = myInstanceInfo.info.instantTypeInfo.ecu
-  private lazy val longWaitTimeThreshold = 2000 / myInstanceInfo.info.instantTypeInfo.ecu //means that for c1.medium with 2 cores, 5 ecu its 400ms
+  private lazy val longWaitTimeThreshold = 3000 / myInstanceInfo.info.instantTypeInfo.ecu //means that for c1.medium with 2 cores, 5 ecu its 600ms
 
   override val defaultFailureHandler: FailureHandler = { req =>
     {
