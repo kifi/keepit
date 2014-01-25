@@ -7,7 +7,7 @@ case class ScraperConfig(
   maxInterval: Double = 1024.0d, //hours
   intervalIncrement: Double = 6.0d, //hours
   intervalDecrement: Double = 2.0d, //hours
-  initialBackoff: Double = 12.0d, //hours
+  initialBackoff: Double = 3.0d, //hours
   maxBackoff: Double = 1024.0d, //hours
   maxRandomDelay: Int = 600, // seconds
   changeThreshold: Double = 0.5,
