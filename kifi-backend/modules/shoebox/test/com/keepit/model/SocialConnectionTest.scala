@@ -20,12 +20,12 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
 
   val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
-  private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[(SocialUserInfo, JsValue)] = {
+  private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[SocialUserInfo] = {
     inject[FacebookSocialGraph].extractFriends(json)
   }
 
   private def extractFacebookFriendIds(json: JsValue)(implicit injector: Injector): Seq[SocialId] = {
-    extractFacebookFriendInfo(json).map(_._1.socialId)
+    extractFacebookFriendInfo(json).map(_.socialId)
   }
 
   "SocialConnection" should {

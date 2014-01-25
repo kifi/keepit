@@ -66,11 +66,14 @@ img.kifi-message-pic.kifi-self {
   margin-bottom: 2px;
   font-weight: bold;
 }
-.kifi-message-body.kifi-message-body>p {
+.kifi-message-p {
   line-height: 16px;
   color: #444;
 }
-.kifi-message-body>p>a[href] {
+.kifi-message-p+.kifi-message-p {
+  margin-top: 3px;
+}
+.kifi-message-p>a[href] {
   text-decoration: underline;
 }
 .kifi-image-in-message {

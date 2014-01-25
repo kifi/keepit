@@ -121,12 +121,12 @@
 
     if (chart == "articleIndex") {
       options.title = "Article Index"
-      options.target = baseTargets.concat("stats.gauges.search.index.article.size")
+      options.target = baseTargets.concat("stats.gauges.search.index.article*.size")
     }
 
     if (chart == "index") {
       options.title = "Other Indices"
-      options.target = baseTargets.concat('exclude(stats.gauges.search.index.*.size, "article")')
+      options.target = baseTargets.concat('exclude(stats.gauges.search.index.*.size, "article*")')
     }
 
     $("#" + chart).graphite(options);

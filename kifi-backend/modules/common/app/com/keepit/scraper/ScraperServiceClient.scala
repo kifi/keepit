@@ -42,8 +42,7 @@ object ScrapeRequest {
 
 case class ScraperThreadDetails(info:AmazonInstanceInfo, details:String) {
   lazy val forkJoinThreadDetails: Seq[String] = {
-    val re = """^ForkJoinPool""".r
-    details.lines filter { line => !(re findFirstIn line isEmpty) } toList
+    details.lines filter { !_.isEmpty } toList
   }
 }
 
@@ -58,7 +57,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
   def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
   def getBasicArticleWithExtractor(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
-  def getThreadDetails:Seq[Future[ScraperThreadDetails]]
+  def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadDetails]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -118,9 +117,8 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getThreadDetails: Seq[Future[ScraperThreadDetails]] = {
-    val call = Common.internal.threadDetails
-    broadcastWithUrls(call) map { _ map {response => ScraperThreadDetails(response.uri.serviceInstance.instanceInfo, response.response.body) } }
+  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadDetails]] = {
+    broadcastWithUrls(Common.internal.threadDetails(Some("ForkJoinPool"), filterState)) map { _ map {response => ScraperThreadDetails(response.uri.serviceInstance.instanceInfo, response.response.body) } }
   }
 }
 
@@ -146,5 +144,5 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
 
-  def getThreadDetails: Seq[Future[ScraperThreadDetails]] = ???
+  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadDetails]] = ???
 }

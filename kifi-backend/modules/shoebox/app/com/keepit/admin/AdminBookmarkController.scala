@@ -148,7 +148,7 @@ class AdminBookmarksController @Inject() (
     }
 
     val bookmarkTotalCountFuture = searchServiceClient.uriGraphIndexInfo() map { infos =>
-      (infos find (_.name == "BookmarkStore")).get.numDocs
+      (infos filter (_.name.startsWith("BookmarkStore"))).map{_.numDocs}.sum
     }
     val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
       bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)

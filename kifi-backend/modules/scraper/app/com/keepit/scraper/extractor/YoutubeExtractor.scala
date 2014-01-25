@@ -32,7 +32,7 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
     val description = doc.select("#watch-description-text, #watch-description-extras div.content, #watch-description-extra-info").text
     val channel = doc.select("#watch7-user-header .yt-user-name").text()
     val closedCaptions = getClosedCaptions(doc).getOrElse("")
-    log.info(s"[parse] headline=$headline desc=${description.take(50)} channel=$channel cc=$closedCaptions")
+    log.info(s"[parse] headline=${headline.take(50)} desc=${description.take(50)} channel=$channel cc=${closedCaptions.take(50)}")
     Seq(headline, description, channel, closedCaptions).filter(_.nonEmpty).mkString("\n")
   }
 

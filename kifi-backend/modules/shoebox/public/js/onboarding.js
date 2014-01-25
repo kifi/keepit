@@ -25,6 +25,8 @@
 		return parseInt($modal.data('page'), 10);
 	}
 
+	var $html = $('html');
+
 	function setPageNum(val) {
 		val = parseInt(val, 10);
 		var prev = getPageNum();
@@ -34,7 +36,9 @@
 			$modal.addClass('page-' + val);
 			win.setTimeout(function () {
 				// update after click tracked
-				$modal.data('trackSource', 'onboarding' + val);
+				var name = 'onboarding' + val;
+				$html.data('trackType', name);
+				win.Tracker.trackView(name);
 			}, 1);
 		}
 		return val;
@@ -148,7 +152,9 @@
 		$('.kifi-onboarding-shade, .kifi-onboarding-modal').removeClass('visible');
 		win.setTimeout(function () {
 			$('.kifi-onboarding-shade, .kifi-onboarding-modal').remove();
-			win.parent.exitOnboarding();
+			if (win.parent) {
+				win.parent.exitOnboarding();
+			}
 		}, 300);
 	}
 
@@ -178,9 +184,12 @@
 	}
 
 	if (win.parent && win.parent.getMe) {
-		win.parent.getMe().then(function (me) {
+		var promise = win.parent.getMe();
+		promise.then(function (me) {
 			updateMe(me.firstName || me.lastName, me.pic200);
+			return me;
 		});
+		win.Tracker.setUserPromise(promise);
 	}
 
 	var resizeId;

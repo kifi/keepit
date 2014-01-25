@@ -40,7 +40,7 @@ var getTextFormatter = (function () {
         parts[i] = bits.join('');
       }
 
-      return '<p>' + parts.join('').replace(lineBreaksRe, '</p><p>') + '</p>';
+      return '<div class="kifi-message-p">' + parts.join('').replace(lineBreaksRe, '</div><div class="kifi-message-p">') + '</div>';
     };
   };
 }());

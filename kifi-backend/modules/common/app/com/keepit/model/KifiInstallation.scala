@@ -59,7 +59,7 @@ case class KifiInstallation (
   version: KifiVersion,
   userAgent: UserAgent,
   state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
-) extends ModelWithExternalId[KifiInstallation] {
+) extends ModelWithExternalId[KifiInstallation] with ModelWithState[KifiInstallation] {
   def withId(id: Id[KifiInstallation]): KifiInstallation = copy(id = Some(id))
   def withUpdateTime(time: DateTime): KifiInstallation = copy(updatedAt = time)
   def withVersion(version: KifiVersion): KifiInstallation = copy(version = version)

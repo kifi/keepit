@@ -4,9 +4,8 @@ import com.google.inject.{Provider, Inject}
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
-import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.LocalPostOffice
@@ -17,33 +16,20 @@ import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
-import com.keepit.common.akka.SafeFuture
 
-import scala.concurrent.{Future, future}
+import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.social.{BasicUser, SocialNetworkType, SocialId}
-import com.keepit.scraper.{Signature, ScraperConfig, HttpRedirect}
+import com.keepit.scraper.Signature
+import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType}
+import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
-import play.api.libs.json.JsArray
-import com.keepit.model.KifiInstallation
-import play.api.libs.json.JsBoolean
-import play.api.libs.json.JsString
-import scala.Some
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsObject
 import com.keepit.normalizer.VerifiedCandidate
-import play.api.libs.json.JsArray
 import com.keepit.model.KifiInstallation
-import play.api.libs.json.JsBoolean
-import play.api.libs.json.JsString
-import scala.Some
-import play.api.libs.json.JsNumber
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 
@@ -75,6 +61,7 @@ class ShoeboxController @Inject() (
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
+  socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin
 )
   (implicit private val clock: Clock,
@@ -581,5 +568,16 @@ class ShoeboxController @Inject() (
   def triggerRawKeepImport() = Action { request =>
     rawKeepImporterPlugin.processKeeps(broadcastToOthers = false)
     Status(202)("0")
+  }
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action { request =>
+    val socialUserInfo = db.readOnly { implicit session =>
+      socialUserInfoRepo.get(socialUserInfoId)
+    }
+    Async {
+      socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
+        Ok("0")
+      }
+    }
   }
 }

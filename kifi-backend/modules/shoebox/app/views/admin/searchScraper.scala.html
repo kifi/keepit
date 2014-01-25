@@ -4,13 +4,13 @@
 
 @admin("Scraper") {
 
-    <h2>Pending Queue <span class="title-hint"></span></h2>
-
     <div class="checkbox">
         <label>
             <input type="checkbox" id="autorefresh" checked/> Enable autorefresh
         </label>
     </div>
+
+    <h2>Pending Queue <span class="title-hint"></span></h2>
 
     <div class="request-table"></div>
 
@@ -21,6 +21,12 @@
     </form>
 
     <h2>Instance Thread Info <span class="thread-details-hint"></span></h2>
+
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="runnable-filter"/> Only show runnable threads
+        </label>
+    </div>
 
     <div class="thread-details"></div>
 
@@ -36,15 +42,33 @@
     </form>
 
     <script>
+        var refreshEnabled = function() { return $("#autorefresh").is(":checked"); };
+        var runnableFilterEnabled = function() { return $("#runnable-filter").is(":checked"); };
+        var isModalOpen = false;
+        var timeout = undefined;
+        var registerModalEvents = function() {
+            $(".modal").on("show.bs.modal", function() {
+                isModalOpen = true;
+            });
+            $(".modal").on("hidden.bs.modal", function() {
+                isModalOpen = false;
+            });
+        };
         var loadrequests = function(){
+            if (runnableFilterEnabled()) {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(Some("RUNNABLE"))"
+            } else {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(None)"
+            }
             $.ajax({
-                url : "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests",
+                url : url,
                 dataType: "html",
                 success: function(data){
                     $("span.title-hint").replaceWith($(data).find("span.title-hint"));
                     $("div.request-table").replaceWith($(data).find("div.request-table"));
                     $("span.thread-details-hint").replaceWith($(data).find("span.thread-details-hint"));
                     $("div.thread-details").replaceWith($(data).find("div.thread-details"));
+                    registerModalEvents();
                 },
                 error: function(){
                     $("span.title-hint").html("(loading failed)");
@@ -52,16 +76,24 @@
                     $("span.thread-details-hint").html("(loading failed)");
                     $("div.thread-details").html("");
                 },
-                complete: function(){
-                    setTimeout(refresh, 5000);
-                }
             });
-        }
+            timeout = setTimeout(refresh, 5000);
+        };
+        var shouldRefresh = function() { return refreshEnabled() && !isModalOpen; };
         var refresh = function(){
-            if ($("#autorefresh").is(":checked")) { loadrequests(); }
+            if (shouldRefresh()) {
+                loadrequests();
+            } else if (refreshEnabled()) {
+                timeout = setTimeout(refresh, 5000);
+            }
         };
         $("#autorefresh").change(function() {
-            if (this.checked) { loadrequests(); }
+            if (shouldRefresh()) { loadrequests(); }
+            else { clearTimeout(timeout); }
+        });
+        $("#runnable-filter").change(function() {
+            clearTimeout(timeout);
+            loadrequests();
         });
         loadrequests();
     </script>

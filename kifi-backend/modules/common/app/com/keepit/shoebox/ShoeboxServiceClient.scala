@@ -40,6 +40,7 @@ import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.common.concurrent.ExecutionContext
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -113,6 +114,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
+  def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -708,6 +710,10 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def triggerRawKeepImport(): Unit = {
-    broadcast(Shoebox.internal.triggerRawKeepImport())
+    callLeader(Shoebox.internal.triggerRawKeepImport())
+  }
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
+    callLeader(Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId)).map(_ => ())(ExecutionContext.immediate)
   }
 }

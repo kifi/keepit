@@ -20,7 +20,7 @@ case class UserSession(
   expires: DateTime,
   state: State[UserSession] = UserSessionStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime) extends ModelWithExternalId[UserSession] {
+  updatedAt: DateTime = currentDateTime) extends ModelWithExternalId[UserSession] with ModelWithState[UserSession] {
   def withId(id: Id[UserSession]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def isValid = state == UserSessionStates.ACTIVE && expires.isAfterNow

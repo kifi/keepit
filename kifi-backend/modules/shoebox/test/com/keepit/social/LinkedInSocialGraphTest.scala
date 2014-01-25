@@ -67,8 +67,8 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
         val connections = rawInfo.jsons flatMap graph.extractFriends
         connections.length === 9
         connections exists { conn =>
-          conn._1.fullName == "Eishay Smith" &&
-          conn._1.pictureUrl.get == "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"
+          conn.fullName == "Eishay Smith" &&
+          conn.pictureUrl.get == "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"
         } must beTrue
       }
     }
