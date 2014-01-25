@@ -58,7 +58,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         }
 
         val connections = inject[UserConnectionCreator].createConnections(socialUserInfo,
-          extractedFriends.map(_._1.socialId), SocialNetworks.FACEBOOK)
+          extractedFriends.map(_.socialId), SocialNetworks.FACEBOOK)
 
         connections.size === 12
 
@@ -109,7 +109,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         }
 
         val connections = inject[UserConnectionCreator].createConnections(socialUserInfo,
-          extractedFriends.map(_._1.socialId), SocialNetworks.FACEBOOK)
+          extractedFriends.map(_.socialId), SocialNetworks.FACEBOOK)
 
         connections.size === 12
 
@@ -118,7 +118,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
 
         val connectionsAfter = inject[UserConnectionCreator]
-            .createConnections(socialUserInfo, extractedFriends2.map(_._1.socialId), SocialNetworks.FACEBOOK)
+            .createConnections(socialUserInfo, extractedFriends2.map(_.socialId), SocialNetworks.FACEBOOK)
 
         inject[Database].readOnly { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)

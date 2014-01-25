@@ -25,7 +25,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.social.{BasicUser, SocialNetworkType, SocialId}
+import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType, SocialId}
 import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
@@ -67,6 +67,7 @@ class ShoeboxController @Inject() (
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
+  socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin
 )
   (implicit private val clock: Clock,
@@ -541,5 +542,16 @@ class ShoeboxController @Inject() (
   def triggerRawKeepImport() = Action { request =>
     rawKeepImporterPlugin.processKeeps(broadcastToOthers = false)
     Status(202)("0")
+  }
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action { request =>
+    val socialUserInfo = db.readOnly { implicit session =>
+      socialUserInfoRepo.get(socialUserInfoId)
+    }
+    Async {
+      socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
+        Ok("0")
+      }
+    }
   }
 }

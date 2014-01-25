@@ -468,8 +468,8 @@ class AdminUserController @Inject() (
       val user = userRepo.get(userId)
       socialUserInfoRepo.getByUser(user.id.get)
     }
-    socialUserInfos foreach { info =>
-      Await.result(socialGraphPlugin.asyncFetch(info), 5 minutes)
+    socialUserInfos.map { info =>
+      socialGraphPlugin.asyncFetch(info)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }

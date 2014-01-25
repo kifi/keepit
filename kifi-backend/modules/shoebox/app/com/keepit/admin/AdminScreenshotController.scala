@@ -36,7 +36,7 @@ class AdminScreenshotController @Inject() (
     val uris = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(userId).map(_.uriId)
     }
-    uris.drop(drop).take(take).grouped(100).map { uriGroup =>
+    uris.drop(drop).take(take).grouped(100).foreach { uriGroup =>
       db.readOnly { implicit session =>
         uriGroup.map { uriId =>
           val normUri = normUriRepo.get(uriId)

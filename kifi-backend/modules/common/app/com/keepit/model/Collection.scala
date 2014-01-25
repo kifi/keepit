@@ -22,7 +22,7 @@ case class Collection(
   updatedAt: DateTime = currentDateTime,
   lastKeptTo: Option[DateTime] = None,
   seq: SequenceNumber = SequenceNumber.ZERO
-  ) extends ModelWithExternalId[Collection] {
+  ) extends ModelWithExternalId[Collection] with ModelWithState[Collection] {
   def withLastKeptTo(now: DateTime) = this.copy(lastKeptTo = Some(now))
   def withId(id: Id[Collection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
