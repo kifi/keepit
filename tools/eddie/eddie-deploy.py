@@ -100,7 +100,8 @@ if __name__=="__main__":
     remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
     try:
       while remoteProc.is_running():
-        time.sleep(1)
+        time.sleep(0.1)
+      remoteProc.wait_for_result()
     except KeyboardInterrupt:
       log("Manual Abort.")
       remoteProc.send_signal(2)
