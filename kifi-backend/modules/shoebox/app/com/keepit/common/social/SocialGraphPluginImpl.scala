@@ -20,8 +20,11 @@ import com.google.inject.Singleton
 import com.keepit.common.performance.timing
 import com.keepit.common.time.Clock
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.concurrent.ExecutionContext
 
-private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
+private case class FetchUserInfo(socialUserInfoId: Id[SocialUserInfo])
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 private case object RefreshAll
@@ -62,8 +65,12 @@ private[social] class SocialGraphActor @Inject() (
         self ! FetchUserInfoQuietly(user)
       }
 
-    case FetchUserInfo(socialUserInfo) =>
-      sender ! fetchUserInfo(socialUserInfo)
+    case FetchUserInfo(socialUserInfoId) =>
+      val socialUserInfo = db.readOnly { implicit session =>
+        socialRepo.get(socialUserInfoId)
+      }
+      fetchUserInfo(socialUserInfo)
+      sender ! ()
 
     case FetchUserInfoQuietly(socialUserInfo) =>
       fetchUserInfo(socialUserInfo)
@@ -85,14 +92,15 @@ private[social] class SocialGraphActor @Inject() (
       } yield {
           markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
 
-          val connections = rawInfo.jsons.map { json =>
+          val friendsSocialId = rawInfo.jsons.map { json =>
             graph.extractEmails(json).map(email => socialUserImportEmail.importEmail(userId, email))
 
             val friends = graph.extractFriends(json)
             socialUserImportFriends.importFriends(socialUserInfo, friends)
+            friends.map(_.socialId)
+          }.toList.flatten
 
-            socialUserCreateConnections.createConnections(socialUserInfo, friends.map(_.socialId), graph.networkType)
-          }.flatten
+          val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId, graph.networkType)
 
           val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
           val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
@@ -145,6 +153,8 @@ private[social] class SocialGraphActor @Inject() (
 class SocialGraphPluginImpl @Inject() (
   graphs: Set[SocialGraph],
   actor: ActorInstance[SocialGraphActor],
+  serviceDiscovery: ServiceDiscovery,
+  shoeboxServiceClient: ShoeboxServiceClient,
   val scheduling: SchedulingProperties) //only on leader
   extends SocialGraphPlugin with Logging with SchedulerPlugin {
 
@@ -165,9 +175,18 @@ class SocialGraphPluginImpl @Inject() (
       .map(_.revokePermissions(socialUserInfo)).getOrElse(Promise.successful().future)
   }
 
-  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {
-    require(socialUserInfo.credentials.isDefined,
-      "social user info's credentials are not defined: %s".format(socialUserInfo))
-    actor.ref.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
+  def asyncFetch(socialUserInfo: SocialUserInfo, broadcastToOthers: Boolean = true): Future[Unit] = {
+    require(socialUserInfo.credentials.isDefined, s"social user info's credentials are not defined: $socialUserInfo")
+    require(socialUserInfo.id.isDefined, s"social user info's id is not defined: $socialUserInfo")
+
+    if (serviceDiscovery.isLeader()) {
+      log.info(s"[SocialGraphPluginImpl] Need to refresh SocialUserInfoId(${socialUserInfo.id.get}). I'm leader.")
+      actor.ref.ask(FetchUserInfo(socialUserInfo.id.get))(5 minutes).map(_ => ())(ExecutionContext.immediate)
+    } else if(broadcastToOthers) {
+      log.info(s"[SocialGraphPluginImpl] Need to refresh SocialUserInfoId(${socialUserInfo.id.get}). Sending to leader.")
+      shoeboxServiceClient.triggerSocialGraphFetch(socialUserInfo.id.get)
+    } else {
+      Future.successful()
+    }
   }
 }

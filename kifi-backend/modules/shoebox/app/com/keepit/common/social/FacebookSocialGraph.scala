@@ -61,6 +61,7 @@ class FacebookSocialGraph @Inject() (
   ) extends SocialGraph with Logging {
 
   val TWO_MINUTES = 2 * 60 * 1000
+  val FETCH_LIMIT = 100
   val networkType = SocialNetworks.FACEBOOK
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
@@ -165,10 +166,10 @@ class FacebookSocialGraph @Inject() (
   private def fetchJsons(url: String, socialUserInfo: SocialUserInfo): Stream[JsValue] = {
     val jsons = get(url, socialUserInfo)
     log.info(s"downloaded FB json using $url")
-    jsons #:: nextPageUrl(jsons).toStream.flatMap { u => fetchJsons(u, socialUserInfo) }
+    jsons #:: nextPageUrl(jsons).map(nextUrl => fetchJsons(nextUrl, socialUserInfo)).getOrElse(Stream.empty)
   }
 
-  private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
+  private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String].orElse((json \ "paging" \ "next").asOpt[String])
 
   private def get(url: String, socialUserInfo: SocialUserInfo): JsValue = timing(s"fetching FB JSON using $url") {
     val client = httpClient.withTimeout(TWO_MINUTES)
@@ -185,7 +186,7 @@ class FacebookSocialGraph @Inject() (
   }
 
   private def url(id: SocialId, accessToken: String) =
-    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.PERSONAL_PROFILE},friends.fields(${FacebookSocialGraph.FRIEND_PROFILE})"
+    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.PERSONAL_PROFILE},friends.fields(${FacebookSocialGraph.FRIEND_PROFILE}).limit($FETCH_LIMIT)"
 
   private def createSocialUserInfo(friend: JsValue): SocialUserInfo =
     SocialUserInfo(

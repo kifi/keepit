@@ -15,8 +15,8 @@ case class FakeSocialGraphModule() extends SocialGraphModule {
 }
 
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
-  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
-    future { throw new Exception("Not Implemented") }
+  def asyncFetch(socialUserInfo: SocialUserInfo, broadcastToOthers: Boolean = true): Future[Unit] =
+    Promise.successful().future
   def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] =
-    future { throw new Exception("Not Implemented") }
+    Promise.successful().future
 }

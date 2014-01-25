@@ -90,6 +90,7 @@ class UserConnectionCreator @Inject() (
     log.debug(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
       db.readWrite { implicit s =>
+        log.info(s"[createNewConnections] Processing group of ${socialIds.length}")
         extractFriendsWithConnections(socialUserInfo, socialIds, network) map {
           case (_, Some(c)) if c.state == SocialConnectionStates.ACTIVE => Some(c)
           case (friend, Some(c)) =>
@@ -115,7 +116,7 @@ class UserConnectionCreator @Inject() (
             }
         }
       }
-    }.flatten.toSeq
+    }.toList.flatten
   }
 
   def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],

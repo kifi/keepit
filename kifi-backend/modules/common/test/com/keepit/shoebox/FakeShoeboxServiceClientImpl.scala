@@ -483,4 +483,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("dummy")
 
   def triggerRawKeepImport(): Unit = ()
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
+    Future.successful()
+  }
 }
