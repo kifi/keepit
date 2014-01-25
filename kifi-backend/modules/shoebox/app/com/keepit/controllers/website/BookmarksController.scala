@@ -169,9 +169,11 @@ class BookmarksController @Inject() (
 
   def allCollections(sort: String) = AuthenticatedJsonAction { request =>
     Async {
+      val numKeepsFuture = SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+      val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
       for {
-        numKeeps <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
-        collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
+        numKeeps <- numKeepsFuture
+        collections <- collectionsFuture
       } yield {
         Ok(Json.obj(
           "keeps" -> numKeeps,
