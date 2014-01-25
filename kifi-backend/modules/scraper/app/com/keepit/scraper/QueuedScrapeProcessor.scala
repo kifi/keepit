@@ -60,12 +60,12 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String]) {
+  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit scraperConfig:ScraperConfig) { // can be removed once things are settled
     try {
       for (msg <- msgOpt)
         log.info(msg)
-      helper.syncSaveScrapeInfo(sc.info.withState(ScrapeInfoStates.INACTIVE))
-      helper.syncGetNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // consider adding DO_NOT_SCRAPE
+      helper.syncSaveNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: UNSCRAPABLE where appropriate
+      helper.syncSaveScrapeInfo(sc.info.withFailure) // todo: mark INACTIVE where appropriate
     } catch {
       case t:Throwable => logErr(t, "terminator", s"deactivate $sc")
     }
@@ -92,7 +92,7 @@ class QueuedScrapeProcessor @Inject() (
                   log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
-                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))
+                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(config)
                   if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
                   else {
                     sc.threadRef.get.interrupt
