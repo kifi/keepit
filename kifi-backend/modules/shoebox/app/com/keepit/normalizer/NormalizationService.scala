@@ -133,19 +133,23 @@ class NormalizationServiceImpl @Inject() (
 
   private def migrate(currentReference: NormalizationReference, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizationReference] =
     db.readWrite { implicit session =>
-      val latestCurrent = normalizedURIRepo.get(currentReference.uriId)
-      if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
+      val latestCurrentUri = normalizedURIRepo.get(currentReference.uriId)
+      val isWriteSafe =
+        latestCurrentUri.state != NormalizedURIStates.INACTIVE &&
+        latestCurrentUri.state != NormalizedURIStates.REDIRECTED &&
+        latestCurrentUri.normalization == currentReference.persistedNormalization
+      if (isWriteSafe) {
         val betterReference = internCandidate(successfulCandidate)
-
-        val (oldUriId, newUriId) = (currentReference.uriId, betterReference.uriId)
-        if (oldUriId != newUriId) {
-          if (currentReference.normalization.isEmpty) {
-            for (weakerVariationCandidate <- weakerCandidates.find { candidate => candidate.isTrusted && candidate.url == currentReference.url }) yield {
-              saveAndLog(latestCurrent.withNormalization(weakerVariationCandidate.normalization))
-            }
+        val shouldMigrate = currentReference.uriId != betterReference.uriId
+        if (shouldMigrate) {
+          val correctNormalization = currentReference.normalization orElse {
+            weakerCandidates.collectFirst { case candidate if candidate.isTrusted && candidate.url == currentReference.url => candidate.normalization }
           }
-          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = oldUriId, newUri = newUriId))
-          log.info(s"${oldUriId}: ${currentReference.url} will be redirected to ${newUriId}: ${betterReference.url}")
+          if (currentReference.persistedNormalization != correctNormalization)
+            saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
+
+          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
+          log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
         }
         Some(betterReference)
       }

@@ -19,7 +19,7 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.common.akka.SafeFuture
 
-import scala.concurrent.future
+import scala.concurrent.{Future, future}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.functional.syntax._
@@ -209,7 +209,7 @@ class ShoeboxController @Inject() (
   }
 
   // todo: revisit
-  def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
+  def recordPermanentRedirect() = Action(parse.json) { request =>
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
@@ -218,18 +218,37 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    val toBeRedirected = for {
-      candidateUri <- db.readOnly { implicit session => normUriRepo.getByUri(redirect.newDestination) }
-      normalization <- candidateUri.normalization
-    } yield {
-        val toBeRedirected = uri.withNormalization(Normalization.MOVED) // should persist here ???
-        db.readWrite { implicit session => normUriRepo.save(toBeRedirected) }
-        normalizationServiceProvider.get.update(NormalizationReference(toBeRedirected), VerifiedCandidate(candidateUri.url, normalization))
-        toBeRedirected
+    Async {
+      val resFutureOption = for {
+        candidateUri <- db.readOnly { implicit session => normUriRepo.getByUri(redirect.newDestination) }
+        normalization <- candidateUri.normalization
+      } yield {
+        val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
+        val verifiedCandidate = VerifiedCandidate(candidateUri.url, normalization)
+        val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
+        // Scraper reports entire NormalizedUri objects with a major chance of stale data / race conditions
+        // The following is meant for synchronisation and should be revisited when scraper apis are rewritten to report modified fields only
+
+        updateFuture.map {
+          case Some(update) => {
+            val redirectedUri = db.readOnly() { implicit session => normUriRepo.get(uri.id.get) }
+            log.info(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
+            redirectedUri
+          }
+          case None => {
+            log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+            uri
+          }
+        }
       }
-    val res = toBeRedirected getOrElse uri
-    log.info(s"[recordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$res")
-    Ok(Json.toJson(res))
+
+      val resFuture = resFutureOption getOrElse {
+          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+          Future.successful(uri)
+        }
+
+      resFuture.map { res => Ok(Json.toJson(res)) }
+    }
   }
 
   def recordScrapedNormalization() = Action(parse.json) { request =>

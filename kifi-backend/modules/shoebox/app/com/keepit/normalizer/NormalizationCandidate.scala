@@ -48,10 +48,11 @@ object NormalizationCandidate {
   }
 }
 
-case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, signature: Option[Signature] = None) {
+case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, correctedNormalization: Option[Normalization] = None, signature: Option[Signature] = None) {
   require(uri.id.isDefined, "NormalizedURI must be persisted before it can be considered a reference normalization")
   def uriId: Id[NormalizedURI] = uri.id.get
   def url = uri.url
-  def normalization: Option[Normalization] = uri.normalization
+  def persistedNormalization: Option[Normalization] = uri.normalization
+  def normalization: Option[Normalization] = correctedNormalization orElse persistedNormalization
 }
 
