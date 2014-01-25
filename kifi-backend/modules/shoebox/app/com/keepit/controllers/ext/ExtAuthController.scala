@@ -25,6 +25,7 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
+  socialUserRepo: SocialUserInfoRepo,
   userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -56,8 +57,9 @@ class ExtAuthController @Inject() (
        })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate, notAuthed) = db.readWrite { implicit s =>
       val user: User = userRepo.get(userId)
+      val notAuthed = socialUserRepo.getNotAuthorizedByUser(userId).map(_.networkType.name)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
@@ -71,7 +73,7 @@ class ExtAuthController @Inject() (
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate)
+      (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate, notAuthed)
     }
 
     if (isUpdate || isInstall) {
@@ -106,7 +108,8 @@ class ExtAuthController @Inject() (
       "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
       "patterns" -> urlPatterns,
-      "eip" -> encryptedIp
+      "eip" -> encryptedIp,
+      "notAuthed" -> notAuthed
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 

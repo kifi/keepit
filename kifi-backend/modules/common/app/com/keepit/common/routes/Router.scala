@@ -120,6 +120,7 @@ object Shoebox extends Service {
     def getUserSegment(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/userSegment", Param("userId", userId))
     def getExtensionVersion(installationId: ExternalId[KifiInstallation]) = ServiceRoute(GET, "/internal/shoebox/database/extensionVersion", Param("installationId", installationId))
     def triggerRawKeepImport() = ServiceRoute(POST, "/internal/shoebox/database/triggerRawKeepImport")
+    def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = ServiceRoute(POST, "/internal/shoebox/database/triggerSocialGraphFetch", Param("id", socialUserInfoId))
   }
 }
 
@@ -245,7 +246,7 @@ object Common {
   object internal {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")
     def version() = ServiceRoute(GET, "/internal/version")
-    def threadDetails() = ServiceRoute(GET, "/internal/common/threadDetails")
+    def threadDetails(name: Option[String], state: Option[String]) = ServiceRoute(GET, "/internal/common/threadDetails", Param("name", name), Param("state", state), Param("hideStack"))
   }
 }
 

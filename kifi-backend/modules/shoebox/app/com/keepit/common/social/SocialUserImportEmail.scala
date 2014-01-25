@@ -12,21 +12,21 @@ class SocialUserImportEmail @Inject() (
 
   def importEmail(userId: Id[User], emailString: String): EmailAddress = {
     db.readWrite { implicit s =>
-      emailRepo.getByAddressOpt(emailString, excludeState = None) match {
-        case Some(email) =>
-          if (email.userId != userId) {
-            if (email.state == EmailAddressStates.UNVERIFIED) {
-              throw new IllegalStateException(s"email $email is not associated with user $userId")
-            }
-            if (email.state != EmailAddressStates.VERIFIED) {
-              emailRepo.save(email.copy(userId = userId, state = EmailAddressStates.VERIFIED))
-            }
+      val emails = emailRepo.getByAddress(emailString, excludeState = None)
+      emails.map { email =>
+        if (email.userId != userId) {
+          if (email.state == EmailAddressStates.VERIFIED) {
+            throw new IllegalStateException(s"email $email is not associated with user $userId")
+          } else if (email.state == EmailAddressStates.UNVERIFIED) {
+            emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
           }
-          log.info(s"email $email for user $userId already exists")
-          email
-        case None =>
-          log.info(s"creating new email $emailString for user $userId")
-          emailRepo.save(EmailAddress(userId = userId, address = emailString, state = EmailAddressStates.VERIFIED))
+          None
+        } else {
+          Some(email)
+        }
+      }.flatten.headOption.getOrElse {
+        log.info(s"creating new email $emailString for user $userId")
+        emailRepo.save(EmailAddress(userId = userId, address = emailString, state = EmailAddressStates.VERIFIED))
       }
     }
   }

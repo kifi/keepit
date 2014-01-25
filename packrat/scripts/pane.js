@@ -113,7 +113,6 @@ var pane = pane || function () {  // idempotent for Chrome
         $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
           .off("transitionend", end);
         $cubby.css("overflow", "");
-        window.dispatchEvent(new Event("resize"));  // for other page scripts
       });
       api.port.emit("pane", {old: $pane[0].dataset.locator, new: locator});
       $pane[0].dataset.locator = locator;
@@ -149,6 +148,7 @@ var pane = pane || function () {  // idempotent for Chrome
           $pane.before(tile);
         }
         $box.data("shown", true).triggerHandler("kifi:shown");
+        window.dispatchEvent(new Event("resize"));  // for other page scripts
       })
       .hoverfu('.kifi-pane-head-logo', function(configureHover) {
         configureHover({

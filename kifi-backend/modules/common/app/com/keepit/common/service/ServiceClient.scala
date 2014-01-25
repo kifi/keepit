@@ -119,6 +119,20 @@ trait ServiceClient extends Logging {
     }
   }
 
+  protected def callLeader(call: ServiceRoute, body: JsValue = JsNull) = {
+    serviceCluster.leader match {
+      case Some(clusterLeader) =>
+        callUrl(call, new ServiceUri(clusterLeader, protocol, port, call.url), body)
+      case None =>
+        log.info("[callLeader] I don't know any leaders, so calling everyone.")
+        Future.sequence(urls(call.url).map { url =>
+          callUrl(call, url, body)
+        }).map { res =>
+          res.last
+        }
+    }
+  }
+
   protected def tee(call: ServiceRoute, body: JsValue = JsNull, teegree: Int = 2): Future[ClientResponse] = {
     val futures = Random.shuffle(urls(call.url)).take(teegree).map(callUrl(call, _, body)) //need to shuffle
     Future.firstCompletedOf(futures)

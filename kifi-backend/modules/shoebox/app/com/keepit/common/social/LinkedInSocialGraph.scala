@@ -75,7 +75,7 @@ class LinkedInSocialGraph @Inject() (
 
   def extractEmails(parentJson: JsValue): Seq[String] = (parentJson \ "emailAddress").asOpt[String].toSeq
 
-  def extractFriends(parentJson: JsValue): Seq[(SocialUserInfo, JsValue)] =
+  def extractFriends(parentJson: JsValue): Seq[SocialUserInfo] =
     ((parentJson \ "values").asOpt[JsArray] getOrElse JsArray()).value collect {
       case jsv if (jsv \ "id").asOpt[String].exists(_ != "private") => createSocialUserInfo(jsv)
     }
@@ -88,6 +88,9 @@ class LinkedInSocialGraph @Inject() (
 
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // LinkedIn has no way of doing this through the API
+    db.readWrite { implicit s =>
+      socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+    }
     Future.successful(())
   }
 
@@ -128,24 +131,24 @@ class LinkedInSocialGraph @Inject() (
   val TWO_MINUTES = 2 * 60 * 1000
   private def getJson(url: String): JsValue = client.withTimeout(TWO_MINUTES).get(DirectUrl(url), client.ignoreFailure).json
 
-  private def getJson(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
+  private def getJson(socialUserInfo: SocialUserInfo): Stream[JsValue] = {
     import LinkedInSocialGraph.{ConnectionsPageSize => PageSize}
     val token = getAccessToken(socialUserInfo)
     val sid = socialUserInfo.socialId
     val connectionsPages = Stream.from(0).map { n => getJson(connectionsUrl(sid, token, n*PageSize, PageSize)) }
     val numPages = 1 + connectionsPages.indexWhere(json => (json \ "_count").asOpt[Int].getOrElse(0) < PageSize)
-    connectionsPages.take(numPages).toIndexedSeq :+ getJson(profileUrl(sid, token))
+    getJson(profileUrl(sid, token)) #:: connectionsPages.take(numPages)
   }
 
-  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
-    (SocialUserInfo(
+  private def createSocialUserInfo(friend: JsValue): SocialUserInfo =
+    SocialUserInfo(
       fullName = ((friend \ "firstName").asOpt[String] ++ (friend \ "lastName").asOpt[String]).mkString(" "),
       pictureUrl = (friend \ "pictureUrls" \ "values").asOpt[JsArray].map(_(0).asOpt[String]).flatten,
       profileUrl = (friend \ "publicProfileUrl").asOpt[String],
       socialId = SocialId((friend \ "id").as[String]),
       networkType = SocialNetworks.LINKEDIN,
       state = SocialUserInfoStates.FETCHED_USING_FRIEND
-    ), friend)
+    )
 
   protected def getAccessToken(socialUserInfo: SocialUserInfo): String = {
     val credentials = socialUserInfo.credentials.getOrElse(throw new Exception("Can't find credentials for %s".format(socialUserInfo)))

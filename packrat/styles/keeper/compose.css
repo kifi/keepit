@@ -1,6 +1,4 @@
-form.kifi-compose {
-  display: block;
-  margin: 0;
+.kifi-compose {
   padding: 10px 6px;
   font-size: 12px;
   line-height: 14px;
@@ -18,7 +16,7 @@ form.kifi-compose {
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
-  word-break: break-word;
+  word-wrap: break-word;
 }
 .kifi-compose.kifi-empty .kifi-compose-draft:focus {
   -webkit-animation: paddingLeft10 .16s ease-out;

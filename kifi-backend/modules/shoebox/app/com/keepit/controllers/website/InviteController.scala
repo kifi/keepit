@@ -116,7 +116,7 @@ class InviteController @Inject() (db: Database,
     }
     Async {
       implicit val duration = 5.minutes
-      TimeoutFuture(Future.sequence(info.map(socialGraphPlugin.asyncFetch))).map { res =>
+      TimeoutFuture(Future.sequence(info.map(socialGraphPlugin.asyncFetch(_)))).map { res =>
         Redirect("/friends/invite")
       }
     }

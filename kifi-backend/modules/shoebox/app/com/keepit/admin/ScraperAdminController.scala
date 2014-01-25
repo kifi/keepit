@@ -32,11 +32,11 @@ class ScraperAdminController @Inject() (
 
   def searchScraper = AdminHtmlAction { implicit request => Ok(html.admin.searchScraper()) }
 
-  def pendingScraperRequests = AdminHtmlAction { implicit request =>
+  def pendingScraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction { implicit request =>
     Async {
       val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
       val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
-      val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails)
+      val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
       for {
         requests <- requestsFuture
         count <- countFuture

@@ -15,8 +15,6 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.util.Random
 import views.html
-import scala.Some
-
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 

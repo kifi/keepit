@@ -71,19 +71,17 @@ class UserIndexer(
       if (users.isEmpty) Future.successful(Seq[UserInfo]())
       else {
         val userIds = users.map(_.id.get)
-        val basicUsersFuture = shoeboxClient.getBasicUsers(userIds)
         val emailsFuture = shoeboxClient.getEmailAddressesForUsers(userIds)
         val experimentsFuture = shoeboxClient.getExperimentsByUserIds(userIds)
 
         val infoFuture = for {
-          basicUsers <- basicUsersFuture
           emails <- emailsFuture
           experiments <- experimentsFuture
         } yield {
           users.flatMap{ user =>
             val id = user.id.get
-            (basicUsers.get(id), emails.get(id), experiments.get(id)) match {
-              case (Some(basicUser), Some(emails), Some(exps)) => Some(UserInfo(user, basicUser, emails, exps.toSeq))
+            (BasicUser.fromUser(user), emails.get(id), experiments.get(id)) match {
+              case (basicUser, Some(emails), Some(exps)) => Some(UserInfo(user, basicUser, emails, exps.toSeq))
               case _ => None
             }
           }

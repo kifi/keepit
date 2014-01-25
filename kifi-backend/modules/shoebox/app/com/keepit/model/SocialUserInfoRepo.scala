@@ -14,6 +14,7 @@ import scala.reflect.ClassTag
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
@@ -50,6 +51,11 @@ class SocialUserInfoRepoImpl @Inject() (
       networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo.apply _, SocialUserInfo.unapply _)
   }
 
+  private val UNPROCESSED_STATES = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
+  private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
+  private val REFRESH_FREQUENCY = 15 // days
+
+
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
 
   override def deleteCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
@@ -73,6 +79,9 @@ class SocialUserInfoRepoImpl @Inject() (
       (for(f <- table if f.userId === userId) yield f).list
     }
 
+  def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
+      (for(f <- table if f.userId === userId && f.state === SocialUserInfoStates.APP_NOT_AUTHORIZED) yield f).list
+
   def getSocialUserByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUser] =
     socialUserCache.getOrElse(SocialUserKey(userId)) {
       (for(f <- table if f.userId === userId) yield f).list.map(_.credentials).flatten.toSeq
@@ -87,13 +96,14 @@ class SocialUserInfoRepoImpl @Inject() (
     }
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
-    val UNPROCESSED_STATE = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
-    (for(f <- table if (f.state.inSet(UNPROCESSED_STATE) && f.credentials.isNotNull && f.createdAt < clock.now.minusMinutes(15))) yield f).list
+    (for(f <- table if f.state.inSet(UNPROCESSED_STATES) && f.userId.isNotNull && f.credentials.isNotNull && f.networkType.inSet(SocialNetworks.REFRESHING) && f.createdAt < clock.now.minusMinutes(15)) yield f).list
   }
 
-  def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
-    (for(f <- table if f.userId.isNotNull && f.credentials.isNotNull && f.networkType.inSet(SocialNetworks.REFRESHING) &&
-      (f.lastGraphRefresh.isNull || f.lastGraphRefresh < clock.now.minusDays(15))) yield f).list
+  def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] = {
+    (for(f <- table if f.userId.isNotNull && f.credentials.isNotNull
+      && f.networkType.inSet(SocialNetworks.REFRESHING) && f.state.inSet(REFRESHING_STATES)
+      && (f.lastGraphRefresh.isNull || f.lastGraphRefresh < clock.now.minusDays(REFRESH_FREQUENCY))) yield f).list
+  }
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
