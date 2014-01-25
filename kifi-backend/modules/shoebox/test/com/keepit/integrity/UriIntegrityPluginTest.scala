@@ -34,6 +34,9 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
             val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
 
+            scrapeInfoRepo.save(ScrapeInfo(uriId = nuri0.id.get))
+            scrapeInfoRepo.save(ScrapeInfo(uriId = nuri2.id.get))
+
             val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/index", nuri2.id.get))        // to be splitted, to be pointing to
@@ -64,8 +67,8 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           urlRepo.getByNormUri(uris(2).id.get).size === 2
           urlRepo.getByNormUri(uris(3).id.get).size === 0
 
-          //scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.ACTIVE
-          //scrapeInfoRepo.count === 2
+          scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.count === 2
 
           bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(0).id.get
 
@@ -82,9 +85,9 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
           urlRepo.getByNormUri(uris(0).id.get) === Nil
 
-//          scrapeInfoRepo.count === 3
-//          scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.INACTIVE
-//          scrapeInfoRepo.getByUriId(uris(1).id.get).head.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.count === 3
+          scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).head.state === ScrapeInfoStates.ACTIVE
 
 
           bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(1).id.get
@@ -105,8 +108,8 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
 
-//          scrapeInfoRepo.count === 4
-//          scrapeInfoRepo.getByUriId(uris(3).id.get).head.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.count === 4
+          scrapeInfoRepo.getByUriId(uris(3).id.get).head.state === ScrapeInfoStates.ACTIVE
 
           bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
           bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
