@@ -32,7 +32,7 @@ import com.keepit.model.UserConnectionIdKey
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
-import com.keepit.scraper.HttpRedirect
+import com.keepit.scraper.{Signature, HttpRedirect}
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
@@ -102,7 +102,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
-  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
@@ -613,8 +613,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit = {
-    call(Shoebox.internal.recordTrustedNormalization(), Json.obj("id" -> uriId.id, "url" -> candidateUrl, "normalization" -> candidateNormalization))
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit = {
+    call(Shoebox.internal.recordScrapedNormalization(), Json.obj("id" -> uriId.id, "signature" -> signature.toBase64(), "url" -> candidateUrl, "normalization" -> candidateNormalization))
   }
 
   def getProxy(url:String):Future[Option[HttpProxy]] = {

@@ -14,7 +14,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.normalizer.{TrustedCandidate, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer._
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.common.akka.SafeFuture
@@ -26,7 +26,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{BasicUser, SocialNetworkType, SocialId}
-import com.keepit.scraper.{ScraperConfig, HttpRedirect}
+import com.keepit.scraper.{Signature, ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
@@ -36,7 +36,15 @@ import play.api.libs.json.JsBoolean
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsNumber
-import com.keepit.normalizer.TrustedCandidate
+import play.api.libs.json.JsObject
+import com.keepit.normalizer.VerifiedCandidate
+import play.api.libs.json.JsArray
+import com.keepit.model.KifiInstallation
+import play.api.libs.json.JsBoolean
+import play.api.libs.json.JsString
+import scala.Some
+import play.api.libs.json.JsNumber
+import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 
 
@@ -216,7 +224,7 @@ class ShoeboxController @Inject() (
     } yield {
         val toBeRedirected = uri.withNormalization(Normalization.MOVED) // should persist here ???
         db.readWrite { implicit session => normUriRepo.save(toBeRedirected) }
-        normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization))
+        normalizationServiceProvider.get.update(NormalizationReference(toBeRedirected), VerifiedCandidate(candidateUri.url, normalization))
         toBeRedirected
       }
     val res = toBeRedirected getOrElse uri
@@ -224,15 +232,15 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def recordTrustedNormalization() = Action(parse.json) { request =>
+  def recordScrapedNormalization() = Action(parse.json) { request =>
     Async {
       val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+      val signature = Signature((request.body \ "signature").as[String])
       val candidateUrl = (request.body \ "url").as[String]
       val candidateNormalization = (request.body \ "normalization").as[Normalization]
 
       val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-      val candidate = TrustedCandidate(candidateUrl, candidateNormalization)
-      normalizationServiceProvider.get.update(uri, candidate).map { idOpt =>
+      normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization)).map { idOpt =>
         implicit val format = Id.format[NormalizedURI]
         Ok(Json.toJson(idOpt))
       }

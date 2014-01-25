@@ -5,7 +5,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.integrity.{URIMigration, UriIntegrityPlugin}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
@@ -15,8 +15,7 @@ import com.keepit.common.db.Id
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = update(current, false, candidates)
-  def update(current: NormalizedURI, isNew: Boolean, candidates: Seq[NormalizationCandidate]): Future[Option[Id[NormalizedURI]]]
+  def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
   def normalize(uriString: String)(implicit session: RSession): String
   def prenormalize(uriString: String)(implicit session: RSession): String
 }
@@ -48,19 +47,18 @@ class NormalizationServiceImpl @Inject() (
     prenormalizedStringOption.getOrElse(uriString)
   }
 
-  def update(currentReference: NormalizedURI, isNew: Boolean, candidates: Seq[NormalizationCandidate]): Future[Option[Id[NormalizedURI]]] = {
-    val relevantCandidates = getRelevantCandidates(currentReference, isNew, candidates)
+  def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
+    val relevantCandidates = getRelevantCandidates(currentReference, candidates)
     for {
       betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
-      betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, isNew, betterReferenceOption)
-    } yield betterReferenceOptionAfterAdditionalUpdates.map(_.id.get)
+      betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
+    } yield betterReferenceOptionAfterAdditionalUpdates.map(_.uriId)
   } tap(_.onFailure {
     case e => airbrake.notify(s"Normalization update failed", e)
   })
 
-  private def processUpdate(currentReference: NormalizedURI, candidates: NormalizationCandidate*): Future[Option[NormalizedURI]] = {
-
-    val contentChecks = db.readOnly { implicit session => priorKnowledge.getContentChecks(currentReference.url) }
+  private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = {
+    val contentChecks = db.readOnly { implicit session => priorKnowledge.getContentChecks(currentReference.url, currentReference.signature) }
     val findStrongerCandidate = FindStrongerCandidate(currentReference, Action(currentReference, contentChecks))
 
     for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(candidates) } yield {
@@ -72,16 +70,17 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getRelevantCandidates(currentReference: NormalizedURI, isNew: Boolean, candidates: Seq[NormalizationCandidate]) = {
+  private def getRelevantCandidates(currentReference: NormalizationReference, candidates: Seq[NormalizationCandidate]) = {
 
     val prenormalizedCandidates = candidates.map {
+      case verifiedCandidate: VerifiedCandidate => verifiedCandidate
+      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => ScrapedCandidate(prenormalize(url), normalization) }
       case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => UntrustedCandidate(prenormalize(url), normalization) }
-      case candidate: TrustedCandidate => candidate
     }
 
     val allCandidates =
-      if (isNew || currentReference.normalization.isEmpty)
-        prenormalizedCandidates ++ findVariations(currentReference.url).map { case (normalization, uri) => TrustedCandidate(uri.url, uri.normalization.getOrElse(normalization)) }
+      if (currentReference.isNew || currentReference.normalization.isEmpty)
+        prenormalizedCandidates ++ findVariations(currentReference.url).map { case (normalization, uri) => VerifiedCandidate(uri.url, uri.normalization.getOrElse(normalization)) }
       else
         prenormalizedCandidates
 
@@ -95,12 +94,12 @@ class NormalizationServiceImpl @Inject() (
     } yield (normalization, uri)
   }
 
-  private def isRelevant(currentReference: NormalizedURI, candidate: NormalizationCandidate): Boolean =
+  private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean =
     currentReference.normalization.isEmpty ||
     currentReference.normalization.get < candidate.normalization ||
     (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
 
-  private case class FindStrongerCandidate(currentReference: NormalizedURI, oracle: NormalizationCandidate => Action) {
+  private case class FindStrongerCandidate(currentReference: NormalizationReference, oracle: NormalizationCandidate => Action) {
 
     def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
       findCandidate(candidates.sortBy(_.normalization).reverse)
@@ -132,13 +131,13 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def migrate(currentReference: NormalizedURI, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizedURI] =
+  private def migrate(currentReference: NormalizationReference, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizationReference] =
     db.readWrite { implicit session =>
-      val latestCurrent = normalizedURIRepo.get(currentReference.id.get)
+      val latestCurrent = normalizedURIRepo.get(currentReference.uriId)
       if (latestCurrent.state != NormalizedURIStates.INACTIVE && latestCurrent.state != NormalizedURIStates.REDIRECTED && latestCurrent.normalization == currentReference.normalization) {
         val betterReference = internCandidate(successfulCandidate)
 
-        val (oldUriId, newUriId) = (currentReference.id.get, betterReference.id.get)
+        val (oldUriId, newUriId) = (currentReference.uriId, betterReference.uriId)
         if (oldUriId != newUriId) {
           if (currentReference.normalization.isEmpty) {
             for (weakerVariationCandidate <- weakerCandidates.find { candidate => candidate.isTrusted && candidate.url == currentReference.url }) yield {
@@ -153,24 +152,26 @@ class NormalizationServiceImpl @Inject() (
       else None
     }
 
-  private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizedURI = {
+  private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {
     val (url, normalization) = (successfulCandidate.url, successfulCandidate.normalization)
-    normalizedURIRepo.getByNormalizedUrl(url) match {
+    val newReferenceUri = normalizedURIRepo.getByNormalizedUrl(url) match {
       case None => saveAndLog(NormalizedURI.withHash(normalizedUrl = url, normalization = Some(normalization)))
       case Some(uri) if uri.normalization.isEmpty || uri.normalization.get < normalization => saveAndLog(uri.withNormalization(normalization))
       case Some(uri) => uri
     }
+    NormalizationReference(newReferenceUri, isNew = true)
   }
 
   private def saveAndLog(uri: NormalizedURI)(implicit session: RWSession) =
     normalizedURIRepo.save(uri) tap { saved => log.info(s"${saved.id.get}: ${saved.url} saved with ${saved.normalization.get}") }
 
-  def processAdditionalUpdates(currentReference: NormalizedURI, isNew: Boolean, betterReferenceOption: Option[NormalizedURI]): Future[Option[NormalizedURI]] = {
-    val newReferenceOption = betterReferenceOption orElse (if (isNew) Some(currentReference) else None)
+  def processAdditionalUpdates(currentReference: NormalizationReference, betterReferenceOption: Option[NormalizationReference]): Future[Option[NormalizationReference]] = {
+    val bestReference = betterReferenceOption getOrElse currentReference
+    val newReferenceOption = Some(bestReference).filter(_.isNew)
     val additionalUpdatesOption = newReferenceOption.map { newReference =>
-      val betterReferenceCandidate = TrustedCandidate(newReference.url, newReference.normalization.get)
+      val newReferenceCandidate = VerifiedCandidate(newReference.url, newReference.normalization.get)
       getURIsToBeFurtherUpdated(currentReference, newReference).map { uri =>
-        processUpdate(uri, betterReferenceCandidate)
+        processUpdate(NormalizationReference(uri), newReferenceCandidate)
       }
     }
 
@@ -180,7 +181,7 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getURIsToBeFurtherUpdated(currentReference: NormalizedURI, newReference: NormalizedURI): Set[NormalizedURI] = db.readOnly { implicit session =>
+  private def getURIsToBeFurtherUpdated(currentReference: NormalizationReference, newReference: NormalizationReference): Set[NormalizedURI] = db.readOnly { implicit session =>
     val haveBeenUpdated = Set(currentReference.url, newReference.url)
     val toBeUpdated = for {
       url <- haveBeenUpdated

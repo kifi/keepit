@@ -21,7 +21,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
-import com.keepit.scraper.HttpRedirect
+import com.keepit.scraper.{Signature, HttpRedirect}
 import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
 
@@ -462,7 +462,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
 
-  def recordTrustedNormalization(uriId: Id[NormalizedURI], candidateUrl: String, candidateNormalization: Normalization): Unit = ???
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit = ???
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
