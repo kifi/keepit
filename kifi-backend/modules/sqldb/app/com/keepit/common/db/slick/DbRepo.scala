@@ -152,6 +152,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
     def externalId = column[ExternalId[M]]("external_id", O.NotNull)
   }
+
+  trait NamedColumns { self: RepoTable[_] =>
+    lazy val _columnStrings = {
+      create_*.map(_.name).take(30).map(db.entityName)
+    }
+    def columnStrings(tableName: String = tableName) = _columnStrings.map(c => tableName + "." + c).mkString(", ")
+  }
 }
 
 trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M] =>

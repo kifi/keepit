@@ -48,14 +48,14 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, uri3, _, _) = setup()
         db.readOnly { implicit s =>
-          val marks = bookmarkRepo.getByUser(user1.id.get, None, None, None, 3)
+          val marks = bookmarkRepo.getByUser(user1.id.get, None, None, 3)
           marks.map(_.uriId) === Seq(uri3.id.get, uri2.id.get, uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, None, 5).map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), None, 5).map(_.uriId) === Seq(uri3.id.get)
-          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, None, None, None, 0) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, 5).map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), 5).map(_.uriId) === Seq(uri3.id.get)
+          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
         }
       }
     }

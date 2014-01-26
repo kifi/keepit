@@ -54,14 +54,14 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit s =>
           val tagId = collections(0).id.get
           collectionRepo.get(tagId).state.value === "active"
-          val bookmarksWithTags = bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
+          val bookmarksWithTags = bookmarkRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
           bookmarksWithTags.size === 2
           (bookmarksWithTags map {b => b.id.get}).toSet === Set(bookmark1.id.get, bookmark2.id.get)
         }
 
         db.readOnly { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "active"
-          val bookmarksWithTags = bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000)
+          val bookmarksWithTags = bookmarkRepo.getByUserAndCollection(user.id.get, collections(1).id.get, None, None, 1000)
           bookmarksWithTags.size === 1
           bookmarksWithTags.head.id.get === bookmark1.id.get
         }

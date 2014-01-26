@@ -115,7 +115,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         }
 
         val keeps = db.readWrite {implicit s =>
-          bookmarkRepo.getByUser(user1.id.get, None, None, None, 100)
+          bookmarkRepo.getByUser(user1.id.get, None, None, 100)
         }
         keeps.size === 2
 
@@ -201,7 +201,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         }
 
         val keeps = db.readWrite {implicit s =>
-          bookmarkRepo.getByUser(user.id.get, None, None, None, 100)
+          bookmarkRepo.getByUser(user.id.get, None, None, 100)
         }
         keeps.size === 2
 
