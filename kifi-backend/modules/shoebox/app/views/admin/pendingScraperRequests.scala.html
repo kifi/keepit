@@ -1,4 +1,4 @@
-@(pending:Seq[ScrapeInfo], count:Int, threadDetailsSeq:Seq[com.keepit.scraper.ScraperThreadDetails])(implicit flash: Flash)
+@(pending:Seq[ScrapeInfo], count:Int, threadInstanceInfoSeq:Seq[com.keepit.scraper.ScraperThreadInstanceInfo])(implicit flash: Flash)
 
 @import com.keepit.controllers.admin.routes
 
@@ -42,21 +42,61 @@
         </table>
     </div>
 
-    <span class="thread-details-hint">(@threadDetailsSeq.length @if(threadDetailsSeq.length == 1) {instance} else {instances})</span>
+    <span class="thread-details-hint">(@threadInstanceInfoSeq.length @if(threadInstanceInfoSeq.length == 1) {instance} else {instances})</span>
 
     <div class="thread-details">
-        <table class="table table-bordered">
-            @for(threadDetails <- threadDetailsSeq) {
-                <tr><td>
-                    @adminHelper.instanceInfoModal(threadDetails.info.instanceId.toString, threadDetails.info)
-                    <h5>Instance ID: <a href="#" onClick="$('#@threadDetails.info.instanceId.toString').modal('show'); return false;">@threadDetails.info.instanceId.toString</a></h5>
-                    <table class="table table-condensed table-bordered table-striped">
-                        @for(details <- threadDetails.forkJoinThreadDetails) {
-                            <tr><td>@details</td></tr>
-                        }
+        <div style="margin-bottom:10px;overflow:hidden">
+            @for(threadInstanceInfo <- threadInstanceInfoSeq) {
+                @adminHelper.instanceInfoModal(threadInstanceInfo.info.instanceId.toString, threadInstanceInfo.info)
+                <div class="well" style="background-color:#efefef;margin-bottom:10px;">
+                    <div style="margin-bottom:10px;overflow:hidden;">
+                        <div style="float:left"><h4 style="padding:0;margin:0">Instance @threadInstanceInfo.info.instanceId.toString</h4></div>
+                        <div style="float:right"><button type="button" data-toggle="modal" data-target="#@threadInstanceInfo.info.instanceId.toString">Show Info</button></div>
+                    </div>
+                    <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                        <thead>
+                            <tr>
+                                <th class="span2">Thread ID</th>
+                                <th class="span1">Submitted</th>
+                                <th class="span1">Called</th>
+                                <th class="span1">Kill Count</th>
+                                <th class="span1">URI ID</th>
+                                <th class="span1">Scrape ID</th>
+                                <th class="span2">URL</th>
+                                <th class="span2">State</th>
+                                <th class="span1">Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for(details <- threadInstanceInfo.forkJoinThreadDetails) {
+                                <tr>
+                                    <td>@details.name</td>
+                                    @details.task match {
+                                        case Some(task) => {
+                                            <td>@adminHelper.timeDisplay(task.submitDateTime)</td>
+                                            <td>@adminHelper.timeDisplay(task.callDateTime)</td>
+                                            <td>@task.killCount</td>
+                                            <td>@task.uriId.getOrElse("-")</td>
+                                            <td>@task.scrapeId.getOrElse("-")</td>
+                                            <td>@task.url</td>
+                                        }
+                                        case None => {
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                        }
+                                    }
+                                    <td>@details.state.getOrElse("-")</td>
+                                    <td>@details.share.getOrElse("-")</td>
+                                </tr>
+                            }
+                        </tbody>
                     </table>
-                </td></tr>
+                </div>
             }
-        </table>
+        </div>
     </div>
 </div>
