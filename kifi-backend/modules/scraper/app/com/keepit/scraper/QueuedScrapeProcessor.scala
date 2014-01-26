@@ -17,17 +17,23 @@ import com.keepit.common.performance._
 import org.apache.http.HttpStatus
 import play.api.Play.current
 import scala.concurrent._
+import play.api.libs.json.Json
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
   val killCount = new AtomicInteger()
   val threadRef = new AtomicReference[Thread]()
   val exRef = new AtomicReference[Throwable]()
-  lazy val submitLocalTime = new DateTime(submitTS).toLocalTime
-  def callLocalTime = new DateTime(callTS.get).toLocalTime
+  lazy val submitDateTime = new DateTime(submitTS)
+  lazy val submitLocalTime = submitDateTime.toLocalTime
+  def callDateTime = new DateTime(callTS.get)
+  def callLocalTime = callDateTime.toLocalTime
   def runMillis(curr:Long) = curr - callTS.get
   def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
-  override def toString = s"[Task:([$submitLocalTime],[${callLocalTime}],[$killCount],${uri.id.getOrElse("")},${info.id.getOrElse("")},${uri.url})]"
+  override def toString = {
+    val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
+    s"[Task:${Json.stringify(Json.toJson(taskDetails))}]"
+  }
 }
 
 @Singleton

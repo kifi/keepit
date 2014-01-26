@@ -21,6 +21,8 @@ import play.api.libs.json._
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.amazon.AmazonInstanceInfo
 import scala.util.matching.Regex
+import org.joda.time.DateTime
+import org.codehaus.jackson.JsonProcessingException
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
 object ScrapeTuple {
@@ -40,9 +42,45 @@ object ScrapeRequest {
   )(ScrapeRequest.apply _, unlift(ScrapeRequest.unapply))
 }
 
-case class ScraperThreadDetails(info:AmazonInstanceInfo, details:String) {
-  lazy val forkJoinThreadDetails: Seq[String] = {
-    details.lines filter { !_.isEmpty } toList
+case class ScraperTaskDetails(
+  uriId:Option[Id[NormalizedURI]],
+  scrapeId:Option[Id[ScrapeInfo]],
+  url:String,
+  submitDateTime:DateTime,
+  callDateTime:DateTime,
+  killCount:Int)
+object ScraperTaskDetails {
+  implicit val format = (
+    (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
+    (__ \ 'scrapeId).formatNullable(Id.format[ScrapeInfo]) and
+    (__ \ 'url).format[String] and
+    (__ \ 'submitDateTime).format[DateTime] and
+    (__ \ 'callDateTime).format[DateTime] and
+    (__ \ 'killCount).format[Int]
+  )(ScraperTaskDetails.apply _, unlift(ScraperTaskDetails.unapply))
+}
+
+case class ScraperThreadDetails(name:String, state:Option[String], share:Option[String], task:Option[ScraperTaskDetails])
+object ScraperThreadDetails {
+  def buildFromString(details:String): ScraperThreadDetails = {
+    val reWithTask = """^(ForkJoinPool\S*)##\[Task:(.*)\]\s+(\w+)\s+(.*)\s+share""".r
+    val reNoTask = """^(ForkJoinPool\S*)\s+(\w+)\s+(.*)\s+share""".r
+    reWithTask findFirstIn details match {
+      case Some(reWithTask(name,task,state,share)) => {
+        try ScraperThreadDetails(name, Some(state), Some(share), Json.parse(task).asOpt[ScraperTaskDetails])
+        catch { case _:JsonProcessingException => ScraperThreadDetails(name, Some(state), Some(share), None) }
+      }
+      case None => reNoTask findFirstIn details match {
+        case Some(reNoTask(name,state,share)) => ScraperThreadDetails(name, Some(state), Some(share), None)
+        case None => ScraperThreadDetails(details, None, None, None)
+      }
+    }
+  }
+}
+
+case class ScraperThreadInstanceInfo(info:AmazonInstanceInfo, details:String) {
+  lazy val forkJoinThreadDetails: Seq[ScraperThreadDetails] = {
+    (details.lines filter { !_.isEmpty } toList) map { ScraperThreadDetails.buildFromString(_) }
   }
 }
 
@@ -57,7 +95,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getBasicArticle(url:String):Future[Option[BasicArticle]]
   def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
   def getBasicArticleWithExtractor(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
-  def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadDetails]]
+  def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -117,8 +155,8 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadDetails]] = {
-    broadcastWithUrls(Common.internal.threadDetails(Some("ForkJoinPool"), filterState)) map { _ map {response => ScraperThreadDetails(response.uri.serviceInstance.instanceInfo, response.response.body) } }
+  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = {
+    broadcastWithUrls(Common.internal.threadDetails(Some("ForkJoinPool"), filterState)) map { _ map {response => ScraperThreadInstanceInfo(response.uri.serviceInstance.instanceInfo, response.response.body) } }
   }
 }
 
@@ -144,5 +182,5 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
 
-  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadDetails]] = ???
+  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
 }
