@@ -206,10 +206,8 @@ class ShoeboxController @Inject() (
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
     Async {
-      val resFutureOption = for {
-        candidateUri <- db.readOnly { implicit session => normUriRepo.getByUri(redirect.newDestination) }
-        normalization <- candidateUri.normalization
-      } yield {
+      val candidateUri = db.readWrite { implicit session => normUriRepo.internByUri(redirect.newDestination) }
+      val resFutureOption = candidateUri.normalization.map { normalization =>
         val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
         val verifiedCandidate = VerifiedCandidate(candidateUri.url, normalization)
         val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
@@ -223,14 +221,14 @@ class ShoeboxController @Inject() (
             redirectedUri
           }
           case None => {
-            log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+            log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
             uri
           }
         }
       }
 
       val resFuture = resFutureOption getOrElse {
-          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
           Future.successful(uri)
         }
 
