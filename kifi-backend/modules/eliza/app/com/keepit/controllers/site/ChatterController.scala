@@ -25,18 +25,16 @@ class ChatterController @Inject() (
 
   def getChatter() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
-    Async {
-      messagingCommander.getChatter(request.user.id.get, Seq(url)).map { res =>
-        Ok(res.headOption.map { case (url, msgs) =>
-          if (msgs.size == 1) {
-            db.readOnly { implicit session =>
-              Json.obj("threads" -> 1, "threadId" -> threadRepo.get(msgs.head).externalId.id)
-            }
-          } else {
-            Json.obj("threads" -> msgs.size)
+    messagingCommander.getChatter(request.user.id.get, Seq(url)).map { res =>
+      Ok(res.headOption.map { case (url, msgs) =>
+        if (msgs.size == 1) {
+          db.readOnly { implicit session =>
+            Json.obj("threads" -> 1, "threadId" -> threadRepo.get(msgs.head).externalId.id)
           }
-        }.getOrElse(Json.obj()))
-      }
+        } else {
+          Json.obj("threads" -> msgs.size)
+        }
+      }.getOrElse(Json.obj()))
     }
   }
 }

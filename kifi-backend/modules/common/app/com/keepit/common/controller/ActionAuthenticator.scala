@@ -15,11 +15,11 @@ import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
 import play.api.i18n.Messages
-import play.api.libs.json.JsNumber
+import play.api.libs.json.{JsValue, JsNumber}
 import play.api.mvc._
 import securesocial.core._
 
-case class ReportedException(val id: ExternalId[AirbrakeError], val cause: Throwable) extends Exception(id.toString, cause)
+case class ReportedException(id: ExternalId[AirbrakeError], cause: Throwable) extends Exception(id.toString, cause)
 
 case class AuthenticatedRequest[T](
     identity: Identity,
@@ -57,16 +57,16 @@ trait ActionAuthenticator extends SecureSocial {
       apiClient: Boolean,
       allowPending: Boolean,
       bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result,
-      onSocialAuthenticated: SecuredRequest[T] => Result,
-      onUnauthenticated: Request[T] => Result): Action[T]
+      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+      onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
+      onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T]
 
   private[controller] def authenticatedAction[T](
       apiClient: Boolean,
       allowPending: Boolean,
       bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result,
-      onUnauthenticated: Request[T] => Result): Action[T] = {
+      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+      onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = {
     authenticatedAction(
       apiClient = apiClient,
       allowPending = allowPending,
@@ -80,14 +80,14 @@ trait ActionAuthenticator extends SecureSocial {
       apiClient: Boolean,
       allowPending: Boolean,
       bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] = {
-        val onUnauthenticated = { implicit request: Request[_] =>
+      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult]): Action[T] = {
+        def onUnauthenticated = { implicit request: Request[T] =>
           if (apiClient) {
-            Forbidden(JsNumber(0))
+            Future.successful(Forbidden(JsNumber(0)))
           } else {
-            Redirect("/login")
+            Future.successful(Redirect("/login")
                 .flashing("error" -> Messages("securesocial.loginRequired"))
-                .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri))
+                .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri)))
           }
         }
         authenticatedAction(
@@ -98,6 +98,23 @@ trait ActionAuthenticator extends SecureSocial {
           onSocialAuthenticated = onUnauthenticated,
           onUnauthenticated = onUnauthenticated)
   }
+
+  object SecureSocialUserAwareAction extends ActionBuilder[RequestWithUser] {
+    protected def invokeBlock[A](request: Request[A],
+                                 block: (RequestWithUser[A]) => Future[SimpleResult]): Future[SimpleResult] =
+    {
+      implicit val req = request
+      val user = for (
+        authenticator <- SecureSocial.authenticatorFromRequest ;
+        user <- UserService.find(authenticator.identityId)
+      ) yield {
+        touch(authenticator)
+        user
+      }
+      block(RequestWithUser(user, request))
+    }
+  }
+
 }
 
 @Singleton
@@ -114,7 +131,7 @@ class RemoteActionAuthenticator @Inject() (
 
   private def getExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = shoeboxClient.getUserExperiments(userId)
 
-  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
+  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[SimpleResult]): (SecuredRequest[T] => Future[SimpleResult]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val experimentsFuture = getExperiments(userId).map(_.toSet)
       val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
@@ -131,10 +148,10 @@ class RemoteActionAuthenticator @Inject() (
           val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds, s"on user id $userId")
           log.info(s"[IMPERSONATOR] admin user $userId is impersonating user $impSocialUserInfo with request ${request.request.path}")
           executeAction(authAction, impUserId,
-            impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
+            impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId))
         case None =>
           executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[ExperimentType]()),
-              kifiInstallationId, newSession, request.request, None, allowPending)
+              kifiInstallationId, newSession, request.request, None)
       }
     }
 
@@ -142,9 +159,9 @@ class RemoteActionAuthenticator @Inject() (
       apiClient: Boolean,
       allowPending: Boolean,
       bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result,
-      onSocialAuthenticated: SecuredRequest[T] => Result,
-      onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
+      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+      onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
+      onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request: RequestWithUser[T] =>
     val result = request.user match {
       case Some(socialUser) =>
         val uidOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).orElse {
@@ -154,7 +171,7 @@ class RemoteActionAuthenticator @Inject() (
         }
         uidOpt match {
           case Some(userId) =>
-            authenticatedHandler(userId, apiClient, allowPending)(onAuthenticated)(SecuredRequest(socialUser, request))
+            authenticatedHandler(userId, apiClient, allowPending)(onAuthenticated)(SecuredRequest(socialUser, request.request))
           case None =>
             onSocialAuthenticated(SecuredRequest(socialUser, request))
         }
@@ -165,10 +182,12 @@ class RemoteActionAuthenticator @Inject() (
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com") || host.endsWith("browserstack.com")
     }.map { h =>
-      result.withHeaders(
-        "Access-Control-Allow-Origin" -> h,
-        "Access-Control-Allow-Credentials" -> "true"
-      )
+      result.map {
+        _.withHeaders(
+          "Access-Control-Allow-Origin" -> h,
+          "Access-Control-Allow-Credentials" -> "true"
+        )
+      }
     }.getOrElse(result)
   }
 
@@ -177,15 +196,12 @@ class RemoteActionAuthenticator @Inject() (
   private[controller] def isAdmin(userId: Id[User]) = monitoredAwait.result(
     getExperiments(userId).map(r => r.contains(ExperimentType.ADMIN)), 2 seconds, s"on is admin experiment for user $userId", false)
 
-  private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
+  private def executeAction[T](action: AuthenticatedRequest[T] => Future[SimpleResult], userId: Id[User], identity: Identity,
       experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
-      newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
+      newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None) = {
     val user = shoeboxClient.getUser(userId)
     try {
-      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId").get, request, experiments, kifiInstallationId, adminUserId)) match {
-        case r: PlainResult => r.withSession(newSession)
-        case any: Result => any
-      }
+      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId").get, request, experiments, kifiInstallationId, adminUserId)).map(_.withSession(newSession))
     } catch {
       case e: Throwable =>
         val globalError = airbrake.notify(AirbrakeError.incoming(request, e,

@@ -67,7 +67,8 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "javax.jms"),
       ExclusionRule(organization = "com.sun.jdmk"),
       ExclusionRule(organization = "com.sun.jmx"),
-      ExclusionRule(organization = "org.jboss.netty")
+      ExclusionRule(organization = "org.jboss.netty"),
+      ExclusionRule("org.scala-stm", "scala-stm_2.10.0")
     ))
 
     val searchDependencies = Seq(
@@ -198,4 +199,6 @@ object ApplicationBuild extends Build {
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
+
+    override def rootProject = Some(aaaMain)
 }
