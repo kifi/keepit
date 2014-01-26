@@ -8,7 +8,7 @@ import play.api.libs.json._
 
 class MobileDevicesController @Inject() (urbanAirship:UrbanAirship, actionAuthenticator:ActionAuthenticator) extends WebsiteController(actionAuthenticator) with ElizaServiceController with Logging {
 
-    def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
+    def registerDevice(deviceType: String) = JsonAction.authenticatedParseJson { implicit request =>
       (request.body \ "token").asOpt[String] map { token =>
         val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
         Ok(Json.obj(

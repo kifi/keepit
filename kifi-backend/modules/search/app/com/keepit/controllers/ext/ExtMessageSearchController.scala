@@ -10,10 +10,10 @@ import com.google.inject.Inject
 
 class ExtMessageSearchController @Inject() (
     commander: MessageSearchCommander, 
-    actionAuthenticator: ActionAuthenticator
+    val actionAuthenticator: ActionAuthenticator
   ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
-  def search(query: String, page: Int) = AuthenticatedJsonAction { request =>
+  def search(query: String, page: Int) = JsonAction.authenticated { request =>
     if (page < 0) {
       BadRequest("Negative Page Number!")
     } else {

@@ -3,13 +3,15 @@ package com.keepit.common.controller
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 import com.keepit.common.akka.SafeFuture
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 import com.keepit.common.service.ServiceType
 
 
 trait ServiceController extends Controller with Logging {
 
   def serviceType: ServiceType
+
+  def resolve[T](a: T) = Future.successful(a)
   
   def SafeAsyncAction(f: Request[AnyContent] => SimpleResult)(implicit ex: ExecutionContext) = Action.async { request =>
     SafeFuture(f(request))

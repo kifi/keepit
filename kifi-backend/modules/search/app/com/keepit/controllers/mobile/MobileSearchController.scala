@@ -31,7 +31,7 @@ class MobileSearchController @Inject() (
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None
-  ) = AuthenticatedJsonAction { request =>
+  ) = JsonAction.authenticated { request =>
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
@@ -42,7 +42,7 @@ class MobileSearchController @Inject() (
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
-  def warmUp() = AuthenticatedJsonAction { request =>
+  def warmUp() = JsonAction.authenticated { request =>
     SafeFuture {
       searchCommander.warmUp(request.userId)
     }

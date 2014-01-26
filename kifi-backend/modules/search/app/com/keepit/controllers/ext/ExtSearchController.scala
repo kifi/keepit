@@ -18,7 +18,7 @@ import com.keepit.search.result.ResultUtil
 import com.keepit.search.SearchCommander
 
 class ExtSearchController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val actionAuthenticator: ActionAuthenticator,
   searchCommander: SearchCommander
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
@@ -32,7 +32,7 @@ class ExtSearchController @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None) = AuthenticatedJsonAction { request =>
+    coll: Option[String] = None) = JsonAction.authenticated { request =>
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
@@ -44,7 +44,7 @@ class ExtSearchController @Inject() (
   }
 
   //external (from the extension/website)
-  def warmUp() = AuthenticatedJsonAction { request =>
+  def warmUp() = JsonAction.authenticated { request =>
     SafeFuture {
       searchCommander.warmUp(request.userId)
     }

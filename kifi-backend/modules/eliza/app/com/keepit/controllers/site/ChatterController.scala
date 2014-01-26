@@ -23,7 +23,7 @@ class ChatterController @Inject() (
   db: Database
   ) extends WebsiteController(actionAuthenticator) with ElizaServiceController {
 
-  def getChatter() = AuthenticatedJsonToJsonAction { request =>
+  def getChatter() = JsonAction.authenticatedParseJsonAsync { request =>
     val url = (request.body \ "url").as[String]
     messagingCommander.getChatter(request.user.id.get, Seq(url)).map { res =>
       Ok(res.headOption.map { case (url, msgs) =>

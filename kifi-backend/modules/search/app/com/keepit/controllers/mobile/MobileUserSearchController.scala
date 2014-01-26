@@ -19,7 +19,7 @@ class MobileUserSearchController @Inject()(
   searcherFactory: MainSearcherFactory,
   filterFactory: UserSearchFilterFactory,
   shoeboxClient: ShoeboxServiceClient,
-  actionAuthenticator: ActionAuthenticator
+  val actionAuthenticator: ActionAuthenticator
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   val EXCLUDED_EXPERIMENTS = Seq("fake")
@@ -32,7 +32,7 @@ class MobileUserSearchController @Inject()(
     }
   }
 
-  def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
+  def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
     val userExps = request.experiments.map{_.value}
     log.info(s"user search: userId = ${userId}, userExps = ${userExps.mkString(" ")}")
@@ -61,7 +61,7 @@ class MobileUserSearchController @Inject()(
     Ok(JsArray(jsVals))
   }
 
-  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = AuthenticatedJsonAction { request =>
+  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
     val searchFilter = createFilter(Some(userId), filter, context)
     val searcher = searcherFactory.getUserSearcher

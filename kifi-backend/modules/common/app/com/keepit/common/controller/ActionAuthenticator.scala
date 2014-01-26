@@ -61,54 +61,13 @@ trait ActionAuthenticator extends SecureSocial {
       onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
       onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T]
 
-  private[controller] def authenticatedAction[T](
-      apiClient: Boolean,
-      allowPending: Boolean,
-      bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
-      onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = {
-    authenticatedAction(
-      apiClient = apiClient,
-      allowPending = allowPending,
-      bodyParser = bodyParser,
-      onAuthenticated = onAuthenticated,
-      onSocialAuthenticated = onUnauthenticated,
-      onUnauthenticated = onUnauthenticated)
-  }
-
-  private[controller] def authenticatedAction[T](
-      apiClient: Boolean,
-      allowPending: Boolean,
-      bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult]): Action[T] = {
-        def onUnauthenticated = { implicit request: Request[T] =>
-          if (apiClient) {
-            Future.successful(Forbidden(JsNumber(0)))
-          } else {
-            Future.successful(Redirect("/login")
-                .flashing("error" -> Messages("securesocial.loginRequired"))
-                .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri)))
-          }
-        }
-        authenticatedAction(
-          apiClient = apiClient,
-          allowPending = allowPending,
-          bodyParser = bodyParser,
-          onAuthenticated = onAuthenticated,
-          onSocialAuthenticated = onUnauthenticated,
-          onUnauthenticated = onUnauthenticated)
-  }
-
   object SecureSocialUserAwareAction extends ActionBuilder[RequestWithUser] {
-    protected def invokeBlock[A](request: Request[A],
-                                 block: (RequestWithUser[A]) => Future[SimpleResult]): Future[SimpleResult] =
-    {
+    protected def invokeBlock[A](request: Request[A], block: (RequestWithUser[A]) => Future[SimpleResult]): Future[SimpleResult] = {
       implicit val req = request
       val user = for (
         authenticator <- SecureSocial.authenticatorFromRequest ;
         user <- UserService.find(authenticator.identityId)
       ) yield {
-        touch(authenticator)
         user
       }
       block(RequestWithUser(user, request))

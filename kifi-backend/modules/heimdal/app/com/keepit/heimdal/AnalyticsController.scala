@@ -97,11 +97,11 @@ class AnalyticsController @Inject() (
     Ok("Update has been triggered. Please be patient. Calling this repeatedly in rapid succession will only make it take longer. If you think it didn't work, wait at least 30 seconds.")
   }
 
-  def getAvailableMetrics(repo: String) = Action { request =>
+  def getAvailableMetrics(repo: String) = Action.async { request =>
     require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
-    Async(metricManager.getAvailableMetrics.map{ metricDescriptors =>
+    metricManager.getAvailableMetrics.map { metricDescriptors =>
       Ok(Json.toJson(metricDescriptors))
-    })
+    }
   }
 
   def getMetric(repo: String, name: String, as: String) = Action { request => //this is going to need some serious refactoring at some point
@@ -140,9 +140,9 @@ class AnalyticsController @Inject() (
     else Ok(html.storedMetricChart(json.toString, errors))
   }
 
-  def getMetricData(repo: String, name: String) = Action { request =>
+  def getMetricData(repo: String, name: String) = Action.async { request =>
     require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
-    Async(metricManager.getMetricInfo(name).flatMap{ infoOption =>
+    metricManager.getMetricInfo(name).flatMap{ infoOption =>
       infoOption.map{ desc =>
         metricManager.getMetric(name).map{ data =>
           if (data.isEmpty){
@@ -163,12 +163,12 @@ class AnalyticsController @Inject() (
           "data" -> Json.arr()
         ))).future
       }
-    })
+    }
   }
 
-  def adhocMetric(repo: String, from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, as: String) = Action{ request =>
+  def adhocMetric(repo: String, from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, as: String) = Action.async { request =>
     require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
-    if (request.queryString.get("help").nonEmpty) Ok(adhocHelp)
+    if (request.queryString.get("help").nonEmpty) resolve(Ok(adhocHelp))
     else {
       val doBreakDown = if (breakDown!="false" && groupBy.startsWith("context")) true else false
       val fromTime = if (from=="") currentDateTime.minusHours(1) else DateTime.parse(from)
@@ -185,70 +185,68 @@ class AnalyticsController @Inject() (
       }
 
       if (as=="json"){
-        Async(jsonFuture.map{ json => Ok(json)})
+        jsonFuture.map{ json => Ok(json)}
       } else if (as=="pie") {
-        Async(jsonFuture.map{ json =>
+        jsonFuture.map{ json =>
           var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'"
           Ok(html.adhocPieChart(Json.stringify(json), title))
-        })
+        }
       } else if (as=="hist"){
-        Async(jsonFuture.map{ json =>
+        jsonFuture.map{ json =>
           var title = (if (mode=="users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'"
           Ok(html.adhocHistChart(Json.stringify(json), title))
-        })
+        }
       } else {
-        BadRequest("'as' paramter must be either 'pie' or 'json'.")
+        resolve(BadRequest("'as' paramter must be either 'pie' or 'json'."))
       }
     }
   }
 
-  def rawEvents(repo: String, events: String, limit: Int, window: Int) = Action { request =>
-    if (request.queryString.get("help").nonEmpty) Ok(rawHelp)
+  def rawEvents(repo: String, events: String, limit: Int, window: Int) = Action.async { request =>
+    if (request.queryString.get("help").nonEmpty) resolve(Ok(rawHelp))
     else {
       val eventsToConsider = if (events=="all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
-      Async(getRepo(repo).getLatestRawEvents(eventsToConsider, limit, window).map(Ok(_)))
+      getRepo(repo).getLatestRawEvents(eventsToConsider, limit, window).map(Ok(_))
     }
   }
 
-  def getEventDescriptors(repo: String) = Action { request =>
-    Async(getRepo(repo).descriptors.getAll().map(descriptors => Ok(Json.toJson(descriptors))))
+  def getEventDescriptors(repo: String) = Action.async { request =>
+    getRepo(repo).descriptors.getAll().map(descriptors => Ok(Json.toJson(descriptors)))
   }
 
-  def updateEventDescriptors(repo: String) = Action { request =>
+  def updateEventDescriptors(repo: String) = Action.async { request =>
     val updatedDescriptors = Json.fromJson[Seq[EventDescriptor]](request.body.asJson.get).get
-    Async {
-      val descriptors = getRepo(repo).descriptors
-      Future.sequence(updatedDescriptors.map(descriptors.upsert)).map(counts => Ok(JsNumber(counts.sum)))
-    }
+    val descriptors = getRepo(repo).descriptors
+    Future.sequence(updatedDescriptors.map(descriptors.upsert)).map(counts => Ok(JsNumber(counts.sum)))
   }
 
-  def deleteUser(userId: Id[User]) = Action { request =>
-    Async { SafeFuture {
+  def deleteUser(userId: Id[User]) = Action.async { request =>
+    SafeFuture {
       userEventLoggingRepo.delete(userId)
       Ok
-    }}
+    }
   }
 
-  def incrementUserProperties(userId: Id[User]) = Action { request =>
+  def incrementUserProperties(userId: Id[User]) = Action.async { request =>
     val increments = request.body.asJson.get.as[JsObject].value.mapValues(_.as[Double]).toMap
-    Async { SafeFuture {
+    SafeFuture {
       userEventLoggingRepo.incrementUserProperties(userId, increments)
       Ok
-    }}
+    }
   }
 
-  def setUserProperties(userId: Id[User]) = Action { request =>
+  def setUserProperties(userId: Id[User]) = Action.async { request =>
     val properties = Json.fromJson[HeimdalContext](request.body.asJson.get).get
-    Async { SafeFuture {
+    SafeFuture {
       userEventLoggingRepo.setUserProperties(userId, properties)
       Ok
-    }}
+    }
   }
 
-  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = Action { request =>
-    Async { SafeFuture {
+  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = Action.async { request =>
+    SafeFuture {
       userEventLoggingRepo.setUserAlias(userId, externalId)
       Ok
-    }}
+    }
   }
 }
