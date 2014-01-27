@@ -68,7 +68,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
 
     def authenticatedAsync(authenticatedAction: AuthenticatedRequest[AnyContent] => Future[SimpleResult]): Action[AnyContent] = {
-      authenticatedAsync()(authenticatedAction)
+      authenticatedAsync[AnyContent]()(authenticatedAction)
     }
 
     def authenticated[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => SimpleResult): Action[T] = {
@@ -76,7 +76,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
 
     def authenticated(authenticatedAction: AuthenticatedRequest[AnyContent] => SimpleResult): Action[AnyContent] = {
-      authenticated()(authenticatedAction)
+      authenticated[AnyContent]()(authenticatedAction)
     }
 
     def authenticatedParseJsonAsync(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult]): Action[JsValue] = {
@@ -85,6 +85,14 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
 
     def authenticatedParseJson(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult): Action[JsValue] = {
       authenticated(parser = parse.tolerantJson)(authenticatedAction)
+    }
+
+    def authenticatedParseJsonAsync(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult]): Action[JsValue] = {
+      authenticatedAsync(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction)
+    }
+
+    def authenticatedParseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult): Action[JsValue] = {
+      authenticated(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction)
     }
 
   }
@@ -105,7 +113,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
 
     def async(authenticatedAction: AuthenticatedRequest[AnyContent] => Future[SimpleResult], unauthenticatedAction: Request[AnyContent] => Future[SimpleResult]): Action[AnyContent] = {
-      async()(authenticatedAction, unauthenticatedAction)
+      async[AnyContent]()(authenticatedAction, unauthenticatedAction)
     }
 
     def apply[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => SimpleResult, unauthenticatedAction: Request[T] => SimpleResult): Action[T] = {
@@ -113,7 +121,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
 
     def apply(authenticatedAction: AuthenticatedRequest[AnyContent] => SimpleResult, unauthenticatedAction: Request[AnyContent] => SimpleResult): Action[AnyContent] = {
-      apply()(authenticatedAction, unauthenticatedAction)
+      apply[AnyContent]()(authenticatedAction, unauthenticatedAction)
     }
 
     def parseJsonAsync(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult], unauthenticatedAction: Request[JsValue] => Future[SimpleResult]): Action[JsValue] = {
@@ -122,6 +130,14 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
 
     def parseJson(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult, unauthenticatedAction: Request[JsValue] => SimpleResult): Action[JsValue] = {
       apply(parser = parse.tolerantJson)(authenticatedAction, unauthenticatedAction)
+    }
+
+    def parseJsonAsync(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult], unauthenticatedAction: Request[JsValue] => Future[SimpleResult]): Action[JsValue] = {
+      async(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction, unauthenticatedAction)
+    }
+
+    def parseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult, unauthenticatedAction: Request[JsValue] => SimpleResult): Action[JsValue] = {
+      apply(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction, unauthenticatedAction)
     }
   }
 }

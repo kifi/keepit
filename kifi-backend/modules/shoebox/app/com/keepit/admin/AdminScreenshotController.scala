@@ -19,7 +19,7 @@ class AdminScreenshotController @Inject() (
   normUriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
-  def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
+  def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
     val normUri = db.readOnly { implicit session =>
       normUriRepo.get(uriId)
     }
@@ -32,7 +32,7 @@ class AdminScreenshotController @Inject() (
     }
   }
 
-  def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction { implicit request =>
+  def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction.authenticated { implicit request =>
     val uris = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(userId).map(_.uriId)
     }

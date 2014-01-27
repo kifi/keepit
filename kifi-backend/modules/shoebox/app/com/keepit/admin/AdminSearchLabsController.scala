@@ -12,7 +12,7 @@ import views.html
 class AdminSearchLabsController @Inject() (actionAuthenticator: ActionAuthenticator, searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
 
-  def friendMap(q: Option[String] = None, minKeeps: Option[Int] = None) = AdminHtmlAction { implicit request =>
+  def friendMap(q: Option[String] = None, minKeeps: Option[Int] = None) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.labs.friendMap(q, minKeeps))
   }
 

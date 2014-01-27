@@ -18,17 +18,17 @@ class AdminArticleIndexerController @Inject()(
     normUriRepo: NormalizedURIRepo
   ) extends AdminController(actionAuthenticator) {
 
-  def index = AdminHtmlAction { implicit request =>
+  def index = AdminHtmlAction.authenticated { implicit request =>
     searchClient.index()
     Ok("indexed articles")
   }
 
-  def reindex = AdminHtmlAction { implicit request =>
+  def reindex = AdminHtmlAction.authenticated { implicit request =>
     searchClient.reindex
     Ok("reindexing started")
   }
 
-  def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
+  def indexByState(state: State[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
       db.readWrite { implicit s =>
         normUriRepo.getByState(state).foreach{ uri => normUriRepo.save(uri.withState(newState)) }
@@ -46,12 +46,12 @@ class AdminArticleIndexerController @Inject()(
     }
   }
 
-  def refreshSearcher = AdminHtmlAction { implicit request =>
+  def refreshSearcher = AdminHtmlAction.authenticated { implicit request =>
     searchClient.refreshSearcher()
     Ok("searcher refreshed")
   }
 
-  def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction { implicit request =>
+  def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction.authenticated { implicit request =>
     Async {
       searchClient.dumpLuceneDocument(id).map(Ok(_))
     }

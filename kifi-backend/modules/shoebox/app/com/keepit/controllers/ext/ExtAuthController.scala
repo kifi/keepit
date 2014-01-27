@@ -35,7 +35,7 @@ class ExtAuthController @Inject() (
   private val crypt = new SimpleDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  def start = AuthenticatedJsonToJsonAction { implicit request =>
+  def start = JsonAction.authenticatedParseJson { implicit request =>
     val userId = request.userId
     val identity = request.identity
     log.info(s"start id: $userId, social id: ${identity.identityId}")
@@ -114,17 +114,17 @@ class ExtAuthController @Inject() (
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
-  def welcome = AuthenticatedJsonAction { implicit request =>
+  def welcome = JsonAction.authenticated { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.identity))
     Redirect("/")
   }
 
   // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
-  def logOut = AuthenticatedHtmlAction { implicit request =>
+  def logOut = JsonAction.authenticated { implicit request =>
     Ok(views.html.logOut(Some(request.identity))).withNewSession
   }
 
-  def whois = AuthenticatedJsonAction { request =>
+  def whois = JsonAction.authenticated { request =>
     val user = db.readOnly(implicit s => userRepo.get(request.userId))
     Ok(Json.obj("externalUserId" -> user.externalId.toString))
   }

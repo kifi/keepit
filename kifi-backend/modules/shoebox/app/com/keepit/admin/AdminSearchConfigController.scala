@@ -25,14 +25,14 @@ class AdminSearchConfigController @Inject() (
   )
     extends AdminController(actionAuthenticator) {
 
-  def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def showUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val searchConfigFuture = searchClient.showUserConfig(userId)
     val user = db.readOnly{ implicit s => userRepo.get(userId) }
     val searchConfig = Await.result(searchConfigFuture, 5 seconds)
     Ok(views.html.admin.searchConfig(user, searchConfig.iterator.toSeq.sortBy(_._1)))
   }
 
-  def setUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def setUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
@@ -41,12 +41,12 @@ class AdminSearchConfigController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def resetUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def resetUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     searchClient.resetUserConfig(userId)
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def getExperiments = AdminHtmlAction { implicit request =>
+  def getExperiments = AdminHtmlAction.authenticated { implicit request =>
     heimdal.updateMetrics()
     val experiments = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }
     val ids = experiments.map(_.id.get)
@@ -62,7 +62,7 @@ class AdminSearchConfigController @Inject() (
     })
   }
 
-  def addNewExperiment = AdminHtmlAction { implicit request =>
+  def addNewExperiment = AdminHtmlAction.authenticated { implicit request =>
     val defaultConfig =  Await.result(searchClient.getSearchDefaultConfig, 5 seconds)
     db.readWrite { implicit s => searchConfigExperimentRepo.save(SearchConfigExperiment(description = "New Experiment", config = defaultConfig)) }
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments)

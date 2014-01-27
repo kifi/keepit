@@ -129,14 +129,14 @@ class MobileAuthController @Inject() (
   }
 
 
-  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+  def socialFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
     unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
   )
 
   def loginWithUserPass(link: String) = Action { implicit request =>
     ProviderController.authenticate("userpass")(request) match {
-      case res: SimpleResult[_] if res.header.status == 303 =>
+      case res: SimpleResult if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
@@ -147,14 +147,14 @@ class MobileAuthController @Inject() (
     }
   }
 
-  def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
+  def userPasswordSignup() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.userPasswordSignupAction(_),
     unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
 
-  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+  def userPassFinalizeAccountAction() = JsonAction.parseJsonAsync(allowPending = true)(
     authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_),
-    unauthenticatedAction = _ => Forbidden(JsNumber(0))
+    unauthenticatedAction = _ => resolve(Forbidden(JsNumber(0)))
   )
 
   def uploadBinaryPicture() = JsonAction(allowPending = true, parser = parse.temporaryFile)(
@@ -167,12 +167,12 @@ class MobileAuthController @Inject() (
   )
 
   // this one sends an email with a link to a page -- more work for mobile likely needed
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+  def forgotPassword() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doForgotPassword(_),
     unauthenticatedAction = authHelper.doForgotPassword(_)
   )
 
-  def linkSocialNetwork(providerName:String) = AuthenticatedJsonToJsonAction(allowPending = true) { implicit request =>
+  def linkSocialNetwork(providerName:String) = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     log.info(s"[linkSocialNetwork($providerName)] curr user: ${request.user} token: ${request.body}")
     val resOpt = for {
       provider   <- Registry.providers.get(providerName)
@@ -182,7 +182,7 @@ class MobileAuthController @Inject() (
         socialUserInfoRepo.getByUser(request.userId)
       } find (_.networkType == SocialNetworkType(providerName)) headOption
 
-      val result:Result = suiOpt match {
+      val result = suiOpt match {
         case Some(sui) =>
           log.info(s"[accessTokenSignup($providerName)] user(${request.user}) already associated with social user: ${sui}")
           Ok(Json.obj("code" -> "link_already_exists")) // err on safe side

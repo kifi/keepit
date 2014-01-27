@@ -29,7 +29,7 @@ class AdminBenchmarkController @Inject() (
     extends AdminController(actionAuthenticator) {
   import BenchmarkResultsJson._
 
-  def benchmarks = AdminHtmlAction { implicit request =>
+  def benchmarks = AdminHtmlAction.authenticated { implicit request =>
     Async {
       val internalPing = pingSearchProcess()
       for {

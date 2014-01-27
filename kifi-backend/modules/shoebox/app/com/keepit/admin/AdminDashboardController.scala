@@ -43,7 +43,7 @@ class AdminDashboardController @Inject() (
     Json.obj("day0" -> day0, "counts" -> userCounts)
   }
 
-  def index = AdminHtmlAction { implicit request =>
+  def index = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.adminDashboard())
   }
 

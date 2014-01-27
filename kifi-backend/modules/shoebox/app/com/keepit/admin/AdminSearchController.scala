@@ -43,7 +43,7 @@ class AdminSearchController @Inject() (
 
   val rand = new Random()
 
-  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction { request =>
+  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction.authenticated { request =>
     Async {
       searchClient.explainResult(query, request.userId, uriId, lang).map(Ok(_))
     }
@@ -61,7 +61,7 @@ class AdminSearchController @Inject() (
         SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](24)), config = config))
   }
 
-  def blindTestVoted() = AdminHtmlAction{ request =>
+  def blindTestVoted() = AdminHtmlAction.authenticated { request =>
     log.info("search blind test: results voted")
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val id1 = body.get("configId1").get.toLong
@@ -79,7 +79,7 @@ class AdminSearchController @Inject() (
     Ok
   }
 
-  def blindTest() = AdminHtmlAction { request =>
+  def blindTest() = AdminHtmlAction.authenticated { request =>
     log.info("search blind test: fetching results")
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
@@ -111,17 +111,17 @@ class AdminSearchController @Inject() (
     Ok(Json.toJson(rv))
   }
 
-  def blindTestPage() = AdminHtmlAction { request =>
+  def blindTestPage() = AdminHtmlAction.authenticated { request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchBlindTest(configs))
   }
 
-  def searchComparisonPage() = AdminHtmlAction { request =>
+  def searchComparisonPage() = AdminHtmlAction.authenticated { request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchComparison(configs))
   }
 
-  def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction { implicit request =>
+  def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
 
     val result = articleSearchResultStore.get(id).get
     val metas: Seq[ArticleSearchResultHitMeta] = db.readOnly { implicit s =>
