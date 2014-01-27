@@ -11,7 +11,7 @@ class AmazonInstanceController @Inject()(
     amazonInstanceInfo: AmazonInstanceInfo
   ) extends AdminController(actionAuthenticator) {
 
-  def instanceInfo = AdminHtmlAction { implicit request =>
+  def instanceInfo = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.amazonInstanceInfo(amazonInstanceInfo))
   }
 

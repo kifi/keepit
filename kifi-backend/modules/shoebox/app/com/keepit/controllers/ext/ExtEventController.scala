@@ -59,12 +59,12 @@ class ExtEventController @Inject() (
             val parsedValue = jsonString.toBoolean
             contextBuilder += (key,parsedValue)
           } catch {
-            case _ =>
+            case _: Throwable =>
               try {
                 val parsedValue = new BigDecimal(jsonString).doubleValue
                 contextBuilder += (key,parsedValue)
               } catch {
-                case _ => contextBuilder += (key,jsonString)
+                case _: Throwable => contextBuilder += (key,jsonString)
               }
           }
         }

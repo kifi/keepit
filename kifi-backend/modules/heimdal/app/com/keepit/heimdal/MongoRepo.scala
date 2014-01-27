@@ -61,7 +61,7 @@ trait MongoRepo[T] {
     db.command(Aggregate(collectionName,command))
   }
 
-  def all: Future[Seq[T]] = collection.find(BSONDocument()).cursor.toList.map{ docs =>
+  def all: Future[Seq[T]] = collection.find(BSONDocument()).cursor.collect[List]().map{ docs =>
     docs.map(fromBSON(_))
   }
 }

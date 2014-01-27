@@ -43,6 +43,7 @@ class GeckoboardPublisherTest extends Specification with TestInjector {
       }
       val publisher = new GeckoboardPublisherImpl(client)
       publisher.publish(new MyWidget())
+      1 === 1
     }
   }
 }

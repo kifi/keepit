@@ -45,16 +45,16 @@ class TopicModelController  @Inject() (
   def currentAccessor = modelAccessor.getActiveAccessor
   def numTopics = currentAccessor.topicNameMapper.rawTopicNames.size
 
-  def remodel() = AdminHtmlAction{ implicit request =>
+  def remodel() = AdminHtmlAction.authenticated { implicit request =>
     topicPlugin.remodel()
     Ok(s"OK. Will reconstruct topic model.")
   }
 
-  def documentTopic(content: Option[String] = None, topicId: Option[String] = None) = AdminHtmlAction{ implicit request =>
+  def documentTopic(content: Option[String] = None, topicId: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.documentTopic(content, topicId))
   }
 
-  def inferTopic = AdminHtmlAction{ implicit request =>
+  def inferTopic = AdminHtmlAction.authenticated { implicit request =>
     def makeString(topicId: Int, membership: Double) = {
       val score = "%.3f".format(membership)
       currentAccessor.topicNameMapper.getMappedNameByNewId(topicId) + ": " + score  // use transferred indexes
@@ -75,11 +75,11 @@ class TopicModelController  @Inject() (
     throw new IllegalStateException("should be disabled")
   }
 
-  def wordTopic(word: Option[String] = None, topic: Option[String] = None) = AdminHtmlAction { implicit request =>
+  def wordTopic(word: Option[String] = None, topic: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.wordTopic(word, topic))
   }
 
-  def getWordTopic = AdminHtmlAction { implicit request =>
+  def getWordTopic = AdminHtmlAction.authenticated { implicit request =>
 
     def getTopTopics(arr: Array[Double], topK: Int = 5) = {
        arr.zipWithIndex.filter(_._1 > 1.0/numTopics)
@@ -101,11 +101,11 @@ class TopicModelController  @Inject() (
     throw new IllegalStateException("should be disabled")
   }
 
-  def userTopic(userId: Option[String] = None, topic: Option[String] = None) = AdminHtmlAction { implicit request =>
+  def userTopic(userId: Option[String] = None, topic: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.userTopic(userId, topic))
   }
 
-  def getUserTopic = AdminHtmlAction { implicit request =>
+  def getUserTopic = AdminHtmlAction.authenticated { implicit request =>
 
     def buildString(score: Array[Int], topK: Int = 10) = {
       val newScore = currentAccessor.topicNameMapper.scoreMapper(score)
@@ -127,7 +127,7 @@ class TopicModelController  @Inject() (
     throw new IllegalStateException("should be disabled")
   }
 
-  def updateTopicName(id: Id[TopicName]) = AdminHtmlAction{ implicit request =>
+  def updateTopicName(id: Id[TopicName]) = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val topicName = body.get("topicName").get
     db.readWrite{ implicit s =>
@@ -139,7 +139,7 @@ class TopicModelController  @Inject() (
 
   def topicsViewDefault = topicsView(modelAccessor.getCurrentFlag, 0)
 
-  def topicsView(flag: String, page: Int = 0) = AdminHtmlAction{ request =>
+  def topicsView(flag: String, page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 50
     val accessor = modelAccessor.getAccessorByFlag(flag)
     val (topics, count) = db.readOnly{ implicit s =>
@@ -152,11 +152,11 @@ class TopicModelController  @Inject() (
     Ok(html.admin.topicNames(flag, topics, page, count, pageCount, PAGE_SIZE))
   }
 
-  def addTopics(flag: String) = AdminHtmlAction { implicit request =>
+  def addTopics(flag: String) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.addTopicNames(flag))
   }
 
-  def saveAddedTopics(flag: String) = AdminHtmlAction{ implicit request =>
+  def saveAddedTopics(flag: String) = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("topics").get
     val topicNames = content.split("\n").map{_.trim}.filter(_ != "")
@@ -171,7 +171,7 @@ class TopicModelController  @Inject() (
     throw new IllegalStateException("should be disabled")
   }
 
-  def genModelFiles(flag: String) = AdminHtmlAction{ implicit request =>
+  def genModelFiles(flag: String) = AdminHtmlAction.authenticated { implicit request =>
     future {
       log.info(s"loading model files for model ${flag}")
 
@@ -198,7 +198,7 @@ class TopicModelController  @Inject() (
     Ok(s"word list and topic binary array for model ${flag} will be created in S3")
   }
 
-  def viewTopicWords(flag: String) = AdminHtmlAction{ implicit request =>
+  def viewTopicWords(flag: String) = AdminHtmlAction.authenticated { implicit request =>
     val id = flag match {
       case TopicModelAccessorFlag.A => "model_a"
       case TopicModelAccessorFlag.B => "model_b"
@@ -209,7 +209,7 @@ class TopicModelController  @Inject() (
   }
 
   // index is not necessarily the same as Id in DB. index starts from 1.
-  def viewTopicDetails(flag: String, index: Int) = AdminHtmlAction{ implicit request =>
+  def viewTopicDetails(flag: String, index: Int) = AdminHtmlAction.authenticated { implicit request =>
     val accessor = modelAccessor.getAccessorByFlag(flag)
     val topic = db.readOnly { implicit s =>
       val topics = accessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
@@ -254,7 +254,7 @@ class TopicModelController  @Inject() (
     (randArticles, allUrisInTopic.size)
   }
 
-  def summary = AdminHtmlAction{ implicit request =>
+  def summary = AdminHtmlAction.authenticated { implicit request =>
     val flag = modelAccessor.getCurrentFlag
     val vocSizeA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).wordTopicModel.vocabulary.size
     val vocSizeB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).wordTopicModel.vocabulary.size

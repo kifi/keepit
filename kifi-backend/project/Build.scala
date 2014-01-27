@@ -35,11 +35,12 @@ object ApplicationBuild extends Build {
 
     val commonDependencies = Seq(
       jdbc,
-      "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
-      "com.typesafe" %% "play-plugins-mailer" % "2.1-RC2",
-      "securesocial" %% "securesocial" % "master-20130808",
+      cache,
+      "com.typesafe.play.plugins" %% "play-statsd" % "2.2.0" exclude("play", "*"),
+      "com.typesafe" %% "play-plugins-mailer" % "2.2.0" exclude("play", "*"),
+      "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
-      "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
+      "com.typesafe.akka" %% "akka-testkit" % "2.2.3"  exclude("play", "*"),
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
       "org.apache.httpcomponents" % "httpclient" % "4.3",
@@ -50,7 +51,7 @@ object ApplicationBuild extends Build {
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
-      "com.typesafe.slick" %% "slick" % "1.0.1",
+      "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*"),
       "net.sf.uadetector" % "uadetector-resources" % "2013.11",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
@@ -67,7 +68,8 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "javax.jms"),
       ExclusionRule(organization = "com.sun.jdmk"),
       ExclusionRule(organization = "com.sun.jmx"),
-      ExclusionRule(organization = "org.jboss.netty")
+      ExclusionRule(organization = "org.jboss.netty"),
+      ExclusionRule("org.scala-stm", "scala-stm_2.10.0")
     ))
 
     val searchDependencies = Seq(
@@ -82,13 +84,13 @@ object ApplicationBuild extends Build {
 
     val shoeboxDependencies = Seq(
       "javax.mail" % "mail" % "1.4.5",
-      "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.1" exclude("play", "*"),
       "org.jsoup" % "jsoup" % "1.7.1"
     )
 
     val heimdalDependencies = Seq(
-      "org.reactivemongo" %% "reactivemongo" % "0.9",
-      "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
+      "org.reactivemongo" %% "reactivemongo" % "0.10.0",
+      "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
       "com.maxmind.geoip2" % "geoip2" % "0.5.0",
       "com.mixpanel" % "mixpanel-java" % "1.2.1"
     ) map (_.excludeAll(
@@ -135,7 +137,7 @@ object ApplicationBuild extends Build {
       "com.keepit.search._"
     )
 
-    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
+    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m", "-Dconfig.resource=application-dev.conf")
 
     val _testOptions = Seq(
       Tests.Argument("sequential", "true"),
@@ -164,7 +166,9 @@ object ApplicationBuild extends Build {
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
-      commonSettings: _*
+      commonSettings ++ Seq(
+        javaOptions in Test += "-Dconfig.resource=application-dev.conf"
+      ): _*
     ).dependsOn(macros)
 
     lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
@@ -198,4 +202,6 @@ object ApplicationBuild extends Build {
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
+
+    override def rootProject = Some(aaaMain)
 }

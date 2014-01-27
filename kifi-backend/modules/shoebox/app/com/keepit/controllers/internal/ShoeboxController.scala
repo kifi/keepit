@@ -568,14 +568,12 @@ class ShoeboxController @Inject() (
     Status(202)("0")
   }
 
-  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action { request =>
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action.async { request =>
     val socialUserInfo = db.readOnly { implicit session =>
       socialUserInfoRepo.get(socialUserInfoId)
     }
-    Async {
-      socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
-        Ok("0")
-      }
+    socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
+      Ok("0")
     }
   }
 }
