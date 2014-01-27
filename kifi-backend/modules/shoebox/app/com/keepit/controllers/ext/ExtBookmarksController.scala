@@ -61,21 +61,21 @@ class ExtBookmarksController @Inject() (
   clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController{
 
-  def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+  def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     bookmarksCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
   }
 
-  def createTag() = AuthenticatedJsonToJsonAction { request =>
+  def createTag() = JsonAction.authenticatedParseJson { request =>
     val name = (request.body \ "name").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
     Ok(Json.toJson(SendableTag from tag))
   }
 
-  def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+  def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
@@ -87,7 +87,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def addToUrl() = AuthenticatedJsonToJsonAction { request =>
+  def addToUrl() = JsonAction.authenticatedParseJson { request =>
     val name = (request.body \ "name").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
@@ -95,7 +95,7 @@ class ExtBookmarksController @Inject() (
     Ok(Json.toJson(SendableTag from tag))
   }
 
-  def clearTags() = AuthenticatedJsonToJsonAction { request =>
+  def clearTags() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit s =>
       for {
@@ -110,14 +110,14 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
-  def tags() = AuthenticatedJsonAction { request =>
+  def tags() = JsonAction.authenticatedParseJson { request =>
     val tags = db.readOnly { implicit s =>
       collectionRepo.getByUser(request.userId)
     }
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 
-  def tagsByUrl() = AuthenticatedJsonToJsonAction { request =>
+  def tagsByUrl() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     val tags = db.readOnly { implicit s =>
       for {
@@ -131,7 +131,7 @@ class ExtBookmarksController @Inject() (
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 
-  def remove() = AuthenticatedJsonToJsonAction { request =>
+  def remove() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     db.readOnly { implicit s =>
       uriRepo.getByUri(url).flatMap { uri =>
@@ -148,7 +148,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def updateKeepInfo() = AuthenticatedJsonToJsonAction { request =>
+  def updateKeepInfo() = JsonAction.authenticatedParseJson { request =>
     val json = request.body
     val url = (json \ "url").as[String]
     val privateKeep =  (json \ "private").asOpt[Boolean]
@@ -172,7 +172,7 @@ class ExtBookmarksController @Inject() (
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
-  def addBookmarks() = AuthenticatedJsonAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
+  def addBookmarks() = JsonAction.authenticated(parser = parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body
@@ -203,7 +203,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def getNumMutualKeeps(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def getNumMutualKeeps(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val n: Int = db.readOnly { implicit s =>
       bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
     }

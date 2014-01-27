@@ -42,6 +42,26 @@ class PlayMailerAPI @Inject()(
     mail.value = mail.value.copy(subject = String.format(subject, args))
     this
   }
+
+  def setBcc(bccs: String*): com.typesafe.plugin.MailerAPI = reportErrors {
+    notImplemented
+  }
+
+  def setCc(ccs: String*): com.typesafe.plugin.MailerAPI = reportErrors {
+    mail.value = mail.value.copy(cc = ccs.map(GenericEmailAddress))
+    this
+  }
+
+  def setRecipient(tos: String *): com.typesafe.plugin.MailerAPI = {
+    mail.value = mail.value.copy(to = tos.map(GenericEmailAddress))
+    this
+  }
+
+  def setFrom(from: String ): com.typesafe.plugin.MailerAPI = {
+    mail.value = mail.value.copy(from = EmailAddresses(from))
+    this
+  }
+
   def addFrom(from: String): MailerAPI = reportErrors {
     mail.value = mail.value.copy(from = EmailAddresses(from))
     this

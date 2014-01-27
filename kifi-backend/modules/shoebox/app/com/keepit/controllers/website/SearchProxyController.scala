@@ -11,12 +11,9 @@ import com.google.inject.Inject
 
 class SearchProxyController @Inject() (actionAuthenticator: ActionAuthenticator, searchServiceClient: SearchServiceClient) extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def search() = AuthenticatedJsonAction { request =>
-    Async(
-      searchServiceClient.search(request.userId, request.experiments.contains(NO_SEARCH_EXPERIMENTS), request.request.acceptLanguages.map(_.code), request.rawQueryString).map{ res =>
-        Ok(res).withHeaders("Content-Type" -> "application/json")
-      }
-    )
-
+  def search() = JsonAction.authenticatedAsync { request =>
+    searchServiceClient.search(request.userId, request.experiments.contains(NO_SEARCH_EXPERIMENTS), request.request.acceptLanguages.map(_.code), request.rawQueryString).map{ res =>
+      Ok(res).withHeaders("Content-Type" -> "application/json")
+    }
   }
 }

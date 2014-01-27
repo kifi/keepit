@@ -7,7 +7,7 @@ import views.html
 
 class AdminEngineeringDashboardController @Inject() (
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
-  def overview = AdminHtmlAction { implicit request =>
+  def overview = AdminHtmlAction.authenticated { implicit request =>
       Ok(html.admin.engineeringDashboard())
   }
 }

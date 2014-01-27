@@ -51,7 +51,7 @@ class InviteController @Inject() (db: Database,
   inviteCommander: InviteCommander
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def invite = AuthenticatedHtmlAction { implicit request =>
+  def invite = HtmlAction.authenticated { implicit request =>
     Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
   }
 
@@ -69,7 +69,7 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def inviteConnection = AuthenticatedHtmlAction { implicit request =>
+  def inviteConnection = HtmlAction.authenticated { implicit request =>
     val (fullSocialId, subject, message) = request.request.body.asFormUrlEncoded match {
       case Some(form) =>
         (form.get("fullSocialId").map(_.head).getOrElse(""),
@@ -84,7 +84,7 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def processInvite(userId:Id[User], user:User, inviteInfo:InviteInfo):Result = {
+  def processInvite(userId:Id[User], user:User, inviteInfo:InviteInfo): SimpleResult = {
     if (inviteInfo.fullSocialId.network == "email") {
       abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
         econtactTr match {
@@ -110,20 +110,18 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def refreshAllSocialInfo() = AuthenticatedHtmlAction { implicit request =>
+  def refreshAllSocialInfo() = HtmlAction.authenticatedAsync { implicit request =>
     val info = db.readOnly { implicit s =>
       socialUserInfoRepo.getByUser(request.userId)
     }
-    Async {
-      implicit val duration = 5.minutes
-      TimeoutFuture(Future.sequence(info.map(socialGraphPlugin.asyncFetch(_)))).map { res =>
-        Redirect("/friends/invite")
-      }
+    implicit val duration = 5.minutes
+    TimeoutFuture(Future.sequence(info.map(socialGraphPlugin.asyncFetch(_)))).map { res =>
+      Redirect("/friends/invite")
     }
   }
 
-  def acceptInvite(id: ExternalId[Invitation]) = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
-    Redirect(com.keepit.controllers.core.routes.AuthController.signupPage)
+  def acceptInvite(id: ExternalId[Invitation]) = HtmlAction.async(allowPending = true)(authenticatedAction = { implicit request =>
+    resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
   }, unauthenticatedAction = { implicit request =>
       val (invitation, inviterUserOpt) = db.readOnly { implicit session =>
         invitationRepo.getOpt(id).map {
@@ -136,30 +134,28 @@ class InviteController @Inject() (db: Database,
       invitation match {
         case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
           if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
-            Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
+            resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id)))
           } else {
-            Async {
-              val nameOpt = (invite.recipientSocialUserId, invite.recipientEContactId) match {
-                case (Some(socialUserId), _) =>
-                  val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
-                  Promise.successful(Option(name)).future
-                case (_, Some(eContactId)) =>
-                  abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name.getOrElse("")) }
-                case _ =>
-                  Promise.successful(None).future
-              }
-              nameOpt.map {
-                case Some(name) =>
-                  val inviter = inviterUserOpt.get.firstName
-                  Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
-                case None =>
-                  log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-                  Redirect(com.keepit.controllers.website.routes.HomeController.home)
-              }
+            val nameOpt = (invite.recipientSocialUserId, invite.recipientEContactId) match {
+              case (Some(socialUserId), _) =>
+                val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
+                Promise.successful(Option(name)).future
+              case (_, Some(eContactId)) =>
+                abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name.getOrElse("")) }
+              case _ =>
+                Promise.successful(None).future
+            }
+            nameOpt.map {
+              case Some(name) =>
+                val inviter = inviterUserOpt.get.firstName
+                Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
+              case None =>
+                log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
+                Redirect(com.keepit.controllers.website.routes.HomeController.home)
             }
           }
         case _ =>
-          Redirect(com.keepit.controllers.website.routes.HomeController.home)
+          resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
       }
   })
 

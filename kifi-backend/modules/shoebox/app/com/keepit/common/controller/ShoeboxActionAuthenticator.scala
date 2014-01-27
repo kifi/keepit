@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
 import play.api.mvc._
 import securesocial.core._
+import scala.concurrent.Future
 
 @Singleton
 class ShoeboxActionAuthenticator @Inject() (
@@ -43,7 +44,7 @@ class ShoeboxActionAuthenticator @Inject() (
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = userExperimentRepo.getUserExperiments(userId)
 
-  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
+  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[SimpleResult]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
     val socialUser = request.user
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
@@ -70,9 +71,10 @@ class ShoeboxActionAuthenticator @Inject() (
       apiClient: Boolean,
       allowPending: Boolean,
       bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result,
-      onSocialAuthenticated: SecuredRequest[T] => Result,
-      onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
+      onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+      onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
+      onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request =>
+    println(s"[authenticatedAction] ${request.user}")
     val result = request.user match {
       case Some(identity) =>
         val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
@@ -81,21 +83,25 @@ class ShoeboxActionAuthenticator @Inject() (
         }
         uidOpt match {
           case Some(userId) =>
+            println(s"[authenticatedAction] REAL USER! $userId")
             authenticatedHandler(userId, apiClient, allowPending)(onAuthenticated)(SecuredRequest(identity, request))
           case None =>
+            println(s"[authenticatedAction] Not a real user")
             onSocialAuthenticated(SecuredRequest(identity, request))
         }
       case None =>
+        println(s"[authenticatedAction] Not logged in. It's okay.")
         onUnauthenticated(request)
     }
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
     }.map { h =>
-      result.withHeaders(
+      import com.keepit.common.concurrent.ExecutionContext.immediate
+      result.map(_.withHeaders(
         "Access-Control-Allow-Origin" -> h,
         "Access-Control-Allow-Credentials" -> "true"
-      )
+      ))(immediate)
     }.getOrElse(result)
   }
 
@@ -105,7 +111,7 @@ class ShoeboxActionAuthenticator @Inject() (
     userExperimentRepo.hasExperiment(userId, ExperimentType.ADMIN)
   }
 
-  private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
+  private def executeAction[T](action: AuthenticatedRequest[T] => Future[SimpleResult], userId: Id[User], identity: Identity,
      experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
      newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
@@ -114,13 +120,17 @@ class ShoeboxActionAuthenticator @Inject() (
       (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
-      Redirect("/logout")
+      Future.successful(Redirect("/logout"))
     } else {
       try {
-        action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
-          case r: PlainResult => newSession map r.withSession getOrElse r
-          case any: Result => any
-        }
+        import com.keepit.common.concurrent.ExecutionContext.immediate
+        val result = action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId))
+        result.map { res =>
+          newSession match {
+            case Some(sess) => res.withSession(sess)
+            case None => res
+          }
+        }(immediate)
       } catch {
         case e: Throwable =>
         val globalError = airbrake.notify(AirbrakeError.incoming(request, e,
