@@ -43,10 +43,8 @@ class AdminSearchController @Inject() (
 
   val rand = new Random()
 
-  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction.authenticated { request =>
-    Async {
-      searchClient.explainResult(query, request.userId, uriId, lang).map(Ok(_))
-    }
+  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction.authenticatedAsync { request =>
+    searchClient.explainResult(query, request.userId, uriId, lang).map(Ok(_))
   }
 
   private def getConfigsForBlindTest: Seq[SearchConfigExperiment] = {

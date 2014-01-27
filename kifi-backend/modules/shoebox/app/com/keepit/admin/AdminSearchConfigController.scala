@@ -46,20 +46,20 @@ class AdminSearchConfigController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def getExperiments = AdminHtmlAction.authenticated { implicit request =>
+  def getExperiments = AdminHtmlAction.authenticatedAsync { implicit request =>
     heimdal.updateMetrics()
     val experiments = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }
     val ids = experiments.map(_.id.get)
     val defaultConfigFuture = searchClient.getSearchDefaultConfig
     val kifiVsGoogleFuture = kifiVsGoogle(ids)
     val searchesWithKifiResultsFuture = searchesWithKifiResults(ids)
-    Async(for {
+    for {
       defaultConfig <- defaultConfigFuture
       kifiVsGoogle <- kifiVsGoogleFuture
       searchesWithKifiResults <- searchesWithKifiResultsFuture
     } yield {
       Ok(html.admin.searchConfigExperiments(experiments, defaultConfig.params, kifiVsGoogle.mapValues(Json.stringify(_)), searchesWithKifiResults.mapValues(Json.stringify(_))))
-    })
+    }
   }
 
   def addNewExperiment = AdminHtmlAction.authenticated { implicit request =>
@@ -68,7 +68,7 @@ class AdminSearchConfigController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments)
   }
 
-  def deleteExperiment = AdminJsonAction { implicit request =>
+  def deleteExperiment = AdminJsonAction.authenticated { implicit request =>
     val id = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
        .get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     id.map { id =>
@@ -78,7 +78,7 @@ class AdminSearchConfigController @Inject() (
     Ok(JsObject(Seq()))
   }
 
-  def updateExperiment = AdminJsonAction { implicit request =>
+  def updateExperiment = AdminJsonAction.authenticated { implicit request =>
     val form = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
     val id = form.get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     val desc = form.get("description").getOrElse("")

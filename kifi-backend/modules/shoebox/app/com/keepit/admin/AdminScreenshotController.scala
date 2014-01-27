@@ -19,18 +19,16 @@ class AdminScreenshotController @Inject() (
   normUriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
-  def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
+  def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val normUri = db.readOnly { implicit session =>
       normUriRepo.get(uriId)
     }
     val req = s3ScreenshotStore.updatePicture(normUri)
-    Async {
-      req.map { result =>
-        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(normUri).getOrElse("")
-        Ok("Done: " + result + s"\n<br><br>\n<a href='$screenshotUrl'>link</a>")
-      }
+    req.map { result =>
+      val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(normUri).getOrElse("")
+      Ok("Done: " + result + s"\n<br><br>\n<a href='$screenshotUrl'>link</a>")
     }
-  }
+}
 
   def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction.authenticated { implicit request =>
     val uris = db.readOnly { implicit session =>

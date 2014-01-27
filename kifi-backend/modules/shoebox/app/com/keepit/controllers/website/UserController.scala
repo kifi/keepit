@@ -524,7 +524,7 @@ class UserController @Inject() (
       case Some(sui) =>
         val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
-        Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
+        Status(200).chunked(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
         Ok(script(JsString("network_not_connected")))
     }
@@ -563,6 +563,6 @@ class UserController @Inject() (
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
+    Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))
   }
 }

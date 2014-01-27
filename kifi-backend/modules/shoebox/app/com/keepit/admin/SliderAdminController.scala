@@ -105,16 +105,14 @@ class SliderAdminController @Inject() (
     Ok(html.admin.domainTags(tags))
   }
 
-  def getClassifications(domain: Option[String]) = AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      domain.map(domainClassifier.fetchTags)
-        .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
-        val tagPairs = tags.map { t =>
-          val tag = db.readOnly { implicit s => domainTagRepo.get(t) }
-          (t.name, tag.map(_.sensitive.getOrElse(false)))
-        }
-        Ok(html.admin.classifications(domain, tagPairs))
+  def getClassifications(domain: Option[String]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    domain.map(domainClassifier.fetchTags)
+      .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
+      val tagPairs = tags.map { t =>
+        val tag = db.readOnly { implicit s => domainTagRepo.get(t) }
+        (t.name, tag.map(_.sensitive.getOrElse(false)))
       }
+      Ok(html.admin.classifications(domain, tagPairs))
     }
   }
 
@@ -151,7 +149,7 @@ class SliderAdminController @Inject() (
     Ok(html.admin.domains(domains))
   }
 
-  def saveDomainOverrides = AdminJsonAction { implicit request =>
+  def saveDomainOverrides = AdminJsonAction.authenticated { implicit request =>
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
     }.toMap
@@ -181,7 +179,7 @@ class SliderAdminController @Inject() (
     Ok(JsObject(Seq()))
   }
 
-  def getImportEvents = AdminHtmlAction.authenticated { implicit request =>
+  def getImportEvents = AdminHtmlAction.authenticatedAsync { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
     val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.IMPORTED_DOMAIN_TAGS).map { rawEvents =>
@@ -210,14 +208,14 @@ class SliderAdminController @Inject() (
       }.sortBy(_.createdAt).reverse
     }
 
-    Async(eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) })
+    eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) }
   }
 
   def getVersionForm = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.versionForm())
   }
 
-  def broadcastLatestVersion(ver: String) = AdminJsonAction { implicit request =>
+  def broadcastLatestVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     eliza.sendToAllUsers(Json.arr("version", ver))
     Ok(Json.obj("version" -> ver))
   }

@@ -43,16 +43,12 @@ class AdminURIGraphController @Inject()(
     Ok("reindexing started")
   }
 
-  def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      searchClient.dumpLuceneURIGraph(id).map(Ok(_))
-    }
+  def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction.authenticatedAsync { implicit request =>
+    searchClient.dumpLuceneURIGraph(id).map(Ok(_))
   }
 
-  def dumpCollectionLuceneDocument(id: Id[Collection]) =  AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      val collection = db.readOnly { implicit s => collectionRepo.get(id) }
-      searchClient.dumpLuceneCollection(id, collection.userId).map(Ok(_))
-    }
+  def dumpCollectionLuceneDocument(id: Id[Collection]) =  AdminHtmlAction.authenticatedAsync { implicit request =>
+    val collection = db.readOnly { implicit s => collectionRepo.get(id) }
+    searchClient.dumpLuceneCollection(id, collection.userId).map(Ok(_))
   }
 }

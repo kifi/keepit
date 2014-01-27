@@ -23,6 +23,7 @@ import com.keepit.model.{SocialUserInfoRepo, UserRepo}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
 import com.keepit.common.db.Id
+import scala.concurrent.Future
 
 
 class MobileAuthController @Inject() (
@@ -143,7 +144,6 @@ class MobileAuthController @Inject() (
           } else sess
           Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(newSession)
         }
-      case res => res
     }
   }
 

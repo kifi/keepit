@@ -27,24 +27,20 @@ class AdminSocialUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get))
   }
 
-  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      for {
-        socialUserInfo <- db.readOnlyAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
-        socialConnections <- db.readOnlyAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName) }
-      } yield {
-        val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
-        Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
-      }
+  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    for {
+      socialUserInfo <- db.readOnlyAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
+      socialConnections <- db.readOnlyAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName) }
+    } yield {
+      val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
+      Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
     }
   }
 
-  def socialUsersView(page: Int) = AdminHtmlAction.authenticated { implicit request =>
+  def socialUsersView(page: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 50
-    Async {
-      db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) } map { socialUsers =>
-        Ok(html.admin.socialUsers(socialUsers, page))
-      }
+    db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) } map { socialUsers =>
+      Ok(html.admin.socialUsers(socialUsers, page))
     }
   }
 

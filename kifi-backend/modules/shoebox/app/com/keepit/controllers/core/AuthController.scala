@@ -69,7 +69,6 @@ class AuthController @Inject() (
           } else sess
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
         }
-      case res => res
     }
   }
 
@@ -118,7 +117,6 @@ class AuthController @Inject() (
           // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
           res.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
         }
-      case res => res
     }
   }
 
@@ -134,7 +132,6 @@ class AuthController @Inject() (
             res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
           } getOrElse res
         } else res
-      case res => res
     }
   }
 

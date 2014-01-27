@@ -106,12 +106,12 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-      Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
+      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }
 
   def unsupported = Action {
-    Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
+    Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
   }
 
   private def homeNotAuthed(implicit request: Request[_]): SimpleResult = {

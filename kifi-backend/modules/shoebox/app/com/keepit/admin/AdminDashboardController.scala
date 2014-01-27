@@ -47,7 +47,7 @@ class AdminDashboardController @Inject() (
     Ok(html.admin.adminDashboard())
   }
 
-  def usersByDate = AdminJsonAction { implicit request =>
+  def usersByDate = AdminJsonAction.authenticated { implicit request =>
     Ok(userCountByDate)
   }
 

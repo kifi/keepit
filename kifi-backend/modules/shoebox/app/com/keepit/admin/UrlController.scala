@@ -26,6 +26,9 @@ import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.integrity.RenormalizationCheckKey
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -54,7 +57,7 @@ class UrlController @Inject() (
   }
 
   def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
-    Akka.future {
+    Future {
       try {
         doRenormalize(readOnly, clearSeq, domainRegex)
       } catch {
@@ -141,7 +144,7 @@ class UrlController @Inject() (
   }
 
   def orphanCleanup(readOnly: Boolean = true) = AdminHtmlAction.authenticated { implicit request =>
-    Akka.future {
+    Future {
       db.readWrite { implicit session =>
         orphanCleaner.clean(readOnly)
       }
@@ -149,7 +152,7 @@ class UrlController @Inject() (
     Ok
   }
   def orphanCleanupFull(readOnly: Boolean = true) = AdminHtmlAction.authenticated { implicit request =>
-    Akka.future {
+    Future {
       db.readWrite { implicit session =>
         orphanCleaner.fullClean(readOnly)
       }

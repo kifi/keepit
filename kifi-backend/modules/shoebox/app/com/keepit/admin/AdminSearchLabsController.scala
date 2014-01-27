@@ -16,9 +16,7 @@ class AdminSearchLabsController @Inject() (actionAuthenticator: ActionAuthentica
     Ok(html.labs.friendMap(q, minKeeps))
   }
 
-  def friendMapJson(q: Option[String] = None, minKeeps: Option[Int]) = AdminJsonAction { implicit request =>
-    Async {
-      searchClient.friendMapJson(request.userId, q, minKeeps).map { json => Ok(JsObject(Seq("data" -> json))) }
-    }
+  def friendMapJson(q: Option[String] = None, minKeeps: Option[Int]) = AdminJsonAction.authenticatedAsync { implicit request =>
+    searchClient.friendMapJson(request.userId, q, minKeeps).map { json => Ok(JsObject(Seq("data" -> json))) }
   }
 }

@@ -126,7 +126,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(toUserId))
   }
 
-  def moreUserInfoView(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def moreUserInfoView(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactsF = abookClient.getEContacts(userId, 40000000)
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
@@ -138,12 +138,10 @@ class AdminUserController @Inject() (
     val rawInfos = socialUserInfos map {info =>
       socialUserRawInfoStore.get(info.id.get)
     }
-    Async {
-      for {
-        abookInfos <- abookInfoF
-        econtacts <- econtactsF
-      } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, econtacts))
-    }
+    for {
+      abookInfos <- abookInfoF
+      econtacts <- econtactsF
+    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, econtacts))
   }
 
   def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction.authenticated { implicit request =>
@@ -175,7 +173,7 @@ class AdminUserController @Inject() (
     } getOrElse BadRequest
   }
 
-  def userView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+  def userView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
@@ -225,16 +223,14 @@ class AdminUserController @Inject() (
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
     val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
-    Async {
-      for {
-        abookInfos <- abookInfoF
-        econtactCount <- econtactCountF
-        econtacts <- econtactsF
-      } yield {
-        Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-          fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
-          collections, collectionFilter))
-      }
+    for {
+      abookInfos <- abookInfoF
+      econtactCount <- econtactCountF
+      econtacts <- econtactsF
+    } yield {
+      Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
+        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
+        collections, collectionFilter))
     }
   }
 
@@ -367,7 +363,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
+  def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction.authenticated { request =>
     val expType = ExperimentType.get(experiment)
     db.readWrite { implicit session =>
       (userExperimentRepo.get(userId, expType, excludeState = None) match {
@@ -411,7 +407,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def userValue(userId: Id[User]) = AdminJsonAction { implicit request =>
+  def userValue(userId: Id[User]) = AdminJsonAction.authenticated { implicit request =>
     val req = request.body.asJson.map { json =>
       ((json \ "name").asOpt[String], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
         case (Some(name), Some(value), None) =>
@@ -438,7 +434,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def changeState(userId: Id[User], state: String) = AdminJsonAction { request =>
+  def changeState(userId: Id[User], state: String) = AdminJsonAction.authenticated { request =>
     val userState = state match {
       case UserStates.ACTIVE.value => UserStates.ACTIVE
       case UserStates.INACTIVE.value => UserStates.INACTIVE
@@ -450,7 +446,7 @@ class AdminUserController @Inject() (
     Ok
   }
 
-  def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
+  def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction.authenticated { request =>
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentType.get(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))

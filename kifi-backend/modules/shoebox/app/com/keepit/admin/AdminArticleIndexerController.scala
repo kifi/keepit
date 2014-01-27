@@ -38,11 +38,9 @@ class AdminArticleIndexerController @Inject()(
     }
   }
 
-  def getSequenceNumber = AdminJsonAction { implicit request =>
-    Async {
-      searchClient.articleIndexerSequenceNumber().map { number =>
-        Ok(JsObject(Seq("sequenceNumber" -> JsNumber(number))))
-      }
+  def getSequenceNumber = AdminJsonAction.authenticatedAsync { implicit request =>
+    searchClient.articleIndexerSequenceNumber().map { number =>
+      Ok(JsObject(Seq("sequenceNumber" -> JsNumber(number))))
     }
   }
 
@@ -51,10 +49,8 @@ class AdminArticleIndexerController @Inject()(
     Ok("searcher refreshed")
   }
 
-  def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      searchClient.dumpLuceneDocument(id).map(Ok(_))
-    }
+  def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction.authenticatedAsync { implicit request =>
+    searchClient.dumpLuceneDocument(id).map(Ok(_))
   }
 }
 

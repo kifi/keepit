@@ -11,6 +11,11 @@ class AdminController(val actionAuthenticator: ActionAuthenticator) extends Serv
 
   object AdminJsonAction extends Actions.AuthenticatedActions {
     override val contentTypeOpt = Some(ContentTypes.JSON)
+    override def globalAuthFilter[T](request: AuthenticatedRequest[T]) = {
+      val userId = request.adminUserId.getOrElse(request.userId)
+      val authorizedDevUser = Play.isDev && userId.id == 1L
+      authorizedDevUser || actionAuthenticator.isAdmin(userId)
+    }
   }
   object AdminHtmlAction extends Actions.AuthenticatedActions {
     override val contentTypeOpt = Some(ContentTypes.HTML)

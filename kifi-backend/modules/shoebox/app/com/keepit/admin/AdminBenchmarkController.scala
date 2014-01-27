@@ -29,14 +29,12 @@ class AdminBenchmarkController @Inject() (
     extends AdminController(actionAuthenticator) {
   import BenchmarkResultsJson._
 
-  def benchmarks = AdminHtmlAction.authenticated { implicit request =>
-    Async {
+  def benchmarks = AdminHtmlAction.authenticatedAsync { implicit request =>
       val internalPing = pingSearchProcess()
       for {
         searchBenchmark <- searchServiceClient.benchmarks()
         shoeboxBenchmark <- future { benchmarkRunner.runBenchmark() }
       } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark, internalPing))
-    }
   }
 
   private def pingSearchProcess(): Double = {

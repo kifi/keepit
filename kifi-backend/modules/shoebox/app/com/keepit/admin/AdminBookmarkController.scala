@@ -49,29 +49,25 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def edit(id: Id[Bookmark]) = AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        val bookmark = bookmarkRepo.get(id)
-        editBookmark(bookmark)
+  def edit(id: Id[Bookmark]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    db.readOnlyAsync { implicit session =>
+      val bookmark = bookmarkRepo.get(id)
+      editBookmark(bookmark)
+    }
+  }
+
+  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    db.readOnlyAsync { implicit session =>
+      val bookmarkOpt = bookmarkRepo.getByUri(id).headOption
+      bookmarkOpt match {
+        case Some(bookmark) => editBookmark(bookmark)
+        case None => NotFound(s"No bookmark for id $id")
       }
     }
   }
 
-  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        val bookmarkOpt = bookmarkRepo.getByUri(id).headOption
-        bookmarkOpt match {
-          case Some(bookmark) => editBookmark(bookmark)
-          case None => NotFound(s"No bookmark for id $id")
-        }
-      }
-    }
-  }
-
-  def rescrape = AdminJsonAction { request =>
-    val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
+  def rescrape = AdminJsonAction.authenticatedParseJson { request =>
+    val id = Id[Bookmark]((request.body \ "id").as[Int])
     db.readWrite { implicit session =>
       val bookmark = bookmarkRepo.get(id)
       val uri = uriRepo.get(bookmark.uriId)
@@ -120,7 +116,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def bookmarksView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+  def bookmarksView(page: Int = 0) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 25
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
@@ -158,16 +154,14 @@ class AdminBookmarksController @Inject() (
     }}}
 
 
-    Async {
-      for {
-        bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
-        count <- bookmarkTotalCountFuture
-        todayImportedCount <- bookmarkTodayImportedCountFuture
-        todayOthersCount <- bookmarkTodayOthersCountFuture
-      } yield {
-        val pageCount: Int = count / PAGE_SIZE + 1
-        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
-      }
+    for {
+      bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
+      count <- bookmarkTotalCountFuture
+      todayImportedCount <- bookmarkTodayImportedCountFuture
+      todayOthersCount <- bookmarkTodayOthersCountFuture
+    } yield {
+      val pageCount: Int = count / PAGE_SIZE + 1
+      Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
     }
 
   }
