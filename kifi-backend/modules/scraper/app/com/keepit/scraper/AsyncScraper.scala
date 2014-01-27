@@ -190,6 +190,7 @@ class AsyncScraper @Inject() (
       id = latestUri.id.get,
       title = latestUri.title.getOrElse(""),
       description = None,
+      canonicalUrl = None,
       keywords = None,
       media = None,
       content = "",
@@ -316,6 +317,7 @@ class AsyncScraper @Inject() (
               val content = extractor.getContent
               val title = getTitle(extractor)
               val description = getDescription(extractor)
+              val canonicalUrl = getCanonicalUrl(extractor)
               val keywords = getKeywords(extractor)
               val media = getMediaTypeString(extractor)
               val signature = Signature(Seq(title, description.getOrElse(""), keywords.getOrElse(""), content))
@@ -328,6 +330,7 @@ class AsyncScraper @Inject() (
                 id = normalizedUri.id.get,
                 title = title,
                 description = description,
+                canonicalUrl = canonicalUrl,
                 keywords = keywords,
                 media = media,
                 content = content,
@@ -351,6 +354,8 @@ class AsyncScraper @Inject() (
 
   private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
 
+  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
+
   private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
 
   private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
@@ -361,6 +366,7 @@ class AsyncScraper @Inject() (
     title = getTitle(extractor),
     content = extractor.getContent,
     description = getDescription(extractor),
+    canonicalUrl = getCanonicalUrl(extractor),
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),

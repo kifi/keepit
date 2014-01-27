@@ -12,6 +12,7 @@ case class Article(
     title: String,
     content: String,
     description: Option[String],
+    canonicalUrl: Option[String],
     keywords: Option[String],
     media: Option[String],
     scrapedAt: DateTime,
@@ -32,6 +33,7 @@ object Article {
       (__ \ 'title).format[String] and
       (__ \ 'content).format[String] and
       (__ \ 'description).formatNullable[String] and
+      (__ \ 'canonicalUrl).formatNullable[String] and
       (__ \ 'keywords).formatNullable[String] and
       (__ \ 'media).formatNullable[String] and
       (__ \ 'scrapedAt).format[DateTime] and
