@@ -1,18 +1,36 @@
 package com.keepit.common
 
 import java.util.Locale
-
 import org.joda.time.format._
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
-
 import com.google.inject.{ImplementedBy, Singleton}
-
 import play.api.libs.json.JsError
 import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.{JsValue, Format}
+import play.api.libs.json.JsNumber
 
 package object time {
+
+  object internalTime {
+    implicit object DateTimeJsonLongFormat extends Format[DateTime] {
+      def reads(json: JsValue) = try {
+        json.asOpt[Long] match {
+          case Some(millis) => JsSuccess(new DateTime(millis, DEFAULT_DATE_TIME_ZONE))
+          case None => {
+            json.asOpt[String] match {
+              case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))
+              case None => throw new Exception("cannot read DateTime as Long or String")
+            }
+          }
+        }
+      } catch {
+        case ex: Throwable => JsError(s"Could not deserialize time $json")
+      }
+      def writes(o: DateTime) = JsNumber(o.getMillis)
+    }
+  }
+
   object zones {
     /**
      * Eastern Standard/Daylight Time.

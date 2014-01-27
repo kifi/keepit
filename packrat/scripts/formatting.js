@@ -6,7 +6,7 @@ var getTextFormatter = (function () {
   var escapedRightBracketRe = /\\\]/g;
   var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;
   var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
-  var lineBreaksRe = /\n(?:[ \t\r]*\n)*/g;
+  var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
   return function() {
     return function(text, render) {
       // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
@@ -40,7 +40,13 @@ var getTextFormatter = (function () {
         parts[i] = bits.join('');
       }
 
-      return '<div class="kifi-message-p">' + parts.join('').replace(lineBreaksRe, '</div><div class="kifi-message-p">') + '</div>';
+      return '<div class="kifi-message-p">' +
+        parts.join('').replace(lineBreaksRe, function (_, multiple) {
+          return multiple ?
+            '</div><div class="kifi-message-p kifi-message-pp">' :
+            '</div><div class="kifi-message-p">';
+        }) +
+        '</div>';
     };
   };
 }());
