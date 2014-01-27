@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
 
 import org.joda.time.DateTime
-import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer.{NormalizationReference, SchemeNormalizer, NormalizationService, NormalizationCandidate}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
@@ -193,12 +193,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
-        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
+        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)); uri
         case Right(prenormalizedUrl) => {
           val normalization = findNormalization(prenormalizedUrl)
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          session.onTransactionSuccess(normalizationServiceProvider.get.update(newUri, isNew = true, candidates))
+          session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*))
           newUri
         }
       }
