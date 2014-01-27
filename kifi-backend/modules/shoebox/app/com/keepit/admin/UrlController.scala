@@ -16,10 +16,9 @@ import com.keepit.integrity.OrphanCleaner
 import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.UriIntegrityPlugin
-import com.keepit.normalizer.NormalizationService
+import com.keepit.normalizer.{NormalizationReference, NormalizationService, VerifiedCandidate}
 import com.keepit.model.DuplicateDocument
 import com.keepit.common.healthcheck.BabysitterTimeout
-import com.keepit.normalizer.TrustedCandidate
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.zookeeper.CentralConfig
@@ -250,7 +249,7 @@ class UrlController @Inject() (
           Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
         case (Some(oldUri), Some(newUri)) => {
           val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
-          val result = monitoredAwait.result(normalizationService.update(oldUri, TrustedCandidate(newUri.url, normalization)), 1 minute, "Manual normalization update failed.")
+          val result = monitoredAwait.result(normalizationService.update(NormalizationReference(oldUri), VerifiedCandidate(newUri.url, normalization)), 1 minute, "Manual normalization update failed.")
           if (result.isDefined)
             Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
           else

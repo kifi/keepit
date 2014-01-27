@@ -8,12 +8,13 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
 
 import org.joda.time.DateTime
-import com.keepit.normalizer.{SchemeNormalizer, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer.{NormalizationReference, SchemeNormalizer, NormalizationService, NormalizationCandidate}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import com.keepit.scraper.ScraperConfig
+import NormalizedURIStates._
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -106,33 +107,30 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
-    if (uri.state == NormalizedURIStates.INACTIVE
-      || uri.state == NormalizedURIStates.ACTIVE
-      || uri.state == NormalizedURIStates.REDIRECTED
-      || uri.state == NormalizedURIStates.UNSCRAPABLE) {
-      // If uri.state is in one of these states, we do not want an ACTIVE ScrapeInfo record for it
-      scrapeRepo.getByUriId(saved.id.get) match {
-        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
-          scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-        case _ => // do nothing
-      }
-    } else if (uri.state == NormalizedURIStates.SCRAPE_FAILED) {
-      scrapeRepo.getByUriId(saved.id.get) match { // do not use saveStateAndNextScrape
-        case Some(scrapeInfo) => if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) { scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE)) }
-        case Some(scrapeInfo) => // do nothing
-        case None => scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
-      }
-    } else {
-      // Otherwise, ensure that ScrapeInfo has an active record for it.
-      scrapeRepo.getByUriId(saved.id.get) match {
-        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
-          scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
-        case Some(scrapeInfo) => // do nothing
-        case None =>
-          scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
-      }
+    uri.state match {
+      case INACTIVE | ACTIVE | REDIRECTED | UNSCRAPABLE => // ensure no ACTIVE scrapeInfo records
+        scrapeRepo.getByUriId(saved.id.get) match {
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
+            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+          case _ => // do nothing
+        }
+      case SCRAPE_FAILED | SCRAPED =>
+        scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
+          case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
+            scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+          case _ => // do nothing
+        }
+      case SCRAPE_WANTED => // ensure that ScrapeInfo has an ACTIVE record for it.
+        scrapeRepo.getByUriId(saved.id.get) match {
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
+          case Some(scrapeInfo) => // do nothing
+          case None =>
+            scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
+        }
+      case _ =>
+        throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
     }
-
     saved
   }
 
@@ -195,12 +193,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
-        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(uri, isNew = false, candidates)); uri
+        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)); uri
         case Right(prenormalizedUrl) => {
           val normalization = findNormalization(prenormalizedUrl)
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          session.onTransactionSuccess(normalizationServiceProvider.get.update(newUri, isNew = true, candidates))
+          session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*))
           newUri
         }
       }

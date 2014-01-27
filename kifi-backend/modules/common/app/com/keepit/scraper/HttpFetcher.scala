@@ -16,7 +16,7 @@ import org.apache.http.client.entity.{DeflateDecompressingEntity, GzipDecompress
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
 import org.apache.http.client.protocol.HttpClientContext
-import java.io.IOException
+import java.io.{EOFException, IOException}
 import scala.util.Try
 import org.apache.http.util.EntityUtils
 import com.keepit.common.time._
@@ -32,6 +32,7 @@ import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.{SSLException, SSLHandshakeException}
 import HttpStatus._
+import java.util.zip.ZipException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -255,16 +256,20 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       fetchInfo.respStatusRef.set(response.getStatusLine)
       Some(response)
     } catch {
-      case e:SSLException               => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:java.io.EOFException       => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SSLHandshakeException      => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:HttpHostConnectException   => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:ClientProtocolException    => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:NoRouteToHostException     => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:UnknownHostException       => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:ConnectTimeoutException    => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SocketException            => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SocketTimeoutException     => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:ZipException               => logAndSet(fetchInfo, None)(e, "fetch", url) // todo: retry without gzip
+      case e @ ( // revisit this list and see what can be handled
+        _:SSLException
+        | _:NoHttpResponseException
+        | _:EOFException
+        | _:SSLHandshakeException
+        | _:HttpHostConnectException
+        | _:ClientProtocolException
+        | _:NoRouteToHostException
+        | _:UnknownHostException
+        | _:ConnectTimeoutException
+        | _:SocketException
+        | _:SocketTimeoutException
+        )                               => logAndSet(fetchInfo, None)(e, "fetch", url)
       case t:Throwable                  => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
 
