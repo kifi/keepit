@@ -18,7 +18,7 @@ import com.keepit.search.result.ResultUtil
 import com.keepit.search.SearchCommander
 
 class ExtSearchController @Inject() (
-  val actionAuthenticator: ActionAuthenticator,
+  actionAuthenticator: ActionAuthenticator,
   searchCommander: SearchCommander
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 

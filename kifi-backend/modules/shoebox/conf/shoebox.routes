@@ -19,9 +19,11 @@ POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
 
-# OAuth provider entry points (e.g. "facebook")
-GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+# See common.routes for our better ProviderController routes.
+
+# SecureSocial routes need to exist, or it complains and dies.
+GET     /-authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
+POST    /-authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
 
 # custom auth routes which set some session state
 

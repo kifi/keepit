@@ -8,10 +8,14 @@ import play.api.mvc.{Request, Result}
 import play.api.mvc.Results.Forbidden
 
 import securesocial.core.providers.{UsernamePasswordProvider => UPP}
-import securesocial.core.{Registry, UserService, IdentityId, SocialUser}
+import securesocial.core._
+import play.api.libs.ws.Response
+import securesocial.core.IdentityId
+import scala.Some
 
 class UsernamePasswordProvider(application: Application)
   extends UPP(application) with UserIdentityProvider {
+
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
     UPP.loginForm.bindFromRequest().fold(
       errors => Left(error("bad_form")),
@@ -28,6 +32,14 @@ class UsernamePasswordProvider(application: Application)
         }
       }
     )
+  }
+
+  override protected def buildInfo(response: Response): OAuth2Info = {
+    try super.buildInfo(response) catch {
+      case e: Throwable =>
+        log.info(s"[securesocial] Failed to build oauth2 info. Response was ${response.body}")
+        throw e
+    }
   }
 
   private def error(errorCode: String) = Forbidden(Json.obj("error" -> errorCode))

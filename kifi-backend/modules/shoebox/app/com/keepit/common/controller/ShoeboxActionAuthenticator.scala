@@ -74,6 +74,7 @@ class ShoeboxActionAuthenticator @Inject() (
       onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
       onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
       onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request =>
+    println(s"[authenticatedAction] ${request.user}")
     val result = request.user match {
       case Some(identity) =>
         val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
@@ -82,11 +83,14 @@ class ShoeboxActionAuthenticator @Inject() (
         }
         uidOpt match {
           case Some(userId) =>
+            println(s"[authenticatedAction] REAL USER! $userId")
             authenticatedHandler(userId, apiClient, allowPending)(onAuthenticated)(SecuredRequest(identity, request))
           case None =>
+            println(s"[authenticatedAction] Not a real user")
             onSocialAuthenticated(SecuredRequest(identity, request))
         }
       case None =>
+        println(s"[authenticatedAction] Not logged in. It's okay.")
         onUnauthenticated(request)
     }
     request.headers.get("Origin").filter { uri =>

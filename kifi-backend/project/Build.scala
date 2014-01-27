@@ -35,11 +35,12 @@ object ApplicationBuild extends Build {
 
     val commonDependencies = Seq(
       jdbc,
-      "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
-      "com.typesafe" %% "play-plugins-mailer" % "2.1-RC2",
-      "securesocial" %% "securesocial" % "master-20130808",
+      cache,
+      "com.typesafe.play.plugins" %% "play-statsd" % "2.2.0" exclude("play", "*"),
+      "com.typesafe" %% "play-plugins-mailer" % "2.2.0" exclude("play", "*"),
+      "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
-      "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
+      "com.typesafe.akka" %% "akka-testkit" % "2.1.0"  exclude("play", "*"),
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
       "org.apache.httpcomponents" % "httpclient" % "4.3",
@@ -50,7 +51,7 @@ object ApplicationBuild extends Build {
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
-      "com.typesafe.slick" %% "slick" % "1.0.1",
+      "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*"),
       "net.sf.uadetector" % "uadetector-resources" % "2013.11",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
@@ -83,13 +84,13 @@ object ApplicationBuild extends Build {
 
     val shoeboxDependencies = Seq(
       "javax.mail" % "mail" % "1.4.5",
-      "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.1" exclude("play", "*"),
       "org.jsoup" % "jsoup" % "1.7.1"
     )
 
     val heimdalDependencies = Seq(
-      "org.reactivemongo" %% "reactivemongo" % "0.9",
-      "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
+      "org.reactivemongo" %% "reactivemongo" % "0.10.0",
+      "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
       "com.maxmind.geoip2" % "geoip2" % "0.5.0",
       "com.mixpanel" % "mixpanel-java" % "1.2.1"
     ) map (_.excludeAll(

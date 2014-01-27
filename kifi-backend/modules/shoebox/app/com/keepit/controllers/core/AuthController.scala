@@ -15,7 +15,6 @@ import com.keepit.social.SocialNetworkType
 import play.api.Play._
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
-import securesocial.controllers.ProviderController
 import securesocial.core._
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
@@ -27,6 +26,7 @@ import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient}
+import com.keepit.social.providers.ProviderController
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -59,9 +59,9 @@ class AuthController @Inject() (
   // Logout is still handled by SecureSocial directly.
 
   def loginSocial(provider: String) = ProviderController.authenticate(provider)
-  def logInWithUserPass(link: String) = Action { implicit request =>
+  def logInWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
     val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
-    authRes match {
+    authRes.map {
       case res: SimpleResult if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
@@ -69,6 +69,7 @@ class AuthController @Inject() (
           } else sess
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
         }
+      case res => res
     }
   }
 
@@ -109,20 +110,19 @@ class AuthController @Inject() (
     }
   })
 
-  def signup(provider: String) = Action { implicit request =>
-    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider)(request) }
-    authRes match {
-      case res: SimpleResult =>
-        authHelper.authHandler(request, res) { (_, sess:Session) =>
-          // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-          res.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
-        }
+  def signup(provider: String) = Action.async(parse.anyContent) { implicit request =>
+    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider) }
+
+    authRes(request).map { result =>
+      authHelper.authHandler(request, result) { (_, sess:Session) =>
+      // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
+        result.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+      }
     }
   }
 
-  def link(provider: String) = Action { implicit request =>
-    ProviderController.authenticate(provider)(request) match {
-      case res: SimpleResult =>
+  def link(provider: String) = Action.async(parse.anyContent) { implicit request =>
+    ProviderController.authenticate(provider)(request) map { res: SimpleResult =>
         val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
         val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
         if (resSession.get(PopupKey).isDefined) {

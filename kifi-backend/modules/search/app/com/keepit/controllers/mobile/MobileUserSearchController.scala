@@ -19,7 +19,7 @@ class MobileUserSearchController @Inject()(
   searcherFactory: MainSearcherFactory,
   filterFactory: UserSearchFilterFactory,
   shoeboxClient: ShoeboxServiceClient,
-  val actionAuthenticator: ActionAuthenticator
+  actionAuthenticator: ActionAuthenticator
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   val EXCLUDED_EXPERIMENTS = Seq("fake")

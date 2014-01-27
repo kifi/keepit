@@ -8,7 +8,6 @@ import securesocial.core._
 import play.api.mvc._
 import scala.util.Try
 import com.keepit.controllers.core.{AuthController, AuthHelper}
-import securesocial.controllers.ProviderController
 import securesocial.core.IdentityId
 import scala.util.Failure
 import scala.Some
@@ -22,8 +21,8 @@ import com.keepit.social.{SocialNetworkType, SocialId, UserIdentity}
 import com.keepit.model.{SocialUserInfoRepo, UserRepo}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
-import com.keepit.common.db.Id
-import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.social.providers.ProviderController
 
 
 class MobileAuthController @Inject() (
@@ -135,8 +134,8 @@ class MobileAuthController @Inject() (
     unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
   )
 
-  def loginWithUserPass(link: String) = Action { implicit request =>
-    ProviderController.authenticate("userpass")(request) match {
+  def loginWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
+    ProviderController.authenticate("userpass")(request).map {
       case res: SimpleResult if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
@@ -144,6 +143,7 @@ class MobileAuthController @Inject() (
           } else sess
           Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(newSession)
         }
+      case res => res
     }
   }
 

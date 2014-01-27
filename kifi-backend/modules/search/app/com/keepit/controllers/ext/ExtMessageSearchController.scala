@@ -10,7 +10,7 @@ import com.google.inject.Inject
 
 class ExtMessageSearchController @Inject() (
     commander: MessageSearchCommander, 
-    val actionAuthenticator: ActionAuthenticator
+    actionAuthenticator: ActionAuthenticator
   ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   def search(query: String, page: Int) = JsonAction.authenticated { request =>

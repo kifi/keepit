@@ -23,6 +23,7 @@ import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
 import scala.util.control.NonFatal
+import java.util.concurrent.atomic.AtomicInteger
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
@@ -38,8 +39,12 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
-
+  private val startedCount = new AtomicInteger(0)
   override def beforeStart(app: Application): Unit = {
+    val cnt = startedCount.incrementAndGet()
+    println("+++++++++++++++++++++++++++++++++++++++++++")
+    println(s"beforeStart... $cnt times")
+    println("+++++++++++++++++++++++++++++++++++++++++++")
     val conf = app.configuration
     val appName = conf.getString("application.name").get
     conf.getConfig("db") match {

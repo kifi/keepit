@@ -22,29 +22,34 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
   private def SocialPlaceholder[T]: SecuredRequest[T] => Future[SimpleResult] = null
   private def UnauthPlaceholder[T]: Request[T] => Future[SimpleResult] = null
 
-  def unhandledUnAuthenticated[T](apiClient: Boolean) = { implicit request: Request[T] =>
-    if (apiClient) {
-      Future.successful(Forbidden(JsNumber(0)))
-    } else {
-      Future.successful(Redirect("/login")
-        .flashing("error" -> Messages("securesocial.loginRequired"))
-        .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri)))
+  def unhandledUnAuthenticated[T](tag: String, apiClient: Boolean) = {
+    println(s"Setting up $tag")
+    val p = { implicit request: Request[T] =>
+      if (apiClient) {
+        Future.successful(Forbidden(JsNumber(0)))
+      } else {
+        Future.successful(Redirect("/login")
+          .flashing("error" -> Messages("securesocial.loginRequired"))
+          .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri)))
+      }
     }
+    p
   }
 
   private def ActionHandlerAsync[T](parser: BodyParser[T], apiClient: Boolean, allowPending: Boolean, authFilter: AuthenticatedRequest[T] => Boolean)
-                                   (onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult], onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T](apiClient), onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T](apiClient)): Action[T] = {
+                                   (onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult], onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onSocial", apiClient), onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
 
     val filteredAuthenticatedRequest: AuthenticatedRequest[T] => Future[SimpleResult] = { request =>
       if (authFilter(request)) {
+        println("Admin passes the filter!")
         onAuthenticated(request)
       } else {
+        println("Admin filtered!")
         onUnauthenticated(request)
       }
-
     }
 
-    actionAuthenticator.authenticatedAction(apiClient, allowPending, parser, filteredAuthenticatedRequest, onUnauthenticated = onUnauthenticated, onSocialAuthenticated = onSocialAuthenticated)
+    actionAuthenticator.authenticatedAction(apiClient, allowPending, parser, filteredAuthenticatedRequest, onSocialAuthenticated = onSocialAuthenticated, onUnauthenticated = onUnauthenticated)
   }
 
   trait ActionDefaults {
@@ -61,9 +66,9 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     def authenticatedAsync[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: (AuthenticatedRequest[T] => Boolean) = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[SimpleResult]): Action[T] = {
       contentTypeOpt match {
         case Some(contentType) =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(authenticatedAction.andThen(_.map(_.as(contentType))))
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))))
         case None =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(authenticatedAction)
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction)
       }
     }
 
@@ -104,11 +109,12 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     // The type is what the Content Type header is set as.
 
     def async[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: AuthenticatedRequest[T] => Boolean = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[SimpleResult], unauthenticatedAction: Request[T] => Future[SimpleResult]): Action[T] = {
+      println(s"Hitting async $apiClient $allowPending $contentTypeOpt")
       contentTypeOpt match {
         case Some(contentType) =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(authenticatedAction.andThen(_.map(_.as(contentType))), unauthenticatedAction.andThen(_.map(_.as(contentType))))
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))), onUnauthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))))
         case None =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(authenticatedAction, unauthenticatedAction)
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction, onUnauthenticated = unauthenticatedAction)
       }
     }
 
@@ -117,6 +123,11 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
 
     def apply[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => SimpleResult, unauthenticatedAction: Request[T] => SimpleResult): Action[T] = {
+      val pp = unauthenticatedAction.compose[Request[T]] { r: Request[T] =>
+        println("CALLED!")
+        r
+      }
+
       async(parser, apiClient, allowPending)(authenticatedAction.andThen(Future.successful), unauthenticatedAction.andThen(Future.successful))
     }
 
