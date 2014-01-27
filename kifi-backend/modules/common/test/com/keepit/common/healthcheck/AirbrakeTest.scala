@@ -24,7 +24,7 @@ class AirbrakeTest extends Specification with TestInjector {
   def validate(xml: NodeSeq) = {
     val schemaLang = "http://www.w3.org/2001/XMLSchema"
     val factory = SchemaFactory.newInstance(schemaLang)
-    val schema = factory.newSchema(new StreamSource("modules/common/test/com/keepit/common/healthcheck/airbrake_2_3.xsd"))
+    val schema = factory.newSchema(new StreamSource("test/com/keepit/common/healthcheck/airbrake_2_3.xsd"))
     val validator = schema.newValidator()
     validator.validate(new StreamSource(new StringReader(xml.toString)))
   }
@@ -46,7 +46,7 @@ class AirbrakeTest extends Specification with TestInjector {
         val lines = (xml \\ "line").toVector
         lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
         lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
-        lines.size === 176
+        lines.size === 188
       }
     }
 
@@ -58,7 +58,7 @@ class AirbrakeTest extends Specification with TestInjector {
         val lines = (xml \\ "line").toVector
         lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
         lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
-        lines.size === 117
+        lines.size === 125
       }
     }
 
@@ -71,7 +71,7 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.NullPointerException</class>
         (xml \ "error" \ "message").head === <message>[0L] java.lang.NullPointerException</message>
-        (xml \ "error" \ "backtrace" \ "line").size === 176
+        (xml \ "error" \ "backtrace" \ "line").size === 188
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "server-environment" \ "app-version").head.text === "0.0.0"
         (xml \ "server-environment" \ "project-root").head.text === "TEST_MODE"
@@ -92,7 +92,7 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>[0L] java.lang.IllegalArgumentException: hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").size === 58
+        (xml \ "error" \ "backtrace" \ "line").size === 62
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
         (xml \ "request" \ "action").head === <action>POST</action>
@@ -144,7 +144,7 @@ class AirbrakeTest extends Specification with TestInjector {
             val lines = (xml \\ "line").toVector
             lines.head === <line method="java.lang.IllegalArgumentException: me iae" file="InjectorProvider.scala" number="39"/>
             lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
-            lines.size === 117
+            lines.size === 125
         }
       }
     }
