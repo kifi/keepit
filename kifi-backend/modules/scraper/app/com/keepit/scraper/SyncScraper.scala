@@ -78,6 +78,9 @@ class SyncScraper @Inject() (
           // first update the uri state to SCRAPED
           val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
 
+          // Report canonical url
+          article.canonicalUrl.foreach(helper.syncRecordScrapedNormalization(latestUri.id.get, signature, _, Normalization.CANONICAL))
+
           // then update the scrape schedule
           helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>

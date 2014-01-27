@@ -241,6 +241,7 @@ class AsyncScraper @Inject() (
       ) {
         // the article does not need to be reindexed update the scrape schedule, uri is not changed
         helper.saveScrapeInfo(info.withDocumentUnchanged()) // todo: revisit
+        article.canonicalUrl.foreach(helper.recordScrapedNormalization(latestUri.id.get, signature, _, Normalization.CANONICAL)) // todo: remove when all existing uris have been rescraped once
         log.info(s"[asyncProcessURI] (${uri.url}) no change detected")
         (latestUri, None)
       } else {
@@ -249,6 +250,7 @@ class AsyncScraper @Inject() (
         val scrapedUri = updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
         val scrapedInfo = info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)
         helper.scraped(scrapedUri, scrapedInfo)
+        article.canonicalUrl.foreach(helper.recordScrapedNormalization(latestUri.id.get, signature, _, Normalization.CANONICAL)) // todo: make part of "scraped" call
         if (shouldUpdateScreenshot(scrapedUri)) {
           s3ScreenshotStore.updatePicture(scrapedUri) onComplete { tr =>
             tr match {
