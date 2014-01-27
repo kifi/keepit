@@ -148,7 +148,7 @@ var pane = pane || function () {  // idempotent for Chrome
           $pane.before(tile);
         }
         $box.data("shown", true).triggerHandler("kifi:shown");
-        window.dispatchEvent(new Event("resize"));  // for other page scripts
+        notifyPageOfResize(true);
       })
       .hoverfu('.kifi-pane-head-logo', function(configureHover) {
         configureHover({
@@ -286,7 +286,7 @@ var pane = pane || function () {  // idempotent for Chrome
         $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
         $pane.remove();
         $('html').removeClass('kifi-pane-parent');
-        window.dispatchEvent(new Event("resize"));  // for other page scripts
+        notifyPageOfResize();
       }
     });
     api.port.emit('pane', {old: $pane[0].dataset.locator});
@@ -298,7 +298,21 @@ var pane = pane || function () {  // idempotent for Chrome
     api.require('scripts/' + name + '.js', function () {
       panes[name].render($box, locator);
     });
-  };
+  }
+
+  function notifyPageOfResize(preventUnload) {
+    if (preventUnload) {
+      window.addEventListener('beforeunload', beforeUnload, true);
+      setTimeout(window.removeEventListener.bind(window, 'beforeunload', beforeUnload, true), 50);
+    }
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  function beforeUnload(e) {
+    log('[beforeUnload]')();
+    e.preventDefault();
+    return ' ';
+  }
 
   // the pane API
   return {
