@@ -137,7 +137,7 @@ object ApplicationBuild extends Build {
       "com.keepit.search._"
     )
 
-    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
+    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m", "-Dconfig.resource=application-dev.conf")
 
     val _testOptions = Seq(
       Tests.Argument("sequential", "true"),
