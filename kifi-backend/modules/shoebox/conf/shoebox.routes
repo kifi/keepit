@@ -1,8 +1,11 @@
 
 
 GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
-GET     /ss/login                   securesocial.controllers.LoginPage.login
-GET     /logout                     securesocial.controllers.LoginPage.logout
+GET     /ss/login                   com.keepit.social.providers.LoginPage.login
+GET     /logout                     com.keepit.social.providers.LoginPage.logout
+
+GET     /-ss/login                   securesocial.controllers.LoginPage.login
+GET     /-logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String], approvalPromptOpt:Option[String])
 GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:Id[ABookInfo], provider:Option[String])

@@ -13,12 +13,15 @@ import securesocial.core._
 import play.api.cache.Cache
 import scala.collection.JavaConversions._
 import play.api.libs.ws.{WS, Response}
+import play.api.libs.json._
 import securesocial.core.AccessDeniedException
 import play.api.libs.ws.Response
 import securesocial.core.IdentityId
+import play.api.libs.json.JsString
 import scala.Some
+import play.api.libs.json.JsNumber
+import play.api.mvc.Call
 import securesocial.core.OAuth2Info
-import com.keepit.social.UserIdentity
 import securesocial.core.AuthenticationException
 
 /**
@@ -80,10 +83,6 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
         // There's no code in the request, this is the first step in the oauth flow
         val state = UUID.randomUUID().toString
         val sessionId = request.session.get(IdentityProvider.SessionId).getOrElse(UUID.randomUUID().toString)
-        println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        BetterRoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
-        println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-
 
         Cache.set(sessionId, state, 300)
         var params = List(
@@ -136,6 +135,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
       OAuth2Constants.Code -> Seq(code),
       OAuth2Constants.RedirectUri -> Seq(BetterRoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled))
     ) ++ newSettings.accessTokenUrlParams.mapValues(Seq(_))
+    println("$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n" + newSettings.accessTokenUrl + "\n\n" + params.toString + "\n\n$$$$$$$$$$$$$$$$$$$$$$$")
     val call = WS.url(newSettings.accessTokenUrl).post(params)
     try {
       buildInfo(awaitResult(call))
@@ -148,15 +148,25 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
   }
 
   protected def buildInfo(response: Response): OAuth2Info = {
-    val json = response.json
+    println("Body:\n" + response.body + "\n---\n")
+    val parsed: Map[String, JsValue] = response.body.split("&").map { kv =>
+      val p = kv.split("=").take(2)
+      p(0) -> (if(p.length == 2) {
+        try { JsNumber(p(1).toInt) } catch {
+          case _: Throwable => JsString(p(1))
+        }
+      } else JsNull )
+    }.toMap
+
+    log.info("[securesocial] got json back [" + parsed + "]")
     if ( log.isDebugEnabled ) {
-      log.debug("[securesocial] got json back [" + json + "]")
+      log.debug("[securesocial] got json back [" + parsed + "]")
     }
     OAuth2Info(
-      (json \ OAuth2Constants.AccessToken).as[String],
-      (json \ OAuth2Constants.TokenType).asOpt[String],
-      (json \ OAuth2Constants.ExpiresIn).asOpt[Int],
-      (json \ OAuth2Constants.RefreshToken).asOpt[String]
+      parsed.get(OAuth2Constants.AccessToken).map(_.as[String]).get,
+      parsed.get(OAuth2Constants.TokenType).map(_.asOpt[String]).flatten,
+      parsed.get(OAuth2Constants.ExpiresIn).map(_.asOpt[Int]).flatten,
+      parsed.get(OAuth2Constants.RefreshToken).map(_.asOpt[String]).flatten
     )
   }
 
@@ -196,6 +206,7 @@ object OAuth2Constants {
 }
 
 object BetterRoutesHelper {
+  // todo(andrew): Fix!
   def authenticateByPost(provider : scala.Predef.String) : play.api.mvc.Call = {
     Call("POST", s"/authenticate/$provider")
   }

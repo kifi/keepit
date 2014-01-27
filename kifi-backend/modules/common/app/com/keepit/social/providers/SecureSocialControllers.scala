@@ -112,3 +112,70 @@ object ProviderController extends Controller
   }
 }
 
+
+
+import play.api.mvc.{Action, Controller}
+import securesocial.core._
+import play.api.Play
+import Play.current
+import providers.UsernamePasswordProvider
+import providers.utils.RoutesHelper
+
+
+/**
+ * The Login page controller
+ */
+object LoginPage extends Controller
+{
+  /**
+   * The property that specifies the page the user is redirected to after logging out.
+   */
+  val onLogoutGoTo = "securesocial.onLogoutGoTo"
+
+  /**
+   * Renders the login page
+   * @return
+   */
+  def login = Action { implicit request =>
+    val to = ProviderController.landingUrl
+    if ( SecureSocial.currentUser.isDefined ) {
+      // if the user is already logged in just redirect to the app
+      if ( Logger.isDebugEnabled ) {
+        Logger.debug("User already logged in, skipping login page. Redirecting to %s".format(to))
+      }
+      Redirect( to )
+    } else {
+      import com.typesafe.plugin._
+      if ( SecureSocial.enableRefererAsOriginalUrl ) {
+        SecureSocial.withRefererAsOriginalUrl(Ok(use[TemplatesPlugin].getLoginPage(request, UsernamePasswordProvider.loginForm)))
+      } else {
+        import Play.current
+        Ok(use[TemplatesPlugin].getLoginPage(request, UsernamePasswordProvider.loginForm))
+
+      }
+    }
+  }
+
+  /**
+   * Logs out the user by clearing the credentials from the session.
+   * The browser is redirected either to the login page or to the page specified in the onLogoutGoTo property.
+   *
+   * @return
+   */
+  def logout = Action { implicit request =>
+    val to = Play.configuration.getString(onLogoutGoTo).getOrElse(RoutesHelper.login().absoluteURL(IdentityProvider.sslEnabled))
+    val user = for (
+      authenticator <- SecureSocial.authenticatorFromRequest ;
+      user <- UserService.find(authenticator.identityId)
+    ) yield {
+      Authenticator.delete(authenticator.id)
+      user
+    }
+    val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
+    user match {
+      case Some(u) => result.withSession( Events.fire(new LogoutEvent(u)).getOrElse(session) )
+      case None => result
+    }
+  }
+}
+

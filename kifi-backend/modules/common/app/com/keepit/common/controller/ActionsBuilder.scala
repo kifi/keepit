@@ -19,9 +19,6 @@ trait ActionsBuilder { self: Controller =>
 class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controller {
   private implicit val ec = ExecutionContext.immediate
 
-  private def SocialPlaceholder[T]: SecuredRequest[T] => Future[SimpleResult] = null
-  private def UnauthPlaceholder[T]: Request[T] => Future[SimpleResult] = null
-
   def unhandledUnAuthenticated[T](tag: String, apiClient: Boolean) = {
     println(s"Setting up $tag")
     val p = { implicit request: Request[T] =>
@@ -60,7 +57,6 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
   }
 
   trait AuthenticatedActions extends ActionDefaults {
-
     // The type is what the Content Type header is set as.
 
     def authenticatedAsync[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: (AuthenticatedRequest[T] => Boolean) = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[SimpleResult]): Action[T] = {
@@ -103,18 +99,15 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
   }
 
   trait NonAuthenticatedActions extends ActionDefaults {
-    val contentTypeOpt: Option[String]
-    val apiClient: Boolean
-    val allowPending: Boolean
     // The type is what the Content Type header is set as.
 
     def async[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: AuthenticatedRequest[T] => Boolean = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[SimpleResult], unauthenticatedAction: Request[T] => Future[SimpleResult]): Action[T] = {
       println(s"Hitting async $apiClient $allowPending $contentTypeOpt")
       contentTypeOpt match {
         case Some(contentType) =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))), onUnauthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))))
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))), onUnauthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))), onSocialAuthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))))
         case None =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction, onUnauthenticated = unauthenticatedAction)
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction, onUnauthenticated = unauthenticatedAction, onSocialAuthenticated = unauthenticatedAction)
       }
     }
 
