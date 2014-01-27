@@ -236,19 +236,16 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def recordScrapedNormalization() = Action(parse.json) { request =>
-    Async {
-      val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
-      val signature = Signature((request.body \ "signature").as[String])
-      val candidateUrl = (request.body \ "url").as[String]
-      val candidateNormalization = (request.body \ "normalization").as[Normalization]
+  def recordScrapedNormalization() = SafeAsyncAction(parse.json) { request =>
+    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+    val signature = Signature((request.body \ "signature").as[String])
+    val candidateUrl = (request.body \ "url").as[String]
+    val candidateNormalization = (request.body \ "normalization").as[Normalization]
 
-      val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-      normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization)).map { idOpt =>
-        implicit val format = Id.format[NormalizedURI]
-        Ok(Json.toJson(idOpt))
-      }
-    }
+    val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
+
+    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization))
+    Ok
   }
 
   def getProxy(url:String) = SafeAsyncAction { request =>

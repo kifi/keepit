@@ -41,6 +41,7 @@ import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.ImmediateMap
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -103,7 +104,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
@@ -615,8 +616,14 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit = {
-    call(Shoebox.internal.recordScrapedNormalization(), Json.obj("id" -> uriId.id, "signature" -> signature.toBase64(), "url" -> candidateUrl, "normalization" -> candidateNormalization))
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit] = {
+    val payload = Json.obj(
+      "id" -> uriId.id,
+      "signature" -> uriSignature.toBase64(),
+      "url" -> candidateUrl,
+      "normalization" -> candidateNormalization
+    )
+    call(Shoebox.internal.recordScrapedNormalization(), payload).imap(_ => {})
   }
 
   def getProxy(url:String):Future[Option[HttpProxy]] = {

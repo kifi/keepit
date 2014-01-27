@@ -1,0 +1,617 @@
+<!DOCTYPE HTML>
+<html itemscope itemtype="http://schema.org/NewsArticle" lang="en-US">
+<head>
+<title>Texas judge: Remove brain-dead woman from ventilator - CNN.com</title>
+<meta charset="UTF-8"/>
+<meta content="2014-01-25T00:10:49Z" http-equiv="last-modified"/>
+<meta content="index,follow" name="robots"/>
+<meta content="noarchive" name="googlebot"/>
+<meta content="width=1024" name="viewport"/>
+<meta content="news" itemprop="genre" name="medium"/>
+<meta content="en-US" itemprop="inLanguage"/>
+<meta content="Texas judge: Remove brain-dead woman from ventilator - CNN.com" name="title"/>
+<meta content="A Texas judge ordered a hospital on Friday to remove a pregnant and brain-dead woman from respirators and ventilators by 5 p.m. Monday." itemprop="description" name="description" property="og:description"/>
+<meta content="" itemprop="keywords" name="keywords"/>
+<meta content="" name="news_keywords"/>
+<meta content="Ed Lavandera. Josh Rubin and Greg Botelho, CNN" itemprop="author" name="author"/>
+<meta content="health" itemprop="articleSection" name="section"/>
+<meta content="CNN" itemprop="sourceOrganization" name="source"/>
+<meta content="" name="subsection"/>
+<meta content="2014-01-24T05:01:00Z" itemprop="datePublished" name="pubdate"/>
+<meta content="2014-01-25T00:10:49Z" itemprop="dateModified" name="lastmod"/>
+<meta content="2014-01-24T05:01:00Z" itemprop="dateCreated"/>
+<meta content="Fort Worth, Texas" itemprop="contentLocation"/>
+<meta content="Texas judge: Remove brain-dead woman from ventilator, other machines" itemprop="headline" property="og:title" />
+<meta content="article" property="og:type"/>
+<meta content="http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html" itemprop="url" property="og:url"/>
+<meta content="CNN" property="og:site_name"/>
+<meta content="http://i2.cdn.turner.com/cnn/dam/assets/140114214552-ac-pkg-lavandera-brain-dead-texas-mom-00001226-story-top.jpg" itemprop="thumbnailUrl" property="og:image"/>
+<meta property="vr:canonical" content="http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html">
+<meta content="129343697106537" property="fb:page_id"/>
+<meta content="CNN" property="og:site_name"/>
+<meta content="80401312489" property="fb:app_id"/>
+<meta property="twitter:card" content="summary" />
+<meta property="twitter:site" content="@CNN"/>
+<meta property="twitter:site:id" content="759251"/>
+<meta property="twitter:creator" content="@cnnhealth"/>
+<meta property="twitter:creator:id" content="41602160"/>
+<meta property="twitter:image" content="http://i2.cdn.turner.com/cnn/dam/assets/140114214552-ac-pkg-lavandera-brain-dead-texas-mom-00001226-left-tease.jpg"/>
+<link href="http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html" rel="canonical"/>
+<link href="/" rel="Start"/>
+<link href="http://i.cdn.turner.com/cnn/.e/img/3.0/global/misc/apple-touch-icon.png" rel="apple-touch-icon" type="image/png"/>
+<link href="/tools/search/cnncom.xml" rel="search" title="CNN.com" type="application/opensearchdescription+xml"/>
+<link href="/tools/search/cnncomvideo.xml" rel="search" title="CNN.com Video" type="application/opensearchdescription+xml"/>
+<link href="http://rss.cnn.com/rss/cnn_health.rss" rel="alternate" title="CNN - Health [RSS]" type="application/rss+xml"/>
+<link href="http://z.cdn.turner.com/cnn/tmpl_asset/static/www_article/1833/css/artlib-min.css" rel="stylesheet" type="text/css"/>
+<link href="http://mediacdn.disqus.com/1296789715/styles/dtpl/defaults.css" rel="stylesheet" type="text/css"/>
+<link href="http://disqus.com/forums/cnn/styles.css" rel="stylesheet" type="text/css"/>
+<link href="http://widgets.outbrain.com/mu/css/outbrainWidget.css?v=33961" id="cssLinkID" rel="stylesheet" type="text/css"/>
+<link href="https://plus.google.com/u/0/b/117515799321987910349/117515799321987910349/posts" rel="publisher"/>
+<script>
+var cnnCurrTime=new Date(1390608826000),
+cnnCurrHour=19,
+cnnCurrMin=13,
+cnnCurrDay="Fri",
+cnnIsIntl=false,
+clickID=211911,
+cnn_cvpAdpre="",
+cnnCVPAdSectionT1="cnn.com_health_t1",
+cnnCVPAdSectionInPage="cnn.com_health_inpage",
+cnnShareUrl="%2F2014%2F01%2F24%2Fhealth%2Fpregnant-brain-dead-woman-texas%2Findex.html",
+cnnShareTitle="Texas%20judge%3A%20Remove%20brain-dead%20woman%20from%20ventilator%2C%20other%20machines",
+cnnShareDesc="",
+cnnFirstPub=new Date('Friday Jan 24 12:01:00 EST 2014'),
+cnnSectionName="health",
+sectionName="health",
+cnnSubSectionName="hth : news",
+cnnPageType="Story",
+cnnBrandingValue="default";
+cnnPartnerValue="";
+cnnOmniBranding="",
+cnnAuthor="Ed Lavandera. Josh Rubin and Greg Botelho, CNN",
+disqus_category_id=207582,
+disqus_identifier="/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html",
+disqus_title="Texas judge: Remove brain-dead woman from ventilator, other machines",
+cnn_edtnswtchver="www",
+cnnIsStoryPage=true,
+cnn_metadata = {},
+cnn_shareconfig = [];
+cnn_metadata = {
+section: [
+"health",
+"hth : news"
+],
+friendly_name: "Texas judge: Remove brain-dead woman from ventilator, other machines",
+template_type: "content",
+template_type_content: "",
+business: {
+cnn: {
+page: {
+author: "Ed Lavandera. Josh Rubin and Greg Botelho, CNN",
+broadcast_franchise: "",
+video_embed_count: "5",
+publish_date: "2014/01/24",
+photo_gallery: ""
+},
+video: {
+video_player: ""
+}
+}
+},
+user: {
+authenticated: "",
+segment: {
+age: "",
+zip: "",
+gender: ""
+}
+}
+};
+if (typeof(cnnOmniPartner) !== "undefined") {
+if (cnn_metadata.template_type_content === "") {
+cnn_metadata.template_type_content = "partner";
+}
+}
+var photo_gallery = "";
+</script>
+<script src="http://z.cdn.turner.com/cnn/tmpl_asset/static/www_article/1833/js/artlib-min.js"></script>
+<script src="http://cdn.optimizely.com/js/131788053.js"></script>
+<script>
+if(typeof CNN==='undefined'){var CNN=Class.create();}
+CNN.expandableMap=[''];
+function _loginOptions(){};
+var disqus_url=(typeof disqus_identifier!=='undefined') ? 'http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html' : 'http://www.cnn.com'+location.pathname;
+cnnad_newTileIDGroup(['607x95_adlinks','336x280_adlinks']);
+</script>
+<!--
+<script src="http://connect.facebook.net/en_US/all.js"></script>
+-->
+<!--adType:mmst-->
+</head>
+<body>
+<a name="top_of_page"></a><a href="#ContentArea"><img src="http://i.cdn.turner.com/cnn/images/1.gif" align="right" alt="Skip to main content" border="0" height="1" hspace="0" style="display:none;" vspace="0" width="10"/></a>
+<div id="cnn_hdr"> <div id="cnn_hdr-prompt" style="display:none"><div class="hdr-wrap" id="cnn_hdr-promptcntnt"></div></div> <div id="cnn_hdr-main"> <div class="hdr-wrap"> <div id="hdr-banner"> <a href="/HEALTH/" id="hdr-banner-title"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/header/us/hdr-health.gif" alt="CNN Health" border="0" height="82" style="border: none;" width="218"/></a> </div> <div id="hdr-editions"> <ul> <li class="no-pad-left"><span><a href="javascript:cnn_initeditionhtml(3);" class="cnn_hdr-editionlnk">SET EDITION</a>: &nbsp;U.S.</span></li> <li><a id="cnn_switchEdition_intl" href="http://edition.cnn.com/?hpt=ed_Intl" title="CNN INTERNATIONAL">INTERNATIONAL</a></li> <li><a href="http://mexico.cnn.com/?hpt=ed_Mexico" hreflang="es" title="CNN M&#201;XICO">M&#201;XICO</a></li> <li class="no-border"><a href="http://arabic.cnn.com/?hpt=ed_Arabic" hreflang="ar" title="CNN ARABIC">ARABIC</a></li> </ul> <div class="cnn_clear"></div><div style="padding-top:2px"> <ul> <li class="no-pad-left no-border no-pad-right"><span><a href="/CNN/Programs" class="cnn_hdr-editionlnk">TV</a>: &nbsp;</span></li> <li class="no-pad-left"><a href="/cnn/programs/" title="CNN TV programming schedule">CNN</a></li> <li><a href="/cnni/" title="CNN International TV programming schedule">CNNi</a></li> <li><a href="http://cnnespanol.cnn.com/" hreflang="es" title="CNN in Spanish">CNN en Espa&#241;ol</a></li> <li class="no-border"><a href="http://www.hlntv.com">HLN</a></li> </ul> </div> </div> <div id="hdr-auth"> <ul> <li><a href="javascript:void(0);" onclick="showOverlay('profile_signup_overlay');return false;" title="Sign up">Sign up</a></li> <li class="no-border no-pad-right"><a href="javascript:void(0);" onclick="showOverlay('profile_signin_overlay');return false;" title="Log in">Log in</a></li> </ul> </div> <div id="hdr-search"> <form method="get" action="http://www.cnn.com/search/" onsubmit="return cnnSearch(this);"> <div class="ftr-search-datacntr"> <div class="ftr-search-tfield"><input id="hdr-search-box" maxlength="100" name="query" size="12" type="text" value=""/></div> <div class="ftr-search-sicon"><input alt="Search" height="21" src="http://i.cdn.turner.com/cnn/.e/img/3.0/search/btn_search_hp_text.gif" type="image" width="55"/></div> </div> <input name="primaryType" type="hidden" value="mixed"/><input name="sortBy" type="hidden" value="relevance"/><input name="intl" type="hidden" value="false"/> </form> </div> </div> </div> <div id="cnn_hdr-nav"> <ul id="us-menu"> <li class="no-border"><a href="/?hpt=sitenav" class="nav-media no-border" id="nav-home" title=""><span>Home</span></a></li> <li class="no-border"><a href="/video/?hpt=sitenav" class="nav-media no-border" id="nav-video" title="Video Breaking News Videos from CNN.com"><span>TV &amp; Video</span></a></li> <li class="no-border"><a href="/trends/?hpt=sitenav" class="nav-media" id="nav-trends" title="CNN Trends powered by Zite"><span>CNN Trends</span></a></li> <li class=""><a href="/US/?hpt=sitenav" class="" id="nav-us" title="U.S. News, Headlines, Stories, and Video from CNN.com"><span>U.S.</span></a></li> <li class=""><a href="/WORLD/?hpt=sitenav" class="" id="nav-world" title="World News International Headlines Stories and Video from CNN.com"><span>World</span></a></li> <li class=""><a href="/POLITICS/?hpt=sitenav" class="" id="nav-politics" title="Election and Politics News from CNN.com"><span>Politics</span></a></li> <li class=""><a href="/JUSTICE/?hpt=sitenav" class="" id="nav-justice" title="Justice News Courts Celebrity Docket and Law News from CNN.com"><span>Justice</span></a></li> <li class=""><a href="/SHOWBIZ/?hpt=sitenav" class="" id="nav-entertainment" title="Entertainment News Celebrities Movies and TV from CNN.com"><span>Entertainment</span></a></li> <li class=""><a href="/TECH/?hpt=sitenav" class="" id="nav-tech" title="Technology Computers Internet and Personal Tech News from CNN.com"><span>Tech</span></a></li> <li class=""><a href="/HEALTH/" class="nav-on" id="nav-health" title="Health News Medicine Diet Fitness and Parenting from CNN.com">Health</a></li> <li class=""><a href="/LIVING/?hpt=sitenav" class="" id="nav-living" title="Living News Personal Work and Home from CNN.com"><span>Living</span></a></li> <li class=""><a href="/TRAVEL/?hpt=sitenav" class="" id="nav-travel" title="Travel News Vacations Destinations and Video from CNN.com"><span>Travel</span></a></li> <li class=""><a href="/OPINION/?hpt=sitenav" class="" id="nav-opinion" title="Opinion Editorial Analysis and Insight from CNN.com"><span>Opinion</span></a></li> <li class=""><a href="http://ireport.cnn.com/?hpt=sitenav" class="" id="nav-ireport" title="CNN iReport &#8211; Share your story, discuss the issues with CNN.com"><span>iReport</span></a></li> <li class=""><a href="http://money.cnn.com/?hpt=sitenav" class="" id="nav-money" title="Business financial personal finance news from CNNMoney"><span>Money</span><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/header/nav-arrow.gif" width="3" height="5" alt="" /></a></li> <li class=""><a href="http://bleacherreport.com/?utm_source=cnn.com&utm_medium=referral&utm_campaign=cnn-nav" class="" id="nav-sports" title="The latest sports news and insights on all of your teams and today's hot topics from Bleacher Report (BleacherReport.com)."><span>Sports</span><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/header/nav-arrow.gif" width="3" height="5" alt="" /></a></li> <!--include virtual="/.element/ssi/www/misc/3.0/header/menu.bleacher.html"--> </ul> </div> </div><div align="center" id="cnnContainer"><div class="cnn_maincntnr"><div class="cnn_containerwht cnn_contentarea">
+<!-- this is where the breaking news CSI code will go -->
+<div id="cnnBannerContainer" class="cnn_www_banner"></div>
+<script type="text/javascript">
+CSIManager.getInstance().call('/.element/ssi/www/breaking_news/3.0/banner.html','','cnnBannerContainer',cnnRenderDomesticBanner);
+</script>
+<div id="cnnSetEditionContainer"></div>
+<div id="cnnMakeHPContainer"></div>
+
+
+<div class="cnn_storyarea" id="cnnContentContainer">
+<div class="cnn_stryarblkbr"></div>
+<div class="cnn_strybtntools">
+<div id="cnn_sharebar1">
+<div class="c_sharebar_cntr c_sharebar_loading">
+<div class="c_sharelftcol">
+<div class="c_sharetitle">SHARE THIS</div>
+<div class="c_sharebtns">
+<ul>
+<li class="c_sharebtn c_sharebtnfb"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'facebook');"></a></li>
+<li class="c_sharebtn c_sharebtntwtr"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'twitter');"></a></li>
+<li class="c_sharebtn c_sharebtngplus"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'googleplus');"></a></li>
+<li class="c_sharebtn c_sharebtnlnkn"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'linkedin');"></a></li>
+</ul>
+<div class="cnn_clear"></div>
+</div>
+<div class="fb-like" data-send="false" data-layout="button_count" data-width="150" data-show-faces="false" data-action="recommend" href="http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html"></div>
+</div><!-- /c_sharelftcol -->
+<div class="c_sharedivcol"></div>
+<div class="c_shareweb c_sharergtcol">
+<ul>
+<li class="cnn_sswdgtweb1"><a href="#" onclick="if(typeof CleanPrintPrintHtml!='undefined' && CleanPrintPrintHtml) CleanPrintPrintHtml(); else window.print(); return false;">Print</a></li>
+<li class="cnn_sswdgtweb2"><a href="#" onclick="return(ET());">Email</a></li>
+<li class="cnn_sswdgtweb3"><a href="javascript:void(0);" onclick="$j('#cnn_sharebarmore1').toggle();">More sharing</a>
+<div id="cnn_sharebarmore1" class="sharebar_othersites sharebar_othersitesl" style="display:none;">
+<div class="shareProp">
+<div class="sharebutton_reddit" title="Reddit"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'reddit');">Reddit</a></div>
+</div>
+<div class="shareProp">
+<div class="sharebutton_stumbleupon" title="StumbleUpon"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'stumbleupon');">StumbleUpon</a></div>
+</div>
+<div class="shareProp">
+<div class="sharebutton_delicious" title="Delicious"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar1', 'delicious');">Delicious</a></div>
+</div>
+</div>
+</li>
+</ul>
+</div><!-- /c_sharergtcol -->
+<div class="cnn_clear"></div>
+</div>
+</div>
+</div>
+<script>
+/* push in config for this share instance */
+cnn_shareconfig.push({
+"id" : "cnn_sharebar1",
+"url" : "http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html",
+"title" : "Texas judge: Remove brain-dead woman from ventilator, other machines"
+});
+</script>
+<!--google_ad_section_start--><!--startclickprintinclude-->
+<h1>Texas judge: Remove brain-dead woman from ventilator, other machines</h1>
+<!--endclickprintinclude--><!--startclickprintexclude-->
+<!--no partner-->
+<div class="cnn_stryathrtmp">
+<div class="cnnByline">By <strong>Ed Lavandera. Josh Rubin and Greg Botelho</strong>, CNN</div>
+<div class="cnn_strytmstmp">updated 7:10 PM EST, Fri January 24, 2014</div>
+</div>
+<!--google_ad_section_end-->
+<div class="cnn_strycntntlft">
+<!--startclickprintexclude-->
+<script>
+</script>
+<div class="cnnStryVidCont" style="background-color:transparent">
+<div id="cnnCVP1">
+</div>
+</div>
+<script>
+window.jQuery(document).ready(function() {
+window.CNNVIDEOS = window.CNNVIDEOS || {};
+CNNVIDEOS[ 'T1' ] = CNNVIDEO( 'cnnCVP1', {
+video: 'crime/2014/01/24/nr-lavendera-texas-fetus-not-viable.cnn',
+thumb: 'http://i2.cdn.turner.com/cnn/dam/assets/140114214552-ac-pkg-lavandera-brain-dead-texas-mom-00001226-story-top.jpg',
+preset: 'storypage',
+diagnostics: {
+section: 'articlepage',
+placement: 'page-top'
+},
+network: 'cnn',
+adsection: cnnCVPAdSectionT1 || '',
+headline: 'Texas hospital: Fetus is \'not viable\'',
+videoSource: 'CNN',
+videoSourceUrl: 'http://newsroom.blogs.cnn.com/',
+url: ''
+});
+// pause other videos playing on page
+window.jQuery( '#cnnCVP1' ).on( 'onContentBegin', function( e, obj ) {
+for ( var instance in window.CNNVIDEOS ) {
+if ( instance !== 'T1' && window.CNNVIDEOS.hasOwnProperty( instance ) ) {
+try { window.CNNVIDEOS[ instance ].pause(); } catch(e){}
+}
+}
+});
+});
+</script>
+<a name="em0"></a>
+<div class="cnn_strylftcntnt"><div class="cnn_strylctcntr">
+<div><strong>STORY HIGHLIGHTS</strong></div>
+<ul class="cnn_bulletbin cnnStryHghLght">
+<!--google_ad_section_start-->
+<li>Judge orders hospital to remove woman from ventilator, respirator</li>
+<li>Hospital agrees woman brain dead since November 28, fetus not viable, court papers say</li>
+<li>Family wants her taken off respirator, ventilator so they can take her body and bury it</li>
+<li>Fort Worth hospital had said it was following state law by keeping her on ventilator </li>
+<!--google_ad_section_end-->
+</ul>
+</div></div>
+<div class="cnn_strylftcntnt adtag15090">
+<!-- CALLOUT|http://ads.cnn.com/html.ng/site=cnn&cnn_position=150x90_spon1&cnn_rollup=us&page.allowcompete=no&params.styles=fs|CALLOUT -->
+<!-- ADSPACE: us/spon1.150x90 -->
+<div id="ad-179cc9ea480c1691" align="center" style="padding: 0; margin: 0; border: 0;"></div>
+<script type="text/javascript">
+cnnad_createAd("179cc9ea480c1691","http://ads.cnn.com/html.ng/site=cnn&cnn_position=150x90_spon1&cnn_rollup=us&page.allowcompete=no&params.styles=fs","90","150");
+cnnad_registerSpace("179cc9ea480c1691","150","90");
+</script>
+<!-- ADSPACE-END -->
+</div>
+<!--endclickprintexclude--><!--google_ad_section_start--><!--startclickprintinclude-->
+<p><strong>Fort Worth, Texas (CNN)</strong> -- A Texas judge ordered a Fort Worth hospital on Friday to remove a pregnant, brain-dead woman from respirators and ventilators.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph2">Judge R.H. Wallace told John Peter Smith Hospital to act on his order by 5 p.m. Monday. The hospital could appeal or decide to remove Marlise Munoz from a ventilator and respirator before that deadline.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph3">Erick Munoz, her husband, broke down in tears after Wallace ruled. He and other family members had been fighting the hospital so the body could be released to them for burial.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph4">Munoz left the courthouse without speaking to reporters, but the family's lawyers did speak out, including Jessica Janicek. She argued that John Peter Smith Hospital was "utilizing (Marlise Munoz's) body as a science experiment."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph5">The judge did not rule on the constitutionality of a law regarding the treatment of a pregnant patient.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph6">A breakthrough came when the hospital and the Munoz family agreed on crucial facts listed in a court document: that Marlise Munoz has "met the clinical criteria for brain death since November 28" and that "the fetus gestating inside Mrs. Munoz is not viable."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph7">The woman's husband repeatedly made these claims in his efforts to have her removed from the machines.</p>
+<script>
+var currExpandable="expand18";
+if(typeof CNN.expandableMap==='object'){CNN.expandableMap.push(currExpandable);}
+var mObj={};
+mObj.type='video';
+mObj.contentId='';
+mObj.network='cnn';
+mObj.source='bestoftv/2014/01/24/court-to-weigh-fate-of-pregnant-texas-woman-lavandera-newday.cnn';
+mObj.videoSource='CNN';
+mObj.videoSourceUrl=' http://newday.blogs.cnn.com/';
+mObj.lgImage="http://i2.cdn.turner.com/cnn/dam/assets/131223153442-dnt-pregnant-wife-on-life-support-00002311-story-body.jpg";
+mObj.lgImageX=300;
+mObj.lgImageY=169;
+mObj.origImageX="214";
+mObj.origImageY="120";
+mObj.contentType='video';
+CNN.expElements.expand18Store=mObj;
+</script>
+<a name="em1"></a>
+<div class="cnn_strylftcntnt cnn_strylftcexpbx" id="expand18">
+<div class="cnn_strylceclbtn"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/mosaic/bttn_close.gif" alt="" border="0" height="23" width="58"/></div>
+<img src="http://i2.cdn.turner.com/cnn/dam/assets/131223153442-dnt-pregnant-wife-on-life-support-00002311-story-body.jpg" alt="" border="0" class="box-image" height="120" width="214"/><cite class="expCaption"><span>Emergency court hearing scheduled today </span></cite>
+</div>
+<p class="cnn_storypgraphtxt cnn_storypgraph8">The wrenching story started with a pregnant woman found unconscious on her kitchen floor. In the more than eight weeks since then, lying supine in a hospital bed, the 33-year-old became the focus of an intense, emotional debate about who is alive, who is dead, and how the presence of a fetus possibly changes the equation.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph9">Hospital spokesman J.R. Labbe said last month that doctors were simply trying to obey <a href='http://codes.lp.findlaw.com/txstatutes/HS/2/H/166/B/166.049' target='_blank'>a Texas law</a> that says "you cannot withhold or withdraw life-sustaining treatment for a pregnant patient."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph10">During Friday's hearing in Fort Worth, representatives of the hospital -- in this case, from the Tarrant County District Attorney's office -- argued that state law was correctly applied.</p>
+<script>
+var currExpandable="expand111";
+if(typeof CNN.expandableMap==='object'){CNN.expandableMap.push(currExpandable);}
+var mObj={};
+mObj.type='video';
+mObj.contentId='';
+mObj.network='cnn';
+mObj.source='living/2014/01/23/ac-lavandera-texas-mom-distinctly-abnormal-fetus.cnn';
+mObj.videoSource='CNN';
+mObj.videoSourceUrl='http://ac360.blogs.cnn.com/';
+mObj.lgImage="http://i2.cdn.turner.com/cnn/dam/assets/140114214552-ac-pkg-lavandera-brain-dead-texas-mom-00001226-story-body.jpg";
+mObj.lgImageX=300;
+mObj.lgImageY=169;
+mObj.origImageX="214";
+mObj.origImageY="120";
+mObj.contentType='video';
+CNN.expElements.expand111Store=mObj;
+</script>
+<a name="em2"></a>
+<div class="cnn_strylftcntnt cnn_strylftcexpbx" id="expand111">
+<div class="cnn_strylceclbtn"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/mosaic/bttn_close.gif" alt="" border="0" height="23" width="58"/></div>
+<img src="http://i2.cdn.turner.com/cnn/dam/assets/140114214552-ac-pkg-lavandera-brain-dead-texas-mom-00001226-story-body.jpg" alt="" border="0" class="box-image" height="120" width="214"/><cite class="expCaption"><span>Texas hospital: Fetus is 'not viable'</span></cite>
+</div>
+<script>
+var currExpandable="expand211";
+if(typeof CNN.expandableMap==='object'){CNN.expandableMap.push(currExpandable);}
+var mObj={};
+mObj.type='video';
+mObj.contentId='';
+mObj.network='cnn';
+mObj.source='bestoftv/2014/01/15/ac-later-brain-dead-mom.cnn';
+mObj.videoSource='CNN';
+mObj.videoSourceUrl='http://ac360.blogs.cnn.com/';
+mObj.lgImage="http://i2.cdn.turner.com/cnn/dam/assets/140114223818-ac-later-brain-dead-mom-00005320-story-body.jpg";
+mObj.lgImageX=300;
+mObj.lgImageY=169;
+mObj.origImageX="214";
+mObj.origImageY="120";
+mObj.contentType='video';
+CNN.expElements.expand211Store=mObj;
+</script>
+<a name="em3"></a>
+<div class="cnn_strylftcntnt cnn_strylftcexpbx" id="expand211">
+<div class="cnn_strylceclbtn"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/mosaic/bttn_close.gif" alt="" border="0" height="23" width="58"/></div>
+<img src="http://i2.cdn.turner.com/cnn/dam/assets/140114223818-ac-later-brain-dead-mom-00005320-story-body.jpg" alt="" border="0" class="box-image" height="120" width="214"/><cite class="expCaption"><span>Ethics and law regarding brain-dead mother</span></cite>
+</div>
+<script>
+var currExpandable="expand311";
+if(typeof CNN.expandableMap==='object'){CNN.expandableMap.push(currExpandable);}
+var mObj={};
+mObj.type='video';
+mObj.contentId='';
+mObj.network='cnn';
+mObj.source='bestoftv/2014/01/18/exp-legal-pregnant-woman-ventilator.cnn';
+mObj.videoSource='CNN';
+mObj.videoSourceUrl='';
+mObj.lgImage="http://i2.cdn.turner.com/cnn/dam/assets/140118131958-exp-legal-pregnant-woman-ventilator-00010927-story-body.jpg";
+mObj.lgImageX=300;
+mObj.lgImageY=169;
+mObj.origImageX="214";
+mObj.origImageY="120";
+mObj.contentType='video';
+CNN.expElements.expand311Store=mObj;
+</script>
+<a name="em4"></a>
+<div class="cnn_strylftcntnt cnn_strylftcexpbx" id="expand311">
+<div class="cnn_strylceclbtn"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/mosaic/bttn_close.gif" alt="" border="0" height="23" width="58"/></div>
+<img src="http://i2.cdn.turner.com/cnn/dam/assets/140118131958-exp-legal-pregnant-woman-ventilator-00010927-story-body.jpg" alt="" border="0" class="box-image" height="120" width="214"/><cite class="expCaption"><span>Family wants pregnant woman off ventilator</span></cite>
+</div>
+<p class="cnn_storypgraphtxt cnn_storypgraph11">But to Erik Munoz, his wife is not a patient because she is not alive.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph12">He and other family members said the hospital should abide by her wishes -- which weren't written down but, they said, relayed verbally to them -- and not have machines keep her organs and blood running.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph13">Erick Munoz had contended doctors told him his wife "had lost all activity in her brain stem" and an accompanying chart stated that she was "brain dead." He has further called her "nothing more than an empty shell" who should be left to rest in peace.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph14">"Pregnant women die every day," said Jessica King, another of the family's attorneys, after the hearing. "They die in car accidents, of heart attacks and other injuries. And when they die, their fetus dies with them.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph15">"It's the way it's always been and the way it should be."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph16"><a href='http://www.cnn.com/2013/12/24/health/pregnant-life-support-texas/' target='_blank'>Mom of pregnant woman: Change the law</a></p>
+<p class="cnn_storypgraphtxt cnn_storypgraph17">In an affidavit filed Thursday in court, Erick Munoz said little to him now is recognizable about Marlise. Her bones crack when her stiff limbs move. Her usual scent has been replaced by the "smell of death." And her once lively eyes have become "soulless."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph18">"Over these past two months, nothing about my wife indicates she is alive," Erick Munoz said. "... What sits in front of me is a deteriorating body."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph19"><strong>Husband: 'Obscene mutilation of a deceased body'</strong></p>
+<p class="cnn_storypgraphtxt cnn_storypgraph20">The couple, two trained paramedics, had been awaiting the arrival of their second child.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph21">Everything came crashing down around 2 a.m. November 26, when she was rushed to the north-central Texas hospital.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph22">Once there, Erick Munoz said, he was told his wife "was for all purposes brain dead." The family also says the fetus may have been deprived of oxygen.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph23"><a href='http://www.cnn.com/2014/01/17/justice/pregnant-life-support-texas/index.html' target='_blank'>Lawyers: Records back claim that woman is brain dead</a></p>
+<p class="cnn_storypgraphtxt cnn_storypgraph24">In his lawsuit, Munoz claims subsequent measures taken at the hospital -- and, in turn, the state law used to justify them -- amounted "to nothing more than the cruel and obscene mutilation of a deceased body against the expressed will of the deceased and her family."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph25">The family's attorneys more recently said that Marlise's fetus "is distinctly abnormal," suffering from hydrocephalus and "deformed to the extent that the gender cannot be determined."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph26">"Quite sadly, this information is not surprising due to the fact that the fetus, after being deprived of oxygen for an indeterminate length of time, is gestating within a dead and deteriorating body, as a horrified family looks on in absolute anguish, distress and sadness," the family attorneys said in a statement.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph27">The hospital and the Tarrant County District Attorney's Office, which said it will defend the medical facility, did not offer the same level of detail as members of the Munoz family.</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph28">But earlier this month, Labbe told CNN that his hospital believed "the courts are the appropriate venue to provide clarity, direction and resolution in this matter."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph29">Late Friday, the hospital issued this statement: "JPS Health Network appreciates the potential impact of the consequences of the order on all parties involved and will be consulting with the Tarrant County District Attorney's office."</p>
+<p class="cnn_storypgraphtxt cnn_storypgraph30"><a href='http://www.cnn.com/2013/12/28/health/life-support-ethics/' target='_blank'>When life support is really 'death support' </a></p>
+<script type="text/javascript">if(typeof CNN.expElements==='object'){CNN.expElements.init();}</script>
+<p class="cnn_strycbftrtxt">CNN's Ed Lavandera and Josh Rubin reported from Fort Worth. Greg Botelho reported and wrote from Atlanta. CNN's Ralph Ellis, Dana Ford and Jason Morris contributed to this report.</p>
+<!--endclickprintinclude--><!--google_ad_section_end-->
+<!--no partner-->
+<div class="cnn_stryshrwdgtbtm">
+<div id="cnn_sharebar2">
+<div class="c_sharebar_cntr c_sharebar_loading">
+<div class="cnn_stryswdgtbtm1">
+<div class="cnn_stryswdgtbtm1a"><a href="http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html#disqus_thread">0</a></div>
+<div class="cnn_stryswdgtbtm1b"><a href="#cnn-disqus-area">Comments &raquo;</a></div>
+</div><!-- /cnn_stryswdgtbtm1 -->
+<div class="cnn_stryswdgtbtm2">
+<div class="c_sharebtmcol1">
+<div class="c_sharetitle">SHARE THIS</div>
+<div class="c_sharebtns">
+<ul>
+<li class="c_sharebtn c_sharebtnfb"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'facebook');"></a></li>
+<li class="c_sharebtn c_sharebtntwtr"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'twitter');"></a></li>
+<li class="c_sharebtn c_sharebtngplus"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'googleplus');"></a></li>
+<li class="c_sharebtn c_sharebtnlnkn"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'linkedin');"></a></li>
+</ul>
+<div class="cnn_clear"></div>
+</div>
+</div><!-- /c_sharebtmcol1 -->
+<div class="c_sharebtmdiv"></div>
+<div class="c_sharebtmcol2">
+<div class="fb-like" data-send="false" data-layout="box_count" data-width="90" data-show-faces="false" data-action="recommend" href="http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html"></div>
+</div><!-- /c_sharebtmcol2 -->
+<div class="c_sharebtmdiv"></div>
+<div class="c_shareweb c_sharebtmcol3">
+<ul>
+<li class="cnn_sswdgtweb1"><a href="#" onclick="if(typeof CleanPrintPrintHtml!='undefined' && CleanPrintPrintHtml) CleanPrintPrintHtml(); else window.print(); return false;">Print</a></li>
+<li class="cnn_sswdgtweb2"><a href="#" onclick="return(ET());">Email</a></li>
+<li class="cnn_sswdgtweb3"><a href="javascript:void(0);" onclick="$j('#cnn_sharebarmore2').toggle();">More sharing</a>
+<div id="cnn_sharebarmore2" class="sharebar_othersites sharebar_othersitesl" style="display:none;">
+<div class="shareProp">
+<div class="sharebutton_reddit" title="Reddit"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'reddit');">Reddit</a></div>
+</div>
+<div class="shareProp">
+<div class="sharebutton_stumbleupon" title="StumbleUpon"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'stumbleupon');">StumbleUpon</a></div>
+</div>
+<div class="shareProp">
+<div class="sharebutton_delicious" title="Delicious"><a href="javascript:void(0);" onclick="cnnsocial.share.click('cnn_sharebar2', 'delicious');">Delicious</a></div>
+</div>
+</div>
+</li>
+</ul>
+</div><!-- /c_sharebtmcol3 -->
+<div class="cnn_clear"></div>
+</div>
+<div class="cnn_clear"></div>
+</div>
+</div>
+</div>
+<script>
+/* push in config for this share instance */
+cnn_shareconfig.push({
+"id" : "cnn_sharebar2",
+"url" : "http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html",
+"title" : "Texas judge: Remove brain-dead woman from ventilator, other machines"
+});
+</script>
+<div class="cnn_strybtmcntnt">
+<div class="cnn_divline"></div>
+<div class="cnn_divline"></div>
+<div class="cnn_strybtmmorebx" id="outbrain_ext_element">
+<div class="OUTBRAIN" data-src="http://www.cnn.com//2014/01/24/health/pregnant-brain-dead-woman-texas/index.html" data-widget-id="AR_2" data-ob-template="cnn" ></div>
+<script type="text/javascript" async="async" src="http://widgets.outbrain.com/outbrain.js"></script>
+</div>
+</div>
+<script>cnnad_newTileIDGroup(['607x95_adlinks','336x280_adlinks']);</script>
+<!-- ADSPACE: health/mmst/adlinks.607x95 -->
+<!-- CALLOUT|http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=607x95_adlinks&cnn_rollup=health&page.allowcompete=no&params.styles=fs|CALLOUT -->
+<div id="ad-51be7b4a8ef76435" align="center" style="padding: 0; margin: 0; border: 0;"></div>
+<script type="text/javascript">
+cnnad_createAd("51be7b4a8ef76435","http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=607x95_adlinks&cnn_rollup=health&page.allowcompete=no&params.styles=fs","95","607");
+cnnad_registerSpace("51be7b4a8ef76435","607","95");
+</script>
+<!-- ADSPACE-END -->
+<div class="cnn_divline cnn_divln3pxblck" style="margin-top:20px;" id="cnn-disqus-area"></div>
+<div id="disqus_thread"></div>
+<script src="http://cnn.disqus.com/embed.js"></script>
+</div>
+</div>
+<div class="cnn_strycntntrgt">
+<div>
+<span id="medium_rectangle" class="_fwph">
+<form id="_fw_form_medium_rectangle" style="display:none">
+<input type="hidden" name="_fw_input_medium_rectangle" id="_fw_input_medium_rectangle" value="w=336&h=280&envp=g_js&sflg=-nrpl&cd=336,280|300,250;">
+</form>
+<span id="_fw_container_medium_rectangle" class="_fwac">
+<div><!-- CALLOUT|http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=336x850_rgt&cnn_rollup=health&page.allowcompete=no&params.styles=fs|CALLOUT -->
+<!-- ADSPACE: health/mmst/rgt.336x850 -->
+<div id="ad-7d2c41eadb16ea5b" align="center" style="padding: 0; margin: 0; border: 0;"></div>
+<script type="text/javascript">
+cnnad_createAd("7d2c41eadb16ea5b","http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=336x850_rgt&cnn_rollup=health&page.allowcompete=no&params.styles=fs","850","336");
+cnnad_registerSpace("7d2c41eadb16ea5b","336","850");
+</script>
+<!-- ADSPACE-END --></div>
+<div class="cnn_adtitle"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/misc/advertisement.gif" alt="ADVERTISEMENT" border="0" height="5" width="58"/></div>
+<div class="cnn_divline cnn_divlscrct"></div>
+</span>
+</span>
+</div>
+<div class="cnn_strycrcntr">
+<div class="cnn_divline cnn_divlscrc"></div>
+<div class="cnn_sectbincntnt cnn_zitemodule"></div>
+<div class="cnn_divline cnn_divlscrc"></div>
+<div style="padding-bottom:17px;padding-top:17px;" class="cnn_strycrcntrpad">
+<div class="OUTBRAIN" data-src="http://www.cnn.com//2014/01/24/health/pregnant-brain-dead-woman-texas/index.html" data-widget-id="AR_6" data-ob-template="cnn" ></div>
+<script type="text/javascript" async="async" src="http://widgets.outbrain.com/outbrain.js"></script>
+<div class="OUTBRAIN" data-src="http://www.cnn.com//2014/01/24/health/pregnant-brain-dead-woman-texas/index.html" data-widget-id="AR_4" data-ob-template="cnn" ></div>
+<script type="text/javascript" async="async" src="http://widgets.outbrain.com/outbrain.js"></script>
+<div class="OUTBRAIN" data-src="http://www.cnn.com//2014/01/24/health/pregnant-brain-dead-woman-texas/index.html" data-widget-id="AR_5" data-ob-template="cnn" ></div>
+<script type="text/javascript" async="async" src="http://widgets.outbrain.com/outbrain.js"></script>
+</div>
+<style>
+.OB_SB_1, .OB_SB_2 { padding:0px; }
+#outbrain_container_1_stripBox .strip-like, #outbrain_container_2_stripBox .strip-like { font-size:18px; }
+#ob_strip_container_rel_1_stripBox { }
+#ob_strip_container_rel_1_stripBox .item-container, #ob_strip_container_rel_2_stripBox .item-container { padding-top:8px;border-top:1px solid #E5E5E5; }
+</style>
+<div class="cnn_divline"></div>
+<div class="cnn_strycrcntrad">
+<div><!-- CALLOUT|http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=300x150_rgt&cnn_rollup=health&page.allowcompete=no&params.styles=fs|CALLOUT -->
+<!-- ADSPACE: health/mmst/rgt.300x150 -->
+<div id="ad-8b07107b37985460" align="center" style="padding: 0; margin: 0; border: 0;"></div>
+<script type="text/javascript">
+cnnad_createAd("8b07107b37985460","http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=300x150_rgt&cnn_rollup=health&page.allowcompete=no&params.styles=fs","150","300");
+cnnad_registerSpace("8b07107b37985460","300","150");
+</script>
+<!-- ADSPACE-END --></div>
+<div class="cnn_adtitle"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/misc/advertisement.gif" alt="ADVERTISEMENT" border="0" height="5" width="58"/></div>
+</div>
+<div class="cnn_divline"></div>
+<div class="cnn_inHealthRssCntr"> <div class="cnn_sectbincntnt2"> <div class="cnn_inHealth_head"><h4><a href="http://www.healthgrades.com/?cid=cnn">Health Resources from HealthGrades</a></h4></div> <div class="cnn_divline cnn_clear"></div> 	<ul class="cnn_bulletbin"> 		<li>
+			<a target="_blank" href="http://inhealth.cnn.com/taking-control-of-ra/the-components-of-ra-treatment/?did=t1_rss2">8 treatment tips for RA			</a>		</li>		<li>
+			<a target="_blank" href="http://inhealth.cnn.com/managing-multiple-sclerosis/the-abcs-of-pain-management-for-multiple-sclerosis?did=t1_rss2">The ABCs of managing MS pain			</a>		</li>		<li>
+			<a target="_blank" href="http://inhealth.cnn.com/reaching-for-a-better-life-with-ra/using-yoga-to-manage-rheumatoid-arthritis?did=t1_rss2">Using yoga to ease RA symptoms			</a>		</li>		<li>
+			<a target="_blank" href="http://inhealth.cnn.com/taking-control-of-low-testosterone/ed-and-low-t-whats-the-difference?did=t1_rss2">ED vs. low testosterone			</a>		</li>		<li>
+			<a target="_blank" href="http://inhealth.cnn.com/finding-the-right-multiple-sclerosis-treatment/eye-scan-could-help-track-progress-of-multiple-sclerosis?did=t1_rss2">Eye scans could track MS progress			</a>		</li>	</ul>	 </div> <div class="cnn_mtpmore"> <a class="cnn_mtpmorebtn" href="http://inhealth.cnn.com/article/popular-health-features/?did=t1rsslp"><img border="0" src="http://i.cdn.turner.com/cnn/.e/img/3.0/1px.gif" alt="More"></a> </div> </div><!--/inHealth Module-->
+<div class="cnn_divline cnn_divlscrc"></div>
+<div style="padding:0 0 0 6px;">
+<!-- ADSPACE: health/mmst/adlinks.336x280 -->
+<!-- CALLOUT|http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=336x280_adlinks&cnn_rollup=health&page.allowcompete=no&params.styles=fs|CALLOUT -->
+<div id="ad-8a455105e7578d97" align="center" style="padding: 0; margin: 0; border: 0;"></div>
+<script type="text/javascript">
+cnnad_createAd("8a455105e7578d97","http://ads.cnn.com/html.ng/site=cnn&cnn_pagetype=mmst&cnn_position=336x280_adlinks&cnn_rollup=health&page.allowcompete=no&params.styles=fs","280","336");
+cnnad_registerSpace("8a455105e7578d97","336","280");
+</script>
+<!-- ADSPACE-END -->
+</div>
+</div>
+</div><div class="cnn_clear"></div>
+</div>
+</div></div></div>
+<div id="fb-root"></div>
+<div align="center"> <div class="cnn_pad6top"></div> <div class='cnn_containerwht' style='width:990px'> <div id="cnn_ftrcntnt"><div class="clearfix" id="cnn_ftrcntntinner"> <div class="cnn_ftrdivl1"></div> <div id="pmWeatherFooter" style="visibility:visible"><p><strong></strong></p></div> <div id="ftr-search"> <form action="http://www.cnn.com/search/" method="get" onsubmit="return cnnSearch(this);"> <div class="ftr-search-datacntr"> <div class="ftr-search-tfield"><input id="ftr-search-box" maxlength="100" name="query" size="12" type="text" value=""/></div> <div class="ftr-search-sicon"><input alt="Search" src="http://i.cdn.turner.com/cnn/.e/img/3.0/search/search_btn_footer.gif" type="image"/></div> </div> <input id="cnnFtrSrchType" name="primaryType" type="hidden" value="mixed"/> <input name="sortBy" type="hidden" value="relevance"/> <input name="intl" type="hidden" value="false"/> <div class="cnn_ftrggle"><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/footer/pngs/footer_google.png" alt="Powered by Google" border="0" class="cnn_ie6png" height="13" width="88"/></div> </form> </div> <div class="cnn_clear"></div> <div class="cnn_divline" style="background-color:#ebebeb;margin-top:3px"></div> <div class="cnn_ftrnvlnks"> <div><a href="/">Home</a> | <a href="/video/">Video</a> | <a href="/trends/">CNN Trends</a> | <a href="/US/">U.S.</a> | <a href="/WORLD/">World</a> | <a href="/POLITICS/">Politics</a> | <a href="/JUSTICE/">Justice</a> | <a href="/SHOWBIZ/">Entertainment</a> | <a href="/TECH/">Tech</a> | <a href="/HEALTH/">Health</a> | <a href="/LIVING/">Living</a> | <a href="/TRAVEL/">Travel</a> | <a href="/OPINION/">Opinion</a> | <a href="http://ireport.cnn.com/?cnn=yes">iReport</a> | <a href="http://money.cnn.com/?cnn=yes">Money</a> | <a href="http://bleacherreport.com/?utm_source=cnn.com&utm_medium=referral&utm_campaign=cnn-footer">Sports</a></div> <div><a href="/tools/index.html">Tools &amp; widgets</a> | <a href="/services/rss/">RSS</a> | <a href="/services/podcasting/">Podcasts</a> | <a href="/exchange/blogs/index.html">Blogs</a> | <a href="/mobile/">CNN mobile</a> | <a href="/profile/">My profile</a> | <a href="/profile/">E-mail alerts</a> | <a href=" /macalerts/">Desktop Alerts</a> | <a href="http://www.turnerstoreonline.com/">CNN shop</a> | <a href="/sitemap/">Site map</a> | <a href="/feedback/">Contact us</a> </div> </div> <div class="cnn_ftrdivl2"></div> <div class="cnn_ftrlnggcntr"> <div><a href="/espanol/" hreflang="es" title="CNN in Spanish">CNN en ESPA&Ntilde;OL</a> | <a href="http://mexico.cnn.com" hreflang="es">CNN M&eacute;xico</a> | <a href="http://www.cnnchile.com" hreflang="es">CNN Chile</a> | <a href="http://www.cnnexpansion.com" hreflang="es">CNN Expansi&oacute;n</a></div> <div><a href="http://arabic.cnn.com/" hreflang="ar" title="CNN Arabic">&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</a> | <a href="http://www.cnn.co.jp/" hreflang="ja" title="CNN Japan">&#26085;&#26412;&#35486;</a> | <a href="http://www.cnnturk.com/" hreflang="tr" title="CNN Turkey">T&uuml;rk&ccedil;e</a></div> <div><a href="/CNN/Programs/" title="CNN TV programming schedule">CNN TV</a> | <a href="/HLN/">HLN</a> | <a href="http://transcripts.cnn.com/TRANSCRIPTS/">Transcripts</a> | </div> </div> <div class="cnn_ftrlgcpy"> <div><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/footer/pngs/footer_cnn_logo.png" alt="CNN" border="0" class="cnn_ie6png" height="11" width="23"/>&copy; 2014 Cable News Network. <a href="http://www.turner.com/" class="cnn_ftrtbslink">Turner Broadcasting System, Inc.</a> All Rights Reserved.</div> <div class="cnn_ftrlgcpy1"><a href="/interactive_legal.html" rel="nofollow">Terms of service</a> | <a href="/privacy.html" rel="nofollow">Privacy guidelines</a> | <a id="cnn_cnsnt_trst"><script type="text/javascript" src="//consent.truste.com/notice?domain=turner.com&c=cnn_cnsnt_trst&text=true&country=us"></script></a><img src="http://i.cdn.turner.com/cnn/.e/img/3.0/global/misc/logo_ad_choices_footer.png" alt="" border="0" class="cnn_ie6png" height="12" style="margin:0pt 0pt 0pt 4px;" width="12"/> | <a href="/services/advertise/main.html" rel="nofollow">Advertise with us</a> | <a href="/about/" rel="nofollow">About us</a> | <a href="http://www.turner.com/careers/">Work for us</a> | <a href="/help/" rel="help">Help</a></div> <div class="cnn_ftrlgcpy1"><a href="http://www.cnnnewsource.com" rel="nofollow">CNN Newsource</a> | <a href="http://www.cnnimagesource.com" rel="nofollow">License Footage</a></div><div class="cnn_clear"></div> </div><div class="cnn_clear"></div> </div></div> </div> </div> <script src="http://z.cdn.turner.com/cnn/tmpl_asset/static/www_global/915/js/globallib-min.js"></script> <script src="http://content.dl-rms.com/rms/mother/5721/nodetag.js"></script> <script src="http://icompass.insightexpressai.com/97.js"></script> <script src="http://js.revsci.net/gateway/gw.js?csid=A09801"></script> <script>cnnad_sendADMData();cnnad_ugsync();if(ms_isLoggedIn()){CNN_setCookie('CNN_member',true,854400,'/',document.domain);}</script> <div id="csimanagerdiv"><div id="csiIframeObjscsi2"><iframe style="visibility:hidden;position:absolute;top:0px;left:-100px;" name="csiDataIframecsi2" id="csiDataIframecsi2" src="http://svcs.cnn.com/weather/getForecast?time=24&amp;mode=json_html&amp;zipCode=30303&amp;locCode=&amp;celcius=false&amp;csiID=csi2" width="10" height="10"></iframe></div></div> <div id="csimanagerdivdelayed"></div>
+<!--jsmd-->
+<script src="http://z.cdn.turner.com/cnn/.e/js/libs/jsmd-10.min.js"></script>
+
+<script>
+var jsmd=_jsmd.init(),pageURL=location.href.toLowerCase();
+if (pageURL.indexOf("/.element/ssi/ads.iframes/")==-1&&pageURL.indexOf("/doubleclick/dartiframe.html")==-1&&pageURL.indexOf("/search/")==-1){
+if (_jsmd.plugin.gQuery("refresh")){
+jsmd.trackMetrics("dynamic-autoRefresh","autorefresh","cnn-autorefresh");
+} else if (_jsmd.plugin.gQuery("is_LR")){
+} else if (cnn_metadata.template_type_content!="gallery"){
+jsmd.send();
+}
+}
+</script>
+<!--/jsmd-->
+<script>
+/*globals FOOTERTOOLS*/
+$j(window).load(function () {
+'use strict';
+FOOTERTOOLS.init();
+});
+</script>
+<script>
+/*globals CNN_CB, cnnsocial, cnnzite_mod, sectionName */
+/* configure apis to load and specify their callbacks */
+cnnsocial.setapiconfig([
+{
+'site' : 'facebook',
+'success' : function() {
+/* trigger connect-cnnsocial.js calls */
+window.cnn_fbAsyncInit();
+}
+},
+{ 'site' : 'twitter' }
+]);
+<!--Visual Revenue Reader Response Tracking Script (v6) -->
+var _vrq = _vrq || [];
+var vrId = 6;
+if(cnn_edtnswtchver === 'edition'){
+vrId = 396;
+}
+_vrq.push(['id', vrId]);
+_vrq.push(['automate', false]);
+_vrq.push(['track', function(){}]);
+(function(d, a){
+var s = d.createElement(a),
+x = d.getElementsByTagName(a)[0];
+s.async = true;
+s.src = 'http://a.visualrevenue.com/vrs.js';
+x.parentNode.insertBefore(s, x);
+})(document, 'script');
+<!-- End of VR RR Tracking Script - All rights reserved -->
+/* add the multiple config instance for sharebars */
+cnnsocial.share.setconfig(cnn_shareconfig);
+$j(document).ready(function () {
+'use strict';
+loadChartbeat("health", "Ed Lavandera. Josh Rubin and Greg Botelho, CNN");
+cnnzite_mod.init();
+CNN.initFlipperTicker();
+/* initialize cnnsocial */
+cnnsocial.init();
+});
+</script>
+<script type="text/javascript">
+/* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+var disqus_shortname = 'cnn'; // required: replace example with your forum shortname
+/* * * DON'T EDIT BELOW THIS LINE * * */
+(function () {
+var s = document.createElement('script'); s.async = true;
+s.type = 'text/javascript';
+s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
+(document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+}());
+</script>
+<script src="http://cache-02.cleanprint.net/cpf/cleanprint?key=cnn" name="cleanprintloader"></script>
+</body>
+</html>

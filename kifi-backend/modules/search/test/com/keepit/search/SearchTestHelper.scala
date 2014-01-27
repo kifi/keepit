@@ -113,6 +113,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       id = normalizedUriId,
       title = title,
       description = None,
+      canonicalUrl = None,
       keywords = None,
       media = None,
       content = content,
