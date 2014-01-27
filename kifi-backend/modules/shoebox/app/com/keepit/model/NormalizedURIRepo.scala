@@ -14,6 +14,7 @@ import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import com.keepit.scraper.ScraperConfig
+import NormalizedURIStates._
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -106,33 +107,30 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
-    if (uri.state == NormalizedURIStates.INACTIVE
-      || uri.state == NormalizedURIStates.ACTIVE
-      || uri.state == NormalizedURIStates.REDIRECTED
-      || uri.state == NormalizedURIStates.UNSCRAPABLE) {
-      // If uri.state is in one of these states, we do not want an ACTIVE ScrapeInfo record for it
-      scrapeRepo.getByUriId(saved.id.get) match {
-        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
-          scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-        case _ => // do nothing
-      }
-    } else if (uri.state == NormalizedURIStates.SCRAPE_FAILED || uri.state == NormalizedURIStates.SCRAPED) {
-      scrapeRepo.getByUriId(saved.id.get) match { // do not use saveStateAndNextScrape
-        case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
-          scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
-        case _ => // do nothing
-      }
-    } else if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
-      // In case of SCRAPE_WANTED, ensure that ScrapeInfo has an active record for it.
-      scrapeRepo.getByUriId(saved.id.get) match {
-        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
-          scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
-        case Some(scrapeInfo) => // do nothing
-        case None =>
-          scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
-      }
-    } else throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
-
+    uri.state match {
+      case INACTIVE | ACTIVE | REDIRECTED | UNSCRAPABLE => // ensure no ACTIVE scrapeInfo records
+        scrapeRepo.getByUriId(saved.id.get) match {
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
+            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+          case _ => // do nothing
+        }
+      case SCRAPE_FAILED | SCRAPED =>
+        scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
+          case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
+            scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+          case _ => // do nothing
+        }
+      case SCRAPE_WANTED => // ensure that ScrapeInfo has an ACTIVE record for it.
+        scrapeRepo.getByUriId(saved.id.get) match {
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
+          case Some(scrapeInfo) => // do nothing
+          case None =>
+            scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
+        }
+      case _ =>
+        throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
+    }
     saved
   }
 
