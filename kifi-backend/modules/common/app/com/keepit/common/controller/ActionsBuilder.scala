@@ -116,11 +116,6 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
 
     def apply[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => SimpleResult, unauthenticatedAction: Request[T] => SimpleResult): Action[T] = {
-      val pp = unauthenticatedAction.compose[Request[T]] { r: Request[T] =>
-        println("CALLED!")
-        r
-      }
-
       async(parser, apiClient, allowPending)(authenticatedAction.andThen(Future.successful), unauthenticatedAction.andThen(Future.successful))
     }
 

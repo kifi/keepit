@@ -53,7 +53,7 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
 
       withDb() { implicit injector =>
         val repo: BarRepoImpl = new BarRepoImpl(db.db, new SystemClock())
-        2 == 2
+        2 === 2
         db.readWrite{ implicit session =>
           val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1

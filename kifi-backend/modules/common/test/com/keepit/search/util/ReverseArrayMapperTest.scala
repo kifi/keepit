@@ -81,6 +81,7 @@ class ReverseArrayMapperTest extends Specification {
         revMapper(nodata(i)) === -1
         i += 1
       }
+      1 === 1
     }
   }
 }

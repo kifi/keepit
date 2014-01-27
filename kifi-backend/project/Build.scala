@@ -40,7 +40,7 @@ object ApplicationBuild extends Build {
       "com.typesafe" %% "play-plugins-mailer" % "2.2.0" exclude("play", "*"),
       "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
-      "com.typesafe.akka" %% "akka-testkit" % "2.1.0"  exclude("play", "*"),
+      "com.typesafe.akka" %% "akka-testkit" % "2.2.3"  exclude("play", "*"),
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
       "org.apache.httpcomponents" % "httpclient" % "4.3",
@@ -166,7 +166,9 @@ object ApplicationBuild extends Build {
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
-      commonSettings: _*
+      commonSettings ++ Seq(
+        javaOptions in Test += "-Dconfig.resource=application-dev.conf"
+      ): _*
     ).dependsOn(macros)
 
     lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(

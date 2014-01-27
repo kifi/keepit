@@ -46,6 +46,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     println(s"beforeStart... $cnt times")
     println("+++++++++++++++++++++++++++++++++++++++++++")
     val conf = app.configuration
+    conf.entrySet.map { case (a, b) =>
+      println("Got: " + a + " ==> " + b.toString)
+    }
     val appName = conf.getString("application.name").get
     conf.getConfig("db") match {
       case Some(dbs) => println(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
