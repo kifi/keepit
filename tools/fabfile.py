@@ -9,7 +9,7 @@ fapi.env.user = "fortytwo"
 master_hosts = ['b01', 'b02']
 
 
-def get_hosts(service_type):
+def get_hosts(service_tpe):
     if service_type=="shoebox":
         return ['b01', 'b02']
     elif service_type=="search":
