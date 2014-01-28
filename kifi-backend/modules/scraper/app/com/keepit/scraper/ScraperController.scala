@@ -10,6 +10,8 @@ import com.keepit.scraper.extractor.ExtractorProviderTypes
 import com.keepit.common.logging.Logging
 import com.keepit.model.ScrapeInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.concurrent.Future
+import play.api.libs.json.Json
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -19,18 +21,34 @@ class ScraperController @Inject() (
 
   def getBasicArticle() = Action(parse.json) { request =>
     log.info(s"getBasicArticle body=${request.body}")
-    val json = request.body
-    val url = (json \ "url").as[String]
-    val proxyOpt = (json \ "proxy").asOpt[HttpProxy]
-    val extractorProviderTypeOpt = (json \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
-    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
     Async {
-      resF.map { res =>
-        val json = Json.toJson(res)
-        log.info(s"[getBasicArticle($url)] result: ${json}")
+      getBasicArticle(request.body).map { articleOption =>
+        val json = Json.toJson(articleOption)
+        val url = (request.body \ "url").as[String]
+        log.info(s"[getBasicArticle($url})] result: $json")
         Ok(json)
       }
     }
+  }
+
+  def getSignature() = Action(parse.json) { request =>
+    log.info(s"getSignature body=${request.body}")
+    Async {
+      getBasicArticle(request.body).map { articleOption =>
+        val signatureOption = articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
+        val json = Json.toJson(signatureOption)
+        val url = (request.body \ "url").as[String]
+        log.info(s"[getSignature($url)] result: ${json}")
+        Ok(json)
+      }
+    }
+  }
+
+  private def getBasicArticle(parameters: JsValue): Future[Option[BasicArticle]] = {
+    val url = (parameters \ "url").as[String]
+    val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
+    val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
+    scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
   }
 
   def asyncScrapeWithInfo() = Action(parse.json) { request =>

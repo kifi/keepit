@@ -141,6 +141,12 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
+  def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
+    call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
+      r.json.validate[Signature].asOpt
+    }
+  }
+
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = {
     broadcastWithUrls(Common.internal.threadDetails(Some("ForkJoinPool"), filterState)) map { _ map {response => ScraperThreadInstanceInfo(response.uri.serviceInstance.instanceInfo, response.response.body) } }
   }
