@@ -6,6 +6,7 @@ import com.keepit.common.service._
 import org.specs2.mutable.Specification
 import com.keepit.common.strings._
 import com.google.inject.util.Providers
+import com.keepit.common.actor.FakeScheduler
 
 class ServiceClusterTest extends Specification {
 
@@ -56,7 +57,7 @@ class ServiceClusterTest extends Specification {
 
   "ServiceCluster" should {
     "find node" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()))
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.session{ zk =>
@@ -84,7 +85,7 @@ class ServiceClusterTest extends Specification {
     }
 
     "dedup nodes" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()))
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.session{ zk =>
@@ -113,7 +114,7 @@ class ServiceClusterTest extends Specification {
     }
 
     "RR router" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()))
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
       zk.session{ zk =>

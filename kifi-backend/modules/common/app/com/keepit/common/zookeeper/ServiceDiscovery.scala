@@ -20,8 +20,6 @@ import play.api.libs.json._
 import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
-import com.keepit.common.akka.SlowRunningExecutionContext
-import com.keepit.common.time.Clock
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
@@ -65,11 +63,11 @@ class ServiceDiscoveryImpl(
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
-    val myCluster = new ServiceCluster(services.currentService, airbrake, if (services.currentService == ServiceType.SHOEBOX) Some(scheduler) else None)
+    val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler)
     clustersToInit(services.currentService) = myCluster
     if (servicesToListenOn.contains(services.currentService)) throw new IllegalArgumentException(s"current service is included in servicesToListenOn: $servicesToListenOn")
     servicesToListenOn foreach {service =>
-      val cluster = new ServiceCluster(service, airbrake, None)
+      val cluster = new ServiceCluster(service, airbrake, scheduler)
       clustersToInit(service) = cluster
     }
     log.info(s"registered clusters: $clustersToInit")

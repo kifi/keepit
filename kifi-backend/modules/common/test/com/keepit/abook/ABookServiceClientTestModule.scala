@@ -7,6 +7,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.actor.FakeScheduler
 
 case class TestABookServiceClientModule() extends ABookServiceClientModule {
   def configure() {}
@@ -14,7 +15,7 @@ case class TestABookServiceClientModule() extends ABookServiceClientModule {
   @Singleton
   @Provides
   def ABookServiceClient(airbrakeNotifier: AirbrakeNotifier): ABookServiceClient = {
-    new FakeABookServiceClientImpl(airbrakeNotifier)
+    new FakeABookServiceClientImpl(airbrakeNotifier, new FakeScheduler())
   }
 
 }

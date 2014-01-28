@@ -18,6 +18,8 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import com.google.inject.Inject
 import com.google.inject.util.Providers
 
+import akka.actor.Scheduler
+
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
@@ -92,8 +94,8 @@ class ElizaServiceClientImpl @Inject() (
   }
 }
 
-class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ElizaServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
