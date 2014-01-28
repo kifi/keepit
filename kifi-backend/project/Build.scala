@@ -196,7 +196,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
-      commonSettings: _*
+      commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-scraper.conf"): _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val aaaMain = play.Project(appName, appVersion).settings(
