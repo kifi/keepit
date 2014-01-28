@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicReference, AtomicLong}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicReference, AtomicLong}
 import com.keepit.model._
 import java.util.concurrent.{ForkJoinPool, ForkJoinTask, ConcurrentLinkedQueue, Callable, Executors, TimeUnit}
 import com.keepit.search.{ArticleStore, Article}
@@ -22,7 +22,59 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+abstract class TracedCallable[T](val name:String, val submitTS:Long) extends Callable[Try[T]] {
 
+  def doWork:T
+
+  val callTS = new AtomicLong
+  val isDone = new AtomicBoolean
+  val threadRef = new AtomicReference[Thread]
+  val killCount = new AtomicInteger
+
+  val trRef = new AtomicReference[Try[T]]
+
+  lazy val submitDateTime = new DateTime(submitTS)
+  def callDateTime = new DateTime(callTS.get)
+
+  def runMillis(curr:Long) = curr - callTS.get
+  def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
+
+  def call(): Try[T] = {
+    val name = Thread.currentThread.getName
+    callTS.set(System.currentTimeMillis)
+    Thread.currentThread().setName(s"$name##${toString}")
+    threadRef.set(Thread.currentThread())
+    try {
+      val r = Try(doWork)
+      trRef.set(r)
+      r
+    } finally {
+      threadRef.set(null)
+      Thread.currentThread().setName(name)
+    }
+  }
+
+  override def toString = s"[TracedCallable($name)] $submitDateTime ${callDateTime}"
+}
+
+object TracedCallable {
+  implicit class AtomicRef[T](val underlying:AtomicReference[T]) extends AnyVal {
+    def asOpt[T] = {
+      val r = underlying.get
+      if (r == null) None else Some(r)
+    }
+  }
+}
+
+abstract class ScrapeCallable(submitTS:Long, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy])
+  extends TracedCallable[(NormalizedURI, Option[Article])]("Scrape", submitTS) {
+  override def toString = {
+    val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
+    s"[Scrape:${Json.stringify(Json.toJson(taskDetails))}]"
+  }
+}
+
+/*
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
   val killCount = new AtomicInteger()
   val threadRef = new AtomicReference[Thread]()
@@ -35,9 +87,10 @@ abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:
   def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
   override def toString = {
     val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
-    s"[Task:${Json.stringify(Json.toJson(taskDetails))}]"
+    s"[Scrape:${Json.stringify(Json.toJson(taskDetails))}]"
   }
 }
+*/
 
 @Singleton
 class QueuedScrapeProcessor @Inject() (
@@ -55,7 +108,7 @@ class QueuedScrapeProcessor @Inject() (
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
   val pSize = Runtime.getRuntime.availableProcessors * 1024
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
-  val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[(NormalizedURI, Option[Article])])]]()
+  val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
 
   log.info(s"[QScraper.ctr] nrInstances=$pSize, pool=$fjPool")
 
@@ -81,6 +134,7 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
+  import TracedCallable._
   val terminator = new Runnable {
     def run(): Unit = {
       try {
@@ -95,11 +149,12 @@ class QueuedScrapeProcessor @Inject() (
             ref.get map { case (sc, fjTask) =>
               if (sc.callTS.get == 0) log.info(s"[terminator] $sc has not yet started")
               else if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc isDone=true; remove from q"))
-              else if (sc.exRef.get != null) removeRef(iter, Some(s"[terminator] $sc caught error ${sc.exRef.get}; remove from q"))
+              else if (sc.trRef.asOpt.isDefined && sc.trRef.get.isFailure) removeRef(iter, Some(s"[terminator] $sc isFailure=true; ${sc.trRef.get}; remove from q"))
+              // else if (sc.exRef.get != null) removeRef(iter, Some(s"[terminator] $sc caught error ${sc.exRef.get}; remove from q"))
               else {
                 val runMillis = curr - sc.callTS.get
                 if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
-                  log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
+                  log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
                   doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(config)
@@ -110,7 +165,7 @@ class QueuedScrapeProcessor @Inject() (
                       log.info(s"[terminator] thread ${sc.threadRef.get} is now interrupted")
                       // safeRemove -- later
                     } else { // may consider hard-stop
-                      val msg = s"[terminator] ($killCount) attempts failed to terminate LONG ($runMillis ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}"
+                      val msg = s"[terminator] ($killCount) attempts failed to terminate LONG ($runMillis ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}"
                       log.error(msg)
                       if (killCount % 5 == 0) { // reduce noise
                         airbrake.notify(msg)
@@ -163,6 +218,10 @@ class QueuedScrapeProcessor @Inject() (
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
+      val callable = new ScrapeCallable(System.currentTimeMillis, nuri, scrapeInfo, proxy) {
+        def doWork: (NormalizedURI, Option[Article]) = worker.safeProcessURI(uri, info, proxyOpt)
+      }
+/*
       val callable = new ScrapeCallable(System.currentTimeMillis, new AtomicLong, nuri, scrapeInfo, proxy) {
         def call(): (NormalizedURI, Option[Article]) = {
           val name = Thread.currentThread.getName
@@ -188,7 +247,8 @@ class QueuedScrapeProcessor @Inject() (
           }
         }
       }
-      val fjTask:ForkJoinTask[(NormalizedURI, Option[Article])] = fjPool.submit(callable)
+*/
+      val fjTask = fjPool.submit(callable)
       if (!fjTask.isDone) {
         submittedQ.offer(WeakReference(callable, fjTask)) // should never return false
       }
