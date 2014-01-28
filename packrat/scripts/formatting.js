@@ -165,12 +165,12 @@ function addParticipantsFormatter(actor, addedUsers) {
 }
 
 function isSessionUser(user) {
-  return Boolean(user && user.id === session.user.id);
+  return user.id === me.id;
 }
 
 function bringSessionUserToFront(users) {
-  for (var i = 1, len = users.length, user; i < len; i++) {
-    user = users[i];
+  for (var i = 1, len = users.length; i < len; i++) {
+    var user = users[i];
     if (isSessionUser(user)) {
       users.splice(i, 1);
       users.unshift(user);

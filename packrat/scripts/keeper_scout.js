@@ -2,7 +2,7 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
-var session, tags = [];
+var me, tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
@@ -13,7 +13,7 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   };
 
-  var whenSessionKnown = [], tileCard, tileCount, onScroll;
+  var whenMeKnown = [], tileCard, tileCount, onScroll;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
@@ -42,9 +42,9 @@ var tile = tile || function() {  // idempotent for Chrome
 
   document.addEventListener("keydown", onKeyDown, true);
 
-  api.port.emit("session", onSessionChange);
+  api.port.emit('me', onMeChange);
   api.port.on({
-    session_change: onSessionChange,
+    me_change: onMeChange,
     open_to: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
     auto_show: loadAndDo.bind(null, 'keeper', 'show', 'auto'),
@@ -67,7 +67,7 @@ var tile = tile || function() {  // idempotent for Chrome
       api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
         if (!o.hide) {
           tile.style.display = "";
-          if (session && session.prefs.showKeeperIntro && !/\.(?:kifi|google)\./.test(location.hostname) && document.hasFocus()) {
+          if (o.showKeeperIntro && !/\.(?:kifi|google)\./.test(location.hostname) && document.hasFocus()) {
             setTimeout(api.require.bind(api, 'scripts/keeper_intro.js', api.noop), 5000);
           }
         }
@@ -117,9 +117,9 @@ var tile = tile || function() {  // idempotent for Chrome
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
       switch (e.keyCode) {
       case 75: // k
-        if (session === undefined) {  // not yet initialized
-          whenSessionKnown.push(onKeyDown.bind(this, e));
-        } else if (!session) {
+        if (me === undefined) {  // not yet initialized
+          whenMeKnown.push(onKeyDown.bind(this, e));
+        } else if (!me) {
           toggleLoginDialog();
         } else if (tile && tile.dataset.kept) {
           api.port.emit("unkeep", withUrls({}));
@@ -172,11 +172,11 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
-    if (session === undefined) {  // not yet initialized
+    if (me === undefined) {  // not yet initialized
       var args = Array.prototype.slice.call(arguments);
       args.unshift(null);
-      whenSessionKnown.push(Function.bind.apply(loadAndDo, args));
-    } else if (!session) {
+      whenMeKnown.push(Function.bind.apply(loadAndDo, args));
+    } else if (!me) {
       toggleLoginDialog();
     } else {
       var args = Array.prototype.slice.call(arguments, 2);
@@ -194,13 +194,13 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   }
 
-  function onSessionChange(s) {
-    if ((session = s)) {
+  function onMeChange(newMe) {
+    if ((me = newMe)) {
       attachTile();
     } else {
       cleanUpDom();
     }
-    while (whenSessionKnown.length) whenSessionKnown.shift()();
+    while (whenMeKnown.length) whenMeKnown.shift()();
   }
 
   function attachTile() {
@@ -263,7 +263,7 @@ var tile = tile || function() {  // idempotent for Chrome
   api.onEnd.push(function() {
     document.removeEventListener("keydown", onKeyDown, true);
     cleanUpDom();
-    session = tile = tileCard = tileCount = null;
+    me = tile = tileCard = tileCount = null;
   });
 
   return tile;
