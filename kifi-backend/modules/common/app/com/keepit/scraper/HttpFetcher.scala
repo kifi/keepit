@@ -262,20 +262,20 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       fetchInfo.respStatusRef.set(response.getStatusLine)
       Some(response)
     } catch {
-      case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url)
-                             else fetchResponse(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
-      case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:EOFException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:HttpHostConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:ClientProtocolException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:NoRouteToHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:UnknownHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:ConnectTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SocketException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SocketTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case t:Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
+        case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url)
+                               else fetchResponse(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+        case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:EOFException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:HttpHostConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:ClientProtocolException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:NoRouteToHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:UnknownHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:ConnectTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:SocketException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:SocketTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case t:Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
   }
 
