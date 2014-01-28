@@ -70,6 +70,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
               "lastName":"Smith",
               "pictureName":"0.jpg",
               "emails":[],
+              "notAuthed":[],
               "experiments":["admin"]}
           """)
 
