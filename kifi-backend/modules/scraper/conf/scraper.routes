@@ -2,7 +2,6 @@
 #INTERNAL ROUTES/Scraper
 ##########################################
 
-POST    /internal/scraper/getBasicArticleWithExtractor  @com.keepit.scraper.ScraperController.getBasicArticle
 POST    /internal/scraper/getBasicArticle               @com.keepit.scraper.ScraperController.getBasicArticle
 POST    /internal/scraper/getSignature                  @com.keepit.scraper.ScraperController.getSignature
 POST    /internal/scraper/scheduleScrape                @com.keepit.scraper.ScraperController.scheduleScrape
