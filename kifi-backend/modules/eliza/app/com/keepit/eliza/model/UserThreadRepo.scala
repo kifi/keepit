@@ -105,6 +105,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
 
+  def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
+
 }
 
 /**
@@ -496,6 +498,10 @@ class UserThreadRepoImpl @Inject() (
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
     val rawData = (for (row <- table if row.thread===threadId) yield row.id ~ row.thread ~ row.user ~ row.lastActive.? ~ row.started ~ row.lastSeen.?).list
     rawData.map{tuple => (UserThreadActivity.apply _).tupled(tuple) }
+  }
+
+  def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats = {
+
   }
 
 }

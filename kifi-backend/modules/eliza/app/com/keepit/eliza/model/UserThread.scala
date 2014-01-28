@@ -52,3 +52,5 @@ case class UserThread(
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 }
+
+case class UserThreadStats(all: Int, active, Int, started: Int)
