@@ -15,37 +15,6 @@
   cursor: text;
 }
 
-.my-keeps>a>.view-name::before,
-.my-friends>a>.view-name::before {
-  content: " ";
-  display: inline-block;
-  height: 21px;
-  padding: 10px 0;
-  background: url(../img/nav-icons.png) 0 no-repeat;
-  background-size: auto 21px;
-  vertical-align: top;
-}
-
-.my-keeps>a>.view-name::before {
-  width: 21px;
-  margin-right: 7px;
-  background-position: -21px;
-}
-
-.my-keeps.active>a>.view-name::before {
-  background-position: 0;
-}
-
-.my-friends>a>.view-name::before {
-  width: 20px;
-  margin-right: 8px;
-  background-position: -62px 8px;
-}
-
-.my-friends.active>a>.view-name::before {
-  background-position: -42px 8px;
-}
-
 #collections>h2 {
   margin-top: 15px;
   padding-bottom: 2px;
