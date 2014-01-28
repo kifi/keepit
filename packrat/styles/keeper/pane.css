@@ -17,7 +17,7 @@
   font: 12px Arial, sans-serif;
   text-align: left;
   direction: ltr;
-  z-index: 999999999991;
+  z-index: 999999999991 !important;
   -webkit-transform: translate3d(322px, 0, 0);
   transform: translate3d(322px, 0, 0);
   transition: -webkit-transform 0.25s ease-in;
