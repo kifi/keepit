@@ -349,6 +349,7 @@ class UserController @Inject() (
     val pimpedUser = userCommander.getUserInfo(user)
     Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++
+       Json.obj("nonAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
        Json.obj("experiments" -> experiments.map(_.value)))
   }
 
