@@ -137,7 +137,7 @@ object ApplicationBuild extends Build {
       "com.keepit.search._"
     )
 
-    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m", "-Dconfig.resource=application-dev.conf")
+    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
 
     val _testOptions = Seq(
       Tests.Argument("sequential", "true"),
@@ -153,7 +153,7 @@ object ApplicationBuild extends Build {
       resolvers ++= commonResolvers,
       templatesImport ++= _templatesImport,
 
-      javaOptions in test ++= javaTestOptions,
+      javaOptions in Test ++= javaTestOptions,
       parallelExecution in Test := false,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
@@ -184,7 +184,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
-      (commonSettings ++ (routesImport ++= Seq("com.keepit.eliza._", "com.keepit.eliza.model._"))) : _*
+      (commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-eliza.conf") ++ (routesImport ++= Seq("com.keepit.eliza._", "com.keepit.eliza.model._"))) : _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
