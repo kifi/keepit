@@ -18,7 +18,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 
-class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
 
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),

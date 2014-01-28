@@ -176,7 +176,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
-      commonSettings: _*
+      commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
