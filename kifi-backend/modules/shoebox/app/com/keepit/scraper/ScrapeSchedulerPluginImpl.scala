@@ -176,6 +176,6 @@ class ScrapeSchedulerPluginImpl @Inject() (
       urlPatternRuleRepo.getProxy(url)
     }
     log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-    scraperClient.getBasicArticleWithExtractor(url, proxyOpt, extractorProviderType)
+    scraperClient.getBasicArticle(url, proxyOpt, extractorProviderType)
   }
 }

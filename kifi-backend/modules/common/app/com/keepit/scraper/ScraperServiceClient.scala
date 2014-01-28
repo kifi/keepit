@@ -92,9 +92,7 @@ trait ScraperServiceClient extends ServiceClient {
   def asyncScrapeWithRequest(request:ScrapeRequest):Future[(NormalizedURI, Option[Article])]
   def scheduleScrape(uri:NormalizedURI, info:ScrapeInfo):Future[Boolean] // ack
   def scheduleScrapeWithRequest(request:ScrapeRequest):Future[Boolean] // ack
-  def getBasicArticle(url:String):Future[Option[BasicArticle]]
-  def getBasicArticleP(url:String, proxy:Option[HttpProxy]):Future[Option[BasicArticle]]
-  def getBasicArticleWithExtractor(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
+  def getBasicArticle(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
 }
 
@@ -137,20 +135,8 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getBasicArticle(url: String): Future[Option[BasicArticle]] = {
-    call(Scraper.internal.getBasicArticle(url)).map{ r =>
-      r.json.validate[BasicArticle].asOpt
-    }
-  }
-
-  def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = {
-    call(Scraper.internal.getBasicArticleP, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy))).map{ r =>
-      r.json.validate[BasicArticle].asOpt
-    }
-  }
-
-  def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    call(Scraper.internal.getBasicArticleWithExtractor, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
+  def getBasicArticle(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+    call(Scraper.internal.getBasicArticle, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
       r.json.validate[BasicArticle].asOpt
     }
   }
@@ -176,11 +162,7 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def scheduleScrapeWithRequest(request: ScrapeRequest): Future[Boolean] = ???
 
-  def getBasicArticle(url: String): Future[Option[BasicArticle]] = ???
-
-  def getBasicArticleP(url: String, proxy: Option[HttpProxy]): Future[Option[BasicArticle]] = ???
-
-  def getBasicArticleWithExtractor(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
+  def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
 
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
 }
