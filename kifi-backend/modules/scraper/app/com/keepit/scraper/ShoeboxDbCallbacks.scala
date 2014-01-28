@@ -13,6 +13,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
 
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 
+  def syncAssignTasks(zkId:Long, max: Int):Seq[ScrapeRequest] = await(assignTasks(zkId, max))
   def syncIsUnscrapableP(url: String, destinationUrl: Option[String]) = await(isUnscrapableP(url, destinationUrl))
   def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = await(getNormalizedUri(uri))
   def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = await(saveNormalizedUri(uri))
@@ -25,6 +26,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
     await(recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization))
   }
 
+  def assignTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = shoeboxServiceClient.assignScrapeTasks(zkId, max)
   def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]] = {
     uri.id match {
       case Some(id) => shoeboxServiceClient.getNormalizedURI(id).map(Some(_))
@@ -46,6 +48,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
 }
 
 trait SyncShoeboxDbCallbacks {
+  def syncAssignTasks(zkId:Long, max:Int):Seq[ScrapeRequest]
   def syncIsUnscrapableP(url: String, destinationUrl: Option[String]):Boolean
   def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI]
   def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI
@@ -59,6 +62,7 @@ trait SyncShoeboxDbCallbacks {
 }
 
 trait ShoeboxDbCallbacks {
+  def assignTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]]
   def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI]
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]

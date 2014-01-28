@@ -15,7 +15,9 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
 import play.modules.statsd.api.Statsd
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.mail.{ElectronicMailCategory, EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.service.ServiceType
 
 case object ScheduleScrape
 
@@ -23,6 +25,8 @@ private[scraper] class ScrapeScheduler @Inject() (
     scraperConfig: ScraperConfig,
     airbrake: AirbrakeNotifier,
     db: Database,
+    serviceDiscovery: ServiceDiscovery,
+    localPostOffice: LocalPostOffice,
     scrapeInfoRepo: ScrapeInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -37,20 +41,54 @@ private[scraper] class ScrapeScheduler @Inject() (
   implicit val config = scraperConfig
 
   def schedule(): Unit = {
-    val (activeOverdues, pendingCount, pendingOverdues) = db.readOnly { implicit s =>
-      (scrapeInfoRepo.getOverdueList(), scrapeInfoRepo.getPendingCount(), scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold)))
+    val (overdues, pendingCount, pendingOverdues, assignedCount, assignedOverdues) = db.readOnly(attempts = 2) { implicit s =>
+      val overdues         = scrapeInfoRepo.getOverdueList()
+      val pendingCount     = scrapeInfoRepo.getPendingCount()
+      val pendingOverdues  = scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
+      val assignedCount    = scrapeInfoRepo.getAssignedCount()
+      val assignedOverdues = scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
+      (overdues, pendingCount, pendingOverdues, assignedCount, assignedOverdues)
     }
-    log.info(s"[schedule]: active:${activeOverdues.length} pending:${pendingCount} pending-overdues:${pendingOverdues.length}")
+    log.info(s"[schedule]: active:${overdues.length} pending:${pendingCount} pending-overdues:${pendingOverdues.length} assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
+
+    val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers
+    val workerIds = workers.map(_.id.id).toSet
+    val (orphaned, assigned) = assignedOverdues partition { info => info.workerId.isDefined } // no workerId (bug)
+    if (!orphaned.isEmpty) {
+      val msg = s"[schedule] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
+      log.error(msg) // shouldn't happen -- airbrake
+      db.readWrite(attempts = 2) { implicit rw =>
+        localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
+        orphaned.foreach { info =>
+          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+        }
+      }
+    }
+
+    val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get) } // workers no longer exists
+    if (!abandoned.isEmpty) {
+      val msg = s"[schedule] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
+      log.warn(msg)
+      db.readWrite(attempts = 2) { implicit rw =>
+        localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
+        abandoned.foreach { info =>
+          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+        }
+      }
+    }
+
+    // needs update
     val batchMax = scraperConfig.batchMax
-    val pendingSkipThreshold = scraperConfig.pendingSkipThreshold // todo: adjust dynamically
-    val adjPendingCount = (pendingCount - pendingOverdues.length) // assuming overdue ones are no longer being worked on
-    val infos = if (adjPendingCount > pendingSkipThreshold) {
+    val pendingSkipThreshold = scraperConfig.pendingSkipThreshold
+    val adjPendingCount = (pendingCount - pendingOverdues.length)
+    val infos =
+      if (adjPendingCount > pendingSkipThreshold) {
         val msg = s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $pendingSkipThreshold. Skip a round."
         log.warn(msg)
         airbrake.notify(msg)
         Seq.empty[ScrapeInfo]
       } else {
-        activeOverdues.take(batchMax) ++ pendingOverdues.take(batchMax)
+        overdues.take(batchMax) ++ pendingOverdues.take(batchMax)
       }
 
     val tasks = if (infos.isEmpty) Seq.empty[(NormalizedURI, ScrapeInfo, Option[HttpProxy])]
@@ -72,7 +110,7 @@ private[scraper] class ScrapeScheduler @Inject() (
           scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE)) // no need to scrape
           None
         } else {
-          val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: batch
+          val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: assigned
           Some(ScrapeRequest(uri, savedInfo, proxyOpt))
         }
       }
@@ -115,7 +153,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     val toSave = info match {
       case Some(s) => s.state match {
         case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime)
-        case ScrapeInfoStates.PENDING  => s // no change
+        case ScrapeInfoStates.PENDING | ScrapeInfoStates.ASSIGNED => s // no change
         case ScrapeInfoStates.INACTIVE => {
           val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
           log.warn(msg)

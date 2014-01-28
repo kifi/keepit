@@ -16,6 +16,9 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def getPendingCount()(implicit session: RSession):Int
   def getPendingList(limit: Int = -1)(implicit session: RSession):Seq[ScrapeInfo]
   def getOverduePendingList(due: DateTime = currentDateTime)(implicit session: RSession):Seq[ScrapeInfo]
+  def getAssignedCount()(implicit session: RSession):Int
+  def getAssignedList(limit: Int = -1)(implicit session: RSession):Seq[ScrapeInfo]
+  def getOverdueAssignedList(due: DateTime = currentDateTime)(implicit session: RSession):Seq[ScrapeInfo]
   def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int)(implicit session: RSession): Int
 }
 
@@ -32,6 +35,7 @@ class ScrapeInfoRepoImpl @Inject() (
 
   override val table = new RepoTable[ScrapeInfo](db, "scrape_info") {
     def uriId =      column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def workerId   = column[Long]("worker_id")
     def lastScrape = column[DateTime]("last_scrape", O.NotNull)
     def nextScrape = column[DateTime]("next_scrape", O.NotNull)
     def interval =   column[Double]("scrape_interval", O.NotNull)
@@ -39,7 +43,7 @@ class ScrapeInfoRepoImpl @Inject() (
     def signature =  column[String]("signature", O.NotNull)
     def destinationUrl = column[String]("destination_url", O.Nullable)
     def seq = column[Int]("seq", O.NotNull)
-    def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo.apply _, ScrapeInfo.unapply _)
+    def * = id.? ~ uriId ~ workerId.? ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo.apply _, ScrapeInfo.unapply _)
   }
 
   override def deleteCache(model: ScrapeInfo)(implicit session: RSession): Unit = {}
@@ -57,6 +61,19 @@ class ScrapeInfoRepoImpl @Inject() (
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo] = {
     val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f).sortBy(_.nextScrape)
     (if (limit >= 0) q.take(limit) else q).list
+  }
+
+  def getAssignedCount()(implicit session: RSession):Int = {
+    Q.queryNA[Int](s"select count(*) from scrape_info where state = '${ScrapeInfoStates.ASSIGNED}'").first
+  }
+
+  def getAssignedList(limit: Int = -1)(implicit session: RSession): Seq[ScrapeInfo] = {
+    val q = (for(f <- table if f.state === ScrapeInfoStates.ASSIGNED) yield f)
+    (if (limit >= 0) q.take(limit) else q).list
+  }
+
+  def getOverdueAssignedList(due: DateTime = currentDateTime)(implicit session: RSession):Seq[ScrapeInfo] = {
+    (for(f <- table if f.state === ScrapeInfoStates.ASSIGNED && f.nextScrape <= due) yield f).sortBy(_.nextScrape).list
   }
 
   def getPendingCount()(implicit session: RSession):Int = {
