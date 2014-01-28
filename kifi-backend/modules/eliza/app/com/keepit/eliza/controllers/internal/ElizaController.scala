@@ -20,6 +20,10 @@ class ElizaController @Inject() (
   notificationRouter: NotificationRouter)
     extends ElizaServiceController with Logging {
 
+  def getUserThreadStats(userId: Id[User]) = Action { request =>
+
+  }
+
   def sendToUserNoBroadcast() = Action { request =>
     Async(future{
       val req = request.body.asJson.get.asInstanceOf[JsObject]
