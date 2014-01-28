@@ -69,8 +69,11 @@ class ServiceDiscoveryImpl(
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
+    val myCluster = new ServiceCluster(services.currentService, airbrake, if (services.currentService == ServiceType.SHOEBOX) Some(scheduler) else None)
+    clustersToInit(services.currentService) = myCluster
+    if (servicesToListenOn.contains(services.currentService)) throw new IllegalArgumentException(s"current service is included in servicesToListenOn: $servicesToListenOn")
     servicesToListenOn foreach {service =>
-      val cluster = new ServiceCluster(service, airbrake, if (services.currentService==ServiceType.SHOEBOX) Some(scheduler) else None)
+      val cluster = new ServiceCluster(service, airbrake, None)
       clustersToInit(service) = cluster
     }
     log.info(s"registered clusters: $clustersToInit")

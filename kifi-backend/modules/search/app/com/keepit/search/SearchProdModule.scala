@@ -21,7 +21,7 @@ case class SearchProdModule() extends SearchModule(
   spellModule = SpellCorrectorModule()
 ) with CommonProdModule  {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: Nil
+    def servicesToListenOn: Seq[ServiceType] = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: Nil
   }
 }
 

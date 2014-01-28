@@ -11,7 +11,7 @@ case class ElizaProdModule() extends ElizaModule(
   urbanAirshipModule = ElizaUrbanAirshipModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: Nil
+    def servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: Nil
   }
 }
 

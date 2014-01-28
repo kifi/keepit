@@ -10,7 +10,7 @@ case class HeimdalProdModule() extends HeimdalModule(
   mongoModule = ProdMongoModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn: Seq[ServiceType] = ServiceType.HEIMDAL :: Nil
+    def servicesToListenOn: Seq[ServiceType] = Nil //is that right?
   }
 }
 
