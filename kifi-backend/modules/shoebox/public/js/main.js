@@ -1064,14 +1064,6 @@ $(function () {
 			.dialog('show');
 	}
 
-	function refreshMe(data) {
-		var url = xhrBase + '/user/me';
-		if (data) {
-			return $.postJson(url, data, updateMe);
-		}
-		return $.getJSON(url, updateMe);
-	}
-
 	function saveNewPrimaryEmail($input, cancel) {
 		var email = $input.val();
 		if (getPrimaryEmailAddress() === email) {
@@ -1081,7 +1073,7 @@ $(function () {
 		getEmailInfo(email)
 			.done(function (emailInfo) {
 				if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
-					refreshMe();
+					repromiseMe();
 					return;
 				}
 				if (emailInfo.isVerified) {
@@ -1107,7 +1099,7 @@ $(function () {
 				address: email,
 				isPrimary: true
 			});
-			refreshMe(props);
+			repromiseMe(props);
 		};
 	}
 
@@ -1122,7 +1114,7 @@ $(function () {
 
 		delete props.email;
 
-		refreshMe(props)
+		repromiseMe(props)
 			.fail(function () {
 				showMessage('Uh oh! Something went wrong!');
 			});
@@ -1225,7 +1217,7 @@ $(function () {
 
 	var gmailAccountTmpl = Handlebars.compile($('#gmail-account').html());
 	function showProfile() {
-		$.when(promise.me, promise.myNetworks).done(function () {
+		$.when(repromiseMe(), promise.myNetworks).done(function () {
 			profileTmpl.render(me);
 
 			updateMe(me);
@@ -2319,7 +2311,7 @@ $(function () {
 			getNetworks();
 		}
 
-		promise.me.done(function (me) {
+		repromiseMe().done(function (me) {
 			clearNotAuthed();
 			if (me.notAuthed && me.notAuthed.length) {
 				if (network) {
@@ -4237,10 +4229,7 @@ $(function () {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: refreshMe().promise().done(function (me) {
-			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
-			return me;
-		}),
+		me: repromiseMe(),
 		myNetworks: getNetworks().promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function (data) {
 			myPrefs = data;
@@ -4249,6 +4238,28 @@ $(function () {
 			}
 		}).promise()
 	};
+
+	function refreshMe(data) {
+		var url = xhrBase + '/user/me';
+		if (data) {
+			return $.postJson(url, data, updateMe);
+		}
+		return $.getJSON(url, updateMe);
+	}
+
+	function repromiseMe(data) {
+		var p = refreshMe(data).promise().done(function (me) {
+			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
+			return me;
+		});
+		if (promise) {
+			promise.me = p;
+		}
+		return p;
+	}
+
+	repromiseMe();
+
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function (data) {
 		updateFriendRequests(data.requests);
