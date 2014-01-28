@@ -8,6 +8,7 @@ angular.module('kifi', [
 	'kifi.profileCard',
 	'kifi.layout.leftCol',
 	'kifi.layout.main',
+	'kifi.layout.nav',
 	'kifi.layout.rightCol'
 ])
 
