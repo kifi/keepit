@@ -182,6 +182,7 @@ trait TopicUpdaterTestHelper extends ShoeboxApplicationInjector {
         id = normalizedUriId,
         title = title,
         description = None,
+        canonicalUrl = None,
         keywords = None,
         media = None,
         content = content,

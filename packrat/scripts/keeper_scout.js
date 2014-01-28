@@ -14,6 +14,34 @@ var tile = tile || function() {  // idempotent for Chrome
   };
 
   var whenSessionKnown = [], tileCard, tileCount, onScroll;
+  while ((tile = document.getElementById('kifi-tile'))) {
+    tile.remove();
+  }
+  tile = document.createElement('kifi');
+  if (!tile.style) {
+    return tile;  // no kifi DOM in XML viewer
+  }
+  tile.id = 'kifi-tile';
+  tile.className = "kifi-root kifi-tile";
+  tile.style.display = "none";
+  tile.dataset.t0 = Date.now();
+  tile.innerHTML =
+    '<div class="kifi-tile-card">' +
+    '<div class="kifi-tile-keep"></div>' +
+    '<div class="kifi-tile-kept"></div></div>';
+  tile["kifi:position"] = positionTile;
+  tile.addEventListener("mouseover", function (e) {
+    if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
+      loadAndDo('keeper', 'show', 'tile');
+    }
+  });
+
+  tileCard = tile.firstChild;
+  tileCount = document.createElement("span");
+  tileCount.className = "kifi-count";
+
+  document.addEventListener("keydown", onKeyDown, true);
+
   api.port.emit("session", onSessionChange);
   api.port.on({
     session_change: onSessionChange,
@@ -180,30 +208,6 @@ var tile = tile || function() {  // idempotent for Chrome
       (document.querySelector("body") || document.documentElement).appendChild(tile);
     }
   }
-
-  while ((tile = document.getElementById('kifi-tile'))) {
-    tile.remove();
-  }
-  tile = document.createElement("kifi");
-  tile.id = "kifi-tile";
-  tile.className = "kifi-root kifi-tile";
-  tile.style.display = "none";
-  tile.dataset.t0 = Date.now();
-  tile.innerHTML =
-    '<div class="kifi-tile-card">' +
-    '<div class="kifi-tile-keep"></div>' +
-    '<div class="kifi-tile-kept"></div></div>';
-  tile["kifi:position"] = positionTile;
-  tile.addEventListener("mouseover", function (e) {
-    if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
-      loadAndDo('keeper', 'show', 'tile');
-    }
-  });
-
-  tileCard = tile.firstChild;
-  tileCount = document.createElement("span");
-  tileCount.className = "kifi-count";
-  document.addEventListener("keydown", onKeyDown, true);
 
   function onResize() {
     if (paneCall('showing')) return;

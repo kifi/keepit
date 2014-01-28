@@ -78,6 +78,9 @@ class SyncScraper @Inject() (
           // first update the uri state to SCRAPED
           val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
 
+          // Report canonical url
+          article.canonicalUrl.foreach(helper.syncRecordScrapedNormalization(latestUri.id.get, signature, _, Normalization.CANONICAL))
+
           // then update the scrape schedule
           helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
@@ -114,6 +117,7 @@ class SyncScraper @Inject() (
           id = latestUri.id.get,
           title = latestUri.title.getOrElse(""),
           description = None,
+          canonicalUrl = None,
           keywords = None,
           media = None,
           content = "",
@@ -181,6 +185,7 @@ class SyncScraper @Inject() (
           } else {
             val content = extractor.getContent
             val title = getTitle(extractor)
+            val canonicalUrl = getCanonicalUrl(extractor)
             val description = getDescription(extractor)
             val keywords = getKeywords(extractor)
             val media = getMediaTypeString(extractor)
@@ -196,6 +201,7 @@ class SyncScraper @Inject() (
               id = normalizedUri.id.get,
               title = title,
               description = description,
+              canonicalUrl = canonicalUrl,
               keywords = keywords,
               media = media,
               content = content,
@@ -226,6 +232,8 @@ class SyncScraper @Inject() (
 
   private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
 
+  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
+
   private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
 
   private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
@@ -235,6 +243,7 @@ class SyncScraper @Inject() (
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = getTitle(extractor),
     content = extractor.getContent,
+    canonicalUrl = getCanonicalUrl(extractor),
     description = getDescription(extractor),
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
