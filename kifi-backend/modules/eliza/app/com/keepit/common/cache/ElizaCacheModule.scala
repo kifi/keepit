@@ -24,6 +24,11 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
+  def userThreadStatsForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserThreadStatsForThreadIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, Duration.Inf))
+
+  @Singleton
+  @Provides
   def playCacheApi(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new PlayCacheApi(stats, accessLog, (innerRepo, 1 second), (outerRepo, 1 hour))
 
