@@ -25,7 +25,8 @@
     "angular-resource": "1.2.x",
     "angular-route": "1.2.x",
     "ngInfiniteScroll": "1.x.x",
-    "angular-ui-router": "~0.2.8"
+    "angular-ui-router": "~0.2.8",
+    "angular-antiscroll": "*"
   },
   "devDependencies": {
     "angular-mocks": "1.2.x"

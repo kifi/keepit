@@ -37,10 +37,12 @@ module.exports = function (grunt) {
 			client: {
 				lib: 'lib',
 				libCss: [
-					'lib/normalize-css/normalize.css'
+					'lib/normalize-css/normalize.css',
+					'lib/antiscroll/antiscroll.css'
 				],
 				libMinCss: [
-					'lib/normalize-css/normalize.css'
+					'lib/normalize-css/normalize.css',
+					'lib/antiscroll/antiscroll.css'
 				],
 				libJs: [
 					'lib/jquery/jquery.js',
@@ -49,6 +51,9 @@ module.exports = function (grunt) {
 					'lib/angular-resource/angular-resource.js',
 					'lib/angular-route/angular-route.js',
 					'lib/angular-ui-router/release/angular-ui-router.js',
+					'lib/jquery.mousewheel/jquery.mousewheel.js',
+					'lib/antiscroll/antiscroll.js',
+					'lib/angular-antiscroll/angular-antiscroll.js',
 					'lib/ngInfiniteScroll/ng-infinite-scroll.js'
 				],
 				libMinJs: [
@@ -58,6 +63,9 @@ module.exports = function (grunt) {
 					'lib/angular-resource/angular-resource.min.js',
 					'lib/angular-route/angular-route.min.js',
 					'lib/angular-ui-router/release/angular-ui-router.min.js',
+					'lib/jquery.mousewheel/jquery.mousewheel.js',
+					'lib/antiscroll/antiscroll.js',
+					'lib/angular-antiscroll/angular-antiscroll.js',
 					'lib/ngInfiniteScroll/ng-infinite-scroll.js'
 				],
 				src: 'src',
@@ -224,8 +232,7 @@ module.exports = function (grunt) {
 			options: {
 				configFile: '<%= path.test.karmaConfig %>'
 			},
-			unit: {
-			},
+			unit: {},
 			watch: {
 				singleRun: false,
 				autoWatch: true
