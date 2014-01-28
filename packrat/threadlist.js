@@ -93,7 +93,7 @@
           this.numUnreadUnmuted--;
         } else {
           log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted)();
-          if (~session.experiments.indexOf('admin')) {
+          if (~experiments.indexOf('admin')) {
             this.numUnreadUnmuted--;
           }
         }

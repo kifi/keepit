@@ -32,7 +32,7 @@ import com.keepit.model.UserConnectionIdKey
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
-import com.keepit.scraper.{Signature, HttpRedirect}
+import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
@@ -96,6 +96,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
+  def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int = 10000):Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Bookmark]]
@@ -590,6 +591,12 @@ class ShoeboxServiceClientImpl @Inject() (
       "keepers" -> JsArray(keepers.map(id => JsString(id.id)))
     )
     call(Shoebox.internal.clickAttribution, payload)
+  }
+
+  def assignScrapeTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    call(Shoebox.internal.assignScrapeTasks(zkId, max)).map { r =>
+      r.json.as[Seq[ScrapeRequest]]
+    }
   }
 
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = {

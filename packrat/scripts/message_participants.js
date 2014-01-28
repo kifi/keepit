@@ -274,7 +274,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		getOtherParticipant: function () {
 			return this.getParticipants().filter(function (user) {
-				return user.id !== win.session.user.id;
+				return user.id !== win.me.id;
 			})[0];
 		},
 

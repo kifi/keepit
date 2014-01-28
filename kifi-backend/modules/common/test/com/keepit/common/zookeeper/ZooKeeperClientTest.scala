@@ -8,22 +8,24 @@ class ZooKeeperClientTest extends Specification {
 
   args(skipAll = true)
 
-  def withClient[T](block: ZooKeeperClient => T)(implicit path: Path, cleanup: Boolean = true): T = {
+  def withZKSession[T](block: ZooKeeperSession => T)(implicit path: Path, cleanup: Boolean = true): T = {
     println(s"starting test with root path $path")
-    val zk = new ZooKeeperClientImpl("localhost", 2000, Some( {zk1 => println(s"in callback, got $zk1")} ))
-    try {
-      zk.createPath(path)
-      block(zk)
-    } finally {
-      if (cleanup) Try { zk.deleteRecursive(path) }
-      zk.close
+    val zkClient = new ZooKeeperClientImpl("localhost", 2000, Some( {zk1 => println(s"in callback, got $zk1")} ))
+    zkClient.session{ zk =>
+      try {
+        zk.createPath(path)
+        block(zk)
+      } finally {
+        if (cleanup) Try { zk.deleteRecursive(path) }
+        zkClient.close()
+      }
     }
   }
 
   "zookeeper" should {
     "connect to server and create paths" in {
       implicit val path = Path("/test" + Random.nextLong.abs)
-      withClient { zk =>
+      withZKSession { zk =>
         zk.createPath(Path(s"{path.name}/a/b/c"))
         zk.createPath(Path(s"{path.name}/a/b/d"))
         val children = zk.getChildren(Path("/a/b"))
@@ -37,7 +39,7 @@ class ZooKeeperClientTest extends Specification {
 
     "connect to server and set some data" in {
       implicit val path = Path("/test" + Random.nextLong.abs)
-      withClient { zk =>
+      withZKSession { zk =>
         zk.createNode(Node(s"{path.name}/testNode"), "foo".getBytes, PERSISTENT)
         zk.watchNode(Node(s"{path.name}/testNode"), { (data : Option[Array[Byte]]) =>
           data match {
@@ -53,7 +55,7 @@ class ZooKeeperClientTest extends Specification {
 
     "monitor node children" in {
       implicit val path = Path("/test" + Random.nextLong.abs)
-      withClient { zk =>
+      withZKSession { zk =>
         zk.create(Path(s"{path.name}/parent"), null, PERSISTENT)
         zk.watchChildren(Path(s"{path.name}/parent"), { (children : Seq[Node]) =>
           println("Children: %s".format(children.mkString(", ")))
@@ -68,7 +70,7 @@ class ZooKeeperClientTest extends Specification {
 
     "SEQUENCE EPHEMERAL (Service Instances) nodes" in {
       implicit val path = Path("/test" + Random.nextLong.abs)
-      withClient { zk =>
+      withZKSession { zk =>
         val parent = Path("/parent")
         zk.create(parent, null, PERSISTENT)
         zk.watchChildren(parent, { (children : Seq[Node]) =>
@@ -82,7 +84,7 @@ class ZooKeeperClientTest extends Specification {
         zk.create(Path(s"{path.name}/other"), null, PERSISTENT)
         println(zk.createNode(Node(s"{path.name}/other/child"), null, PERSISTENT))
       }(path, false)
-      withClient { zk =>
+      withZKSession { zk =>
         zk.getChildren(Path(s"{path.name}/other")).size === 1
         zk.getChildren(Path(s"{path.name}/parent")).size === 0
       }(path, true)
@@ -90,7 +92,7 @@ class ZooKeeperClientTest extends Specification {
 
     "For a given node, automatically maintain a map from the node's children to the each child's data" in {
       implicit val path = Path("/test" + Random.nextLong.abs)
-      withClient { zk =>
+      withZKSession { zk =>
         val childMap = collection.mutable.Map[Node, String]()
 
         zk.create(Path(s"{path.name}/parent"), null, PERSISTENT)
