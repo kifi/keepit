@@ -25,7 +25,7 @@
   -webkit-font-smoothing: antialiased;
   text-align: left;
 }
-.kifi-with-pane .kifi-tagbox {
+html[kifi-with-pane] .kifi-tagbox {
   bottom: 54px;
   width: 312px;
   border-bottom: 0;
@@ -364,11 +364,11 @@
 .kifi-tagbox-clear:hover {
   color: #0089d5 !important;
 }
-.kifi-with-pane .kifi-tagbox-suggest,
-.kifi-with-pane .kifi-tagbox-suggest-inner,
-.kifi-with-pane .kifi-tagbox-tagged-wrapper,
-.kifi-with-pane .kifi-tagbox-tagged,
-.kifi-with-pane .kifi-tagbox-empty {
+html[kifi-with-pane] .kifi-tagbox-suggest,
+html[kifi-with-pane] .kifi-tagbox-suggest-inner,
+html[kifi-with-pane] .kifi-tagbox-tagged-wrapper,
+html[kifi-with-pane] .kifi-tagbox-tagged,
+html[kifi-with-pane] .kifi-tagbox-empty {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
