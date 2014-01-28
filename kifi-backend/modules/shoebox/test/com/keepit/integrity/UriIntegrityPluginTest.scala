@@ -34,6 +34,9 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
             val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
 
+            scrapeInfoRepo.save(ScrapeInfo(uriId = nuri0.id.get))
+            scrapeInfoRepo.save(ScrapeInfo(uriId = nuri2.id.get))
+
             val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/index", nuri2.id.get))        // to be splitted, to be pointing to

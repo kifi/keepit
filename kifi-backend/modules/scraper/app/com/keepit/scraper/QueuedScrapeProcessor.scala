@@ -17,17 +17,23 @@ import com.keepit.common.performance._
 import org.apache.http.HttpStatus
 import play.api.Play.current
 import scala.concurrent._
+import play.api.libs.json.Json
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
   val killCount = new AtomicInteger()
   val threadRef = new AtomicReference[Thread]()
   val exRef = new AtomicReference[Throwable]()
-  lazy val submitLocalTime = new DateTime(submitTS).toLocalTime
-  def callLocalTime = new DateTime(callTS.get).toLocalTime
+  lazy val submitDateTime = new DateTime(submitTS)
+  lazy val submitLocalTime = submitDateTime.toLocalTime
+  def callDateTime = new DateTime(callTS.get)
+  def callLocalTime = callDateTime.toLocalTime
   def runMillis(curr:Long) = curr - callTS.get
   def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
-  override def toString = s"[Task:([$submitLocalTime],[${callLocalTime}],[$killCount],${uri.id.getOrElse("")},${info.id.getOrElse("")},${uri.url})]"
+  override def toString = {
+    val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
+    s"[Task:${Json.stringify(Json.toJson(taskDetails))}]"
+  }
 }
 
 @Singleton
@@ -60,12 +66,12 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String]) {
+  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit scraperConfig:ScraperConfig) { // can be removed once things are settled
     try {
       for (msg <- msgOpt)
         log.info(msg)
-      helper.syncSaveScrapeInfo(sc.info.withState(ScrapeInfoStates.INACTIVE))
-      helper.syncGetNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // consider adding DO_NOT_SCRAPE
+      helper.syncSaveNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: UNSCRAPABLE where appropriate
+      helper.syncSaveScrapeInfo(sc.info.withFailure) // todo: mark INACTIVE where appropriate
     } catch {
       case t:Throwable => logErr(t, "terminator", s"deactivate $sc")
     }
@@ -92,7 +98,7 @@ class QueuedScrapeProcessor @Inject() (
                   log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
-                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))
+                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(config)
                   if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
                   else {
                     sc.threadRef.get.interrupt

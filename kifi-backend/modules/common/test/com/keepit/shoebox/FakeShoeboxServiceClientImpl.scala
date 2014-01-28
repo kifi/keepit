@@ -21,7 +21,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
-import com.keepit.scraper.HttpRedirect
+import com.keepit.scraper.{Signature, HttpRedirect}
 import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
 
@@ -289,13 +289,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString
       )
-      val user = allUsers.getOrElse(id,dummyUser)
-      id -> BasicUser(
-        externalId = user.externalId,
-        firstName = user.firstName,
-        lastName = user.lastName,
-        pictureName = "fake.jpg" //
-      )
+      val user = allUsers.getOrElse( id,dummyUser)
+      id -> BasicUser.fromUser(user)
     }.toMap
     Future.successful(basicUsers)
   }
@@ -308,12 +303,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         lastName = "Adams-clone-" + id.toString
       )
       val user = allUsers.getOrElse(id,dummyUser)
-      id -> BasicUser(
-        externalId = user.externalId,
-        firstName = user.firstName,
-        lastName = user.lastName,
-        pictureName = "fake.jpg" //
-      )
+      id -> BasicUser.fromUser(user)
     }.toMap
     Future.successful(basicUsers)
   }
@@ -462,6 +452,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
 
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit] = ???
+
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???
@@ -483,4 +475,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("dummy")
 
   def triggerRawKeepImport(): Unit = ()
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
+    Future.successful()
+  }
 }

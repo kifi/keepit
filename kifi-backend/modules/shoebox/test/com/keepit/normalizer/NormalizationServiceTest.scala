@@ -29,7 +29,7 @@ class NormalizationServiceTest extends TestKitScope with Specification with Shoe
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
-    val id = Await.result(normalizationService.update(uri, candidates: _*), 1 seconds)
+    val id = Await.result(normalizationService.update(NormalizationReference(uri), candidates: _*), 1 seconds)
     uriIntegrityPlugin.batchURIMigration()
     id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }
@@ -58,7 +58,7 @@ class NormalizationServiceTest extends TestKitScope with Specification with Shoe
       "does not normalize an http:// url to HTTP twice" in {
         val httpUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("http://vimeo.com/48578814") }.get
         httpUri.normalization === Some(Normalization.HTTP)
-        updateNormalizationNow(httpUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.HTTP)) === None
+        updateNormalizationNow(httpUri, VerifiedCandidate("http://vimeo.com/48578814", Normalization.HTTP)) === None
       }
 
       "redirect an existing http url to a new https:// url" in {
@@ -90,7 +90,7 @@ class NormalizationServiceTest extends TestKitScope with Specification with Shoe
       "upgrade an existing https:// url to a better normalization" in {
         val httpsUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
         httpsUri.normalization === Some(Normalization.HTTPS)
-        updateNormalizationNow(httpsUri, TrustedCandidate("https://vimeo.com/48578814", Normalization.CANONICAL))
+        updateNormalizationNow(httpsUri, VerifiedCandidate("https://vimeo.com/48578814", Normalization.CANONICAL))
         val latestHttpsUri = db.readOnly { implicit session => uriRepo.get(httpsUri.id.get) }
         latestHttpsUri.normalization === Some(Normalization.CANONICAL)
       }
@@ -99,7 +99,7 @@ class NormalizationServiceTest extends TestKitScope with Specification with Shoe
         val canonicalUri = db.readOnly { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
         canonicalUri.normalization === Some(Normalization.CANONICAL)
 
-        val moreRecentCanonicalUri = updateNormalizationNow(canonicalUri, TrustedCandidate("http://vimeo.com/48578814", Normalization.CANONICAL)).get
+        val moreRecentCanonicalUri = updateNormalizationNow(canonicalUri, VerifiedCandidate("http://vimeo.com/48578814", Normalization.CANONICAL)).get
         moreRecentCanonicalUri.state !== NormalizedURIStates.REDIRECTED
         moreRecentCanonicalUri.redirect === None
         moreRecentCanonicalUri.redirectTime === None

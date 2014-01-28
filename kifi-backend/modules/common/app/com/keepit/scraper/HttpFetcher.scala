@@ -13,14 +13,14 @@ import org.apache.http.client.config.RequestConfig
 import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
 import org.apache.http.HttpHeaders._
 import org.apache.http.client.entity.{DeflateDecompressingEntity, GzipDecompressingEntity}
-import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.auth.{UsernamePasswordCredentials, AuthScope}
 import org.apache.http.client.protocol.HttpClientContext
-import java.io.IOException
+import java.io.{EOFException, IOException}
 import scala.util.Try
 import org.apache.http.util.EntityUtils
 import com.keepit.common.time._
-import com.keepit.common.performance.timing
+import com.keepit.common.performance.{timing, timingWithResult}
 import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ConcurrentLinkedQueue}
 import scala.ref.WeakReference
 import play.api.{Logger, Play}
@@ -30,7 +30,9 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import java.net.{SocketException, NoRouteToHostException, UnknownHostException, SocketTimeoutException}
 import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
-import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.{SSLException, SSLHandshakeException}
+import HttpStatus._
+import java.util.zip.ZipException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -164,8 +166,10 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
             val curr = System.currentTimeMillis
             val ref = iter.next
             ref.get map { case ft:FetchInfo =>
-              if (ft.respStatusRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} is done; resp.status=${ft.respStatusRef.get}; remove from q"))
-              else if (ft.exRef.get() != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
+              if (ft.respStatusRef.get != null) {
+                val sc = ft.respStatusRef.get.getStatusCode
+                removeRef(iter, if (sc != SC_OK && sc != SC_NOT_MODIFIED) Some(s"[enforcer] ${ft.url} finished with abnormal status:${ft.respStatusRef.get}") else None)
+              } else if (ft.exRef.get != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
               else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
               else {
                 val runMillis = curr - ft.ts
@@ -220,8 +224,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   })
   scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch: url=$url,proxy=$proxy") {
-    val ts = System.currentTimeMillis
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map{p => s" via ${p.alias}"}.getOrElse("")}") {
     val httpGet = new HttpGet(url)
     val httpContext = new BasicHttpContext()
 
@@ -242,28 +245,31 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
-    log.info(s"[fetch($url)] executing request " + httpGet.getURI() + proxy.map(httpProxy => s" via ${httpProxy.alias}").getOrElse(""))
-
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
     val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     val responseOpt = try {
+      val ts = System.currentTimeMillis
       q.offer(WeakReference(fetchInfo))
-      val response = httpClient.execute(httpGet, httpContext)
+      val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r:CloseableHttpResponse => r.getStatusLine.toString }) { httpClient.execute(httpGet, httpContext) }
       fetchInfo.respStatusRef.set(response.getStatusLine)
-      log.info(s"[fetch($url)] time-lapsed:${System.currentTimeMillis - ts} response status:${response.getStatusLine.toString}")
       Some(response)
     } catch {
-      case e:java.io.EOFException       => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SSLHandshakeException      => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:HttpHostConnectException   => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:ClientProtocolException    => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:NoRouteToHostException     => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:UnknownHostException       => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:ConnectTimeoutException    => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SocketException            => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e:SocketTimeoutException     => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:ZipException               => logAndSet(fetchInfo, None)(e, "fetch", url) // todo: retry without gzip
+      case e @ ( // revisit this list and see what can be handled
+        _:SSLException
+        | _:NoHttpResponseException
+        | _:EOFException
+        | _:SSLHandshakeException
+        | _:HttpHostConnectException
+        | _:ClientProtocolException
+        | _:NoRouteToHostException
+        | _:UnknownHostException
+        | _:ConnectTimeoutException
+        | _:SocketException
+        | _:SocketTimeoutException
+        )                               => logAndSet(fetchInfo, None)(e, "fetch", url)
       case t:Throwable                  => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
 

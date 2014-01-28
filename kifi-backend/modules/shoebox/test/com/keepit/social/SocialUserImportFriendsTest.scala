@@ -49,11 +49,8 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
   def testFacebookGraph(socialUserInfo: SocialUserInfo, jsonFilename: String, numOfFriends: Int)(implicit injector: Injector) = {
     val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
     val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
-    val rawFriends = inject[SocialUserImportFriends].importFriends(socialUserInfo, extractedFriends)
-    val store = inject[SocialUserRawInfoStore].asInstanceOf[Map[Id[SocialUserInfo], SocialUserRawInfo]]
-    store.size === numOfFriends
-    store.clear()
-    rawFriends.size === numOfFriends
+    val socialUsers = inject[SocialUserImportFriends].importFriends(socialUserInfo, extractedFriends)
+    socialUsers.size === numOfFriends
   }
 
 }

@@ -104,7 +104,7 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
                   "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
                   "firstName":"Shanee",
                   "lastName":"Smith",
-                  "pictureName":"fake.jpg"
+                  "pictureName":"0.jpg"
                 }
               ],
               "digest": "test me out",
@@ -128,11 +128,11 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
                 "url": "https://admin.kifi.com/admin/searchExperiments",
                 "nUrl": "https://admin.kifi.com/admin/searchExperiments",
                 "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"fake.jpg"
+                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"
                 },
                 "participants":
                   [
-                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"fake.jpg"}
+                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"}
                   ]
               }]
           }

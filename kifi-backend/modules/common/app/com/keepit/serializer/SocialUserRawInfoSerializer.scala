@@ -19,14 +19,14 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
         "socialId" -> JsString(info.socialId.id),
         "networkType" -> JsString(SocialNetworkType.unapply(info.networkType).get),
         "fullName" -> JsString(info.fullName),
-        "jsons" -> JsArray(info.jsons)
+        "jsons" -> JsArray(info.jsons.toList)
       )
     )
 
   def reads(json: JsValue): JsSuccess[SocialUserRawInfo] = JsSuccess({
     val jsons = (json \ "jsons") match {
-      case array: JsArray => array.value
-      case _ => Seq()
+      case array: JsArray => array.value.toStream
+      case _ => Stream()
     }
     SocialUserRawInfo(
       userId = (json \ "userId").asOpt[Long].map(Id(_)),

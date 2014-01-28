@@ -70,7 +70,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
     )
   }
 
-  "ExtUserSearchController" should {
+  "MobileUserSearchController" should {
     "search user" in {
       running(new SearchApplication(modules:_*)) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
@@ -98,7 +98,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
                       "id":"4e5f7b8c-951b-4497-8661-123456789004",
                       "firstName":"Woody",
                       "lastName":"Allen",
-                      "pictureName":"fake.jpg"
+                      "pictureName":"face.jpg"
                     },
                   "isFriend":false
                 }
@@ -133,7 +133,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
                 "id":"4e5f7b8c-951b-4497-8661-123456789001",
                 "firstName":"firstName1",
                 "lastName":"lastName1",
-                "pictureName":"fake.jpg"
+                "pictureName":"picName1.jpg"
               },
               "status":"requested"
             },
@@ -143,7 +143,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
                 "id":"4e5f7b8c-951b-4497-8661-123456789002",
                 "firstName":"firstName2",
                 "lastName":"lastName2",
-                "pictureName":"fake.jpg"
+                "pictureName":"picName2.jpg"
               },
               "status":"friend"
             },
@@ -152,7 +152,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
                 "id":"4e5f7b8c-951b-4497-8661-123456789003",
                 "firstName":"firstName3",
                 "lastName":"lastName3",
-                "pictureName":"fake.jpg"
+                "pictureName":"picName3.jpg"
               },
               "status":""
             }
@@ -185,7 +185,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
                 "id":"4e5f7b8c-951b-4497-8661-123456789004",
                 "firstName":"Woody",
                 "lastName":"Allen",
-                "pictureName":"fake.jpg"
+                "pictureName":"face.jpg"
               },
               "status":""
             }

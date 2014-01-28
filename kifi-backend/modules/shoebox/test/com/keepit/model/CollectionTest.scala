@@ -57,10 +57,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
         db.readOnly { implicit s =>
           collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
-          bookmarkRepo.getByUser(user1.id.get, None, None, coll1.id, 5) must haveLength(2)
-          bookmarkRepo.getByUser(user1.id.get, None, None, None, 5) must haveLength(2)
-          bookmarkRepo.getByUser(user1.id.get, None, None, coll2.id, 5) must haveLength(1)
-          bookmarkRepo.getByUser(user1.id.get, None, None, coll3.id, 5) must beEmpty
+          bookmarkRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
+          bookmarkRepo.getByUser(user1.id.get, None, None, 5) must haveLength(2)
+          bookmarkRepo.getByUserAndCollection(user1.id.get, coll2.id.get, None, None, 5) must haveLength(1)
+          bookmarkRepo.getByUserAndCollection(user1.id.get, coll3.id.get, None, None, 5) must beEmpty
         }
       }
     }

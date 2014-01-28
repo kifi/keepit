@@ -79,7 +79,12 @@ class BookmarksCommander @Inject() (
   def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
     val (keeps, collectionOpt) = db.readOnly { implicit s =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
-      val keeps = bookmarkRepo.getByUser(userId, before, after, collectionOpt map (_.id.get), count)
+      val keeps = collectionOpt match {
+        case Some(collection) =>
+          bookmarkRepo.getByUserAndCollection(userId, collection.id.get, before, after, count)
+        case None =>
+          bookmarkRepo.getByUser(userId, before, after, count)
+      }
       (keeps, collectionOpt)
     }
     searchClient.sharingUserInfo(userId, keeps.map(_.uriId)) map { infos =>

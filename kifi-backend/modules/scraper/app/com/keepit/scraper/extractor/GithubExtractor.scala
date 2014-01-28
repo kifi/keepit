@@ -22,6 +22,8 @@ object GithubExtractorProvider extends ExtractorProvider {
 
 class GithubExtractor(url: String, maxContentChars: Int) extends JsoupBasedExtractor(url, maxContentChars) with Logging {
 
+  override def getCanonicalUrl(): Option[String] = None //we don't trust github's canonical urls
+
   def parse(doc: Document) = {
     // Determine which kind of page we're on
     val selectors =
