@@ -38,10 +38,12 @@ module.exports = function (grunt) {
 				lib: 'lib',
 				libCss: [
 					'lib/normalize-css/normalize.css',
+					'lib/bootstrap/dist/css/bootstrap.css',
 					'lib/antiscroll/antiscroll.css'
 				],
 				libMinCss: [
 					'lib/normalize-css/normalize.css',
+					'lib/bootstrap/dist/css/bootstrap.min.css',
 					'lib/antiscroll/antiscroll.css'
 				],
 				libJs: [
@@ -51,6 +53,8 @@ module.exports = function (grunt) {
 					'lib/angular-resource/angular-resource.js',
 					'lib/angular-route/angular-route.js',
 					'lib/angular-ui-router/release/angular-ui-router.js',
+					'lib/angular-bootstrap/ui-bootstrap-tpls.js',
+
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					'lib/angular-antiscroll/angular-antiscroll.js',
@@ -63,6 +67,7 @@ module.exports = function (grunt) {
 					'lib/angular-resource/angular-resource.min.js',
 					'lib/angular-route/angular-route.min.js',
 					'lib/angular-ui-router/release/angular-ui-router.min.js',
+					'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					'lib/angular-antiscroll/angular-antiscroll.js',

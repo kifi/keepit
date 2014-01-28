@@ -4,6 +4,7 @@ angular.module('kifi', [
 	'ngCookies',
 	'ngResource',
 	'ngRoute',
+	'ui.bootstrap',
 	'antiscroll',
 	'kifi.templates',
 	'kifi.profileCard',

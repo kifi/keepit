@@ -11,7 +11,17 @@
 				<span class="kf-tag-name">{{tag.name}}</span>
 				<span class="kf-tag-count">{{tag.keeps}}</span>
 			</a>
-			<div class="kf-tag-dropdown-button"></div>
+			<div class="dropdown">
+				<a class="dropdown-toggle">Drop</a>
+				<ul class="dropdown-menu">
+					<li>
+						<a href="javascript:" ng-click="rename(tag)">Rename</a>
+					</li>
+					<li>
+						<a href="javascript:" ng-click="remove(tag)">Remove</a>
+					</li>
+				</ul>
+			</div>
 		</li>
 		<li class="kf-tag kf-tag-new">
 			<a href="javascript:" ng-click="create(search.name)">
@@ -19,14 +29,6 @@
 				<span class="kf-tag-caption">Add a new tag:</span>
 				<span class="kf-tag-name">{{search.name}}</span>
 			</a>
-		</li>
-	</ul>
-	<ul id="kf-tag-dropdown">
-		<li>
-			<a class="kf-tag-dropdown-item" href="javascript:" ng-click="rename(selected)">Rename</a>
-		</li>
-		<li>
-			<a class="kf-tag-dropdown-item" href="javascript:" ng-click="remove(selected)">Remove</a>
 		</li>
 	</ul>
 </div>

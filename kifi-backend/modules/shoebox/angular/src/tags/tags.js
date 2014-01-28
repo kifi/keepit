@@ -12,12 +12,12 @@ angular.module('kifi.tags', [])
 				console.log('create', name);
 			};
 
-			scope.rename = function (selected) {
-				console.log('rename', selected);
+			scope.rename = function (tag) {
+				console.log('rename', tag);
 			};
 
-			scope.remove = function (selected) {
-				console.log('remove', selected);
+			scope.remove = function (tag) {
+				console.log('remove', tag);
 			};
 
 			scope.clearFilter = function () {
