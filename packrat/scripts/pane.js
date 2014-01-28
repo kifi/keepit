@@ -122,7 +122,7 @@ var pane = pane || function () {  // idempotent for Chrome
       $pane = $(render('html/keeper/pane',
         $.extend(params, {
           site: location.hostname,
-          user: session.user
+          user: me
         }), {
           pane_top_menu: 'pane_top_menu',
           pane: 'pane_' + name

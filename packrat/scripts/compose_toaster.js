@@ -31,18 +31,20 @@ var toaster = (function () {
 
   return {
     toggle: function ($parent) {
+      var deferred = Q.defer();
       if ($toaster) {
         if ($toaster.data('compose').isBlank()) {
           hide();
         } else {
           log('[toaster:toggle] no-op')();
         }
-        var d = Q.defer();
-        d.resolve();
-        return d.promise;
+        deferred.resolve();
       } else {
-        return show($parent);
+        api.port.emit('prefs', function (prefs) {
+          show($parent, prefs, deferred);
+        });
       }
+      return deferred.promise;
     },
     hide: function () {
       if ($toaster) {
@@ -56,14 +58,13 @@ var toaster = (function () {
     }
   };
 
-  function show($parent) {
+  function show($parent, prefs, deferred) {
     log('[toaster:show]')();
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
       draftDefault: 'Check this out.',
-      submitButtonLabel: 'Send',
-      submitTip: (session.prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
+      sendKeyTip: (prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
       snapshotUri: api.url('images/snapshot.png')
     }, {
       compose: 'compose'
@@ -76,29 +77,24 @@ var toaster = (function () {
     .on('click', '.kifi-toast-find-friends-x', onFindFriendsXClick)
     .appendTo($parent);
 
-    $toaster.data('compose', initCompose($toaster, session.prefs.enterToSend, {onSubmit: send}));
+    $toaster.data('compose', initCompose($toaster, prefs.enterToSend, {onSubmit: send}));
     $(document).data('esc').add(hide);
     pane.onHide.add(hide);
 
     api.port.on(handlers);
     api.port.emit('get_page_thread_count');
 
-    var deferred = Q.defer();
-
     $toaster.layout()
-    .on('transitionend', $.proxy(onShown, null, deferred))
+    .on('transitionend', $.proxy(onShown, null, deferred, prefs))
     .removeClass('kifi-down');
-
-    return deferred.promise;
   }
 
-  function onShown(deferred, e) {
+  function onShown(deferred, prefs, e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
       log('[toaster:onShown]')();
-      var $t = $(this).off('transitionend', onShown)
-        .css('overflow', 'visible'); // for enterToSend dropdown
+      var $t = $(this).off('transitionend', onShown);
       deferred.resolve($t.data('compose'));
-      if (session.prefs.showFindFriends) {
+      if (prefs.showFindFriends) {
         $toaster.find('.kifi-toast-find-friends').addClass('kifi-showing');
       }
     }
@@ -148,7 +144,6 @@ var toaster = (function () {
   function onFindFriendsXClick(e) {
     if (e.which !== 1) return;
     hideFindFriends();
-    session.prefs.showFindFriends = false;
     api.port.emit('set_show_find_friends', false);
   }
 
