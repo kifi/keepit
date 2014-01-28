@@ -1,0 +1,78 @@
+.kf-nav-group-name
+  margin: 4px 0 0
+  font-size: 19px
+  line-height: 36px
+  color: #67829c
+  font-weight: 400
+  font-smoothing: antialiased
+  padding: 0 0 0 39px
+
+.kf-nav-item
+  position: relative
+  margin: 0
+  font-size: 13px
+  line-height: 41px
+  user-select: none
+
+.kf-nav-link
+  display: block
+  padding: 0 6px 0 40px
+
+  &.kf-nav-link
+    color: #818692
+
+  &:hover
+    background-color: #e9ecf2
+
+  .kf-nav-item.active &
+    background-color: #e3e6ee
+    color: #556179
+
+.kf-nav-count
+  float: right
+  margin: 10px 0 0
+  border: 1px solid #b8c5d2
+  border-radius: 10.5px
+  background: #eff2f7
+  color: #628196
+  font-size: 12px
+  line-height: 20px
+  height: 19px
+  padding: 0 12px
+
+  &.empty
+    display: none
+
+  .kf-nav-friends &
+    background: #b7d07c
+    border-color: transparent
+    color: #fff
+
+  .kf-nav-item.active &
+    color: #fff
+    background: #b8c5d2
+
+.kf-nav-name::before
+  content: " "
+  display: inline-block
+  height: 21px
+  padding: 10px 0
+  background: url(../img/nav-icons.png) 0 no-repeat
+  background-size: auto 21px
+  vertical-align: top
+
+  .kf-nav-keeps &
+    width: 21px
+    margin-right: 7px
+    background-position: -21px
+
+  .kf-nav-keeps.active &
+    background-position: 0
+
+  .kf-nav-friends &
+    width: 20px
+    margin-right: 8px
+    background-position: -62px 8px
+
+  .kf-nav-friends.active &
+    background-position: -42px 8px

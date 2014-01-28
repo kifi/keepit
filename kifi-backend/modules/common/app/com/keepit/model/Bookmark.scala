@@ -26,7 +26,7 @@ case class Bookmark(
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
   seq: SequenceNumber = SequenceNumber.ZERO
-) extends ModelWithExternalId[Bookmark] {
+) extends ModelWithExternalId[Bookmark] with ModelWithState[Bookmark] {
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
@@ -75,9 +75,11 @@ object Bookmark {
 case class BookmarkUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
 
 object BookmarkUriAndTime {
+  import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
+
   implicit def bookmarkUriAndTimeFormat = (
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'createdAt).format(DateTimeJsonFormat)
+    (__ \ 'createdAt).format(DateTimeJsonLongFormat)
   )(BookmarkUriAndTime.apply, unlift(BookmarkUriAndTime.unapply))
 }
 

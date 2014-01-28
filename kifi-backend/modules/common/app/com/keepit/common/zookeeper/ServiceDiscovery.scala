@@ -141,8 +141,6 @@ class ServiceDiscoveryImpl(
       myInstance foreach { instance =>
       try {
           log.warn(s"deleting instance $instance from zookeeper before re-registering itself")
-          //remove the airbrake if we think its cool
-          airbrake.get.notify(s"deleting instance $instance from zookeeper before re-registering itself")
           zk.deleteNode(instance.node)
         } catch {
           case e: Throwable =>

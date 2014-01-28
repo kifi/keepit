@@ -1,6 +1,4 @@
-form.kifi-compose {
-  display: block;
-  margin: 0;
+.kifi-compose {
   padding: 10px 6px;
   font-size: 12px;
   line-height: 14px;
@@ -18,7 +16,7 @@ form.kifi-compose {
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
-  word-break: break-word;
+  word-wrap: break-word;
 }
 .kifi-compose.kifi-empty .kifi-compose-draft:focus {
   -webkit-animation: paddingLeft10 .16s ease-out;
@@ -295,12 +293,6 @@ body.kifi-snapshot-root {
 .kifi-ti-token-selected {
   background-color: #4c8ffb;
 }
-.kifi-ti-token>p {
-  display: inline;
-  padding: 0;
-  margin: 0;
-  color: inherit;
-}
 .kifi-ti-token-delete {
   margin-left: 5px;
   padding: 1px 4px 3px;
@@ -325,15 +317,6 @@ body.kifi-snapshot-root {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-/* searchingText or noResultText
-.kifi-ti-dropdown>p {
-  margin: 0 !important;
-  padding: 5px;
-  font: inherit;
-  font-weight: bold;
-  color: #777;
-}
-*/
 .kifi-ti-dropdown>ul {
   position: static;
   float: none;

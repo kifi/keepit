@@ -6,6 +6,7 @@ import com.keepit.common.db.{LargeString, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import scala.Some
+import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException
 
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
@@ -52,18 +53,24 @@ class UserValueRepoImpl @Inject() (
     valueCache.remove(UserValueKey(userValue.userId, userValue.name))
   }
 
-  def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] =
-    valueCache.getOrElseOpt(UserValueKey(userId, name)) { getUserValue(userId, name).map(_.value) }
+  def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] = {
+    valueCache.getOrElseOpt(UserValueKey(userId, name)) {
+      (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f.value).firstOption.map(_.value)
+    }
+  }
 
   def getUserValue(userId: Id[User], name: String)(implicit session: RSession): Option[UserValue] =
     (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f).firstOption
 
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String = {
-    (for (v <- table if v.userId === userId && v.name === name) yield v).firstOption.map { v =>
-      save(v.copy(value = value, state = UserValueStates.ACTIVE))
-    }.getOrElse {
-      save(UserValue(userId = userId, name = name, value = value))
-    }.value
+    val updated = (for (v <- table if v.userId === userId && v.name === name) yield v.value ~ v.state ~ v.updatedAt).update((value, UserValueStates.ACTIVE, clock.now())) > 0
+    if (updated) {
+      valueCache.remove(UserValueKey(userId, name))
+      value
+    } else {
+        save(UserValue(userId = userId, name = name, value = value))
+        value
+    }
   }
 
   def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean = {

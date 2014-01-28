@@ -22,7 +22,7 @@
   transform: none;
   transition-timing-function: linear, ease-out;
 }
-.kifi-with-pane .kifi-knp-box {
+html[kifi-with-pane] .kifi-knp-box {
   bottom: 66px;
   right: 6px;
 }
@@ -161,7 +161,7 @@
   -webkit-transform-origin: left bottom;
   transform-origin: left bottom;
 }
-.kifi-with-pane .kifi-knp-box::after {
+html[kifi-with-pane] .kifi-knp-box::after {
   right: 96px;
 }
 

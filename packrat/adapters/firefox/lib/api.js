@@ -418,12 +418,12 @@ exports.tabs = {
     return pages[pageId];
   },
   getFocused: function () {
-    var tab = tabs.activeTab;
-    return tab ? pages[tab.id] : null;
+    var tab;
+    return activeWinHasFocus && (tab = tabs.activeTab) ? pages[tab.id] : null;
   },
   isFocused: function(page) {
-    var tab = tabsById[page.id], win = tab.window;
-    return win === windows.activeWindow && tab === win.tabs.activeTab;
+    var tab;
+    return activeWinHasFocus && (tab = tabs.activeTab) ? tabsById[page.id] === tab : false;
   },
   navigate: function(tabId, url) {
     var tab = tabsById[tabId];
@@ -494,6 +494,7 @@ tabs
   log("[tabs.ready]", tab.id, tab.url);
 });
 
+var activeWinHasFocus = true;
 windows
 .on("open", function(win) {
   log("[windows.open]", win.title);
@@ -504,12 +505,14 @@ windows
   removeFromWindow(win);
 })
 .on("activate", function(win) {
+  activeWinHasFocus = true;
   var page = pages[win.tabs.activeTab.id];
   if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
 })
 .on("deactivate", function(win) {
+  activeWinHasFocus = false;
   var page = pages[win.tabs.activeTab.id];
   if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);

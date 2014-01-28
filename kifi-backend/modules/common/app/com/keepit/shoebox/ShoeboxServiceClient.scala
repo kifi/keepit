@@ -32,7 +32,7 @@ import com.keepit.model.UserConnectionIdKey
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
-import com.keepit.scraper.HttpRedirect
+import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
@@ -40,6 +40,8 @@ import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.ImmediateMap
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -94,6 +96,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
+  def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int = 10000):Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Bookmark]]
@@ -102,6 +105,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
   def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
@@ -112,6 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
+  def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -588,6 +593,12 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.clickAttribution, payload)
   }
 
+  def assignScrapeTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    call(Shoebox.internal.assignScrapeTasks(zkId, max)).map { r =>
+      r.json.as[Seq[ScrapeRequest]]
+    }
+  }
+
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = {
     call(Shoebox.internal.getScrapeInfo(), Json.toJson(uri)).map { r =>
       r.json.as[ScrapeInfo]
@@ -610,6 +621,16 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), timeout = timeout).map { r =>
       r.json.as[NormalizedURI]
     }
+  }
+
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit] = {
+    val payload = Json.obj(
+      "id" -> uriId.id,
+      "signature" -> uriSignature.toBase64(),
+      "url" -> candidateUrl,
+      "normalization" -> candidateNormalization
+    )
+    call(Shoebox.internal.recordScrapedNormalization(), payload).imap(_ => {})
   }
 
   def getProxy(url:String):Future[Option[HttpProxy]] = {
@@ -703,6 +724,10 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def triggerRawKeepImport(): Unit = {
-    broadcast(Shoebox.internal.triggerRawKeepImport())
+    callLeader(Shoebox.internal.triggerRawKeepImport())
+  }
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
+    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), timeout = 300000).map(_ => ())(ExecutionContext.immediate)
   }
 }

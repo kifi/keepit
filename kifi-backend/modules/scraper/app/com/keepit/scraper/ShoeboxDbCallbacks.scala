@@ -3,7 +3,7 @@ package com.keepit.scraper
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.{Future, Await, Awaitable}
-import com.keepit.model.{ScrapeInfoStates, Bookmark, ScrapeInfo, NormalizedURI}
+import com.keepit.model._
 import com.keepit.common.db.{State, Id}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
@@ -13,6 +13,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
 
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 
+  def syncAssignTasks(zkId:Long, max: Int):Seq[ScrapeRequest] = await(assignTasks(zkId, max))
   def syncIsUnscrapableP(url: String, destinationUrl: Option[String]) = await(isUnscrapableP(url, destinationUrl))
   def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = await(getNormalizedUri(uri))
   def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = await(saveNormalizedUri(uri))
@@ -21,7 +22,11 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark] = await(getLatestBookmark(uriId))
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = await(recordPermanentRedirect(uri, redirect))
   def syncSaveBookmark(bookmark:Bookmark):Bookmark = await(saveBookmark(bookmark))
+  def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit = {
+    await(recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization))
+  }
 
+  def assignTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = shoeboxServiceClient.assignScrapeTasks(zkId, max)
   def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]] = {
     uri.id match {
       case Some(id) => shoeboxServiceClient.getNormalizedURI(id).map(Some(_))
@@ -35,12 +40,15 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def saveBookmark(bookmark:Bookmark): Future[Bookmark] = shoeboxServiceClient.saveBookmark(bookmark)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
   def isUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
-
   def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = shoeboxServiceClient.scraped(uri, info)
   def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo) = shoeboxServiceClient.scrapeFailed(uri, info)
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit] = {
+    shoeboxServiceClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization)
+  }
 }
 
 trait SyncShoeboxDbCallbacks {
+  def syncAssignTasks(zkId:Long, max:Int):Seq[ScrapeRequest]
   def syncIsUnscrapableP(url: String, destinationUrl: Option[String]):Boolean
   def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI]
   def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI
@@ -49,9 +57,12 @@ trait SyncShoeboxDbCallbacks {
   def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Bookmark]
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
   def syncSaveBookmark(bookmark:Bookmark):Bookmark
+  def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit
+
 }
 
 trait ShoeboxDbCallbacks {
+  def assignTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def getNormalizedUri(uri:NormalizedURI):Future[Option[NormalizedURI]]
   def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI]
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
@@ -60,6 +71,7 @@ trait ShoeboxDbCallbacks {
   def saveBookmark(bookmark:Bookmark): Future[Bookmark]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit]
 
   def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
   def scrapeFailed(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]

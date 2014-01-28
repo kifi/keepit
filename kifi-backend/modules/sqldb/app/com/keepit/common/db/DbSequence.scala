@@ -1,6 +1,6 @@
 package com.keepit.common.db
 
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import scalax.io.JavaConverters._
 import scala.util.matching.Regex
 import play.api.libs.json._
@@ -22,6 +22,7 @@ abstract class DbSequence(val name: String) {
   if (DbSequence.validSequenceName.findFirstIn(name).isEmpty)
     throw new IllegalArgumentException(s"Sequence name $name is invalid")
   def incrementAndGet()(implicit session: RWSession): SequenceNumber
+  def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber
 }
 
 object DbSequence {

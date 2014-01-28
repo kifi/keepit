@@ -40,8 +40,14 @@ def message_irc(msg):
   }
   requests.post("https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/", data=data)
 
-def abort(why):
-  pass
+
+def message_hipchat(msg):
+  data = {
+    "room_id": "Deploy",
+    "from": "Deploy",
+    "message": msg
+  }
+  requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
 
 def whoAmI():
   ec2 = boto.ec2.connect_to_region("us-west-1", aws_access_key_id="AKIAINZ2TABEYCFH7SMQ", aws_secret_access_key="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")
@@ -60,6 +66,7 @@ def logger(head):
   def log(msg):
     print head + msg
     message_irc(head + msg)
+    message_hipchat(head + msg)
   return log
 
 def checkUp():
@@ -166,7 +173,7 @@ class LocalAsset(object):
     if suffix is not None:
       targetName = targetName + "-" + suffix
     dstpath = os.path.join(destination, targetName)
-    shutil.move(srcpath, dstpath)
+    shutil.move(self.path, dstpath)
 
   def delete(self):
     shutil.rmtree(self.path)
@@ -204,7 +211,7 @@ class LocalAssets(object):
     return [a for a in self.assets if a.hash==chash][0]
 
   def keepOnlyNewest(self, howMany):
-    for assets in sorted(self.assets, key = lambda x: x.timestamp)[:-howMany]:
+    for asset in sorted(self.assets, key = lambda x: x.timestamp)[:-howMany]:
       asset.delete()
 
 
@@ -341,24 +348,29 @@ if __name__ == "__main__":
         log("Service Up. Deploy Finished.")
       else:
         log("Service failed to come up. Deployment Failed! Rollback Advised.")
+      releaseLock()
 
 
     except DeployAbortException as e:
       import traceback
       traceback.print_exc()
       log("ABORT: " + e.reason)
+      releaseLock()
+      sys.exit(1)
     except Exception as e:
       import traceback
       traceback.print_exc()
       log("FATAL ERROR: " + str(e))
-    finally:
       releaseLock()
+      sys.exit(1)
 
 
   except Exception as e:
     import traceback
     traceback.print_exc()
     logger("")("Deployment Initialization Fatal Error. (" + str(e) + ")")
+    releaseLock()
+    sys.exit(1)
 
 
 

@@ -1,13 +1,13 @@
 /*
  * Clear fix
- */ 
+ */
 .kifi-group {
   zoom: 1; /* For IE 6/7 (trigger hasLayout) */
 
   &::before, &::after {
     content: "";
     display: table;
-  } 
+  }
 
   &::after {
     clear: both;
@@ -41,7 +41,7 @@
   -webkit-font-smoothing: antialiased;
   text-align: left;
 
-  .kifi-with-pane & {
+  html[kifi-with-pane] & {
     bottom: 54px;
     width: 312px;
     border-bottom: 0;
@@ -437,8 +437,12 @@ display: block;
   }
 }
 
-.kifi-with-pane {
-  .kifi-tagbox-suggest, .kifi-tagbox-suggest-inner, .kifi-tagbox-tagged-wrapper, .kifi-tagbox-tagged, .kifi-tagbox-empty {
+html[kifi-with-pane] {
+  .kifi-tagbox-suggest,
+  .kifi-tagbox-suggest-inner,
+  .kifi-tagbox-tagged-wrapper,
+  .kifi-tagbox-tagged,
+  .kifi-tagbox-empty {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }

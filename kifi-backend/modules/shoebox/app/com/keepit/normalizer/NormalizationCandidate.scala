@@ -1,8 +1,10 @@
 package com.keepit.normalizer
 
-import com.keepit.model.{RawKeep, Normalization}
+import com.keepit.model.{NormalizedURI, RawKeep, Normalization}
 import play.api.libs.json.JsObject
 import com.keepit.commanders.RawBookmarkRepresentation
+import com.keepit.scraper.Signature
+import com.keepit.common.db.Id
 
 sealed trait NormalizationCandidate {
   val url: String
@@ -10,7 +12,11 @@ sealed trait NormalizationCandidate {
   def isTrusted: Boolean
 }
 
-case class TrustedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
+case class VerifiedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
+  def isTrusted = true
+}
+
+case class ScrapedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
   def isTrusted = true
 }
 
@@ -41,3 +47,12 @@ object NormalizationCandidate {
     }.getOrElse(Nil)
   }
 }
+
+case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, correctedNormalization: Option[Normalization] = None, signature: Option[Signature] = None) {
+  require(uri.id.isDefined, "NormalizedURI must be persisted before it can be considered a reference normalization")
+  def uriId: Id[NormalizedURI] = uri.id.get
+  def url = uri.url
+  def persistedNormalization: Option[Normalization] = uri.normalization
+  def normalization: Option[Normalization] = correctedNormalization orElse persistedNormalization
+}
+

@@ -15,10 +15,14 @@ package object performance {
       elapsedTime
     }
 
+    def resultString(res:String) = s"[$tag] result: (${res}) elapsed milliseconds: ${(elapsedTime/1000000d)}"
     override def toString = s"[$tag] elapsed milliseconds: ${(elapsedTime/1000000d)}"
 
-    def logTime()(implicit logger:Logger = log) {
-      logger.info(toString)
+    def logTime(resOpt:Option[String] = None)(implicit logger:Logger = log) {
+      resOpt match {
+        case Some(res) => logger.info(resultString(res))
+        case None => logger.info(toString)
+      }
     }
   }
 
@@ -26,7 +30,16 @@ package object performance {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()
-    sw.logTime()
+    sw.logTime(None)
+    res
+  }
+
+  def timingWithResult[A](tag: String, r:(A => String) = {a:A => a.toString})(f: => A)(implicit logger:Logger): A = {
+    val sw = new Stopwatch(tag)
+    val res = f
+    val resString = r(res)
+    sw.stop()
+    sw.logTime(Some(resString))
     res
   }
 
@@ -34,7 +47,7 @@ package object performance {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()
-    sw.logTime()
+    sw.logTime(None)
     Statsd.increment(statsdTag)
     Statsd.timing(statsdTag, sw.elapsedTime / 1000000)
     res

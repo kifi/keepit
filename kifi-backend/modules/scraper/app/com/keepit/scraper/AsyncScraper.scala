@@ -190,6 +190,7 @@ class AsyncScraper @Inject() (
       id = latestUri.id.get,
       title = latestUri.title.getOrElse(""),
       description = None,
+      canonicalUrl = None,
       keywords = None,
       media = None,
       content = "",
@@ -248,6 +249,8 @@ class AsyncScraper @Inject() (
         val scrapedUri = updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED)
         val scrapedInfo = info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)
         helper.scraped(scrapedUri, scrapedInfo)
+        // Report canonical url
+        article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _)) // todo: make part of "scraped" call
         if (shouldUpdateScreenshot(scrapedUri)) {
           s3ScreenshotStore.updatePicture(scrapedUri) onComplete { tr =>
             tr match {
@@ -316,6 +319,7 @@ class AsyncScraper @Inject() (
               val content = extractor.getContent
               val title = getTitle(extractor)
               val description = getDescription(extractor)
+              val canonicalUrl = getCanonicalUrl(extractor)
               val keywords = getKeywords(extractor)
               val media = getMediaTypeString(extractor)
               val signature = Signature(Seq(title, description.getOrElse(""), keywords.getOrElse(""), content))
@@ -328,6 +332,7 @@ class AsyncScraper @Inject() (
                 id = normalizedUri.id.get,
                 title = title,
                 description = description,
+                canonicalUrl = canonicalUrl,
                 keywords = keywords,
                 media = media,
                 content = content,
@@ -351,6 +356,8 @@ class AsyncScraper @Inject() (
 
   private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
 
+  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
+
   private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
 
   private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
@@ -361,6 +368,7 @@ class AsyncScraper @Inject() (
     title = getTitle(extractor),
     content = extractor.getContent,
     description = getDescription(extractor),
+    canonicalUrl = getCanonicalUrl(extractor),
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
@@ -394,6 +402,11 @@ class AsyncScraper @Inject() (
       } getOrElse(false)
       hasFishy301Restriction || wasKeptRecently
     }
+  }
+
+  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
+    val absoluteCanonicalUrl = URI.url(uri.url, canonicalUrl)
+    helper.recordScrapedNormalization(uri.id.get, signature, absoluteCanonicalUrl, Normalization.CANONICAL)
   }
 
 }

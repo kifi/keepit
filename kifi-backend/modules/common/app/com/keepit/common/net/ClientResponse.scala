@@ -81,10 +81,13 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
     //todo: this list should be taken from some config or some smarter mechanizem then that
     //trackTimeThresholdFactor is basically a proxy to the machine speed (ECU). more ECU, faster the machine should be
     val trackTimeThreshold = if(
+      url.contains("/internal/shoebox/database/getUriIdsInCollection")) {
+      500000 / trackTimeThresholdFactor //ms
+    } else if(
         url.contains("/getEContacts") ||
         url.contains("/getContacts") ||
         url.contains("/internal/shoebox/database/getIndexable") ||
-        url.contains("/internal/shoebox/database/getUriIdsInCollection") ||
+        url.contains("/internal/eliza/getThreadContentForIndexing") ||
         url.contains("graph.facebook.com/") ||
         url.contains("api.linkedin.com/")) {
       10000 / trackTimeThresholdFactor //ms

@@ -36,6 +36,7 @@ class SlickTest extends Specification with DbTestInjector {
         trait BarRepo extends Repo[Bar] {
           //here you may have model specific queries...
           def getByName(name: String)(implicit session: ROSession): Seq[Bar]
+          def getCurrentSeqNum()(implicit session: RSession): SequenceNumber
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
@@ -45,6 +46,11 @@ class SlickTest extends Specification with DbTestInjector {
           implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
+
+          private val sequence = db.getSequence("normalized_uri_sequence")
+
+          override def save(bar: Bar)(implicit session: RWSession): Bar = {sequence.incrementAndGet(); super.save(bar)}
+          def getCurrentSeqNum()(implicit session: RSession) = {sequence.getLastGeneratedSeq()}
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
           override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
@@ -66,8 +72,10 @@ class SlickTest extends Specification with DbTestInjector {
         inject[Database].readWrite{ implicit session =>
           val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1
+          repo.getCurrentSeqNum().value === 1
           val fooB = repo.save(Bar(name = "B"))
           fooB.id.get.id === 2
+          repo.getCurrentSeqNum().value === 2
         }
 
         inject[Database].readOnly{ implicit session =>

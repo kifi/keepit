@@ -8,7 +8,7 @@
   text-transform: none;
 }
 
-.kifi-with-pane #kifi-notify-notice-wrapper {
+html[kifi-with-pane] #kifi-notify-notice-wrapper {
   right: 342px;
 }
 
@@ -33,11 +33,6 @@
   opacity: 1;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-item p {
-	padding: 0;
-	margin: 0;
-	word-wrap: break-word;
-}
 #kifi-notify-notice-wrapper .kifi-notify-close {
 	position: absolute;
 	top: 6px;
@@ -84,8 +79,8 @@
   font-style: italic;
   color: #fff;
   padding-right: 8px;
-  word-break: normal;
   overflow: hidden;
+  word-wrap: break-word;
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-triggered {
@@ -95,7 +90,6 @@
   font-style: normal;
   color: #fff;
   padding-right: 8px;
-  word-break: normal;
   overflow: hidden;
 }
 

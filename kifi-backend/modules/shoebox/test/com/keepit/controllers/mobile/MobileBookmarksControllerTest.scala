@@ -119,12 +119,12 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       }
 
       val bookmarksWithTags = db.readOnly { implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
+        bookmarkRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarksWithTags.size === 1
 
       db.readOnly {implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, None, 100).size === 2
+        bookmarkRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
         println(uris mkString "\n")
         uris.size === 2
@@ -136,13 +136,13 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       inject[FakeActionAuthenticator].setUser(user)
       val request = FakeRequest("POST", path).withJsonBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
       val result = route(request).get
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
 
       Json.parse(contentAsString(result)) must equalTo(Json.obj())
 
       val bookmarks = db.readOnly { implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
+        bookmarkRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 0
     }
@@ -186,7 +186,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       }
 
       db.readOnly {implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, None, 100).size === 2
+        bookmarkRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
         println(uris mkString "\n")
         uris.size === 2
@@ -207,13 +207,13 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       Json.parse(contentAsString(result)) must equalTo(expected)
 
       db.readWrite {implicit s =>
-        val keeps = bookmarkRepo.getByUser(user.id.get, None, None, None, 100)
+        val keeps = bookmarkRepo.getByUser(user.id.get, None, None, 100)
         println(keeps mkString "\n")
         keeps.size === 2
       }
 
       val bookmarks = db.readOnly { implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
+        bookmarkRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
 
       bookmarks.size === 1
@@ -248,7 +248,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       }
 
       db.readOnly {implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, None, 100).size === 0
+        bookmarkRepo.getByUser(user.id.get, None, None, 100).size === 0
         val uris = uriRepo.all
         uris.size === 0
       }
@@ -259,8 +259,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       inject[FakeActionAuthenticator].setUser(user)
       val request = FakeRequest("POST", path).withJsonBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
       val result = route(request).get
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
 
       val expected = Json.parse(s"""
         {"id":"${collections(0).externalId}","name":"myCollaction1"}
@@ -268,13 +268,13 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       Json.parse(contentAsString(result)) must equalTo(expected)
 
       db.readWrite {implicit s =>
-        val keeps = bookmarkRepo.getByUser(user.id.get, None, None, None, 100)
+        val keeps = bookmarkRepo.getByUser(user.id.get, None, None, 100)
         println(keeps mkString "\n")
         keeps.size === 1
       }
 
       val bookmarks = db.readOnly { implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000)
+        bookmarkRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 1
       bookmarks(0).url === "http://www.google.com/"
@@ -316,7 +316,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       }
 
       val keeps = db.readWrite {implicit s =>
-        bookmarkRepo.getByUser(user1.id.get, None, None, None, 100)
+        bookmarkRepo.getByUser(user1.id.get, None, None, 100)
       }
       keeps.size === 2
 
@@ -398,7 +398,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       }
 
       val keeps = db.readWrite {implicit s =>
-        bookmarkRepo.getByUser(user.id.get, None, None, None, 100)
+        bookmarkRepo.getByUser(user.id.get, None, None, 100)
       }
       keeps.size === 2
 

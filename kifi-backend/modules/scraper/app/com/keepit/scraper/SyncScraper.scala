@@ -67,6 +67,7 @@ class SyncScraper @Inject() (
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
           helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _)) // todo(Léo): remove when all existing uris have been processed once
           log.info(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
@@ -83,6 +84,10 @@ class SyncScraper @Inject() (
           helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             helper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
           }
+
+          // Report canonical url
+          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _))
+
           log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
@@ -114,6 +119,7 @@ class SyncScraper @Inject() (
           id = latestUri.id.get,
           title = latestUri.title.getOrElse(""),
           description = None,
+          canonicalUrl = None,
           keywords = None,
           media = None,
           content = "",
@@ -181,6 +187,7 @@ class SyncScraper @Inject() (
           } else {
             val content = extractor.getContent
             val title = getTitle(extractor)
+            val canonicalUrl = getCanonicalUrl(extractor)
             val description = getDescription(extractor)
             val keywords = getKeywords(extractor)
             val media = getMediaTypeString(extractor)
@@ -196,6 +203,7 @@ class SyncScraper @Inject() (
               id = normalizedUri.id.get,
               title = title,
               description = description,
+              canonicalUrl = canonicalUrl,
               keywords = keywords,
               media = media,
               content = content,
@@ -226,6 +234,8 @@ class SyncScraper @Inject() (
 
   private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
 
+  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
+
   private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
 
   private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
@@ -235,6 +245,7 @@ class SyncScraper @Inject() (
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = getTitle(extractor),
     content = extractor.getContent,
+    canonicalUrl = getCanonicalUrl(extractor),
     description = getDescription(extractor),
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
@@ -265,6 +276,11 @@ class SyncScraper @Inject() (
     val wasKeptRecently = helper.syncGetLatestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
     hasFishy301Restriction || wasKeptRecently
     hasFishy301Restriction
+  }
+
+  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
+    val absoluteCanonicalUrl = URI.url(uri.url, canonicalUrl)
+    helper.syncRecordScrapedNormalization(uri.id.get, signature, absoluteCanonicalUrl, Normalization.CANONICAL)
   }
 
 }

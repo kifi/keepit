@@ -8,12 +8,16 @@ import scala.math._
 import com.keepit.common.logging.Logging
 
 object ScrapeInfoStates extends States[ScrapeInfo] {
-  val PENDING = State[ScrapeInfo]("pending") // scheduled
+  val PENDING  = State[ScrapeInfo]("pending") // scheduled
+  val ASSIGNED = State[ScrapeInfo]("assigned") // pull
 }
+
+class ScraperWorker()
 
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
+  workerId: Option[Id[ScraperWorker]] = None,
   lastScrape: DateTime = START_OF_TIME,
   nextScrape: DateTime = START_OF_TIME,
   interval: Double = 24.0d, // hours
@@ -23,9 +27,10 @@ case class ScrapeInfo(
   destinationUrl: Option[String] = None
 ) extends ModelWithState[ScrapeInfo] with Logging {
   def withId(id: Id[ScrapeInfo]) = this.copy(id = Some(id))
+  def withWorkerId(id: Id[ScraperWorker]) = this.copy(workerId = Some(id))
   def withUpdateTime(now: DateTime) = this
   def withState(state: State[ScrapeInfo]) = {
-    log.debug(s"[withState($id, $uriId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
+    log.debug(s"[withState($id, $uriId, $workerId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
     this.copy(state = state)
   }
 
@@ -35,6 +40,7 @@ case class ScrapeInfo(
       case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
       case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
       case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
+      case ScrapeInfoStates.ASSIGNED => copy(state = state, nextScrape = currentDateTime)
     }
     log.debug(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
     res
@@ -72,7 +78,7 @@ case class ScrapeInfo(
   private[this] def hoursToSeconds(hours: Double) = (hours * 60.0d * 60.0d).toInt
   def withNextScrape(nextScrape: DateTime) = copy(nextScrape = nextScrape)
 
-  override def toString = s"[ScrapeInfo(id=$id, uriId=$uriId): state=$state, lastScrape=$lastScrape, nextScrape=$nextScrape, interval=$interval, failures=$failures, dstUrl=$destinationUrl]"
+  override def toString = s"[ScrapeInfo(id=$id, uriId=$uriId, worker=$workerId): state=$state, lastScrape=$lastScrape, nextScrape=$nextScrape, interval=$interval, failures=$failures, dstUrl=$destinationUrl]"
 }
 
 object ScrapeInfo {
@@ -82,6 +88,7 @@ object ScrapeInfo {
   implicit val format = (
       (__ \ 'id).formatNullable(Id.format[ScrapeInfo]) and
       (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'workerId).formatNullable(Id.format[ScraperWorker]) and
       (__ \ 'lastScrape).format[DateTime] and
       (__ \ 'nextScrape).format[DateTime] and
       (__ \ 'interval).format[Double] and

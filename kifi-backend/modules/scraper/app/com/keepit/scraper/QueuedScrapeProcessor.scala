@@ -17,17 +17,26 @@ import com.keepit.common.performance._
 import org.apache.http.HttpStatus
 import play.api.Play.current
 import scala.concurrent._
+import play.api.libs.json.Json
+import com.keepit.common.zookeeper.ServiceDiscovery
+import scala.util.{Try, Success, Failure}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
   val killCount = new AtomicInteger()
   val threadRef = new AtomicReference[Thread]()
   val exRef = new AtomicReference[Throwable]()
-  lazy val submitLocalTime = new DateTime(submitTS).toLocalTime
-  def callLocalTime = new DateTime(callTS.get).toLocalTime
+  lazy val submitDateTime = new DateTime(submitTS)
+  lazy val submitLocalTime = submitDateTime.toLocalTime
+  def callDateTime = new DateTime(callTS.get)
+  def callLocalTime = callDateTime.toLocalTime
   def runMillis(curr:Long) = curr - callTS.get
   def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
-  override def toString = s"[Task:([$submitLocalTime],[${callLocalTime}],[$killCount],${uri.id.getOrElse("")},${info.id.getOrElse("")},${uri.url})]"
+  override def toString = {
+    val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
+    s"[Task:${Json.stringify(Json.toJson(taskDetails))}]"
+  }
 }
 
 @Singleton
@@ -38,11 +47,12 @@ class QueuedScrapeProcessor @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
+  serviceDiscovery: ServiceDiscovery,
+  asyncHelper: ShoeboxDbCallbacks,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
-
   val pSize = Runtime.getRuntime.availableProcessors * 1024
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[(NormalizedURI, Option[Article])])]]()
@@ -60,12 +70,12 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String]) {
+  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit scraperConfig:ScraperConfig) { // can be removed once things are settled
     try {
       for (msg <- msgOpt)
         log.info(msg)
-      helper.syncSaveScrapeInfo(sc.info.withState(ScrapeInfoStates.INACTIVE))
-      helper.syncGetNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // consider adding DO_NOT_SCRAPE
+      helper.syncSaveNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: UNSCRAPABLE where appropriate
+      helper.syncSaveScrapeInfo(sc.info.withFailure) // todo: mark INACTIVE where appropriate
     } catch {
       case t:Throwable => logErr(t, "terminator", s"deactivate $sc")
     }
@@ -92,7 +102,7 @@ class QueuedScrapeProcessor @Inject() (
                   log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("\n")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
-                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))
+                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(config)
                   if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
                   else {
                     sc.threadRef.get.interrupt
@@ -116,6 +126,27 @@ class QueuedScrapeProcessor @Inject() (
             } orElse {
               removeRef(iter) // Some(s"[terminator] remove collected entry $ref from queue")
               None
+            }
+          }
+
+          if (config.pull) { // todo: move this out
+            log.info(s"[puller] look for things to do ... q.size=${submittedQ.size()}")
+            if (submittedQ.isEmpty) {
+              serviceDiscovery.thisInstance map { inst =>
+                if (inst.isHealthy) {
+                  asyncHelper.assignTasks(inst.id.id, Runtime.getRuntime.availableProcessors()) onComplete { trRequests =>
+                    trRequests match {
+                      case Failure(t) =>
+                        log.error(s"[puller] Caught exception ${t} while pulling for tasks",t) // move along
+                      case Success(requests) =>
+                        log.info(s"[puller(${inst.id.id}})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
+                        for (sr <- requests) {
+                          asyncScrape(sr.uri, sr.info, sr.proxyOpt)
+                        }
+                    }
+                  }
+                }
+              }
             }
           }
         }

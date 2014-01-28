@@ -10,6 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.search.IndexInfo
 
 class AdminIndexInfoController @Inject()(
     actionAuthenticator: ActionAuthenticator,
@@ -23,8 +24,9 @@ class AdminIndexInfoController @Inject()(
 
     val infos = infoFutures.flatMap{ future =>
       val (serviceInstance, indexInfos) = Await.result(future, 10 seconds)
-      indexInfos.map{ info => (clusterMemberInfos.get(serviceInstance.id), info) }
+      indexInfos.map{ info => (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableIndexInfo(info)) }
     }
+
     Ok(views.html.admin.indexer(infos))
   }
 }

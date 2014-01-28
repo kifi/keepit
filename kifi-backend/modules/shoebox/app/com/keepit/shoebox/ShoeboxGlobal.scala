@@ -5,7 +5,6 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{MailToKeepPlugin, MailSenderPlugin}
-import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.scraper._
 import play.api.Mode._
@@ -30,7 +29,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
     require(injector.instance[ScrapeSchedulerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[SocialGraphRefresher] != null) //make sure its not lazy loaded
     require(injector.instance[MailSenderPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[AutogenReaperPlugin] != null) //make sure its not lazy loaded
     injector.instance[MailSenderPlugin].processOutbox()

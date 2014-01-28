@@ -74,10 +74,12 @@
   function defaultClickHandler(action) {
     var oldId;
     if (userInfo && userInfo.id) {
-      oldId = mixpanel.get_distinct_id();
-      mixpanel.identify(userInfo.id);
+      oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
+	  if (oldId) {
+		  mixpanel.identify(userInfo.id);
+	  }
     }
-    mixpanel.track('user_clicked_internal_page',{
+    mixpanel.track('user_clicked_page',{
       type: getLocation(),
       action: action,
       origin: window.location.origin
@@ -102,8 +104,10 @@
 
   function sendIdentifiedView(path) {
     if (userInfo && userInfo.id) {
-      var oldId = mixpanel.get_distinct_id();
-      mixpanel.identify(userInfo.id);
+      var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
+	  if (!oldId) {
+		  return;
+	  }
       mixpanel.track('user_viewed_page',{
         type: getLocation(path),
         origin: window.location.origin,

@@ -21,7 +21,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
-import com.keepit.scraper.HttpRedirect
+import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
 
@@ -440,6 +440,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {}
 
+  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    Future.successful(Seq.empty[ScrapeRequest])
+  }
+
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
   def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = ???
@@ -451,6 +455,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
+
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit] = ???
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
@@ -473,4 +479,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("dummy")
 
   def triggerRawKeepImport(): Unit = ()
+
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
+    Future.successful()
+  }
 }
