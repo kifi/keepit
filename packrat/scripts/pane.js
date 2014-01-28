@@ -36,7 +36,7 @@ var pane = pane || function () {  // idempotent for Chrome
   api.onEnd.push(function () {
     log('[pane:onEnd]')();
     $pane && $pane.remove();
-    $('html').removeClass('kifi-with-pane kifi-pane-parent');
+    $('html').removeAttr('kifi-with-pane kifi-pane-parent');
   });
 
   function toPaneName(locator) {
@@ -118,7 +118,7 @@ var pane = pane || function () {  // idempotent for Chrome
       $pane[0].dataset.locator = locator;
       populatePane($new, name, locator);
     } else {
-      $('html').addClass('kifi-pane-parent');
+      $('html').attr('kifi-pane-parent', '');
       $pane = $(render('html/keeper/pane',
         $.extend(params, {
           site: location.hostname,
@@ -148,7 +148,7 @@ var pane = pane || function () {  // idempotent for Chrome
           $pane.before(tile);
         }
         $box.data("shown", true).triggerHandler("kifi:shown");
-        window.dispatchEvent(new Event("resize"));  // for other page scripts
+        notifyPageOfResize(true);
       })
       .hoverfu('.kifi-pane-head-logo', function(configureHover) {
         configureHover({
@@ -261,7 +261,7 @@ var pane = pane || function () {  // idempotent for Chrome
       .on("mousedown click keydown keypress keyup", function (e) {
         e.stopPropagation();
       });
-      $("html").addClass("kifi-with-pane");
+      $('html').attr('kifi-with-pane', '');
       var $box = $pane.find(".kifi-pane-box");
       populatePane($box, name, locator);
     }
@@ -285,20 +285,34 @@ var pane = pane || function () {  // idempotent for Chrome
         var $pane = $(this);
         $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
         $pane.remove();
-        $('html').removeClass('kifi-pane-parent');
-        window.dispatchEvent(new Event("resize"));  // for other page scripts
+        $('html').removeAttr('kifi-pane-parent');
+        notifyPageOfResize();
       }
     });
     api.port.emit('pane', {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
-    $('html').removeClass('kifi-with-pane');
+    $('html').removeAttr('kifi-with-pane');
   }
 
   function populatePane($box, name, locator) {
     api.require('scripts/' + name + '.js', function () {
       panes[name].render($box, locator);
     });
-  };
+  }
+
+  function notifyPageOfResize(preventUnload) {
+    if (preventUnload) {
+      window.addEventListener('beforeunload', beforeUnload, true);
+      setTimeout(window.removeEventListener.bind(window, 'beforeunload', beforeUnload, true), 50);
+    }
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  function beforeUnload(e) {
+    log('[beforeUnload]')();
+    e.preventDefault();
+    return ' ';
+  }
 
   // the pane API
   return {
@@ -329,7 +343,7 @@ var pane = pane || function () {  // idempotent for Chrome
         } else {
           showPane(locator);
         }
-      } else if (!$('html').hasClass('kifi-pane-parent')) { // ensure it's finished hiding
+      } else if ($('html').attr('kifi-pane-parent') == null) { // ensure it's finished hiding
         showPane(locator);
       }
     },

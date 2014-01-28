@@ -13,17 +13,21 @@ trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolea
   protected def check(candidate: NormalizationCandidate): Future[Boolean]
 }
 
-case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit scraperPlugin: ScrapeSchedulerPlugin) extends ContentCheck with Logging {
+case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit scraperPlugin: ScrapeSchedulerPlugin) extends ContentCheck with Logging {
+
+  def isDefinedAt(candidate: NormalizationCandidate) = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
 
   private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url, None).map { articleOption =>
     articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
   }
 
-  private lazy val referenceContentSignatureFuture = signature(referenceUrl)
+  private lazy val referenceContentSignatureFuture = referenceSignature match {
+    case None => signature(referenceUrl)
+    case someSignature => Future.successful(someSignature)
+  }
   private var failedContentChecks = Set.empty[String]
   private var referenceUrlIsBroken = false
 
-  def isDefinedAt(candidate: NormalizationCandidate) = candidate.url.matches(trustedDomain)
   protected def check(candidate: NormalizationCandidate): Future[Boolean] = {
     val alternateUrl = candidate.url
     if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl)) Future.successful(false)
@@ -31,7 +35,13 @@ case class SignatureCheck(referenceUrl: String, trustedDomain: String)(implicit 
       currentContentSignatureOption <- referenceContentSignatureFuture
       candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) signature(alternateUrl) else Future.successful(None)
     } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
-        case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
+        case (Some(currentContentSignature), Some(candidateContentSignature)) => {
+          val similarity = currentContentSignature.similarTo(candidateContentSignature)
+          val threshold = 0.99 // todo: move to config
+          val doTheyMatch =  similarity > threshold
+          log.info(s"[${if (doTheyMatch) "ACCEPT" else "REJECT"} at $threshold] Content similarity of ${referenceUrl} and ${alternateUrl}: $similarity")
+          doTheyMatch
+        }
         case (Some(_), None) => {
           log.error(s"Content signature of URL ${alternateUrl} could not be computed.")
           failedContentChecks += alternateUrl; false

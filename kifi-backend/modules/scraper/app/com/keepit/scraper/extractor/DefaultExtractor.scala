@@ -10,6 +10,7 @@ import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
 import com.keepit.common.net.URI
+import scala.collection.mutable
 
 
 object DefaultExtractorProvider extends ExtractorProvider {
@@ -36,6 +37,8 @@ class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
   private[this] val handler: DefaultContentHandler = new DefaultContentHandler(output, metadata, url)
 
   protected def getContentHandler: ContentHandler = handler
+
+  def getLink(key: String): Option[String] = handler.links.get(key)
 
   override def getKeywords(): Option[String] = {
     val str = (handler.getKeywords.map{ _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")
@@ -79,6 +82,7 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
   private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
 
   def getKeywords:Option[Seq[String]] = keywordValidatorContentHandler.map{ _.keywords }
+  private[extractor] val links = mutable.HashMap[String, String]()
 
   override def startDocument() {
     // enable boilerpipe only for HTML
@@ -98,6 +102,7 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
 
   // anchor tag
   private[this] var inAnchor = false
+
   private def startAnchor(uri: String, localName: String, qName: String, atts: Attributes) = {
     //nested anchor tags blow up Boilerpipe. so we close it if one is already open
     if (inAnchor) super.endElement(uri, localName, qName)
@@ -107,6 +112,14 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
   private def endAnchor(uri: String, localName: String, qName: String) = {
     if (inAnchor) super.endElement(uri, localName, qName)
     inAnchor = false
+  }
+
+  // link tag
+  private def startLink(uri: String, localName: String, qName: String, atts: Attributes) = {
+    super.startElement(uri, localName, qName, atts)
+    val rel = atts.getValue("rel")
+    val href = atts.getValue("href")
+    links(rel) = href
   }
 
   // option tag
@@ -120,7 +133,8 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
 
   private val startElemProcs: Map[String, (String, String, String, Attributes)=>Unit] = Map(
     "a" -> startAnchor,
-    "option" -> startOption
+    "option" -> startOption,
+    "link" -> startLink
   )
   private val endElemProcs: Map[String, (String, String, String)=>Unit] = Map(
     "a" -> endAnchor,

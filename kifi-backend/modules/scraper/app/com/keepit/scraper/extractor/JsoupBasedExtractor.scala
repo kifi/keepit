@@ -26,7 +26,13 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
     content.take(maxContentChars)
   }
 
-  def getMetadata(name: String): Option[String] = Option(doc.select("meta[name=" + name + "]").attr("content"))
+  def getMetadata(name: String): Option[String] = toOption(doc.select("meta[name=" + name + "]").attr("content"))
+                                          .orElse(toOption(doc.select("meta[property=" + name + "]").attr("content")))
+
+  def getLink(name: String): Option[String] = toOption(doc.select("link[ref=" + name + "]").attr("href"))
+
+  private def toOption(str: String): Option[String] = if (str == null || str.isEmpty) None else Some(str)
+
   def getKeywords(): Option[String] = getMetadata("keywords")
 
   private[extractor] def replace(text: String, replacements: (String, String)*) = {

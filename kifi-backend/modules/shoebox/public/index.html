@@ -521,6 +521,17 @@ Kifi also lets you message your friends about what you keep and find alongside a
 
 							<div class="invite-friends" data-href="friends/invite">
 								<div class="antiscroll-inner">
+									<div class="refresh-networks">
+										<div class="network-refresh facebook">
+											<span>Your Facebook friend list is out of date</span>
+											<a class="network-refresh-button" href="javascript:" data-network="facebook">Refresh now</a>
+										</div>
+
+										<div class="network-refresh linkedin">
+											<span>Your LinkedIn friend list is out of date</span>
+											<a class="network-refresh-button" href="javascript:" data-network="linkedin">Refresh now</a>
+										</div>
+									</div>
 									<ul>
 										<li class="invite-friend {{status}}" data-template data-value="{{value}}" data-status="{{status}}">
 										<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{% if image %}{{image}}{% endif %}{% if !image %}assets/img/ghost-linkedin.100.png{% endif %}">

@@ -4,9 +4,8 @@ import com.google.inject.{Provider, Inject}
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
-import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.LocalPostOffice
@@ -14,29 +13,24 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.normalizer.{TrustedCandidate, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer._
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
-import com.keepit.common.akka.SafeFuture
 
-import scala.concurrent.future
+import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType, SocialId}
+import com.keepit.scraper.Signature
+import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType}
 import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
-import play.api.libs.json.JsArray
+import com.keepit.normalizer.VerifiedCandidate
 import com.keepit.model.KifiInstallation
-import play.api.libs.json.JsBoolean
-import play.api.libs.json.JsString
-import scala.Some
-import play.api.libs.json.JsNumber
-import com.keepit.normalizer.TrustedCandidate
+import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 
 
@@ -202,7 +196,7 @@ class ShoeboxController @Inject() (
   }
 
   // todo: revisit
-  def recordPermanentRedirect() = SafeAsyncAction(parse.json) { request =>
+  def recordPermanentRedirect() = Action(parse.json) { request =>
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
@@ -211,20 +205,47 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    val toBeRedirected = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        candidateUri <- normUriRepo.getByUri(redirect.newDestination)
-        normalization <- candidateUri.normalization
-      } yield {
-        val toBeRedirected = uri.withNormalization(Normalization.MOVED)
-        // session.onTransactionSuccess(normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)))
-        normalizationServiceProvider.get.update(toBeRedirected, TrustedCandidate(candidateUri.url, normalization)) // TODO:revisit
-        toBeRedirected
+    Async {
+      val candidateUri = db.readWrite { implicit session => normUriRepo.internByUri(redirect.newDestination) }
+      val resFutureOption = candidateUri.normalization.map { normalization =>
+        val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
+        val verifiedCandidate = VerifiedCandidate(candidateUri.url, normalization)
+        val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
+        // Scraper reports entire NormalizedUri objects with a major chance of stale data / race conditions
+        // The following is meant for synchronisation and should be revisited when scraper apis are rewritten to report modified fields only
+
+        updateFuture.map {
+          case Some(update) => {
+            val redirectedUri = db.readOnly() { implicit session => normUriRepo.get(uri.id.get) }
+            log.info(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
+            redirectedUri
+          }
+          case None => {
+            log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+            uri
+          }
+        }
       }
+
+      val resFuture = resFutureOption getOrElse {
+          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+          Future.successful(uri)
+        }
+
+      resFuture.map { res => Ok(Json.toJson(res)) }
     }
-    val res = toBeRedirected getOrElse uri
-    log.info(s"[recordPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$res")
-    Ok(Json.toJson(res))
+  }
+
+  def recordScrapedNormalization() = SafeAsyncAction(parse.json) { request =>
+    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+    val signature = Signature((request.body \ "signature").as[String])
+    val candidateUrl = (request.body \ "url").as[String]
+    val candidateNormalization = (request.body \ "normalization").as[Normalization]
+
+    val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
+
+    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization))
+    Ok
   }
 
   def getProxy(url:String) = SafeAsyncAction { request =>

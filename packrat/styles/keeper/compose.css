@@ -293,12 +293,6 @@ body.kifi-snapshot-root {
 .kifi-ti-token-selected {
   background-color: #4c8ffb;
 }
-.kifi-ti-token>p {
-  display: inline;
-  padding: 0;
-  margin: 0;
-  color: inherit;
-}
 .kifi-ti-token-delete {
   margin-left: 5px;
   padding: 1px 4px 3px;
@@ -323,15 +317,6 @@ body.kifi-snapshot-root {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-/* searchingText or noResultText
-.kifi-ti-dropdown>p {
-  margin: 0 !important;
-  padding: 5px;
-  font: inherit;
-  font-weight: bold;
-  color: #777;
-}
-*/
 .kifi-ti-dropdown>ul {
   position: static;
   float: none;

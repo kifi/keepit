@@ -70,8 +70,8 @@ img.kifi-message-pic.kifi-self {
   line-height: 16px;
   color: #444;
 }
-.kifi-message-p+.kifi-message-p {
-  margin-top: 3px;
+.kifi-message-pp {
+  margin-top: 6px;
 }
 .kifi-message-p>a[href] {
   text-decoration: underline;
