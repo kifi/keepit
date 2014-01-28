@@ -188,7 +188,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
-      commonSettings: _*
+      commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-heimdal.conf"): _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
