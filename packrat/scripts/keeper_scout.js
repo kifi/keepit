@@ -91,16 +91,17 @@ var tile = tile || function() {  // idempotent for Chrome
     scroll_rule: function(r) {
       if (!onScroll && !window.keeper) {
         var lastScrollTime = 0;
-        document.addEventListener("scroll", onScroll = function(e) {
+        document.addEventListener('scroll', onScroll = function (e) {
           var t = e.timeStamp || Date.now();
           if (t - lastScrollTime > 100) {  // throttling to avoid measuring DOM too freq
             lastScrollTime = t;
-            var hPage = document.body.scrollHeight;
-            var hViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"].clientHeight;
+            var srEl = scrollRoot();
+            var hPage = srEl.scrollHeight;
+            var hViewport = srEl.clientHeight;
             var hSeen = window.pageYOffset + hViewport;
-            log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?")();
+            log('[onScroll]', Math.round(hSeen / hPage * 10000) / 100, '>', r[1], '% and', hPage, '>', r[0] * hViewport, '?')();
             if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage && e.isTrusted !== false) {
-              log("[onScroll] showing")();
+              log('[onScroll] showing')();
               loadAndDo('keeper', 'show', 'scroll');
             }
           }
@@ -252,8 +253,12 @@ var tile = tile || function() {  // idempotent for Chrome
     return pane && pane[methodName]();
   }
 
+  function scrollRoot() {
+    return document[document.compatMode === 'CSS1Compat' ? 'documentElement' : 'body'];
+  }
+
   setTimeout(function checkIfUseful() {
-    if (document.hasFocus() && document.body.scrollTop > 300) {
+    if (document.hasFocus() && scrollRoot().scrollTop > 300) {
       api.port.emit('useful_page');
     } else {
       setTimeout(checkIfUseful, 5000);
