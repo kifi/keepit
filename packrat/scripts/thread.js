@@ -33,7 +33,7 @@ panes.thread = function () {
       var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
       api.port.on(handlers);  // important to subscribe to 'message' before requesting thread
       api.port.emit('thread', threadId, function (th) {
-        renderThread($paneBox, $tall, $who, th.id, th.messages, session);
+        renderThread($paneBox, $tall, $who, th.id, th.messages, th.enterToSend);
         var lastMsg = th.messages[th.messages.length - 1];
         messageHeader.init($who.find('.kifi-message-header'), th.id, lastMsg.participants);
         emitRendered(threadId, lastMsg);
@@ -51,9 +51,9 @@ panes.thread = function () {
       }
     }};
 
-  function renderThread($paneBox, $tall, $who, threadId, messages, session) {
+  function renderThread($paneBox, $tall, $who, threadId, messages, enterToSend) {
     messages.forEach(function (m) {
-      m.isLoggedInUser = m.user.id === session.user.id;
+      m.isLoggedInUser = m.user.id === me.id;
     });
     $(render('html/keeper/messages', {
       formatMessage: getTextFormatter,
@@ -61,8 +61,7 @@ panes.thread = function () {
       formatLocalDate: getLocalDateFormatter,
       messages: messages,
       draftPlaceholder: 'Type a message…',
-      submitButtonLabel: 'Send',
-      submitTip: (session.prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
+      sendKeyTip: (enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
       snapshotUri: api.url('images/snapshot.png')
     }, {
       message: 'message',
@@ -77,7 +76,7 @@ panes.thread = function () {
 
     $holder = $tall.find('.kifi-scroll-inner').preventAncestorScroll().data('threadId', threadId);
     var $scroll = $tall.find('.kifi-scroll-wrap');
-    var compose = initCompose($tall, session.prefs.enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
+    var compose = initCompose($tall, enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
     $scroll.antiscroll({x: false});
@@ -135,8 +134,8 @@ panes.thread = function () {
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: session.user
-    }, session.user.id)
+      user: me
+    }, me.id)
     .data('text', text);
     $holder.append($m).scrollToBottom();
 

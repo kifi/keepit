@@ -9,7 +9,7 @@ trait Extractor {
   def getMetadata(name: String): Option[String]
   def getKeywords(): Option[String]
   def getLink(key: String): Option[String]
-  def getCanonicalUrl(): Option[String] = getLink("canonical").orElse(getMetadata("og:url")).orElse(getMetadata("vr:canonical"))
+  def getCanonicalUrl(): Option[String] = getLink("canonical").orElse(getMetadata("og:url")).orElse(getMetadata("vr:canonical")).filterNot(_.isEmpty)
 }
 
 trait ExtractorFactory extends Function[String, Extractor]

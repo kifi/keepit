@@ -105,6 +105,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
 
+  def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
+
 }
 
 /**
@@ -114,7 +116,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 class UserThreadRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent,
-    shoebox: ShoeboxServiceClient
+    shoebox: ShoeboxServiceClient //todo: Its wrong to have a shoebox client here, this should go in the contoller layer
   )
   extends DbRepo[UserThread] with UserThreadRepo with Logging {
 
@@ -496,6 +498,15 @@ class UserThreadRepoImpl @Inject() (
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
     val rawData = (for (row <- table if row.thread===threadId) yield row.id ~ row.thread ~ row.user ~ row.lastActive.? ~ row.started ~ row.lastSeen.?).list
     rawData.map{tuple => (UserThreadActivity.apply _).tupled(tuple) }
+  }
+
+  def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats = {
+    import StaticQuery.interpolation
+
+    UserThreadStats(
+      all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
+      active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
+      started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
   }
 
 }

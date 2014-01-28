@@ -41,21 +41,17 @@ trait ServiceDiscovery {
 }
 
 class ServiceDiscoveryImpl(
-    zk: ZooKeeperClient,
+    zkClient: ZooKeeperClient,
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
     scheduler: Scheduler,
     airbrake: Provider[AirbrakeNotifier],
-    disableRegistration: Boolean = sys.props.getOrElse("service.register.disable", "false").toBoolean, // todo: inject config
     val isCanary: Boolean = false,
     servicesToListenOn: Seq[ServiceType] =
-        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.C_SHOEBOX :: Nil,
-    doKeepAlive: Boolean = true)
+        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.C_SHOEBOX :: Nil)
   extends ServiceDiscovery with Logging {
 
   private var lastStatusChangeTime = System.currentTimeMillis
-
-  if (disableRegistration) log.warn("[ServiceDiscovery] registration DISABLED")
 
   private[this] val registrationLock = new AnyRef
   @volatile private[this] var registered = false
@@ -82,8 +78,7 @@ class ServiceDiscoveryImpl(
 
   def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
 
-  def isLeader: Boolean = if (isCanary || disableRegistration) false
-  else {
+  def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
@@ -112,27 +107,9 @@ class ServiceDiscoveryImpl(
     myCluster.instanceForNode(instance.node).isDefined
   }
 
-  private def keepAlive() : Unit = if (!disableRegistration) {
-    scheduler.scheduleOnce(2 minutes){
-      if (registered) {
-        forceUpdate()
-        if (stillRegistered) {
-          keepAlive()
-        } else {
-          registrationLock.synchronized {
-            if (!stillRegistered) {
-              log.warn("Zookeeper seems to have lost me! Re-registering.")
-              doRegister()
-            }
-          }
-        }
-      }
-    }
-  }
-
   private def watchServices(): Unit = clusters.values foreach watchService
 
-  private def watchService(cluster: ServiceCluster): Unit = {
+  private def watchService(cluster: ServiceCluster): Unit = zkClient.session{ zk =>
     zk.createPath(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
@@ -140,25 +117,23 @@ class ServiceDiscoveryImpl(
     })
   }
 
-  def forceUpdate() : Unit = {
+  def forceUpdate() : Unit = zkClient.session{ zk =>
     for (cluster <- clusters.values) {
       val children = zk.getChildren(cluster.servicePath)
       cluster.update(zk, children)
     }
   }
 
-  def register(): ServiceInstance = if (disableRegistration) ServiceInstance.EMPTY
-  else registrationLock.synchronized {
+  def register(): ServiceInstance = registrationLock.synchronized {
     if (unregistered) throw new IllegalStateException("unable to register once unregistered")
 
     registered = true
-    zk.onConnected{ () => doRegister() } // It is expected that zk is ready at this point and invokes doRegister immediately
-    if (doKeepAlive) keepAlive()
+    zkClient.onConnected{ zk => doRegister(zk) } // It is expected that zk is ready at this point and invokes doRegister immediately
     myInstance.get
   }
 
 
-  private def doRegister(): Unit = if (!disableRegistration) {
+  private def doRegister(zk: ZooKeeperSession): Unit = {
     if (registered) {
       log.info(s"registered clusters: $clusters, my service is ${thisRemoteService.serviceType}, my instance is $myInstance")
 
@@ -183,15 +158,15 @@ class ServiceDiscoveryImpl(
     }
   }
 
-  override def unRegister(): Unit = if (!disableRegistration) registrationLock.synchronized {
+  override def unRegister(): Unit = registrationLock.synchronized {
     registered = false
     unregistered = true
-    myInstance foreach {instance => zk.deleteNode(instance.node)}
+    myInstance foreach {instance => zkClient.session{ zk => zk.deleteNode(instance.node) } }
     myInstance = None
   }
 
-  def changeStatus(newStatus: ServiceStatus): Unit = if (!disableRegistration) if(stillRegistered()) {
-    synchronized {
+  def changeStatus(newStatus: ServiceStatus): Unit = zkClient.session{ zk =>
+    if (stillRegistered()) synchronized {
       myInstance foreach { instance =>
         log.info(s"Changing instance status to $newStatus")
         thisRemoteService.status = newStatus

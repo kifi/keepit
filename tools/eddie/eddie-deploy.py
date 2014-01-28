@@ -6,6 +6,47 @@ import boto.ec2
 import spur
 import os
 import time
+from boto.s3.connection import S3Connection
+from boto.s3.key import Key
+import datetime
+
+class S3Asset(object):
+
+  def __init__(self, key):
+    self.key = key
+    self.name = key.name.split(".")[0]
+    (kind, date, time, _, chash) = self.name.split("-")
+    self.serviceType = kind
+    self.hash = chash
+    self.timestamp = datetime.datetime.strptime(date+time, "%Y%m%d%H%M")
+
+
+class S3Assets(object):
+
+  def __init__(self, serviceType, bucket):
+    conn = S3Connection("AKIAINZ2TABEYCFH7SMQ", "s0asxMClN0loLUHDXe9ZdPyDxJTGdOiquN/SyDLi")
+    bucket = conn.get_bucket(bucket)
+    allKeys = bucket.list()
+    self.assets = []
+    for key in allKeys:
+      asset = S3Asset(key)
+      if asset.serviceType==serviceType:
+        self.assets.append(asset)
+
+
+  def latest(self):
+    inOrder = sorted(self.assets, key = lambda x: x.timestamp)
+    if not inOrder:
+      raise Exception("No Version Available!")
+    return inOrder[-1]
+
+  def byHash(self, chash):
+    versions = [a for a in self.assets if a.hash==chash]
+    if not versions:
+      raise Exception("Unknown commit hash: " + chash)
+    return versions[0]
+
+
 
 class ServiceInstance(object):
   def __init__(self, instance):
@@ -85,15 +126,30 @@ if __name__=="__main__":
   else:
     instances = [instance for instance in instances if instance.service==args.serviceType]
 
-  log("Triggered deploy of %s to %s in %s mode" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode))
+  assets = S3Assets(args.serviceType, "fortytwo-builds")
 
   command = ["python", "/home/fortytwo/eddie/eddie-self-deploy.py"]
 
+  assets = S3Assets(args.serviceType, "fortytwo-builds")
+
+  version = 'latest'
+  full_version = 'latest'
   if args.version:
-    command.append(args.version)
+    version = args.version
+    try:
+      full_version = assets.byHash(version).name
+    except:
+      full_version = version
+  else:
+    version = assets.latest().hash
+    full_version = assets.latest().name + " (latest)"
+
+  command.append(version)
 
   if args.mode and args.mode=="force":
     command.append("force")
+
+  log("Triggered deploy of %s to %s in %s mode with version %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, full_version))
 
   for instance in instances:
     shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
