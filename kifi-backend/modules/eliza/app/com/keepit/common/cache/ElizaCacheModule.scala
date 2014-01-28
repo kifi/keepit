@@ -5,7 +5,6 @@ import com.keepit.common.logging.AccessLog
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.common.usersegment.UserSegmentCache
@@ -21,6 +20,11 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def messagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new MessagesForThreadIdCache(stats, accessLog, (outerRepo, Duration.Inf))
+
+  @Singleton
+  @Provides
+  def userThreadStatsForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserThreadStatsForThreadIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, Duration.Inf))
 
   @Singleton
   @Provides

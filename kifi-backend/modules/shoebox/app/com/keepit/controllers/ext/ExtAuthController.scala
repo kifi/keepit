@@ -102,8 +102,6 @@ class ExtAuthController @Inject() (
     Ok(Json.obj(
       "joined" -> user.createdAt.toLocalDate,
       "user" -> BasicUser.fromUser(user),
-      "name" -> s"${user.firstName} ${user.lastName}",  // deprecated, remove after all extensions at 2.6.38 or later
-      "userId" -> user.externalId.id,                   // deprecated, remove after all extensions at 2.6.38 or later
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,

@@ -35,6 +35,10 @@ class SearchAnalyticsTest extends Specification {
       val kifiSearchHit2 = KifiSearchHit(hit2, 10, false, true, users.map(BasicUser.fromUser), 0.5.toFloat)
       val kifiHitContext2 = kifiSearchHit2.json.as[KifiHitContext]
       check(kifiHitContext2, kifiSearchHit2)
+      val hit3 = BasicSearchHit(title = None, url = "https://whatever")
+      val kifiSearchHit3 = KifiSearchHit(hit3, 10, false, true, users.map(BasicUser.fromUser), 0.5.toFloat)
+      val kifiHitContext3 = kifiSearchHit3.json.as[KifiHitContext]
+      check(kifiHitContext3, kifiSearchHit3)
       1===1
     }
 

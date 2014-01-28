@@ -15,6 +15,10 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
+import scala.concurrent._
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 case class Path(name: String) {
   override def toString = name
@@ -26,9 +30,14 @@ case class Node(name: String) {
   def asPath: Path = Path(name)
 }
 
-@ImplementedBy(classOf[ZooKeeperClientImpl])
 trait ZooKeeperClient {
-  def onConnected(handler: ()=>Unit): Unit
+  def onConnected(handler: ZooKeeperSession => Unit): Unit
+  def session[T](f: ZooKeeperSession => T): T
+  def close(): Unit
+}
+
+trait ZooKeeperSession {
+  def getState(): ZooKeeper.States
 
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit): Unit
   def watchChildren(path: Path, updateChildren : Seq[Node] => Unit): Unit
@@ -56,56 +65,44 @@ trait ZooKeeperClient {
  */
 class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
                       watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
-  @volatile private[this] var zk : ZooKeeper = null
-  private[this] val onConnectedHandlers = new ArrayBuffer[()=>Unit] with SynchronizedBuffer[()=>Unit]
 
-  connect()
+  private[this] val onConnectedHandlers = new ArrayBuffer[ZooKeeperSession=>Unit]
 
-  def onConnected(handler: ()=>Unit): Unit = {
-    onConnectedHandlers += handler
-    if (zk != null && zk.getState() == ZooKeeper.States.CONNECTED) execOnConnectedHandler(handler) // if already connected, execute the handler immediately
+  private def connect(): Future[ZooKeeperSessionImpl] = {
+    val promise = Promise[Unit]
+
+    val sessionWatcher = new Watcher {
+      def process(event : WatchedEvent) { sessionEvent(promise, event) }
+    }
+
+    log.info(s"Attempting to connect to zookeeper servers $servers")
+    val zk = new ZooKeeperSessionImpl(new ZooKeeper(servers, sessionTimeout, sessionWatcher))
+
+    promise.future.map{ _ =>
+      onConnectedHandlers.synchronized{ onConnectedHandlers.foreach(handler => execOnConnectedHandler(zk, handler)) }
+      zk
+    }
   }
 
-  private def execOnConnectedHandler(handler: ()=>Unit): Unit = {
+  @volatile private[this] var zkSession : ZooKeeperSessionImpl = Await.result(connect(), Duration.Inf)
+
+  def onConnected(handler: ZooKeeperSession=>Unit): Unit = onConnectedHandlers.synchronized {
+    onConnectedHandlers += handler
+    val zk = zkSession
+    if (zk.getState() == ZooKeeper.States.CONNECTED) execOnConnectedHandler(zk, handler) // if already connected, execute the handler immediately
+  }
+
+  private def execOnConnectedHandler(zk: ZooKeeperSession, handler: ZooKeeperSession => Unit): Unit = {
     try {
-      handler()
+      handler(zk)
     } catch {
     case e:Exception =>
       log.error("Exception during execution of an onConnected handler", e)
     }
   }
 
-  def getHandle() : ZooKeeper = zk
-
-  private implicit def nodes(strings: JList[String]): Seq[Node] =
-    asScalaBuffer(strings) map {n => Node(n)}
-
-  private implicit def paths(strings: JList[String]): Seq[Path] =
-    asScalaBuffer(strings) map {p => Path(p)}
-
-  /**
-   * connect() attaches to the remote zookeeper and sets an instance variable.
-   */
-  private def connect() {
-    val connectionLatch = new CountDownLatch(1)
-    val assignLatch = new CountDownLatch(1)
-    if (zk != null) {
-      zk.close()
-      zk = null
-    }
-    zk = new ZooKeeper(servers, sessionTimeout,
-                       new Watcher { def process(event : WatchedEvent) {
-                         sessionEvent(assignLatch, connectionLatch, event)
-                       }})
-    assignLatch.countDown()
-    log.info(s"Attempting to connect to zookeeper servers $servers")
-    connectionLatch.await()
-    onConnectedHandlers.foreach(execOnConnectedHandler(_))
-  }
-
-  def sessionEvent(assignLatch: CountDownLatch, connectionLatch : CountDownLatch, event : WatchedEvent) {
+  private def sessionEvent(promise : Promise[Unit], event : WatchedEvent) {
     log.info("ZooKeeper event: %s".format(event))
-    assignLatch.await()
     event.getState match {
       case KeeperState.SyncConnected => {
         try {
@@ -114,21 +111,40 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
           case e:Exception =>
             log.error("Exception during zookeeper connection established callback", e)
         }
-        connectionLatch.countDown()
+        promise.success() // invoke onConnected handlers
       }
       case KeeperState.Expired => {
-        // Session was expired; create a new zookeeper connection
-        connect()
+        // Session was expired; establish a new zookeeper connection and save a session
+        future{
+          zkSession = Await.result(connect(), Duration.Inf)
+        }
+      }
+      case KeeperState.AuthFailed => {
+        promise.failure(new KeeperException.AuthFailedException())
       }
       case _ => // Disconnected -- zookeeper library will handle reconnects
     }
   }
 
+  def session[T](f: ZooKeeperSession => T): T = f(zkSession)
+
+  def close(): Unit = zkSession.close()
+}
+
+class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging {
+
+  private implicit def nodes(strings: JList[String]): Seq[Node] =
+    asScalaBuffer(strings) map {n => Node(n)}
+
+  private implicit def paths(strings: JList[String]): Seq[Path] =
+    asScalaBuffer(strings) map {p => Path(p)}
+
+
   /**
    * Given a string representing a path, return each subpath
    * Ex. subPaths("/a/b/c", "/") == ["/a", "/a/b", "/a/b/c"]
    */
-  def subPaths(path: Path, sep: Char) = {
+  private def subPaths(path: Path, sep: Char) = {
     val l = path.name.split(sep).toList
     val paths = l.tail.foldLeft[List[Path]](Nil){(xs, x) =>
       (Path(xs.headOption.getOrElse("") + sep.toString + x))::xs}
@@ -141,13 +157,8 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
     zk.getChildren(makeNodePath(path).name, false)
   }
 
-  def close() = zk.close
-
-  def isAlive: Boolean = {
-    // If you can get the root, then we're alive.
-    val result: Stat = zk.exists("/", false) // do not watch
-    result.getVersion >= 0
-  }
+  def close(): Unit = zk.close()
+  def getState(): ZooKeeper.States = zk.getState()
 
   def create(path: Path, data: Array[Byte], createMode: CreateMode): Path =
     Path(zk.create(makeNodePath(path).name, data, Ids.OPEN_ACL_UNSAFE, createMode))

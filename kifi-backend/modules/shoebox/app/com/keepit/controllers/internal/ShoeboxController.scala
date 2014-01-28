@@ -22,9 +22,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.scraper.Signature
+import com.keepit.scraper.{ScrapeRequest, Signature, ScraperConfig, HttpRedirect}
 import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType}
-import com.keepit.scraper.{ScraperConfig, HttpRedirect}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
@@ -234,17 +233,15 @@ class ShoeboxController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def recordScrapedNormalization() = Action.async(parse.json) { request =>
+  def recordScrapedNormalization() = Action(parse.json) { request =>
     val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
     val signature = Signature((request.body \ "signature").as[String])
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
 
     val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization)).map { idOpt =>
-      implicit val format = Id.format[NormalizedURI]
-      Ok(Json.toJson(idOpt))
-    }
+    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization))
+    Ok
   }
 
   def getProxy(url:String) = SafeAsyncAction { request =>
@@ -321,6 +318,19 @@ class ShoeboxController @Inject() (
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     Ok(Json.toJson(uriId))
+  }
+
+  def assignScrapeTasks(zkId:Id[ScraperWorker], max:Int) = SafeAsyncAction { request =>
+    val res = db.readWrite(attempts = 2) { implicit rw =>
+      scrapeInfoRepo.getOverdueList(max) map { info => // todo: prioritize
+        val nuri = normUriRepo.get(info.uriId)
+        val proxy = urlPatternRuleRepo.getProxy(nuri.url)
+        val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
+        ScrapeRequest(nuri, savedInfo, proxy)
+      }
+    }
+    log.info(s"[assignScrapeTasks($zkId,$max)] result=${res}")
+    Ok(Json.toJson(res))
   }
 
   def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>

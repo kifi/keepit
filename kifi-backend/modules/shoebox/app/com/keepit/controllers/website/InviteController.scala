@@ -147,8 +147,15 @@ class InviteController @Inject() (db: Database,
             }
             nameOpt.map {
               case Some(name) =>
+                val baseUrl = current.configuration.getString("application.baseUrl").get
                 val inviter = inviterUserOpt.get.firstName
-                Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
+                val pageUrl = baseUrl + request.uri
+                val titleText = s"$inviter sent you an invite to kifi"
+                val titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
+
+                Ok(views.html.marketing.landing(
+                    useCustomMetaData = true, pageUrl = pageUrl, titleText = titleText, titleDesc = titleDesc
+                )).withCookies(Cookie("inv", invite.externalId.id))
               case None =>
                 log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
                 Redirect(com.keepit.controllers.website.routes.HomeController.home)

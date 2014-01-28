@@ -18,9 +18,17 @@
     "tests"
   ],
   "dependencies": {
+    "normalize-css": "2.x.x",
     "jquery": "1.x.x",
     "angular": "1.2.x",
-    "normalize-css": "2.x.x"
+    "angular-cookies": "1.2.x",
+    "angular-resource": "1.2.x",
+    "angular-route": "1.2.x",
+    "ngInfiniteScroll": "1.x.x",
+    "angular-ui-router": "~0.2.8",
+    "angular-antiscroll": "*",
+    "angular-bootstrap": "~0.10.0",
+    "bootstrap": "~3.0.3"
   },
   "devDependencies": {
     "angular-mocks": "1.2.x"

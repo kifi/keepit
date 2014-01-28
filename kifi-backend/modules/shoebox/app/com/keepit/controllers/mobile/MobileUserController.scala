@@ -62,6 +62,7 @@ class MobileUserController @Inject() (
     val user = userCommander.getUserInfo(request.user)
     Ok(toJson(user.basicUser).as[JsObject] ++
        toJson(user.info).as[JsObject] ++
+       Json.obj("notAuthed" -> user.notAuthed).as[JsObject] ++
        Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
