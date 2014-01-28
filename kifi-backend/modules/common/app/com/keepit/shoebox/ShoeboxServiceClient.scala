@@ -721,6 +721,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
-    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), timeout = 30000).map(_ => ())(ExecutionContext.immediate)
+    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), timeout = 300000).map(_ => ())(ExecutionContext.immediate)
   }
 }
