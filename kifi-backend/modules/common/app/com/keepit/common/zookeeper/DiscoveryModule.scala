@@ -43,7 +43,7 @@ object DiscoveryModule {
 
 }
 
-case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
+trait ProdDiscoveryModule extends DiscoveryModule with Logging {
 
   def configure() { }
 
@@ -88,8 +88,10 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
-    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake, isCanary = DiscoveryModule.isCanary)
+    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake, isCanary = DiscoveryModule.isCanary, servicesToListenOn = servicesToListenOn)
   }
+
+  def servicesToListenOn: Seq[ServiceType]
 
   @Singleton
   @Provides

@@ -48,8 +48,7 @@ class ServiceDiscoveryImpl(
     airbrake: Provider[AirbrakeNotifier],
     disableRegistration: Boolean = sys.props.getOrElse("service.register.disable", "false").toBoolean, // todo: inject config
     val isCanary: Boolean = false,
-    servicesToListenOn: Seq[ServiceType] =
-        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.C_SHOEBOX :: Nil,
+    servicesToListenOn: Seq[ServiceType],
     doKeepAlive: Boolean = true)
   extends ServiceDiscovery with Logging {
 
