@@ -18,6 +18,9 @@ import org.apache.http.HttpStatus
 import play.api.Play.current
 import scala.concurrent._
 import play.api.libs.json.Json
+import com.keepit.common.zookeeper.ServiceDiscovery
+import scala.util.{Try, Success, Failure}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 abstract class ScrapeCallable(val submitTS:Long, val callTS:AtomicLong, val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends Callable[(NormalizedURI, Option[Article])] {
@@ -44,10 +47,13 @@ class QueuedScrapeProcessor @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
+  serviceDiscovery: ServiceDiscovery,
+  asyncHelper: ShoeboxDbCallbacks,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
+  val PULL_ENABLE   = sys.props.get("scraper.pull.enable") map (_.toBoolean) getOrElse (false)
 
   val pSize = Runtime.getRuntime.availableProcessors * 1024
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
@@ -122,6 +128,27 @@ class QueuedScrapeProcessor @Inject() (
             } orElse {
               removeRef(iter) // Some(s"[terminator] remove collected entry $ref from queue")
               None
+            }
+          }
+
+          if (PULL_ENABLE) { // todo: move this out
+            log.info(s"[puller] look for things to do ... q.size=${submittedQ.size()}")
+            if (submittedQ.isEmpty) {
+              serviceDiscovery.thisInstance map { inst =>
+                if (inst.isHealthy) {
+                  asyncHelper.assignTasks(inst.id.id, Runtime.getRuntime.availableProcessors()) onComplete { trRequests =>
+                    trRequests match {
+                      case Failure(t) =>
+                        log.error(s"[puller] Caught exception ${t} while pulling for tasks",t) // move along
+                      case Success(requests) =>
+                        log.info(s"[puller(${inst.id.id}})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
+                        for (sr <- requests) {
+                          asyncScrape(sr.uri, sr.info, sr.proxyOpt)
+                        }
+                    }
+                  }
+                }
+              }
             }
           }
         }
