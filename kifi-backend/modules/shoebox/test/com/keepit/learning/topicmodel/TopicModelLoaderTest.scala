@@ -22,6 +22,7 @@ class TopicModelLoaderTest extends Specification {
       model.wordTopic.foreach { x =>
         topic.get(x._1).get === x._2
       }
+      1===1
     }
   }
 

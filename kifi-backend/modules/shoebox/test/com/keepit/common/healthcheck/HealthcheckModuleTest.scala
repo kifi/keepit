@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import org.specs2.mutable.Specification
+import org.specs2.mutable.SpecificationLike
 
 import com.keepit.common.mail._
 import akka.actor.ActorSystem
@@ -9,7 +9,7 @@ import play.api.test.Helpers.running
 import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
 import com.keepit.common.actor.TestActorSystemModule
 
-class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+class HealthcheckModuleTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
 
   class FakeMailSender extends MailSender(null, null) {
     var mailQueue: List[ElectronicMail] = Nil
