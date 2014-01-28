@@ -105,6 +105,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo](profile)
   }
 
+  implicit object ScraperWorkerIdTypeMapper extends BaseTypeMapper[Id[ScraperWorker]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[ScraperWorker](profile)
+  }
+
   implicit object EContactIdTypeMapper extends BaseTypeMapper[Id[EContact]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[EContact](profile)
   }
