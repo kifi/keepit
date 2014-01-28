@@ -158,7 +158,8 @@ object ApplicationBuild extends Build {
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
       sources in doc in Compile := List(),
-      Keys.fork := false
+      Keys.fork := false,
+      skip in update := true
     )
 
     lazy val macros = play.Project("macros", appVersion, commonDependencies, path = file("modules/macros")).settings(
@@ -173,35 +174,36 @@ object ApplicationBuild extends Build {
 
     lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile")
 
     val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
       commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
-    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
     val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
       commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-search.conf"): _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile")
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
       (commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-eliza.conf") ++ (routesImport ++= Seq("com.keepit.eliza._", "com.keepit.eliza.model._"))) : _*
-    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
     val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
       commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-heimdal.conf"): _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile")
 
     val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
       commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-abook.conf"): _*
-    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
     val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
       commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-scraper.conf"): _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile")
 
-    val aaaMain = play.Project(appName, appVersion).settings(
-      commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile").aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
+    val kifiBackend = play.Project(appName, appVersion).settings(commonSettings: _*)
+    .settings(skip in update := false)
+    .dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile")
+    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
 
-    override def rootProject = Some(aaaMain)
+    override def rootProject = Some(kifiBackend)
 }
