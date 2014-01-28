@@ -76,8 +76,8 @@ class NormalizationServiceImpl @Inject() (
 
     val prenormalizedCandidates = candidates.flatMap {
       case verifiedCandidate: VerifiedCandidate => Some(verifiedCandidate)
-      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(ScrapedCandidate(_, normalization)) }
-      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(UntrustedCandidate(_, normalization)) }
+      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => prenormalizeMaybe(url).map(ScrapedCandidate(_, normalization)) }
+      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => prenormalizeMaybe(url).map(UntrustedCandidate(_, normalization)) }
     }
 
     val allCandidates =
