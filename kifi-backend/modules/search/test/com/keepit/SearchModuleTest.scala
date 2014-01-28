@@ -27,7 +27,7 @@ class SearchModuleTest extends Specification with Logging with ApplicationInject
 
   "Module" should {
     "instantiate controllers" in {
-      running(new DeprecatedSearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient).withShoeboxServiceModule()) {
+      running(new DeprecatedSearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

@@ -66,9 +66,7 @@ class ShardedArticleIndexer(
   }
 
   override def reindex(): Unit = {
-    val seq = computeCatchUpSeqNumber
-    indexShards.valuesIterator.foreach{_.catchUpSeqNumber_=(seq)}
-    catchUpSeqNumber_=(seq)
+    indexShards.valuesIterator.foreach{_.catchUpSeqNumber_=(catchUpSeqNumber)}
     super.reindex()
   }
 }
