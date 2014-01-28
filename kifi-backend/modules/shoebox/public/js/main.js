@@ -1064,14 +1064,6 @@ $(function () {
 			.dialog('show');
 	}
 
-	function refreshMe(data) {
-		var url = xhrBase + '/user/me';
-		if (data) {
-			return $.postJson(url, data, updateMe);
-		}
-		return $.getJSON(url, updateMe);
-	}
-
 	function saveNewPrimaryEmail($input, cancel) {
 		var email = $input.val();
 		if (getPrimaryEmailAddress() === email) {
@@ -1081,7 +1073,7 @@ $(function () {
 		getEmailInfo(email)
 			.done(function (emailInfo) {
 				if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
-					refreshMe();
+					repromiseMe();
 					return;
 				}
 				if (emailInfo.isVerified) {
@@ -1107,7 +1099,7 @@ $(function () {
 				address: email,
 				isPrimary: true
 			});
-			refreshMe(props);
+			repromiseMe(props);
 		};
 	}
 
@@ -1122,7 +1114,7 @@ $(function () {
 
 		delete props.email;
 
-		refreshMe(props)
+		repromiseMe(props)
 			.fail(function () {
 				showMessage('Uh oh! Something went wrong!');
 			});
@@ -1225,7 +1217,7 @@ $(function () {
 
 	var gmailAccountTmpl = Handlebars.compile($('#gmail-account').html());
 	function showProfile() {
-		$.when(promise.me, promise.myNetworks).done(function () {
+		$.when(repromiseMe(), promise.myNetworks).done(function () {
 			profileTmpl.render(me);
 
 			updateMe(me);
@@ -1802,10 +1794,15 @@ $(function () {
 		connectSocial($(e.target).data('network'));
 	});
 
+	var $refreshNetworks = $('.refresh-networks');
+	$refreshNetworks.on('click', '.network-refresh-button', function (e) {
+		connectSocial($(e.target).data('network'));
+	});
+
 	function connectSocial(network) {
 		log('[connectSocial]', network);
 		toggleInviteHelp(network, false);
-		toggleImporting(network, true);
+		toggleImporting(network, !!network && network === getNetworkFilterSelected());
 
 		window.location = KF.origin + (network === 'email' ? '/importContacts' : '/link/' + network);
 	}
@@ -1965,6 +1962,8 @@ $(function () {
 
 		$nwFriendsLoading.hide();
 		$nwFriends.find('.no-results').empty().hide();
+
+		clearNotAuthed();
 
 		log('[filterFriendsByNetwork]', network);
 		chooseNetworkFilterDOM(network);
@@ -2275,6 +2274,10 @@ $(function () {
 		$ul.toggleClass('center', $ul.children().length === 1);
 	}
 
+	function clearNotAuthed() {
+		$refreshNetworks.removeClass('email gmail facebook linkedin');
+	}
+
 
 	function prepInviteTab(moreToShow) {
 		log('[prepInviteTab]', moreToShow);
@@ -2307,6 +2310,20 @@ $(function () {
 		if (!network) {
 			getNetworks();
 		}
+
+		repromiseMe().done(function (me) {
+			clearNotAuthed();
+			if (me.notAuthed && me.notAuthed.length) {
+				if (network) {
+					if (me.notAuthed.indexOf(network) !== -1) {
+						$refreshNetworks.addClass(network);
+					}
+				}
+				else {
+					$refreshNetworks.addClass(me.notAuthed.join(' '));
+				}
+			}
+		});
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
 			log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
@@ -3428,7 +3445,7 @@ $(function () {
 			showProfile();
 			break;
 		case 'friends':
-			$.when(promise.me).done(function () {
+			promise.me.done(function () {
 				showFriends(hash);
 			});
 			break;
@@ -4212,10 +4229,7 @@ $(function () {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: refreshMe().promise().done(function (me) {
-			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
-			return me;
-		}),
+		me: repromiseMe(),
 		myNetworks: getNetworks().promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function (data) {
 			myPrefs = data;
@@ -4224,6 +4238,28 @@ $(function () {
 			}
 		}).promise()
 	};
+
+	function refreshMe(data) {
+		var url = xhrBase + '/user/me';
+		if (data) {
+			return $.postJson(url, data, updateMe);
+		}
+		return $.getJSON(url, updateMe);
+	}
+
+	function repromiseMe(data) {
+		var p = refreshMe(data).promise().done(function (me) {
+			me.fullname = me.fullname || (me.firstName ? (me.lastName ? me.firstName + ' ' + me.lastName : me.firstName) : (me.lastName || ''));
+			return me;
+		});
+		if (promise) {
+			promise.me = p;
+		}
+		return p;
+	}
+
+	repromiseMe();
+
 	updateCollections();
 	$.getJSON(xhrBase + '/user/friends/count', function (data) {
 		updateFriendRequests(data.requests);

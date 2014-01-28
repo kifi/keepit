@@ -1,6 +1,6 @@
 package com.keepit.common.db.slick
 
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.{DbSequence, SequenceNumber, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
@@ -29,6 +29,13 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     initSequence(name)
     def incrementAndGet()(implicit sess: RWSession): SequenceNumber = {
       val stmt = sess.conn.prepareStatement(s"""SELECT NEXTVAL('$name')""")
+      val rs = stmt.executeQuery()
+      rs.next()
+      SequenceNumber(rs.getLong(1))
+    }
+
+    def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber = {
+      val stmt = session.conn.prepareStatement(s"""SELECT CURRVAL('$name')""")
       val rs = stmt.executeQuery()
       rs.next()
       SequenceNumber(rs.getLong(1))

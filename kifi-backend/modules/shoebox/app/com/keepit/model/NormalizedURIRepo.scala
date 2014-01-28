@@ -28,7 +28,8 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
-}
+  def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
+  }
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (
@@ -72,9 +73,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber = {
-    val q = (for( r <- table ) yield r.seq)
-    val m = q.list.map{_.value}.max
-    SequenceNumber(m)
+    sequence.getLastGeneratedSeq()
   }
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession): Unit = {

@@ -226,7 +226,11 @@ case class HttpClientImpl(
         dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
-      if (waitTime > longWaitTimeThreshold) {//could take in account remote service type
+      val url = request.httpUri.url
+      if (waitTime > longWaitTimeThreshold && //could take in account remote service type
+          //some paths are not optimized for large data now but they're not a priority and we should not alert on them
+          //todo(eishay): make it configurable
+          !url.contains("/internal/shoebox/database/getUriIdsInCollection")) {
         val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(
           AirbrakeError.outgoing(

@@ -81,7 +81,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "experimentId": response.experimentId,
         "query": response.query,
         "filter": filter,
-        "maxResults": response.session.prefs.maxResults,
+        "maxResults": response.prefs.maxResults,
         "kifiResults": response.hits.length,
         "kifiExpanded": response.expanded || false,
         "kifiTime": tKifiResultsReceived - tQuery,
@@ -140,7 +140,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       if (q !== query || !areSameFilter(newFilter, filter)) {
         log("[results] ignoring for query:", q, "filter:", newFilter)();
         return;
-      } else if (!resp.session) {
+      } else if (!resp.me) {
         log("[results] no user info")();
         return;
       }
@@ -180,8 +180,8 @@ if (searchUrlRe.test(document.URL)) !function() {
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));
         $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal));
       }
-      if (showPreview && resp.hits.length > resp.session.prefs.maxResults) {
-        resp.nextHits = resp.hits.splice(resp.session.prefs.maxResults);
+      if (showPreview && resp.hits.length > resp.prefs.maxResults) {
+        resp.nextHits = resp.hits.splice(resp.prefs.maxResults);
         resp.nextUUID = resp.uuid;
         resp.nextContext = resp.context;
         resp.mayHaveMore = true;
@@ -207,7 +207,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         }
       }
 
-      if (showPreview && isFirst && resp.session.prefs.showSearchIntro && document.hasFocus()) {
+      if (showPreview && isFirst && resp.prefs.showSearchIntro && document.hasFocus()) {
         setTimeout(api.require.bind(api, 'scripts/search_intro.js', function () {
           if (tQuery === t1) {
             searchIntro.show($res);
@@ -309,7 +309,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           "origin": window.location.origin,
           "uuid": isKifi ? hit.uuid : response.uuid,
           "filter": filter,
-          "maxResults": response.session.prefs.maxResults,
+          "maxResults": response.prefs.maxResults,
           "experimentId": response.experimentId,
           "kifiResults": response.hits.length,
           "kifiExpanded": response.expanded || false,
@@ -468,8 +468,8 @@ if (searchUrlRe.test(document.URL)) !function() {
       document.addEventListener('mousewheel', hide, true);
       document.addEventListener('wheel', hide, true);
       document.addEventListener('keypress', hide, true);
-      if (response.session && !$leaves.filter('.kifi-res-max-results-n.kifi-checked').length) {
-        $leaves.filter('.kifi-res-max-results-' + response.session.prefs.maxResults).addClass('kifi-checked').removeAttr('href');
+      if (!$leaves.filter('.kifi-res-max-results-n.kifi-checked').length) {
+        $leaves.filter('.kifi-res-max-results-' + response.prefs.maxResults).addClass('kifi-checked').removeAttr('href');
       }
       // .kifi-hover class needed because :hover does not work during drag
       function enterItem() {
@@ -511,7 +511,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       var n = +$this.text();
       api.port.emit('set_max_results', n);
     }).on('click', '.kifi-res-bar', function (e) {
-      if (e.shiftKey && response.session && ~response.session.experiments.indexOf("admin")) {
+      if (e.shiftKey && ~(response.experiments || []).indexOf('admin')) {
         location.href = response.admBaseUri + '/admin/search/results/' + response.uuid;
       }
     }).on('click', '.kifi-filter[href]', function (e, alreadySearched) {
@@ -575,7 +575,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       .finish().removeAttr('style')
       .append(render('html/search/google_hits', {
           results: response.hits,
-          self: response.session.user,
+          self: response.me,
           images: api.url('images'),
           filter: response.filter,
           mayHaveMore: response.mayHaveMore
@@ -638,7 +638,7 @@ if (searchUrlRe.test(document.URL)) !function() {
     delete response.nextContext;
 
     for (var i = 0; i < hits.length; i++) {
-      hitHtml.push(render("html/search/google_hit", $.extend({self: response.session.user, images: api.url("images")}, hits[i])));
+      hitHtml.push(render('html/search/google_hit', $.extend({self: response.me, images: api.url('images')}, hits[i])));
     }
     $(hitHtml.join(''))
     .css({visibility: 'hidden', height: 0, margin: 0})
@@ -668,7 +668,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       boldSearchTerms(hit.bookmark.title, matches.title) :
       formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
-    hit.scoreText = ~response.session.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
+    hit.scoreText = ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
     hit.tagsText = (hit.bookmark.tagNames || []).join(', ');
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;

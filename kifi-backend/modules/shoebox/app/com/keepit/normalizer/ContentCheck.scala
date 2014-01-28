@@ -17,9 +17,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
 
   def isDefinedAt(candidate: NormalizationCandidate) = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
 
-  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url, None).map { articleOption =>
-    articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
-  }
+  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.getSignature(url, None)
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {
     case None => signature(referenceUrl)
@@ -35,7 +33,13 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
       currentContentSignatureOption <- referenceContentSignatureFuture
       candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) signature(alternateUrl) else Future.successful(None)
     } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
-        case (Some(currentContentSignature), Some(candidateContentSignature)) => currentContentSignature.similarTo(candidateContentSignature) > 0.9
+        case (Some(currentContentSignature), Some(candidateContentSignature)) => {
+          val similarity = currentContentSignature.similarTo(candidateContentSignature)
+          val threshold = 0.99 // todo: move to config
+          val doTheyMatch =  similarity > threshold
+          log.info(s"[${if (doTheyMatch) "ACCEPT" else "REJECT"} at $threshold] Content similarity of ${referenceUrl} and ${alternateUrl}: $similarity")
+          doTheyMatch
+        }
         case (Some(_), None) => {
           log.error(s"Content signature of URL ${alternateUrl} could not be computed.")
           failedContentChecks += alternateUrl; false

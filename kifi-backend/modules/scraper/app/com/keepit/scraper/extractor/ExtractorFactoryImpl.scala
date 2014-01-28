@@ -6,7 +6,9 @@ import com.keepit.common.logging.Logging
 import com.google.inject.{Singleton, Inject}
 
 @Singleton
-class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractorProvider, linkProcessingExtractorProvider: LinkProcessingExtractorProvider) extends ExtractorFactory with Logging {
+class ExtractorFactoryImpl @Inject() (
+    youtubeExtractorProvider: YoutubeExtractorProvider,
+    linkProcessingExtractorProvider: LinkProcessingExtractorProvider) extends ExtractorFactory with Logging {
 
   val all = Seq(
     youtubeExtractorProvider,
@@ -23,12 +25,12 @@ class ExtractorFactoryImpl @Inject() (youtubeExtractorProvider: YoutubeExtractor
             f.apply(uri)
           }.getOrElse(throw new Exception("failed to find an extractor factory"))
         case Failure(_) =>
-          log.warn("uri parsing failed: [%s]".format(url))
+          log.warn(s"uri parsing failed: [$url]")
           DefaultExtractorProvider(url)
       }
     } catch {
       case e: Throwable =>
-        log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
+        log.warn(s"uri parsing failed: [$url][$e]")
         DefaultExtractorProvider(url)
     }
   }

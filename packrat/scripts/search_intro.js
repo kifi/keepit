@@ -6,8 +6,8 @@
 
 var searchIntro = searchIntro || {
   show: function show($parent) {
-    api.port.emit('session', function (sess) {
-      if (sess.prefs.showSearchIntro && searchIntro.show === show && document.hasFocus()) {
+    api.port.emit('prefs', function (prefs) {
+      if (prefs.showSearchIntro && searchIntro.show === show && document.hasFocus()) {
         searchIntro.$el = $(render('html/search/search_intro'))
           .appendTo($parent)
           .on('click', '.kifi-search-intro-x', searchIntro.hide)

@@ -21,7 +21,7 @@ import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
-import com.keepit.scraper.{Signature, HttpRedirect}
+import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
 
@@ -377,8 +377,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getHighestUriSeq(): Future[Long] = {
-    val seq = allNormalizedURIs.values.map{_.seq.value}.max
-    Future.successful(seq)
+    val seq = allNormalizedURIs.values.map{_.seq.value}
+    Future.successful(if (seq.isEmpty) 0L else seq.max)
   }
 
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
@@ -440,6 +440,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {}
 
+  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    Future.successful(Seq.empty[ScrapeRequest])
+  }
+
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
   def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = ???
@@ -452,7 +456,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
 
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Unit = ???
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit] = ???
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 

@@ -1,6 +1,6 @@
 package com.keepit.common.db.slick
 
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.{DbSequence, SequenceNumber, MySqlDatabaseDialect}
 import scala.slick.driver.MySQLDriver
 import scala.slick.session.{Database => SlickDatabase}
@@ -16,6 +16,12 @@ class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     def incrementAndGet()(implicit sess: RWSession): SequenceNumber = {
       sess.getPreparedStatement(s"UPDATE $name SET id=LAST_INSERT_ID(id+1);").execute()
       val rs = sess.getPreparedStatement(s"SELECT LAST_INSERT_ID();").executeQuery()
+      rs.next()
+      SequenceNumber(rs.getLong(1))
+    }
+
+    def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber = {
+      val rs = session.getPreparedStatement(s"SELECT id from $name;").executeQuery()
       rs.next()
       SequenceNumber(rs.getLong(1))
     }

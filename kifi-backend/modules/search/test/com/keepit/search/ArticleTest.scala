@@ -15,6 +15,7 @@ class ArticleTest extends Specification {
         id = Id(22),
         title = "my title",
         description = Some("my description"),
+        canonicalUrl = Some("canonical url"),
         keywords = Some("my keyword"),
         media = Some("my media"),
         content = "my content",
@@ -38,6 +39,7 @@ class ArticleTest extends Specification {
         id = Id(22),
         title = "my title",
         description = None,
+        canonicalUrl = None,
         keywords = None,
         media = None,
         content = """my content

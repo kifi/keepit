@@ -60,13 +60,13 @@ trait ConfigStore {
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit)
 }
 
-class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
+class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
 
-  zk.onConnected{ () => watches.foreach{ case (key, handler) => watch(key)(handler) } }
+  zkClient.onConnected{ _ => watches.foreach{ case (key, handler) => watch(key)(handler) } }
 
-  def get(key: CentralConfigKey): Option[String] = {
+  def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
       zk.getOpt(key.toNode).map(fromByteArray(_))
     } catch {
@@ -75,28 +75,28 @@ class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
     }
   }
 
-  def set(key: CentralConfigKey, value: String): Unit = {
+  def set(key: CentralConfigKey, value: String): Unit = zkClient.session{ zk =>
     try{
       zk.set(key.toNode, value)
     } catch {
       case e: KeeperException.NoNodeException => {
         try {
-          zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
+          zk.createNode(key.toNode, value, CreateMode.PERSISTENT)
         } catch {
           case e: KeeperException.NoNodeException => {
             val parentPath = key.toNode.name.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
             zk.createPath(Path(parentPath))
-            zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
+            zk.createNode(key.toNode, value, CreateMode.PERSISTENT)
           }
         }
       }
     }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
+  def watch(key: CentralConfigKey)(handler: Option[String] => Unit): Unit = zkClient.session{ zk =>
     zk.watchNode(key.toNode, byteArrayOption => future{handler(byteArrayOption.map(fromByteArray(_)))})
+    watches += ((key, handler))
   }
-
 }
 
 
