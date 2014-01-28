@@ -26,7 +26,6 @@ class AppScope extends Scope with Logging {
   private var started = false
   private var stopping = false
   private var stopped = false
-  private val startedCount = new AtomicInteger(0)
 
   private var plugins: List[Plugin] = Nil
   private[inject] var pluginsToStart: List[Plugin] = Nil
@@ -35,15 +34,6 @@ class AppScope extends Scope with Logging {
   private var app: Application = _
 
   def onStart(app: Application): Unit = {
-
-    val cnt = startedCount.incrementAndGet()
-    println("===========================================")
-    println(s"[$identifier] scope starting... $cnt times")
-    println("===========================================")
-    if (started) {
-      println("scope already started. waiting for a bit.")
-      Thread.sleep(5000)
-    }
     require(!started, "AppScope has already been started")
     this.app = app
     pluginsToStart foreach { p => startPlugin(p) }
