@@ -6,6 +6,7 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
+import com.keepit.common.KestrelCombinator
 
 import play.api.Play.current
 import play.api.mvc._
@@ -148,15 +149,19 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
   }
 
   protected def buildInfo(response: Response): OAuth2Info = {
-    println("Body:\n" + response.body + "\n---\n")
-    val parsed: Map[String, JsValue] = response.body.split("&").map { kv =>
-      val p = kv.split("=").take(2)
-      p(0) -> (if(p.length == 2) {
-        try { JsNumber(p(1).toInt) } catch {
-          case _: Throwable => JsString(p(1))
-        }
-      } else JsNull )
-    }.toMap
+    val parsed = try {
+      response.json.as[JsObject].value tap { s => println("Used JSON!\n\n" + s)}
+    } catch {
+      case _: Throwable =>
+        response.body.split("&").map { kv =>
+          val p = kv.split("=").take(2)
+          p(0) -> (if(p.length == 2) {
+            try { JsNumber(p(1).toInt) } catch {
+              case _: Throwable => JsString(p(1))
+            }
+          } else JsNull )
+        }.toMap tap { s => println("Used Map hack!\n\n" + s)}
+    }
 
     log.info("[securesocial] got json back [" + parsed + "]")
     if ( log.isDebugEnabled ) {

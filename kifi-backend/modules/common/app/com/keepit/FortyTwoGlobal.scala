@@ -39,16 +39,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
-  private val startedCount = new AtomicInteger(0)
   override def beforeStart(app: Application): Unit = {
-    val cnt = startedCount.incrementAndGet()
-    println("+++++++++++++++++++++++++++++++++++++++++++")
-    println(s"beforeStart... $cnt times")
-    println("+++++++++++++++++++++++++++++++++++++++++++")
     val conf = app.configuration
-    conf.entrySet.map { case (a, b) =>
-      println("Got: " + a + " ==> " + b.toString)
-    }
     val appName = conf.getString("application.name").get
     conf.getConfig("db") match {
       case Some(dbs) => println(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
