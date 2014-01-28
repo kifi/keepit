@@ -5,14 +5,14 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.IndexManager
 import com.keepit.search.index.Indexer
 import com.keepit.search.IndexInfo
+import com.keepit.common.logging.Logging
 
-trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
+trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] with Logging{
   val indexShards: Map[Shard[K], T]
   protected val updateLock = new AnyRef
   @volatile protected var closing = false
 
   def commitSequenceNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
-  def localIndexerInfo: Seq[(Int, Long)] = indexShards.valuesIterator.map{indexer => (indexer.numDocs, indexer.catchUpSeqNumber.value)}.toSeq
 
   def committedAt: Option[String] = {
     indexShards.valuesIterator.reduce{ (a, b) =>
@@ -28,9 +28,13 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] {
     _sequenceNumber = n
   }
 
-  private[this] var _catchUpSeqNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.catchUpSeqNumber.value).min)
+  protected def getDbHighestSeqNum(): SequenceNumber = SequenceNumber.ZERO
+
+  private[this] var _catchUpSeqNumber: SequenceNumber = {
+    val dbSeq = getDbHighestSeqNum()
+    indexShards.valuesIterator.map{indexer =>  if (indexer.numDocs == 0) dbSeq else indexer.catchUpSeqNumber}.min
+  }
   def catchUpSeqNumber = _catchUpSeqNumber
-  protected def catchUpSeqNumber_=(n: SequenceNumber) { _catchUpSeqNumber = n }
 
   private[this] var resetSequenceNumber = false
   protected def resetSequenceNumberIfReindex() {
