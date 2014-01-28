@@ -225,8 +225,9 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
   private case class HttpTransaction(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
-  private implicit def responseOpt2HttpTransaction(responseOpt: Option[CloseableHttpResponse])(implicit fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext): HttpTransaction = {
-    HttpTransaction(responseOpt, fetchInfo, httpGet, httpContext)
+  private object HttpTransaction {
+    implicit def responseOpt2HttpTransaction(responseOpt: Option[CloseableHttpResponse])(implicit fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext): HttpTransaction =
+      HttpTransaction(responseOpt, fetchInfo, httpGet, httpContext)
   }
 
   private def fetchResponse(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpTransaction = {
