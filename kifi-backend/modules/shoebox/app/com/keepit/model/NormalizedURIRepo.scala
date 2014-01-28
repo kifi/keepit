@@ -72,9 +72,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber = {
-    val q = (for( r <- table ) yield r.seq)
-    val m = q.list.map{_.value}.max
-    SequenceNumber(m)
+    sequence.getLastGeneratedSeq()
   }
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession): Unit = {
