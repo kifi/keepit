@@ -1802,10 +1802,15 @@ $(function () {
 		connectSocial($(e.target).data('network'));
 	});
 
+	var $refreshNetworks = $('.refresh-networks');
+	$refreshNetworks.on('click', '.network-refresh-button', function (e) {
+		connectSocial($(e.target).data('network'));
+	});
+
 	function connectSocial(network) {
 		log('[connectSocial]', network);
 		toggleInviteHelp(network, false);
-		toggleImporting(network, true);
+		toggleImporting(network, !!network && network === getNetworkFilterSelected());
 
 		window.location = KF.origin + (network === 'email' ? '/importContacts' : '/link/' + network);
 	}
@@ -1965,6 +1970,8 @@ $(function () {
 
 		$nwFriendsLoading.hide();
 		$nwFriends.find('.no-results').empty().hide();
+
+		clearNotAuthed();
 
 		log('[filterFriendsByNetwork]', network);
 		chooseNetworkFilterDOM(network);
@@ -2275,6 +2282,10 @@ $(function () {
 		$ul.toggleClass('center', $ul.children().length === 1);
 	}
 
+	function clearNotAuthed() {
+		$refreshNetworks.removeClass('email gmail facebook linkedin');
+	}
+
 
 	function prepInviteTab(moreToShow) {
 		log('[prepInviteTab]', moreToShow);
@@ -2307,6 +2318,20 @@ $(function () {
 		if (!network) {
 			getNetworks();
 		}
+
+		promise.me.done(function (me) {
+			clearNotAuthed();
+			if (me.notAuthed && me.notAuthed.length) {
+				if (network) {
+					if (me.notAuthed.indexOf(network) !== -1) {
+						$refreshNetworks.addClass(network);
+					}
+				}
+				else {
+					$refreshNetworks.addClass(me.notAuthed.join(' '));
+				}
+			}
+		});
 
 		$.getJSON(xhrBase + '/user/socialConnections', opts, function (friends) {
 			log('[prepInviteTab] search: ' + search + ', network: ' + network + ', friends: ', friends);
@@ -3428,7 +3453,7 @@ $(function () {
 			showProfile();
 			break;
 		case 'friends':
-			$.when(promise.me).done(function () {
+			promise.me.done(function () {
 				showFriends(hash);
 			});
 			break;

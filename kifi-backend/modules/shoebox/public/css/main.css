@@ -5645,3 +5645,46 @@ a.photo-dialog-submit:focus {
   border-color: inherit;
   background-color: #fff;
 }
+
+.network-refresh {
+  display: none;
+  font-size: 16px;
+  color: #e4716d;
+  background-color: #fffdc5;
+  padding: 26px 40px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.refresh-networks.facebook .network-refresh.facebook {
+  display: block;
+}
+
+.refresh-networks.linkedin .network-refresh.linkedin {
+  display: block;
+}
+
+.network-refresh span {
+  margin-right: 30px;
+}
+
+.network-refresh-button.network-refresh-button {
+  display: inline-block;
+  font-size: 14px;
+  padding: 9px 20px;
+  font-weight: lighter;
+  letter-spacing: 0.5px;
+  color: white;
+  background-color: #3a8bf9;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.network-refresh-button.network-refresh-button:hover {
+  background-color: #4d96f9;
+}
+
+.network-refresh-button.network-refresh-button:active {
+  background-color: #2e6fc7;
+}
+
