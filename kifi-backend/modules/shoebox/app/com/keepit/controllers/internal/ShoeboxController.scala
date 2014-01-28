@@ -323,7 +323,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uriId))
   }
 
-  def assignScrapeTasks(zkId:Long, max:Int) = SafeAsyncAction { request =>
+  def assignScrapeTasks(zkId:Id[ScraperWorker], max:Int) = SafeAsyncAction { request =>
     val res = db.readWrite(attempts = 2) { implicit rw =>
       scrapeInfoRepo.getOverdueList(max) map { info => // todo: prioritize
         val nuri = normUriRepo.get(info.uriId)

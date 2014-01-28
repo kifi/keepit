@@ -35,7 +35,7 @@ class ScrapeInfoRepoImpl @Inject() (
 
   override val table = new RepoTable[ScrapeInfo](db, "scrape_info") {
     def uriId =      column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def workerId   = column[Long]("worker_id")
+    def workerId   = column[Id[ScraperWorker]]("worker_id")
     def lastScrape = column[DateTime]("last_scrape", O.NotNull)
     def nextScrape = column[DateTime]("next_scrape", O.NotNull)
     def interval =   column[Double]("scrape_interval", O.NotNull)

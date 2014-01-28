@@ -12,10 +12,12 @@ object ScrapeInfoStates extends States[ScrapeInfo] {
   val ASSIGNED = State[ScrapeInfo]("assigned") // pull
 }
 
+class ScraperWorker()
+
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
-  workerId: Option[Long] = None,
+  workerId: Option[Id[ScraperWorker]] = None,
   lastScrape: DateTime = START_OF_TIME,
   nextScrape: DateTime = START_OF_TIME,
   interval: Double = 24.0d, // hours
@@ -25,7 +27,7 @@ case class ScrapeInfo(
   destinationUrl: Option[String] = None
 ) extends ModelWithState[ScrapeInfo] with Logging {
   def withId(id: Id[ScrapeInfo]) = this.copy(id = Some(id))
-  def withWorkerId(id: Long) = this.copy(workerId = Some(id))
+  def withWorkerId(id: Id[ScraperWorker]) = this.copy(workerId = Some(id))
   def withUpdateTime(now: DateTime) = this
   def withState(state: State[ScrapeInfo]) = {
     log.debug(s"[withState($id, $uriId, $workerId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
@@ -86,7 +88,7 @@ object ScrapeInfo {
   implicit val format = (
       (__ \ 'id).formatNullable(Id.format[ScrapeInfo]) and
       (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-      (__ \ 'workerId).formatNullable[Long] and
+      (__ \ 'workerId).formatNullable(Id.format[ScraperWorker]) and
       (__ \ 'lastScrape).format[DateTime] and
       (__ \ 'nextScrape).format[DateTime] and
       (__ \ 'interval).format[Double] and

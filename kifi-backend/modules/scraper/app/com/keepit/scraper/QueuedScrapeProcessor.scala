@@ -53,8 +53,6 @@ class QueuedScrapeProcessor @Inject() (
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
-  val PULL_ENABLE   = sys.props.get("scraper.pull.enable") map (_.toBoolean) getOrElse (false)
-
   val pSize = Runtime.getRuntime.availableProcessors * 1024
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[(NormalizedURI, Option[Article])])]]()
@@ -131,7 +129,7 @@ class QueuedScrapeProcessor @Inject() (
             }
           }
 
-          if (PULL_ENABLE) { // todo: move this out
+          if (config.pull) { // todo: move this out
             log.info(s"[puller] look for things to do ... q.size=${submittedQ.size()}")
             if (submittedQ.isEmpty) {
               serviceDiscovery.thisInstance map { inst =>

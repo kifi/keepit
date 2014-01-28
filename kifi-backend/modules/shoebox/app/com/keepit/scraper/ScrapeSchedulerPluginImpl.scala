@@ -65,7 +65,7 @@ private[scraper] class ScrapeScheduler @Inject() (
       }
     }
 
-    val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get) } // workers no longer exists
+    val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) } // workers no longer exists
     if (!abandoned.isEmpty) {
       val msg = s"[schedule] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
       log.warn(msg)
