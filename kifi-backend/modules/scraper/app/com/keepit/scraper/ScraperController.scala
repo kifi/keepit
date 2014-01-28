@@ -21,7 +21,7 @@ class ScraperController @Inject() (
   def getBasicArticle() = Action(parse.json) { request =>
     log.info(s"getBasicArticle body=${request.body}")
     Async {
-      getBasicArticle(request.body).map { articleOption =>
+      processBasicArticleRequest(request.body).map { articleOption =>
         val json = Json.toJson(articleOption)
         val url = (request.body \ "url").as[String]
         log.info(s"[getBasicArticle($url})] result: $json")
@@ -33,9 +33,9 @@ class ScraperController @Inject() (
   def getSignature() = Action(parse.json) { request =>
     log.info(s"getSignature body=${request.body}")
     Async {
-      getBasicArticle(request.body).map { articleOption =>
-        val signatureOption = articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
-        val json = Json.toJson(signatureOption)
+      processBasicArticleRequest(request.body).map { articleOption =>
+        val signatureOption = articleOption.map(_.signature)
+        val json = Json.toJson(signatureOption.map(_.toBase64()))
         val url = (request.body \ "url").as[String]
         log.info(s"[getSignature($url)] result: ${json}")
         Ok(json)
@@ -43,7 +43,7 @@ class ScraperController @Inject() (
     }
   }
 
-  private def getBasicArticle(parameters: JsValue): Future[Option[BasicArticle]] = {
+  private def processBasicArticleRequest(parameters: JsValue): Future[Option[BasicArticle]] = {
     val url = (parameters \ "url").as[String]
     val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
     val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }

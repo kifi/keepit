@@ -11,7 +11,9 @@ case class BasicArticle(
   httpContentType: Option[String] = None, // from http header
   httpOriginalContentCharset: Option[String] = None, // from EntityUtils.getContentCharSet
   destinationUrl: Option[String] = None
-)
+) {
+  lazy val signature: Signature = Signature(Seq(title, description.getOrElse(""), content))
+}
 
 object BasicArticle {
   def apply(article: Article): BasicArticle = BasicArticle(

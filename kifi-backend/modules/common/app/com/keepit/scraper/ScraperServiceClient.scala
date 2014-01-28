@@ -93,6 +93,7 @@ trait ScraperServiceClient extends ServiceClient {
   def scheduleScrape(uri:NormalizedURI, info:ScrapeInfo):Future[Boolean] // ack
   def scheduleScrapeWithRequest(request:ScrapeRequest):Future[Boolean] // ack
   def getBasicArticle(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
+  def getSignature(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
 }
 
@@ -143,7 +144,7 @@ class ScraperServiceClientImpl @Inject() (
 
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
     call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
-      r.json.validate[Signature].asOpt
+      r.json.asOpt[String].map(Signature(_))
     }
   }
 
@@ -169,6 +170,8 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def scheduleScrapeWithRequest(request: ScrapeRequest): Future[Boolean] = ???
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
+
+  def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]] = ???
 
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
 }
