@@ -2,7 +2,7 @@
 	<div class="kf-nav-group-name">Tags</div>
 	<div class="kf-tag-input-box">
 		<input placeholder="Find or add a tag..." ng-model="search.name">
-		<a class="kf-tag-input-clear" tabindex="-1">&times;</a>
+		<a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter()">&times;</a>
 	</div>
 	<ul class="kf-tag-list" antiscroll="autoHide:true">
 		<li class="kf-tag" ng-repeat="tag in tags | filter: search">
