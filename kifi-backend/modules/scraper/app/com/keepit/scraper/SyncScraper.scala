@@ -67,6 +67,7 @@ class SyncScraper @Inject() (
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
           helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _)) // todo(Léo): remove when all existing uris have been processed once
           log.info(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
@@ -78,14 +79,15 @@ class SyncScraper @Inject() (
           // first update the uri state to SCRAPED
           val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
 
-          // Report canonical url
-          article.canonicalUrl.foreach(helper.syncRecordScrapedNormalization(latestUri.id.get, signature, _, Normalization.CANONICAL))
-
           // then update the scrape schedule
           helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
             helper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
           }
+
+          // Report canonical url
+          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _))
+
           log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
@@ -274,6 +276,11 @@ class SyncScraper @Inject() (
     val wasKeptRecently = helper.syncGetLatestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
     hasFishy301Restriction || wasKeptRecently
     hasFishy301Restriction
+  }
+
+  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
+    val absoluteCanonicalUrl = URI.url(uri.url, canonicalUrl)
+    helper.syncRecordScrapedNormalization(uri.id.get, signature, absoluteCanonicalUrl, Normalization.CANONICAL)
   }
 
 }

@@ -335,7 +335,8 @@ module.exports = function (grunt) {
 
 	// Default task(s).
 	grunt.registerTask('default', [
-		'dev'
+		'dev',
+		'watch'
 	]);
 
 	// Development task

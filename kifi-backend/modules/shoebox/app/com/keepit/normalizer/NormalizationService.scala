@@ -171,7 +171,7 @@ class NormalizationServiceImpl @Inject() (
 
   def processAdditionalUpdates(currentReference: NormalizationReference, betterReferenceOption: Option[NormalizationReference]): Future[Option[NormalizationReference]] = {
     val bestReference = betterReferenceOption getOrElse currentReference
-    val newReferenceOption = Some(bestReference).filter(_.isNew)
+    val newReferenceOption = Some(bestReference).filter(ref => ref.isNew && ref.normalization.isDefined)
     val additionalUpdatesOption = newReferenceOption.map { newReference =>
       val newReferenceCandidate = VerifiedCandidate(newReference.url, newReference.normalization.get)
       getURIsToBeFurtherUpdated(currentReference, newReference).map { uri =>
