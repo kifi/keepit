@@ -21,7 +21,7 @@ class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     }
 
     def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber = {
-      val rs = session.getPreparedStatement(s"SELECT LAST_INSERT_ID();").executeQuery()
+      val rs = session.getPreparedStatement(s"SELECT id from $name;").executeQuery()
       rs.next()
       SequenceNumber(rs.getLong(1))
     }
