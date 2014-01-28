@@ -4,6 +4,7 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.{Singleton, Provides}
 import scala.collection.mutable
 import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.ZooKeeper
 
 
 case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
@@ -21,8 +22,15 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
 
   val basePath = Path("")
 
-  def onConnected(handler: ()=>Unit): Unit = { handler() }
+  private val zk = new FakeZooKeeperSession(db)
 
+  def onConnected(handler: ZooKeeperSession=>Unit): Unit = { handler(zk) }
+  def session[T](f: ZooKeeperSession => T): T = f(zk)
+  def close() = {}
+}
+
+class FakeZooKeeperSession(db: mutable.HashMap[Node, Array[Byte]]) extends ZooKeeperSession {
+  def getState() = ZooKeeper.States.CONNECTED
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
   def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {}
   def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
