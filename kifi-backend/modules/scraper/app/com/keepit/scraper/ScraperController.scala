@@ -11,7 +11,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.ScrapeInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
-import play.api.libs.json.Json
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
