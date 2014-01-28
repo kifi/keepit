@@ -1,6 +1,5 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.common.db.{Model, Id}
 import com.keepit.model.{User, NormalizedURI}
@@ -9,11 +8,6 @@ import play.api.libs.json._
 
 import org.joda.time.DateTime
 
-
-import scala.concurrent.duration._
-
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
-import play.api.libs.functional.syntax._
 import scala.Some
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
@@ -44,23 +38,3 @@ case class UserThread(
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 }
-
-case class UserThreadStats(all: Int, active: Int, started: Int)
-
-object UserThreadStats {
-  implicit def format = (
-    (__ \ 'all).format[Int] and
-    (__ \ 'active).format[Int] and
-    (__ \ 'started).format[Int]
-  )(UserThreadStats.apply, unlift(UserThreadStats.unapply))
-}
-
-case class UserThreadStatsForUserIdKey(userId:Id[User]) extends Key[UserThreadStats] {
-  override val version = 0
-  val namespace = "thread_stats_for_user"
-  def toKey():String = userId.id.toString
-}
-
-class UserThreadStatsForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserThreadStatsForUserIdKey, UserThreadStats](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
-

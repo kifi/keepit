@@ -5,7 +5,6 @@ import com.keepit.common.logging.AccessLog
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.common.usersegment.UserSegmentCache
