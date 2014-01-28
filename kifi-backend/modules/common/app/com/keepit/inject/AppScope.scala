@@ -34,6 +34,7 @@ class AppScope extends Scope with Logging {
   private var app: Application = _
 
   def onStart(app: Application): Unit = {
+    println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
     pluginsToStart foreach { p => startPlugin(p) }
