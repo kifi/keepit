@@ -10,6 +10,8 @@ import com.keepit.model.UserExperiment
 import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.google.inject.Injector
 import com.keepit.common.usersegment.UserSegment
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class SearchConfigTest extends Specification with TestInjector {
   "The search configuration" should {
@@ -33,20 +35,20 @@ class SearchConfigTest extends Specification with TestInjector {
 
         val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"))
 
-        val v1 = await(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
+        val v1 = Await.result(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
             "recencyBoost" -> "2.0",
             "percentMatch" -> "70",
             "tailCutting" -> "0.30"
           ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE
-        )))
+        )),Duration(1, "minutes"))
 
-        val v2 = await(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
+        val v2 = Await.result(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
             "recencyBoost" -> "1.0",
             "percentMatch" -> "90",
             "tailCutting" -> "0.10"
           ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE
-        )))
+        )),Duration(1, "minutes"))
 
         searchConfigManager.syncActiveExperiments
         val (c1, e1) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
@@ -102,11 +104,11 @@ class SearchConfigTest extends Specification with TestInjector {
 
         val Seq(greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Greg", lastName = "Metvin"))
 
-        val ex = await(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
+        val ex = Await.result(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
           "percentMatch" -> "700",
           "phraseBoost" -> "500.0"
         ), weight = 1, state = SearchConfigExperimentStates.ACTIVE
-        )))
+        )),Duration(1, "minutes"))
 
         searchConfigManager.syncActiveExperiments
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")

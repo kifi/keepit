@@ -35,6 +35,7 @@ class SearchAnalyticsTest extends Specification {
       val kifiSearchHit2 = KifiSearchHit(hit2, 10, false, true, users.map(BasicUser.fromUser), 0.5.toFloat)
       val kifiHitContext2 = kifiSearchHit2.json.as[KifiHitContext]
       check(kifiHitContext2, kifiSearchHit2)
+      1===1
     }
 
     "be deserialized from current extension payload" in {
@@ -43,6 +44,7 @@ class SearchAnalyticsTest extends Specification {
         "isPrivate" -> false,
         "count" -> 10,
         "keepers" -> users.map(_.externalId.id),
+
         "tags" -> tags.map(_.id),
         "title" -> Some("whatever"),
         "titleMatches" -> 3,
