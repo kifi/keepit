@@ -18,6 +18,7 @@ trait NormalizationService {
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
   def normalize(uriString: String)(implicit session: RSession): String
   def prenormalize(uriString: String)(implicit session: RSession): String
+  def prenormalizeMaybe(uriString: String)(implicit session: RSession): Option[String]
 }
 
 @Singleton
@@ -29,10 +30,11 @@ class NormalizationServiceImpl @Inject() (
   priorKnowledge: PriorKnowledge,
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url).getOrElse(prenormalize(uriString))
+  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url) getOrElse prenormalize(uriString)
+  def prenormalize(uriString: String)(implicit session: RSession): String = prenormalizeMaybe(uriString) getOrElse uriString
 
-  //using readonly db when exist, don't use cache
-  def prenormalize(uriString: String)(implicit session: RSession): String = {
+    //using readonly db when exist, don't use cache
+  def prenormalizeMaybe(uriString: String)(implicit session: RSession): Option[String] = {
     val withStandardPrenormalizationOption = URI.safelyParse(uriString).map(Prenormalizer)
     val withPreferredSchemeOption = for {
       prenormalized <- withStandardPrenormalizationOption
@@ -44,7 +46,7 @@ class NormalizationServiceImpl @Inject() (
       prenormalizedString <- prenormalizedURI.safelyToString()
     } yield prenormalizedString
 
-    prenormalizedStringOption.getOrElse(uriString)
+    prenormalizedStringOption
   }
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
@@ -72,10 +74,10 @@ class NormalizationServiceImpl @Inject() (
 
   private def getRelevantCandidates(currentReference: NormalizationReference, candidates: Seq[NormalizationCandidate]) = {
 
-    val prenormalizedCandidates = candidates.map {
-      case verifiedCandidate: VerifiedCandidate => verifiedCandidate
-      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => ScrapedCandidate(prenormalize(url), normalization) }
-      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => UntrustedCandidate(prenormalize(url), normalization) }
+    val prenormalizedCandidates = candidates.flatMap {
+      case verifiedCandidate: VerifiedCandidate => Some(verifiedCandidate)
+      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(ScrapedCandidate(_, normalization)) }
+      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(UntrustedCandidate(_, normalization)) }
     }
 
     val allCandidates =
