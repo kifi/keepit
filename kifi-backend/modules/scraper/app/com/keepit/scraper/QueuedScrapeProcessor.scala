@@ -70,7 +70,7 @@ abstract class ScrapeCallable(submitTS:Long, val uri:NormalizedURI, val info:Scr
   extends TracedCallable[(NormalizedURI, Option[Article])]("Scrape", submitTS) {
   override def toString = {
     val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
-    s"[Scrape:${Json.stringify(Json.toJson(taskDetails))}]"
+    s"[Task:${Json.stringify(Json.toJson(taskDetails))}]"
   }
 }
 
