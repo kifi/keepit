@@ -28,7 +28,8 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
-}
+  def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
+  }
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (

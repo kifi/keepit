@@ -104,6 +104,7 @@ object Shoebox extends Service {
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
     def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
+    def assignScrapeTasks(zkId:Long, max:Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")
     def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
@@ -237,9 +238,8 @@ object Scraper extends Service {
     def asyncScrapeArticleWithRequest() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithRequest")
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
-    def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
-    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleP")
-    def getBasicArticleWithExtractor() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleWithExtractor")
+    def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
+    def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
   }
 }
 

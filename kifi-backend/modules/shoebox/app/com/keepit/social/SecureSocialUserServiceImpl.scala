@@ -185,6 +185,7 @@ class SecureSocialUserPluginImpl @Inject() (
             socialUserInfoRepo.save(socialUserInfo)
           }
           sui
+
         }
         try {
           db.readWrite(attempts = 3) { implicit session =>

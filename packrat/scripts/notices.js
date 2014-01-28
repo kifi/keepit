@@ -180,7 +180,7 @@ panes.notices = function () {
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
       if (notice.authors === 1) {
-        notice[notice.author.id === session.user.id ? 'isSent' : 'isReceived'] = true;
+        notice[notice.author.id === me.id ? 'isSent' : 'isReceived'] = true;
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
@@ -204,11 +204,11 @@ panes.notices = function () {
         }
       } else {
         if (nParticipants === 2) {
-          notice.namedParticipant = participants.filter(idIsNot(session.user.id))[0];
+          notice.namedParticipant = participants.filter(idIsNot(me.id))[0];
         } else if (nParticipants <= nNamesMax) {
-          notice.namedParticipants = participants.map(makeFirstNameYou(session.user.id));
+          notice.namedParticipants = participants.map(makeFirstNameYou(me.id));
         } else {
-          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(session.user.id));
+          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(me.id));
           notice.otherParticipants = participants.slice(nNamesMax - 1);
           notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
         }
@@ -220,7 +220,7 @@ panes.notices = function () {
         notice.nameIndex = counter();
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
-      notice.authorShortName = notice.author.id === session.user.id ? 'Me' : notice.author.firstName;
+      notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
       return render('html/keeper/notice_message', notice);
     case 'triggered':
       return render('html/keeper/notice_triggered', notice);
@@ -442,7 +442,7 @@ panes.notices = function () {
   }
 
   function isSent(th) {
-    return th.firstAuthor != null && th.participants[th.firstAuthor].id === session.user.id;
+    return th.firstAuthor != null && th.participants[th.firstAuthor].id === me.id;
   }
 
   function toNamesJson(users) {

@@ -17,9 +17,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
 
   def isDefinedAt(candidate: NormalizationCandidate) = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
 
-  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.scrapeBasicArticle(url, None).map { articleOption =>
-    articleOption.map { article => Signature(Seq(article.title, article.description.getOrElse(""), article.content)) }
-  }
+  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.getSignature(url, None)
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {
     case None => signature(referenceUrl)

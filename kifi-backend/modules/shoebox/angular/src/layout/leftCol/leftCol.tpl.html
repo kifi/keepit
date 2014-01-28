@@ -4,38 +4,5 @@
 	</div>
 	<div kf-profile-card></div>
 	<div kf-nav></div>
-	<div id="collections">
-		<h2>Tags</h2>
-		<h3 class="collection-new" data-before-template>
-			<label>
-				<input placeholder="Find or add a tag...">
-				<a class="tag-input-clear" tabindex="-1">&times;</a>
-			</label>
-		</h3>
-		<div id="collections-list">
-			<div class="antiscroll-inner">
-				<h3 class="collection" data-template data-id="{{id}}" data-name="{{name}}" style="display:none">
-					<a href="tag/{{id}}">
-						<span class="tag-icon"></span>
-						<span class="view-name">{{name}}</span>
-						<span class="tag-count">{{keeps}}</span>
-					</a>
-					<div class="coll-tri"></div>
-				</h3>
-			</div>
-		</div>
-		<div id="tag-new-template" style="display:none">
-			<h3 class="collection tag-new" data-name="{{name}}">
-				<a href="javascript:">
-					<span class="tag-create"></span>
-					<div class="caption">Add a new tag:</div>
-					<span class="view-name">{{name}}</span>
-				</a>
-			</h3>
-		</div>
-		<menu id="coll-menu">
-			<li><a class="coll-rename" href="javascript:">Rename</a></li>
-			<li><a class="coll-remove" href="javascript:">Remove</a></li>
-		</menu>
-	</div>
+	<div kf-tags></div>
 </div>

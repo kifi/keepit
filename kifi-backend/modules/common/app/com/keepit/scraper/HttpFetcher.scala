@@ -225,10 +225,13 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
   private case class HttpTransaction(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
+  private implicit def responseOpt2HttpTransaction(responseOpt: Option[CloseableHttpResponse])(implicit fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext): HttpTransaction = {
+    HttpTransaction(responseOpt, fetchInfo, httpGet, httpContext)
+  }
 
   private def fetchResponse(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpTransaction = {
-    val httpGet = new HttpGet(url)
-    val httpContext = new BasicHttpContext()
+    implicit val httpGet = new HttpGet(url)
+    implicit val httpContext = new BasicHttpContext()
 
     proxy.map { httpProxy =>
       val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.hostname, httpProxy.port, httpProxy.scheme)).build()
@@ -251,29 +254,27 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
     if (disableGzip) httpGet.addHeader(ACCEPT_ENCODING, "")
-    val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
+    implicit val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     try {
       q.offer(WeakReference(fetchInfo))
       val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r:CloseableHttpResponse => r.getStatusLine.toString }) { httpClient.execute(httpGet, httpContext) }
       fetchInfo.respStatusRef.set(response.getStatusLine)
-      HttpTransaction(Some(response), fetchInfo, httpGet, httpContext)
+      Some(response)
     } catch {
-      case e:ZipException               => if (disableGzip) HttpTransaction(logAndSet(fetchInfo, None)(e, "fetch", url), fetchInfo, httpGet, httpContext)
-                                           else fetchResponse(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
-      case e @ ( // revisit this list and see what can be handled
-        _:SSLException
-        | _:NoHttpResponseException
-        | _:EOFException
-        | _:SSLHandshakeException
-        | _:HttpHostConnectException
-        | _:ClientProtocolException
-        | _:NoRouteToHostException
-        | _:UnknownHostException
-        | _:ConnectTimeoutException
-        | _:SocketException
-        | _:SocketTimeoutException
-        )                               => HttpTransaction(logAndSet(fetchInfo, None)(e, "fetch", url), fetchInfo, httpGet, httpContext)
-      case t:Throwable                  => HttpTransaction(logAndSet(fetchInfo, None)(t, "fetch", url, true), fetchInfo, httpGet, httpContext)
+      case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url)
+                             else fetchResponse(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+      case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:EOFException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:HttpHostConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:ClientProtocolException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:NoRouteToHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:UnknownHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:ConnectTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:SocketException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e:SocketTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case t:Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
   }
 

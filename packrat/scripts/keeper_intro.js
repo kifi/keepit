@@ -5,8 +5,8 @@
 // @require scripts/render.js
 // @require scripts/html/keeper/keeper_intro.js
 
-api.port.emit('session', function (sess) {
-  if (sess.prefs.showKeeperIntro && document.hasFocus() && !window.keeper) {
+api.port.emit('prefs', function (prefs) {
+  if (prefs.showKeeperIntro && document.hasFocus() && !window.keeper) {
     var $intro = $(render('html/keeper/keeper_intro'))
       .insertAfter(tile)
       .on('click', '.kifi-keeper-intro-x', hide)

@@ -1,28 +1,14 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
-import com.keepit.common.db.slick.FortyTwoTypeMappers._
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.db.{Model, Id, ExternalId}
+import com.keepit.common.db.{Model, Id}
 import com.keepit.model.{User, NormalizedURI}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 
-import play.api.libs.json.{Json, JsValue, JsNull, JsObject}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
 
 import org.joda.time.DateTime
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-
-import scala.slick.lifted.Query
-import scala.concurrent.{Future, Promise, Await}
-import scala.concurrent.duration._
-
-import MessagingTypeMappers._
-import com.keepit.common.mail.{PostOffice, ElectronicMailCategory}
+import scala.Some
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
 
@@ -45,7 +31,7 @@ case class UserThread(
     notificationEmailed: Boolean = false,
     replyable: Boolean = true,
     lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
-    started: Boolean = false //Wether or not this thread was started by this user
+    started: Boolean = false //Whether or not this thread was started by this user
   )
   extends Model[UserThread] {
 
