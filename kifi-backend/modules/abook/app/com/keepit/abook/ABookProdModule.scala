@@ -12,6 +12,6 @@ case class ABookProdModule() extends ABookModule(
   contactsUpdaterPluginModule = ProdContactsUpdaterPluginModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn: Seq[ServiceType] = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: Nil
+    def servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: Nil
   }
 }
