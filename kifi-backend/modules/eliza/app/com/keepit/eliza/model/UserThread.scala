@@ -1,28 +1,14 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
-import com.keepit.common.db.slick.FortyTwoTypeMappers._
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.db.{Model, Id, ExternalId}
+import com.keepit.common.db.{Model, Id}
 import com.keepit.model.{User, NormalizedURI}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 
-import play.api.libs.json.{Json, JsValue, JsNull, JsObject}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
 
 import org.joda.time.DateTime
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-
-import scala.slick.lifted.Query
-import scala.concurrent.{Future, Promise, Await}
-import scala.concurrent.duration._
-
-import MessagingTypeMappers._
-import com.keepit.common.mail.{PostOffice, ElectronicMailCategory}
+import scala.Some
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
 
@@ -52,5 +38,3 @@ case class UserThread(
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
 }
-
-case class UserThreadStats(all: Int, active: Int, started: Int)
