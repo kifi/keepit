@@ -180,7 +180,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
-      commonSettings: _*
+      commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-search.conf"): _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
