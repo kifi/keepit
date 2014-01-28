@@ -61,7 +61,7 @@ class ShardedArticleIndexer(
     total
   }
 
-  override def getDbHighestSeqNum() = {
+  override def getDbHighestSeqNum(): SequenceNumber = {
     SequenceNumber(Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds))
   }
 
