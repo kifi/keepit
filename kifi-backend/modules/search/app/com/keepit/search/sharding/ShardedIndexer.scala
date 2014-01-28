@@ -30,11 +30,15 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] with Logging{
 
   protected def getDbHighestSeqNum(): SequenceNumber = SequenceNumber.ZERO
 
-  private[this] lazy val catchUpSeqNum: SequenceNumber = {
+  protected def computeCatchUpSeqNumber: SequenceNumber = {
     val dbSeq = getDbHighestSeqNum()
-    indexShards.valuesIterator.map{indexer =>  if (indexer.numDocs == 0) dbSeq else indexer.catchUpSeqNumber}.min
+    indexShards.valuesIterator.map{indexer => if (indexer.numDocs == 0) dbSeq else indexer.catchUpSeqNumber}.min
   }
-  def catchUpSeqNumber = catchUpSeqNum
+
+  private[this] var _catchUpSeqNumber: SequenceNumber = computeCatchUpSeqNumber
+
+  def catchUpSeqNumber = _catchUpSeqNumber
+  def catchUpSeqNumber_=(n: SequenceNumber) {_catchUpSeqNumber = n}
 
   private[this] var resetSequenceNumber = false
   protected def resetSequenceNumberIfReindex() {
