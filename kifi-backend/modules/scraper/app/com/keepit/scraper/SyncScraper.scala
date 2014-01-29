@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import com.google.inject._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
@@ -256,7 +256,10 @@ class SyncScraper @Inject() (
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
     redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => updateRedirectRestriction(uri, redirect)
+      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => {
+        if (redirect.isPermanent) airbrake.notify(AirbrakeError(new Exception(s"Found fishy 301: $redirect")))
+        updateRedirectRestriction(uri, redirect)
+      }
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => removeRedirectRestriction(uri)
     }

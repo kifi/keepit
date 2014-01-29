@@ -21,6 +21,7 @@ import play.api.libs.json.Json
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.net.HttpClient
 
 abstract class TracedCallable[T](val name:String, val submitTS:Long) extends Callable[Try[T]] {
 
@@ -97,6 +98,7 @@ class QueuedScrapeProcessor @Inject() (
   val airbrake:AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
+  httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
@@ -214,7 +216,7 @@ class QueuedScrapeProcessor @Inject() (
   val scheduler = Executors.newSingleThreadScheduledExecutor
   scheduler.scheduleWithFixedDelay(terminator, config.scrapePendingFrequency, config.scrapePendingFrequency * 2, TimeUnit.SECONDS)
 
-  private def worker = new SyncScraper(airbrake, config, httpFetcher, extractorFactory, articleStore, s3ScreenshotStore, helper)
+  private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, helper)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {

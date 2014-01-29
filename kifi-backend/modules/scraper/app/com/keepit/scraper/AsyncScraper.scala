@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.{Provider, Inject}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
@@ -17,7 +17,7 @@ import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Failure
 import scala.util.Success
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{SafeFuture, FortyTwoActor}
 import play.api.Play
 import akka.routing.SmallestMailboxRouter
 import akka.util.Timeout
@@ -378,7 +378,10 @@ class AsyncScraper @Inject() (
 
   def asyncProcessRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
     redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => future { updateRedirectRestriction(uri, redirect) }
+      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => SafeFuture {
+        if (redirect.isPermanent) airbrake.notify(AirbrakeError(new Exception(s"Found fishy 301: $redirect")))
+        updateRedirectRestriction(uri, redirect)
+      }
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.recordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => future { removeRedirectRestriction(uri) }
     }
