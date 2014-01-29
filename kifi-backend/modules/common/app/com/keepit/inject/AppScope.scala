@@ -17,6 +17,7 @@ import scala.concurrent.Promise
 import scala.util.Try
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
+import java.util.concurrent.atomic.AtomicInteger
 
 class AppScope extends Scope with Logging {
 

@@ -28,7 +28,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
     val user = db.readWrite {implicit s =>
       userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
     }
-    val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
+    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
     val email = inject[FacebookSocialGraph].extractEmails(json)
       .map(em => inject[SocialUserImportEmail].importEmail(user.id.get, em)).head
     email.address === emailString

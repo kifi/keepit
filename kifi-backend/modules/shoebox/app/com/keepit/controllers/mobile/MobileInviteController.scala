@@ -27,39 +27,37 @@ class MobileInviteController @Inject()(
 
   private val url = current.configuration.getString("application.baseUrl").get // todo: removeme
 
-  def inviteConnection = AuthenticatedJsonToJsonAction { implicit request =>
+  def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
     Json.fromJson[InviteInfo](request.body).asOpt map { inviteInfo =>
       val userId = request.userId
       val user = request.user
       if (inviteInfo.fullSocialId.network == "email") {
-        Async {
-          abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
-            econtactTr match {
-              case Success(c) =>
-                inviteCommander.sendInvitationForContact(userId, c, user, url, inviteInfo)
-                log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
-                Ok(Json.obj("code" -> "invitation_sent"))
-              case Failure(e) =>
-                log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
-                BadRequest(Json.obj("code" -> "invalid_arguments"))
-            }
+        abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
+          econtactTr match {
+            case Success(c) =>
+              inviteCommander.sendInvitationForContact(userId, c, user, url, inviteInfo)
+              log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
+              Ok(Json.obj("code" -> "invitation_sent"))
+            case Failure(e) =>
+              log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
+              BadRequest(Json.obj("code" -> "invalid_arguments"))
           }
         }
       } else {
         val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, url)
-        if (inviteStatus.sent) Ok(Json.obj("code" -> "invitation_sent"))
+        if (inviteStatus.sent) resolve(Ok(Json.obj("code" -> "invitation_sent")))
         else if (inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") { // special handling
           inviteStatus.savedInvite match {
             case Some(saved) =>
-              Ok(Json.obj("code" -> "client_handle", "invite" -> Json.toJson[Invitation](saved)))
+              resolve(Ok(Json.obj("code" -> "client_handle", "invite" -> Json.toJson[Invitation](saved))))
             case None => { // shouldn't happen
               log.error(s"[processInvite($userId,$user,$inviteInfo)] Could not send Facebook invite")
-              Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error"))
+              resolve(Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error")))
             }
           }
-        } else BadRequest(Json.obj("code" -> "invite_not_sent"))
+        } else resolve(BadRequest(Json.obj("code" -> "invite_not_sent")))
       }
-    } getOrElse BadRequest(Json.obj("code" -> "invalid_arguments"))
+    } getOrElse resolve(BadRequest(Json.obj("code" -> "invalid_arguments")))
   }
 
 }

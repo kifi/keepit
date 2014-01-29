@@ -224,6 +224,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   })
   scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
+
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map{p => s" via ${p.alias}"}.getOrElse("")}") {
     val httpGet = new HttpGet(url)
     val httpContext = new BasicHttpContext()
@@ -250,27 +251,24 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
 
     val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     val responseOpt = try {
-      val ts = System.currentTimeMillis
       q.offer(WeakReference(fetchInfo))
       val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r:CloseableHttpResponse => r.getStatusLine.toString }) { httpClient.execute(httpGet, httpContext) }
       fetchInfo.respStatusRef.set(response.getStatusLine)
       Some(response)
     } catch {
-      case e:ZipException               => logAndSet(fetchInfo, None)(e, "fetch", url) // todo: retry without gzip
-      case e @ ( // revisit this list and see what can be handled
-        _:SSLException
-        | _:NoHttpResponseException
-        | _:EOFException
-        | _:SSLHandshakeException
-        | _:HttpHostConnectException
-        | _:ClientProtocolException
-        | _:NoRouteToHostException
-        | _:UnknownHostException
-        | _:ConnectTimeoutException
-        | _:SocketException
-        | _:SocketTimeoutException
-        )                               => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case t:Throwable                  => logAndSet(fetchInfo, None)(t, "fetch", url, true)
+        case e:ZipException => logAndSet(fetchInfo, None)(e, "fetch", url) // todo: retry without gzip
+        case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:EOFException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:HttpHostConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:ClientProtocolException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:NoRouteToHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:UnknownHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:ConnectTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:SocketException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:SocketTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case t:Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
 
     responseOpt match {

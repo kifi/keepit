@@ -15,7 +15,7 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
     case dangerousFuture =>
       dangerousFuture.onFailure {
         case cause: Throwable =>
-          System.err.println("SafeFuture exception: ${cause.toString}")
+          System.err.println(s"SafeFuture exception: ${cause.toString}")
           cause.printStackTrace() // should always work, to stdout
           try {
             // Needs a running Play application. May fail.

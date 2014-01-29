@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.message.ThreadContent
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
@@ -17,6 +18,7 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
+import com.keepit.eliza.model.{UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
@@ -30,6 +32,8 @@ trait ElizaServiceClient extends ServiceClient {
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]]
 
+  def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
+
   //migration
   def importThread(data: JsObject): Unit
 }
@@ -38,7 +42,8 @@ trait ElizaServiceClient extends ServiceClient {
 class ElizaServiceClientImpl @Inject() (
     val airbrakeNotifier: AirbrakeNotifier,
     val httpClient: HttpClient,
-    val serviceCluster: ServiceCluster
+    val serviceCluster: ServiceCluster,
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache
   )
   extends ElizaServiceClient with Logging {
 
@@ -86,6 +91,14 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = {
+    userThreadStatsForUserIdCache.get(UserThreadStatsForUserIdKey(userId)) map { s => Future.successful(s) } getOrElse {
+      call(Eliza.internal.getUserThreadStats(userId)).map{ response =>
+        Json.parse(response.body).as[UserThreadStats]
+      }
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -117,5 +130,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   //migration
   def importThread(data: JsObject): Unit = {}
 
+  def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
 }

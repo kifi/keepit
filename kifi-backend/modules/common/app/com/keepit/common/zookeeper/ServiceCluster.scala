@@ -77,7 +77,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     case false => Node(s"${servicePath.name}/$node")
   }
 
-  private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperClient) = try {
+  private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperSession) = try {
     val nodeData: String = zk.get(childNode)
     log.info(s"data for node $childNode is $nodeData")
     val remoteService = RemoteService.fromJson(nodeData)
@@ -93,7 +93,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       log.error(s"could not fetch data node for instance of $childNode: ${t.toString}", t)
   }
 
-  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) =
+  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperSession) =
     childNodes foreach { childNode =>
       addNewNode(newInstances, childNode, zk)
     }
@@ -114,7 +114,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       Some(leader)
   }
 
-  def deDuplicate(zk: ZooKeeperClient, instances: TrieMap[Node, ServiceInstance]): TrieMap[Node, ServiceInstance] = {
+  def deDuplicate(zk: ZooKeeperSession, instances: TrieMap[Node, ServiceInstance]): TrieMap[Node, ServiceInstance] = {
     try {
       val machines = new TrieMap[IpAddress, Node]()
       instances foreach { case (node, instance) =>
@@ -142,7 +142,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     instances
   }
 
-  def update(zk: ZooKeeperClient, children: Seq[Node]): Unit = synchronized {
+  def update(zk: ZooKeeperSession, children: Seq[Node]): Unit = synchronized {
     val newInstances = instances.clone()
     val childNodes = children map {c => ensureFullPathNode(c, true)}
     addNewNodes(newInstances, childNodes, zk)

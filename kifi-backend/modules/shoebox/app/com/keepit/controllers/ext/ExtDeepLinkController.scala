@@ -21,26 +21,24 @@ class ExtDeepLinkController @Inject() (
 
 
   
-  def createDeepLink() = Action { request =>
-    Async(future{
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val initiator = Id[User]((req \ "initiator").as[Long])
-      val recipient = Id[User]((req \ "recipient").as[Long])
-      val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
-      val locator = (req \ "locator").as[String]
+  def createDeepLink() = Action(parse.tolerantJson) { request =>
+    val req = request.body.asInstanceOf[JsObject]
+    val initiator = Id[User]((req \ "initiator").as[Long])
+    val recipient = Id[User]((req \ "recipient").as[Long])
+    val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
+    val locator = (req \ "locator").as[String]
 
 
-      db.readWrite{ implicit session => deepLinkRepo.save(
-        DeepLink(
-          initiatorUserId = Some(initiator),
-          recipientUserId = Some(recipient),
-          uriId = Some(uriId),
-          urlId = None,
-          deepLocator = DeepLocator(locator)
-        )
-      )}
-      Ok("")
-    })
+    db.readWrite{ implicit session => deepLinkRepo.save(
+      DeepLink(
+        initiatorUserId = Some(initiator),
+        recipientUserId = Some(recipient),
+        uriId = Some(uriId),
+        urlId = None,
+        deepLocator = DeepLocator(locator)
+      )
+    )}
+    Ok("")
   }
   
   def handle(token: String) = HtmlAction(authenticatedAction = { request =>

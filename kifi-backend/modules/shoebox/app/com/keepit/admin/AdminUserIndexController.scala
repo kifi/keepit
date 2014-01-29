@@ -8,7 +8,7 @@ class AdminUserIndexController  @Inject()(
   actionAuthenticator: ActionAuthenticator,
   searchClient: SearchServiceClient
 ) extends AdminController(actionAuthenticator) {
-  def reindex() = AdminHtmlAction{ implicit request =>
+  def reindex() = AdminHtmlAction.authenticated { implicit request =>
     searchClient.reindexUsers()
     Ok("reindexing users")
   }

@@ -195,7 +195,7 @@ class ShoeboxController @Inject() (
   }
 
   // todo: revisit
-  def recordPermanentRedirect() = Action(parse.json) { request =>
+  def recordPermanentRedirect() = Action.async(parse.json) { request =>
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
@@ -204,45 +204,42 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    Async {
-      val candidateUri = db.readWrite { implicit session => normUriRepo.internByUri(redirect.newDestination) }
-      val resFutureOption = candidateUri.normalization.map { normalization =>
-        val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
-        val verifiedCandidate = VerifiedCandidate(candidateUri.url, normalization)
-        val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
-        // Scraper reports entire NormalizedUri objects with a major chance of stale data / race conditions
-        // The following is meant for synchronisation and should be revisited when scraper apis are rewritten to report modified fields only
+    val candidateUri = db.readWrite { implicit session => normUriRepo.internByUri(redirect.newDestination) }
+    val resFutureOption = candidateUri.normalization.map { normalization =>
+      val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
+      val verifiedCandidate = VerifiedCandidate(candidateUri.url, normalization)
+      val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
+      // Scraper reports entire NormalizedUri objects with a major chance of stale data / race conditions
+      // The following is meant for synchronisation and should be revisited when scraper apis are rewritten to report modified fields only
 
-        updateFuture.map {
-          case Some(update) => {
-            val redirectedUri = db.readOnly() { implicit session => normUriRepo.get(uri.id.get) }
-            log.info(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
-            redirectedUri
-          }
-          case None => {
-            log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
-            uri
-          }
+      updateFuture.map {
+        case Some(update) => {
+          val redirectedUri = db.readOnly() { implicit session => normUriRepo.get(uri.id.get) }
+          log.info(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
+          redirectedUri
+        }
+        case None => {
+          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+          uri
         }
       }
-
-      val resFuture = resFutureOption getOrElse {
-          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
-          Future.successful(uri)
-        }
-
-      resFuture.map { res => Ok(Json.toJson(res)) }
     }
+
+    val resFuture = resFutureOption getOrElse {
+        log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+        Future.successful(uri)
+      }
+
+    resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def recordScrapedNormalization() = SafeAsyncAction(parse.json) { request =>
+  def recordScrapedNormalization() = Action(parse.json) { request =>
     val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
     val signature = Signature((request.body \ "signature").as[String])
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
 
     val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-
     normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization))
     Ok
   }
@@ -577,14 +574,12 @@ class ShoeboxController @Inject() (
     Status(202)("0")
   }
 
-  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action { request =>
+  def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action.async { request =>
     val socialUserInfo = db.readOnly { implicit session =>
       socialUserInfoRepo.get(socialUserInfoId)
     }
-    Async {
-      socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
-        Ok("0")
-      }
+    socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
+      Ok("0")
     }
   }
 }

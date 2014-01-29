@@ -15,7 +15,7 @@ class AdminSemanticVectorController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator){
 
-  def analysis() = AdminHtmlAction { implicit request =>
+  def analysis() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
     val level = body.get("subsetLevel").get
@@ -32,7 +32,7 @@ class AdminSemanticVectorController @Inject()(
     Ok(report.replaceAll("\n","\n<br>"))
   }
 
-  def similarity() = AdminHtmlAction { implicit request =>
+  def similarity() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val (q1, q2) = (body.get("query1").get, body.get("query2").get)
     val stem = body.get("stem").get.toBoolean
@@ -40,7 +40,7 @@ class AdminSemanticVectorController @Inject()(
     Ok(s"similarity: ${score}")
   }
 
-  def visualize() = AdminHtmlAction { implicit request =>
+  def visualize() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val (q1, q2) = (body.get("query1").get, body.get("query2").get)
     val rv = Await.result(searchClient.visualizeSemanticVector(Seq(q1, q2)), 5 seconds)
@@ -48,7 +48,7 @@ class AdminSemanticVectorController @Inject()(
     Ok(msg)
   }
 
-  def semanticLoss() = AdminHtmlAction { implicit request =>
+  def semanticLoss() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
     val score = Await.result(searchClient.semanticLoss(query), 5 seconds)
@@ -56,7 +56,7 @@ class AdminSemanticVectorController @Inject()(
     Ok(msg.replaceAll("\n","\n<br>"))
   }
 
-  def index() = AdminHtmlAction { implicit request =>
+  def index() = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.SemanticVector())
   }
 }

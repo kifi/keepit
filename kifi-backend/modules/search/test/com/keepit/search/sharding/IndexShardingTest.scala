@@ -101,6 +101,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           shardedKeeps.reduce(_ union _) === keeps
         }
       }
+      1===1
     }
 
     "handle URI migration" in {
@@ -174,6 +175,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
             newCollSizes(shard) === oldCollSizes(shard)
           }
         }
+        1===1
       }
     }
 
@@ -189,21 +191,37 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         val store = mkStore(uris)
         val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
-        indexer.update() === 5
+        indexer.update() === 5                // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))   // a4
-        indexer.update() === 1
+        indexer.update() === 1                // one subindexer's catup seqNum = 6
         indexer.reindex()
 
         shoebox.saveURIs(uris(2).withState(NormalizedURIStates.ACTIVE),
             NormalizedURI.withHash(title = Some("a5"), normalizedUrl = "http://www.keepit.com/article5", state = SCRAPED)  )
 
         indexer.update() === 3      // skipped the active ones. catch up done.
-        indexer.catchUpSeqNumber.value === 4   // min of 4 and 6.
-        indexer.sequenceNumber.value === 4
+        indexer.catchUpSeqNumber.value === 5   // min of 5 and 6.
+        indexer.sequenceNumber.value === 5
 
-        indexer.update() === 3     // 3 uris changed after seqNum 4: a2, a4, a5
+        indexer.update() === 3     // 3 uris changed after seqNum 5: a2, a4, a5
         indexer.sequenceNumber.value === 8
 
+      }
+    }
+
+    "skip active uris when build index from scratch" in {
+      running(application){
+        val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val numUris = 10
+        val uris =   (0 until numUris).map {n => val state = if (n % 2 == 0) SCRAPED else ACTIVE; NormalizedURI.withHash(title = Some("a" + n),
+          normalizedUrl = "http://www.keepit.com/article" + n, state = state)}.toList
+        val savedUris = shoebox.saveURIs(uris :_*)
+        val store = mkStore(savedUris)
+        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.update === 5
+        indexer.catchUpSeqNumber.value === 10
+        indexer.sequenceNumber.value === 10
       }
     }
 

@@ -49,7 +49,7 @@ class AdminClusterController @Inject() (
       }
     }
 
-    def clustersView = AdminHtmlAction { implicit request =>
+    def clustersView = AdminHtmlAction.authenticated { implicit request =>
       Ok(html.admin.adminClustersView(clustersInfo))
     }
 }
