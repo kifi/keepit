@@ -27,8 +27,6 @@ angular.module('kifi.tags', [])
 					scope.focusFilter = true;
 				};
 
-				console.log(scope);
-
 				scope.showAddTag = function () {
 					var name = scope.filter && scope.filter.name;
 					if (name) {
