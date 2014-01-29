@@ -7,7 +7,7 @@
   -webkit-user-modify: read-write;
   border: 1px solid #d2d2d2;
   border-bottom: none;
-  border-radius: 0;
+  border-radius: 0 !important;
   background-color: #fff;
   padding: 6px 8px;
   min-height: 21px;
@@ -39,7 +39,7 @@
   50% {padding-left: 2px}
 }
 .kifi-compose-draft:first-child {
-  border-radius: 3px 3px 0 0;
+  border-radius: 3px 3px 0 0 !important;
 }
 .kifi-compose.kifi-empty .kifi-compose-draft::after {
   content: attr(data-placeholder);
@@ -51,7 +51,7 @@
 .kifi-compose-bar {
   border: 1px solid #d2d2d2;
   border-top: none;
-  border-radius: 0 0 3px 3px;
+  border-radius: 0 0 3px 3px !important;
   background: #f2f4f7;
   text-align: right;
   position: relative;
@@ -143,7 +143,7 @@ span.kifi-compose-tip-alt {
   background-color: #6fa6ef;
   border: 1px solid #6fa6ef;
   border-top: none;
-  border-bottom-right-radius: inherit;
+  border-bottom-right-radius: inherit !important;
   line-height: 28px;
 }
 .kifi-compose.kifi-empty a.kifi-compose-submit[href] {
@@ -202,7 +202,7 @@ body.kifi-snapshot-root {
   background-color: black;
   color: white;
   padding: 10px 15px;
-  border-radius: 15px;
+  border-radius: 15px !important;
   cursor: move;
 }
 .kifi-snapshot-cancel {
@@ -224,7 +224,7 @@ body.kifi-snapshot-root {
   z-index: 999999999993;
   background: rgba(255,255,0,.15);
   border: 3px solid rgba(255,255,0,.7);
-  border-radius: 6px;
+  border-radius: 6px !important;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }

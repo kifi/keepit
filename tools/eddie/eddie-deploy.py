@@ -10,6 +10,8 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 import datetime
 
+userName = None
+
 class S3Asset(object):
 
   def __init__(self, key):
@@ -80,7 +82,7 @@ def message_hipchat(msg):
   requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
 
 def log(msg):
-  amsg = "[" + getpass.getuser() + "] " + msg
+  amsg = "[" + userName + "] " + msg
   print amsg
   message_irc(amsg)
   message_hipchat(amsg)
@@ -90,7 +92,7 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in ec2.get_only_instances()]
 
 if __name__=="__main__":
-  parser = argparse.ArgumentParser(description="Your friendly FortyTwo Deployment Service v0.42")
+  parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
   parser.add_argument(
     'serviceType',
     action = 'store',
@@ -106,19 +108,33 @@ if __name__=="__main__":
   parser.add_argument(
     '--mode',
     action = 'store',
-    help = "Wait for machines to come up or not (default: 'safe')",
-    metavar = "Host",
+    help = "Wait for machines to come up or not. Options: 'safe' or 'force'. (default: 'safe').",
+    metavar = "Mode",
     default = 'safe',
     choices = ['safe', 'force']
   )
   parser.add_argument(
     '--version',
     action = 'store',
-    help = "Target version",
+    help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
     metavar = "Version"
+  )
+  parser.add_argument(
+    '--iam',
+    action = 'store',
+    help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
+    metavar = "Name"
   )
 
   args = parser.parse_args(sys.argv[1:])
+
+  if args.iam:
+    userName = args.iam
+  else:
+    userName = getpass.getuser()
+    if userName=="fortytwo":
+      print "Yo, dude, set your name! ('--iam' option)"
+
   instances = getAllInstances()
 
   if args.host:
