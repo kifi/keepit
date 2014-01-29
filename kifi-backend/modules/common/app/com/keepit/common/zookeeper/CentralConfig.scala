@@ -81,12 +81,11 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
     } catch {
       case e: KeeperException.NoNodeException => {
         try {
-          zk.createNode(key.toNode, value, CreateMode.PERSISTENT)
+          zk.create(key.toNode, value, CreateMode.PERSISTENT)
         } catch {
           case e: KeeperException.NoNodeException => {
-            val parentPath = key.toNode.name.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
-            zk.createPath(Path(parentPath))
-            zk.createNode(key.toNode, value, CreateMode.PERSISTENT)
+            zk.create(key.toNode.parent.get)
+            zk.create(key.toNode, value, CreateMode.PERSISTENT)
           }
         }
       }
@@ -105,22 +104,20 @@ class InMemoryConfigStore extends ConfigStore {
   val db : SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
   val watches : HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
 
-  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.name)
+  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.nodeName)
 
 
   def set(key: CentralConfigKey, value: String) : Unit = {
-    db(key.toNode.name) = value
-    watches.get(key.toNode.name).foreach{ funs =>
+    db(key.toNode.nodeName) = value
+    watches.get(key.toNode.nodeName).foreach{ funs =>
       funs.foreach(_(Some(value)))
     }
   }
 
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
-    if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
-    watches(key.toNode.name) += handler
+    if (!watches.isDefinedAt(key.toNode.nodeName)) watches(key.toNode.nodeName) = new ArrayBuffer[Option[String] => Unit]()
+    watches(key.toNode.nodeName) += handler
   }
-
-
 }
 
 
@@ -166,6 +163,4 @@ class CentralConfig @Inject() (cs: ConfigStore){
     }
 
 }
-
-
 

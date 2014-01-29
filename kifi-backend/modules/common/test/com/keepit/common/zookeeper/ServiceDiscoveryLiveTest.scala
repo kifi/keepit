@@ -49,34 +49,34 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
         val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zkClient, services, Providers.of(amazonInstanceInfo(1)), inject[Scheduler], Providers.of(new FakeAirbrakeNotifier()))
         zkClient.session{ zk => try {
           discovery.myClusterSize === 0
-          zk.watchChildren(Path(s"/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
+          zk.watchChildren(Node("/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
           })
-          val path = zk.createPath(Path("/fortytwo/services/SHOEBOX"))
-          val firstNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(1), EPHEMERAL_SEQUENTIAL)
-          val secondNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(2), EPHEMERAL_SEQUENTIAL)
+          val path = zk.create(Node("/fortytwo/services/SHOEBOX"))
+          val firstNode = zk.create(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(1), EPHEMERAL_SEQUENTIAL)
+          val secondNode = zk.create(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(2), EPHEMERAL_SEQUENTIAL)
           println("new node: " + secondNode, null, EPHEMERAL_SEQUENTIAL)
           val registeredInstance = discovery.register()
           println("registerred:::::")
           println(registeredInstance)
           println(new String(zk.get(registeredInstance.node)))
           discovery.startSelfCheck()
-          val thirdNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(3), EPHEMERAL_SEQUENTIAL)
+          val thirdNode = zk.create(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(3), EPHEMERAL_SEQUENTIAL)
           println("new node: " + thirdNode, null, EPHEMERAL_SEQUENTIAL)
           println("sleeping 1")
           Thread.sleep(10000)
 
-          println(zk.getChildren(Path("/fortytwo/services/SHOEBOX")) mkString ",")
-          zk.getChildren(Path("/fortytwo/services/SHOEBOX")).size === 3
+          println(zk.getChildren(Node("/fortytwo/services/SHOEBOX")) mkString ",")
+          zk.getChildren(Node("/fortytwo/services/SHOEBOX")).size === 3
           discovery.isLeader() === false
           discovery.myClusterSize === 3
-          zk.deleteNode(secondNode)
+          zk.delete(secondNode)
           println("sleeping 2")
           Thread.sleep(10000)
 
           discovery.myClusterSize === 2
           discovery.isLeader() === true
-          zk.deleteNode(thirdNode)
+          zk.delete(thirdNode)
           println("sleeping 3")
           Thread.sleep(10000)
 

@@ -30,11 +30,11 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   private var scheduledWarning: Option[Cancellable] = None
   private var scheduledPanic: Option[Cancellable] = None
 
-  val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
-  val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
+  val servicePath = Node(s"/fortytwo/services/${serviceType.name}")
+  val serviceNodeMaster = Node(s"${servicePath.path}/${serviceType.name}_")
 
   def size: Int = instances.size
-  def registered(instance: ServiceInstance): Boolean = instances.contains(ensureFullPathNode(instance.node))
+  def registered(instance: ServiceInstance): Boolean = instances.contains(instance.node)
   var leader: Option[ServiceInstance] = None
 
   override def toString(): String = s"""Service Cluster of $serviceType:
@@ -70,12 +70,6 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   }
 
   def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
-
-  def ensureFullPathNode(node: Node, throwIfDoes: Boolean = false) = node.name contains servicePath.name match {
-    case true if (throwIfDoes) => throw new Exception(s"node $node already contains service path")
-    case true => node
-    case false => Node(s"${servicePath.name}/$node")
-  }
 
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperSession) = try {
     val nodeData: String = zk.get(childNode)
@@ -126,10 +120,10 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
           if (newNodeId == existingNodeId) {
             airbrake.get.notify(s"The two existing ZK nodes have same node ID! Don't know what to do $ip: $existing and $node for service ${instance}, breaking out")
           } else if (newNodeId < existingNodeId) {
-            zk.deleteNode(node)
+            zk.delete(node)
             instances.remove(node)
           } else {
-            zk.deleteNode(existing)
+            zk.delete(existing)
             instances.remove(existing)
           }
         }
@@ -144,9 +138,8 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
 
   def update(zk: ZooKeeperSession, children: Seq[Node]): Unit = synchronized {
     val newInstances = instances.clone()
-    val childNodes = children map {c => ensureFullPathNode(c, true)}
-    addNewNodes(newInstances, childNodes, zk)
-    removeOldNodes(newInstances, childNodes)
+    addNewNodes(newInstances, children, zk)
+    removeOldNodes(newInstances, children)
     deDuplicate(zk, newInstances)
     leader = findLeader(newInstances)
     instances = newInstances

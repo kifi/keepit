@@ -110,9 +110,9 @@ class ServiceDiscoveryImpl(
   private def watchServices(): Unit = clusters.values foreach watchService
 
   private def watchService(cluster: ServiceCluster): Unit = zkClient.session{ zk =>
-    zk.createPath(cluster.servicePath)
+    zk.create(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
-      log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
+      log.info(s"""services in my cluster under ${cluster.servicePath.nodeName}: ${children.mkString(", ")}""")
       cluster.update(zk, children)
     })
   }
@@ -141,7 +141,7 @@ class ServiceDiscoveryImpl(
       myInstance foreach { instance =>
       try {
           log.warn(s"deleting instance $instance from zookeeper before re-registering itself")
-          zk.deleteNode(instance.node)
+          zk.delete(instance.node)
         } catch {
           case e: Throwable =>
             log.info("trying to delete node on re-registration, safe to ignore", e)
@@ -150,7 +150,7 @@ class ServiceDiscoveryImpl(
         }
       }
 
-      val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
+      val myNode = zk.create(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
       myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
@@ -161,7 +161,7 @@ class ServiceDiscoveryImpl(
   override def unRegister(): Unit = registrationLock.synchronized {
     registered = false
     unregistered = true
-    myInstance foreach {instance => zkClient.session{ zk => zk.deleteNode(instance.node) } }
+    myInstance foreach {instance => zkClient.session{ zk => zk.delete(instance.node) } }
     myInstance = None
   }
 
