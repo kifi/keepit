@@ -405,8 +405,9 @@ class AsyncScraper @Inject() (
   }
 
   private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
-    val absoluteCanonicalUrl = URI.url(uri.url, canonicalUrl)
-    helper.recordScrapedNormalization(uri.id.get, signature, absoluteCanonicalUrl, Normalization.CANONICAL)
+    URI.sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
+      helper.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL)
+    }
   }
 
 }

@@ -41,12 +41,8 @@ class NormalizationServiceImpl @Inject() (
       schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString)
     } yield schemeNormalizer(prenormalized)
 
-    val prenormalizedStringOption = for {
-      prenormalizedURI <- withPreferredSchemeOption orElse withStandardPrenormalizationOption
-      prenormalizedString <- prenormalizedURI.safelyToString()
-    } yield prenormalizedString
-
-    prenormalizedStringOption
+    val prenormalizedURIOption = withPreferredSchemeOption orElse withStandardPrenormalizationOption
+    prenormalizedURIOption.map(_.toString())
   }
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {

@@ -21,11 +21,8 @@ case class SchemeNormalizer(normalization: Normalization) extends StaticNormaliz
 }
 
 object SchemeNormalizer {
-  def generateVariations(url: String): Seq[(Normalization, String)] = {
-    URI.safelyParse(url) map { uri => for {
-        normalization <- Normalization.schemes.toSeq
-        urlVariation <- SchemeNormalizer(normalization)(uri).safelyToString()
-      } yield (normalization, urlVariation)
-    }
-  } getOrElse(Seq())
+  def generateVariations(url: String): Seq[(Normalization, String)] = for {
+    uri <- URI.safelyParse(url).toSeq
+    normalization <- Normalization.schemes
+  } yield (normalization, SchemeNormalizer(normalization)(uri).toString())
 }
