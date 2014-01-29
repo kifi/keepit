@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.tags', [])
+angular.module('kifi.tags', ['util'])
 
 .directive('kfTags', [
-	'$timeout',
-	function ($timeout) {
+	'$timeout', '$location', 'util',
+	function ($timeout, $location, util) {
 		return {
 			restrict: 'A',
 			templateUrl: 'tags/tags.tpl.html',
@@ -37,12 +37,14 @@ angular.module('kifi.tags', [])
 					return false;
 				};
 
-				var list = element.find('.kf-tag-list'),
-					pos = list.position();
+				scope.isActiveTag = function (tag) {
+					return util.startsWith($location.path(), '/tag/' + tag.id);
+				};
 
+				var list = element.find('.kf-tag-list');
 				list.css({
 					position: 'absolute',
-					top: pos.top,
+					top: list.position().top,
 					bottom: 0
 				});
 
