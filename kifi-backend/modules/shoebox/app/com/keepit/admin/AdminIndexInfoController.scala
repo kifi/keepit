@@ -18,7 +18,7 @@ class AdminIndexInfoController @Inject()(
     searchClient: SearchServiceClient
   ) extends AdminController(actionAuthenticator) {
 
-  def all = AdminHtmlAction { implicit request =>
+  def all = AdminHtmlAction.authenticated { implicit request =>
     val infoFutures = searchClient.indexInfoList()
     val clusterMemberInfos = adminClusterController.clustersInfo.filter(_.serviceType == ServiceType.SEARCH).map{ i => (i.zkid, i) }.toMap
 

@@ -17,6 +17,7 @@ import scala.concurrent.Promise
 import scala.util.Try
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
+import java.util.concurrent.atomic.AtomicInteger
 
 class AppScope extends Scope with Logging {
 
@@ -33,7 +34,6 @@ class AppScope extends Scope with Logging {
   private var app: Application = _
 
   def onStart(app: Application): Unit = {
-    println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
     pluginsToStart foreach { p => startPlugin(p) }

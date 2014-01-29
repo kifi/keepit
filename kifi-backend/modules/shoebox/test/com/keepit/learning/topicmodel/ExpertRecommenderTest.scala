@@ -73,6 +73,7 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper {
           val correct = uriIds.slice(i*10, (i+1)*10).foldLeft(Map.empty[Id[NormalizedURI], Int]){(m, uri) => m + (uri -> (i + 1))}
           rcmder.allRelevantBookmarks(uriIds.toSet, List(i+1).toSet) === correct
         }
+        1===1
       }
     }
 
@@ -106,6 +107,7 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper {
             clicksMap.get(Id[User](user)).get === Map.empty[Id[NormalizedURI], (Int, Int)]
           }
         }
+        1===1
       }
     }
 

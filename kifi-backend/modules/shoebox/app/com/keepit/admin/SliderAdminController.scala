@@ -39,7 +39,7 @@ class SliderAdminController @Inject() (
   eliza: ElizaServiceClient)
     extends AdminController(actionAuthenticator) {
 
-  def getRules = AdminHtmlAction { implicit request =>
+  def getRules = AdminHtmlAction.authenticated { implicit request =>
     val groupName = "default"
     val group = db.readOnly { implicit session =>
       sliderRuleRepo.getGroup(groupName)
@@ -47,7 +47,7 @@ class SliderAdminController @Inject() (
     Ok(html.admin.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
   }
 
-  def saveRules = AdminHtmlAction { implicit request =>
+  def saveRules = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get
     val groupName = body("group").head
     val ruleGroup = db.readWrite { implicit session =>
@@ -65,14 +65,14 @@ class SliderAdminController @Inject() (
     Redirect(routes.SliderAdminController.getRules)
   }
 
-  def getPatterns = AdminHtmlAction { implicit request =>
+  def getPatterns = AdminHtmlAction.authenticated { implicit request =>
     val patterns = db.readOnly { implicit session =>
       urlPatternRepo.all
     }
     Ok(html.admin.sliderPatterns(patterns))
   }
 
-  def savePatterns = AdminHtmlAction { implicit request =>
+  def savePatterns = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     val patterns = db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
@@ -98,27 +98,25 @@ class SliderAdminController @Inject() (
     Redirect(routes.SliderAdminController.getPatterns)
   }
 
-  def getDomainTags = AdminHtmlAction { implicit request =>
+  def getDomainTags = AdminHtmlAction.authenticated { implicit request =>
     val tags = db.readOnly { implicit session =>
       domainTagRepo.all
     }
     Ok(html.admin.domainTags(tags))
   }
 
-  def getClassifications(domain: Option[String]) = AdminHtmlAction { implicit request =>
-    Async {
-      domain.map(domainClassifier.fetchTags)
-        .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
-        val tagPairs = tags.map { t =>
-          val tag = db.readOnly { implicit s => domainTagRepo.get(t) }
-          (t.name, tag.map(_.sensitive.getOrElse(false)))
-        }
-        Ok(html.admin.classifications(domain, tagPairs))
+  def getClassifications(domain: Option[String]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    domain.map(domainClassifier.fetchTags)
+      .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
+      val tagPairs = tags.map { t =>
+        val tag = db.readOnly { implicit s => domainTagRepo.get(t) }
+        (t.name, tag.map(_.sensitive.getOrElse(false)))
       }
+      Ok(html.admin.classifications(domain, tagPairs))
     }
   }
 
-  def saveDomainTags = AdminHtmlAction { implicit request =>
+  def saveDomainTags = AdminHtmlAction.authenticated { implicit request =>
     val tagIdValue = """sensitive_([0-9]+)""".r
     val sensitiveTags = request.body.asFormUrlEncoded.get.keys
       .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
@@ -144,14 +142,14 @@ class SliderAdminController @Inject() (
     Redirect(routes.SliderAdminController.getDomainTags)
   }
 
-  def getDomainOverrides = AdminHtmlAction { implicit request =>
+  def getDomainOverrides = AdminHtmlAction.authenticated { implicit request =>
     val domains = db.readOnly { implicit session =>
       domainRepo.getOverrides()
     }
     Ok(html.admin.domains(domains))
   }
 
-  def saveDomainOverrides = AdminJsonAction { implicit request =>
+  def saveDomainOverrides = AdminJsonAction.authenticated { implicit request =>
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
     }.toMap
@@ -181,7 +179,7 @@ class SliderAdminController @Inject() (
     Ok(JsObject(Seq()))
   }
 
-  def getImportEvents = AdminHtmlAction { implicit request =>
+  def getImportEvents = AdminHtmlAction.authenticatedAsync { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
     val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.IMPORTED_DOMAIN_TAGS).map { rawEvents =>
@@ -210,14 +208,14 @@ class SliderAdminController @Inject() (
       }.sortBy(_.createdAt).reverse
     }
 
-    Async(eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) })
+    eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) }
   }
 
-  def getVersionForm = AdminHtmlAction { implicit request =>
+  def getVersionForm = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.versionForm())
   }
 
-  def broadcastLatestVersion(ver: String) = AdminJsonAction { implicit request =>
+  def broadcastLatestVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     eliza.sendToAllUsers(Json.arr("version", ver))
     Ok(Json.obj("version" -> ver))
   }

@@ -1,7 +1,6 @@
 package com.keepit.heimdal
 
 import reactivemongo.api.MongoDriver
-import reactivemongo.core.actors.Authenticate
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
@@ -13,6 +12,7 @@ import com.google.inject.{Provides, Singleton}
 
 import play.api.Play.current
 import com.keepit.shoebox.ShoeboxServiceClient
+import reactivemongo.core.nodeset.Authenticate
 
 
 trait MongoModule extends ScalaModule

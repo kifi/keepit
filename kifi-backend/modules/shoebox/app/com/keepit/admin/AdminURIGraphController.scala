@@ -16,13 +16,13 @@ class AdminURIGraphController @Inject()(
   searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
 
-  def load = AdminHtmlAction { implicit request =>
+  def load = AdminHtmlAction.authenticated { implicit request =>
     searchClient.updateURIGraph()
     Ok(s"indexed users")
   }
 
 
-  def update(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def update(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     // bump up seqNum
     val bookmarks = db.readOnly { implicit s => bookmarkRepo.getByUser(userId) }
     bookmarks.grouped(1000).foreach { group =>
@@ -38,21 +38,17 @@ class AdminURIGraphController @Inject()(
     Ok(s"indexed users")
   }
 
-  def reindex = AdminHtmlAction { implicit request =>
+  def reindex = AdminHtmlAction.authenticated { implicit request =>
     searchClient.reindexURIGraph()
     Ok("reindexing started")
   }
 
-  def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.dumpLuceneURIGraph(id).map(Ok(_))
-    }
+  def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction.authenticatedAsync { implicit request =>
+    searchClient.dumpLuceneURIGraph(id).map(Ok(_))
   }
 
-  def dumpCollectionLuceneDocument(id: Id[Collection]) =  AdminHtmlAction { implicit request =>
-    Async {
-      val collection = db.readOnly { implicit s => collectionRepo.get(id) }
-      searchClient.dumpLuceneCollection(id, collection.userId).map(Ok(_))
-    }
+  def dumpCollectionLuceneDocument(id: Id[Collection]) =  AdminHtmlAction.authenticatedAsync { implicit request =>
+    val collection = db.readOnly { implicit s => collectionRepo.get(id) }
+    searchClient.dumpLuceneCollection(id, collection.userId).map(Ok(_))
   }
 }

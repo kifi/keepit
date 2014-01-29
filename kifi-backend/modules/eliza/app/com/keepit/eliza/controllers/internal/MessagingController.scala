@@ -68,10 +68,10 @@ class MessagingController @Inject() (
   extends ElizaServiceController with Logging {
 
   //for indexing data requests
-  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long) = Action { request =>
-    Async(messagingIndexCommander.getThreadContentsForMessagesFromIdToId(Id[Message](sequenceNumber), Id[Message](sequenceNumber+maxBatchSize)).map{ threadContents =>
+  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long) = Action.async { request =>
+    messagingIndexCommander.getThreadContentsForMessagesFromIdToId(Id[Message](sequenceNumber), Id[Message](sequenceNumber+maxBatchSize)).map{ threadContents =>
       Ok(JsArray(threadContents.map(Json.toJson(_))))
-    })
+    }
   }
 
   def sendGlobalNotification() = Action(parse.json) { request =>

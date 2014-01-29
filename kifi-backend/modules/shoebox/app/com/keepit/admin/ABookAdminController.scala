@@ -21,16 +21,14 @@ extends AdminController(actionAuthenticator) {
 
   def allABooksView = abooksView(0)
 
-  def abooksView(page:Int) = AdminHtmlAction { implicit request =>
+  def abooksView(page:Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 50
-    Async {
-      val abookInfosFuture: Future[Seq[ABookInfo]] = abookServiceClient.getPagedABookInfos(page, PAGE_SIZE)
-      val abooksCountFuture: Future[Int] = abookServiceClient.getABooksCount()
-      for {
-        abookInfos <- abookInfosFuture
-        abooksCount <- abooksCountFuture
-      } yield Ok(views.html.admin.abook(abookInfos, page, abooksCount, PAGE_SIZE))
-    }
+    val abookInfosFuture: Future[Seq[ABookInfo]] = abookServiceClient.getPagedABookInfos(page, PAGE_SIZE)
+    val abooksCountFuture: Future[Int] = abookServiceClient.getABooksCount()
+    for {
+      abookInfos <- abookInfosFuture
+      abooksCount <- abooksCountFuture
+    } yield Ok(views.html.admin.abook(abookInfos, page, abooksCount, PAGE_SIZE))
   }
 
 }

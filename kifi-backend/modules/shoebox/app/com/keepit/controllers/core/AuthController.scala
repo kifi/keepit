@@ -15,7 +15,6 @@ import com.keepit.social.SocialNetworkType
 import play.api.Play._
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
-import securesocial.controllers.ProviderController
 import securesocial.core._
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
@@ -27,6 +26,7 @@ import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient}
+import com.keepit.social.providers.ProviderController
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -59,10 +59,10 @@ class AuthController @Inject() (
   // Logout is still handled by SecureSocial directly.
 
   def loginSocial(provider: String) = ProviderController.authenticate(provider)
-  def logInWithUserPass(link: String) = Action { implicit request =>
+  def logInWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
     val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
-    authRes match {
-      case res: SimpleResult[_] if res.header.status == 303 =>
+    authRes.map {
+      case res: SimpleResult if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
@@ -110,21 +110,19 @@ class AuthController @Inject() (
     }
   })
 
-  def signup(provider: String) = Action { implicit request =>
-    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider)(request) }
-    authRes match {
-      case res: SimpleResult[_] =>
-        authHelper.authHandler(request, res) { (_, sess:Session) =>
-          // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-          res.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
-        }
-      case res => res
+  def signup(provider: String) = Action.async(parse.anyContent) { implicit request =>
+    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider) }
+
+    authRes(request).map { result =>
+      authHelper.authHandler(request, result) { (_, sess:Session) =>
+      // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
+        result.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+      }
     }
   }
 
-  def link(provider: String) = Action { implicit request =>
-    ProviderController.authenticate(provider)(request) match {
-      case res: SimpleResult[_] =>
+  def link(provider: String) = Action.async(parse.anyContent) { implicit request =>
+    ProviderController.authenticate(provider)(request) map { res: SimpleResult =>
         val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
         val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
         if (resSession.get(PopupKey).isDefined) {
@@ -134,15 +132,14 @@ class AuthController @Inject() (
             res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
           } getOrElse res
         } else res
-      case res => res
     }
   }
 
-  def popupBeforeLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
+  def popupBeforeLinkSocial(provider: String) = HtmlAction.authenticated(allowPending = true) { implicit request =>
     Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(session + (PopupKey -> "1"))
   }
 
-  def popupAfterLinkSocial(provider: String) = AuthenticatedHtmlAction(allowPending = true) { implicit request =>
+  def popupAfterLinkSocial(provider: String) = HtmlAction.authenticated(allowPending = true) { implicit request =>
     def esc(s: String) = s.replaceAll("'", """\\'""")
     val identity = request.identityOpt.get
     Ok(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>")
@@ -184,12 +181,12 @@ class AuthController @Inject() (
   }
 
   // Initial user/pass signup JSON action
-  def userPasswordSignup() = JsonToJsonAction(allowPending = true)(
+  def userPasswordSignup() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.userPasswordSignupAction(_),
     unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
 
-  private def doSignupPage(implicit request: Request[_]): Result = {
+  private def doSignupPage(implicit request: Request[_]): SimpleResult = {
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
       identity.email.flatMap { addr =>
         db.readOnly { implicit s =>
@@ -261,18 +258,18 @@ class AuthController @Inject() (
     }
   }
 
-  def userPassFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+  def userPassFinalizeAccountAction() = JsonAction.parseJsonAsync(allowPending = true)(
     authenticatedAction = authHelper.doUserPassFinalizeAccountAction(_),
-    unauthenticatedAction = _ => Forbidden(JsNumber(0))
+    unauthenticatedAction = _ => resolve(Forbidden(JsNumber(0)))
   )
 
-  def socialFinalizeAccountAction() = JsonToJsonAction(allowPending = true)(
+  def socialFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
     unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
   )
 
   def OkStreamFile(filename: String) =
-    Ok.stream(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
+    Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
   def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authHelper.doVerifyEmail(code)(_), unauthenticatedAction = authHelper.doVerifyEmail(code)(_))
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
@@ -280,7 +277,7 @@ class AuthController @Inject() (
       .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
-  def forgotPassword() = JsonToJsonAction(allowPending = true)(
+  def forgotPassword() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doForgotPassword(_),
     unauthenticatedAction = authHelper.doForgotPassword(_)
   )
@@ -300,7 +297,7 @@ class AuthController @Inject() (
     }
   }
 
-  def setPassword() = JsonToJsonAction(allowPending = true)(
+  def setPassword() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSetPassword(_),
     unauthenticatedAction = authHelper.doSetPassword(_)
   )
@@ -319,7 +316,7 @@ class AuthController @Inject() (
     authenticatedAction = doCancelPage(_),
     unauthenticatedAction = doCancelPage(_)
   )
-  private def doCancelPage(implicit request: Request[_]): Result = {
+  private def doCancelPage(implicit request: Request[_]): SimpleResult = {
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
