@@ -225,8 +225,12 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
   private[this] var scoredDoc = -1
   private[this] var scoreVal = 0.0f
   private[this] val adjustedSemanticBoost = {
-    val good = if (semanticScorer != null) semanticScorer.getChildren().exists(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].hasGoodQuality) else false
-    if (good) semanticBoost else 0.1f
+    val n = if (semanticScorer != null) {
+      semanticScorer.getChildren().map(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].getNumPayloadsUsed).foldLeft(0)(_ max _)
+    } else 0
+
+    val adjust = 1.0/(1 + pow(1.5, 5 - n))
+    semanticBoost * adjust.toFloat
   }
 
   private[this] val semanticScoreBase = (1.0f - adjustedSemanticBoost)

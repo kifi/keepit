@@ -63,8 +63,6 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
 
   lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
 
-  private[this] var numPayloadsMap: Map[Term, Int] = Map()
-
   override def getContextVector: SemanticVector = {
     if (useNonPersonalizedContextVector){
       Await.result(nonPersonalizedContextVectorFuture.get, 1 second)
@@ -112,7 +110,5 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
     numPayloadsMap += term -> numPayloads
     composer
   }
-
-  override def contextHasGoodQuality = numPayloadsMap.nonEmpty && numPayloadsMap.values.min >= 2
 
 }
