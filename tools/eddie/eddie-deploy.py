@@ -187,10 +187,12 @@ if __name__=="__main__":
     for instance in instances:
       shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
       remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
+      log("Deploy triggered on " + instance.name + ". Waiting for the machine to finish.")
       try:
         while remoteProc.is_running():
           time.sleep(0.1)
         remoteProc.wait_for_result()
+        log("Done with " + instance.name + ".")
       except KeyboardInterrupt:
         log("Manual Abort.")
         remoteProc.send_signal(2)
