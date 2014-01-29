@@ -63,7 +63,7 @@ object URI extends Logging {
 
   def sanitize(baseUrl: String, targetUrl: String): Option[String] = {
     val quotedString = """"(.+)"""".r
-    val actualTargetUrlOption = Some(targetUrl) collect {
+    val actualTargetUrlOption = Option(targetUrl) collect {
       case quotedString(uriString) => uriString
       case uriString if uriString.nonEmpty => uriString
     }
