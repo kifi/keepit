@@ -108,18 +108,17 @@ if [ "$1" == "package" ]; then
 
   cd out
   cfx xpi --pkgdir=firefox \
-    --update-link=https://www.kifi.com/assets/plugins/kifi-beta.xpi \
-    --update-url=https://www.kifi.com/assets/plugins/kifi-beta.update.rdf > /dev/null
+    --update-link=https://www.kifi.com/bin-s3/ext/firefox/kifi-beta.xpi \
+    --update-url=https://www.kifi.com/bin-s3/ext/firefox/kifi-beta.update.rdf > /dev/null
   cd - > /dev/null
 
   find out -d 1
 
   if [ "$2" == "deploy" ]; then
     echo -e "\nDeploying Firefox extension to kifi.com"
-    for server in b01 b02 shoebox-demand-1; do
-      echo "Uploading to $server..."
-      scp out/kifi-beta.xpi out/kifi-beta.update.rdf fortytwo@$server:www-install/
-      done
+    echo "Uploading to S3..."
+    aws s3 cp out/kifi-beta.xpi s3://kifi-bin/ext/firefox/
+    aws s3 cp out/kifi-beta.update.rdf s3://kifi-bin/ext/firefox/
     echo "Done."
 
     echo -e "\n!! Please upload kifi-beta.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"
