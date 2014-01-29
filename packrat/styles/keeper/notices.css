@@ -123,7 +123,7 @@
   left: 9px;
   width: 53px;
   height: 53px;
-  border-radius: 3px;
+  border-radius: 3px !important;
 }
 .kifi-notice-title {
   font-size: 12px;
@@ -156,20 +156,20 @@
   left: 0;
   height: 53px;
   width: 53px;
-  border-radius: 3px;
+  border-radius: 3px !important;
 }
 .kifi-notice-mosaic-2>.kifi-notice-pic-0,
 .kifi-notice-mosaic-3>.kifi-notice-pic-0 {
   left: 27px;
   width: 26px;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 3px 3px 0 !important;
 }
 .kifi-notice-mosaic-4>.kifi-notice-pic-0 {
   top: 27px;
   left: 27px;
   width: 26px;
   height: 26px;
-  border-radius: 0 0 3px;
+  border-radius: 0 0 3px !important;
 }
 .kifi-notice-sent .kifi-notice-pic-0 {
   top: 26px;
@@ -178,7 +178,7 @@
   width: 26px;
   background-color: #fff;
   border: 2px solid #fff;
-  border-radius: 50%;
+  border-radius: 50% !important;
   z-index: 1;
 }
 .kifi-notice-sent>.kifi-notice-mosaic-3::before,
@@ -197,36 +197,36 @@
   left: 0;
   width: 26px;
   height: 53px;
-  border-radius: 3px 0 0 3px;
+  border-radius: 3px 0 0 3px !important;
 }
 :not(.kifi-notice-sent)>.kifi-notice-mosaic-3>.kifi-notice-pic-1,
 .kifi-notice-mosaic-4>.kifi-notice-pic-1 {
   height: 26px;
-  border-radius: 3px 0 0;
+  border-radius: 3px 0 0 !important;
 }
 .kifi-notice-sent>.kifi-notice-mosaic-2>.kifi-notice-pic-1 {
   width: 53px;
   height: 53px;
-  border-radius: 3px 3px 6px;
+  border-radius: 3px 3px 6px !important;
 }
 .kifi-notice-pic-2 {
   top: 27px;
   left: 0;
   height: 26px;
   width: 26px;
-  border-radius: 0 0 0 3px;
+  border-radius: 0 0 0 3px !important;
 }
 .kifi-notice-sent>.kifi-notice-mosaic-3>.kifi-notice-pic-2 {
   top: 0;
   left: 27px;
-  border-radius: 0 3px 0 0;
+  border-radius: 0 3px 0 0 !important;
 }
 .kifi-notice-pic-3 {
   top: 0;
   left: 27px;
   height: 26px;
   width: 26px;
-  border-radius: 0 3px 0 0;
+  border-radius: 0 3px 0 0 !important;
 }
 
 .kifi-notice-state {
@@ -239,7 +239,7 @@
   box-sizing: border-box;
   background-color: #85a4ea;
   background-clip: content-box;
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 .kifi-notice-state:hover {
   top: 16px;

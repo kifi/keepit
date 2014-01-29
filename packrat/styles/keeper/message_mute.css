@@ -79,7 +79,7 @@
   color: white;
   background: #f0ad4d;
   text-decoration: none;
-  border-radius: 2px;
+  border-radius: 2px !important;
 }
 .kifi-message-header-unmute-button:hover,
 .kifi-message-header-unmute-button:focus {
