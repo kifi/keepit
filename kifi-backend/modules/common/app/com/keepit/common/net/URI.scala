@@ -60,20 +60,6 @@ object URI extends Logging {
       absoluteTargetUrl <- absoluteUrl(baseUri, targetUrl)
     } yield absoluteTargetUrl
     else None
-
-  def sanitize(baseUrl: String, targetUrl: String): Option[String] = {
-    val quotedString = """"(.+)"""".r
-    val actualTargetUrlOption = Some(targetUrl) collect {
-      case quotedString(uriString) => uriString
-      case uriString if uriString.nonEmpty => uriString
-    }
-    for {
-      actualTargetUrl <- actualTargetUrlOption
-      absoluteTargetUrl <- absoluteUrl(baseUrl, actualTargetUrl)
-      parsedTargetUri <- safelyParse(absoluteTargetUrl)
-    } yield parsedTargetUri.toString()
-  }
-
 }
 
 class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Option[String], val host: Option[Host], val port: Int, val path: Option[String], val query: Option[Query], val fragment: Option[String]) {

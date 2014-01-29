@@ -11,9 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.SearchServiceClient
 import com.keepit.common.crypto.SimpleDESCrypt
-
 
 import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -54,7 +52,6 @@ case class SocketInfo(
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val shoebox: ShoeboxServiceClient
-  protected val search: SearchServiceClient
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
   protected val clock: Clock
@@ -175,9 +172,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         onConnect(socketInfo)
 
         val tStart = currentDateTime
-        SafeFuture {
-          search.warmUpUser(streamSession.userId)
-        }
         //Analytics
         SafeFuture {
           val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build

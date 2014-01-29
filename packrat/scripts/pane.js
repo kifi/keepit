@@ -26,7 +26,7 @@ var pane = pane || function () {  // idempotent for Chrome
   'use strict';
   var $pane, paneHistory, paneObserver;
 
-  $(document).data('esc').add(function (e) {
+  $(document).data('esc').add(function () {
     if ($pane) {
       hidePane();
       return false;
@@ -89,7 +89,6 @@ var pane = pane || function () {  // idempotent for Chrome
           deferred.resolve();
         }
       }, locator, paramsArg);
-      deferred.resolve();
     }
     return deferred.promise;
   }
@@ -126,7 +125,8 @@ var pane = pane || function () {  // idempotent for Chrome
         }), {
           pane_top_menu: 'pane_top_menu',
           pane: 'pane_' + name
-        }));
+        }))
+        .data('state', 'opening');
       $pane[0].dataset.locator = locator;
       api.port.emit('pane', {new: locator});
 
@@ -141,15 +141,16 @@ var pane = pane || function () {  // idempotent for Chrome
       observePaneAncestry();
 
       $pane.layout()
-      .on("transitionend", function onPaneShown(e) {
+      .on('transitionend', function onPaneShown(e) {
         if (e.target !== this) return;
-        $pane.off("transitionend", onPaneShown);
+        $pane.off('transitionend', onPaneShown);
         if (bringSlider) {
-          tile.style.display = "block"; // in case sensitive
+          tile.style.display = 'block'; // in case sensitive
         } else {
           keeper.appendTo($pane);
           $pane.before(tile);
         }
+        $pane.data('state', 'open');
         $box.data("shown", true).triggerHandler("kifi:shown");
         notifyPageOfResize(true);
       })
@@ -271,6 +272,11 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function hidePane(leaveSlider) {
+    var state = $pane && $pane.data('state');
+    if (state !== 'open') {
+      log('[hidePane] ignored, state:', state)();
+      return;
+    }
     log('[hidePane]', leaveSlider ? 'leaving slider' : '')();
     if (leaveSlider) {
       $(tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
@@ -282,6 +288,7 @@ var pane = pane || function () {  // idempotent for Chrome
     }
     pane.onHide.dispatch();
     $pane
+    .data('state', 'closing')
     .off('transitionend') // onPaneShown
     .on('transitionend', function (e) {
       if (e.target === this) {
@@ -353,11 +360,7 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(o.locator, false, o.paramsArg, o.redirected);
       }
     },
-    hide: function (leaveSlider) {
-      if ($pane) {
-        hidePane(leaveSlider);
-      }
-    },
+    hide: hidePane,
     toggle: function (trigger, locator) {
       locator = locator || '/messages:all';
       if ($pane) {
@@ -371,6 +374,8 @@ var pane = pane || function () {  // idempotent for Chrome
         }
       } else if ($('html').attr('kifi-pane-parent') == null) { // ensure it's finished hiding
         showPane(locator);
+      } else {
+        log('[pane.toggle] ignoring, hiding')();
       }
     },
     compose: function(trigger, recipient) {

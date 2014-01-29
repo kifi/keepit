@@ -57,7 +57,7 @@ module.exports = function (grunt) {
 
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
-					'lib/angular-antiscroll/angular-antiscroll.js',
+					//'lib/angular-antiscroll/angular-antiscroll.js',
 					'lib/ngInfiniteScroll/ng-infinite-scroll.js'
 				],
 				libMinJs: [
@@ -70,7 +70,7 @@ module.exports = function (grunt) {
 					'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
-					'lib/angular-antiscroll/angular-antiscroll.js',
+					//'lib/angular-antiscroll/angular-antiscroll.js',
 					'lib/ngInfiniteScroll/ng-infinite-scroll.js'
 				],
 				src: 'src',

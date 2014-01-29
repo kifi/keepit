@@ -8,69 +8,8 @@
 
 /* left col */
 
-.left-col h3>label {
-  display: block;
-  padding: 0 6px 0 40px;
-  color: #818692;
-  cursor: text;
-}
-
-#collections>h2 {
-  margin-top: 15px;
-  padding-bottom: 2px;
-  position: relative;
-}
-
-#collections h3 {
-  line-height: 36px;
-}
-
-.collection-new {
-  background: #fff;
-  -webkit-transition: background-color .16s;
-  transition: background-color .16s;
-}
-
 .collection-new.submitted {
   background-color: rgba(255,255,255,0);
-}
-
-.collection-new label {
-  position: relative;
-}
-
-.collection-new input {
-  width: 100%;
-  margin: 0;
-  border: 0;
-  padding: 0;
-  background-color: transparent;
-  color: inherit;
-  font: inherit;
-  line-height: 1.35;
-  background-image: url(../img/tag-icon-blue.png);
-  background-repeat: no-repeat;
-  background-size: auto 16px;
-  padding-left: 22px;
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  padding-right: 23px;
-}
-
-.collection-new .tag-input-clear {
-  display: none;
-  position: absolute;
-  top: -1px;
-  right: 0;
-  font-size: 1.45em;
-  padding: 0 12px;
-  cursor: pointer;
-  color: #99a3b3;
-}
-
-.collection-new.non-empty .tag-input-clear {
-  display: block;
 }
 
 .collection-new .tag-input-clear:hover {
