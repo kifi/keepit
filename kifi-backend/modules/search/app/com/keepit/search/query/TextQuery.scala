@@ -17,6 +17,7 @@ import org.apache.lucene.util.Bits
 import java.util.{Set => JSet}
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
+import collection.JavaConversions._
 
 object TextQuery {
   val personalQueryTieBreakerMultiplier = 0.5f
@@ -223,7 +224,16 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
   private[this] var docR = if (regularScorer == null) NO_MORE_DOCS else -1
   private[this] var scoredDoc = -1
   private[this] var scoreVal = 0.0f
-  private[this] val semanticScoreBase = (1.0f - semanticBoost)
+  private[this] val adjustedSemanticBoost = {
+    val n = if (semanticScorer != null) {
+      semanticScorer.getChildren().map(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].getNumPayloadsUsed).foldLeft(0)(_ max _)
+    } else 0
+
+    val adjust = 1.0/(1 + pow(1.5, 5 - n))
+    semanticBoost * adjust.toFloat
+  }
+
+  private[this] val semanticScoreBase = (1.0f - adjustedSemanticBoost)
 
   override def docID(): Int = doc
 
@@ -257,10 +267,10 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       if (semanticScorer.docID < doc) semanticScorer.advance(doc)
 
       if (semanticScorer.docID == doc) {
-        semanticScorer.score() * semanticBoost + semanticScoreBase
+        semanticScorer.score() * adjustedSemanticBoost + semanticScoreBase
       } else {
         if (docP == doc) {
-          0.9f * semanticBoost + semanticScoreBase
+          0.9f * adjustedSemanticBoost + semanticScoreBase
         } else {
           semanticScoreBase
         }
