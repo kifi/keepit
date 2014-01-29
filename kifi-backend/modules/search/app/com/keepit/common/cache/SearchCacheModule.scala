@@ -12,6 +12,7 @@ import com.keepit.search.tracker.BrowsingHistoryUserIdCache
 import com.keepit.search.tracker.ClickHistoryUserIdCache
 import com.keepit.search.tracker.ClickHistoryBuilder
 import com.keepit.search.tracker.ProbablisticLRUChunkCache
+import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 
 case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
@@ -24,6 +25,11 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def probablisticLRUChunkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ProbablisticLRUChunkCache(stats, accessLog, (innerRepo, 5 seconds), (outerRepo, Duration.Inf))
+
+  @Singleton
+  @Provides
+  def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, Duration.Inf))
 
   @Singleton
   @Provides

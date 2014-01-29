@@ -22,7 +22,6 @@ class ElizaController @Inject() (
   elizaStatsCommander: ElizaStatsCommander)
     extends ElizaServiceController with Logging {
 
-<<<<<<< HEAD
   def getUserThreadStats(userId: Id[User]) = Action { request =>
     Ok(UserThreadStats.format.writes(elizaStatsCommander.getUserThreadStats(userId)))
   }
