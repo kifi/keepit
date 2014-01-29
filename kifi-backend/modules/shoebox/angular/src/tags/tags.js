@@ -21,7 +21,7 @@ angular.module('kifi.tags', [])
 			};
 
 			scope.showAddTag = function () {
-				var name = scope.filter.name;
+				var name = scope.filter && scope.filter.name;
 				if (name) {
 					return !scope.tags.some(function (tag) {
 						return tag.name.toLowerCase() === name.toLowerCase();
@@ -29,6 +29,16 @@ angular.module('kifi.tags', [])
 				}
 				return false;
 			};
+
+			function updateScroller() {
+				console.log('scope.scroller', scope.scroller);
+				if (scope.scroller) {
+					scope.scroller.refresh();
+				}
+			}
+
+			scope.$watch('filter.name', updateScroller);
+			scope.$watch('tags', updateScroller);
 
 			scope.tags = [{
 				"id": "67846543-b5fc-45eb-b522-bfe3628544a3",
