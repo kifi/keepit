@@ -178,15 +178,20 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
    * ZooKeeper version of mkdir -p
    */
   def create(node: Node): Node = {
-    for (path <- node.ancestors()) {
+    for (ancestor <- node.ancestors()) {
       try {
-        log.debug(s"Creating path in create: $path")
-        zk.create(path.path, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
+        log.debug(s"Creating path in create: ancestor.path")
+        zk.create(ancestor.path, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
       } catch {
-        case _: KeeperException.NodeExistsException => {} // ignore existing nodes
+        case _: KeeperException.NodeExistsException => // ignore existing nodes
       }
     }
-    create(node, null, CreateMode.PERSISTENT)
+    try {
+      log.debug(s"Creating path in create: $node.path")
+      create(node, null, CreateMode.PERSISTENT)
+    } catch {
+      case _: KeeperException.NodeExistsException => node // ignore existing nodes
+    }
   }
 
   def get(node: Node): Array[Byte] = zk.getData(node.path, false, null)
