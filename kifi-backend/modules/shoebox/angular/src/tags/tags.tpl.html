@@ -5,7 +5,7 @@
 			<input placeholder="Find or add a tag..." ng-model="filter.name">
 			<a class="kf-tag-input-clear" href="javascript:" ng-click="filter.name = ''" ng-show="filter.name">&times;</a>
 		</div>
-		<ul class="kf-tag-list" antiscroll="autoHide:true">
+		<ul class="kf-tag-list" antiscroll="{ autoHide: true }">
 			<li class="kf-nav-item kf-tag" ng-repeat="tag in shownTags = (tags | filter: filter)">
 				<a href="tag/{{tag.id}}">
 					<span class="kf-tag-icon"></span>

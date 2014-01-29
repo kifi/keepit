@@ -14,6 +14,7 @@ angular.module('antiscroll', [])
 					if (attrs.antiscroll) {
 						options = scope.$eval(attrs.antiscroll);
 					}
+					console.log('antiscroll', options);
 
 					scope.scroller = element.antiscroll(options).data('antiscroll');
 				}
