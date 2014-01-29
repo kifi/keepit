@@ -63,6 +63,8 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
 
   lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
 
+  private[this] var numPayloadsMap: Map[Term, Int] = Map()
+
   override def getContextVector: SemanticVector = {
     if (useNonPersonalizedContextVector){
       Await.result(nonPersonalizedContextVectorFuture.get, 1 second)
@@ -73,6 +75,7 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
     var i = 0
+    var numPayloads = 0
     while (i < subReaders.length) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
@@ -95,6 +98,7 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
               tp.nextPosition()
               val payload = tp.getPayload()
               if (payload != null) {
+                numPayloads += 1
                 composer.add(payload.bytes, payload.offset, payload.length, weight)
               } else {
                 log.error(s"payload is missing: term=${term.toString}")
@@ -105,6 +109,10 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
       }
       i += 1
     }
+    numPayloadsMap += term -> numPayloads
     composer
   }
+
+  override def contextHasGoodQuality = numPayloadsMap.nonEmpty && numPayloadsMap.values.min >= 2
+
 }

@@ -204,7 +204,7 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
   def getContextSketch: Sketch = throw new UnsupportedOperationException("not available. create a new searcher instance with SearchSemanticContext")
   def getContextVector: SemanticVector = throw new UnsupportedOperationException("not available. create a new searcher instance using withSemanticContext")
 
-  def withSemanticContext: Searcher = new Searcher(indexReader) with SearchSemanticContext
+  def withSemanticContext: Searcher = new Searcher(indexReader) with SearchSemanticContext {override def contextHasGoodQuality = true}
 }
 
 trait SearchSemanticContext extends Searcher {
@@ -212,6 +212,8 @@ trait SearchSemanticContext extends Searcher {
   private[this] var contextTerms = Set.empty[Term]
   private[this] var contextSketch: Option[Sketch] = None
   private[this] var contextVector: Option[SemanticVector] = None
+
+  protected def contextHasGoodQuality: Boolean
 
   override def numOfContextTerms: Int = contextTerms.size
 

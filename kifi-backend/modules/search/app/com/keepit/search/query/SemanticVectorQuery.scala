@@ -97,7 +97,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     val contextVector = searcher.getContextVector
     val tp = searcher.getSemanticVectorEnum(context, query.term, context.reader.getLiveDocs)
-    if (tp != null) new SemanticVectorScorerImpl(this, tp, contextVector, value) else new EmptySemanticVectorScorerImpl(this, contextVector)
+    if (tp != null) new SemanticVectorScorerImpl(this, tp, contextVector, value, searcher.asInstanceOf[{def contextHasGoodQuality: Boolean}].contextHasGoodQuality) else new EmptySemanticVectorScorerImpl(this, contextVector)
   }
 }
 
@@ -105,9 +105,10 @@ abstract class SemanticVectorScorer(weight: SemanticVectorWeight, vector: Semant
   val term = weight.term
   def getQuerySemanticVector(): SemanticVector = vector
   def getSemanticVectorBytesRef(): BytesRef = null
+  def hasGoodQuality: Boolean
 }
 
-class SemanticVectorScorerImpl(weight: SemanticVectorWeight, tp: SemanticVectorEnum, vector: SemanticVector, value: Float) extends SemanticVectorScorer(weight, vector) with Logging {
+class SemanticVectorScorerImpl(weight: SemanticVectorWeight, tp: SemanticVectorEnum, vector: SemanticVector, value: Float, goodQuality: Boolean) extends SemanticVectorScorer(weight, vector) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scoreValue = 0f
@@ -148,6 +149,8 @@ class SemanticVectorScorerImpl(weight: SemanticVectorWeight, tp: SemanticVectorE
       null
     }
   }
+
+  override def hasGoodQuality: Boolean = goodQuality
 }
 
 class EmptySemanticVectorScorerImpl(weight: SemanticVectorWeight, vector: SemanticVector) extends SemanticVectorScorer(weight, vector) {
@@ -156,5 +159,6 @@ class EmptySemanticVectorScorerImpl(weight: SemanticVectorWeight, vector: Semant
   override def advance(target: Int): Int = NO_MORE_DOCS
   override def score(): Float = 0.0f
   override def freq(): Int = 0
+  override def hasGoodQuality: Boolean = false
 }
 
