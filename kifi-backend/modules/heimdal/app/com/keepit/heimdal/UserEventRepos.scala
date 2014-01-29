@@ -14,6 +14,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.util.{Failure, Success}
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import com.keepit.common.usersegment.UserSegment
 
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent] {
@@ -84,7 +85,7 @@ class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAug
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     val uid = userEvent.userId
     shoeboxClient.getUserSegment(uid).map{ seg =>
-      Seq(("userSegment" -> ContextStringData(seg.description)))
+      Seq(("userSegment" -> ContextStringData(UserSegment.getDescription(seg))))
     }
   }
 }
