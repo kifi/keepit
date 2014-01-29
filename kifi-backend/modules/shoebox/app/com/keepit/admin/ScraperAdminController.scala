@@ -30,33 +30,29 @@ class ScraperAdminController @Inject() (
 
   val MAX_COUNT_DISPLAY = 50
 
-  def searchScraper = AdminHtmlAction { implicit request => Ok(html.admin.searchScraper()) }
+  def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
-  def pendingScraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Async {
-      val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
-      val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
-      val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
-      for {
-        requests <- requestsFuture
-        count <- countFuture
-        threadDetails <- threadDetailsFuture
-      } yield Ok(html.admin.pendingScraperRequests(requests, count, threadDetails))
-    }
+  def pendingScraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
+    val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
+    val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
+    for {
+      requests <- requestsFuture
+      count <- countFuture
+      threadDetails <- threadDetailsFuture
+    } yield Ok(html.admin.pendingScraperRequests(requests, count, threadDetails))
   }
 
-  def scrapeArticle(url:String) = AdminHtmlAction { implicit request =>
-    Async {
-      scrapeScheduler.scrapeBasicArticle(url, None) map { articleOpt =>
-        articleOpt match {
-          case None => Ok(s"Failed to scrape $url")
-          case Some(article) => Ok(s"For $url, article:${article.toString}")
-        }
+  def scrapeArticle(url:String) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    scrapeScheduler.scrapeBasicArticle(url, None) map { articleOpt =>
+      articleOpt match {
+        case None => Ok(s"Failed to scrape $url")
+        case Some(article) => Ok(s"For $url, article:${article.toString}")
       }
     }
   }
 
-  def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction { implicit request =>
+  def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction.authenticated { implicit request =>
     val updateCount = db.readWrite { implicit session =>
       scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinMinutes)
     }
@@ -65,7 +61,7 @@ class ScraperAdminController @Inject() (
       )
   }
 
-  def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
+  def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
     def errorMsg(id: Id[NormalizedURI]) = {
       val uri = db.readOnly{ implicit s =>
         normalizedURIRepo.get(id)
@@ -86,12 +82,12 @@ class ScraperAdminController @Inject() (
     }
   }
 
-  def getProxies = AdminHtmlAction { implicit request =>
+  def getProxies = AdminHtmlAction.authenticated { implicit request =>
     val proxies = db.readOnly { implicit session => httpProxyRepo.all() }
     Ok(html.admin.proxies(proxies))
   }
 
-  def saveProxies = AdminHtmlAction { implicit request =>
+  def saveProxies = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("alias_")).map(_.substring(6))) {

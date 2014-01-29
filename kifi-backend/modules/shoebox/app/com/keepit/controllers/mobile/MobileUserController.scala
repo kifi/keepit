@@ -30,35 +30,31 @@ class MobileUserController @Inject() (
   userCommander: UserCommander)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getFriends() = AuthenticatedJsonAction { request =>
+  def getFriends() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
   }
 
-  def socialNetworkInfo() = AuthenticatedJsonAction { request =>
+  def socialNetworkInfo() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
-  def abookInfo() = AuthenticatedJsonAction { request =>
-    Async {
-      userCommander.abookInfo(request.userId) map { abooks =>
-        Ok(Json.toJson(abooks))
-      }
+  def abookInfo() = JsonAction.authenticatedAsync { request =>
+    userCommander.abookInfo(request.userId) map { abooks =>
+      Ok(Json.toJson(abooks))
     }
   }
 
-  def uploadContacts(origin: ABookOriginType) = AuthenticatedJsonAction(parse.json(maxLength = 1024 * 50000)) { request =>
+  def uploadContacts(origin: ABookOriginType) = JsonAction.authenticatedAsync(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
-    Async{
-      userCommander.uploadContactsProxy(request.userId, origin, json) map { abookInfoTr =>
-        abookInfoTr match {
-          case Success(abookInfo) => Ok(Json.toJson(abookInfo))
-          case Failure(ex) => BadRequest(Json.obj("code" -> ex.getMessage)) // can do better
-        }
+    userCommander.uploadContactsProxy(request.userId, origin, json) map { abookInfoTr =>
+      abookInfoTr match {
+        case Success(abookInfo) => Ok(Json.toJson(abookInfo))
+        case Failure(ex) => BadRequest(Json.obj("code" -> ex.getMessage)) // can do better
       }
     }
   }
 
-  def currentUser = AuthenticatedJsonAction(true) { implicit request =>
+  def currentUser = JsonAction.authenticated(allowPending = true) { implicit request =>
     getUserInfo(request)
   }
 
@@ -70,7 +66,7 @@ class MobileUserController @Inject() (
        Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
-  def changePassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
+  def changePassword = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
@@ -84,37 +80,31 @@ class MobileUserController @Inject() (
   }
 
   // todo: removeme (legacy api)
-  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    Async {
-      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
-        Ok(Json.toJson(r))
-      }
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
+    userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+      Ok(Json.toJson(r))
     }
   }
 
-  def querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    Async {
-      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
-        Ok(Json.toJson(r))
-      }
+  def querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
+    userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+      Ok(Json.toJson(r))
     }
   }
 
-  def queryContacts(search: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction { request =>
-    Async {
-      userCommander.queryContacts(request.userId, search, after, limit) map { r =>
-        Ok(Json.toJson(r))
-      }
+  def queryContacts(search: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
+    userCommander.queryContacts(request.userId, search, after, limit) map { r =>
+      Ok(Json.toJson(r))
     }
   }
 
-  def friend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def friend(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
-  def unfriend(externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def unfriend(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
     if (userCommander.unfriend(request.userId, externalId)) {
       Ok(Json.obj("code" -> "removed"))
     } else {
@@ -122,23 +112,23 @@ class MobileUserController @Inject() (
     }
   }
   
-  def ignoreFriendRequest(externalId:ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def ignoreFriendRequest(externalId:ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
-  def incomingFriendRequests = AuthenticatedJsonAction { request =>
+  def incomingFriendRequests = JsonAction.authenticated { request =>
     val users = userCommander.incomingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def outgoingFriendRequests = AuthenticatedJsonAction { request =>
+  def outgoingFriendRequests = JsonAction.authenticated { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def disconnect(networkString: String) = AuthenticatedJsonAction(bodyParser = parse.anyContent) { implicit request =>
+  def disconnect(networkString: String) = JsonAction.authenticated(parser = parse.anyContent) { implicit request =>
     val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
     suiOpt match {
       case None => BadRequest(Json.obj("code" -> code))

@@ -65,7 +65,7 @@ private[scraper] class ScrapeScheduler @Inject() (
       }
     }
 
-    val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get) } // workers no longer exists
+    val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) } // workers no longer exists
     if (!abandoned.isEmpty) {
       val msg = s"[schedule] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
       log.warn(msg)
@@ -176,6 +176,12 @@ class ScrapeSchedulerPluginImpl @Inject() (
       urlPatternRuleRepo.getProxy(url)
     }
     log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-    scraperClient.getBasicArticleWithExtractor(url, proxyOpt, extractorProviderType)
+    scraperClient.getBasicArticle(url, proxyOpt, extractorProviderType)
+  }
+
+  def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
+    val proxyOpt = db.readOnly { implicit s => urlPatternRuleRepo.getProxy(url) }
+    log.info(s"[getSignature] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+    scraperClient.getSignature(url, proxyOpt, extractorProviderType)
   }
 }

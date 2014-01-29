@@ -25,7 +25,7 @@ class AdminHealthController @Inject() (
   globalCacheStatistics: GlobalCacheStatistics)
     extends AdminController(actionAuthenticator) {
 
-  def serviceView = AdminHtmlAction { implicit request =>
+  def serviceView = AdminHtmlAction.authenticated { implicit request =>
     val errorCount = healthcheckPlugin.errorCount
     val recentErrors = healthcheckPlugin.errors()
     val cacheStats = globalCacheStatistics.getStatistics
@@ -34,16 +34,16 @@ class AdminHealthController @Inject() (
         services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }
 
-  def getErrors() = AdminHtmlAction { implicit request =>
+  def getErrors() = AdminHtmlAction.authenticated { implicit request =>
     Ok(healthcheckPlugin.errors().mkString("\n"))
   }
 
-  def reportErrors() = AdminHtmlAction { implicit request =>
+  def reportErrors() = AdminHtmlAction.authenticated { implicit request =>
     healthcheckPlugin.reportErrors()
     Ok("reported")
   }
 
-  def resetErrorCount() = AdminHtmlAction { implicit request =>
+  def resetErrorCount() = AdminHtmlAction.authenticated { implicit request =>
     healthcheckPlugin.resetErrorCount
     Redirect(routes.AdminHealthController.serviceView)
   }

@@ -59,6 +59,7 @@ class UserRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
+
   }
 
   def allActiveTimes()(implicit session: RSession): Seq[DateTime] = {

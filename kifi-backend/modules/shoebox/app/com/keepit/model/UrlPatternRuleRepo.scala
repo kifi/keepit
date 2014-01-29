@@ -63,7 +63,7 @@ class UrlPatternRuleRepoImpl @Inject() (
   def findAll(url: String)(implicit session: RSession): Seq[UrlPatternRule] = allActive().filter(rule => url.matches(rule.pattern))
   def findFirst(url: String)(implicit session: RSession): Option[UrlPatternRule] = allActive().find(rule => url.matches(rule.pattern))
   def isUnscrapable(url: String)(implicit session: RSession): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
-  def getProxy(url: String)(implicit session: RSession): Option[HttpProxy] = for { rule <- findFirst(url); proxyId <- rule.useProxy; proxy <- httpProxyRepo.allActive().find(_.id == Some(proxyId)) } yield proxy
+  def getProxy(url: String)(implicit session: RSession): Option[HttpProxy] = for { rule <- findFirst(url); proxyId <- rule.useProxy; proxy <- httpProxyRepo.allActive().find(_.id == Some(proxyId)) } yield proxy // todo(Léo): break up this repo amd move proxy rules to sraper db
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
 }

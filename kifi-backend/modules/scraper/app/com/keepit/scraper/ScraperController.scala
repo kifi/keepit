@@ -10,6 +10,7 @@ import com.keepit.scraper.extractor.ExtractorProviderTypes
 import com.keepit.common.logging.Logging
 import com.keepit.model.ScrapeInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.concurrent.Future
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -17,74 +18,56 @@ class ScraperController @Inject() (
   scrapeProcessor: ScrapeProcessor
 ) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
 
-  def getBasicArticle(url:String) = Action { request =>
-    val resF = scrapeProcessor.fetchBasicArticle(url, None, None)
-    Async {
-      resF.map { res =>
-        val json = Json.toJson(res)
-        log.info(s"[getBasicArticle($url)] result: ${json}")
-        Ok(json)
-      }
+  def getBasicArticle() = Action.async(parse.json) { request =>
+    log.info(s"getBasicArticle body=${request.body}")
+    processBasicArticleRequest(request.body).map { articleOption =>
+      val json = Json.toJson(articleOption)
+      val url = (request.body \ "url").as[String]
+      log.info(s"[getBasicArticle($url})] result: $json")
+      Ok(json)
     }
   }
 
-  def getBasicArticleP() = Action(parse.json) { request =>
-    log.info(s"getBasicArticleP body=${request.body}")
-    val json = request.body
-    val url = (json \ "url").as[String]
-    val proxyOpt = (json \ "proxy").asOpt[HttpProxy]
-    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt, None)
-    Async {
-      resF.map { res =>
-        val json = Json.toJson(res)
-        log.info(s"[getBasicArticleP($url)] result: ${json}")
-        Ok(json)
-      }
+  def getSignature() = Action.async(parse.json) { request =>
+    log.info(s"getSignature body=${request.body}")
+    processBasicArticleRequest(request.body).map { articleOption =>
+      val signatureOption = articleOption.map(_.signature)
+      val json = Json.toJson(signatureOption.map(_.toBase64()))
+      val url = (request.body \ "url").as[String]
+      log.info(s"[getSignature($url)] result: ${json}")
+      Ok(json)
     }
   }
 
-  def getBasicArticleWithExtractor() = Action(parse.json) { request =>
-    log.info(s"getBasicArticleP body=${request.body}")
-    val json = request.body
-    val url = (json \ "url").as[String]
-    val proxyOpt = (json \ "proxy").asOpt[HttpProxy]
-    val extractorProviderTypeOpt = (json \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
-    val resF = scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
-    Async {
-      resF.map { res =>
-        val json = Json.toJson(res)
-        log.info(s"[getBasicArticleP($url)] result: ${json}")
-        Ok(json)
-      }
-    }
+  private def processBasicArticleRequest(parameters: JsValue): Future[Option[BasicArticle]] = {
+    val url = (parameters \ "url").as[String]
+    val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
+    val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
+    scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
   }
 
-  def asyncScrapeWithInfo() = Action(parse.json) { request =>
+  def asyncScrapeWithInfo() = Action.async(parse.json) { request =>
     val jsValues = request.body.as[JsArray].value
     require(jsValues != null && jsValues.length >= 2, "Expect args to be nUri & scrapeInfo")
     val uri = jsValues(0).as[NormalizedURI]
     val info = jsValues(1).as[ScrapeInfo]
     log.info(s"[asyncScrapeWithInfo] url=${uri.url}, scrapeInfo=$info")
     val tupF = scrapeProcessor.scrapeArticle(uri, info, None)
-    Async {
-      tupF.map { t =>
-        val res = ScrapeTuple(t._1, t._2)
-        log.info(s"[asyncScrapeWithInfo(${uri.url})] result=${t._1}")
-        Ok(Json.toJson(res))
-      }
+    tupF.map { t =>
+      val res = ScrapeTuple(t._1, t._2)
+      log.info(s"[asyncScrapeWithInfo(${uri.url})] result=${t._1}")
+      Ok(Json.toJson(res))
     }
   }
 
-  def asyncScrapeWithRequest() = Action(parse.json) { request =>
+  def asyncScrapeWithRequest() = Action.async(parse.json) { request =>
     val scrapeRequest = request.body.as[ScrapeRequest]
     log.info(s"[asyncScrapeWithRequest] req=${scrapeRequest}")
     val tupF = scrapeProcessor.scrapeArticle(scrapeRequest.uri, scrapeRequest.info, scrapeRequest.proxyOpt)
-    Async {
-      tupF.map { t =>
-        val res = ScrapeTuple(t._1, t._2)
-        log.info(s"[asyncScrapeWithInfo(${scrapeRequest.uri.url})] result=${t._1}")
-        Ok(Json.toJson(res))
-      }
+    tupF.map { t =>
+      val res = ScrapeTuple(t._1, t._2)
+      log.info(s"[asyncScrapeWithInfo(${scrapeRequest.uri.url})] result=${t._1}")
+      Ok(Json.toJson(res))
     }
   }
 

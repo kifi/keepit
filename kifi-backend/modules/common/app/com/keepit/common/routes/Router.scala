@@ -187,6 +187,7 @@ object Eliza extends Service {
     def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
     def sendGlobalNotification() = ServiceRoute(POST, "/internal/eliza/sendGlobalNotification")
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
+    def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
     def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long) = ServiceRoute(GET, "/internal/eliza/getThreadContentForIndexing", Param("sequenceNumber", sequenceNumber), Param("maxBatchSize", maxBatchSize))
   }
 }
@@ -238,9 +239,8 @@ object Scraper extends Service {
     def asyncScrapeArticleWithRequest() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithRequest")
     def scheduleScrape() = ServiceRoute(POST, s"/internal/scraper/scheduleScrape")
     def scheduleScrapeWithRequest() = ServiceRoute(POST, s"/internal/scraper/scheduleScrapeWithRequest")
-    def getBasicArticle(url:String) = ServiceRoute(GET, s"/internal/scraper/getBasicArticle", Param("url", url))
-    def getBasicArticleP() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleP")
-    def getBasicArticleWithExtractor() = ServiceRoute(POST, s"/internal/scraper/getBasicArticleWithExtractor")
+    def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
+    def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
   }
 }
 

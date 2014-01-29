@@ -41,7 +41,7 @@ class ExtMessagingController @Inject() (
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   ) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
 
-  def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
+  def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val tStart = currentDateTime
     val o = request.body
     val extVersion = (o \ "extVersion").asOpt[String]
@@ -68,10 +68,10 @@ class ExtMessagingController @Inject() (
         "messages" -> messages.reverse))
     }
 
-    Async(messageSubmitResponse)
+    messageSubmitResponse
   }
 
-  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = AuthenticatedJsonToJsonAction { request =>
+  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim

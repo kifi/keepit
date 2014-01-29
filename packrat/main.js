@@ -17,6 +17,7 @@ var tabsTagging = []; // [tab]
 var threadListCallbacks = {}; // normUrl => [function]
 var threadCallbacks = {}; // threadID => [function]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
+var deepLinkTimers = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
@@ -39,6 +40,10 @@ function clearDataCache() {
   threadListCallbacks = {};
   threadCallbacks = {};
   threadReadAt = {};
+  for (var tabId in deepLinkTimers) {
+    api.timers.clearTimeout(deepLinkTimers[tabId]);
+  }
+  deepLinkTimers = {};
 
   pageData = {};
   threadLists = {};
@@ -144,7 +149,7 @@ var mixpanel = {
   },
   augmentAndBatch: function (data) {
     data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
-    data.properties.distinct_id = session.user.id;
+    data.properties.distinct_id = me.id;
     data.properties.browser = api.browser.name;
     data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
@@ -163,7 +168,7 @@ var mixpanel = {
         'event': eventName,
         'properties': properties
       };
-      if (session) {
+      if (me) {
         this.augmentAndBatch(data);
       } else {
         this.queue.push(data);
@@ -301,7 +306,7 @@ var socketHandlers = {
   },
   experiments: function(exp) {
     log("[socket:experiments]", exp)();
-    session.experiments = exp;
+    experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
   new_friends: function(fr) {
@@ -369,7 +374,7 @@ var socketHandlers = {
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl)();
     forEachTabAtLocator('/messages/' + threadId, function(tab) {
-      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: session.user.id});
+      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id});
     });
     var messages = messageData[threadId];
     if (messages) {
@@ -557,23 +562,23 @@ api.port.on({
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
-    session.prefs.enterToSend = data;
+    prefs.enterToSend = data;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
   },
   set_max_results: function(n) {
-    session.prefs.maxResults = n;
+    prefs.maxResults = n;
     ajax('POST', '/ext/pref/maxResults?n=' + n);
   },
   set_show_find_friends: function(show) {
-    session.prefs.showFindFriends = show;
+    prefs.showFindFriends = show;
     ajax('POST', '/ext/pref/showFindFriends?show=' + show);
   },
   set_show_keeper_intro: function(show) {
-    session.prefs.showKeeperIntro = show;
+    prefs.showKeeperIntro = show;
     ajax('POST', '/ext/pref/showKeeperIntro?show=' + show);
   },
   set_show_search_intro: function(show) {
-    session.prefs.showSearchIntro = show;
+    prefs.showSearchIntro = show;
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
   },
   useful_page: function(o, _, tab) {
@@ -646,14 +651,17 @@ api.port.on({
   thread: function(id, respond, tab) {
     var msgs = messageData[id];
     if (msgs) {
-      respond({id: id, messages: msgs});
+      reply({id: id, messages: msgs});
     } else {
       var tc = threadCallbacks[id];
       if (!tc) {
         tc = threadCallbacks[id] = [];
         socket.send(['get_thread', id]);
       }
-      tc.push(respond);
+      tc.push(reply);
+    }
+    function reply(o) {
+      respond({id: o.id, messages: o.messages, enterToSend: prefs ? prefs.enterToSend : true});
     }
   },
   get_unread_thread_count: function(_, __, tab) {
@@ -759,8 +767,11 @@ api.port.on({
       socket.send(['set_all_notifications_visited', msgId]);
     }
   },
-  session: function(_, respond) {
-    respond(session);
+  me: function(_, respond) {
+    respond(me);
+  },
+  prefs: function(_, respond) {
+    respond(prefs);
   },
   web_base_uri: function(_, respond) {
     respond(webBaseUri());
@@ -1129,20 +1140,22 @@ function sendPageThreadCount(tab, tl) {
 
 function awaitDeepLink(link, tabId, retrySec) {
   if (link.locator) {
+    api.timers.clearTimeout(deepLinkTimers[tabId]);
+    delete deepLinkTimers[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
-      log("[awaitDeepLink]", tabId, link)();
+      log('[awaitDeepLink]', tabId, link)();
       api.tabs.emit(tab, "open_to", {
-        trigger: "deepLink",
+        trigger: 'deepLink',
         locator: link.locator,
         redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
       }, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
       log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec")();
-      api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
   } else {
-    log("[awaitDeepLink] no locator", tabId, link)();
+    log('[awaitDeepLink] no locator', tabId, link)();
   }
 }
 
@@ -1247,7 +1260,7 @@ function tellVisibleTabsNoticeCountIfChanged() {
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
-  if (!session) {
+  if (!me) {
     log("[searchOnServer] no session")();
     respond({});
     return;
@@ -1271,7 +1284,9 @@ function searchOnServer(request, respond) {
   var respHandler = function(resp) {
     log('[searchOnServer] response:', resp)();
     resp.filter = request.filter;
-    resp.session = session;
+    resp.me = me;
+    resp.prefs = prefs || {maxResults: 1};
+    resp.experiments = experiments;
     resp.admBaseUri = admBaseUri();
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
@@ -1301,14 +1316,14 @@ function processSearchHit(hit) {
 }
 
 function kifify(tab) {
-  log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', session ? '' : 'no session')();
+  log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', me ? '' : 'no session')();
   if (!tab.icon) {
     api.icon.set(tab, 'icons/k_gray' + (silence ? '.paused' : '') + '.png');
   } else {
     updateIconSilence(tab);
   }
 
-  if (!session) {
+  if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
       ajax("GET", "/ext/authed", function(loggedIn) {
         if (loggedIn !== false) {
@@ -1385,7 +1400,8 @@ function kififyWithPageData(tab, d) {
     kept: d.kept,
     position: d.position,
     hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive,
-    tags: d.tags
+    tags: d.tags,
+    showKeeperIntro: prefs && prefs.showKeeperIntro
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
@@ -1510,9 +1526,8 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
   if (!tooLate && !silence) {
     threadLists[nUri] = pt;
     var numUnreadUnmuted = pt.countUnreadUnmuted();
-    if (ruleSet.rules.message && numUnreadUnmuted > 0) {  // open immediately to unread message(s)
-      // TODO: verify that there is not a pending deep link listener for this tab (or the pane is not already open)
-      api.tabs.emit(tab, 'open_to', {
+    if (ruleSet.rules.message && numUnreadUnmuted > 0 && !deepLinkTimers[tab.id] && !paneIsOpen(tab.id)) {
+      api.tabs.emit(tab, 'open_to', {  // open immediately to unread message(s)
         locator: numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/messages',
         trigger: 'message'
       }, {queue: 1});
@@ -1543,11 +1558,20 @@ function updateThreadInTabs(oldMessageCount, o) {
 }
 
 function isSent(th) {
-  return th.firstAuthor != null && th.participants[th.firstAuthor].id === session.user.id;
+  return th.firstAuthor != null && th.participants[th.firstAuthor].id === me.id;
 }
 
 function isUnread(th) {
   return th.unread;
+}
+
+function paneIsOpen(tabId) {
+  var hasThisTabId = hasId(tabId);
+  for (var loc in tabsByLocator) {
+    if (tabsByLocator[loc].some(hasThisTabId)) {
+      return true;
+    }
+  }
 }
 
 function setIcon(tab, kept) {
@@ -1672,12 +1696,12 @@ api.on.beforeSearch.add(throttle(function () {
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
-  if (!session) return;
+  if (!me) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
     entry = searchPrefetchCache[query] = {callbacks: [], response: null};
-    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function(response) {
+    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function (response) {
       entry.response = response;
       while (entry.callbacks.length) entry.callbacks.shift()(response);
       api.timers.clearTimeout(entry.expireTimeout);
@@ -1841,12 +1865,14 @@ function getTags() {
   });
 }
 
-function getPrefs() {
-  ajax("GET", "/ext/prefs", function(o) {
-    log("[getPrefs]", o)();
-    session.prefs = o[1];
-    session.eip = o[2];
-    socket && socket.send(["eip", session.eip]);
+function getPrefs () {
+  ajax('GET', '/ext/prefs', function (arr) {
+    log('[getPrefs]', arr)();
+    if (me) {
+      prefs = arr[1];
+      eip = arr[2];
+      socket.send(['eip', eip]);
+    }
   });
 }
 
@@ -1892,7 +1918,7 @@ function throttle(func, wait, opts) {  // underscore.js
 
 // ===== Session management
 
-var session, socket, silence, onLoadingTemp;
+var me, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
   if (api.mode.isDev()) {
@@ -1905,16 +1931,18 @@ function authenticate(callback, retryMs) {
 function startSession(callback, retryMs) {
   ajax("POST", "/kifi/start", {
     installation: stored('installation_id'),
-    version: api.version},
+    version: api.version
+  },
   function done(data) {
     log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
     unstore('logout');
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
-    session = data;
-    session.prefs = {}; // to come via socket
+    me = data.user;
+    experiments = data.experiments;
+    eip = data.eip;
     socket = socket || api.socket.open(
-      elizaBaseUri().replace(/^http/, 'ws') + '/eliza/ext/ws?version=' + api.version + (session.eip ? '&eip=' + session.eip : ''),
+      elizaBaseUri().replace(/^http/, 'ws') + '/eliza/ext/ws?version=' + api.version + (eip ? '&eip=' + eip : ''),
       socketHandlers, onSocketConnect, onSocketDisconnect);
     logEvent.catchUp();
     mixpanel.catchUp();
@@ -1922,12 +1950,9 @@ function startSession(callback, retryMs) {
     ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
     store('installation_id', data.installationId);
-    delete session.rules;
-    delete session.patterns;
-    delete session.installationId;
 
     api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
-    emitAllTabs("session_change", session);
+    emitAllTabs('me_change', me);
     callback();
   },
   function fail(xhr) {
@@ -1974,13 +1999,13 @@ function openLogin(callback, retryMs) {
 }
 
 function clearSession() {
-  if (session) {
-    api.tabs.each(function(tab) {
+  if (me) {
+    api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/k_gray.png');
-      api.tabs.emit(tab, 'session_change', null);
+      api.tabs.emit(tab, 'me_change', null);
     });
   }
-  session = null;
+  me = prefs = experiments = eip = null;
   if (socket) {
     socket.close();
     socket = null;

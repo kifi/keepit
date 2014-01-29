@@ -11,6 +11,7 @@ case class ScraperConfig(
   maxBackoff: Double = 1024.0d, //hours
   maxRandomDelay: Int = 600, // seconds
   changeThreshold: Double = 0.5,
+  pull:Boolean = sys.props.get("scraper.pull.enable") map (_.toBoolean) getOrElse (false),
   scrapePendingFrequency: Int = sys.props.getOrElse("scraper.pending.freq", "15").toInt, // seconds
   queued: Boolean = sys.props.getOrElse("scraper.plugin.queued", "true").toBoolean,
   async: Boolean = sys.props.getOrElse("scraper.plugin.async", "false").toBoolean,

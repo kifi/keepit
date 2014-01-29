@@ -279,8 +279,21 @@ class SyncScraper @Inject() (
   }
 
   private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
-    val absoluteCanonicalUrl = URI.url(uri.url, canonicalUrl)
-    helper.syncRecordScrapedNormalization(uri.id.get, signature, absoluteCanonicalUrl, Normalization.CANONICAL)
+    sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
+      helper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL)
+    }
   }
 
+  private def sanitize(baseUrl: String, canonicalUrl: String): Option[String] = {
+    val quotedString = """"(.+)"""".r
+    val actualTargetUrlOption = Option(canonicalUrl) collect {
+      case quotedString(uriString) => uriString
+      case uriString if uriString.nonEmpty => uriString
+    }
+    for {
+      actualTargetUrl <- actualTargetUrlOption
+      absoluteTargetUrl <- URI.absoluteUrl(baseUrl, actualTargetUrl)
+      parsedTargetUri <- URI.safelyParse(absoluteTargetUrl)
+    } yield parsedTargetUri.toString()
+  }
 }

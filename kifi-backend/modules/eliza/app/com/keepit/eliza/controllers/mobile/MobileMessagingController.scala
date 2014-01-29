@@ -23,15 +23,15 @@ class MobileMessagingController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory
   ) extends MobileController(actionAuthenticator) with ElizaServiceController {
 
-  def getNotifications(howMany: Int) = AuthenticatedJsonAction { request =>
-    Async(messagingCommander.getLatestSendableNotifications(request.userId, howMany.toInt).map{ notices =>
+  def getNotifications(howMany: Int) = JsonAction.authenticatedAsync { request =>
+    messagingCommander.getLatestSendableNotifications(request.userId, howMany.toInt).map{ notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
       Ok(Json.arr("notifications", notices, numUnreadUnmuted))
-    })
+    }
   }
 
 
-  def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
+  def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val tStart = currentDateTime
     val o = request.body
     val (title, text) = (
@@ -55,10 +55,10 @@ class MobileMessagingController @Inject() (
         "messages" -> messages.reverse))
     }
 
-    Async(messageSubmitResponse)
+    messageSubmitResponse
   }
 
-  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = AuthenticatedJsonToJsonAction { request =>
+  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
     val tStart = currentDateTime
     val o = request.body
     val text = (o \ "text").as[String].trim

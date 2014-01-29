@@ -40,15 +40,15 @@ class ExtUserController @Inject() (
     Forbidden("0").as(JSON) // TODO: change to Ok("false") once all extensions are at 2.6.37 or later
   })
 
-  def getNetworks(friendExtId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def getNetworks(friendExtId: ExternalId[User]) = JsonAction.authenticated { request =>
     Ok(Json.toJson(networkInfoLoader.load(request.user.id.get, friendExtId)))
   }
 
-  def getFriends() = AuthenticatedJsonAction { request =>
+  def getFriends() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
   }
 
-  def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>
+  def suppressSliderForSite() = JsonAction.authenticatedParseJson { request =>
     val json = request.body
     val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]

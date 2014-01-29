@@ -20,7 +20,7 @@ class AdminInvitationController @Inject() (
 
   val pageSize = 50
 
-  def displayInvitations(page: Int = 0, showing: String = "all") = AdminHtmlAction{ implicit request =>
+  def displayInvitations(page: Int = 0, showing: String = "all") = AdminHtmlAction.authenticated { implicit request =>
     val showState = showing.toLowerCase match {
       case InvitationStates.ACCEPTED.value => Some(InvitationStates.ACCEPTED)
       case InvitationStates.ADMIN_ACCEPTED.value => Some(InvitationStates.ADMIN_ACCEPTED)
@@ -41,7 +41,7 @@ class AdminInvitationController @Inject() (
     Ok(html.admin.invitationsDisplay(invitesWithSocial, page, count, numPages, showing))
   }
 
-  def acceptUser(id: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
+  def acceptUser(id: Id[SocialUserInfo]) = AdminHtmlAction.authenticated { implicit request =>
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
@@ -74,7 +74,7 @@ class AdminInvitationController @Inject() (
     }
   }
 
-  def rejectUser(id: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
+  def rejectUser(id: Id[SocialUserInfo]) = AdminHtmlAction.authenticated { implicit request =>
     val rejectedUser = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
