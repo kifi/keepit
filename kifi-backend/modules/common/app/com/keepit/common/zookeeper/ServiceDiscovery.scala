@@ -150,7 +150,7 @@ class ServiceDiscoveryImpl(
         }
       }
 
-      val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceNodePrefix, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
+      val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceType.name + "_", RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
       myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")

@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 
 class ZooKeeperClientTest extends Specification {
 
-//  args(skipAll = true)
+  args(skipAll = true)
 
   def withZKSession[T](block: ZooKeeperSession => T)(implicit node: Node, cleanup: Boolean = true): T = {
     println(s"starting test with root path ${node.path}")

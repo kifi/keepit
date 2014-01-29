@@ -31,7 +31,6 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   private var scheduledPanic: Option[Cancellable] = None
 
   val servicePath = Node(s"/fortytwo/services/${serviceType.name}")
-  val serviceNodePrefix = s"${serviceType.name}_"
 
   def size: Int = instances.size
   def registered(instance: ServiceInstance): Boolean = instances.contains(instance.node)
