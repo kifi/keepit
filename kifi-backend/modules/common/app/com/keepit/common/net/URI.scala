@@ -83,13 +83,6 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     sb.toString()
   }
 
-  def safelyToString() = try {
-    Some(toString())
-  } catch { case e : Exception =>
-    URI.log.error("URI.toString() failed: [%s] caused by [%s]".format(raw, e.getMessage))
-    None
-  }
-
   override def hashCode() = URI.unapply(this).hashCode()
   override def equals(o: Any) = o match {
     case that: URI if getClass == that.getClass => URI.unapply(this) == URI.unapply(that)

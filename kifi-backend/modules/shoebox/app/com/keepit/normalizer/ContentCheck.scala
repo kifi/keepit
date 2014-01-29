@@ -35,7 +35,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
     } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
         case (Some(currentContentSignature), Some(candidateContentSignature)) => {
           val similarity = currentContentSignature.similarTo(candidateContentSignature)
-          val threshold = 0.99 // todo: move to config
+          val threshold = 0.99 // todo(Léo): move to config
           val doTheyMatch =  similarity > threshold
           log.info(s"[${if (doTheyMatch) "ACCEPT" else "REJECT"} at $threshold] Content similarity of ${referenceUrl} and ${alternateUrl}: $similarity")
           doTheyMatch
