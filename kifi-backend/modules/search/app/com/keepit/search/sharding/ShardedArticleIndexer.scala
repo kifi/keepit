@@ -65,8 +65,4 @@ class ShardedArticleIndexer(
     SequenceNumber(Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds))
   }
 
-  override def reindex(): Unit = {
-    indexShards.valuesIterator.foreach{_.catchUpSeqNumber_=(catchUpSeqNumber)}
-    super.reindex()
-  }
 }
