@@ -68,13 +68,12 @@ panes.thread = function () {
       compose: 'compose'
     }))
     .prependTo($tall)
-    .on('mousedown', 'a[href^="x-kifi-sel:"]', lookMouseDown)
-    .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
-      e.preventDefault();
-    })
     .find('time').timeago();
 
-    $holder = $tall.find('.kifi-scroll-inner').preventAncestorScroll().data('threadId', threadId);
+    $holder = $tall.find('.kifi-scroll-inner')
+      .preventAncestorScroll()
+      .handleLookClicks()
+      .data('threadId', threadId);
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var compose = initCompose($tall, enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
