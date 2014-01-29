@@ -14,7 +14,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
 
 import play.api._
@@ -22,6 +22,8 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
+import scala.util.control.NonFatal
+import java.util.concurrent.atomic.AtomicInteger
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
@@ -37,7 +39,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
-
   override def beforeStart(app: Application): Unit = {
     val conf = app.configuration
     val appName = conf.getString("application.name").get
@@ -94,14 +95,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val localConfig = Configuration(ConfigFactory.parseFile(getUserFile("local.conf")))
     super.onLoadConfig(config ++ localConfig, path, classloader, mode)
   }
-  override def onBadRequest(request: RequestHeader, error: String): Result = {
+  override def onBadRequest(request: RequestHeader, error: String): Future[SimpleResult] = {
     val errorId = ExternalId[Exception]()
     val msg = s"BAD REQUEST: $errorId: [$error] on ${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
     log.warn(msg)
     if (mode == Mode.Test) {
       throw new Exception(s"error [$msg] on $request")
     }
-    allowCrossOrigin(request, BadRequest(msg))
+    Future.successful(allowCrossOrigin(request, BadRequest(msg)))
   }
 
   override def onRouteRequest(request: RequestHeader) = super.onRouteRequest(request).orElse {
@@ -109,10 +110,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     Some(request.path).filter(_.endsWith("/")).map(p => Action(Results.MovedPermanently(p.dropRight(1))))
   }
 
-  override def onHandlerNotFound(request: RequestHeader): Result = {
+  override def onHandlerNotFound(request: RequestHeader): Future[SimpleResult] = {
     val errorId = ExternalId[Exception]()
     log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
-    allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId)))
+    Future.successful(allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId))))
   }
 
   @volatile private var lastAlert: Long = -1
@@ -132,21 +133,28 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
   }
 
-  override def onError(request: RequestHeader, ex: Throwable): Result = {
-    val errorId: ExternalId[_] = ex match {
-      case reported: ReportedException => reported.id
-      case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex, s"Unreported Exception $ex")).id
+  override def onError(request: RequestHeader, ex: Throwable): Future[SimpleResult] = {
+    try {
+      val errorId: ExternalId[_] = ex match {
+        case reported: ReportedException => reported.id
+        case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex, s"Unreported Exception $ex")).id
+      }
+      System.err.println(s"Play onError handler for ${ex.toString}")
+      ex.printStackTrace()
+      serviceDiscoveryHandleError()
+      val message = if (request.path.startsWith("/internal/")) {
+        //todo(eishay) consider use the original ex.getCause instead
+        s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
+      } else {
+        errorId.id
+      }
+      Future.successful(allowCrossOrigin(request, InternalServerError(message)))
+    } catch {
+      case NonFatal(e) => {
+        Logger.error("Error while rendering default error page", e)
+        Future.successful(InternalServerError)
+      }
     }
-    System.err.println(s"Play onError handler for ${ex.toString}")
-    ex.printStackTrace()
-    serviceDiscoveryHandleError()
-    val message = if (request.path.startsWith("/internal/")) {
-      //todo(eishay) consider use the original ex.getCause instead
-      s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
-    } else {
-      errorId.id
-    }
-    allowCrossOrigin(request, InternalServerError(message))
   }
 
   @volatile private var announcedStopping: Boolean = false
@@ -194,7 +202,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     serviceDiscovery.unRegister()
   }
 
-  private def allowCrossOrigin(request: RequestHeader, result: Result): Result = {  // for kifi.com/site dev
+  private def allowCrossOrigin(request: RequestHeader, result: SimpleResult): SimpleResult = {  // for kifi.com/site dev
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com") || host.endsWith("browserstack.com")

@@ -14,6 +14,7 @@ import play.api.mvc._
 import securesocial.core._
 
 import net.codingwell.scalaguice.ScalaModule
+import scala.concurrent.Future
 
 case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
   log.debug("using new FakeActionAuthenticatorModule")
@@ -56,9 +57,9 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
   }
 
   private[controller] def authenticatedAction[T](apiClient: Boolean, allowPending: Boolean, bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Result,
-    onSocialAuthenticated: SecuredRequest[T] => Result,
-    onUnauthenticated: Request[T] => Result): Action[T] = Action(bodyParser) { request =>
+    onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
+    onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = Action.async(bodyParser) { request =>
       try {
         val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
         log.debug("running action with fake auth of user $user, request on path ${request.path} api: $apiClient")

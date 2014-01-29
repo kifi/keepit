@@ -1,6 +1,6 @@
 package com.keepit.classify
 
-import org.specs2.mutable.Specification
+import org.specs2.mutable.SpecificationLike
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClientModule
@@ -20,7 +20,7 @@ import com.keepit.akka.TestKitScope
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 
-class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),

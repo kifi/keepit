@@ -9,7 +9,7 @@ class DefaultExtractorTest extends Specification {
 
   def setup(url: String, file: String): DefaultExtractor = {
     val uri = URI.parse(url).get
-    val stream = new FileInputStream("modules/scraper/test/com/keepit/scraper/extractor/" + file)
+    val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
     val extractor = DefaultExtractorProvider(uri)
     extractor.process(new HttpInputStream(stream))
     extractor

@@ -28,7 +28,7 @@ class ExtPageController @Inject() (
   pageCommander: PageCommander)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getPageDetails() = AuthenticatedJsonToJsonAction { request =>
+  def getPageDetails() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     if (url.isEmpty) throw new Exception(s"empty url for json ${request.body} for user ${request.user}")
     val info = pageCommander.getPageDetails(url, request.userId, request.experiments)

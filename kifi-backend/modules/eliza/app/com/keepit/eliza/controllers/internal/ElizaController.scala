@@ -20,32 +20,32 @@ class ElizaController @Inject() (
   notificationRouter: NotificationRouter)
     extends ElizaServiceController with Logging {
 
-  def sendToUserNoBroadcast() = Action { request =>
-    Async(future{
+  def sendToUserNoBroadcast() = Action.async { request =>
+    future{
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val data = (req \ "data").asInstanceOf[JsArray]
       notificationRouter.sendToUserNoBroadcast(userId, data)
       Ok("")
-    })
+    }
   }
 
-  def sendToUser() = Action { request =>
-    Async(future{
+  def sendToUser() = Action.async { request =>
+    future{
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val data = (req \ "data").asInstanceOf[JsArray]
       notificationRouter.sendToUser(userId, data)
       Ok("")
-    })
+    }
   }
 
-  def sendToAllUsers() = Action { request =>
-    Async(future{
+  def sendToAllUsers() = Action.async { request =>
+    future{
       val req = request.body.asJson.get.asInstanceOf[JsArray]
       notificationRouter.sendToAllUsers(req)
       Ok("")
-    })
+    }
   }
 
   def connectedClientCount() = Action { request =>

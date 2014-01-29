@@ -31,7 +31,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
          * using json and one socialuserinfo, create connections
          *
          */
-        val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -77,7 +77,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
     "disable non existing connections for social users but not kifi users" in {
       running(new ShoeboxApplication(modules:_*)) {
 
-        val json1 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
+        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
         val sui1 = inject[Database].readWrite { implicit s =>
           val u1 = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -113,7 +113,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
 
         connections.size === 12
 
-        val json2 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString)
+        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString)
 
         val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
 

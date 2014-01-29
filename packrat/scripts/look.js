@@ -1,7 +1,16 @@
 // @require scripts/snapshot.js
 
-function lookMouseDown(e) {
+$.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
   'use strict';
+  return function () {
+    return this
+      .on('mousedown', 'a[href^="x-kifi-sel:"]', lookMouseDown)
+      .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
+        e.preventDefault();
+      });
+  };
+
+function lookMouseDown(e) {
   if (e.which != 1) return;
   e.preventDefault();
   var el = snapshot.fuzzyFind(this.href.substr(11));
@@ -74,3 +83,4 @@ function lookMouseDown(e) {
     return ms;
   }
 }
+}());

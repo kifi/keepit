@@ -12,7 +12,7 @@ import com.keepit.social.{SocialId, SocialNetworks}
 import com.keepit.test.ShoeboxApplication
 
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.Result
+import play.api.mvc.SimpleResult
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
@@ -26,6 +26,8 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
+
+import scala.concurrent.Future
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -111,7 +113,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
           user1
         }
 
-        def getNames(result: Result): Seq[String] = {
+        def getNames(result: Future[SimpleResult]): Seq[String] = {
           Json.fromJson[Seq[JsObject]](Json.parse(contentAsString(result))).get.map(j => (j \ "label").as[String])
         }
 

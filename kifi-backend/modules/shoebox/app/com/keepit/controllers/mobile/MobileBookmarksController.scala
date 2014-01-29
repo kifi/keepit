@@ -37,34 +37,30 @@ class MobileBookmarksController @Inject() (
 
   implicit val writesKeepInfo = new FullKeepInfoWriter()
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int) = AuthenticatedJsonAction { request =>
-    Async {
-      bookmarksCommander.allKeeps(before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
-        Ok(Json.obj(
-          "collection" -> res._1,
-          "before" -> before,
-          "after" -> after,
-          "keeps" -> res._2
-        ))
-      }
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int) = JsonAction.authenticatedAsync { request =>
+    bookmarksCommander.allKeeps(before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
+      Ok(Json.obj(
+        "collection" -> res._1,
+        "before" -> before,
+        "after" -> after,
+        "keeps" -> res._2
+      ))
     }
   }
 
-  def allCollections(sort: String) = AuthenticatedJsonAction { request =>
-    Async {
-      for {
-        numKeeps <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
-        collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
-      } yield {
-        Ok(Json.obj(
-          "keeps" -> numKeeps,
-          "collections" -> collections
-        ))
-      }
+  def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
+    for {
+      numKeeps <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+      collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
+    } yield {
+      Ok(Json.obj(
+        "keeps" -> numKeeps,
+        "collections" -> collections
+      ))
     }
   }
 
-  def keepMultiple() = AuthenticatedJsonAction { request =>
+  def keepMultiple() = JsonAction.authenticated { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
       val source = BookmarkSource.mobile
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
@@ -79,7 +75,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def unkeepMultiple() = AuthenticatedJsonAction { request =>
+  def unkeepMultiple() = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
@@ -91,7 +87,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def saveCollection() = AuthenticatedJsonAction { request =>
+  def saveCollection() = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     collectionCommander.saveCollection("", request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
@@ -99,7 +95,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def addTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+  def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     db.readOnly { implicit s => collectionRepo.getOpt(id) } map { tag =>
       bookmarksCommander.tagUrl(tag, request.body, request.userId, BookmarkSource.mobile, request.kifiInstallationId)
@@ -109,7 +105,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def removeTag(id: ExternalId[Collection]) = AuthenticatedJsonToJsonAction { request =>
+  def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.mobile).build
     bookmarksCommander.removeTag(id, url, request.userId)

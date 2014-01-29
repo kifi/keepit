@@ -327,6 +327,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
             rec.url === uri.url
           }
         }
+        1===1
       }
     }
   }
