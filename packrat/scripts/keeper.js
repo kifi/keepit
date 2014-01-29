@@ -267,6 +267,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       e.preventDefault();
     }).on('click', '.kifi-dock-btn', function (e) {
       if (e.originalEvent.isTrusted === false) return;
+      $slider.data().stickiness |= 2;
       var locator = this.dataset.loc;
       api.require('scripts/pane.js', function () {
         if (locator) {
@@ -520,6 +521,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       return $slider.addClass('kifi-wide');
     },
     discard: function() {
+      $slider.off();
+      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-keep-tag,.kifi-kept-tag,.kifi-keeper-x,.kifi-dock-btn').hoverfu('destroy');
       $slider = null;
     },
     appendTo: function(parent) {
