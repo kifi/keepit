@@ -24,7 +24,7 @@
 					</ul>
 				</div>
 			</li>
-			<li class="kf-nav-item kf-tag kf-tag-new" ng-show="filter.name && !shownTags.length">
+			<li class="kf-nav-item kf-tag kf-tag-new" ng-show="showAddTag()">
 				<a href="javascript:" ng-click="create(filter.name)">
 					<span class="kf-tag-icon kf-tag-icon-create"></span>
 					<span class="kf-tag-caption">Add a new tag:</span>

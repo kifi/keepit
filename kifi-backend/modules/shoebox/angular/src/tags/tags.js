@@ -20,6 +20,16 @@ angular.module('kifi.tags', [])
 				console.log('remove', tag);
 			};
 
+			scope.showAddTag = function () {
+				var name = scope.filter.name;
+				if (name) {
+					return !scope.tags.some(function (tag) {
+						return tag.name.toLowerCase() === name.toLowerCase();
+					});
+				}
+				return false;
+			};
+
 			scope.tags = [{
 				"id": "67846543-b5fc-45eb-b522-bfe3628544a3",
 				"name": "Marketing",
