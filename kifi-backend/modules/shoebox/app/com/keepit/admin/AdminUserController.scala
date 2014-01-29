@@ -1,7 +1,8 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
+import scala.concurrent.duration.Duration
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -20,8 +21,6 @@ import play.api.data._
 import play.api.libs.json._
 import views.html
 import com.keepit.abook.ABookServiceClient
-import java.math.BigInteger
-import java.security.SecureRandom
 import com.keepit.common.store.S3ImageStore
 import com.keepit.heimdal._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -33,7 +32,8 @@ import scala.Some
 import com.keepit.model.KeepToCollection
 import com.keepit.model.UserExperiment
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{CollectionCommander, DefaultKeeps, BookmarksCommander, UserCommander}
+import com.keepit.commanders.UserCommander
+import com.keepit.eliza.model.UserThreadStats
 
 case class UserStatistics(
     user: User,
@@ -48,9 +48,13 @@ case class UserStatistics(
 case class UserStatisticsPage(
   userViewType: UserViewType,
   users: Seq[UserStatistics],
+  userThreadStats: Map[Id[User], Future[UserThreadStats]],
   page: Int,
   userCount: Int,
-  pageSize: Int)
+  pageSize: Int) {
+
+  def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), Duration.Inf)
+}
 
 sealed trait UserViewType
 object UserViewTypes {
@@ -260,6 +264,11 @@ class AdminUserController @Inject() (
         case FakeUsersViewType => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
       }
     }
+    val userThreadStats = (users.par.map { u =>
+      val userId = u.user.id.get
+      (userId -> eliza.getUserThreadStats(u.user.id.get))
+    }).seq.toMap
+
     val userCount = db.readOnly { implicit s =>
       userViewType match {
         case AllUsersViewType => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)
@@ -267,7 +276,7 @@ class AdminUserController @Inject() (
         case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
       }
     }
-    UserStatisticsPage(userViewType, users, page, userCount, PAGE_SIZE)
+    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE)
   }
 
   def usersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
@@ -292,7 +301,11 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, 0, users.size, users.size), searchTerm))
+        val userThreadStats = (users.par.map { u =>
+          val userId = u.user.id.get
+          (userId -> eliza.getUserThreadStats(u.user.id.get))
+        }).seq.toMap
+        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, userThreadStats, 0, users.size, users.size), searchTerm))
     }
   }
 
