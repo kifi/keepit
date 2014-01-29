@@ -20,12 +20,6 @@ angular.module('kifi.tags', [])
 				console.log('remove', tag);
 			};
 
-			scope.clearFilter = function () {
-				if (scope.search) {
-					scope.search.name = '';
-				}
-			};
-
 			scope.tags = [{
 				"id": "67846543-b5fc-45eb-b522-bfe3628544a3",
 				"name": "Marketing",
