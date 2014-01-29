@@ -90,7 +90,7 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in ec2.get_only_instances()]
 
 if __name__=="__main__":
-  parser = argparse.ArgumentParser(description="Your friendly FortyTwo Deployment Service v0.42")
+  parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
   parser.add_argument(
     'serviceType',
     action = 'store',
@@ -106,15 +106,15 @@ if __name__=="__main__":
   parser.add_argument(
     '--mode',
     action = 'store',
-    help = "Wait for machines to come up or not (default: 'safe')",
-    metavar = "Host",
+    help = "Wait for machines to come up or not. Options: 'safe' or 'force'. (default: 'safe').",
+    metavar = "Mode",
     default = 'safe',
     choices = ['safe', 'force']
   )
   parser.add_argument(
     '--version',
     action = 'store',
-    help = "Target version",
+    help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
     metavar = "Version"
   )
 
