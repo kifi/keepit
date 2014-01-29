@@ -175,9 +175,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         onConnect(socketInfo)
 
         val tStart = currentDateTime
-        SafeFuture {
-          search.warmUpUser(streamSession.userId)
-        }
         //Analytics
         SafeFuture {
           val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
