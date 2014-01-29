@@ -34,17 +34,31 @@ class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: I
 
 case class ServiceResponse(uri: ServiceUri, response: ClientResponse)
 
+trait RoutingStrategy {
+  def nextInstance:ServiceInstance
+}
+
 trait ServiceClient extends Logging {
   protected def httpClient: HttpClient
 
   val serviceCluster: ServiceCluster
   val airbrakeNotifier: AirbrakeNotifier
 
+  val roundRobin = new RoutingStrategy {
+    def nextInstance = serviceCluster.nextService().getOrElse(throw new ServiceNotAvailableException(serviceCluster.serviceType))
+  }
+
+  val leaderPriority = new RoutingStrategy {
+  def nextInstance = serviceCluster.leader orElse serviceCluster.nextService getOrElse (throw new ServiceNotAvailableException(serviceCluster.serviceType))
+  }
+
   private def nextInstance(): ServiceInstance =
     serviceCluster.nextService().getOrElse(throw new ServiceNotAvailableException(serviceCluster.serviceType))
 
   val protocol: String = "http"
   val port: Int = 9000
+
+  protected def serviceUri(path: String, router:RoutingStrategy) = new ServiceUri(router.nextInstance, protocol, port, path)
 
   protected def url(path: String): ServiceUri = new ServiceUri(nextInstance(), protocol, port, path)
 
@@ -55,9 +69,9 @@ trait ServiceClient extends Logging {
       }
     }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000): Future[ClientResponse] = {
-    val respFuture = RetryFuture(attempts, { case t : ConnectException => true }){
-      callUrl(call, url(call.url), body, ignoreFailure = true, timeout = timeout)
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000, routingStrategy:RoutingStrategy = roundRobin): Future[ClientResponse] = {
+    val respFuture = RetryFuture(attempts, { case t : ConnectException => true }) {
+      callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, timeout = timeout)
     }
     respFuture.onSuccess {
       case res: ClientResponse => if(!res.isUp) {
