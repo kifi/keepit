@@ -112,7 +112,7 @@ class ServiceDiscoveryImpl(
   private def watchService(cluster: ServiceCluster): Unit = zkClient.session{ zk =>
     zk.create(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
-      log.info(s"""services in my cluster under ${cluster.servicePath.nodeName}: ${children.mkString(", ")}""")
+      log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
       cluster.update(zk, children)
     })
   }
@@ -150,7 +150,7 @@ class ServiceDiscoveryImpl(
         }
       }
 
-      val myNode = zk.create(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
+      val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceNodePrefix, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
       myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
@@ -172,7 +172,7 @@ class ServiceDiscoveryImpl(
         thisRemoteService.status = newStatus
         instance.setRemoteService(thisRemoteService)
         lastStatusChangeTime = System.currentTimeMillis
-        zk.set(instance.node, RemoteService.toJson(instance.remoteService))
+        zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
       }
     }
   }

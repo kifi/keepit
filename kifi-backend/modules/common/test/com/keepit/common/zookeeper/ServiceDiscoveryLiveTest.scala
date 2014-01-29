@@ -53,21 +53,21 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
           })
           val path = zk.create(Node("/fortytwo/services/SHOEBOX"))
-          val firstNode = zk.create(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(1), EPHEMERAL_SEQUENTIAL)
-          val secondNode = zk.create(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(2), EPHEMERAL_SEQUENTIAL)
+          val firstNode = zk.createChild(path, "SHOEBOX_", remoteServiceJson(1), EPHEMERAL_SEQUENTIAL)
+          val secondNode = zk.createChild(path, "SHOEBOX_", remoteServiceJson(2), EPHEMERAL_SEQUENTIAL)
           println("new node: " + secondNode, null, EPHEMERAL_SEQUENTIAL)
           val registeredInstance = discovery.register()
           println("registerred:::::")
           println(registeredInstance)
-          println(new String(zk.get(registeredInstance.node)))
+          println(new String(zk.getData(registeredInstance.node)))
           discovery.startSelfCheck()
-          val thirdNode = zk.create(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), remoteServiceJson(3), EPHEMERAL_SEQUENTIAL)
+          val thirdNode = zk.createChild(path, "SHOEBOX_", remoteServiceJson(3), EPHEMERAL_SEQUENTIAL)
           println("new node: " + thirdNode, null, EPHEMERAL_SEQUENTIAL)
           println("sleeping 1")
           Thread.sleep(10000)
 
-          println(zk.getChildren(Node("/fortytwo/services/SHOEBOX")) mkString ",")
-          zk.getChildren(Node("/fortytwo/services/SHOEBOX")).size === 3
+          println(zk.getChildren(path) mkString ",")
+          zk.getChildren(path).size === 3
           discovery.isLeader() === false
           discovery.myClusterSize === 3
           zk.delete(secondNode)
@@ -82,7 +82,7 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
 
           discovery.myClusterSize === 1
           discovery.isLeader() === true
-          println(new String(zk.get(registeredInstance.node)))
+          println(new String(zk.getData(registeredInstance.node)))
           discovery.unRegister()
           println("sleeping 4")
           Thread.sleep(10000)

@@ -31,7 +31,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   private var scheduledPanic: Option[Cancellable] = None
 
   val servicePath = Node(s"/fortytwo/services/${serviceType.name}")
-  val serviceNodeMaster = Node(s"${servicePath.path}/${serviceType.name}_")
+  val serviceNodePrefix = s"${serviceType.name}_"
 
   def size: Int = instances.size
   def registered(instance: ServiceInstance): Boolean = instances.contains(instance.node)
@@ -72,7 +72,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
 
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperSession) = try {
-    val nodeData: String = zk.get(childNode)
+    val nodeData: String = zk.getData(childNode)
     log.info(s"data for node $childNode is $nodeData")
     val remoteService = RemoteService.fromJson(nodeData)
     if (newInstances.isDefinedAt(childNode)){

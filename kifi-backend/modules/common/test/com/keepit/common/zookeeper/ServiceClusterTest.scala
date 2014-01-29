@@ -60,8 +60,8 @@ class ServiceClusterTest extends Specification {
       val zk = new FakeZooKeeperClient()
       val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
-        zk.set(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
-        zk.set(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService2))
+        zk.setData(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
+        zk.setData(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService2))
       }
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
@@ -87,9 +87,9 @@ class ServiceClusterTest extends Specification {
       val zk = new FakeZooKeeperClient()
       val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
-        zk.set(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
-        zk.set(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService1))//me a dup!
-        zk.set(Node(basePath, "node_00000003"), RemoteService.toJson(remoteService2))
+        zk.setData(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
+        zk.setData(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService1))//me a dup!
+        zk.setData(Node(basePath, "node_00000003"), RemoteService.toJson(remoteService2))
       }
       zk.registeredCount === 3
       println(zk.nodes.mkString(" : "))
@@ -116,9 +116,9 @@ class ServiceClusterTest extends Specification {
       val zk = new FakeZooKeeperClient()
       val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
-        zk.set(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
-        zk.set(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService2))
-        zk.set(Node(basePath, "node_00000003"), RemoteService.toJson(remoteService3))
+        zk.setData(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
+        zk.setData(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService2))
+        zk.setData(Node(basePath, "node_00000003"), RemoteService.toJson(remoteService3))
         cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Node(basePath, "node_00000003") :: Nil)
       }
       val service1 = cluster.nextService.get

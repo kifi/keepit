@@ -34,17 +34,23 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Array[Byte]]) extends ZooKe
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
 
-  def create(node: Node, data: Array[Byte], createMode: CreateMode): Node = {
-    set(node, data)
+  def create(node: Node, data: Array[Byte]): Node = {
+    setData(node, data)
     node
+  }
+  def createChild(parent: Node, name: String, data: Array[Byte], createMode: CreateMode): Node = {
+    val child = Node(parent, name)
+    setData(Node(parent, name), data)
+    child
   }
   def create(node: Node): Node = node
 
   def getChildren(node: Node): Seq[Node] = Nil
-  def get(node: Node): Array[Byte] = db.get(node).getOrElse(Array[Byte](0))
-  def getOpt(node: Node): Option[Array[Byte]] = db.get(node)
 
-  def set(node: Node, data: Array[Byte]) {
+  def getData(node: Node): Array[Byte] = db.get(node).getOrElse(Array[Byte](0))
+  def getDataOpt(node: Node): Option[Array[Byte]] = db.get(node)
+
+  def setData(node: Node, data: Array[Byte]) {
     db(node) = data
   }
 

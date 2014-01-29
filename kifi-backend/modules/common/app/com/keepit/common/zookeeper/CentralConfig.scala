@@ -68,24 +68,24 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
-      zk.getOpt(key.toNode).map(fromByteArray(_))
+      zk.getDataOpt(key.toNode).map(fromByteArray(_))
     } catch {
       case e: KeeperException.ConnectionLossException =>
-        zk.getOpt(key.toNode).map(fromByteArray(_))
+        zk.getDataOpt(key.toNode).map(fromByteArray(_))
     }
   }
 
   def set(key: CentralConfigKey, value: String): Unit = zkClient.session{ zk =>
     try{
-      zk.set(key.toNode, value)
+      zk.setData(key.toNode, value)
     } catch {
       case e: KeeperException.NoNodeException => {
         try {
-          zk.create(key.toNode, value, CreateMode.PERSISTENT)
+          zk.create(key.toNode, value)
         } catch {
           case e: KeeperException.NoNodeException => {
             zk.create(key.toNode.parent.get)
-            zk.create(key.toNode, value, CreateMode.PERSISTENT)
+            zk.create(key.toNode, value)
           }
         }
       }
@@ -104,19 +104,19 @@ class InMemoryConfigStore extends ConfigStore {
   val db : SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
   val watches : HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
 
-  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.nodeName)
+  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.name)
 
 
   def set(key: CentralConfigKey, value: String) : Unit = {
-    db(key.toNode.nodeName) = value
-    watches.get(key.toNode.nodeName).foreach{ funs =>
+    db(key.toNode.name) = value
+    watches.get(key.toNode.name).foreach{ funs =>
       funs.foreach(_(Some(value)))
     }
   }
 
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
-    if (!watches.isDefinedAt(key.toNode.nodeName)) watches(key.toNode.nodeName) = new ArrayBuffer[Option[String] => Unit]()
-    watches(key.toNode.nodeName) += handler
+    if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
+    watches(key.toNode.name) += handler
   }
 }
 
