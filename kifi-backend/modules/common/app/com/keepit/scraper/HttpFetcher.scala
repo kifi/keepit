@@ -224,10 +224,15 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   })
   scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
 
+  private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
+  private object HttpFetchHandlerResult {
+    implicit def reponseOpt2HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse])(implicit fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext): HttpFetchHandlerResult =
+      HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext)
+  }
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map{p => s" via ${p.alias}"}.getOrElse("")}") {
-    val httpGet = new HttpGet(url)
-    val httpContext = new BasicHttpContext()
+  private def fetchHandler(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpFetchHandlerResult = {
+    implicit val httpGet = new HttpGet(url)
+    implicit val httpContext = new BasicHttpContext()
 
     proxy.map { httpProxy =>
       val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.hostname, httpProxy.port, httpProxy.scheme)).build()
@@ -249,14 +254,16 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     httpContext.setAttribute("scraper_destination_url", url)
     httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
 
-    val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
-    val responseOpt = try {
+    if (disableGzip) httpGet.addHeader(ACCEPT_ENCODING, "")
+    implicit val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
+    try {
       q.offer(WeakReference(fetchInfo))
       val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r:CloseableHttpResponse => r.getStatusLine.toString }) { httpClient.execute(httpGet, httpContext) }
       fetchInfo.respStatusRef.set(response.getStatusLine)
       Some(response)
     } catch {
-        case e:ZipException => logAndSet(fetchInfo, None)(e, "fetch", url) // todo: retry without gzip
+        case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
+                               else fetchHandler(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
         case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
@@ -270,7 +277,10 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
         case e:SocketTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case t:Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
+  }
 
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map{p => s" via ${p.alias}"}.getOrElse("")}") {
+    val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
     responseOpt match {
       case None =>
         HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) FAILED to execute ($fetchInfo)"), httpContext)
