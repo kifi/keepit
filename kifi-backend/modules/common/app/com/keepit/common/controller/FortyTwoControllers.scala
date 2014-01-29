@@ -3,30 +3,26 @@ package com.keepit.common.controller
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 import com.keepit.common.akka.SafeFuture
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 import com.keepit.common.service.ServiceType
 
 
 trait ServiceController extends Controller with Logging {
 
   def serviceType: ServiceType
+
+  def resolve[T](a: T) = Future.successful(a)
   
-  def SafeAsyncAction(f: Request[AnyContent] => Result)(implicit ex: ExecutionContext) = Action{ request =>  
-    Async{ 
-      SafeFuture(f(request)) 
-    }  
+  def SafeAsyncAction(f: Request[AnyContent] => SimpleResult)(implicit ex: ExecutionContext) = Action.async { request =>
+    SafeFuture(f(request))
   }
 
-  def SafeAsyncAction(f: => Result)(implicit ex: ExecutionContext) = Action{  
-    Async{ 
-      SafeFuture(f) 
-    }  
+  def SafeAsyncAction(f: => SimpleResult)(implicit ex: ExecutionContext) = Action.async {
+    SafeFuture(f)
   }
 
-  def SafeAsyncAction[A](parser: BodyParser[A])(f: Request[A] => Result)(implicit ex: ExecutionContext) = Action[A](parser){ request =>  
-    Async{ 
-      SafeFuture(f(request)) 
-    }  
+  def SafeAsyncAction[A](parser: BodyParser[A])(f: Request[A] => SimpleResult)(implicit ex: ExecutionContext) = Action.async[A](parser){ request =>
+    SafeFuture(f(request))
   }
 
 }

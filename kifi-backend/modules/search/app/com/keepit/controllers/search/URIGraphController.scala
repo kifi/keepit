@@ -42,7 +42,7 @@ class URIGraphController @Inject()(
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
-  def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
+  def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
     val infosFuture = future {
       val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
       ids.map{ id =>
@@ -55,9 +55,7 @@ class URIGraphController @Inject()(
         }
       }
     }
-    Async {
-      infosFuture.map(info => Ok(Json.toJson(info)))
-    }
+    infosFuture.map(info => Ok(Json.toJson(info)))
   }
 
   def indexInfo = Action { implicit request =>

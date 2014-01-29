@@ -7,7 +7,7 @@ import views.html
 @Singleton
 class AdminSearchPerformanceController  @Inject() (
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
-  def viewSearchPerformance = AdminHtmlAction { implicit request =>
+  def viewSearchPerformance = AdminHtmlAction.authenticated { implicit request =>
       Ok(html.admin.searchPerformance())
   }
 }

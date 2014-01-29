@@ -76,7 +76,7 @@ class UserController @Inject() (
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // hotspot -- need optimization; gather timing info for analysis
-  def friends() = AuthenticatedJsonAction { request =>
+  def friends() = JsonAction.authenticated { request =>
     val userId = request.userId
     Ok(Json.obj(
       "friends" -> timing(s"friends($userId) ALL") {
@@ -101,7 +101,7 @@ class UserController @Inject() (
     ))
   }
 
-  def friendCount() = AuthenticatedJsonAction { request =>
+  def friendCount() = JsonAction.authenticated { request =>
     db.readOnly { implicit s =>
       Ok(Json.obj(
         "friends" -> userConnectionRepo.getConnectionCount(request.userId),
@@ -110,24 +110,22 @@ class UserController @Inject() (
     }
   }
 
-  def socialNetworkInfo() = AuthenticatedJsonAction { request =>
+  def socialNetworkInfo() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
-  def abookInfo() = AuthenticatedJsonAction { request =>
+  def abookInfo() = JsonAction.authenticatedAsync { request =>
     val abookF = abookServiceClient.getABookInfos(request.userId)
-    Async {
-      abookF.map { abooks =>
-        Ok(Json.toJson(abooks))
-      }
+    abookF.map { abooks =>
+      Ok(Json.toJson(abooks))
     }
   }
 
-  def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def friendNetworkInfo(id: ExternalId[User]) = JsonAction.authenticated { request =>
     Ok(toJson(networkInfoLoader.load(request.userId, id)))
   }
 
-  def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def unfriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     if (userCommander.unfriend(request.userId, id)) {
       Ok(Json.obj("removed" -> true))
     } else {
@@ -135,7 +133,7 @@ class UserController @Inject() (
     }
   }
 
-  def friend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def friend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, id)
     if (success) {
       Ok(Json.obj("success" -> true, code -> true))
@@ -144,7 +142,7 @@ class UserController @Inject() (
     }
   }
 
-  def ignoreFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def ignoreFriendRequest(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.ignoreFriendRequest(request.userId, id)
     if (success) Ok(Json.obj("success" -> true))
     else if (code == "friend_request_not_found") NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
@@ -152,7 +150,7 @@ class UserController @Inject() (
     else BadRequest(Json.obj("error" -> code))
   }
 
-  def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def cancelFriendRequest(id: ExternalId[User]) = JsonAction.authenticated { request =>
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { recipient =>
         friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get,
@@ -168,17 +166,17 @@ class UserController @Inject() (
     }
   }
 
-  def incomingFriendRequests = AuthenticatedJsonAction { request =>
+  def incomingFriendRequests = JsonAction.authenticated { request =>
     val users = userCommander.incomingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def outgoingFriendRequests = AuthenticatedJsonAction { request =>
+  def outgoingFriendRequests = JsonAction.authenticated { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def excludeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     db.readWrite { implicit s =>
       val friendIdOpt = userRepo.getOpt(id) collect {
         case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
@@ -192,7 +190,7 @@ class UserController @Inject() (
     }
   }
 
-  def includeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     db.readWrite { implicit s =>
       val friendIdOpt = userRepo.getOpt(id) collect {
         case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
@@ -206,11 +204,11 @@ class UserController @Inject() (
     }
   }
 
-  def currentUser = AuthenticatedJsonAction(true) { implicit request =>
+  def currentUser = JsonAction.authenticated(allowPending = true) { implicit request =>
     getUserInfo(request.userId)
   }
 
-  def changePassword = AuthenticatedJsonToJsonAction(true) { implicit request =>
+  def changePassword = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
@@ -223,7 +221,7 @@ class UserController @Inject() (
     }
   }
 
-  def getEmailInfo(email: String) = AuthenticatedJsonAction(allowPending = true) { implicit request =>
+  def getEmailInfo(email: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
@@ -246,7 +244,7 @@ class UserController @Inject() (
 
   private val siteUrl = current.configuration.getString("application.baseUrl").get
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
-  def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
+  def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
       val hasInvalidEmails = userData.emails.exists { addresses =>
         addresses.map(em => emailRegex.findFirstIn(em.address).isEmpty).contains(true)
@@ -355,7 +353,7 @@ class UserController @Inject() (
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")
 
-  def getPrefs() = AuthenticatedJsonAction { request =>
+  def getPrefs() = JsonAction.authenticated { request =>
     Ok(db.readOnly { implicit s =>
       JsObject(SitePrefNames.toSeq.map { name =>
         name -> userValueRepo.getValue(request.userId, name).map(value => {
@@ -368,7 +366,7 @@ class UserController @Inject() (
     })
   }
 
-  def savePrefs() = AuthenticatedJsonToJsonAction { request =>
+  def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
     if (o.keys.subsetOf(SitePrefNames)) {
       db.readWrite(attempts = 3) { implicit s =>
@@ -386,7 +384,7 @@ class UserController @Inject() (
     }
   }
 
-  def getInviteCounts() = AuthenticatedJsonAction { request =>
+  def getInviteCounts() = JsonAction.authenticated { request =>
     db.readOnly { implicit s =>
       val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(1000)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
@@ -397,7 +395,7 @@ class UserController @Inject() (
     }
   }
 
-  def needMoreInvites() = AuthenticatedJsonAction { request =>
+  def needMoreInvites() = JsonAction.authenticated { request =>
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
         from = EmailAddresses.INVITATION,
@@ -440,7 +438,7 @@ class UserController @Inject() (
       "cropSize" -> optional(number)
     )(UserPicInfo.apply)(UserPicInfo.unapply)
   )
-  def setUserPicture() = AuthenticatedJsonAction(allowPending = false) { implicit request =>
+  def setUserPicture() = JsonAction.authenticated(allowPending = true) { implicit request =>
     userPicForm.bindFromRequest.fold(
     formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
     { case UserPicInfo(picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
@@ -462,7 +460,7 @@ class UserController @Inject() (
   }
 
   private val url = current.configuration.getString("application.baseUrl").get
-  def resendVerificationEmail(email: String) = AuthenticatedHtmlAction { implicit request =>
+  def resendVerificationEmail(email: String) = HtmlAction.authenticated { implicit request =>
     db.readWrite { implicit s =>
       emailAddressRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
@@ -483,16 +481,14 @@ class UserController @Inject() (
     Ok
   }
 
-  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = AuthenticatedJsonAction {  request =>
-    Async {
-      userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
-        Ok(Json.toJson(r))
-      }
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync {  request =>
+    userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+      Ok(Json.toJson(r))
     }
   }
 
   // todo: Combine this and next (abook import)
-  def checkIfImporting(network: String, callback: String) = AuthenticatedHtmlAction { implicit request =>
+  def checkIfImporting(network: String, callback: String) = HtmlAction.authenticated { implicit request =>
     val startTime = clock.now
     var importHasHappened = new AtomicBoolean(false)
     var finishedImportAnnounced = new AtomicBoolean(false)
@@ -529,7 +525,7 @@ class UserController @Inject() (
       case Some(sui) =>
         val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
-        Ok.stream(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
+        Status(200).chunked(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
       case None =>
         Ok(script(JsString("network_not_connected")))
     }
@@ -537,7 +533,7 @@ class UserController @Inject() (
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
   val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt * 1000
-  def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = AuthenticatedHtmlAction { request =>
+  def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = HtmlAction.authenticated { request =>
     import ABookInfoStates._
     val ts = System.currentTimeMillis
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
@@ -568,6 +564,6 @@ class UserController @Inject() (
          res.collect { case Some(s:String) => s }.headOption
       }
     }
-    Ok.stream(returnEnumerator.andThen(Enumerator.eof))
+    Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))
   }
 }

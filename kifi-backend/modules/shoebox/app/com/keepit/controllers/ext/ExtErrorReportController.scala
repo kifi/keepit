@@ -16,7 +16,7 @@ class ExtErrorReportController @Inject() (
   heimdal: HeimdalServiceClient)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def addErrorReport = JsonToJsonAction(true) (authenticatedAction = { request =>
+  def addErrorReport = JsonAction.parseJson(allowPending = true) (authenticatedAction = { request =>
     val json = request.body
     val message = (json \ "message").as[String]
     val (inst, userId, exps) = (request.kifiInstallationId.getOrElse(""), request.userId, request.experiments.mkString(","))

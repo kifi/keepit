@@ -101,6 +101,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           shardedKeeps.reduce(_ union _) === keeps
         }
       }
+      1===1
     }
 
     "handle URI migration" in {
@@ -174,6 +175,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
             newCollSizes(shard) === oldCollSizes(shard)
           }
         }
+        1===1
       }
     }
 

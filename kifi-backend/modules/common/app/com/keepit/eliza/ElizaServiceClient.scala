@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.message.ThreadContent
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
@@ -17,7 +18,7 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.UserThreadStats
+import com.keepit.eliza.model.{UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
@@ -41,7 +42,8 @@ trait ElizaServiceClient extends ServiceClient {
 class ElizaServiceClientImpl @Inject() (
     val airbrakeNotifier: AirbrakeNotifier,
     val httpClient: HttpClient,
-    val serviceCluster: ServiceCluster
+    val serviceCluster: ServiceCluster,
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache
   )
   extends ElizaServiceClient with Logging {
 
@@ -90,8 +92,10 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = {
-    call(Eliza.internal.getUserThreadStats(userId)).map{ response =>
-      Json.parse(response.body).as[UserThreadStats]
+    userThreadStatsForUserIdCache.get(UserThreadStatsForUserIdKey(userId)) map { s => Future.successful(s) } getOrElse {
+      call(Eliza.internal.getUserThreadStats(userId)).map{ response =>
+        Json.parse(response.body).as[UserThreadStats]
+      }
     }
   }
 

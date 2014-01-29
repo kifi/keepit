@@ -1,6 +1,6 @@
 package com.keepit.normalizer
 
-import org.specs2.mutable.Specification
+import org.specs2.mutable.SpecificationLike
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
@@ -17,7 +17,7 @@ import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 
-class NormalizationServiceTest extends TestKitScope with Specification with ShoeboxTestInjector {
+class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
     case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
@@ -170,6 +170,7 @@ class NormalizationServiceTest extends TestKitScope with Specification with Shoe
 
       "shutdown shared actor system" in {
         system.shutdown()
+        1===1
       }
     }
   }

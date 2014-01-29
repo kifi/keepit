@@ -25,14 +25,14 @@ class AdminSearchConfigController @Inject() (
   )
     extends AdminController(actionAuthenticator) {
 
-  def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def showUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val searchConfigFuture = searchClient.showUserConfig(userId)
     val user = db.readOnly{ implicit s => userRepo.get(userId) }
     val searchConfig = Await.result(searchConfigFuture, 5 seconds)
     Ok(views.html.admin.searchConfig(user, searchConfig.iterator.toSeq.sortBy(_._1)))
   }
 
-  def setUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def setUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
@@ -41,34 +41,34 @@ class AdminSearchConfigController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def resetUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
+  def resetUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     searchClient.resetUserConfig(userId)
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def getExperiments = AdminHtmlAction { implicit request =>
+  def getExperiments = AdminHtmlAction.authenticatedAsync { implicit request =>
     heimdal.updateMetrics()
     val experiments = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }
     val ids = experiments.map(_.id.get)
     val defaultConfigFuture = searchClient.getSearchDefaultConfig
     val kifiVsGoogleFuture = kifiVsGoogle(ids)
     val searchesWithKifiResultsFuture = searchesWithKifiResults(ids)
-    Async(for {
+    for {
       defaultConfig <- defaultConfigFuture
       kifiVsGoogle <- kifiVsGoogleFuture
       searchesWithKifiResults <- searchesWithKifiResultsFuture
     } yield {
       Ok(html.admin.searchConfigExperiments(experiments, defaultConfig.params, kifiVsGoogle.mapValues(Json.stringify(_)), searchesWithKifiResults.mapValues(Json.stringify(_))))
-    })
+    }
   }
 
-  def addNewExperiment = AdminHtmlAction { implicit request =>
+  def addNewExperiment = AdminHtmlAction.authenticated { implicit request =>
     val defaultConfig =  Await.result(searchClient.getSearchDefaultConfig, 5 seconds)
     db.readWrite { implicit s => searchConfigExperimentRepo.save(SearchConfigExperiment(description = "New Experiment", config = defaultConfig)) }
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments)
   }
 
-  def deleteExperiment = AdminJsonAction { implicit request =>
+  def deleteExperiment = AdminJsonAction.authenticated { implicit request =>
     val id = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
        .get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     id.map { id =>
@@ -78,7 +78,7 @@ class AdminSearchConfigController @Inject() (
     Ok(JsObject(Seq()))
   }
 
-  def updateExperiment = AdminJsonAction { implicit request =>
+  def updateExperiment = AdminJsonAction.authenticated { implicit request =>
     val form = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
     val id = form.get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     val desc = form.get("description").getOrElse("")
