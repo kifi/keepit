@@ -7,6 +7,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 
 trait ElizaServiceClientModule extends ScalaModule
 
@@ -18,12 +19,13 @@ case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
   def elizaServiceClient (
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
-    airbrakeNotifier: AirbrakeNotifier): ElizaServiceClient = {
+    airbrakeNotifier: AirbrakeNotifier,
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache): ElizaServiceClient = {
     new ElizaServiceClientImpl(
       airbrakeNotifier,
       client,
-      serviceDiscovery.serviceCluster(ServiceType.ELIZA)
-      )
+      serviceDiscovery.serviceCluster(ServiceType.ELIZA),
+      userThreadStatsForUserIdCache)
   }
 }
 

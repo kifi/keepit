@@ -24,7 +24,7 @@ var panes = panes || {};  // idempotent for Chrome
 
 var pane = pane || function () {  // idempotent for Chrome
   'use strict';
-  var $pane, paneHistory;
+  var $pane, paneHistory, paneObserver;
 
   $(document).data('esc').add(function (e) {
     if ($pane) {
@@ -35,7 +35,7 @@ var pane = pane || function () {  // idempotent for Chrome
 
   api.onEnd.push(function () {
     log('[pane:onEnd]')();
-    $pane && $pane.remove();
+    if ($pane) $pane.remove();
     $('html').removeAttr('kifi-with-pane kifi-pane-parent');
   });
 
@@ -128,7 +128,8 @@ var pane = pane || function () {  // idempotent for Chrome
           pane: 'pane_' + name
         }));
       $pane[0].dataset.locator = locator;
-      api.port.emit("pane", {new: locator});
+      api.port.emit('pane', {new: locator});
+
       var bringSlider = !keeper.showing();
       if (bringSlider) {
         $pane.append(keeper.create(locator)).appendTo(tile.parentNode);
@@ -137,6 +138,8 @@ var pane = pane || function () {  // idempotent for Chrome
         $pane.insertBefore(tile);
         keeper.moveToBottom();
       }
+      observePaneAncestry();
+
       $pane.layout()
       .on("transitionend", function onPaneShown(e) {
         if (e.target !== this) return;
@@ -280,18 +283,41 @@ var pane = pane || function () {  // idempotent for Chrome
     pane.onHide.dispatch();
     $pane
     .off('transitionend') // onPaneShown
-    .on("transitionend", function (e) {
+    .on('transitionend', function (e) {
       if (e.target === this) {
-        var $pane = $(this);
-        $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
-        $pane.remove();
-        $('html').removeAttr('kifi-pane-parent');
-        notifyPageOfResize();
+        cleanUpDom(this);
       }
     });
     api.port.emit('pane', {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
     $('html').removeAttr('kifi-with-pane');
+  }
+
+  function observePaneAncestry() {
+    if (paneObserver) paneObserver.disconnect();
+    paneObserver = new MutationObserver(cleanUpIfRemoved);
+    var what = {childList: true};
+    for (var node = $pane[0].parentNode; node !== document; node = node.parentNode) {
+      paneObserver.observe(node, what);
+    }
+  }
+
+  function cleanUpIfRemoved() {
+    if ($pane ? !document.contains($pane[0]) : $('html').attr('kifi-pane-parent') != null) {
+      cleanUpDom($pane && $pane[0]);
+    }
+  }
+
+  function cleanUpDom(pane) {
+    if (pane) {
+      $(pane).find('.kifi-pane-box').triggerHandler('kifi:remove');
+      api.port.emit('pane', {old: pane.dataset.locator});
+    }
+    if (paneObserver) paneObserver.disconnect();
+    $pane = paneHistory = paneObserver = null;
+    $(pane).remove();
+    $('html').removeAttr('kifi-pane-parent kifi-with-pane');
+    notifyPageOfResize();
   }
 
   function populatePane($box, name, locator) {

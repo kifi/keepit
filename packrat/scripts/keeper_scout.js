@@ -13,7 +13,7 @@ var tile = tile || function() {  // idempotent for Chrome
     }
   };
 
-  var whenMeKnown = [], tileCard, tileCount, onScroll;
+  var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount, onScroll;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
@@ -30,7 +30,7 @@ var tile = tile || function() {  // idempotent for Chrome
     '<div class="kifi-tile-keep"></div>' +
     '<div class="kifi-tile-kept"></div></div>';
   tile["kifi:position"] = positionTile;
-  tile.addEventListener("mouseover", function (e) {
+  tile.addEventListener('mouseover', function (e) {
     if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
       loadAndDo('keeper', 'show', 'tile');
     }
@@ -137,12 +137,12 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 77: // m
         api.port.emit('unsilence');
-        loadAndDo('pane', 'toggle', 'key', '/messages');
+        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages'});
         e.preventDefault();
         break;
       case 79: // o
         api.port.emit('unsilence');
-        loadAndDo('pane', 'toggle', 'key', '/messages:all');
+        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages:all'});
         e.preventDefault();
         break;
       case 83: // s
@@ -205,8 +205,18 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function attachTile() {
-    if (tile && !tile.parentNode) {
-      (document.querySelector("body") || document.documentElement).appendChild(tile);
+    if (tile && !document.contains(tile)) {
+      var parent = document.querySelector('body') || document.documentElement;
+      parent.appendChild(tile);
+      if (parent !== tileParent) {
+        if (tileObserver) tileObserver.disconnect();
+        tileObserver = new MutationObserver(attachTile);
+        var what = {childList: true};
+        for (var node = parent; node !== document; node = node.parentNode) {
+          tileObserver.observe(node, what);
+        }
+        tileParent = parent;
+      }
     }
   }
 
@@ -228,7 +238,7 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function setTileVertOffset(px) {
-    log("[setTileVertOffset] px:", px)();
+    log('[setTileVertOffset] px:', px)();
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
@@ -240,8 +250,10 @@ var tile = tile || function() {  // idempotent for Chrome
     }
     if (tile) {
       if (leaveTileInDoc) {
-        tile.style.display = "none";
+        tile.style.display = 'none';
       } else {
+        if (tileObserver) tileObserver.disconnect();
+        tileObserver = tileParent = null;
         tile.remove();
       }
     }

@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
-import play.api.mvc.{AsyncResult, Action}
+import play.api.mvc.{SimpleResult, AsyncResult, Action}
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
 import java.io.File
@@ -57,13 +57,13 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
-  def importContactsP(userId:Id[User]) = Action(parse.json) { request =>
+  def importContactsP(userId:Id[User]) = Action.async(parse.json) { request =>
     val tokenOpt = request.body.asOpt[OAuth2Token]
     log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
     tokenOpt match {
       case None =>
         log.error(s"[importContactsP($userId)] token is invalid body=${request.body}")
-        BadRequest("Invalid token")
+        resolve(BadRequest("Invalid token"))
       case Some(tk) => tk.issuer match {
         case OAuth2TokenIssuers.GOOGLE => {
           val savedToken = db.readWrite(attempts = 2) { implicit s =>
@@ -71,12 +71,12 @@ class ABookController @Inject() (
           }
           importGmailContacts(userId, tokenOpt.get.accessToken, Some(savedToken))
         }
-        case _ => BadRequest(s"Unsupported issuer ${tk.issuer}")
+        case _ => resolve(BadRequest(s"Unsupported issuer ${tk.issuer}"))
       }
     }
   }
 
-  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action { request =>
+  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action.async { request =>
     provider match {
       case "google" => {
         importGmailContacts(userId, accessToken, None)
@@ -84,35 +84,31 @@ class ABookController @Inject() (
       case "facebook" => {
         if (Play.maybeApplication.isDefined && (!Play.isProd)) {
           val friendsUrl = "https://graph.facebook.com/me/friends"
-          Async {
-            WS.url(friendsUrl).withQueryString(("access_token", accessToken),("fields", "id,name,first_name,last_name,username,picture,email")).get map { resp =>
-              resp.status match {
-                case OK => {
-                  val friends = resp.json
-                  log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-                  Ok(friends)
-                }
-                case _ => {
-                  BadRequest("Unsuccessful attempt to invoke facebook API")
-                }
+          WS.url(friendsUrl).withQueryString(("access_token", accessToken),("fields", "id,name,first_name,last_name,username,picture,email")).get map { resp =>
+            resp.status match {
+              case OK => {
+                val friends = resp.json
+                log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
+                Ok(friends)
+              }
+              case _ => {
+                BadRequest("Unsuccessful attempt to invoke facebook API")
               }
             }
           }
         } else {
-          BadRequest("Unsupported provider")
+          resolve(BadRequest("Unsupported provider"))
         }
       }
     }
   }
 
-  def importGmailContacts(userId: Id[User], accessToken: String, tokenOpt:Option[OAuth2Token]): AsyncResult = {  // todo: move to commander
+  def importGmailContacts(userId: Id[User], accessToken: String, tokenOpt:Option[OAuth2Token]): Future[SimpleResult] = {  // todo: move to commander
     val resF = importGmailContactsF(userId, accessToken, tokenOpt)
-    Async {
-      resF.map { abookInfoOpt =>
-        abookInfoOpt match {
-          case Some(info) => Ok(Json.toJson(info))
-          case None => BadRequest("Failed to import gmail contacts")
-        }
+    resF.map { abookInfoOpt =>
+      abookInfoOpt match {
+        case Some(info) => Ok(Json.toJson(info))
+        case None => BadRequest("Failed to import gmail contacts")
       }
     }
   }

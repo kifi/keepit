@@ -10,6 +10,8 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 import datetime
 
+userName = None
+
 class S3Asset(object):
 
   def __init__(self, key):
@@ -79,8 +81,8 @@ def message_hipchat(msg):
   }
   requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
 
-def log(msg): #ZZZ hipchat with notification
-  amsg = "[" + getpass.getuser() + "] " + msg
+def log(msg):
+  amsg = "[" + userName + "] " + msg
   print amsg
   message_irc(amsg)
   message_hipchat(amsg)
@@ -90,7 +92,7 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in ec2.get_only_instances()]
 
 if __name__=="__main__":
-  parser = argparse.ArgumentParser(description="Your friendly FortyTwo Deployment Service v0.42")
+  parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
   parser.add_argument(
     'serviceType',
     action = 'store',
@@ -106,19 +108,33 @@ if __name__=="__main__":
   parser.add_argument(
     '--mode',
     action = 'store',
-    help = "Wait for machines to come up or not (default: 'safe')",
-    metavar = "Host",
+    help = "Wait for machines to come up or not. Options: 'safe' or 'force'. (default: 'safe').",
+    metavar = "Mode",
     default = 'safe',
     choices = ['safe', 'force']
   )
   parser.add_argument(
     '--version',
     action = 'store',
-    help = "Target version",
+    help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
     metavar = "Version"
+  )
+  parser.add_argument(
+    '--iam',
+    action = 'store',
+    help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
+    metavar = "Name"
   )
 
   args = parser.parse_args(sys.argv[1:])
+
+  if args.iam:
+    userName = args.iam
+  else:
+    userName = getpass.getuser()
+    if userName=="fortytwo":
+      print "Yo, dude, set your name! ('--iam' option)"
+
   instances = getAllInstances()
 
   if args.host:
@@ -151,17 +167,44 @@ if __name__=="__main__":
 
   log("Triggered deploy of %s to %s in %s mode with version %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, full_version))
 
-  for instance in instances:
-    shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
-    remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
+  if args.mode and args.mode=="force":
     try:
-      while remoteProc.is_running():
-        time.sleep(0.1)
-      remoteProc.wait_for_result()
+      inpt = raw_input("Warning: Force Mode! You sure? [Y,N,Ctrl+C]")
+      if inpt=="Y":
+        remoteProcs = []
+        for instance in instances:
+          shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
+          remoteProcs.append(shell.spawn(command, store_pid=True, stdout=sys.stdout))
+        log("Deploy Triggered on all instances. Waiting for them to finish.")
+        try:
+          for remoteProc in remoteProcs:
+            while remoteProc.is_running():
+              time.sleep(0.1)
+            remoteProc.wait_for_result()
+        except KeyboardInterrupt:
+          log("Manual Abort. Might be too late (force mode).")
+          for remoteProc in remoteProcs:
+            try:
+              remoteProc.send_signal(2)
+            except:
+              pass
+          sys.exit(1)
+      else:
+        log("Manual Abort.")
     except KeyboardInterrupt:
       log("Manual Abort.")
-      remoteProc.send_signal(2)
-      sys.exit(1)
-
+  else:
+    for instance in instances:
+      shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
+      remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
+      try:
+        while remoteProc.is_running():
+          time.sleep(0.1)
+        remoteProc.wait_for_result()
+      except KeyboardInterrupt:
+        log("Manual Abort.")
+        remoteProc.send_signal(2)
+        sys.exit(1)
+    log("Deployment Complete")
 
 

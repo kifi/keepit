@@ -34,6 +34,7 @@ class ZooKeeperClientTest extends Specification {
         val s = new String(zk.get(Node(s"{path.name}/a/b/c")))
         s === "foo"
         zk.deleteRecursive(Path(s"{path.name}/a"))
+        1 === 1
       }
     }
 
@@ -50,6 +51,7 @@ class ZooKeeperClientTest extends Specification {
         zk.set(Node(s"{path.name}/testNode"), "bar".getBytes)
         zk.set(Node(s"{path.name}/testNode"), "baz".getBytes)
         zk.deleteNode(Node(s"{path.name}/testNode"))
+        1 === 1
       }
     }
 
@@ -65,6 +67,7 @@ class ZooKeeperClientTest extends Specification {
         zk.deleteNode(Node(s"{path.name}/parent/child1"))
         zk.createNode(Node(s"{path.name}/parent/child3"), null, PERSISTENT)
         zk.deleteRecursive(Path(s"{path.name}/parent"))
+        1 === 1
       }
     }
 
@@ -88,6 +91,8 @@ class ZooKeeperClientTest extends Specification {
         zk.getChildren(Path(s"{path.name}/other")).size === 1
         zk.getChildren(Path(s"{path.name}/parent")).size === 0
       }(path, true)
+
+      1 === 1
     }
 
     "For a given node, automatically maintain a map from the node's children to the each child's data" in {
@@ -106,6 +111,8 @@ class ZooKeeperClientTest extends Specification {
         zk.set(Node(s"{path.name}/parent/b"), "bar2".getBytes)
         zk.createNode(Node(s"{path.name}/parent/c"), "baz".getBytes, PERSISTENT)
         println("child map: %s".format(childMap)) // NOTE: real code should synchronize access on childMap
+
+        1 === 1
       }
     }
   }

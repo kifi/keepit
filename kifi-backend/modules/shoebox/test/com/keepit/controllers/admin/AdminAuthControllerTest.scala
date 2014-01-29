@@ -74,7 +74,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         val impersonateRequest = FakeRequest("POST", "/admin/user/%s/impersonate".format(impersonate.id.get.toString))
           .withCookies(cookie1)
         val impersonateResultFail = route(impersonateRequest).get
-        status(impersonateResultFail) must equalTo(401)
+        status(impersonateResultFail) must equalTo(403)
 
         db.readWrite {implicit s =>
           inject[UserExperimentRepo].save(UserExperiment(experimentType = ExperimentType.ADMIN, userId = admin.id.get))

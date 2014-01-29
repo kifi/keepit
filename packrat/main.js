@@ -17,6 +17,7 @@ var tabsTagging = []; // [tab]
 var threadListCallbacks = {}; // normUrl => [function]
 var threadCallbacks = {}; // threadID => [function]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
+var deepLinkTimers = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
@@ -39,6 +40,10 @@ function clearDataCache() {
   threadListCallbacks = {};
   threadCallbacks = {};
   threadReadAt = {};
+  for (var tabId in deepLinkTimers) {
+    api.timers.clearTimeout(deepLinkTimers[tabId]);
+  }
+  deepLinkTimers = {};
 
   pageData = {};
   threadLists = {};
@@ -1135,20 +1140,22 @@ function sendPageThreadCount(tab, tl) {
 
 function awaitDeepLink(link, tabId, retrySec) {
   if (link.locator) {
+    api.timers.clearTimeout(deepLinkTimers[tabId]);
+    delete deepLinkTimers[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
-      log("[awaitDeepLink]", tabId, link)();
+      log('[awaitDeepLink]', tabId, link)();
       api.tabs.emit(tab, "open_to", {
-        trigger: "deepLink",
+        trigger: 'deepLink',
         locator: link.locator,
         redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
       }, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
       log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec")();
-      api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
   } else {
-    log("[awaitDeepLink] no locator", tabId, link)();
+    log('[awaitDeepLink] no locator', tabId, link)();
   }
 }
 
@@ -1519,9 +1526,8 @@ function gotPageThreadsFor(url, tab, pt, nUri) {
   if (!tooLate && !silence) {
     threadLists[nUri] = pt;
     var numUnreadUnmuted = pt.countUnreadUnmuted();
-    if (ruleSet.rules.message && numUnreadUnmuted > 0) {  // open immediately to unread message(s)
-      // TODO: verify that there is not a pending deep link listener for this tab (or the pane is not already open)
-      api.tabs.emit(tab, 'open_to', {
+    if (ruleSet.rules.message && numUnreadUnmuted > 0 && !deepLinkTimers[tab.id] && !paneIsOpen(tab.id)) {
+      api.tabs.emit(tab, 'open_to', {  // open immediately to unread message(s)
         locator: numUnreadUnmuted === 1 ? '/messages/' + pt.firstUnreadUnmuted() : '/messages',
         trigger: 'message'
       }, {queue: 1});
@@ -1557,6 +1563,15 @@ function isSent(th) {
 
 function isUnread(th) {
   return th.unread;
+}
+
+function paneIsOpen(tabId) {
+  var hasThisTabId = hasId(tabId);
+  for (var loc in tabsByLocator) {
+    if (tabsByLocator[loc].some(hasThisTabId)) {
+      return true;
+    }
+  }
 }
 
 function setIcon(tab, kept) {

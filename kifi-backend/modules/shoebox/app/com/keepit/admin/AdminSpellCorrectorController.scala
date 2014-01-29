@@ -14,7 +14,7 @@ class AdminSpellCorrectorController @Inject() (
 
   val Home = Redirect(routes.AdminSpellCorrectorController.spellChecker())
 
-  def correct() = AdminHtmlAction { request =>
+  def correct() = AdminHtmlAction.authenticated { request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
     val t1 = System.currentTimeMillis
@@ -24,7 +24,7 @@ class AdminSpellCorrectorController @Inject() (
     Home.flashing("success" -> message)
   }
 
-  def spellChecker() = AdminHtmlAction { implicit request =>
+  def spellChecker() = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.spellchecker())
   }
 }

@@ -4,6 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URIParserUtil._
 import com.keepit.common.strings.UTF8
 import scala.util.{Failure, Success, Try}
+import scala.util.matching.Regex
 
 object URI extends Logging {
 
@@ -42,20 +43,37 @@ object URI extends Logging {
   def isRelative(uriString: String): Boolean = uriString.startsWith("/")
   def isAbsolute(uriString : String): Boolean = !isRelative(uriString)
 
-  def url(baseUri: URI, targetUrl: String): String =
+  def absoluteUrl(baseUri: URI, targetUrl: String): Option[String] =
     if (isRelative(targetUrl)) {
       val absoluteTargetUrl = for {
         scheme <- baseUri.scheme
         host <- baseUri.host }
       yield scheme + "://" + host.name + targetUrl
-      absoluteTargetUrl getOrElse targetUrl
+      absoluteTargetUrl
     }
-    else targetUrl
+    else Some(targetUrl)
 
-  def url(baseUrl: String, targetUrl: String): String =
-    if (isRelative(targetUrl) && isAbsolute(baseUrl))
-      safelyParse(baseUrl).map(url(_, targetUrl)) getOrElse targetUrl
-    else targetUrl
+  def absoluteUrl(baseUrl: String, targetUrl: String): Option[String] =
+    if (isAbsolute(targetUrl)) Some(targetUrl)
+    else if (isAbsolute(baseUrl)) for {
+      baseUri <- safelyParse(baseUrl)
+      absoluteTargetUrl <- absoluteUrl(baseUri, targetUrl)
+    } yield absoluteTargetUrl
+    else None
+
+  def sanitize(baseUrl: String, targetUrl: String): Option[String] = {
+    val quotedString = """"(.+)"""".r
+    val actualTargetUrlOption = Option(targetUrl) collect {
+      case quotedString(uriString) => uriString
+      case uriString if uriString.nonEmpty => uriString
+    }
+    for {
+      actualTargetUrl <- actualTargetUrlOption
+      absoluteTargetUrl <- absoluteUrl(baseUrl, actualTargetUrl)
+      parsedTargetUri <- safelyParse(absoluteTargetUrl)
+    } yield parsedTargetUri.toString()
+  }
+
 }
 
 class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Option[String], val host: Option[Host], val port: Int, val path: Option[String], val query: Option[Query], val fragment: Option[String]) {
@@ -81,13 +99,6 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     fragment.foreach{ fragment => if (fragment.length > 0) sb.append("#").append(fragment) }
 
     sb.toString()
-  }
-
-  def safelyToString() = try {
-    Some(toString())
-  } catch { case e : Exception =>
-    URI.log.error("URI.toString() failed: [%s] caused by [%s]".format(raw, e.getMessage))
-    None
   }
 
   override def hashCode() = URI.unapply(this).hashCode()

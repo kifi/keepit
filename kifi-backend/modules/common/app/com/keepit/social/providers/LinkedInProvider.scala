@@ -3,9 +3,9 @@ package com.keepit.social.providers
 import com.keepit.social.UserIdentityProvider
 
 import LinkedInProvider._
-import play.api.libs.ws.WS
+import play.api.libs.ws.{Response, WS}
 import play.api.{Logger, Application}
-import securesocial.core.{IdentityId, AuthenticationException, SocialUser}
+import securesocial.core.{OAuth2Info, IdentityId, AuthenticationException, SocialUser}
 import play.api.libs.json.JsArray
 
 /**
@@ -15,6 +15,14 @@ class LinkedInProvider(application: Application)
     extends securesocial.core.OAuth2Provider(application) with UserIdentityProvider {
 
   override def id = LinkedInProvider.LinkedIn
+
+  override protected def buildInfo(response: Response): OAuth2Info = {
+    try super.buildInfo(response) catch {
+      case e: Throwable =>
+        Logger.info(s"[securesocial] Failed to build linkedin oauth2 info. Response was ${response.body}")
+        throw e
+    }
+  }
 
   override def fillProfile(user: SocialUser): SocialUser = {
     val accessToken = user.oAuth2Info.get.accessToken

@@ -116,6 +116,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 class UserThreadRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent,
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
     shoebox: ShoeboxServiceClient //todo: Its wrong to have a shoebox client here, this should go in the contoller layer
   )
   extends DbRepo[UserThread] with UserThreadRepo with Logging {
@@ -142,8 +143,13 @@ class UserThreadRepoImpl @Inject() (
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
 
-  override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: UserThread)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {
+    userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
+  }
+
+  override def invalidateCache(model: UserThread)(implicit session: RSession): Unit = {
+    userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
+  }
 
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
     shoebox.getUserOpt(basicUser.externalId) map { userOpt=>
@@ -502,11 +508,12 @@ class UserThreadRepoImpl @Inject() (
 
   def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats = {
     import StaticQuery.interpolation
-
-    UserThreadStats(
-      all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
-      active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
-      started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
+    userThreadStatsForUserIdCache.getOrElse(UserThreadStatsForUserIdKey(userId)) {
+      UserThreadStats(
+        all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
+        active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
+        started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
+    }
   }
 
 }

@@ -51,7 +51,7 @@ case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination
 }
 
 object HttpRedirect {
-  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.url(currentLocation, newDestination))
+  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.absoluteUrl(currentLocation, newDestination).getOrElse(newDestination))
 
   import play.api.libs.functional.syntax._
   import play.api.libs.json._

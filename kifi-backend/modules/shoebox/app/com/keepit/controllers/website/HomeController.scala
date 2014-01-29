@@ -65,23 +65,23 @@ class HomeController @Inject() (
   }
 
   // Start post-launch stuff!
-  def about = HtmlAction(true)(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
-  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+  def about = HtmlAction(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
+  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     Ok(views.html.marketing.about(isLoggedIn))
   }
 
-  def termsOfService = HtmlAction(true)(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
-  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+  def termsOfService = HtmlAction(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     Ok(views.html.marketing.terms(isLoggedIn))
   }
 
-  def privacyPolicy = HtmlAction(true)(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
-  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+  def privacyPolicy = HtmlAction(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     Ok(views.html.marketing.privacy(isLoggedIn))
   }
 
-  def mobileLanding = HtmlAction(true)(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
-  private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
+  def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
+  private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent.fromString(agent)
     }
@@ -92,9 +92,9 @@ class HomeController @Inject() (
   }
   // End post-launch stuff!
 
-  def home = HtmlAction(true)(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
+  def home = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
 
-  private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {
+  private def homeAuthed(implicit request: AuthenticatedRequest[_]): SimpleResult = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
@@ -106,15 +106,15 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-      Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
+      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
     }
   }
 
   def unsupported = Action {
-    Ok.stream(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
+    Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
   }
 
-  private def homeNotAuthed(implicit request: Request[_]): Result = {
+  private def homeNotAuthed(implicit request: Request[_]): SimpleResult = {
     if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -153,7 +153,7 @@ class HomeController @Inject() (
 
   def homeWithParam(id: String) = home
 
-  def blog = HtmlAction(true)(authenticatedAction = { request =>
+  def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
       request.headers.get(USER_AGENT) match {
         case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
         case _ => homeAuthed(request)
@@ -191,7 +191,7 @@ class HomeController @Inject() (
       friendsOnKifi = friendsOnKifi)).discardingCookies(DiscardingCookie("inv"))
   }
 
-  def install = AuthenticatedHtmlAction { implicit request =>
+  def install = HtmlAction.authenticated { implicit request =>
     val toBeNotified = db.readWrite { implicit session =>
       for {
         su <- socialUserRepo.getByUser(request.user.id.get)
@@ -214,7 +214,7 @@ class HomeController @Inject() (
   }
 
   // todo: move this to UserController
-  def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
+  def disconnect(networkString: String) = HtmlAction.authenticated { implicit request =>
     val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
     suiOpt match {
       case None => code match {
