@@ -1,5 +1,6 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @request scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
 
 function initCompose($c, enterToSend, opts) {
@@ -67,7 +68,9 @@ function initCompose($c, enterToSend, opts) {
       e.preventDefault();
       document.execCommand('insertText', false, cd.getData('text/plain'));
     }
-  }).preventAncestorScroll();
+  })
+  .preventAncestorScroll()
+  .handleLookClicks();
 
   if ($t.length) {
     $t.tokenInput({}, {

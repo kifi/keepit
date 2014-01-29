@@ -27,49 +27,43 @@ class UserPictureController @Inject() (
   val config: S3ImageConfig)
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getPic(size: String, id: ExternalId[User], picName: String) = Action { request =>
+  def getPic(size: String, id: ExternalId[User], picName: String) = Action.async { request =>
     val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName
     db.readOnly { implicit s => userRepo.getOpt(id) } collect {
       case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
-        Async {
-          val optSize = if (size == "original") None else Try(size.toInt).toOption
-          imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
-        }
+        val optSize = if (size == "original") None else Try(size.toInt).toOption
+        imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
     } getOrElse {
-      Redirect(S3UserPictureConfig.defaultImage)
+      resolve(Redirect(S3UserPictureConfig.defaultImage))
     }
   }
 
-  def get(size: Int, id: ExternalId[User]) = Action { request =>
+  def get(size: Int, id: ExternalId[User]) = Action.async { request =>
     db.readOnly { implicit s => userRepo.getOpt(id) } collect {
       case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
-        Async {
-          val optSize = Some(size)
-          user.pictureName.map { pictureName =>
-            imageStore.getPictureUrl(optSize, user, pictureName) map (Redirect(_))
-          } getOrElse {
-            imageStore.getPictureUrl(optSize, user, "0") map (Redirect(_))
-          }
+        val optSize = Some(size)
+        user.pictureName.map { pictureName =>
+          imageStore.getPictureUrl(optSize, user, pictureName) map (Redirect(_))
+        } getOrElse {
+          imageStore.getPictureUrl(optSize, user, "0") map (Redirect(_))
         }
     } getOrElse {
-      Redirect(S3UserPictureConfig.defaultImage)
+      resolve(Redirect(S3UserPictureConfig.defaultImage))
     }
   }
 
-  def update() = AuthenticatedHtmlAction { request =>
+  def update() = HtmlAction.authenticatedAsync { request =>
     if (request.experiments.contains(ExperimentType.ADMIN)) {
-      Async {
-        Future.sequence(for {
-          user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
-        } yield {
-          val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
-          imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId, setDefault = false).map(_ => socialUser.socialId)
-        }).map { results =>
-          Ok(results.mkString(","))
-        }
+      Future.sequence(for {
+        user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
+      } yield {
+        val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
+        imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId, setDefault = false).map(_ => socialUser.socialId)
+      }).map { results =>
+        Ok(results.mkString(","))
       }
     } else {
-      Forbidden
+      resolve(Forbidden)
     }
   }
 

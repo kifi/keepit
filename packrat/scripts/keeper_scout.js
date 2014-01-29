@@ -137,12 +137,12 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 77: // m
         api.port.emit('unsilence');
-        loadAndDo('pane', 'toggle', 'key', '/messages');
+        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages'});
         e.preventDefault();
         break;
       case 79: // o
         api.port.emit('unsilence');
-        loadAndDo('pane', 'toggle', 'key', '/messages:all');
+        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages:all'});
         e.preventDefault();
         break;
       case 83: // s

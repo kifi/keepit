@@ -11,6 +11,8 @@ import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice, Local
 import play.api.Play.current
 import com.google.inject.Inject
 import com.keepit.scraper.SignatureBuilder
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class DuplicateDocumentDetection @Inject() (
     db: Database,
@@ -86,7 +88,7 @@ class DuplicateDocumentDetection @Inject() (
   }
 
  def asyncProcessDocuments() = {
-   Akka.future {
+   Future {
      val startTime = System.currentTimeMillis
 
      val docs = findDupeDocuments()

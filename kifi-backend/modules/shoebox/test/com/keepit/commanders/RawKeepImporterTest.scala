@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import org.specs2.mutable.Specification
+import org.specs2.mutable.SpecificationLike
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 import com.keepit.heimdal.HeimdalContext
 import akka.actor.ActorSystem
@@ -16,7 +16,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
 
 
-class RawKeepImporterTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
   // This is a good example of how to test actor side effects.
   implicit val context = HeimdalContext.empty
 
@@ -30,7 +30,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with Specification with
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val bookmarkInterner = inject[BookmarkInterner]
-        val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/data/bookmarks_small.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, BookmarkSource.bookmarkImport, json))
 
         // Importer is run synchronously in TestKit.

@@ -19,7 +19,7 @@ class PhraseController @Inject() (
 
   val pageSize = 50
 
-  def displayPhrases(page: Int = 0) = AdminHtmlAction{ implicit request =>
+  def displayPhrases(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     val (phrasesOpt, count) = db.readOnly { implicit session =>
       val count = 10//phraseRepo.count
       val phrasesOpt = if(!PhraseImporter.isInProgress) {
@@ -33,11 +33,11 @@ class PhraseController @Inject() (
     Ok(html.admin.phraseManager(phrasesOpt, page, count, numPages))
   }
 
-  def refreshPhrases = AdminHtmlAction{ implicit request =>
+  def refreshPhrases = AdminHtmlAction.authenticated { implicit request =>
     searchClient.refreshPhrases()
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
-  def addPhrase = AdminHtmlAction{ implicit request =>
+  def addPhrase = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val phrase = body.get("phrase").get
     val lang = body.get("lang").get
@@ -49,7 +49,7 @@ class PhraseController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
 
-  def savePhrases = AdminHtmlAction { implicit request =>
+  def savePhrases = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     db.readWrite { implicit session =>
       val repo = phraseRepo

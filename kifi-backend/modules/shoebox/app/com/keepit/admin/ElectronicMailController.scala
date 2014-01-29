@@ -20,7 +20,7 @@ class ElectronicMailController @Inject() (
 
   def electronicMailsViewFirstPage = electronicMailsView(0)
 
-  def electronicMailsView(page: Int = 0) = AdminHtmlAction { request =>
+  def electronicMailsView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
     val (count, electronicMails) = db.readOnly { implicit s =>
       val electronicMails = repo.page(page, PAGE_SIZE)

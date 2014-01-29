@@ -6,7 +6,7 @@ import com.keepit.common.controller.AdminController
 import views.html
 
 class AdminWebSocketController @Inject() (actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
-  def serviceView = AdminHtmlAction { implicit request =>
+  def serviceView = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.websocketPerformance())
   }
 }

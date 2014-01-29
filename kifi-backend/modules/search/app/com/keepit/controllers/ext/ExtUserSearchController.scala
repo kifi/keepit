@@ -32,7 +32,7 @@ class ExtUserSearchController @Inject()(
     }
   }
 
-  def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
+  def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
     val userExps = request.experiments.map{_.value}
     log.info(s"user search: userId = ${userId}, userExps = ${userExps.mkString(" ")}")
@@ -61,7 +61,7 @@ class ExtUserSearchController @Inject()(
     Ok(JsArray(jsVals))
   }
 
-  def search(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = AuthenticatedJsonAction { request =>
+  def search(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
     val searchFilter = createFilter(Some(userId), filter, context)
     val searcher = searcherFactory.getUserSearcher

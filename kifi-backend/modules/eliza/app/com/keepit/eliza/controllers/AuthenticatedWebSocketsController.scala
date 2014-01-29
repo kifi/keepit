@@ -76,7 +76,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        Akka.future {
+        Future {
           try {
             f(e)
           } catch {
@@ -203,12 +203,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           } getOrElse {
             log.warn("WS no handler for: " + jsArr)
           }
-        }.mapDone(_ => endSession("Session ended"))
+        }.map(_ => endSession("Session ended"))
 
 
         (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
       }
-      case None => Akka.future {
+      case None => Future {
         Statsd.increment(s"websocket.anonymous")
         log.info("Disconnecting anonymous user")
         (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)

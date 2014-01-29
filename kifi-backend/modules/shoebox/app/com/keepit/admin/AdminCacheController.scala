@@ -7,7 +7,7 @@ import views.html
 
 @Singleton
 class AdminCacheController  @Inject() (actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
-  def serviceView = AdminHtmlAction { implicit request =>
+  def serviceView = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.cachePerformance())
   }
 }
