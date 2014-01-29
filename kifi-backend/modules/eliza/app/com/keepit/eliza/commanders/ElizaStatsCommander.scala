@@ -9,9 +9,11 @@ import com.keepit.model.User
 
 class ElizaStatsCommander @Inject() (
   userThreadRepo: UserThreadRepo,
-  db: Database) extends Logging { {
+  db: Database) extends Logging {
 
   def getUserThreadStats(userId: Id[User]): UserThreadStats = {
-
+    db.readOnly { implicit s =>
+      userThreadRepo.getUserStats(userId)
+    }
   }
 }

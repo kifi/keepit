@@ -17,6 +17,7 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
+import com.keepit.eliza.model.UserThreadStats
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
@@ -29,6 +30,8 @@ trait ElizaServiceClient extends ServiceClient {
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]]
+
+  def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -86,6 +89,12 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = {
+    call(Eliza.internal.getUserThreadStats(userId)).map{ response =>
+      Json.parse(response.body).as[UserThreadStats]
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -117,5 +126,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends
   //migration
   def importThread(data: JsObject): Unit = {}
 
+  def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
 }
