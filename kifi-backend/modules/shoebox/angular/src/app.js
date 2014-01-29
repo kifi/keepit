@@ -6,6 +6,7 @@ angular.module('kifi', [
 	'ngRoute',
 	'ui.bootstrap',
 	'antiscroll',
+	'focusWhen',
 	'kifi.templates',
 	'kifi.profileCard',
 	'kifi.tags',
