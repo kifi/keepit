@@ -63,15 +63,6 @@ class ServiceInstance(object):
   def __repr__(self):
     return "%s (%s) %s on %s [%s]" % (self.service, self.mode, self.name, self.type, self.ip)
 
-def message_irc(msg):
-  data = {
-    'service': 'deployment',
-    'url': 'https://grove.io/app',
-    'icon_url': 'https://grove.io/static/img/avatar.png',
-    'message': msg
-  }
-  requests.post("https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/", data=data)
-
 def message_hipchat(msg):
   data = {
     "room_id": "Deploy",
@@ -84,7 +75,6 @@ def message_hipchat(msg):
 def log(msg):
   amsg = "[" + userName + "] " + msg
   print amsg
-  message_irc(amsg)
   message_hipchat(amsg)
 
 def getAllInstances():
@@ -195,7 +185,7 @@ if __name__=="__main__":
       log("Manual Abort.")
   else:
     for instance in instances:
-      shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
+      shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
       remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
       try:
         while remoteProc.is_running():
