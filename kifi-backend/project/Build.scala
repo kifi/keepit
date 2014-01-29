@@ -159,7 +159,7 @@ object ApplicationBuild extends Build {
       EclipseKeys.skipParents in ThisBuild := false,
       sources in doc in Compile := List(),
       Keys.fork := false,
-      skip in update := true
+      skip in update := false
     )
 
     lazy val macros = play.Project("macros", appVersion, commonDependencies, path = file("modules/macros")).settings(
