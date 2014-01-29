@@ -37,7 +37,7 @@
   font-size: 12px;
   text-align: center;
   background-color: #d4dce3;
-  border-radius: 3px;
+  border-radius: 3px !important;
   color: #3b485c;
   cursor: pointer;
 }
@@ -69,7 +69,7 @@
   top: -320px;
   height: 290px;
   border: 1px solid #b8c5d2;
-  border-radius: 5px;
+  border-radius: 5px !important;
   background: #fff;
   box-shadow: rgba(103, 130, 156, .41) 4px 6px;
   text-align: center;
@@ -104,7 +104,7 @@
   padding: 0 24px;
   margin: 12px auto 0;
   background-color: #6fa6ef;
-  border-radius: 4px;
+  border-radius: 4px !important;
   color: #fff !important;
 }
 .kifi-toast-find-friends-a:hover {
@@ -122,7 +122,7 @@
   right: 8px;
   height: 22px;
   width: 22px;
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 .kifi-toast-find-friends-x:before,
 .kifi-toast-find-friends-x:after {
@@ -159,7 +159,7 @@
 }
 
 .kifi-toast-top {
-  border-radius: 3px 3px 0 0;
+  border-radius: 3px 3px 0 0 !important;
   padding: 0 9px;
   background: #34495e;
 }
@@ -174,7 +174,7 @@
   right: 0;
   height: 28px;
   width: 28px;
-  border-top-right-radius: inherit;
+  border-top-right-radius: inherit !important;
 }
 .kifi-toast-x:before,
 .kifi-toast-x:after {
