@@ -27,7 +27,10 @@ var pane = pane || function () {  // idempotent for Chrome
   var $pane, paneHistory, paneObserver;
 
   $(document).data('esc').add(function () {
-    return hidePane() ? false : undefined;
+    if ($pane) {
+      hidePane();
+      return false;
+    }
   });
 
   api.onEnd.push(function () {
@@ -272,7 +275,7 @@ var pane = pane || function () {  // idempotent for Chrome
     var state = $pane && $pane.data('state');
     if (state !== 'open') {
       log('[hidePane] ignored, state:', state)();
-      return false;
+      return;
     }
     log('[hidePane]', leaveSlider ? 'leaving slider' : '')();
     if (leaveSlider) {
@@ -295,7 +298,6 @@ var pane = pane || function () {  // idempotent for Chrome
     api.port.emit('pane', {old: $pane[0].dataset.locator});
     $pane = paneHistory = null;
     $('html').removeAttr('kifi-with-pane');
-    return true;
   }
 
   function observePaneAncestry() {
