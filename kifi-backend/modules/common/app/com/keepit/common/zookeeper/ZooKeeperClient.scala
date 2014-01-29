@@ -83,13 +83,12 @@ trait ZooKeeperSession {
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit
 
   def create(node: Node): Node
-  def create(node: Node, data: Array[Byte]): Node
-  def createChild(parent: Node, name: String, data: Array[Byte], createMode: CreateMode): Node
+  def createChild(parent: Node, childName: String, data: Array[Byte] = null, createMode: CreateMode = CreateMode.PERSISTENT): Node
 
+  def get(node: Node): Option[Node]
   def getChildren(node: Node): Seq[Node]
 
   def getData(node: Node): Array[Byte]
-  def getDataOpt(node: Node): Option[Array[Byte]]
 
   def setData(node: Node, data: Array[Byte]): Unit
 
@@ -188,50 +187,40 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
   def close(): Unit = zk.close()
   def getState(): ZooKeeper.States = zk.getState()
 
-  def create(node: Node, data: Array[Byte]): Node = {
-    Node(zk.create(node, data, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT))
-  }
-
-  def createChild(parent: Node, name: String, data: Array[Byte], createMode: CreateMode): Node = {
-    Node(zk.create(Node(parent, name), data, Ids.OPEN_ACL_UNSAFE, createMode))
-  }
-
-  /**
-   * ZooKeeper version of mkdir -p
-   */
+  // ZooKeeper version of mkdir -p
   def create(node: Node): Node = {
     for (ancestor <- node.ancestors()) {
       try {
-        log.debug(s"Creating path in create: ancestor.path")
+        log.debug(s"Creating node in create: ${ancestor.path}")
         zk.create(ancestor.path, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
       } catch {
         case _: KeeperException.NodeExistsException => // ignore existing nodes
       }
     }
     try {
-      log.debug(s"Creating path in create: $node")
-      create(node, null)
+      log.debug(s"Creating node in create: $node")
+      zk.create(node.path, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
+      node
     } catch {
       case _: KeeperException.NodeExistsException => node // ignore existing nodes
     }
   }
 
-  def getData(node: Node): Array[Byte] = zk.getData(node, false, null)
+  def createChild(parent: Node, childName: String, data: Array[Byte] = null, createMode: CreateMode = CreateMode.PERSISTENT): Node = {
+    Node(zk.create(Node(parent, childName), data, Ids.OPEN_ACL_UNSAFE, createMode))
+  }
 
-  def getDataOpt(node: Node): Option[Array[Byte]] = try{
-      Some(getData(node))
-    }
-    catch {
-      case e: KeeperException.NoNodeException => None
-    }
+  def get(node: Node): Option[Node] = {
+    if (zk.exists(node, null) != null) Some(node) else None
+  }
+
+  def getData(node: Node): Array[Byte] = zk.getData(node, false, null)
 
   def setData(node: Node, data: Array[Byte]): Unit = zk.setData(node, data, -1)
 
   def delete(node: Node): Unit = zk.delete(node, -1)
 
-  /**
-   * Delete a node along with all of its children
-   */
+  // Delete a node along with all of its descendants
   def deleteRecursive(node: Node) {
     val children = getChildren(node)
     for (child <- children) {
@@ -286,7 +275,7 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
     val watchedChildren = scala.collection.mutable.HashSet[Node]()
 
     case class ChildWatcher(child: Node) extends Watcher {
-      def process(event: WatchedEvent) : Unit = watchedChildren.synchronized{
+      def process(event: WatchedEvent) : Unit = watchedChildren.synchronized {
         watchedChildren -= child
         val children = getChildren(node, false)
         updateChildren(children)
@@ -311,7 +300,7 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
     def doWatchChildren(children: Seq[Node]) : Unit = watchedChildren.synchronized {
       children.filterNot(watchedChildren.contains _).foreach{ child =>
         try {
-          zk.getData(child.path, ChildWatcher(node), new Stat())
+          zk.getData(child.path, ChildWatcher(child), new Stat())
           watchedChildren += child
         } catch {
           case e:KeeperException =>

@@ -68,10 +68,15 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
-      zk.getDataOpt(key.toNode).map(fromByteArray(_))
+      Option(fromByteArray(zk.getData(key.toNode)))
     } catch {
+      case e: KeeperException.NoNodeException => None
       case e: KeeperException.ConnectionLossException =>
-        zk.getDataOpt(key.toNode).map(fromByteArray(_))
+        try {
+          Option(fromByteArray(zk.getData(key.toNode)))
+        } catch {
+          case e: KeeperException.NoNodeException => None
+        }
     }
   }
 
@@ -80,14 +85,8 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
       zk.setData(key.toNode, value)
     } catch {
       case e: KeeperException.NoNodeException => {
-        try {
-          zk.create(key.toNode, value)
-        } catch {
-          case e: KeeperException.NoNodeException => {
-            zk.create(key.toNode.parent.get)
-            zk.create(key.toNode, value)
-          }
-        }
+        zk.create(key.toNode)
+        zk.setData(key.toNode, value)
       }
     }
   }

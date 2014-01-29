@@ -36,28 +36,33 @@ class ZooKeeperClientTest extends Specification {
         zk.setData(Node(s"${node.path}/a/b/c"), "foo".getBytes())
         val s = new String(zk.getData(Node(s"${node.path}/a/b/c")))
         s === "foo"
-        zk.deleteRecursive(Node(s"${node.path}/a"))
-        1 === 1
       }
     }
 
     "connect to server and set some data" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
-        val testNode = zk.create(Node(s"${node.path}/testNode"), "foo".getBytes)
+        val testNode = zk.createChild(node, "testNode", "foo".getBytes)
         zk.watchNode(testNode, { (data : Option[Array[Byte]]) =>
           data match {
             case Some(d) => println("Data updated: %s".format(new String(d)))
             case None => println("Node deleted")
           }
         })
+
+        new String(zk.getData(testNode)) === "foo"
+
         zk.setData(testNode, "bar".getBytes)
         new String(zk.getData(testNode)) === "bar"
+
         zk.setData(testNode, "baz".getBytes)
         new String(zk.getData(testNode)) === "baz"
         zk.delete(testNode)
 
         zk.getData(testNode) must throwA[KeeperException.NoNodeException]
+
+        zk.createChild(node, "testNode")
+        zk.getData(testNode) === null
       }
     }
 
@@ -65,44 +70,49 @@ class ZooKeeperClientTest extends Specification {
       println("monitoring")
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
-        @volatile var latch = new CountDownLatch(1)
+        @volatile var latch: Option[CountDownLatch] = None
+        def mkLatch = { latch = Some(new CountDownLatch(1)) }
+        def awaitLatch = { latch.map(_.await) }
+
         @volatile var childSet = Set.empty[Node]
-        val parent = zk.create(Node(s"${node.path}/parent"), null)
+        val parent = zk.createChild(node, "parent")
         zk.watchChildren(parent, { (children : Seq[Node]) =>
           childSet = children.toSet
           println("Children: %s".format(children.mkString(", ")))
-          latch.countDown()
+          latch.map(l => l.countDown())
         })
-        latch.await()
-        childSet === Set()
 
-        latch = new CountDownLatch(1)
-        val child1 = zk.createChild(parent, "child1", null, PERSISTENT)
-        latch.await()
+        mkLatch
+        val child1 = zk.createChild(parent, "child1")
+        awaitLatch
         childSet === Set(Node(parent, "child1"))
 
-        latch = new CountDownLatch(1)
-        val child2 = zk.createChild(parent, "child2", null, PERSISTENT)
-        latch.await()
+        mkLatch
+        val child2 = zk.createChild(parent, "child2")
+        awaitLatch
         childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
 
-        latch = new CountDownLatch(1)
+        mkLatch
         zk.delete(child1)
-        latch.await()
+        awaitLatch
         childSet === Set(Node(parent, "child2"))
 
-        latch = new CountDownLatch(1)
-        val child3 = zk.createChild(parent, "child3", null, PERSISTENT)
-        latch.await()
+        mkLatch
+        val child3 = zk.createChild(parent, "child3")
+        awaitLatch
         childSet === Set(Node(parent, "child2"), Node(parent, "child3"))
+
+        mkLatch
+        zk.deleteRecursive(parent)
+        awaitLatch
+        childSet === Set()
       }
     }
 
     "SEQUENCE EPHEMERAL (Service Instances) nodes" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
-        val parent = Node(node, "parent")
-        zk.create(parent, null)
+        val parent = zk.createChild(node, "parent")
         zk.watchChildren(parent, { (children : Seq[Node]) =>
           println("Service Instances: %s".format(children.mkString(", ")))
         })
@@ -112,8 +122,8 @@ class ZooKeeperClientTest extends Specification {
 
         zk.getChildren(parent).size === 3
 
-        val other = zk.create(Node(s"${node.path}/other"), null)
-        println(zk.createChild(other, "child", null, PERSISTENT))
+        val other = zk.createChild(node, "other")
+        println(zk.createChild(other, "child"))
       }(node, false)
       withZKSession { zk =>
         zk.getChildren(Node(s"${node.path}/other")).size === 1
@@ -124,22 +134,37 @@ class ZooKeeperClientTest extends Specification {
     "For a given node, automatically maintain a map from the node's children to the each child's data" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
-        val parent = Node(node, "parent")
+        val parent = zk.createChild(node, "parent")
         val childMap = collection.mutable.Map[Node, String]()
+        @volatile var latch: Option[CountDownLatch] = None
+        def mkLatch = { latch = Some(new CountDownLatch(1)) }
+        def awaitLatch = { latch.map(_.await) }
 
-        zk.create(parent, null)
-        zk.watchChildrenWithData(parent, childMap, { data => new String(data) })
+        zk.watchChildrenWithData(parent, childMap, { data => new String(data) }, { _ => latch.map(l => l.countDown()) })
+        mkLatch
+        val child1 = zk.createChild(parent, "a", "foo".getBytes)
+        awaitLatch
+        childMap === Map(Node(parent, "a") -> "foo")
 
-        val child1 = zk.createChild(parent, "a", "foo".getBytes, PERSISTENT)
-        val child2 = zk.createChild(parent, "b", "bar".getBytes, PERSISTENT)
-        println("child map: %s".format(childMap)) // NOTE: real code should synchronize access on childMap
+        mkLatch
+        val child2 = zk.createChild(parent, "b", "bar".getBytes)
+        awaitLatch
+        childMap === Map(Node(parent, "a") -> "foo", Node(parent, "b") -> "bar")
 
+        mkLatch
         zk.delete(child1)
-        zk.setData(child2, "bar2".getBytes)
-        zk.createChild(parent, "c", "baz".getBytes, PERSISTENT)
-        println("child map: %s".format(childMap)) // NOTE: real code should synchronize access on childMap
+        awaitLatch
+        childMap === Map(Node(parent, "b") -> "bar")
 
-        1 === 1
+        mkLatch
+        zk.setData(child2, "bar2".getBytes)
+        awaitLatch
+        childMap === Map(Node(parent, "b") -> "bar2")
+
+        mkLatch
+        zk.createChild(parent, "c", "baz".getBytes)
+        awaitLatch
+        childMap === Map(Node(parent, "b") -> "bar2", Node(parent, "c") -> "baz")
       }
     }
   }
