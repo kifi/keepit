@@ -6,11 +6,34 @@ import boto.ec2
 import spur
 import os
 import time
+import portalocker
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 import datetime
 
 userName = None
+
+class FileLock(object):
+
+  def __init__(self, filename):
+    self.filename = filename
+    self.lockFile = None
+
+  def lock(self):
+    if self.lockFile is None:
+      self.lockFile = open(self.filename, "w")
+    try:
+      portalocker.lock(self.lockFile, portalocker.LOCK_EX | portalocker.LOCK_NB)
+      return True
+    except:
+      return False
+
+  def unlock(self):
+    try:
+      portalocker.unlock(self.lockFile)
+      lockFile.close()
+    except:
+      pass
 
 class S3Asset(object):
 
@@ -125,6 +148,8 @@ if __name__=="__main__":
     if userName=="fortytwo":
       print "Yo, dude, set your name! ('--iam' option)"
 
+  lock = FileLock("/home/fortytwo/" + args.serviceType + ".lock")
+
   instances = getAllInstances()
 
   if args.host:
@@ -154,6 +179,10 @@ if __name__=="__main__":
 
   if args.mode and args.mode=="force":
     command.append("force")
+  else:
+    if not lock.lock():
+      print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
+      sys.exit(0)
 
   log("Triggered deploy of %s to %s in %s mode with version %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, full_version))
 
@@ -196,7 +225,8 @@ if __name__=="__main__":
       except KeyboardInterrupt:
         log("Manual Abort.")
         remoteProc.send_signal(2)
+        lock.unlock()
         sys.exit(1)
+    lock.unlock()
     log("Deployment Complete")
-
 
