@@ -136,7 +136,6 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
       OAuth2Constants.Code -> Seq(code),
       OAuth2Constants.RedirectUri -> Seq(BetterRoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled))
     ) ++ newSettings.accessTokenUrlParams.mapValues(Seq(_))
-    println("$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n" + newSettings.accessTokenUrl + "\n\n" + params.toString + "\n\n$$$$$$$$$$$$$$$$$$$$$$$")
     val call = WS.url(newSettings.accessTokenUrl).post(params)
     try {
       buildInfo(awaitResult(call))
@@ -150,7 +149,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
 
   protected def buildInfo(response: Response): OAuth2Info = {
     val parsed = try {
-      response.json.as[JsObject].value tap { s => println("Used JSON!\n\n" + s)}
+      response.json.as[JsObject].value
     } catch {
       case _: Throwable =>
         response.body.split("&").map { kv =>
@@ -160,7 +159,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
               case _: Throwable => JsString(p(1))
             }
           } else JsNull )
-        }.toMap tap { s => println("Used Map hack!\n\n" + s)}
+        }.toMap
     }
 
     log.info("[securesocial] got json back [" + parsed + "]")
