@@ -21,7 +21,6 @@ class DefaultExtractorTest extends Specification {
       extractor.getCanonicalUrl() === Some("http://money.cnn.com/2014/01/24/news/companies/dimon-pay/index.html")
       extractor.getLink("canonical") === Some("http://money.cnn.com/2014/01/24/news/companies/dimon-pay/index.html")
       extractor.getMetadata("og:url") === Some("http://money.cnn.com/2014/01/24/news/companies/dimon-pay/index.html")
-      extractor.getMetadata("vr:canonical") === None
     }
 
     "parse doc 2" in {
@@ -29,7 +28,6 @@ class DefaultExtractorTest extends Specification {
       extractor.getCanonicalUrl() === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
       extractor.getLink("canonical") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
       extractor.getMetadata("og:url") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
-      extractor.getMetadata("vr:canonical") === None
     }
 
     "parse doc 3" in {
@@ -37,7 +35,6 @@ class DefaultExtractorTest extends Specification {
       extractor.getCanonicalUrl() === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
       extractor.getLink("canonical") === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
       extractor.getMetadata("og:url") === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
-      extractor.getMetadata("vr:canonical") === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
     }
 
   }
