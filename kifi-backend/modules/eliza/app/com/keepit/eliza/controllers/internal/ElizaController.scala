@@ -14,11 +14,17 @@ import play.api.mvc.Action
 import play.api.libs.json.{JsObject, JsArray}
 
 import com.google.inject.Inject
-
+import com.keepit.eliza.commanders.ElizaStatsCommander
+import com.keepit.eliza.model.UserThreadStats
 
 class ElizaController @Inject() (
-  notificationRouter: NotificationRouter)
+  notificationRouter: NotificationRouter,
+  elizaStatsCommander: ElizaStatsCommander)
     extends ElizaServiceController with Logging {
+
+  def getUserThreadStats(userId: Id[User]) = Action { request =>
+    Ok(UserThreadStats.format.writes(elizaStatsCommander.getUserThreadStats(userId)))
+  }
 
   def sendToUserNoBroadcast() = Action.async { request =>
     future{
