@@ -7,6 +7,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
+import akka.actor.Scheduler
 
 trait ScraperServiceClientModule extends ScalaModule
 
@@ -34,8 +35,8 @@ case class TestScraperServiceClientModule() extends ScraperServiceClientModule {
 
   @Singleton
   @Provides
-  def ScraperServiceClient(airbrakeNotifier: AirbrakeNotifier): ScraperServiceClient = {
-    new FakeScraperServiceClientImpl(airbrakeNotifier)
+  def ScraperServiceClient(airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler): ScraperServiceClient = {
+    new FakeScraperServiceClientImpl(airbrakeNotifier, scheduler)
   }
 
 }
