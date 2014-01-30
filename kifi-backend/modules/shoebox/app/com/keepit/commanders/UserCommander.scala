@@ -126,7 +126,6 @@ class UserCommander @Inject() (
     // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
     // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
     val kifiSupport = Seq(
-      BasicUser(ExternalId[User]("742fa97c-c12a-4dcf-bff5-0f33280ef35a"), "Noah, Kifi Help", "", "Vjy5S.jpg"),
       BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg"))
     basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
   }
