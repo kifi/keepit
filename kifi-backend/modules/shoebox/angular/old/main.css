@@ -34,11 +34,6 @@
   color: black;
 }
 
-.collection:not(.with-menu):not(:hover)>.coll-tri,
-.collection.renaming>.coll-tri {
-  display: none;
-}
-
 #coll-menu {
   position: absolute;
   top: 100%;
