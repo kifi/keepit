@@ -23,6 +23,7 @@ trait ScraperServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null)//make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null)//make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null)//make sure its not lazy loaded
+    require(injector.instance[PullerPlugin] != null)
     log.info("ScraperService started")
   }
 

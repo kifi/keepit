@@ -7,6 +7,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.actor.FakeScheduler
 
 case class FakeElizaServiceClientModule() extends ElizaServiceClientModule {
   def configure() {}
@@ -14,7 +15,7 @@ case class FakeElizaServiceClientModule() extends ElizaServiceClientModule {
   @Singleton
   @Provides
   def elizaServiceClient(airbrakeNotifier: AirbrakeNotifier): ElizaServiceClient = {
-    new FakeElizaServiceClientImpl(airbrakeNotifier)
+    new FakeElizaServiceClientImpl(airbrakeNotifier, new FakeScheduler())
   }
 
 }
