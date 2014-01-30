@@ -165,9 +165,6 @@ nav-item()
     text-align: center
     cursor: pointer
 
-    .kf-tag.active &
-      background-color: #b8c5d2
-
     &:before
       content: " "
       border-width: 4px 4px 0
@@ -177,7 +174,11 @@ nav-item()
       line-height: 0
       vertical-align: 1px
 
-      .kf-tag.active &
+  &.active
+    .dropdown-toggle
+      background-color: #b8c5d2
+
+      &:before
         border-top-color: white
 
   .dropdown-menu

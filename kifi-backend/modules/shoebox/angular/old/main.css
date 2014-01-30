@@ -34,35 +34,6 @@
   color: black;
 }
 
-.coll-tri {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 33px;
-  background-color: #e3e6ee;
-  text-align: center;
-  cursor: pointer;
-}
-
-.active>.coll-tri {
-  background-color: #b8c5d2;
-}
-
-.coll-tri::before {
-  content: " ";
-  border-width: 4px 4px 0;
-  border-style: solid;
-  border-color: #b8c5d2 transparent;
-  font-size: 0;
-  line-height: 0;
-  vertical-align: 1px;
-}
-
-.active>.coll-tri::before {
-  border-top-color: #fff;
-}
-
 .collection:not(.with-menu):not(:hover)>.coll-tri,
 .collection.renaming>.coll-tri {
   display: none;

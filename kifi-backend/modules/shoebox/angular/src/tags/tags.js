@@ -11,15 +11,15 @@ angular.module('kifi.tags', ['util'])
 			scope: {},
 			link: function (scope, element /*, attrs*/ ) {
 				scope.create = function (name) {
-					console.log('create', name);
+					alert('create:' + name);
 				};
 
 				scope.rename = function (tag) {
-					console.log('rename', tag);
+					alert('rename:' + tag.name);
 				};
 
 				scope.remove = function (tag) {
-					console.log('remove', tag);
+					alert('remove:' + tag.name);
 				};
 
 				scope.clearFilter = function () {
