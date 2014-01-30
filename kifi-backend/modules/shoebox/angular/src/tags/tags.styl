@@ -138,6 +138,52 @@ nav-item()
   .kf-tag.renaming &
     background-image: url(../img/tag-icon-gray.png)
 
+.kf-tag
+  .dropdown
+    display: none
+    position: absolute
+    top: 0
+    right: 0
+    height: 100%
+
+    &.open
+      display: block
+
+  &:hover .dropdown
+    display: block
+
+  &.renaming .dropdown
+    display: none
+
+  .dropdown-toggle
+    position: absolute
+    top: 0
+    bottom: 0
+    right: 0
+    width: 33px
+    background-color: #e3e6ee
+    text-align: center
+    cursor: pointer
+
+    .kf-tag.active &
+      background-color: #b8c5d2
+
+    &:before
+      content: " "
+      border-width: 4px 4px 0
+      border-style: solid
+      border-color: #b8c5d2 transparent
+      font-size: 0
+      line-height: 0
+      vertical-align: 1px
+
+      .kf-tag.active &
+        border-top-color: white
+
+  .dropdown-menu
+    left: auto
+    right: 0
+
 .kf-tag-new
   background-color: #d4e4f9
 
