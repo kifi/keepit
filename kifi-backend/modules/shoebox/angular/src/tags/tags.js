@@ -28,9 +28,11 @@ angular.module('kifi.tags', ['util', 'dom'])
 					alert('remove:' + tag.name);
 				};
 
-				scope.clearFilter = function () {
+				scope.clearFilter = function (focus) {
 					scope.filter.name = '';
-					scope.focusFilter = true;
+					if (focus) {
+						scope.focusFilter = true;
+					}
 				};
 
 				function getFilterValue() {
@@ -41,8 +43,9 @@ angular.module('kifi.tags', ['util', 'dom'])
 					var name = getFilterValue(),
 						res = false;
 					if (name) {
+						name = name.toLowerCase();
 						res = !scope.tags.some(function (tag) {
-							return tag.name.toLowerCase() === name.toLowerCase();
+							return tag.name.toLowerCase() === name;
 						});
 					}
 					scope.isAddTagShown = res;
@@ -54,7 +57,14 @@ angular.module('kifi.tags', ['util', 'dom'])
 				};
 
 				scope.getShownTags = function () {
-					return scope.shownTags || scope.tags || [];
+					var child = scope.$$childHead;
+					while (child) {
+						if (child.shownTags) {
+							return child.shownTags;
+						}
+						child = child.$$nextSibling;
+					}
+					return scope.tags || [];
 				};
 
 				function indexOfTag(tag) {
@@ -81,78 +91,124 @@ angular.module('kifi.tags', ['util', 'dom'])
 					}
 				};
 
+				scope.refreshHighlight = function () {
+					var shownTags = scope.getShownTags();
+					var highlight = scope.highlight;
+					if (highlight) {
+						var index = shownTags.indexOf(highlight);
+						if (index !== -1) {
+							// might scroll
+							return scope.highlightAt(index);
+						}
+					}
+
+					if (shownTags.length) {
+						return scope.highlightFirst();
+					}
+
+					return scope.dehighlight();
+				};
+
 				scope.isHighlight = function (tag) {
 					return scope.highlight === tag;
 				};
 
-				scope.highlightAt = function (index) {
-					if (index != null && index >= 0 && index < scope.getShownTags().length) {
-						var tag = scope.highlight = scope.getShownTags()[index];
-						dom.scrollIntoViewLazy(element.find('.kf-tag')[index]);
-						return tag;
-					}
+				scope.isHighlightNew = function () {
+					return !scope.highlight && !! getFilterValue();
+				};
+
+				scope.dehighlight = function () {
 					scope.highlight = null;
+					if (scope.isAddTagShown) {
+						dom.scrollIntoViewLazy(element.find('.kf-tag-new')[0]);
+					}
 					return null;
 				};
 
-				scope.isHighlightNew = function () {
-					return !scope.highlight && !!getFilterValue();
+				scope.highlightAt = function (index) {
+					if (index == null) {
+						return scope.dehighlight();
+					}
+
+					var tags = scope.getShownTags(),
+						len = tags.length;
+					if (!len) {
+						return scope.dehighlight();
+					}
+
+					index = ((index % len) + len) % len;
+					var tag = tags[index];
+					scope.highlight = tag;
+					dom.scrollIntoViewLazy(element.find('.kf-tag')[index]);
+					return tag;
+				};
+
+				scope.highlightFirst = function () {
+					return scope.highlightAt(0);
+				};
+
+				scope.highlightLast = function () {
+					return scope.highlightAt(-1);
 				};
 
 				scope.highlightNext = function () {
 					if (scope.isHighlightNew()) {
 						// new tag is highlighted
 						// highlight the first
-						return scope.highlightAt(0);
+						return scope.highlightFirst();
 					}
 
 					var index = indexOfTag(scope.highlight);
 					if (index === -1) {
 						// no highlight
 						// highlight the first
-						return scope.highlightAt(0);
+						return scope.highlightFirst();
 					}
 
 					if (index === scope.getShownTags().length - 1) {
 						// last item on the list
-						// highlight the new tag if available
-						// the first, otherwise
+
 						if (scope.isAddTagShown) {
-							return scope.highlightAt(null);
+							// highlight the new tag if available
+							return scope.dehighlight();
 						}
 
-						return scope.highlightAt(0);
+						// the first, otherwise
+						return scope.highlightFirst();
 					}
 
+					// highlight the next item
 					return scope.highlightAt(index + 1);
 				};
 
 				scope.highlightPrev = function () {
 					if (scope.isHighlightNew()) {
 						// new tag is highlighted
-						// highlight the first
-						return scope.highlightAt(0);
+						// highlight the last
+						return scope.highlightLast();
 					}
 
 					var index = indexOfTag(scope.highlight);
 					if (index === -1) {
 						// no highlight
-						// highlight the first
-						return scope.highlightAt(0);
+						// highlight the last
+						return scope.highlightLast();
 					}
 
-					if (index === scope.getShownTags().length - 1) {
-						// last item on the list
-						// highlight the new tag if available
-						// the first, otherwise
+					if (index === 0) {
+						// first item on the list
+
 						if (scope.isAddTagShown) {
-							return scope.highlightAt(null);
+							// highlight the new tag if available
+							return scope.dehighlight();
 						}
 
-						return scope.highlightAt(0);
+						// the last, otherwise
+						return scope.highlightLast();
 					}
 
-					return scope.highlightAt(index + 1);
+					// highlight the prev item
+					return scope.highlightAt(index - 1);
 				};
 
 				var list = element.find('.kf-tag-list');
@@ -163,6 +219,9 @@ angular.module('kifi.tags', ['util', 'dom'])
 					bottom: 0
 				});
 
+				scope.$watch('filter.name', function () {
+					$timeout(scope.refreshHighlight);
+				});
 				scope.$watch('filter.name', scope.refreshScroll);
 				scope.$watch('tags', scope.refreshScroll);
 
