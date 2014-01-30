@@ -68,12 +68,12 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
-      Option(fromByteArray(zk.getData(key.toNode)))
+      Option(zk.getData(key.toNode)).map(fromByteArray)
     } catch {
       case e: KeeperException.NoNodeException => None
       case e: KeeperException.ConnectionLossException =>
         try {
-          Option(fromByteArray(zk.getData(key.toNode)))
+          Option(zk.getData(key.toNode)).map(fromByteArray)
         } catch {
           case e: KeeperException.NoNodeException => None
         }
