@@ -42,6 +42,7 @@ angular.module('kifi.tags', ['util'])
 				};
 
 				var list = element.find('.kf-tag-list');
+				console.log(list.position().top);
 				list.css({
 					position: 'absolute',
 					top: list.position().top,

@@ -34,54 +34,6 @@
   color: black;
 }
 
-.collection.tag-new {
-  color: #858585;
-  background-color: #d4e4f9;
-}
-
-.collection.tag-new a {
-  padding-top: 9px;
-  padding-bottom: 9px;
-}
-
-#collections .collection.tag-new {
-  line-height: normal;
-}
-
-.collection.tag-new:hover {
-  background-color: #c4d4e9;
-}
-
-.collection.tag-new.highlight {
-  background-color: #6fa6ef;
-}
-
-.tag-new .caption {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  margin-bottom: 1px;
-}
-
-.tag-new .tag-create {
-  float: left;
-  position: relative;
-  left: -4px;
-  margin: 5px 4px 0 0;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: url(../img/plus.png) center/8px no-repeat #b8c5d2;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-}
-
-.tag-new.highlight .tag-create {
-  background-color: #dbdee3;
-}
-
 .coll-tri {
   position: absolute;
   top: 0;

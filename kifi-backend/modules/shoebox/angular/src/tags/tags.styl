@@ -1,3 +1,10 @@
+nav-item()
+  position: relative
+  display: block
+  padding: 0 6px 0 40px
+  line-height: 36px
+  color: #818692
+
 .kf-tags
   .kf-nav-group-name
     position: relative
@@ -5,11 +12,7 @@
     margin-top: 15px
 
 .kf-tag-input-box
-  position: relative
-  display: block
-  padding: 0 6px 0 40px
-  line-height: 36px
-  color: #818692
+  nav-item()
   cursor: text
   background: #fff
   white-space: nowrap
@@ -134,3 +137,42 @@
 
   .kf-tag.renaming &
     background-image: url(../img/tag-icon-gray.png)
+
+.kf-tag-new
+  background-color: #d4e4f9
+
+  &:hover
+    background-color: #c4d4e9
+
+  &.highlight
+    background-color: #6fa6ef
+
+  a
+    nav-item()
+    color: #858585
+    line-height: normal
+    padding-top: 9px
+    padding-bottom: 9px
+
+.kf-tag-caption
+  display: block
+  font-size: 11px
+  font-weight: 500
+  text-transform: uppercase
+  margin-bottom: 1px
+
+.kf-tag-icon-create
+  position: relative
+  float: left
+  left: -4px
+  width: 18px
+  height: 18px
+  border-radius: 50%
+  margin: 5px 4px 0 0
+  background: url(../img/plus.png) center/8px no-repeat #b8c5d2
+  image-rendering: -moz-crisp-edges
+  image-rendering: -webkit-optimize-contrast
+  image-rendering: crisp-edges
+
+  .kf-tag-new.highlight &
+    background-color: #dbdee3
