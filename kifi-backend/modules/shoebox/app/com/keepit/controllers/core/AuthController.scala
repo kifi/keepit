@@ -75,7 +75,6 @@ class AuthController @Inject() (
 
   def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
-      inviteCommander.markPendingInvitesAsAccepted(request.user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
       Redirect("/")
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
