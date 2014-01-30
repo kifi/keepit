@@ -8,9 +8,11 @@
   position: relative
   display: block
   padding: 0 6px 0 40px
+  line-height: 36px
   color: #818692
   cursor: text
   background: #fff
+  white-space: nowrap
   transition: background-color .16s
 
   input
@@ -73,6 +75,32 @@
   &.active
     background-color: #e3e6ee
 
+  &.highlight
+  &.drop-hover
+    background-color: #6fa6ef
+
+    .kf-tag-caption
+    .kf-tag-name
+      color: white
+
+    .kf-tag-count
+      color: #628196
+      border-color: white
+      background-color: white
+
+  &.renaming
+    background-color: white
+
+    a
+      cursor: text
+
+    .kf-tag-count
+      display: none
+
+  &.renaming
+  &.renamed
+    transition: background-color .16s
+
 .kf-tag-name
   white-space: nowrap
   overflow: hidden
@@ -90,3 +118,19 @@
   .kf-tag.active &
     background-color: #eff2f7
     color: #93a7bc
+
+.kf-tag-icon
+  display: inline-block
+  width: 14px
+  height: 16px
+  margin-right: 4px
+  vertical-align: middle
+  background-size: auto 16px
+  background-repeat: no-repeat
+  background-image: url(../img/tag-icon-gray.png)
+
+  .kf-tag.active &
+    background-image: url(../img/tag-icon-white.png)
+
+  .kf-tag.renaming &
+    background-image: url(../img/tag-icon-gray.png)

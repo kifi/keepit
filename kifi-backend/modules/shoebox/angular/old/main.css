@@ -23,10 +23,6 @@
   line-height: 1.35;
 }
 
-#collections-list {
-  overflow: hidden;
-}
-
 #collections-list.positioned {
   position: absolute;
   bottom: 0;
@@ -34,66 +30,8 @@
   right: -1px;
 }
 
-.collection.highlight,
-.collection.drop-hover {
-  background-color: #6fa6ef;
-}
-
-.collection.highlight .caption,
-.collection.highlight .view-name,
-.collection.drop-hover .view-name {
-  color: #fff;
-}
-
-.collection.highlight .tag-count,
-.collection.drop-hover .tag-count {
-  background-color: #fff;
-  border-color: #fff;
-  color: #628196;
-}
-
-.collection.renaming {
-  background-color: #fff;
-}
-
-.collection.renaming>a {
-  cursor: text;
-}
-
-.collection.renaming,
-.collection.renamed {
-  -webkit-transition: background-color .16s;
-  transition: background-color .16s;
-}
-
-.collection.renaming .tag-count {
-  display: none;
-}
-
 .collection input {
   color: black;
-}
-
-.tag-icon {
-  display: inline-block;
-  width: 14px;
-  height: 16px;
-  background-size: auto 16px;
-  background-repeat: no-repeat;
-  vertical-align: middle;
-  margin-right: 4px;
-}
-
-.tag-icon {
-  background-image: url(../img/tag-icon-gray.png);
-}
-
-.collection.active .tag-icon {
-  background-image: url(../img/tag-icon-white.png);
-}
-
-.collection.renaming .tag-icon {
-  background-image: url(../img/tag-icon-gray.png);
 }
 
 .collection.tag-new {
