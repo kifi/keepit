@@ -611,7 +611,14 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
+    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), timeout = timeout).map { r =>
+      r.json.as[NormalizedURI]
+    }
+  }
+
+  def updateNormalizedURI(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[NormalizedURI] = {
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), timeout = timeout).map { r =>
       r.json.as[NormalizedURI]
     }
