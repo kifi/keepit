@@ -1,3 +1,4 @@
+import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
 import sbt._
 import Keys._
 import play.Project._
@@ -34,35 +35,29 @@ object ApplicationBuild extends Build {
     writeToFile("modules/common/conf/app_compilation_date.txt", now)
 
     val commonDependencies = Seq(
-      jdbc,
+      jdbc, // todo(andrew): move to sqldb when we discover a way to get Play to support multiple play.plugins files.
       cache,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.2.0" exclude("play", "*"),
       "com.typesafe" %% "play-plugins-mailer" % "2.2.0" exclude("play", "*"),
       "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.2.3"  exclude("play", "*"),
-      "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
-      "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.httpcomponents" % "httpclient" % "4.3",
-      "org.apache.tika" % "tika-parsers" % "1.3",
+      "org.apache.httpcomponents" % "httpclient" % "4.3", // todo(andrew): remove from common when HttpFetcher is moved to scraper
+      "org.apache.commons" % "commons-compress" % "1.4.1",
       "org.apache.commons" % "commons-math3" % "3.1.1",
       "commons-io" % "commons-io" % "2.4",
       "org.apache.zookeeper" % "zookeeper" % "3.4.5",
-      "com.cybozu.labs" % "langdetect" % "1.1-20120112",
+      "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
-      "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*"),
       "net.sf.uadetector" % "uadetector-resources" % "2013.11",
-      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
       "com.google.inject.extensions" % "guice-multibindings" % "3.0",
       "net.codingwell" %% "scala-guice" % "3.0.2",
-      "org.apache.lucene" % "lucene-core" % "4.2.1",
-      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
-      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
       "org.imgscalr" % "imgscalr-lib" % "4.2",
       "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
-      "org.feijoas" %% "mango" % "0.10"
+      "org.apache.lucene" % "lucene-core" % "4.2.1", // todo(andrew/yasuhiro): remove from common
+      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1" // todo(andrew/yasuhiro): remove from common
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -75,17 +70,22 @@ object ApplicationBuild extends Build {
     val searchDependencies = Seq(
       "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
         from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
-      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5"
+      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
+      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
+      "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*") // todo(andrew): Remove. Needed because of CloseableIterator. Implement yourself!
     )
 
     val sqldbDependencies = Seq(
-      "mysql" % "mysql-connector-java" % "5.1.25"
+      "mysql" % "mysql-connector-java" % "5.1.25",
+      "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*")
     )
 
     val shoeboxDependencies = Seq(
       "javax.mail" % "mail" % "1.4.5",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.1" exclude("play", "*"),
-      "org.jsoup" % "jsoup" % "1.7.1"
+      "org.jsoup" % "jsoup" % "1.7.1",
+      "org.apache.poi" % "poi" % "3.8",
+      "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1"
     )
 
     val heimdalDependencies = Seq(
@@ -101,7 +101,9 @@ object ApplicationBuild extends Build {
     val abookDependencies = Seq()
 
     val scraperDependencies = Seq(
-      "org.jsoup" % "jsoup" % "1.7.1"
+      "org.jsoup" % "jsoup" % "1.7.1",
+      "org.apache.tika" % "tika-parsers" % "1.3",
+      "org.apache.httpcomponents" % "httpclient" % "4.3"
     )
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
@@ -159,12 +161,12 @@ object ApplicationBuild extends Build {
       EclipseKeys.skipParents in ThisBuild := false,
       sources in doc in Compile := List(),
       Keys.fork := false,
-      skip in update := false
+      /*skip in update := true,
+       *skip in update in (Compile, test) := true*/
+      aggregate in update := false
     )
 
-    lazy val macros = play.Project("macros", appVersion, commonDependencies, path = file("modules/macros")).settings(
-      commonSettings: _*
-    )
+    lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings()
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
       commonSettings ++ Seq(
@@ -201,9 +203,16 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile")
 
     val kifiBackend = play.Project(appName, appVersion).settings(commonSettings: _*)
-    .settings(skip in update := false)
+    .settings(
+      aggregate in update := false
+    )
     .dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile")
     .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
+
+    val distProject = play.Project("dist", appVersion, path = file("./out")).settings(commonSettings: _*)
+    .settings(
+      aggregate in update := false)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper)
 
     override def rootProject = Some(kifiBackend)
 }
