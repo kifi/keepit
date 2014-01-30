@@ -9,7 +9,9 @@ angular.module('kifi.tags', ['util', 'dom'])
 			KEY_DOWN = 40,
 			KEY_ENTER = 13,
 			KEY_ESC = 27,
-			KEY_TAB = 9;
+			KEY_TAB = 9,
+			KEY_DEL = 46,
+			KEY_F2 = 113;
 
 		return {
 			restrict: 'A',
@@ -17,15 +19,21 @@ angular.module('kifi.tags', ['util', 'dom'])
 			scope: {},
 			link: function (scope, element /*, attrs*/ ) {
 				scope.create = function (name) {
-					alert('create:' + name);
+					if (name) {
+						alert('create:' + name);
+					}
 				};
 
 				scope.rename = function (tag) {
-					alert('rename:' + tag.name);
+					if (tag) {
+						alert('rename:' + tag.name);
+					}
 				};
 
 				scope.remove = function (tag) {
-					alert('remove:' + tag.name);
+					if (tag) {
+						alert('remove:' + tag.name);
+					}
 				};
 
 				scope.clearFilter = function (focus) {
@@ -74,6 +82,12 @@ angular.module('kifi.tags', ['util', 'dom'])
 					return -1;
 				}
 
+				scope.viewTag = function (tag) {
+					if (tag) {
+						return $location.path('/tag/' + tag.id);
+					}
+				};
+
 				scope.onKeydown = function (e) {
 					switch (e.keyCode) {
 					case KEY_UP:
@@ -83,10 +97,16 @@ angular.module('kifi.tags', ['util', 'dom'])
 						scope.highlightNext();
 						break;
 					case KEY_ENTER:
-						break;
-					case KEY_TAB:
+						scope.viewTag(scope.highlight);
 						break;
 					case KEY_ESC:
+						scope.dehighlight();
+						break;
+					case KEY_DEL:
+						scope.remove(scope.highlight);
+						break;
+					case KEY_F2:
+						scope.rename(scope.highlight);
 						break;
 					}
 				};
@@ -102,7 +122,7 @@ angular.module('kifi.tags', ['util', 'dom'])
 						}
 					}
 
-					if (shownTags.length) {
+					if (getFilterValue() && shownTags.length) {
 						return scope.highlightFirst();
 					}
 
@@ -212,7 +232,6 @@ angular.module('kifi.tags', ['util', 'dom'])
 				};
 
 				var list = element.find('.kf-tag-list');
-				console.log(list.position().top);
 				list.css({
 					position: 'absolute',
 					top: list.position().top,
