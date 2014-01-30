@@ -57,17 +57,11 @@ object ServiceType {
     override val warnInstances = 0
   }
 
-  def fromString(str: String) = str match {
-    case SHOEBOX.name => SHOEBOX
-    case SEARCH.name => SEARCH
-    case ELIZA.name => ELIZA
-    case HEIMDAL.name => HEIMDAL
-    case ABOOK.name => ABOOK
-    case SCRAPER.name => SCRAPER
-    case DEV_MODE.name => DEV_MODE
-    case TEST_MODE.name => TEST_MODE
-    case C_SHOEBOX.name => C_SHOEBOX
-  }
+  val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: Nil
+  val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
+  val all: List[ServiceType] = inProduction ::: notInProduction
+
+  val fromString = all.map(serviceType => (serviceType.name -> serviceType)).toMap
 
   implicit def format[T]: Format[ServiceType] = Format(
     __.read[String].map(fromString),
@@ -83,21 +77,10 @@ class FortyTwoServices(
 
   val started = clock.now
 
-  val serviceByCode = Map(
-    ServiceType.SHOEBOX.name -> ServiceType.SHOEBOX,
-    ServiceType.DEV_MODE.name -> ServiceType.DEV_MODE,
-    ServiceType.SEARCH.name -> ServiceType.SEARCH,
-    ServiceType.ELIZA.name -> ServiceType.ELIZA,
-    ServiceType.HEIMDAL.name -> ServiceType.HEIMDAL,
-    ServiceType.ABOOK.name -> ServiceType.ABOOK,
-    ServiceType.SCRAPER.name -> ServiceType.SCRAPER,
-    ServiceType.C_SHOEBOX.name -> ServiceType.C_SHOEBOX
-  )
-
   lazy val currentService: ServiceType = playMode match {
     case Mode.Test => ServiceType.TEST_MODE
     case Mode.Dev => ServiceType.DEV_MODE
-    case Mode.Prod => serviceByCode(Play.current.configuration.getString("application.name").get)
+    case Mode.Prod => ServiceType.fromString(Play.current.configuration.getString("application.name").get)
   }
 
   lazy val currentVersion: ServiceVersion = playMode match {
