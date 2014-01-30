@@ -108,6 +108,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (uri.state == NormalizedURIStates.ACTIVE
           || uri.state == NormalizedURIStates.INACTIVE
           || uri.state == NormalizedURIStates.UNSCRAPABLE
+          || uri.state == NormalizedURIStates.REDIRECTED
         ) {
           scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE)) // no need to scrape
           None
