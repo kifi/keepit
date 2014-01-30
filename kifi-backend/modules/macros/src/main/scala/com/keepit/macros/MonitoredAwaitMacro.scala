@@ -1,5 +1,7 @@
 package com.keepit.macros
 
+import scala.language.experimental.macros
+import scala.language.experimental.macros._
 import scala.concurrent.Await
 import scala.concurrent.Awaitable
 import scala.concurrent.duration._
