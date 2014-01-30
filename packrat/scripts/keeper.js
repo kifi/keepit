@@ -500,20 +500,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
     showing: function() {
       return !!$slider;
     },
-    show: function (trigger) {  // trigger is for the event log (e.g. 'tile', 'auto', 'scroll')
-      $(tile).hoverfu('destroy');
+    show: function (trigger) {  // trigger is for event log (e.g. 'tile')
       if ($slider) {
-        log('[show] already showing')();
+        log('[show] ignored, already showing')();
       } else {
         log('[show]', trigger)();
-        if (trigger === 'tile') {
-          showSlider(trigger);
-          growSlider('', 'kifi-wide');
-        } else if ((trigger === 'auto' || trigger === 'scroll') && !lastCreatedAt) { // auto-show only if not already shown
-          showSlider(trigger);
-          growSlider('kifi-tiny', 'kifi-auto');
-          idleTimer.start(5000);
-        }
+        $(tile).hoverfu('destroy');
+        showSlider(trigger);
+        growSlider('', 'kifi-wide');
       }
     },
     create: function(locator) {
@@ -548,24 +542,36 @@ var keeper = keeper || function () {  // idempotent for Chrome
     moveBackFromBottom: function () {
       $(tile).css('transform', '');
     },
-    showKeepers: function (keepers, otherKeeps) {
+    engage: function (trigger, type) {
       if (lastCreatedAt) return;
-      var $tile = $(tile).hoverfu(function (configureHover) {
-        // TODO: preload friend pictures
-        render('html/keeper/keepers', setKeepersAndCounts(keepers, otherKeeps, {
-          cssClass: 'kifi-keepers-promo' + ($tile.find('.kifi-count').length ? ' kifi-above-count' : '')
-        }), function (html) {
-          var $tip = $(html).on('transitionend', function unhoverfu(e) {
-            if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
-              $tip.off('transitionend', unhoverfu);
-              $tile.hoverfu('destroy');
-            }
-          });
-          configureHover($tip, {insertBefore: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
+      var $tile = $(tile);
+      if (type === 'keepers') {
+        api.port.emit('get_keepers', function (o) {
+          if (o.keepers.length && !lastCreatedAt) {
+            $tile.hoverfu(function (configureHover) {
+              // TODO: preload friend pictures
+              render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
+                cssClass: 'kifi-keepers-promo' + ($tile.find('.kifi-count').length ? ' kifi-above-count' : '')
+              }), function (html) {
+                if (lastCreatedAt) return;
+                var $promo = $(html).on('transitionend', function unhoverfu(e) {
+                  if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
+                    $promo.off('transitionend', unhoverfu);
+                    $tile.hoverfu('destroy');
+                  }
+                });
+                configureHover($promo, {insertBefore: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
+              });
+            }).hoverfu('show');
+            setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
+          }
         });
-      });
-      $tile.hoverfu('show');
-      setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
+      } else if (type === 'button') {
+        $tile.hoverfu('destroy');
+        showSlider(trigger);
+        growSlider('kifi-tiny', 'kifi-auto');
+        idleTimer.start(5000);
+      }
     },
     onPaneChange: function (locator) {
       $slider.find('.kifi-at').removeClass('kifi-at');

@@ -1409,19 +1409,21 @@ function kififyWithPageData(tab, d) {
     tab.engaged = true;
     if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {
       if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
-        log("[initTab]", tab.id, "restricted")();
+        log('[initTab]', tab.id, 'restricted')();
       } else if (ruleSet.rules.shown && d.shown) {
-        log("[initTab]", tab.id, "shown before")();
+        log('[initTab]', tab.id, 'shown before')();
       } else {
+        var focused = api.tabs.isFocused(tab);
         if (ruleSet.rules.scroll) {
-          api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
+          api.tabs.emit(tab, 'scroll_rule', ruleSet.rules.scroll, {queue: 1});
         }
-        tab.autoShowSec = (ruleSet.rules.focus || [])[0];
-        if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
-          scheduleAutoShow(tab);
+        if ((ruleSet.rules.focus || [])[0] != null) {
+          tab.buttonSec = ruleSet.rules.focus[0];
+          if (focused) scheduleAutoEngage(tab, 'button');
         }
         if (d.keepers.length) {
-          api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps}, {queue: 1});
+          tab.keepersSec = 20;
+          if (focused) scheduleAutoEngage(tab, 'keepers');
         }
       }
     }
@@ -1627,22 +1629,18 @@ api.icon.on.click.add(function (tab) {
 
 api.tabs.on.focus.add(function(tab) {
   log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab)();
-
   for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
-
   delete tab.focusCallbacks;
   kifify(tab);
-  if (tab.autoShowSec != null && !tab.autoShowTimer) {
-    scheduleAutoShow(tab);
-  }
+  scheduleAutoEngage(tab, 'button');
+  scheduleAutoEngage(tab, 'keepers');
 });
 
 api.tabs.on.blur.add(function(tab) {
   log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab)();
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
+  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
 });
 
 api.tabs.on.loading.add(function(tab) {
@@ -1678,8 +1676,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   if (tabsTagging.length) {
     tabsTagging = tabsTagging.filter(idIsNot(tab.id));
   }
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
+  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
   delete tab.nUri;
   delete tab.count;
   delete tab.engaged;
@@ -1781,15 +1778,25 @@ function qualify(key) {
 
 // ===== Helper functions
 
-function scheduleAutoShow(tab) {
-  log("[scheduleAutoShow] scheduling tab:", tab.id)();
+function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
-  tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
-    delete tab.autoShowSec;
-    delete tab.autoShowTimer;
-    log('[autoShow]', tab.id)();
-    api.tabs.emit(tab, 'auto_show', null, {queue: 1});
-  }, tab.autoShowSec * 1000);
+  var secName = type + 'Sec', timerName = type + 'Timer';
+  if (tab[secName] == null || tab[timerName]) return;
+  log('[scheduleAutoEngage]', tab.id, type)();
+  tab[timerName] = api.timers.setTimeout(function autoEngage() {
+    delete tab[secName];
+    delete tab[timerName];
+    log('[autoEngage]', tab.id, type)();
+    api.tabs.emit(tab, 'auto_engage', type, {queue: 1});
+  }, tab[secName] * 1000);
+}
+
+function clearAutoEngageTimer(tab, type) {
+  var secName = type + 'Sec', timerName = type + 'Timer';
+  if (tab[timerName]) {
+    api.timers.clearTimeout(tab[timerName]);
+    delete tab[timerName];
+  }
 }
 
 function compilePatterns(arr) {
