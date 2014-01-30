@@ -154,7 +154,7 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr(requestId.toLong, notices, currentDateTime))
       }
     },
-    "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>  // deprecated (unused since 2.8.38)
+    "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       messagingCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt).map { case (notices, numTotal) =>
         socket.channel.push(Json.arr(requestId.toLong, notices, numTotal))
       }
@@ -174,7 +174,7 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
-    "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ => // deprecated (unused since 2.8.38)
+    "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt).map { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
