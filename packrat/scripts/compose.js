@@ -78,7 +78,6 @@ function initCompose($c, enterToSend, opts) {
       minChars: 1,
       placeholder: 'To',
       hintText: '',
-      noResultsText: '',
       searchingText: '',
       resultsLimit: 4,
       preventDuplicates: true,

@@ -150,7 +150,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 					placeholder: 'Type a name...',
 					hintText: '',
-					noResultsText: '',
 					searchingText: '',
 					resultsLimit: 4,
 					preventDuplicates: true,
