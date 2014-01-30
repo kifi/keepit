@@ -8,6 +8,7 @@ import play.api.Play.current
 import scala.concurrent.future
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.ServiceDiscovery
+import net.codingwell.scalaguice.ScalaModule
 
 case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
 
@@ -15,17 +16,11 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
 
   def configure() {
     install(FakeAirbrakeModule())
+    install(FakeSchedulerModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
   }
-
-  @Provides
-  def globalSchedulingEnabled: SchedulingProperties =
-    new SchedulingProperties {
-      def enabled = false
-      def enabledOnlyForLeader = false
-    }
 
   @Provides
   @AppScoped
@@ -36,8 +31,16 @@ case class StandaloneTestActorSystemModule(implicit system: ActorSystem) extends
 
   def configure() {
     bind[ActorBuilder].to[TestActorBuilderImpl]
-    bind[Scheduler].to[FakeScheduler]
     bind[ActorSystem].toInstance(system)
+    install(FakeSchedulerModule())
+  }
+
+}
+
+case class FakeSchedulerModule() extends ScalaModule {
+
+  def configure() {
+    bind[Scheduler].to[FakeScheduler]
   }
 
   @Provides

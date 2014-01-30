@@ -266,11 +266,14 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   threadLists.sent.includesOldest = arr.length < THREAD_BATCH_SIZE;
   threadLists.unread.includesOldest = threadLists.unread.ids.length >= numUnread;
 
-  ['all', 'sent', 'unread'].forEach(function (kind) {
-    (threadListCallbacks[kind] || []).forEach(function (callback) {
-      callback(threadLists[kind]);
-    });
-    delete threadListCallbacks[kind];
+  invokeThreadListCallbacks('all', threadLists.all);
+  ['sent', 'unread'].forEach(function (kind) {
+    var tl = threadLists[kind];
+    if (tl.ids.length || tl.includesOldest) {
+      invokeThreadListCallbacks(kind, tl);
+    } else {
+      socket.send(['get_' + kind + '_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, kind, tl));
+    }
   });
 
   tellVisibleTabsNoticeCountIfChanged();
@@ -291,6 +294,30 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   });
 
   api.tabs.eachSelected(kifify);
+}
+
+function gotFilteredThreads(kind, tl, arr, numTotal) {
+  log('[gotFilteredThreads]', kind, arr, numTotal || '')();
+  arr.forEach(function (n) {
+    standardizeNotification(n);
+    threadsById[n.thread] = n;
+  });
+  tl.ids = arr.map(getThreadId);
+  tl.includesOldest = arr.length < THREAD_BATCH_SIZE;
+  if (numTotal != null) {
+    tl.numTotal = numTotal;
+  }
+  invokeThreadListCallbacks(kind, tl);
+}
+
+function invokeThreadListCallbacks(key, tl, arg) {
+  var callbacks = threadListCallbacks[key];
+  if (callbacks) {
+    for (var i = 0; i < callbacks.length; i++) {
+      callbacks[i](tl, arg);
+    }
+    delete threadListCallbacks[key];
+  }
 }
 
 var socketHandlers = {
@@ -1489,11 +1516,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
   pt.includesOldest = threads.length < THREAD_BATCH_SIZE;
 
   // invoking callbacks
-  var callbacks = threadListCallbacks[uri];
-  while (callbacks && callbacks.length) {
-    callbacks.shift()(pt, nUri);
-  }
-  delete threadListCallbacks[uri];
+  invokeThreadListCallbacks(uri, pt, nUri);
 
   // sending new page threads and count to any tabs on this page with pane open to page threads
   forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {

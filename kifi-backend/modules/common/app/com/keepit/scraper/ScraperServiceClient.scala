@@ -23,6 +23,8 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import scala.util.matching.Regex
 import org.joda.time.DateTime
 import org.codehaus.jackson.JsonProcessingException
+import akka.actor.Scheduler
+
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
 object ScrapeTuple {
@@ -153,9 +155,9 @@ class ScraperServiceClientImpl @Inject() (
   }
 }
 
-class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ScraperServiceClient {
+class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
 
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 

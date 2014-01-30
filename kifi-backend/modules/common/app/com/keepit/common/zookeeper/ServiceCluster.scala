@@ -21,7 +21,7 @@ import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
 
-class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], schedulerOpt: Option[Scheduler] = None) extends Logging {
+class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
   private var routingList: Vector[ServiceInstance] = Vector()
@@ -151,25 +151,23 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     leader = findLeader(newInstances)
     instances = newInstances
     resetRoutingList()
-    schedulerOpt.map{ scheduler =>
-      if (instances.size < serviceType.minInstances){
-        if (scheduledPanic.isEmpty) {
-          scheduledPanic = Some(scheduler.scheduleOnce(3 minutes){
-            airbrake.get.panic(s"Service cluster for ${serviceType} way too small!")
-          })
-        }
-      } else if (instances.size < serviceType.warnInstances) {
-        if (scheduledWarning.isEmpty) {
-          scheduledWarning = Some(scheduler.scheduleOnce(20 minutes){
-            airbrake.get.notify(s"Service cluster for ${serviceType} too small!")
-          })
-        }
-      } else {
-        scheduledWarning.map(_.cancel())
-        scheduledPanic.map(_.cancel())
-        scheduledWarning = None
-        scheduledPanic = None
+    if (instances.size < serviceType.minInstances){
+      if (scheduledPanic.isEmpty) {
+        scheduledPanic = Some(scheduler.scheduleOnce(3 minutes){
+          airbrake.get.panic(s"Service cluster for ${serviceType} way too small!")
+        })
       }
+    } else if (instances.size < serviceType.warnInstances) {
+      if (scheduledWarning.isEmpty) {
+        scheduledWarning = Some(scheduler.scheduleOnce(20 minutes){
+          airbrake.get.notify(s"Service cluster for ${serviceType} too small!")
+        })
+      }
+    } else {
+      scheduledWarning.map(_.cancel())
+      scheduledPanic.map(_.cancel())
+      scheduledWarning = None
+      scheduledPanic = None
     }
   }
 

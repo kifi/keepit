@@ -12,6 +12,7 @@ abstract class WebsiteController(val actionAuthenticator: ActionAuthenticator) e
     override val contentTypeOpt = Some(ContentTypes.JSON)
   }
   object HtmlAction extends Actions.AuthenticatedActions with Actions.NonAuthenticatedActions {
+    override val contentTypeOpt = Some(ContentTypes.HTML)
     override val apiClient = false
   }
   object AnyAction extends Actions.AuthenticatedActions with Actions.NonAuthenticatedActions

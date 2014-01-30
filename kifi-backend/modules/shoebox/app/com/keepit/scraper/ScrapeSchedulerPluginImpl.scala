@@ -79,43 +79,45 @@ private[scraper] class ScrapeScheduler @Inject() (
       }
     }
 
-    // update/remove if pulling works well
-    val batchMax = scraperConfig.batchMax
-    val pendingSkipThreshold = scraperConfig.pendingSkipThreshold
-    val adjPendingCount = (pendingCount - pendingOverdues.length)
-    val infos =
-      if (adjPendingCount > pendingSkipThreshold) {
-        val msg = s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $pendingSkipThreshold. Skip a round."
-        log.warn(msg)
-        airbrake.notify(msg)
-        Seq.empty[ScrapeInfo]
-      } else {
-        overdues.take(batchMax) ++ pendingOverdues.take(batchMax)
-      }
-
-    val tasks = if (infos.isEmpty) Seq.empty[(NormalizedURI, ScrapeInfo, Option[HttpProxy])]
-    else db.readOnly { implicit s =>
-      infos.map { info =>
-        val uri = normalizedURIRepo.get(info.uriId)
-        val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
-        (uri, info, proxyOpt)
-      }
-    }
-    Statsd.gauge("scraper.scheduler.uris.count", tasks.length)
-    val ts = System.currentTimeMillis
-    tasks foreach { case (uri, info, proxyOpt) =>
-      val request = db.readWrite { implicit s =>
-        if (NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
-          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
-          None
+    if (scraperConfig.push) {
+      // update/remove if pulling works well
+      val batchMax = scraperConfig.batchMax
+      val pendingSkipThreshold = scraperConfig.pendingSkipThreshold
+      val adjPendingCount = (pendingCount - pendingOverdues.length)
+      val infos =
+        if (adjPendingCount > pendingSkipThreshold) {
+          val msg = s"[schedule] # of pending jobs (adj=${adjPendingCount}, pending=${pendingCount}, pendingOverdues=${pendingOverdues.length}) > $pendingSkipThreshold. Skip a round."
+          log.warn(msg)
+          airbrake.notify(msg)
+          Seq.empty[ScrapeInfo]
         } else {
-          val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: assigned
-          Some(ScrapeRequest(uri, savedInfo, proxyOpt))
+          overdues.take(batchMax) ++ pendingOverdues.take(batchMax)
+        }
+
+      val tasks = if (infos.isEmpty) Seq.empty[(NormalizedURI, ScrapeInfo, Option[HttpProxy])]
+      else db.readOnly { implicit s =>
+        infos.map { info =>
+          val uri = normalizedURIRepo.get(info.uriId)
+          val proxyOpt = urlPatternRuleRepo.getProxy(uri.url)
+          (uri, info, proxyOpt)
         }
       }
-      request foreach { req => scraperServiceClient.scheduleScrapeWithRequest(req) }
+      Statsd.gauge("scraper.scheduler.uris.count", tasks.length)
+      val ts = System.currentTimeMillis
+      tasks foreach { case (uri, info, proxyOpt) =>
+        val request = db.readWrite { implicit s =>
+          if (NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
+            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+            None
+          } else {
+            val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: assigned
+            Some(ScrapeRequest(uri, savedInfo, proxyOpt))
+          }
+        }
+        request foreach { req => scraperServiceClient.scheduleScrapeWithRequest(req) }
+      }
+      log.info(s"[schedule] submitted ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
     }
-    log.info(s"[schedule] submitted ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
   }
 
 }

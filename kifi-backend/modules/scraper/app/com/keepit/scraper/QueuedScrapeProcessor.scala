@@ -121,6 +121,31 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
+  override def pull():Unit = {
+    if (config.pull) {
+      log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size()}")
+      if (submittedQ.isEmpty) {
+        serviceDiscovery.thisInstance map {
+          inst =>
+            if (inst.isHealthy) {
+              asyncHelper.assignTasks(inst.id.id, Runtime.getRuntime.availableProcessors() * config.pullMultiplier) onComplete {
+                trRequests =>
+                  trRequests match {
+                    case Failure(t) =>
+                      log.error(s"[puller] Caught exception ${t} while pulling for tasks", t) // move along
+                    case Success(requests) =>
+                      log.info(s"[puller(${inst.id.id}})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
+                      for (sr <- requests) {
+                        asyncScrape(sr.uri, sr.info, sr.proxyOpt)
+                      }
+                  }
+              }
+            }
+        }
+      }
+    }
+  }
+
   import TracedCallable._
   val terminator = new Runnable {
     def run(): Unit = {
@@ -170,27 +195,6 @@ class QueuedScrapeProcessor @Inject() (
               None
             }
           }
-
-          if (config.pull) { // todo: move this out
-            log.info(s"[puller] look for things to do ... q.size=${submittedQ.size()}")
-            if (submittedQ.isEmpty) {
-              serviceDiscovery.thisInstance map { inst =>
-                if (inst.isHealthy) {
-                  asyncHelper.assignTasks(inst.id.id, Runtime.getRuntime.availableProcessors()) onComplete { trRequests =>
-                    trRequests match {
-                      case Failure(t) =>
-                        log.error(s"[puller] Caught exception ${t} while pulling for tasks",t) // move along
-                      case Success(requests) =>
-                        log.info(s"[puller(${inst.id.id}})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
-                        for (sr <- requests) {
-                          asyncScrape(sr.uri, sr.info, sr.proxyOpt)
-                        }
-                    }
-                  }
-                }
-              }
-            }
-          }
         }
       } catch {
         case t:Throwable => logErr(t, "terminator", submittedQ.toString, true)
@@ -199,7 +203,7 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   val scheduler = Executors.newSingleThreadScheduledExecutor
-  scheduler.scheduleWithFixedDelay(terminator, config.scrapePendingFrequency, config.scrapePendingFrequency * 2, TimeUnit.SECONDS)
+  scheduler.scheduleWithFixedDelay(terminator, config.scrapePendingFrequency, config.scrapePendingFrequency, TimeUnit.SECONDS)
 
   private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, helper)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {

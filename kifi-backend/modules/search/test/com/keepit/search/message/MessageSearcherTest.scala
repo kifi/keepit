@@ -20,6 +20,7 @@ import org.apache.lucene.util.Version
 import play.api.libs.json.Json
 
 import org.specs2.mutable._
+import com.keepit.common.actor.FakeScheduler
 
 
 class MessageSearcherTest extends Specification with TestInjector{
@@ -106,7 +107,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     val indexer = new MessageIndexer(
       indexDirectory =  new VolatileIndexDirectoryImpl(),
       indexWriterConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing),
-      eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier]),
+      eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier], new FakeScheduler()),
       airbrake = inject[AirbrakeNotifier]
     )
 
