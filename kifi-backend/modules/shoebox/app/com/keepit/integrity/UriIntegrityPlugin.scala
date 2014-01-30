@@ -107,7 +107,7 @@ class UriIntegrityActor @Inject()(
     val (oldInfoOpt, newInfoOpt) = (scrapeInfoRepo.getByUriId(oldUri.id.get), scrapeInfoRepo.getByUriId(newUri.id.get))
     (oldInfoOpt, newInfoOpt) match {
       case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
-      case (Some(oldInfo), Some(newInfo)) if ( oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE )  =>
+      case (Some(oldInfo), Some(newInfo)) if ( oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE ) && (newUri.state != NormalizedURIStates.UNSCRAPABLE)  =>
         uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
       case _ =>
     }
