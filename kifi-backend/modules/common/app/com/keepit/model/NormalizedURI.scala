@@ -128,6 +128,8 @@ object NormalizedURIStates extends States[NormalizedURI] {
       (UNSCRAPABLE -> Set(ACTIVE)),
       (INACTIVE -> Set.empty))
 
+  val DO_NOT_SCRAPE = Set(ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
+
   def transitionByAdmin[T](transition: (State[NormalizedURI], Set[State[NormalizedURI]]))(f:State[NormalizedURI]=>T) = {
     f(validate(transition, ADMIN_TRANSITIONS))
   }

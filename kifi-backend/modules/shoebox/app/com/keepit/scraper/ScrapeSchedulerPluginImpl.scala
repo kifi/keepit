@@ -105,12 +105,8 @@ private[scraper] class ScrapeScheduler @Inject() (
     val ts = System.currentTimeMillis
     tasks foreach { case (uri, info, proxyOpt) =>
       val request = db.readWrite { implicit s =>
-        if (uri.state == NormalizedURIStates.ACTIVE
-          || uri.state == NormalizedURIStates.INACTIVE
-          || uri.state == NormalizedURIStates.UNSCRAPABLE
-          || uri.state == NormalizedURIStates.REDIRECTED
-        ) {
-          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE)) // no need to scrape
+        if (NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
+          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
           None
         } else {
           val savedInfo = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.PENDING)) // todo: assigned
@@ -152,25 +148,27 @@ class ScrapeSchedulerPluginImpl @Inject() (
   def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {
     require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
     val uriId = uri.id.get
-    val info = scrapeInfoRepo.getByUriId(uriId)
-    val toSave = info match {
-      case Some(s) => s.state match {
-        case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime)
-        case ScrapeInfoStates.PENDING | ScrapeInfoStates.ASSIGNED => s // no change
-        case ScrapeInfoStates.INACTIVE => {
-          val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
-          log.warn(msg)
-          localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
-            subject = s"ScrapeScheduler.scheduleScrape($uri)",
-            htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
-            category = NotificationCategory.System.ADMIN))
-          s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime) // dangerous; revisit
+    if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
+      val info = scrapeInfoRepo.getByUriId(uriId)
+      val toSave = info match {
+        case Some(s) => s.state match {
+          case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime)
+          case ScrapeInfoStates.PENDING | ScrapeInfoStates.ASSIGNED => s // no change
+          case ScrapeInfoStates.INACTIVE => {
+            val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
+            log.warn(msg)
+            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
+              subject = s"ScrapeScheduler.scheduleScrape($uri)",
+              htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
+              category = NotificationCategory.System.ADMIN))
+            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime) // dangerous; revisit
+          }
         }
+        case None => ScrapeInfo(uriId = uriId)
       }
-      case None => ScrapeInfo(uriId = uriId)
+      val saved = scrapeInfoRepo.save(toSave)
+      // todo: It may be nice to force trigger a scrape directly
     }
-    val saved = scrapeInfoRepo.save(toSave)
-    // todo: It may be nice to force trigger a scrape directly
   }
 
   def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
