@@ -174,8 +174,6 @@ class AuthCommander @Inject()(
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
         email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
-      SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
-
       val user = db.readOnly { implicit session =>
         userRepo.get(userId)
       }
@@ -186,6 +184,8 @@ class AuthCommander @Inject()(
       sfi.picToken.map { token =>
         s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
       }
+
+      SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
       (user, emailPassIdentity)
     }
