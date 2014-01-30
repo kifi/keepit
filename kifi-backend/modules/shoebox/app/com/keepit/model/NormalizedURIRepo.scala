@@ -29,6 +29,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
+  def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   }
 
 @Singleton
@@ -203,6 +204,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       }
     }
   }
+
+  def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =
+    (for(t <- table if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
 
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
