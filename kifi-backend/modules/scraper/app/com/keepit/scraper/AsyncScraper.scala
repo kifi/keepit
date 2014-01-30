@@ -379,7 +379,7 @@ class AsyncScraper @Inject() (
   def asyncProcessRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
     redirects.find(_.isLocatedAt(uri.url)) match {
       case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => SafeFuture {
-        if (redirect.isPermanent) airbrake.notify(AirbrakeError(new Exception(s"Found fishy 301: $redirect")))
+        if (redirect.isPermanent) log.warn(s"Found fishy 301 $redirect for $uri")
         updateRedirectRestriction(uri, redirect)
       }
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.recordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
