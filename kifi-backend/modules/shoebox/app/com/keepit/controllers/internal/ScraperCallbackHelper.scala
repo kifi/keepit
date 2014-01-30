@@ -31,7 +31,7 @@ class ScraperCallbackHelper @Inject()(
     }
   }
 
-  def assignTasks(zkId:Id[ScraperWorker], max:Int):Seq[ScrapeRequest] = timingWithResult[Seq[ScrapeRequest]](s"assignTasks($zkId,$max)", {_.mkString(",")}) {
+  def assignTasks(zkId:Id[ScraperWorker], max:Int):Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", {r:Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}"}) {
     withLock(lock) {
       val builder = Seq.newBuilder[ScrapeRequest]
       val res = db.readWrite(attempts = 2) { implicit rw =>
