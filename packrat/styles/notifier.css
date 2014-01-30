@@ -24,7 +24,7 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
 	color: #eee;
   padding: 15px;
 	font-size: 11px;
-  border-radius: 10px;
+  border-radius: 10px !important;
   border: 1px solid #ddd;
   cursor: pointer
 }
@@ -47,7 +47,7 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
 #kifi-notify-notice-wrapper .kifi-notify-close:hover {
   color: #333;
   background-color:#ddd;
-  border-radius: 10px;
+  border-radius: 10px !important;
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-title {
@@ -99,7 +99,7 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   height: 42px;
   margin: 0;
   border: none;
-  border-radius: 2px;
+  border-radius: 2px !important;
   padding: 0;
 }
 

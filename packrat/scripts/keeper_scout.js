@@ -47,7 +47,7 @@ var tile = tile || function() {  // idempotent for Chrome
     me_change: onMeChange,
     open_to: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
-    auto_show: loadAndDo.bind(null, 'keeper', 'show', 'auto'),
+    auto_engage: loadAndDo.bind(null, 'keeper', 'engage', 'auto'),
     init: function(o) {
       var pos = o.position;
       if (pos) {
@@ -82,9 +82,6 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.removeAttribute("data-kept");
       }
     },
-    keepers: function(o) {
-      setTimeout(loadAndDo.bind(null, 'keeper', 'showKeepers', o.keepers, o.otherKeeps), 3000);
-    },
     count: function(n) {
       tile && updateCount(n);
     },
@@ -102,7 +99,7 @@ var tile = tile || function() {  // idempotent for Chrome
             log('[onScroll]', Math.round(hSeen / hPage * 10000) / 100, '>', r[1], '% and', hPage, '>', r[0] * hViewport, '?')();
             if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage && e.isTrusted !== false) {
               log('[onScroll] showing')();
-              loadAndDo('keeper', 'show', 'scroll');
+              loadAndDo('keeper', 'engage', 'scroll', 'button');
             }
           }
         });
@@ -137,12 +134,12 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 77: // m
         api.port.emit('unsilence');
-        loadAndDo('pane', 'toggle', 'key', '/messages');
+        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages'});
         e.preventDefault();
         break;
       case 79: // o
         api.port.emit('unsilence');
-        loadAndDo('pane', 'toggle', 'key', '/messages:all');
+        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages:all'});
         e.preventDefault();
         break;
       case 83: // s

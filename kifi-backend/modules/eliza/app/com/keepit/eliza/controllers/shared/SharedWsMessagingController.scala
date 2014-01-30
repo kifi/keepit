@@ -13,13 +13,10 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.SearchServiceClient
 import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice, RemotePostOffice}
 
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 import play.modules.statsd.api.Statsd
 
@@ -36,7 +33,6 @@ class SharedWsMessagingController @Inject() (
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     protected val shoebox: ShoeboxServiceClient,
-    protected val search: SearchServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
     protected val clock: Clock,
@@ -158,7 +154,7 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr(requestId.toLong, notices, currentDateTime))
       }
     },
-    "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>  // deprecated (unused since 2.8.38)
+    "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       messagingCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt).map { case (notices, numTotal) =>
         socket.channel.push(Json.arr(requestId.toLong, notices, numTotal))
       }
@@ -178,7 +174,7 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }
     },
-    "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ => // deprecated (unused since 2.8.38)
+    "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt).map { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices))
       }

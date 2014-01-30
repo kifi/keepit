@@ -49,12 +49,12 @@ class ExtPreferenceController @Inject() (
   private val crypt = new SimpleDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  def normalize(url: String) = AuthenticatedJsonAction { request =>
+  def normalize(url: String) = JsonAction.authenticated { request =>
     val json = db.readOnly { implicit session => Json.arr(normalizationService.normalize(url)) }
     Ok(json)
   }
 
-  def getRules(version: String) = AuthenticatedJsonAction { request =>
+  def getRules(version: String) = JsonAction.authenticated { request =>
     db.readOnly { implicit s =>
       val group = sliderRuleRepo.getGroup("default")
       if (version != group.version) {
@@ -65,38 +65,38 @@ class ExtPreferenceController @Inject() (
     }
   }
 
-  def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonAction { request =>
+  def setEnterToSend(enterToSend: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
     Ok(JsNumber(0))
   }
 
-  def setMaxResults(n: Int) = AuthenticatedJsonAction { request =>
+  def setMaxResults(n: Int) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
     Ok(JsNumber(0))
   }
 
-  def setShowKeeperIntro(show: Boolean) = AuthenticatedJsonAction { request =>
+  def setShowKeeperIntro(show: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_keeper_intro", show.toString))
     Ok(JsNumber(0))
   }
 
-  def setShowSearchIntro(show: Boolean) = AuthenticatedJsonAction { request =>
+  def setShowSearchIntro(show: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_search_intro", show.toString))
     Ok(JsNumber(0))
   }
 
-  def setShowFindFriends(show: Boolean) = AuthenticatedJsonAction { request =>
+  def setShowFindFriends(show: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
     Ok(JsNumber(0))
   }
 
-  def getPrefs() = AuthenticatedJsonAction { request =>
+  def getPrefs() = JsonAction.authenticated { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
     Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get), encryptedIp))
   }
 
-  def setKeeperPosition() = AuthenticatedJsonToJsonAction { request =>
+  def setKeeperPosition() = JsonAction.authenticatedParseJson { request =>
     val pos = request.body \ "pos"
     val host = (request.body \ "host").as[String]
 

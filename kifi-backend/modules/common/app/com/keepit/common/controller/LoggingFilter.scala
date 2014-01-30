@@ -25,19 +25,19 @@ class LoggingFilter() extends EssentialFilter {
   lazy val midFlightRequests = global.injector.instance[MidFlightRequests]
 
   def apply(next: EssentialAction) = new EssentialAction {
-    def apply(rh: RequestHeader): Iteratee[Array[Byte],play.api.mvc.Result] = {
+    def apply(rh: RequestHeader): Iteratee[Array[Byte], SimpleResult] = {
       if (!discovery.amIUp && (discovery.timeSinceLastStatusChange > 20000L)) {
         val message = s"Current status of service ${myAmazonInstanceInfo.info.localIp} ${discovery.myStatus.getOrElse("UNKNOWN")}, last changed ${discovery.timeSinceLastStatusChange}ms ago"
         //system is going down, maybe the logger, emails, airbrake are gone already
         println(message)
         //we can remove this airbrake once we'll see the system works right
         airbrake.notify(message)
-        Done(SimpleResult[String](header = ResponseHeader(Status.SERVICE_UNAVAILABLE), body = Enumerator(message)))
+        Done(SimpleResult(header = ResponseHeader(Status.SERVICE_UNAVAILABLE), body = Enumerator()))
       } else {
         val countStart = midFlightRequests.comingIn(rh)
         val timer = accessLog.timer(HTTP_IN)
 
-        def logTime(result: PlainResult): Result = {
+        def logTime(result: SimpleResult): SimpleResult = {
           midFlightRequests.goingOut(rh)
           val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
           val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
@@ -66,8 +66,7 @@ class LoggingFilter() extends EssentialFilter {
         }
         try {
           next(rh).map {
-            case plain: PlainResult => logTime(plain)
-            case async: AsyncResult => async.transform(logTime)
+            case plain: SimpleResult => logTime(plain)
           }
         } catch {
           case t: Throwable =>

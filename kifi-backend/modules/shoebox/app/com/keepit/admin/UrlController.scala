@@ -25,6 +25,10 @@ import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.integrity.RenormalizationCheckKey
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
+
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -48,12 +52,12 @@ class UrlController @Inject() (
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
-  def index = AdminHtmlAction { implicit request =>
+  def index = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.adminDashboard())
   }
 
-  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Akka.future {
+  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
+    Future {
       try {
         doRenormalize(readOnly, clearSeq, domainRegex)
       } catch {
@@ -139,16 +143,16 @@ class UrlController @Inject() (
     }
   }
 
-  def orphanCleanup(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
-    Akka.future {
+  def orphanCleanup(readOnly: Boolean = true) = AdminHtmlAction.authenticated { implicit request =>
+    Future {
       db.readWrite { implicit session =>
         orphanCleaner.clean(readOnly)
       }
     }
     Ok
   }
-  def orphanCleanupFull(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
-    Akka.future {
+  def orphanCleanupFull(readOnly: Boolean = true) = AdminHtmlAction.authenticated { implicit request =>
+    Future {
       db.readWrite { implicit session =>
         orphanCleaner.fullClean(readOnly)
       }
@@ -156,7 +160,7 @@ class UrlController @Inject() (
     Ok
   }
 
-  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction { implicit request =>
+  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction.authenticated { implicit request =>
     val dupes = db.readOnly { implicit conn =>
       duplicateDocumentRepo.getActive(page, size)
     }
@@ -175,7 +179,7 @@ class UrlController @Inject() (
     Ok(html.admin.documentIntegrity(loadedDupes))
   }
 
-  def handleDuplicate = AdminHtmlAction { implicit request =>
+  def handleDuplicate = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get
     val action = body("action").head
     val id = Id[DuplicateDocument](body("id").head.toLong)
@@ -183,7 +187,7 @@ class UrlController @Inject() (
     Ok
   }
 
-  def handleDuplicates = AdminHtmlAction { implicit request =>
+  def handleDuplicates = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get
     val action = body("action").head
     val id = Id[NormalizedURI](body("id").head.toLong)
@@ -191,12 +195,12 @@ class UrlController @Inject() (
     Ok
   }
 
-  def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
+  def duplicateDocumentDetection = AdminHtmlAction.authenticated { implicit request =>
     dupeDetect.asyncProcessDocuments()
     Redirect(routes.UrlController.documentIntegrity())
   }
 
-  def normalizationView(page: Int = 0) = AdminHtmlAction{ request =>
+  def normalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     implicit val playRequest = request.request
     val PAGE_SIZE = 50
     val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
@@ -211,18 +215,18 @@ class UrlController @Inject() (
     Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
 
-  def batchURIMigration = AdminHtmlAction{ request =>
+  def batchURIMigration = AdminHtmlAction.authenticated { request =>
     implicit val playRequest = request.request
     monitoredAwait.result(uriIntegrityPlugin.batchURIMigration(), 1 minute, "Manual merge failed.")
     Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
   }
 
-  def batchURLMigration = AdminHtmlAction{ request =>
+  def batchURLMigration = AdminHtmlAction.authenticated { request =>
     uriIntegrityPlugin.batchURLMigration(500)
     Ok("Ok. Start migration of upto 500 urls")
   }
 
-  def renormalizationView(page: Int = 0) = AdminHtmlAction{ request =>
+  def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
     val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
@@ -237,7 +241,7 @@ class UrlController @Inject() (
     Ok(html.admin.renormalizationView(info, page, totalCount, pageCount, PAGE_SIZE))
   }
 
-  def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction { request =>
+  def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction.authenticated { request =>
     db.readOnly { implicit session =>
       (uriRepo.getByUri(oldUrl), uriRepo.getByUri(newUrl)) match {
         case (None, _) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUrl} could not be found.")
@@ -256,14 +260,14 @@ class UrlController @Inject() (
     }
   }
 
-  def getPatterns = AdminHtmlAction { implicit request =>
+  def getPatterns = AdminHtmlAction.authenticated { implicit request =>
     val (patterns, proxies) = db.readOnly { implicit session =>
       (urlPatternRuleRepo.all.sortBy(_.id.get.id), httpProxyRepo.all())
     }
     Ok(html.admin.urlPatternRules(patterns, proxies))
   }
 
-  def savePatterns = AdminHtmlAction { implicit request =>
+  def savePatterns = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
@@ -309,6 +313,16 @@ class UrlController @Inject() (
       }
     }
     Redirect(routes.UrlController.getPatterns)
+  }
+
+  def fixRedirectedUriStates(doIt: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    val problematicUris = db.readOnly { implicit session => uriRepo.toBeRemigrated() }
+    if (doIt) db.readWrite { implicit session =>
+      problematicUris.foreach { uri =>
+        changedUriRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uri.redirect.get))
+      }
+    }
+    Ok(Json.toJson(problematicUris))
   }
 }
 

@@ -1,6 +1,6 @@
 package com.keepit.common.store
 
-import org.specs2.mutable.Specification
+import org.specs2.mutable.SpecificationLike
 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, DirectUrl}
@@ -19,7 +19,7 @@ import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 
-class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
 
   val imageDataIntegrityTestPluginModule =
     new ShoeboxFakeStoreModule() {

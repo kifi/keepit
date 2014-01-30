@@ -18,11 +18,11 @@ class AdminAuthController @Inject() (
   impersonateCookie: ImpersonateCookie)
     extends AdminController(actionAuthenticator) {
 
-  def unimpersonate = AdminJsonAction { request =>
+  def unimpersonate = AdminJsonAction.authenticated { request =>
     Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(impersonateCookie.discard)
   }
 
-  def impersonate(id: Id[User]) = AdminJsonAction { request =>
+  def impersonate(id: Id[User]) = AdminJsonAction.authenticated { request =>
     val user = db.readOnly { implicit s =>
       userRepo.get(id)
     }

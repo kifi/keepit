@@ -29,7 +29,7 @@
   transition: -webkit-transform .3s;
   transition: transform .3s;
   border: 1px solid #e3e5e8;
-  border-radius: 5px;
+  border-radius: 5px !important;
   background: #fff;
   color: #000;
   line-height: 0;
@@ -53,7 +53,7 @@
   right: 10px;
   height: 24px;
   width: 24px;
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 .kifi-dialog-x:before,
 .kifi-dialog-x:after {
@@ -100,6 +100,6 @@
   box-sizing: border-box;
   border-top: 41px solid transparent;
   background: #f6f6f6 content-box;
-  border-bottom-left-radius: inherit;
-  border-bottom-right-radius: inherit;
+  border-bottom-left-radius: inherit !important;
+  border-bottom-right-radius: inherit !important;
 }

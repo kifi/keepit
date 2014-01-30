@@ -33,6 +33,7 @@ class NlpParserTest extends Specification {
       t2 = System.currentTimeMillis()
       tagged === List(("NP", "machine learning"), ("NP", "natrual language processing"))
       println(s"nlp parser time elapesed: ${t2 - t1}")
+      1===1
     }
   }
 

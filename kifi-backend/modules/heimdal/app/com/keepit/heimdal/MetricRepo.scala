@@ -38,7 +38,7 @@ class MetricRepo(val collection: BSONCollection, protected val airbrake: Airbrak
     doc.getAs[BSONArray]("data").get.values.toSeq.map(_.asInstanceOf[BSONDocument])
   )
 
-  def allLean: Future[Seq[MetricData]] = collection.find(BSONDocument(), BSONDocument("data.users" -> BSONBoolean(false))).cursor.toList.map{ docs =>
+  def allLean: Future[Seq[MetricData]] = collection.find(BSONDocument(), BSONDocument("data.users" -> BSONBoolean(false))).cursor.collect[List]().map{ docs =>
     docs.map(fromBSON(_))
   }
 }

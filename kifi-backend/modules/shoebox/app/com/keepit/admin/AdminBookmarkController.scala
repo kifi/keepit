@@ -49,29 +49,25 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def edit(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        val bookmark = bookmarkRepo.get(id)
-        editBookmark(bookmark)
+  def edit(id: Id[Bookmark]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    db.readOnlyAsync { implicit session =>
+      val bookmark = bookmarkRepo.get(id)
+      editBookmark(bookmark)
+    }
+  }
+
+  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    db.readOnlyAsync { implicit session =>
+      val bookmarkOpt = bookmarkRepo.getByUri(id).headOption
+      bookmarkOpt match {
+        case Some(bookmark) => editBookmark(bookmark)
+        case None => NotFound(s"No bookmark for id $id")
       }
     }
   }
 
-  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        val bookmarkOpt = bookmarkRepo.getByUri(id).headOption
-        bookmarkOpt match {
-          case Some(bookmark) => editBookmark(bookmark)
-          case None => NotFound(s"No bookmark for id $id")
-        }
-      }
-    }
-  }
-
-  def rescrape = AdminJsonAction { request =>
-    val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
+  def rescrape = AdminJsonAction.authenticatedParseJson { request =>
+    val id = Id[Bookmark]((request.body \ "id").as[Int])
     db.readWrite { implicit session =>
       val bookmark = bookmarkRepo.get(id)
       val uri = uriRepo.get(bookmark.uriId)
@@ -81,7 +77,7 @@ class AdminBookmarksController @Inject() (
   }
 
   //post request with a list of private/public and active/inactive
-  def updateBookmarks() = AdminHtmlAction { request =>
+  def updateBookmarks() = AdminHtmlAction.authenticated { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
     def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
@@ -113,14 +109,14 @@ class AdminBookmarksController @Inject() (
   }
 
   //this is an admin only task!!!
-  def delete(id: Id[Bookmark]) = AdminHtmlAction { request =>
+  def delete(id: Id[Bookmark]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit s =>
       bookmarkRepo.delete(id)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
 
-  def bookmarksView(page: Int = 0) = AdminHtmlAction { implicit request =>
+  def bookmarksView(page: Int = 0) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 25
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
@@ -158,16 +154,14 @@ class AdminBookmarksController @Inject() (
     }}}
 
 
-    Async {
-      for {
-        bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
-        count <- bookmarkTotalCountFuture
-        todayImportedCount <- bookmarkTodayImportedCountFuture
-        todayOthersCount <- bookmarkTodayOthersCountFuture
-      } yield {
-        val pageCount: Int = count / PAGE_SIZE + 1
-        Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
-      }
+    for {
+      bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
+      count <- bookmarkTotalCountFuture
+      todayImportedCount <- bookmarkTodayImportedCountFuture
+      todayOthersCount <- bookmarkTodayOthersCountFuture
+    } yield {
+      val pageCount: Int = count / PAGE_SIZE + 1
+      Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
     }
 
   }

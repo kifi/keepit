@@ -41,12 +41,8 @@ class NormalizationServiceImpl @Inject() (
       schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString)
     } yield schemeNormalizer(prenormalized)
 
-    val prenormalizedStringOption = for {
-      prenormalizedURI <- withPreferredSchemeOption orElse withStandardPrenormalizationOption
-      prenormalizedString <- prenormalizedURI.safelyToString()
-    } yield prenormalizedString
-
-    prenormalizedStringOption
+    val prenormalizedURIOption = withPreferredSchemeOption orElse withStandardPrenormalizationOption
+    prenormalizedURIOption.map(_.toString())
   }
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
@@ -110,8 +106,8 @@ class NormalizationServiceImpl @Inject() (
       orderedCandidates match {
         case Seq() => Future.successful((None, Seq()))
         case Seq(strongerCandidate, weakerCandidates @ _*) => {
-          assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, "Normalization candidates have not been sorted properly")
-          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, "Normalization candidates have not been filtered properly")
+          assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, s"Normalization candidates ${weakerCandidates.head} and $strongerCandidate have not been sorted properly for ${currentReference}")
+          assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, s"Normalization candidate $strongerCandidate has not been filtered properly for $currentReference")
 
           db.readOnly { implicit session =>
             oracle(strongerCandidate) match {

@@ -11,9 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.SearchServiceClient
 import com.keepit.common.crypto.SimpleDESCrypt
-
 
 import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -54,7 +52,6 @@ case class SocketInfo(
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val shoebox: ShoeboxServiceClient
-  protected val search: SearchServiceClient
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
   protected val clock: Clock
@@ -76,7 +73,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        Akka.future {
+        Future {
           try {
             f(e)
           } catch {
@@ -175,9 +172,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         onConnect(socketInfo)
 
         val tStart = currentDateTime
-        SafeFuture {
-          search.warmUpUser(streamSession.userId)
-        }
         //Analytics
         SafeFuture {
           val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
@@ -203,12 +197,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           } getOrElse {
             log.warn("WS no handler for: " + jsArr)
           }
-        }.mapDone(_ => endSession("Session ended"))
+        }.map(_ => endSession("Session ended"))
 
 
         (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
       }
-      case None => Akka.future {
+      case None => Future {
         Statsd.increment(s"websocket.anonymous")
         log.info("Disconnecting anonymous user")
         (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)

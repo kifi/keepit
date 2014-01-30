@@ -1,8 +1,11 @@
 
 
 GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
-GET     /ss/login                   securesocial.controllers.LoginPage.login
-GET     /logout                     securesocial.controllers.LoginPage.logout
+GET     /ss/login                   com.keepit.social.providers.LoginPage.login
+GET     /logout                     com.keepit.social.providers.LoginPage.logout
+
+GET     /-ss/login                   securesocial.controllers.LoginPage.login
+GET     /-logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String], approvalPromptOpt:Option[String])
 GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:Id[ABookInfo], provider:Option[String])
@@ -19,9 +22,11 @@ POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
 
-# OAuth provider entry points (e.g. "facebook")
-GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+# See common.routes for our better ProviderController routes.
+
+# SecureSocial routes need to exist, or it complains and dies.
+GET     /-authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
+POST    /-authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
 
 # custom auth routes which set some session state
 
@@ -295,6 +300,7 @@ GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdm
 GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
 GET     /admin/data/scraper_pending     @com.keepit.controllers.admin.ScraperAdminController.pendingScraperRequests(stateFilter: Option[String] ?= None)
 GET     /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
+GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
