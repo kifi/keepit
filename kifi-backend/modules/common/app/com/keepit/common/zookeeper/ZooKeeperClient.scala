@@ -148,7 +148,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
           case e:Exception =>
             log.error("Exception during zookeeper connection established callback", e)
         }
-        promise.success() // invoke onConnected handlers
+        promise.trySuccess() // invoke onConnected handlers
       }
       case KeeperState.Expired => {
         // Session was expired; establish a new zookeeper connection and save a session
@@ -157,7 +157,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
         }
       }
       case KeeperState.AuthFailed => {
-        promise.failure(new KeeperException.AuthFailedException())
+        promise.tryFailure(new KeeperException.AuthFailedException())
       }
       case _ => // Disconnected -- zookeeper library will handle reconnects
     }

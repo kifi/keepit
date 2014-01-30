@@ -63,11 +63,7 @@ class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeb
 
   private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()
-    val absoluteLinkUrl = URI.url(uri, link.getUri)
-    link match {
-      case _ if isAbout(url, link.getText, absoluteLinkUrl) => Some(absoluteLinkUrl)
-      case _ => None
-    }
+    URI.absoluteUrl(uri, link.getUri).collect { case absoluteLinkUrl if isAbout(url, link.getText, absoluteLinkUrl) => absoluteLinkUrl }
   }
 
   private def isAbout(baseUrl: String, linkText: String, linkUrl: String): Boolean = {

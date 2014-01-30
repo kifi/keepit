@@ -11,6 +11,9 @@ import com.keepit.common.net.{HttpClientImpl, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent._
 
+import akka.actor.Scheduler
+
+
 import scala.concurrent.{Future, Promise}
 
 import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
@@ -171,9 +174,9 @@ class ABookServiceClientImpl @Inject() (
   }
 }
 
-class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
+class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
 
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 

@@ -17,10 +17,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.google.inject.util.Providers
 import com.keepit.serializer.TypeCode
+import com.keepit.common.actor.FakeScheduler
 
 
 class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler())
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   var eventsRecorded : Int = 0

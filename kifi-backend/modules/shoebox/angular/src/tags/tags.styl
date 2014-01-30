@@ -1,0 +1,225 @@
+nav-item()
+  position: relative
+  display: block
+  padding: 0 6px 0 40px
+  line-height: 36px
+  color: #818692
+
+.kf-tags
+  .kf-nav-group-name
+    position: relative
+    padding-bottom: 2px
+    margin-top: 15px
+
+.kf-tag-input-box
+  nav-item()
+  cursor: text
+  background: #fff
+  white-space: nowrap
+  transition: background-color .16s
+
+  input
+    width: 100%
+    margin: 0
+    border: 0
+    padding: 0
+    padding-left: 22px
+    padding-right: 23px
+    background-color: transparent
+    color: inherit
+    font: inherit
+    line-height: 1.35
+    background-image: url(../img/tag-icon-blue.png)
+    background-repeat: no-repeat
+    background-size: auto 16px
+    box-sizing: border-box
+
+.kf-tag-input-clear
+  position: absolute
+  top: -1px
+  right: 0
+  font-size: 1.45em
+  padding: 0 12px
+  cursor: pointer
+
+  &.kf-tag-input-clear
+    color: #99a3b3
+
+  &:hover
+    color: #6fa6ef
+
+.kf-tag-list
+  position: relative
+  width: 100%
+  overflow: hidden
+
+  .antiscroll-inner
+    position: relative
+    width: 100% !important
+    height: 100% !important
+    overflow-x: hidden
+
+  .sortable-placeholder
+    background: #6fa6ef
+    height: 2px
+    min-height: 0
+
+  .antiscroll-scrollbar
+    z-index: 2
+
+.kf-tag
+  position: relative
+  line-height: 36px
+  white-space: nowrap
+
+  &:hover
+    background-color: #e9ecf2
+
+  &.active
+    background-color: #e3e6ee
+
+  &.highlight
+  &.drop-hover
+    background-color: #6fa6ef
+
+    .kf-tag-caption
+    .kf-tag-name
+      color: white
+
+    .kf-tag-count
+      color: #628196
+      border-color: white
+      background-color: white
+
+  &.renaming
+    background-color: white
+
+    a
+      cursor: text
+
+    .kf-tag-count
+      display: none
+
+  &.renaming
+  &.renamed
+    transition: background-color .16s
+
+.kf-tag-name
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.kf-tag-count
+  font-size: 12px
+  line-height: 20px
+  padding: 2px 12px
+  border-radius: 10.5px
+  margin-left: 4px
+  color: #93a7bc
+  background: #e3e6ee
+
+  .kf-tag.active &
+    background-color: #eff2f7
+    color: #93a7bc
+
+.kf-tag-icon
+  display: inline-block
+  width: 14px
+  height: 16px
+  margin-right: 4px
+  vertical-align: middle
+  background-size: auto 16px
+  background-repeat: no-repeat
+  background-image: url(../img/tag-icon-gray.png)
+
+  .kf-tag.active &
+    background-image: url(../img/tag-icon-white.png)
+
+  .kf-tag.renaming &
+    background-image: url(../img/tag-icon-gray.png)
+
+.kf-tag
+  .dropdown
+    display: none
+    position: absolute
+    top: 0
+    right: 0
+    height: 100%
+
+    &.open
+      display: block
+
+  &:hover .dropdown
+    display: block
+
+  &.renaming .dropdown
+    display: none
+
+  .dropdown-toggle
+    position: absolute
+    top: 0
+    bottom: 0
+    right: 0
+    width: 33px
+    background-color: #e3e6ee
+    text-align: center
+    cursor: pointer
+
+    &:before
+      content: " "
+      border-width: 4px 4px 0
+      border-style: solid
+      border-color: #b8c5d2 transparent
+      font-size: 0
+      line-height: 0
+      vertical-align: 1px
+
+  &.active
+    .dropdown-toggle
+      background-color: #b8c5d2
+
+      &:before
+        border-top-color: white
+
+  .dropdown-menu
+    left: auto
+    right: 0
+
+.kf-tag-new
+  background-color: #d4e4f9
+
+  &:hover
+    background-color: #c4d4e9
+
+  &.highlight
+    background-color: #6fa6ef
+
+  a
+    nav-item()
+    color: #858585
+    line-height: normal
+    padding-top: 9px
+    padding-bottom: 9px
+
+.kf-tag-caption
+  display: block
+  font-size: 11px
+  font-weight: 500
+  text-transform: uppercase
+  margin-bottom: 1px
+
+.kf-tag-icon-create
+  position: relative
+  float: left
+  left: -4px
+  width: 18px
+  height: 18px
+  border-radius: 50%
+  margin: 5px 4px 0 0
+  background: url(../img/plus.png) center/8px no-repeat #b8c5d2
+  image-rendering: -moz-crisp-edges
+  image-rendering: -webkit-optimize-contrast
+  image-rendering: crisp-edges
+
+  .kf-tag-new.highlight &
+    background-color: #dbdee3

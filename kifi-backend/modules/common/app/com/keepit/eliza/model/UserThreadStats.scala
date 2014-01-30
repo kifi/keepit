@@ -21,12 +21,12 @@ object UserThreadStats {
   )(UserThreadStats.apply, unlift(UserThreadStats.unapply))
 }
 
-case class UserThreadStatsForUserIdKey(userId:Id[User]) extends Key[UserThreadStats] {
+case class UserThreadStatsForUserIdKey(userId: Id[User]) extends Key[UserThreadStats] {
   override val version = 0
   val namespace = "thread_stats_for_user"
   def toKey():String = userId.id.toString
 }
 
-class UserThreadStatsForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class UserThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserThreadStatsForUserIdKey, UserThreadStats](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 

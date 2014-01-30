@@ -284,31 +284,32 @@ var api = function() {
     "api:require": function(data, respond, page) {
       injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
-  chrome.runtime.onConnect.addListener(function(port) {
+  chrome.runtime.onConnect.addListener(function (port) {
     var tab = port.sender.tab;
-    log("#0a0", "[onConnect]", port.name, tab && tab.id, tab && tab.url)();
-    if (port.sender.id === chrome.runtime.id && tab) {
-      if (ports[tab.id]) {
-        log("#a00", "[onConnect] %i disconnecting prev port", tab.id)();
-        ports[tab.id].disconnect();
+    var tabId = tab && tab.id;
+    log('#0a0', '[onConnect]', tabId, port.name, tab ? tab.url : '')();
+    if (port.sender.id === chrome.runtime.id && tabId) {
+      if (ports[tabId]) {
+        log('#a00', '[onConnect] %i disconnecting prev port', tabId)();
+        ports[tabId].disconnect();
       }
-      ports[tab.id] = port;
+      ports[tabId] = port;
       port.handling = {};
-      port.onMessage.addListener(function(msg) {
-        var page = pages[tab.id];
+      port.onMessage.addListener(function (msg) {
+        var page = pages[tabId];
         var kind = msg[0], data = msg[1], callbackId = msg[2];
         var handler = portHandlers[kind];
         if (page && handler) {
-          log("#0a0", "[onMessage] %i %s", tab.id, kind, data != null ? data : "")();
+          log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '')();
           handler(data, respondToTab.bind(port, callbackId), page, port);
         } else {
-          log("#a00", "[onMessage] %i %s %s %O %s", tab.id, kind, "ignored, page:", page, "handler:", !!handler)();
+          log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler)();
         }
       });
-      port.onDisconnect.addListener(function() {
-        log("#0a0", "[onDisconnect]", tab.id)();
-        delete ports[tab.id].handling;
-        delete ports[tab.id];
+      port.onDisconnect.addListener(function () {
+        log('#0a0', '[onDisconnect]', tabId)();
+        delete ports[tabId].handling;
+        delete ports[tabId];
       });
     }
   });

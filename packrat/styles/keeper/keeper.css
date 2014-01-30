@@ -58,7 +58,7 @@
   right: 0;
   height: 42px;
   width: 0;
-  border-radius: 5px;
+  border-radius: 5px !important;
   background-position: 8px 15px;
   background-size: auto 13px;
   background-repeat: no-repeat;
@@ -76,7 +76,7 @@ html[kifi-with-pane] .kifi-keeper-x {
   width: auto;
   height: auto;
   margin-bottom: 14px;
-  border-radius: 6px;
+  border-radius: 6px !important;
   padding: 8px 12px 10px;
   background-color: rgba(53,60,67,.9);
   color: #fff;
@@ -137,7 +137,7 @@ html[kifi-with-pane] .kifi-keeper-x {
   right: 0;
   width: 178px;
   height: 42px;
-  border-radius: 5px;
+  border-radius: 5px !important;
   -webkit-perspective: 200px;
   perspective: 200px;
 }
@@ -166,7 +166,7 @@ html[kifi-with-pane] .kifi-keep-card {
   right: 0;
   width: 100%;
   height: 100%;
-  border-radius: inherit;
+  border-radius: inherit !important;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transition: -webkit-transform .25s ease-in-out, z-index .25s linear;
@@ -193,7 +193,7 @@ html[kifi-with-pane] .kifi-keep-card {
   right: 0;
   width: 100%;
   height: 100%;
-  border-radius: inherit;
+  border-radius: inherit !important;
   line-height: 42px;
   color: #fff;
   text-align: center;
@@ -262,8 +262,8 @@ html[kifi-with-pane] .kifi-keep-card {
   left: 0;
   width: 28px;
   height: 28px;
-  border-top-left-radius: inherit;
-  border-bottom-right-radius: 24px;
+  border-top-left-radius: inherit !important;
+  border-bottom-right-radius: 24px !important;
 }
 .kifi-keep-lock:hover,
 .kifi-kept-lock:hover,
@@ -328,8 +328,8 @@ html[kifi-with-pane] .kifi-keep-card {
   right: 0;
   width: 28px;
   height: 28px;
-  border-top-right-radius: inherit;
-  border-bottom-left-radius: 24px;
+  border-top-right-radius: inherit !important;
+  border-bottom-left-radius: 24px !important;
 }
 .kifi-keep-tag::before,
 .kifi-kept-tag::before {
@@ -352,7 +352,7 @@ html[kifi-with-pane] .kifi-keep-card {
   bottom: 78px;
   height: 122px;
   border: 2px solid #b8c5d2;
-  border-radius: 5px;
+  border-radius: 5px !important;
   box-shadow: rgba(0,40,90,.2) 5px 4px 0 2px;
   white-space: nowrap;
   background: #fff right 12px top 12px/24px 14px no-repeat;
@@ -535,7 +535,7 @@ html[kifi-with-pane] .kifi-keep-card {
   height: 20px;
   width: 20px;
   background-color: rgba(0,40,90,.2);
-  border-bottom-right-radius: 6px;
+  border-bottom-right-radius: 6px !important;
 }
 .kifi-keepers-tri-shadow {
   position: absolute;
@@ -556,7 +556,7 @@ html[kifi-with-pane] .kifi-keep-card {
   width: 129px;
   height: 42px;
   background: #67829c;
-  border-radius: 5px;
+  border-radius: 5px !important;
   font-size: 0;
   line-height: 0;
   text-align: right; /* keeps contents still during transition */
@@ -606,12 +606,12 @@ html[kifi-with-pane] .kifi-keep-card {
   background-color: #5e778f;
 }
 .kifi-dock-btn:first-child {
-  border-top-left-radius: inherit;
-  border-bottom-left-radius: inherit;
+  border-top-left-radius: inherit !important;
+  border-bottom-left-radius: inherit !important;
 }
 .kifi-dock-btn:last-child {
-  border-top-right-radius: inherit;
-  border-bottom-right-radius: inherit;
+  border-top-right-radius: inherit !important;
+  border-bottom-right-radius: inherit !important;
 }
 .kifi-keeper.kifi-growing .kifi-count,
 .kifi-keeper.kifi-hiding .kifi-count {

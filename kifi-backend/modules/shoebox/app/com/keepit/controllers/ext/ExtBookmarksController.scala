@@ -110,7 +110,7 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
-  def tags() = JsonAction.authenticatedParseJson { request =>
+  def tags() = JsonAction.authenticated { request =>
     val tags = db.readOnly { implicit s =>
       collectionRepo.getByUser(request.userId)
     }

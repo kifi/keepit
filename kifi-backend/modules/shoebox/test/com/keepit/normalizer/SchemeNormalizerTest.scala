@@ -6,7 +6,7 @@ import com.keepit.common.net.URI
 
 class SchemeNormalizerTest extends Specification {
 
-  def normalize(normalizer: URINormalizer, url: String) = URI.safelyParse(url).map(normalizer).flatMap(_.safelyToString()).get
+  def normalize(normalizer: URINormalizer, url: String) = URI.safelyParse(url).map(normalizer(_).toString()).get
 
   "SchemeNormalizer" should {
 

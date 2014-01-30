@@ -4,7 +4,7 @@
   bottom: 56px;
   width: 450px;
   border: 1px solid #dbe1e7;
-  border-radius: 5px;
+  border-radius: 5px !important;
   background: #fff;
   text-align: center;
   color: #000;
@@ -52,7 +52,7 @@ html[kifi-with-pane] .kifi-knp-box {
   display: block;
   margin: 0 auto 20px;
   border: 1px solid #dae1e8;
-  border-radius: 3px;
+  border-radius: 3px !important;
   padding: 6px 8px;
   width: 350px;
   text-align: left;
@@ -65,7 +65,7 @@ html[kifi-with-pane] .kifi-knp-box {
   float: right;
   margin: 0 40px 20px 0;
   background-color: #6fa6ef;
-  border-radius: 3px;
+  border-radius: 3px !important;
   padding: 8px 24px;
   font-size: 14px;
   line-height: 18px;
@@ -171,7 +171,7 @@ html[kifi-with-pane] .kifi-knp-box::after {
   right: 8px;
   height: 24px;
   width: 24px;
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 .kifi-knp-x:before,
 .kifi-knp-x:after {

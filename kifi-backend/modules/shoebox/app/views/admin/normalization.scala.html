@@ -12,7 +12,15 @@
         Prev
         </a>
       </li>
-      @for(i <- 0 to (pageCount - 1)) {
+
+      @if(page - 20 > 0){
+        <li class="disabled">
+          <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">...</a>
+        </li>
+      }
+
+
+      @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
           <li class="disabled">
             <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(i)">@{i + 1}</a>
@@ -23,6 +31,13 @@
           </li>
         }
       }
+
+      @if(page + 20 < pageCount - 1){
+        <li class="disabled">
+          <a href="com.keepit.controllers.admin.routes.UrlController.normalizationView(pageCount - 1)">...</a>
+        </li>
+      }
+
       <li>
         @if(applied.size > 0) {
           <a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(page + 1)">
@@ -61,7 +76,7 @@
     <th>URLs</th>
     <th>Normalizations</th>
   </tr>
-  
+
   @applied.zipWithIndex.map{ case ((oldUri, newUri, time), i) =>
     <tr>
       <th rowspan="2"> @{applied.size - i} </th>
@@ -71,7 +86,7 @@
     <tr>
       <td>@newUri.id</td> <td><a href = "@newUri.url" >@newUri.url</td><td>@newUri.normalization.map(_.scheme)</td>
   </tr>
-    
+
   }
 
   </table>

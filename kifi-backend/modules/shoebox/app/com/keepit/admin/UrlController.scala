@@ -27,6 +27,7 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
 
 
 class UrlController @Inject() (
@@ -312,6 +313,16 @@ class UrlController @Inject() (
       }
     }
     Redirect(routes.UrlController.getPatterns)
+  }
+
+  def fixRedirectedUriStates(doIt: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    val problematicUris = db.readOnly { implicit session => uriRepo.toBeRemigrated() }
+    if (doIt) db.readWrite { implicit session =>
+      problematicUris.foreach { uri =>
+        changedUriRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uri.redirect.get))
+      }
+    }
+    Ok(Json.toJson(problematicUris))
   }
 }
 

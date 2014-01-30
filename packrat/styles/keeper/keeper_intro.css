@@ -5,7 +5,7 @@
   bottom: 76px;
   width: 400px;
   border: 2px solid #b8c5d2;
-  border-radius: 5px;
+  border-radius: 5px !important;
   box-shadow: rgba(0,40,90,.2) 5px 4px 0 2px;
   padding: 16px 0 24px;
   font-size: 14px;
@@ -63,7 +63,7 @@
   right: 7px;
   height: 22px;
   width: 22px;
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 .kifi-keeper-intro-x:before,
 .kifi-keeper-intro-x:after {
