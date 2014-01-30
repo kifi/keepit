@@ -1,19 +1,19 @@
 <div class="kf-tags">
 	<div class="kf-nav-group-name">Tags</div>
-	<label class="kf-nav-item kf-tag kf-tag-input-box">
+	<label class="kf-nav-item kf-tag-input-box">
 		<input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" focus-when="focusFilter">
 		<a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter()" ng-show="filter.name">&times;</a>
 	</label>
 </div>
 <ul class="kf-tag-list" antiscroll>
-	<li class="kf-nav-item kf-tag" ng-repeat="tag in shownTags = (tags | filter: filter)">
-		<a href="tag/{{tag.id}}">
+	<li class="kf-nav-item kf-tag" ng-class="{ active: isActiveTag(tag) }" ng-repeat="tag in shownTags = (tags | filter: filter)">
+		<a class="kf-nav-link" ng-href="/tag/{{tag.id}}">
 			<span class="kf-tag-icon"></span>
 			<span class="kf-tag-name">{{tag.name}}</span>
 			<span class="kf-tag-count">{{tag.keeps}}</span>
 		</a>
 		<div class="dropdown">
-			<a class="dropdown-toggle">Drop</a>
+			<a class="dropdown-toggle"></a>
 			<ul class="dropdown-menu">
 				<li>
 					<a href="javascript:" ng-click="rename(tag)">Rename</a>

@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.layout.nav', [])
+angular.module('kifi.layout.nav', ['util'])
 
 .directive('kfNav', [
-	'$location',
-	function ($location) {
+	'$location', 'util',
+	function ($location, util) {
 		return {
 			//replace: true,
 			restrict: 'A',
@@ -17,7 +17,7 @@ angular.module('kifi.layout.nav', [])
 
 				scope.isActive = function (path) {
 					var loc = $location.path();
-					return loc === path || loc.lastIndexOf(path + '/', 0) === 0;
+					return loc === path || util.startsWith(loc, path + '/');
 				};
 			}
 		};

@@ -5,6 +5,7 @@ angular.module('kifi', [
 	'ngResource',
 	'ngRoute',
 	'ui.bootstrap',
+	'util',
 	'antiscroll',
 	'focusWhen',
 	'kifi.templates',
