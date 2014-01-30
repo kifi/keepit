@@ -18,6 +18,7 @@ import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import java.util.concurrent.atomic.AtomicReference
 
 
 object Node {
@@ -100,45 +101,36 @@ trait ZooKeeperSession {
  * The code was originally taken from https://github.com/twitter/scala-zookeeper-client/blob/master/src/main/scala/com/twitter/zookeeper/ZooKeeperClient.scala
  * It was abandoned by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
  */
-class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
+class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
                       watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
 
+  private[this] val zkSession : AtomicReference[ZooKeeperSessionImpl] = new AtomicReference(null)
   private[this] val onConnectedHandlers = new ArrayBuffer[ZooKeeperSession=>Unit]
 
   private def connect(): Future[ZooKeeperSessionImpl] = {
     val promise = Promise[Unit]
 
-    val sessionWatcher = new Watcher {
-      def process(event : WatchedEvent) { sessionEvent(promise, event) }
-    }
-
     log.info(s"Attempting to connect to zookeeper servers $servers")
-    val zk = new ZooKeeperSessionImpl(new ZooKeeper(servers, sessionTimeout, sessionWatcher))
+    val zk = new ZooKeeperSessionImpl(this, promise)
 
     promise.future.map{ _ =>
-      onConnectedHandlers.synchronized{ onConnectedHandlers.foreach(handler => execOnConnectedHandler(zk, handler)) }
+      onConnectedHandlers.synchronized{ onConnectedHandlers.foreach(handler => zk.execOnConnectHandler(handler)) }
       zk
     }
   }
 
-  @volatile private[this] var zkSession : ZooKeeperSessionImpl = Await.result(connect(), Duration.Inf)
-
   def onConnected(handler: ZooKeeperSession=>Unit): Unit = onConnectedHandlers.synchronized {
     onConnectedHandlers += handler
-    val zk = zkSession
-    if (zk.getState() == ZooKeeper.States.CONNECTED) execOnConnectedHandler(zk, handler) // if already connected, execute the handler immediately
+    val zk = zkSession.get
+    zk.execOnConnectHandler(handler) // if already connected, this executes the handler immediately
   }
 
-  private def execOnConnectedHandler(zk: ZooKeeperSession, handler: ZooKeeperSession => Unit): Unit = {
-    try {
-      handler(zk)
-    } catch {
-    case e:Exception =>
-      log.error("Exception during execution of an onConnected handler", e)
-    }
+  def refreshSession(): Unit = future{
+    val old = zkSession.getAndSet(Await.result(connect(), Duration.Inf))
+    if (old != null) try { old.close() } catch { case _: Throwable => } // make sure the old session is closed
   }
 
-  private def sessionEvent(promise : Promise[Unit], event : WatchedEvent) {
+  def processSessionEvent(event: WatchedEvent) {
     log.info("ZooKeeper event: %s".format(event))
     event.getState match {
       case KeeperState.SyncConnected => {
@@ -148,32 +140,92 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
           case e:Exception =>
             log.error("Exception during zookeeper connection established callback", e)
         }
-        promise.success() // invoke onConnected handlers
       }
       case KeeperState.Expired => {
-        // Session was expired; establish a new zookeeper connection and save a session
-        future{
-          zkSession = Await.result(connect(), Duration.Inf)
-        }
+        // Session was expired, reestablish a new zookeeper connection
+        refreshSession()
       }
-      case KeeperState.AuthFailed => {
-        promise.failure(new KeeperException.AuthFailedException())
-      }
-      case _ => // Disconnected -- zookeeper library will handle reconnects
+      case _ => // Disconnected or something else
     }
   }
 
-  def session[T](f: ZooKeeperSession => T): T = f(zkSession)
+  // establish a zk session
+  zkSession.compareAndSet(null, Await.result(connect(), Duration.Inf))
 
-  def close(): Unit = zkSession.close()
+  def session[T](f: ZooKeeperSession => T): T = f(zkSession.get)
+
+  def close(): Unit = zkSession.get.close()
 }
 
-class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging {
+class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]) extends ZooKeeperSession with Logging {
+
+  class SessionWatcher extends Watcher {
+    def process(event : WatchedEvent) {
+      zkClient.processSessionEvent(event) // let zkClient handle the session expiration
+      event.getState match {
+        case KeeperState.SyncConnected => {
+          // invoke onConnected handlers by completing the promise
+          val isNewConnection = promise.trySuccess()
+          // if not a new connection, we must have recovered from connection loss
+          if (!isNewConnection) ZooKeeperSessionImpl.this.recover()
+        }
+        case KeeperState.AuthFailed => {
+          promise.tryFailure(new KeeperException.AuthFailedException())
+        }
+        case _ => // Disconnected, Expired or something else
+      }
+    }
+  }
+
+  private[this] val zk = new ZooKeeper(zkClient.servers, zkClient.sessionTimeout, new SessionWatcher)
 
   private implicit def nodeToPath(node: Node): String = node.path
 
-  private def getChildren(node: Node, watch: Boolean): Seq[Node] = {
-    val childNames = zk.getChildren(node, watch)
+  // watch management
+  sealed trait RegisteredWatch
+  case class RegisteredNodeWatch(node: Node, onDataChanged : Option[Array[Byte]] => Unit) extends RegisteredWatch
+  case class RegisteredChildWatch(node: Node, updateChildren: Seq[Node] => Unit) extends RegisteredWatch
+  private[this] val watchList = new ArrayBuffer[RegisteredWatch]
+  private def registerWatch(watch: RegisteredWatch): Unit = watchList.synchronized { watchList += watch }
+
+  // onConnectedHandler management
+  private[this] val pendingHandlerList = new ArrayBuffer[ZooKeeperSession => Unit]
+
+  // recover from connection loss
+  def recover() = {
+    // execute pending onConnected handlers if any
+    val pending = new ArrayBuffer[ZooKeeperSession => Unit]
+    pendingHandlerList.synchronized {
+      pending ++= pendingHandlerList
+      pendingHandlerList.clear()
+    }
+    pending.foreach(execOnConnectHandler)
+
+    // register watches again
+    watchList.synchronized {
+      watchList.foreach{ registeredWatch =>
+        registeredWatch match {
+          case RegisteredNodeWatch(node, onDataChanged) => watchNode(node, onDataChanged)
+          case RegisteredChildWatch(node, updateChildren) => watchChildren(node, updateChildren)
+        }
+      }
+    }
+  }
+
+  def execOnConnectHandler(handler: ZooKeeperSession => Unit): Unit = {
+    pendingHandlerList.synchronized {
+      if (zk.getState() == ZooKeeper.States.CONNECTED) {
+        try { handler(this) } catch {
+          case e: Throwable => log.error("Exception during execution of an onConnected handler", e)
+        }
+      } else {
+        pendingHandlerList.synchronized{ pendingHandlerList += handler }
+      }
+    }
+  }
+
+  def getChildren(node: Node): Seq[Node] = {
+    val childNames = zk.getChildren(node, false)
     childNames.map{ Node(node, _) }
   }
 
@@ -181,8 +233,6 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
     val childNames = zk.getChildren(node, watcher)
     childNames.map{ Node(node, _) }
   }
-
-  def getChildren(node: Node): Seq[Node] = getChildren(node, false)
 
   def close(): Unit = zk.close()
   def getState(): ZooKeeper.States = zk.getState()
@@ -254,15 +304,23 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
         updateData
       }
     }
+
+    def reregister {
+      zk.getData(node, dataGetter, null)
+    }
+
     def dataGetter = new Watcher {
       def process(event : WatchedEvent) {
-        if (event.getType == EventType.NodeDataChanged || event.getType == EventType.NodeCreated) {
-          updateData
-        } else if (event.getType == EventType.NodeDeleted) {
-          deletedData
+        event.getType match {
+          case EventType.NodeDataChanged | EventType.NodeCreated => updateData
+          case EventType.NodeDeleted => deletedData
+          case EventType.NodeChildrenChanged => reregister
+          case _ => // session event, we intentionally lose this watch
         }
       }
     }
+
+    registerWatch(RegisteredNodeWatch(node, onDataChanged))
     updateData
   }
 
@@ -274,25 +332,38 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
   def watchChildren(node: Node, updateChildren: Seq[Node] => Unit){
     val watchedChildren = scala.collection.mutable.HashSet[Node]()
 
-    case class ChildWatcher(child: Node) extends Watcher {
+    class ChildWatcher(child: Node) extends Watcher {
       def process(event: WatchedEvent) : Unit = watchedChildren.synchronized {
         watchedChildren -= child
-        val children = getChildren(node, false)
-        updateChildren(children)
-        doWatchChildren(children)
+        event.getType match {
+          case EventType.NodeDataChanged | EventType.NodeCreated =>
+            val children = getChildren(node)
+            updateChildren(children)
+            doWatchChildren(children)
+          case EventType.NodeChildrenChanged =>
+            val children = getChildren(node)
+            doWatchChildren(children)
+          case EventType.NodeDeleted => // deletion handled via parent watch
+          case _ => // session event, we intentionally lose this watch
+        }
       }
     }
 
     class ParentWatcher() extends Watcher {
       def process(event: WatchedEvent): Unit = {
         //in case deleted, watch for recreation
-        if (event.getType==EventType.NodeDeleted){
-          updateChildren(List())
-          zk.exists(node, new ParentWatcher())
-        } else { //otherwise, recreate watch on self and on new children
-          val children = getChildren(node, new ParentWatcher())
-          updateChildren(children)
-          doWatchChildren(children)
+        event.getType match {
+          case EventType.NodeDataChanged | EventType.NodeCreated =>
+            val children = getChildren(node, new ParentWatcher())
+            doWatchChildren(children)
+          case EventType.NodeChildrenChanged =>
+            val children = getChildren(node, new ParentWatcher())
+            updateChildren(children)
+            doWatchChildren(children)
+          case EventType.NodeDeleted =>
+            updateChildren(List())
+            zk.exists(node, new ParentWatcher())
+          case _ => // session event, we intentionally lose this watch
         }
       }
     }
@@ -300,7 +371,7 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
     def doWatchChildren(children: Seq[Node]) : Unit = watchedChildren.synchronized {
       children.filterNot(watchedChildren.contains _).foreach{ child =>
         try {
-          zk.getData(child.path, ChildWatcher(child), new Stat())
+          zk.getData(child.path, new ChildWatcher(child), new Stat())
           watchedChildren += child
         } catch {
           case e:KeeperException =>
@@ -310,12 +381,13 @@ class ZooKeeperSessionImpl(zk : ZooKeeper) extends ZooKeeperSession with Logging
     }
 
     //check immediately
+    registerWatch(RegisteredChildWatch(node, updateChildren))
     try{
       val children = getChildren(node, new ParentWatcher())
       updateChildren(children)
       doWatchChildren(children)
     } catch {
-      case e :KeeperException => zk.exists(node, new ParentWatcher())
+      case e :KeeperException.NoNodeException => zk.exists(node, new ParentWatcher())
     }
   }
 
