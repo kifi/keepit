@@ -33,7 +33,6 @@ var DEFAULT_SETTINGS = {
     noResultsText: "No results",
     searchingText: "Searching...",
     deleteText: "×",
-    animateDropdown: true,
     placeholder: null,
     theme: null,
     zindex: 999,
@@ -844,9 +843,7 @@ $.TokenList = function (input, url_or_data, settings) {
     // Populate the results dropdown with some results
     function populate_dropdown (query, results) {
         if(results && results.length) {
-            dropdown.empty();
             var dropdown_ul = $("<ul/>")
-                .appendTo(dropdown)
                 .mouseover(function (event) {
                     select_dropdown_item($(event.target).closest("li"));
                 })
@@ -854,8 +851,7 @@ $.TokenList = function (input, url_or_data, settings) {
                     add_token($(event.target).closest("li").data("tokeninput"));
                     hidden_input.change();
                     return false;
-                })
-                .hide();
+                });
 
             if ($(input).data("settings").resultsLimit && results.length > $(input).data("settings").resultsLimit) {
                 results = results.slice(0, $(input).data("settings").resultsLimit);
@@ -881,13 +877,8 @@ $.TokenList = function (input, url_or_data, settings) {
                 $.data(this_li.get(0), "tokeninput", value);
             });
 
+            dropdown.empty().append(dropdown_ul);
             show_dropdown();
-
-            if($(input).data("settings").animateDropdown) {
-                dropdown_ul.slideDown("fast");
-            } else {
-                dropdown_ul.show();
-            }
         } else {
             if($(input).data("settings").noResultsText) {
                 dropdown.html("<p>" + escapeHTML($(input).data("settings").noResultsText) + "</p>");

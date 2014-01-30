@@ -80,7 +80,6 @@ function initCompose($c, enterToSend, opts) {
       hintText: '',
       noResultsText: '',
       searchingText: '',
-      animateDropdown: false,
       resultsLimit: 4,
       preventDuplicates: true,
       allowTabOut: true,

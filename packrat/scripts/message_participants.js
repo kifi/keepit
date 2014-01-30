@@ -152,7 +152,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 					hintText: '',
 					noResultsText: '',
 					searchingText: '',
-					animateDropdown: false,
 					resultsLimit: 4,
 					preventDuplicates: true,
 					allowTabOut: true,
