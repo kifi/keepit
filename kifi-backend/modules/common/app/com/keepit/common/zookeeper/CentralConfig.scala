@@ -68,27 +68,25 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
-      zk.getOpt(key.toNode).map(fromByteArray(_))
+      Option(zk.getData(key.toNode)).map(fromByteArray)
     } catch {
+      case e: KeeperException.NoNodeException => None
       case e: KeeperException.ConnectionLossException =>
-        zk.getOpt(key.toNode).map(fromByteArray(_))
+        try {
+          Option(zk.getData(key.toNode)).map(fromByteArray)
+        } catch {
+          case e: KeeperException.NoNodeException => None
+        }
     }
   }
 
   def set(key: CentralConfigKey, value: String): Unit = zkClient.session{ zk =>
     try{
-      zk.set(key.toNode, value)
+      zk.setData(key.toNode, value)
     } catch {
       case e: KeeperException.NoNodeException => {
-        try {
-          zk.createNode(key.toNode, value, CreateMode.PERSISTENT)
-        } catch {
-          case e: KeeperException.NoNodeException => {
-            val parentPath = key.toNode.name.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
-            zk.createPath(Path(parentPath))
-            zk.createNode(key.toNode, value, CreateMode.PERSISTENT)
-          }
-        }
+        zk.create(key.toNode)
+        zk.setData(key.toNode, value)
       }
     }
   }
@@ -119,8 +117,6 @@ class InMemoryConfigStore extends ConfigStore {
     if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
     watches(key.toNode.name) += handler
   }
-
-
 }
 
 
@@ -166,6 +162,4 @@ class CentralConfig @Inject() (cs: ConfigStore){
     }
 
 }
-
-
 
