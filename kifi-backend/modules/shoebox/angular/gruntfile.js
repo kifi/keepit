@@ -75,7 +75,7 @@ module.exports = function (grunt) {
 				],
 				src: 'src',
 				common: 'src/common',
-				commonStyl: 'src/common/**/*.styl',
+				commonStyl: 'src/common/*.styl',
 				assets: 'assets',
 				js: 'src/**/*.js',
 				styl: 'src/**/*.styl',

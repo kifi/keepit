@@ -67,17 +67,38 @@ class HomeController @Inject() (
   // Start post-launch stuff!
   def about = HtmlAction(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
-    Ok(views.html.marketing.about(isLoggedIn))
+    request.request.headers.get(USER_AGENT).map { agentString =>
+      val agent = UserAgent.fromString(agentString)
+      if (agent.name == "IE" || agent.name == "Safari") {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (agent.isMobile) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
+      } else None
+    }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
   }
 
   def termsOfService = HtmlAction(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
-    Ok(views.html.marketing.terms(isLoggedIn))
+    request.request.headers.get(USER_AGENT).map { agentString =>
+      val agent = UserAgent.fromString(agentString)
+      if (agent.name == "IE" || agent.name == "Safari") {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (agent.isMobile) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
+      } else None
+    }.flatten.getOrElse(Ok(views.html.marketing.terms(isLoggedIn)))
   }
 
   def privacyPolicy = HtmlAction(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
-    Ok(views.html.marketing.privacy(isLoggedIn))
+    request.request.headers.get(USER_AGENT).map { agentString =>
+      val agent = UserAgent.fromString(agentString)
+      if (agent.name == "IE" || agent.name == "Safari") {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (agent.isMobile) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
+      } else None
+    }.flatten.getOrElse(Ok(views.html.marketing.privacy(isLoggedIn)))
   }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
@@ -210,7 +231,17 @@ class HomeController @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
     }
     setHasSeenInstall()
-    Ok(views.html.website.install(request.user))
+    request.request.headers.get(USER_AGENT).map { agentString =>
+      val agent = UserAgent.fromString(agentString)
+      log.info(s"trying to log in via $agent. orig string: $agentString")
+      if (agent.name == "IE" || agent.name == "Safari") {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (agent.isMobile) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
+      } else if (!agent.isSupportedDesktop) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else None
+    }.flatten.getOrElse(Ok(views.html.website.install(request.user)))
   }
 
   // todo: move this to UserController

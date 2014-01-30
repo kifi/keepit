@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import com.google.inject._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
@@ -11,7 +11,7 @@ import java.io.File
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.URI
+import com.keepit.common.net.{DirectUrl, HttpClient, URI}
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
 import scala.util.Success
@@ -21,6 +21,7 @@ class SyncScraper @Inject() (
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
+  httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
@@ -255,7 +256,10 @@ class SyncScraper @Inject() (
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
     redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => updateRedirectRestriction(uri, redirect)
+      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => {
+        if (redirect.isPermanent) airbrake.notify(AirbrakeError(new Exception(s"Found fishy 301: $redirect")))
+        updateRedirectRestriction(uri, redirect)
+      }
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => removeRedirectRestriction(uri)
     }
@@ -273,9 +277,12 @@ class SyncScraper @Inject() (
 
   private def hasFishy301(movedUri: NormalizedURI): Boolean = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
-    val wasKeptRecently = helper.syncGetLatestBookmark(movedUri.id.get).map(_.updatedAt.isAfter(currentDateTime.minusHours(1))).getOrElse(false)
-    hasFishy301Restriction || wasKeptRecently
-    hasFishy301Restriction
+    lazy val isFishy = helper.syncGetLatestBookmark(movedUri.id.get).filter(_.updatedAt.isAfter(currentDateTime.minusHours(1))) match {
+      case Some(recentKeep) if recentKeep.source != BookmarkSource.bookmarkImport => true
+      case Some(importedBookmark) if (importedBookmark.url != movedUri.url) => httpClient.get(DirectUrl(importedBookmark.url)).status != HttpStatus.SC_MOVED_PERMANENTLY
+      case None => false
+    }
+    hasFishy301Restriction || isFishy
   }
 
   private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
