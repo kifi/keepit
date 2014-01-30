@@ -594,7 +594,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def assignScrapeTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    call(Shoebox.internal.assignScrapeTasks(zkId, max)).map { r =>
+    call(Shoebox.internal.assignScrapeTasks(zkId, max), timeout = 10000, routingStrategy = leaderPriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
     }
   }

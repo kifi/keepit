@@ -45,39 +45,41 @@ private[scraper] class ScrapeScheduler @Inject() (
       val overdues         = scrapeInfoRepo.getOverdueList()
       val pendingCount     = scrapeInfoRepo.getPendingCount()
       val pendingOverdues  = scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
-      val assignedCount    = scrapeInfoRepo.getAssignedCount()
-      val assignedOverdues = scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
+      val assignedCount    = if (scraperConfig.pull) scrapeInfoRepo.getAssignedCount() else 0
+      val assignedOverdues = if (scraperConfig.pull) scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold)) else Seq.empty[ScrapeInfo]
       (overdues, pendingCount, pendingOverdues, assignedCount, assignedOverdues)
     }
     log.info(s"[schedule]: active:${overdues.length} pending:${pendingCount} pending-overdues:${pendingOverdues.length} assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
 
-    val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers
-    val workerIds = workers.map(_.id.id).toSet
-    val (orphaned, assigned) = assignedOverdues partition { info => info.workerId.isDefined } // no workerId (bug)
-    if (!orphaned.isEmpty) {
-      val msg = s"[schedule] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
-      log.error(msg) // shouldn't happen -- airbrake
-      db.readWrite(attempts = 2) { implicit rw =>
-        localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
-        orphaned.foreach { info =>
-          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+    if (scraperConfig.pull) {
+      val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers
+      val workerIds = workers.map(_.id.id).toSet
+      val (assigned, orphaned) = assignedOverdues partition { info => info.workerId.isDefined } // no workerId (bug)
+      if (!orphaned.isEmpty) {
+        val msg = s"[schedule] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
+        log.error(msg) // shouldn't happen -- airbrake
+        db.readWrite(attempts = 2) { implicit rw =>
+          localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
+          orphaned.foreach { info =>
+            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+          }
+        }
+      }
+
+      val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) } // workers no longer exists
+      if (!abandoned.isEmpty) {
+        val msg = s"[schedule] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
+        log.warn(msg)
+        db.readWrite(attempts = 2) { implicit rw =>
+          localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
+          abandoned.foreach { info =>
+            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
+          }
         }
       }
     }
 
-    val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) } // workers no longer exists
-    if (!abandoned.isEmpty) {
-      val msg = s"[schedule] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
-      log.warn(msg)
-      db.readWrite(attempts = 2) { implicit rw =>
-        localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
-        abandoned.foreach { info =>
-          scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
-        }
-      }
-    }
-
-    // needs update
+    // update/remove if pulling works well
     val batchMax = scraperConfig.batchMax
     val pendingSkipThreshold = scraperConfig.pendingSkipThreshold
     val adjPendingCount = (pendingCount - pendingOverdues.length)
