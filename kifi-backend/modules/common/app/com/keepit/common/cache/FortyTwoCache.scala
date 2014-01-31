@@ -46,7 +46,6 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
 
   private[this] def decodeValue(key: K, valueOpt: Option[Any], timer: AccessLogTimer): ObjectState[T] = {
     try {
-      val objOpt = valueOpt.map(serializer.reads)
       val namespace = key.namespace
       valueOpt.map(serializer.reads) match {
         case Some(obj) => {
