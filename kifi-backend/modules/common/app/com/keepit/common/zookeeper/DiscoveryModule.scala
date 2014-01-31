@@ -1,6 +1,6 @@
 package com.keepit.common.zookeeper
 
-import net.codingwell.scalaguice.ScalaModule
+import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
 
 import com.google.inject.{Singleton, Provides, Provider}
 
@@ -9,20 +9,21 @@ import akka.actor.Scheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
-import com.keepit.common.net.{HttpClient,DirectUrl}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.KestrelCombinator
-import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 
 import play.api.Play.current
 
-import scala.Some
 import scala.concurrent.{Await, Future, Promise}
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
-import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
+import com.keepit.common.actor.ProdActorSystemModule
+import com.keepit.common.amazon.MyAmazonInstanceInfo
+import scala.Some
+import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.actor.DevActorSystemModule
 
 trait DiscoveryModule extends ScalaModule
 
@@ -103,6 +104,9 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
     new ZkConfigStore(zk)
   }
 
+  @Provides @Singleton
+  def serviceClientBinder: ScalaMultibinder[ServiceClient] = ScalaMultibinder.newSetBinder[ServiceClient](binder)
+
 }
 
 abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
@@ -129,6 +133,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def timeSinceLastStatusChange: Long = 0L
       def thisInstance = Some(new ServiceInstance(Node(cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
+      def isListeningOn(serviceType: ServiceType): Boolean = serviceType == cluster.serviceType
       def register() = thisInstance.get
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = {}

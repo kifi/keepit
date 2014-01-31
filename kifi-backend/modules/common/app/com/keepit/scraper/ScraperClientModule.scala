@@ -4,9 +4,9 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{HttpClientImpl, HttpClient}
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.service.ServiceType
+import com.keepit.common.service.{ServiceClient, ServiceType}
 import play.api.Play._
-import net.codingwell.scalaguice.ScalaModule
+import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
 import akka.actor.Scheduler
 
 trait ScraperServiceClientModule extends ScalaModule
@@ -17,14 +17,18 @@ case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
 
   @Singleton
   @Provides
-  def ScraperServiceClient(client: HttpClient,
-                           serviceDiscovery: ServiceDiscovery,
-                           airbrakeNotifier: AirbrakeNotifier): ScraperServiceClient = {
-    new ScraperServiceClientImpl(
+  def ScraperServiceClient(
+    client: HttpClient,
+    serviceDiscovery: ServiceDiscovery,
+    serviceClientBinder: ScalaMultibinder[ServiceClient],
+    airbrakeNotifier: AirbrakeNotifier): ScraperServiceClient = {
+    val scraper = new ScraperServiceClientImpl(
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.SCRAPER)
     )
+    serviceClientBinder.addBinding().toInstance(scraper)
+    scraper
   }
 
 }

@@ -38,6 +38,8 @@ trait ServiceDiscovery {
   def isCanary: Boolean
 }
 
+class UnknownServiceException(message: String) extends Exception(message)
+
 class ServiceDiscoveryImpl(
     zkClient: ZooKeeperClient,
     services: FortyTwoServices,
@@ -76,7 +78,8 @@ class ServiceDiscoveryImpl(
 
   private val myCluster = clusters(services.currentService)
 
-  def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
+  def serviceCluster(serviceType: ServiceType): ServiceCluster =
+    clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service ${serviceType}."))
 
   def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
