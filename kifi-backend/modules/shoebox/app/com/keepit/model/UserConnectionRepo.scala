@@ -2,11 +2,11 @@ package com.keepit.model
 
 import scala.concurrent.duration.Duration
 import scala.slick.lifted.Query
-
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
@@ -46,6 +46,13 @@ class UserConnectionRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
+  private val sequence = db.getSequence("user_connection_sequence")
+
+  override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
+    val seqNum = sequence.incrementAndGet()
+    super.save(model.copy(seq = seqNum))
+  }
+
   def invalidateCache(userId: Id[User])(implicit session: RSession): Unit = {
     userConnCache.remove(UserConnectionIdKey(userId))
     connCountCache.remove(UserConnectionCountKey(userId))
@@ -77,7 +84,8 @@ class UserConnectionRepoImpl @Inject() (
   override val table = new RepoTable[UserConnection](db, "user_connection") {
     def user1 = column[Id[User]]("user_1", O.NotNull)
     def user2 = column[Id[User]]("user_2", O.NotNull)
-    def * = id.? ~ user1 ~ user2 ~ state ~ createdAt ~ updatedAt <> (UserConnection, UserConnection.unapply _)
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def * = id.? ~ user1 ~ user2 ~ state ~ createdAt ~ updatedAt ~ seq <> (UserConnection, UserConnection.unapply _)
   }
 
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection] =
