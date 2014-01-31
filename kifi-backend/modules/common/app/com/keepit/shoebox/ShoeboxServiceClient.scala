@@ -651,7 +651,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
+  def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int = 10000): Future[Boolean] = {
     val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
       log.info(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
       None
