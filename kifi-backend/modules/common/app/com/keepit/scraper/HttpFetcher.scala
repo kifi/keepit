@@ -126,7 +126,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
 
   val httpClient = httpClientBuilder.build()
 
-  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
+  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // Play reference can be removed
   val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   case class FetchInfo(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
@@ -222,7 +222,8 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       thread
     }
   })
-  scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
+  val ENFORCER_FREQ: Int = sys.props.get("scraper.fetcher.enforcer.freq") map (_.toInt) getOrElse (5)
+  scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
 
   private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
   private object HttpFetchHandlerResult {

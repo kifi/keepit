@@ -203,7 +203,8 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   val scheduler = Executors.newSingleThreadScheduledExecutor
-  scheduler.scheduleWithFixedDelay(terminator, config.scrapePendingFrequency, config.scrapePendingFrequency, TimeUnit.SECONDS)
+  val TERMINATOR_FREQ: Int = sys.props.get("scraper.terminator.freq") map (_.toInt) getOrElse (5)
+  scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
 
   private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, helper)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {
