@@ -147,14 +147,14 @@ class ScrapeSchedulerPluginImpl @Inject() (
     super.onStop()
   }
 
-  def scheduleScrape(uri: NormalizedURI, randomDelayMillis: Int)(implicit session: RWSession): Unit = {
+  def scheduleScrape(uri: NormalizedURI, delayMillis: Int)(implicit session: RWSession): Unit = {
     require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
     val uriId = uri.id.get
     if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
       val info = scrapeInfoRepo.getByUriId(uriId)
       val toSave = info match {
         case Some(s) => s.state match {
-          case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime.plus(randomDelayMillis))
+          case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime.plus(delayMillis))
           case ScrapeInfoStates.PENDING | ScrapeInfoStates.ASSIGNED => s // no change
           case ScrapeInfoStates.INACTIVE => {
             val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
