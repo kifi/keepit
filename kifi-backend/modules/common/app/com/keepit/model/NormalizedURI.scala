@@ -109,17 +109,19 @@ object NormalizedURIStates extends States[NormalizedURI] {
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val SCRAPE_WANTED = State[NormalizedURI]("scrape_wanted")
   val REDIRECTED = State[NormalizedURI]("redirected")
+  val SCRAPE_LATER = State[NormalizedURI]("scrape_later")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPE_WANTED, REDIRECTED)),
+      (ACTIVE -> Set(SCRAPE_WANTED, REDIRECTED, SCRAPE_LATER)),
       (SCRAPE_WANTED -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE, REDIRECTED)),
       (SCRAPED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
       (SCRAPE_FAILED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
       (UNSCRAPABLE -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
-      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)))
-      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED))
+      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED, SCRAPE_LATER)),
+      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)),
+      (SCRAPE_LATER -> Set(SCRAPE_WANTED)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),

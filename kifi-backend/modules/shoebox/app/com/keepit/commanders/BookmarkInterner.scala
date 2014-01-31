@@ -17,6 +17,7 @@ import scala.util.Try
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
+import scala.util.Random
 
 case class InternedUriAndBookmark(bookmark: Bookmark, uri: NormalizedURI, isNewKeep: Boolean)
 
@@ -118,18 +119,25 @@ class BookmarkInterner @Inject() (
     (persisted.values.map(_.get).flatten.toSeq, failed.keys.toList)
   }
 
+  val MAX_RANDOM_SCHEDULE_DELAY: Int = sys.props.get("scraper.queue.delay") map (_.toInt) getOrElse (600000)
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
+      import NormalizedURIStates._
       val uri = {
         val initialURI = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
-        if (initialURI.state == NormalizedURIStates.ACTIVE || initialURI.state == NormalizedURIStates.INACTIVE)
-          uriRepo.save(initialURI.withState(NormalizedURIStates.SCRAPE_WANTED))
-        else initialURI
+        if (initialURI.state == ACTIVE || initialURI.state == INACTIVE) {
+          val state = if (source == BookmarkSource.bookmarkImport) SCRAPE_LATER else SCRAPE_WANTED
+          uriRepo.save(initialURI.withState(state))
+        } else initialURI
       }
       val (isNewKeep, bookmark) = internBookmark(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
 
-      if (uri.state == NormalizedURIStates.SCRAPE_WANTED) {
-        Try(scraper.scheduleScrape(uri))
+      uri.state match {
+        case SCRAPE_WANTED => Try(scraper.scheduleScrape(uri))
+        case SCRAPE_LATER => {
+          uriRepo.save(uri.withState(SCRAPE_WANTED))
+          Try(scraper.scheduleScrape(uri, Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY)))
+        }
       }
 
       Some(InternedUriAndBookmark(bookmark, uri, isNewKeep))
