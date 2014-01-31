@@ -27,13 +27,14 @@ import play.api.{Logger, Play}
 import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
-import java.net.{SocketException, NoRouteToHostException, UnknownHostException, SocketTimeoutException}
+import java.net._
 import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.{SSLException, SSLHandshakeException}
 import HttpStatus._
 import java.util.zip.ZipException
 import java.security.cert.CertPathBuilderException
+import sun.security.validator.ValidatorException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -264,6 +265,8 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     } catch {
         case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
                                else fetchHandler(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+        case e:ConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:ValidatorException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:CertPathBuilderException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)

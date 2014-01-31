@@ -7,6 +7,15 @@ angular.module('kifi.tagService', [])
 	function ($http, env, $q) {
 		var list = [];
 
+		function indexById(id) {
+			for (var i = 0, l = list.length; i < l; i++) {
+				if (list[i].id === id) {
+					return i;
+				}
+			}
+			return -1;
+		}
+
 		return {
 			list: list,
 
@@ -46,25 +55,49 @@ angular.module('kifi.tagService', [])
 
 			remove: function (tagId) {
 				function removeTag(id) {
-					for (var i = 0, l = list.length, tag; i < l; i++) {
-						tag = list[i];
-						if (tag.id === id) {
-							return list.splice(i, 1);
-						}
+					var index = indexById(id);
+					if (index !== -1) {
+						list.splice(index, 1);
 					}
 				}
 
 				if (env.dev) {
 					var deferred = $q.defer();
 					removeTag(tagId);
-					deferred.resolve(true);
+					deferred.resolve(tagId);
 					return deferred.promise;
 				}
 
 				var url = env.xhrBase + '/collections/' + tagId + '/delete';
 				return $http.post(url).then(function () {
 					removeTag(tagId);
-					return true;
+					return tagId;
+				});
+			},
+
+			rename: function (tagId, name) {
+				function renameTag(id, name) {
+					var index = indexById(id);
+					if (index !== -1) {
+						var tag = list[index];
+						tag.name = name;
+						return tag;
+					}
+					return null;
+				}
+
+				if (env.dev) {
+					var deferred = $q.defer();
+					deferred.resolve(renameTag(tagId, name));
+					return deferred.promise;
+				}
+
+				var url = env.xhrBase + '/collections/' + tagId + '/update';
+				return $http.post(url, {
+					name: name
+				}).then(function (res) {
+					var tag = res.data;
+					return renameTag(tag.id, tag.name);
 				});
 			}
 		};
