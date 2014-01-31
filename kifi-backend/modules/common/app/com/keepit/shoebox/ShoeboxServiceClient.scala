@@ -9,7 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -149,13 +149,13 @@ class ShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient with Logging{
 
   val MaxUrlLength = 3000
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
   private[this] val consolidateSocialInfoByNetworkAndSocialIdReq = new RequestConsolidator[SocialUserInfoNetworkKey, Option[SocialUserInfo]](ttl = 30 seconds)
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
-  private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
   private def redundantDBConnectionCheck(request: Iterable[_]) {
     if (request.isEmpty) {
@@ -201,7 +201,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Bookmark]] = {
-    call(Shoebox.internal.getBookmarksChanged(seqNum.value, fetchSize)).map{ r =>
+    call(Shoebox.internal.getBookmarksChanged(seqNum.value, fetchSize), callTimeouts = longTimeout).map{ r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
     }
   }
@@ -214,20 +214,20 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Bookmark]] = {
-    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), timeout = timeout).map { r =>
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Seq[Bookmark]] = {
+    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
     }
   }
 
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Option[Bookmark]] = {
-    call(Shoebox.internal.getLatestBookmark(uriId)).map { r =>
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Option[Bookmark]] = {
+    call(Shoebox.internal.getLatestBookmark(uriId), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       Json.fromJson[Option[Bookmark]](r.json).get
     }
   }
 
-  def saveBookmark(bookmark: Bookmark)(implicit timeout:Int): Future[Bookmark] = {
-    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), timeout = timeout).map { r =>
+  def saveBookmark(bookmark: Bookmark)(implicit timeout: Int): Future[Bookmark] = {
+    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       Json.fromJson[Bookmark](r.json).get
     }
   }
@@ -371,25 +371,25 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]] = {
-    call(Shoebox.internal.getPhrasesChanged(seqNum.value, fetchSize)).map { r =>
+    call(Shoebox.internal.getPhrasesChanged(seqNum.value, fetchSize), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[Phrase]](r.json).get
     }
   }
 
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
-    call(Shoebox.internal.getCollectionsChanged(seqNum.value, fetchSize)) map { r =>
+    call(Shoebox.internal.getCollectionsChanged(seqNum.value, fetchSize), callTimeouts = longTimeout) map { r =>
       Json.fromJson[Seq[Collection]](r.json).get
     }
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
-    call(Shoebox.internal.getBookmarksInCollection(collectionId)) map { r =>
+    call(Shoebox.internal.getBookmarksInCollection(collectionId), callTimeouts = longTimeout) map { r =>
       Json.fromJson[Seq[Bookmark]](r.json).get
     }
   }
 
   def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[BookmarkUriAndTime]] = {
-    call(Shoebox.internal.getUriIdsInCollection(collectionId)) map { r =>
+    call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = longTimeout) map { r =>
       Json.fromJson[Seq[BookmarkUriAndTime]](r.json).get
     }
   }
@@ -450,25 +450,25 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
-    call(Shoebox.internal.getIndexable(seqNum, fetchSize)).map { r =>
+    call(Shoebox.internal.getIndexable(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
 
   def getIndexableUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getIndexableUris(seqNum, fetchSize)).map { r =>
+    call(Shoebox.internal.getIndexableUris(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 
   def getScrapedUris(seqNum: Long, fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize)).map { r =>
+    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 
   def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
-    call(Shoebox.internal.getUserIndexable(seqNum, fetchSize)).map{ r =>
+    call(Shoebox.internal.getUserIndexable(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
       r.json.as[JsArray].value.map{ x => Json.fromJson[User](x).get }
     }
   }
@@ -594,7 +594,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def assignScrapeTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    call(Shoebox.internal.assignScrapeTasks(zkId, max), timeout = 10000, routingStrategy = leaderPriority).map { r =>
+    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
     }
   }
@@ -606,19 +606,19 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = {
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), timeout = timeout).map { r =>
+    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r =>
       r.json.as[ScrapeInfo]
     }
   }
 
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), timeout = timeout).map { r =>
+    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       r.json.as[NormalizedURI]
     }
   }
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = {
-    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), timeout = timeout).map { r =>
+    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       r.json.as[NormalizedURI]
     }
   }
@@ -663,7 +663,7 @@ class ShoeboxServiceClientImpl @Inject() (
       case Some(dUrl) => Seq(Json.toJson(url.take(MaxUrlLength)), Json.toJson(dUrl.take(MaxUrlLength)))
       case None => Seq(Json.toJson(url.take(MaxUrlLength)))
     })
-    call(Shoebox.internal.isUnscrapableP, payload, timeout = timeout).map { r =>
+    call(Shoebox.internal.isUnscrapableP, payload, callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       r.json.as[Boolean]
     }
   }
@@ -728,6 +728,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
-    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), timeout = 300000).map(_ => ())(ExecutionContext.immediate)
+    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = CallTimeouts(responseTimeout = Some(300000))).map(_ => ())(ExecutionContext.immediate)
   }
 }

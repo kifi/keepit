@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
+import com.keepit.common.net.{CallTimeouts, NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
@@ -129,7 +129,7 @@ class LinkedInSocialGraph @Inject() (
   }
 
   val TWO_MINUTES = 2 * 60 * 1000
-  private def getJson(url: String): JsValue = client.withTimeout(TWO_MINUTES).get(DirectUrl(url), client.ignoreFailure).json
+  private def getJson(url: String): JsValue = client.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES), maxJsonParseTime = Some(20000))).get(DirectUrl(url), client.ignoreFailure).json
 
   private def getJson(socialUserInfo: SocialUserInfo): Stream[JsValue] = {
     import LinkedInSocialGraph.{ConnectionsPageSize => PageSize}

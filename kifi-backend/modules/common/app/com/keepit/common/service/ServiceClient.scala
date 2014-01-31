@@ -6,7 +6,7 @@ import scala.util.Random
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ServiceUnavailableException, ClientResponse, HttpClient, HttpUri}
+import com.keepit.common.net._
 import com.keepit.common.routes._
 import com.keepit.common.zookeeper.{ServiceCluster, ServiceInstance}
 import com.keepit.common.KestrelCombinator
@@ -16,6 +16,8 @@ import java.net.ConnectException
 
 import play.api.libs.json.{JsNull, JsValue}
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.Some
+import com.keepit.common.routes.ServiceRoute
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
@@ -69,9 +71,9 @@ trait ServiceClient extends Logging {
       }
     }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, timeout: Int = 5000, routingStrategy:RoutingStrategy = roundRobin): Future[ClientResponse] = {
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy:RoutingStrategy = roundRobin): Future[ClientResponse] = {
     val respFuture = RetryFuture(attempts, { case t : ConnectException => true }) {
-      callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, timeout = timeout)
+      callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, callTimeouts = callTimeouts)
     }
     respFuture.onSuccess {
       case res: ClientResponse => if(!res.isUp) {
@@ -93,7 +95,7 @@ trait ServiceClient extends Logging {
     respFuture
   }
 
-  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, timeout: Int = 5000): Future[ClientResponse] = {
+  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = {
     val url = httpUri.url
     if (url.length > ServiceClient.MaxUrlLength) {
       airbrakeNotifier.notify(AirbrakeError(
@@ -103,14 +105,14 @@ trait ServiceClient extends Logging {
     }
     if (ignoreFailure) {
       call match {
-        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(timeout).getFuture(httpUri, httpClient.ignoreFailure)
-        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(timeout).postFuture(httpUri, body, httpClient.ignoreFailure)
+        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri, httpClient.ignoreFailure)
+        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body, httpClient.ignoreFailure)
       }
     }
     else{
       call match {
-        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(timeout).getFuture(httpUri)
-        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(timeout).postFuture(httpUri, body)
+        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri)
+        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
       }
     }
   }
@@ -133,14 +135,14 @@ trait ServiceClient extends Logging {
     }
   }
 
-  protected def callLeader(call: ServiceRoute, body: JsValue = JsNull, ignoreFailure: Boolean = false, timeout: Int = 5000) = {
+  protected def callLeader(call: ServiceRoute, body: JsValue = JsNull, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts) = {
     serviceCluster.leader match {
       case Some(clusterLeader) =>
-        callUrl(call, new ServiceUri(clusterLeader, protocol, port, call.url), body, ignoreFailure, timeout)
+        callUrl(call, new ServiceUri(clusterLeader, protocol, port, call.url), body, ignoreFailure, callTimeouts)
       case None =>
         log.info("[callLeader] I don't know any leaders, so calling everyone.")
         Future.sequence(urls(call.url).map { url =>
-          callUrl(call, url, body, ignoreFailure, timeout)
+          callUrl(call, url, body, ignoreFailure, callTimeouts)
         }).map { res =>
           res.last
         }
