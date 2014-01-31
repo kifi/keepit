@@ -30,8 +30,8 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
 }
 
 
-case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientResponse)
-  extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}]"){
+case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientResponse, duration: Int)
+  extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}] total-time:${duration}ms is more then 20sec?"){
   override def toString(): String = getMessage
 }
 
@@ -178,7 +178,7 @@ case class HttpClientImpl(
     val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, callTimeouts.maxJsonParseTime.get)
     val status = response.status
     if (status / 100 != validResponseClass) {
-      val exception = if (status == Status.SERVICE_UNAVAILABLE) {
+      if (status == Status.SERVICE_UNAVAILABLE) {
         request.httpUri match {
           case d: DirectUrl =>
             val msg = s"external service ${d.summary} is not available"
@@ -190,8 +190,10 @@ case class HttpClientImpl(
             log.error(msg)
             val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
             airbrake.get.notify(err)
-            if (count > 1) {
-              Some(new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse))
+            if (count > 5) {
+              // if remote service is reporting shutdown, don’t immediately throw an exception.
+              // duration is expected to be more then 20sec!
+              Some(new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse, request.timer.done().duration))
             } else {
               None
             }
