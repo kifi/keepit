@@ -11,6 +11,7 @@ angular.module('kifi', [
 	'focusWhen',
 	'kifi.templates',
 	'kifi.profileCard',
+	'kifi.profileService',
 	'kifi.tags',
 	'kifi.tagService',
 	'kifi.layout.leftCol',
