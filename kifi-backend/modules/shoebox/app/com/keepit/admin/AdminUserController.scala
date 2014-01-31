@@ -461,13 +461,14 @@ class AdminUserController @Inject() (
 
   def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction.authenticated { request =>
     db.readWrite { implicit session =>
-      userExperimentRepo.get(userId, ExperimentType.get(experiment)).foreach { ue =>
+      val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
+      ue foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
         val experiments = userExperimentRepo.getUserExperiments(userId)
         eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
         heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
+        userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
       }
-      userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
     }
     Ok(Json.obj(experiment -> false))
   }
