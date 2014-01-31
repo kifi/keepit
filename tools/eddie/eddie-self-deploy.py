@@ -347,7 +347,7 @@ if __name__ == "__main__":
       if serviceUp:
         log("Service Up. Deploy Finished.")
       else:
-        log("Service failed to come up. Deployment Failed! Rollback Advised.")
+        raise DeployAbortException("Service failed to come up. Deployment Failed! Rollback Advised.")
       releaseLock()
 
 

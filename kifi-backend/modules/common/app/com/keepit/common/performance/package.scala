@@ -15,7 +15,7 @@ package object performance {
       elapsedTime
     }
 
-    def resultString(res:String) = s"[$tag] result: (${res}) elapsed milliseconds: ${(elapsedTime/1000000d)}"
+    def resultString(res:String) = s"[$tag] result: ${res}; elapsed milliseconds: ${(elapsedTime/1000000d)}"
     override def toString = s"[$tag] elapsed milliseconds: ${(elapsedTime/1000000d)}"
 
     def logTime(resOpt:Option[String] = None)(implicit logger:Logger = log) {

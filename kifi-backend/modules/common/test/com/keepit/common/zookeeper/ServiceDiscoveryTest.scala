@@ -33,8 +33,8 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
     }
 
     "set of nodes" in {
-      Set(Node("/a/b"), Node("a/c")).contains(Node("a/b")) == true
-      Set(Node("/a/b"), Node("a/c")).contains(Node("a/d")) == false
+      Set(Node("/a/b"), Node("/a/c")).contains(Node("/a/b")) == true
+      Set(Node("/a/b"), Node("/a/c")).contains(Node("/a/d")) == false
     }
 
     "register" in {
@@ -42,7 +42,7 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
         val zkClient = inject[ZooKeeperClient]
         val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], null, false, Nil)
         val registeredInstance = discovery.register()
-        fromByteArray(zkClient.session{ zk => zk.get(registeredInstance.node) }) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
+        fromByteArray(zkClient.session{ zk => zk.getData(registeredInstance.node) }) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
       }
     }
   }

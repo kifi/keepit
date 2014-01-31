@@ -30,10 +30,9 @@ var DEFAULT_SETTINGS = {
 
     // Display settings
     hintText: "Type in a search term",
-    noResultsText: "No results",
     searchingText: "Searching...",
+    noResultsHtml: null,
     deleteText: "×",
-    animateDropdown: true,
     placeholder: null,
     theme: null,
     zindex: 999,
@@ -803,13 +802,13 @@ $.TokenList = function (input, url_or_data, settings) {
     function show_dropdown() {
         dropdown
             .css({
+                display: "",
                 position: "absolute",
                 top: token_list.offset().top + token_list.outerHeight(),
                 left: token_list.offset().left,
                 width: token_list.css("width"),
                 'z-index': $(input).data("settings").zindex
-            })
-            .show();
+            });
     }
 
     function show_dropdown_searching () {
@@ -842,78 +841,50 @@ $.TokenList = function (input, url_or_data, settings) {
     }
 
     // Populate the results dropdown with some results
-    function populate_dropdown (query, results) {
-        if(results && results.length) {
-            dropdown.empty();
-            var dropdown_ul = $("<ul/>")
-                .appendTo(dropdown)
-                .mouseover(function (event) {
-                    select_dropdown_item($(event.target).closest("li"));
+    function populate_dropdown(query, results) {
+        var settings = $(input).data('settings');
+        dropdown.empty();
+        if (results.length) {
+            if (results.length > settings.resultsLimit) {
+                results = results.slice(0, settings.resultsLimit);
+            }
+            var items = results.map(function (result, i) {
+                var html = settings.resultsFormatter(result);
+                html = find_value_and_highlight_term(html, result[settings.propertyToSearch], query);
+                return $(html)
+                    .addClass(settings.classes[i % 2 ? 'dropdownItem' : 'dropdownItem2'])
+                    .data('tokeninput', result)[0];
+            });
+            select_dropdown_item(items[0]);
+
+            $('<ul/>')
+                .append(items)
+                .on('mouseover', 'li', function () {
+                    select_dropdown_item(this);
                 })
-                .mousedown(function (event) {
-                    add_token($(event.target).closest("li").data("tokeninput"));
+                .on('mousedown', 'li', function () {
+                    add_token($.data(this, 'tokeninput'));
                     hidden_input.change();
                     return false;
                 })
-                .hide();
+                .appendTo(dropdown);
 
-            if ($(input).data("settings").resultsLimit && results.length > $(input).data("settings").resultsLimit) {
-                results = results.slice(0, $(input).data("settings").resultsLimit);
-            }
+        } else if (settings.noResultsHtml) {
+            dropdown.html(settings.noResultsHtml);
+        }
 
-            $.each(results, function(index, value) {
-                var this_li = $(input).data("settings").resultsFormatter(value);
-
-                this_li = find_value_and_highlight_term(this_li ,value[$(input).data("settings").propertyToSearch], query);
-
-                this_li = $(this_li).appendTo(dropdown_ul);
-
-                if(index % 2) {
-                    this_li.addClass($(input).data("settings").classes.dropdownItem);
-                } else {
-                    this_li.addClass($(input).data("settings").classes.dropdownItem2);
-                }
-
-                if(index === 0) {
-                    select_dropdown_item(this_li);
-                }
-
-                $.data(this_li.get(0), "tokeninput", value);
-            });
-
-            show_dropdown();
-
-            if($(input).data("settings").animateDropdown) {
-                dropdown_ul.slideDown("fast");
-            } else {
-                dropdown_ul.show();
-            }
+        if (dropdown.is(':empty')) {
+            hide_dropdown();
         } else {
-            if($(input).data("settings").noResultsText) {
-                dropdown.html("<p>" + escapeHTML($(input).data("settings").noResultsText) + "</p>");
-                show_dropdown();
-            } else {
-              hide_dropdown();
-            }
+            show_dropdown();
         }
     }
 
     // Highlight an item in the results dropdown
-    function select_dropdown_item (item) {
-        if(item) {
-            if(selected_dropdown_item) {
-                deselect_dropdown_item($(selected_dropdown_item));
-            }
-
-            item.addClass($(input).data("settings").classes.selectedDropdownItem);
-            selected_dropdown_item = item.get(0);
-        }
-    }
-
-    // Remove highlighting from an item in the results dropdown
-    function deselect_dropdown_item (item) {
-        item.removeClass($(input).data("settings").classes.selectedDropdownItem);
-        selected_dropdown_item = null;
+    function select_dropdown_item(item) {
+        var className = $(input).data("settings").classes.selectedDropdownItem;
+        $(selected_dropdown_item).removeClass(className);
+        $(selected_dropdown_item = item).addClass(className);
     }
 
     // Do a search and show the "searching" dropdown if the input is longer
@@ -941,21 +912,22 @@ $.TokenList = function (input, url_or_data, settings) {
 
     // Do the actual search
     function run_search(query) {
+        var settings = $(input).data("settings");
         var cache_key = query + computeURL();
         var cached_results = cache.get(cache_key);
-        if(cached_results) {
-            if ($.isFunction($(input).data("settings").onCachedResult)) {
-              cached_results = $(input).data("settings").onCachedResult.call(hidden_input, cached_results);
+        if (cached_results) {
+            if ($.isFunction(settings.onCachedResult)) {
+              cached_results = settings.onCachedResult.call(hidden_input, cached_results);
             }
             populate_dropdown(query, cached_results);
         } else {
             // Are we doing an ajax search or local data search?
-            if($(input).data("settings").url) {
+            if (settings.url) {
                 var url = computeURL();
                 // Extract exisiting get params
                 var ajax_params = {};
                 ajax_params.data = {};
-                if(url.indexOf("?") > -1) {
+                if (url.indexOf("?") > -1) {
                     var parts = url.split("?");
                     ajax_params.url = parts[0];
 
@@ -969,29 +941,29 @@ $.TokenList = function (input, url_or_data, settings) {
                 }
 
                 // Prepare the request
-                ajax_params.data[$(input).data("settings").queryParam] = query;
-                ajax_params.type = $(input).data("settings").method;
-                ajax_params.dataType = $(input).data("settings").contentType;
-                if($(input).data("settings").crossDomain) {
+                ajax_params.data[settings.queryParam] = query;
+                ajax_params.type = settings.method;
+                ajax_params.dataType = settings.contentType;
+                if (settings.crossDomain) {
                     ajax_params.dataType = "jsonp";
                 }
 
                 // Attach the success callback
                 ajax_params.success = function(results) {
-                  cache.add(cache_key, $(input).data("settings").jsonContainer ? results[$(input).data("settings").jsonContainer] : results);
-                  if($.isFunction($(input).data("settings").onResult)) {
-                      results = $(input).data("settings").onResult.call(hidden_input, results);
+                  cache.add(cache_key, settings.jsonContainer ? results[settings.jsonContainer] : results);
+                  if ($.isFunction(settings.onResult)) {
+                      results = settings.onResult.call(hidden_input, results);
                   }
 
                   // only populate the dropdown if the results are associated with the active search query
-                  if(input_box.val() === query) {
-                      populate_dropdown(query, $(input).data("settings").jsonContainer ? results[$(input).data("settings").jsonContainer] : results);
+                  if (input_box.val() === query) {
+                      populate_dropdown(query, settings.jsonContainer ? results[settings.jsonContainer] : results);
                   }
                 };
 
                 // Make the request
                 $.ajax(ajax_params);
-            } else if($(input).data("settings").local_data) {
+            } else if (settings.local_data) {
                 // See if we have cache of query minus one character. Can help speed things up.
                 query = $.trim(query);
 
@@ -999,14 +971,14 @@ $.TokenList = function (input, url_or_data, settings) {
                 if (query.length > 1 && (v = cache.get(query.substr(0, query.length - 1) + computeURL()))) {
                     queryData = v;
                 } else {
-                    queryData = $(input).data("settings").local_data;
+                    queryData = settings.local_data;
                 }
                 // Do the search through local data
                 var results = [];
                 var terms = $.trim(query.toLowerCase()).split(/\s+/);
 
                 queryData.forEach(function (row) {
-                    var n = $.trim(row[$(input).data("settings").propertyToSearch]).split(/\s+/);
+                    var n = $.trim(row[settings.propertyToSearch]).split(/\s+/);
 
                     var res = scoreCandidate(terms, n);
                     if (res) {
@@ -1016,8 +988,8 @@ $.TokenList = function (input, url_or_data, settings) {
                 results = results.sort(function(a, b) { return b.score - a.score; }).map(function (a) { return a.row; });
 
                 cache.add(cache_key, results);
-                if($.isFunction($(input).data("settings").onResult)) {
-                    results = $(input).data("settings").onResult.call(hidden_input, results);
+                if($.isFunction(settings.onResult)) {
+                    results = settings.onResult.call(hidden_input, results);
                 }
                 populate_dropdown(query, results);
             }
@@ -1089,11 +1061,9 @@ $.TokenList = function (input, url_or_data, settings) {
 
     // compute the dynamic URL
     function computeURL() {
-        var url = $(input).data("settings").url;
-        if(typeof $(input).data("settings").url == 'function') {
-            url = $(input).data("settings").url.call($(input).data("settings"));
-        }
-        return url;
+        var settings = $(input).data('settings');
+        var url = settings.url;
+        return typeof url === 'function' ? url.call(settings) : url;
     }
 
     // Bring browser focus to the specified object.
