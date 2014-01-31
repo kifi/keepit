@@ -93,7 +93,7 @@ class QueuedScrapeProcessor @Inject() (
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
-  val pSize = Runtime.getRuntime.availableProcessors * 1024
+  val pSize = Runtime.getRuntime.availableProcessors * 64
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
 
