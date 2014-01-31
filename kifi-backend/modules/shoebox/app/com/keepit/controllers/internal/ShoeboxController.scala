@@ -137,6 +137,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
+  def updateNormalizedURI() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
+    request.body.as[Seq[(String, )]]
+
+
+
+    Ok(Json.toJson(0))
+  }
+
   def scraped() = SafeAsyncAction(parse.json) { request =>
     val ts = System.currentTimeMillis
     val json = request.body

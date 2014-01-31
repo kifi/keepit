@@ -1,6 +1,8 @@
 package com.keepit.common
 
 import org.apache.commons.lang3.StringUtils
+import play.api.libs.json.Json.JsValueWrapper
+import play.api.libs.json.{Json, JsObject}
 
 package object strings {
   val UTF8 = "UTF-8"
@@ -24,4 +26,14 @@ package object strings {
   implicit class StringWithNoLineBreaks(str: String) {
     def trimAndRemoveLineBreaks(): String = str.replaceAll("""[\t\n\x0B\f\r]""", " ").replaceAll("""[ ]{2,}""", " ").trim()
   }
+
+
+  implicit class OptionWrappedJsObject(obj: Seq[(String, Option[JsValueWrapper])]) {
+    def stripOptions(): JsObject = {
+      Json.obj(obj.map { v =>
+        if (v._2.nonEmpty) Some(v._1 -> v._2.get) else None
+      }.flatten: _*)
+    }
+  }
+
 }
