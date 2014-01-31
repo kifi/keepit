@@ -38,6 +38,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
 				scope.rename = function (tag) {
 					if (tag) {
+						scope.renameTag = {
+							value: tag.name
+						};
 						scope.renaming = tag;
 					}
 				};
@@ -71,10 +74,10 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 				};
 
 				scope.submitRename = function () {
-					alert('rename: ' + scope.newName.value);
+					alert('rename: ' + scope.renameTag.value);
 					// different scope
-					if (scope.newName.value) {
-						scope.renaming.name = scope.newName.value;
+					if (scope.renameTag.value) {
+						scope.renaming.name = scope.renameTag.value;
 						scope.renaming = null;
 						return;
 					}
