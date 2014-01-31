@@ -22,4 +22,4 @@ create sequence search_friend_sequence;
 alter table search_friend add seq INT;
 create index search_friend_seq_index on search_friend(seq);
 
-insert into evolutions (name, description) values ('134.sql', 'add seq number to user_connection and search_friend');
+insert into evolutions (name, description) values ('135.sql', 'add seq number to user_connection and search_friend');
