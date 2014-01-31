@@ -145,10 +145,7 @@ class S3ScreenshotStoreImpl(
       future onComplete {
         case Success(result) =>
           if (result) {
-            // todo(andrew): create Screenshot model, track what sizes we have and when they were captured
-            shoeboxServiceClient.getNormalizedURI(normalizedUri.id.get).map { normalizedUri =>
-              shoeboxServiceClient.saveNormalizedURI(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
-            }
+            shoeboxServiceClient.updateNormalizedURI(uriId = normalizedUri.id.get, screenshotUpdatedAt = Some(clock.now))
           }
         case Failure(e) =>
           airbrake.notify(AirbrakeError(

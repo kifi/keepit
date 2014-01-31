@@ -17,62 +17,30 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.social._
-import com.keepit.model.UserExperimentUserIdKey
 import com.keepit.model.ExperimentType
-import com.keepit.model.ExternalUserIdKey
-import com.keepit.model.SocialUserInfoUserKey
-import com.keepit.model.BookmarkUriUserKey
-import com.keepit.social.BasicUserUserIdKey
-import com.keepit.social.SocialId
-import com.keepit.model.NormalizedURIKey
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.UserConnectionIdKey
-import com.keepit.model.SocialUserInfoNetworkKey
-import com.keepit.model.UserSessionExternalIdKey
-import com.keepit.model.UserExternalIdKey
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
-import com.keepit.common.usersegment.UserSegmentKey
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.ImmediateMap
 import play.api.libs.json.Json.JsValueWrapper
 import org.joda.time.DateTime
-import play.api.libs.functional.syntax._
-import com.keepit.model.UserExperimentUserIdKey
-import com.keepit.model.UserValueKey
-import com.keepit.model.UserIdKey
-import com.keepit.model.KifiInstallation
-import com.keepit.model.ExternalUserIdKey
-import com.keepit.model.SocialUserInfoUserKey
 import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.model.BookmarkUriUserKey
-import com.keepit.social.BasicUserUserIdKey
-import com.keepit.model.SearchFriendsKey
-import com.keepit.model.UserConnectionCountKey
-import com.keepit.model.BookmarkCountKey
-import com.keepit.shoebox.ShoeboxCacheProvider
-import com.keepit.model.ExtensionVersionInstallationIdKey
-import com.keepit.model.UserExternalIdKey
-import com.keepit.model.DeepLocator
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsNumber
-import com.keepit.social.SocialId
-import com.keepit.model.UrlHash
-import com.keepit.model.UserConnectionIdKey
-import com.keepit.model.NormalizedURIKey
 import com.keepit.common.usersegment.UserSegmentKey
 import play.api.libs.json.JsObject
-import com.keepit.model.SocialUserInfoNetworkKey
-import com.keepit.model.UserSessionExternalIdKey
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
+  private val ? = null.asInstanceOf[Nothing]
+
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUser(userId: Id[User]): Future[Option[User]]
@@ -132,6 +100,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def updateNormalizedURI(uriId: Id[NormalizedURI], createdAt: DateTime = ?, updatedAt: DateTime = ?, externalId: ExternalId[NormalizedURI] = ?, title: Option[String] = ?, url: String = ?, urlHash: UrlHash = ?, state: State[NormalizedURI] = ?, seq: SequenceNumber = ?, screenshotUpdatedAt: Option[DateTime] = ?, restriction: Option[Restriction] = ?, normalization: Option[Normalization] = ?, redirect: Option[Id[NormalizedURI]] = ?, redirectTime: Option[DateTime] = ?)(implicit timeout:Int = 10000): Future[Boolean]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
@@ -641,30 +610,18 @@ class ShoeboxServiceClientImpl @Inject() (
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
-    Json.obj("" -> "")
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), timeout = timeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
 
-  private val UNSAFE_DEFAULT = null.asInstanceOf[Nothing]
-  def updateNormalizedURI(uriId: Id[NormalizedURI],
-                          createdAt: DateTime = UNSAFE_DEFAULT,
-                          updatedAt: DateTime = UNSAFE_DEFAULT,
-                          externalId: ExternalId[NormalizedURI] = UNSAFE_DEFAULT,
-                          title: Option[String] = UNSAFE_DEFAULT,
-                          url: String = UNSAFE_DEFAULT,
-                          urlHash: UrlHash = UNSAFE_DEFAULT,
-                          state: State[NormalizedURI] = UNSAFE_DEFAULT,
-                          seq: SequenceNumber = UNSAFE_DEFAULT,
-                          screenshotUpdatedAt: Option[DateTime] = UNSAFE_DEFAULT,
-                          restriction: Option[Restriction] = UNSAFE_DEFAULT,
-                          normalization: Option[Normalization] = UNSAFE_DEFAULT,
-                          redirect: Option[Id[NormalizedURI]] = UNSAFE_DEFAULT,
-                          redirectTime: Option[DateTime] = UNSAFE_DEFAULT)(implicit timeout:Int): Future[Boolean] = {
-    import NormalizedURI._
+  def updateNormalizedURI(uriId: Id[NormalizedURI], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[NormalizedURI],
+                          title: Option[String], url: String, urlHash: UrlHash, state: State[NormalizedURI], seq: SequenceNumber,
+                          screenshotUpdatedAt: Option[DateTime], restriction: Option[Restriction], normalization: Option[Normalization],
+                          redirect: Option[Id[NormalizedURI]], redirectTime: Option[DateTime])(implicit timeout:Int): Future[Boolean] = {
     import com.keepit.common.strings.OptionWrappedJsObject
-    val safeJsonParams: Seq[(String, Option[JsValueWrapper])] = Seq(
+    import NormalizedURI._
+    val safeJsonParams: Seq[(String, JsValueWrapper)] = Seq(
       "createdAt" -> Option(createdAt),
       "updatedAt" -> Option(updatedAt),
       "externalId" -> Option(externalId),
@@ -677,12 +634,12 @@ class ShoeboxServiceClientImpl @Inject() (
       "restriction" -> Option(restriction),
       "normalization" -> Option(normalization),
       "redirect" -> Option(redirect),
-      "redirectTime" -> Option(redirectTime))
+      "redirectTime" -> Option(redirectTime)
+    )
 
-    call(Shoebox.internal.updateNormalizedURI(), safeJsonParams.stripOptions())
-
-    Future{true}
-
+    call(Shoebox.internal.updateNormalizedURI(), Json.obj(safeJsonParams: _*).stripJsNulls()).map { resp =>
+      resp.json.asOpt[Boolean].getOrElse(false)
+    }
   }
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = {
