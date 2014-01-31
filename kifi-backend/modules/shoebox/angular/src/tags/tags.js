@@ -38,6 +38,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
 				scope.rename = function (tag) {
 					if (tag) {
+						scope.lastHighlight = scope.highlight;
 						scope.renameTag = {
 							value: tag.name
 						};
@@ -73,19 +74,30 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 					}
 				};
 
+				function rehighlight() {
+					if (scope.lastHighlight && !scope.highlight) {
+						scope.highlight = scope.lastHighlight;
+					}
+					scope.lastHighlight = null;
+				}
+
 				scope.submitRename = function () {
-					alert('rename: ' + scope.renameTag.value);
 					// different scope
-					if (scope.renameTag.value) {
-						scope.renaming.name = scope.renameTag.value;
-						scope.renaming = null;
-						return;
+					var newName = scope.renameTag.value,
+						tag = scope.renaming;
+					if (newName && newName !== tag.name) {
+						return tagService.rename(tag.id, newName).then(function (tag) {
+							scope.cancelRename();
+							return tag;
+						});
 					}
 					return scope.cancelRename();
 				};
 
 				scope.cancelRename = function () {
 					scope.renaming = null;
+					scope.focusFilter = true;
+					rehighlight();
 				};
 
 				function getFilterValue() {
@@ -152,7 +164,12 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 						scope.select();
 						break;
 					case KEY_ESC:
-						scope.dehighlight();
+						if (scope.highlight) {
+							scope.dehighlight();
+						}
+						else {
+							scope.clearFilter();
+						}
 						break;
 					case KEY_DEL:
 						scope.remove(scope.highlight);
@@ -292,9 +309,11 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
 				scope.$watch('filter.name', function () {
 					$timeout(scope.refreshHighlight);
+					scope.refreshScroll();
 				});
-				scope.$watch('filter.name', scope.refreshScroll);
-				scope.$watch('tags', scope.refreshScroll);
+				scope.$watch('tags', function () {
+					scope.refreshScroll();
+				});
 
 				tagService.fetchAll();
 			}
