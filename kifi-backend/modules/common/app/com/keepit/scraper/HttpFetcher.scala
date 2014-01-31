@@ -33,6 +33,7 @@ import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.{SSLException, SSLHandshakeException}
 import HttpStatus._
 import java.util.zip.ZipException
+import java.security.cert.CertPathBuilderException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -263,6 +264,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     } catch {
         case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
                                else fetchHandler(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+        case e:CertPathBuilderException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
