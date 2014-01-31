@@ -38,7 +38,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
 				scope.rename = function (tag) {
 					if (tag) {
-						alert('rename:' + tag.name);
+						scope.renaming = tag;
 					}
 				};
 
@@ -53,6 +53,36 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 					if (focus) {
 						scope.focusFilter = true;
 					}
+				};
+
+				scope.isRenaming = function (tag) {
+					return scope.renaming === tag;
+				};
+
+				scope.onRenameKeydown = function (e) {
+					switch (e.keyCode) {
+					case KEY_ENTER:
+						scope.submitRename();
+						break;
+					case KEY_ESC:
+						scope.cancelRename();
+						break;
+					}
+				};
+
+				scope.submitRename = function () {
+					alert('rename: ' + scope.newName.value);
+					// different scope
+					if (scope.newName.value) {
+						scope.renaming.name = scope.newName.value;
+						scope.renaming = null;
+						return;
+					}
+					return scope.cancelRename();
+				};
+
+				scope.cancelRename = function () {
+					scope.renaming = null;
 				};
 
 				function getFilterValue() {
