@@ -34,7 +34,7 @@ class FakeHttpClient(
     rtr.lift(url).getOrElse(throw new Exception(s"url [$url] did not match"))
   }
 
-  override def withTimeout(timeout: Int): HttpClient = this
+  override def withTimeout(callTimeouts: CallTimeouts): HttpClient = this
 
   override def postFuture(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { post(url, body) }
   override def postXmlFuture(url: HttpUri, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = Future.successful { postXml(url, body) }

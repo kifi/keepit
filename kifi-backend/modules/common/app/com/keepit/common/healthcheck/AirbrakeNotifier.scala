@@ -84,13 +84,13 @@ class AirbrakeSender @Inject() (
   def sendDeployment(payload: String): Unit = {
     log.info(s"announcing deployment to airbrake: $payload")
     httpClient.
-      withTimeout(60000).
+      withTimeout(CallTimeouts(responseTimeout = Some(60000))).
       withHeaders("Content-type" -> "application/x-www-form-urlencoded").
       postTextFuture(DirectUrl("http://api.airbrake.io/deploys.txt"), payload, httpClient.ignoreFailure)
   }
 
   def sendError(xml: NodeSeq): Unit = httpClient.
-    withTimeout(60000).
+    withTimeout(CallTimeouts(responseTimeout = Some(60000))).
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture(DirectUrl("http://airbrakeapp.com/notifier_api/v2/notices"), xml, defaultFailureHandler) map { res =>
       try {
