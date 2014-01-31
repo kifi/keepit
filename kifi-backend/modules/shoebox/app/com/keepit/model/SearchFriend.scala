@@ -11,7 +11,8 @@ case class SearchFriend(
     friendId: Id[User],
     state: State[SearchFriend] = SearchFriendStates.EXCLUDED,
     createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime
+    updatedAt: DateTime = currentDateTime,
+    seq: SequenceNumber = SequenceNumber.ZERO
     ) extends ModelWithState[SearchFriend] {
   def withId(id: Id[SearchFriend]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
