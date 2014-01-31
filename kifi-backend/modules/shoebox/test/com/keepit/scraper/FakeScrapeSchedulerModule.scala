@@ -19,7 +19,7 @@ case class FakeScrapeSchedulerModule(fakeArticles: Option[PartialFunction[(Strin
 
 class FakeScrapeSchedulerPlugin(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]]) extends ScrapeSchedulerPlugin {
   def scrapePending() = Future.successful(Seq())
-  def scheduleScrape(uri: NormalizedURI)(implicit session: RWSession): Unit = {}
+  def scheduleScrape(uri: NormalizedURI, randomDelayMillis: Int)(implicit session: RWSession): Unit = {}
   def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType] = None): Future[Option[BasicArticle]] = Future.successful(fakeArticles.map(_.apply((url, extractorProviderType))))
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType] = None): Future[Option[Signature]] = scrapeBasicArticle(url, extractorProviderType).map(_.map(_.signature))
 }
