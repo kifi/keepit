@@ -1092,6 +1092,12 @@ function markRead(threadId, messageId, time) {
 
     tellVisibleTabsNoticeCountIfChanged();
     return true;
+  } else {
+    log('#c00', '[markRead] noop', threadId, messageId, time,
+      th ? '' : 'not loaded',
+      th && !th.unread ? 'read' : '',
+      th && th.id !== messageId ? 'message: ' + th.id : '',
+      th && th.time > time ? 'newer: ' + th.time : '')();
   }
 }
 
