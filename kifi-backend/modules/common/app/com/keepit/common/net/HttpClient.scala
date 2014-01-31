@@ -23,7 +23,6 @@ import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
 import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
-import com.keepit.common.amazon.MyAmazonInstanceInfo
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
@@ -184,20 +183,25 @@ case class HttpClientImpl(
           case d: DirectUrl =>
             val msg = s"external service ${d.summary} is not available"
             log.error(msg)
-            new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+            Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
           case s: ServiceUri =>
-            s.serviceInstance.reportServiceUnavailable()
-            val msg = s"service ${s.serviceInstance} is not available, reported ${s.serviceInstance.reportedSentServiceUnavailableCount} times"
+            val count = s.serviceInstance.reportServiceUnavailable()
+            val msg = s"service ${s.serviceInstance} is not available, reported $count times"
             log.error(msg)
             val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
             airbrake.get.notify(err)
-            new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse)
+            if (count > 1) {
+              Some(new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse))
+            } else {
+              None
+            }
         }
       } else {
-        new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+        Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
+      } map {exception =>
+        if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
+        else throw exception
       }
-      if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
-      else throw exception
     }
     clientResponse
   }

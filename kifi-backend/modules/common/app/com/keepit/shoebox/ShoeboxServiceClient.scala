@@ -348,7 +348,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] =
-      call(Shoebox.internal.getNormalizedURIByURL(), JsString(url.take(MaxUrlLength))).map { r => r.json match {
+      call(Shoebox.internal.getNormalizedURIByURL(), JsString(url.take(MaxUrlLength)), callTimeouts = CallTimeouts(maxWaitTime = Some(400))).map { r => r.json match {
         case JsNull => None
         case js: JsValue => Some(Json.fromJson[NormalizedURI](js).get)
         case null => None
