@@ -10,7 +10,7 @@ import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
 import com.keepit.scraper.ProdScrapeSchedulerModule
-import com.keepit.common.zookeeper.ProdDiscoveryModule
+import com.keepit.common.zookeeper.{DiscoveryModule, ProdDiscoveryModule}
 import com.keepit.common.service.ServiceType
 
 case class ShoeboxProdModule() extends ShoeboxModule (
@@ -27,6 +27,10 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
+    def servicesToListenOn =
+      if (DiscoveryModule.isCanary) // canary listens on shoebox
+        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.SHOEBOX :: Nil
+      else
+        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
   }
 }
