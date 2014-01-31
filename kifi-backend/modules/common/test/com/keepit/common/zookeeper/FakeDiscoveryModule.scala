@@ -5,9 +5,14 @@ import com.google.inject.{Singleton, Provides}
 import scala.collection.mutable
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooKeeper
+import com.keepit.common.actor.{FakeSchedulerModule, TestActorSystemModule}
 
 
 case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
+
+  def configure() {
+    install(FakeSchedulerModule())
+  }
 
   @Provides
   @Singleton

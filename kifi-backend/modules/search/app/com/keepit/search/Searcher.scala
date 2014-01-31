@@ -40,6 +40,9 @@ object Searcher {
 class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[IndexWarmer] = None) extends IndexSearcher(indexReader) {
 
   private[this] var sketchMap = Map.empty[Term, Sketch]
+  protected[this] var numPayloadsMap: Map[Term, Int] = Map()
+
+  def numPayloadsUsed: Int = if (numPayloadsMap.size == 0) 0 else numPayloadsMap.values.min
 
   // search: hits are ordered by score
   def search(query: Query): Seq[SearcherHit] = {
@@ -156,6 +159,7 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
       if (tp != null){
         while (tp.nextDoc < NO_MORE_DOCS) {
           var freq = tp.freq()
+          numPayloadsMap += term -> freq
           while (freq > 0) {
             freq -= 1
             tp.nextPosition()

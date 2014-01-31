@@ -61,7 +61,8 @@ class ShoeboxController @Inject() (
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  rawKeepImporterPlugin: RawKeepImporterPlugin
+  rawKeepImporterPlugin: RawKeepImporterPlugin,
+  scraperHelper: ScraperCallbackHelper
 )
   (implicit private val clock: Clock,
    implicit private val scraperConfig: ScraperConfig,
@@ -321,15 +322,7 @@ class ShoeboxController @Inject() (
   }
 
   def assignScrapeTasks(zkId:Id[ScraperWorker], max:Int) = SafeAsyncAction { request =>
-    val res = db.readWrite(attempts = 2) { implicit rw =>
-      scrapeInfoRepo.getOverdueList(max) map { info => // todo: prioritize
-        val nuri = normUriRepo.get(info.uriId)
-        val proxy = urlPatternRuleRepo.getProxy(nuri.url)
-        val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
-        ScrapeRequest(nuri, savedInfo, proxy)
-      }
-    }
-    log.info(s"[assignScrapeTasks($zkId,$max)] result=${res}")
+    val res = scraperHelper.assignTasks(zkId, max)
     Ok(Json.toJson(res))
   }
 

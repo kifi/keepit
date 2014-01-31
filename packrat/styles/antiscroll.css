@@ -10,13 +10,13 @@
   top: 0;
   right: 1px;
   width: 1px;
-  border-radius: .5px;
+  border-radius: .5px !important;
   transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s;
 }
 .kifi-scrollbar-vertical:hover,
 .kifi-scrollbar-vertical.kifi-scroll-dragging {
   width: 12px;
-  border-radius: 6px;
+  border-radius: 6px !important;
   box-shadow: 0 0 1px #fff;
 }
 .kifi-scrollbar-vertical::before {

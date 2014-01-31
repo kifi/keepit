@@ -5,10 +5,14 @@ angular.module('kifi', [
 	'ngResource',
 	'ngRoute',
 	'ui.bootstrap',
+	'util',
+	'dom',
 	'antiscroll',
+	'focusWhen',
 	'kifi.templates',
 	'kifi.profileCard',
 	'kifi.tags',
+	'kifi.tagService',
 	'kifi.layout.leftCol',
 	'kifi.layout.main',
 	'kifi.layout.nav',
@@ -16,19 +20,41 @@ angular.module('kifi', [
 ])
 
 .config([
-	'$routeProvider', '$locationProvider',
-	function ($routeProvider, $locationProvider) {
+	'$routeProvider', '$locationProvider', '$httpProvider',
+	function ($routeProvider, $locationProvider, $httpProvider) {
 		$locationProvider
-		.html5Mode(true)
-		.hashPrefix('!');
+			.html5Mode(true)
+			.hashPrefix('!');
 
 		$routeProvider.otherwise({
 			redirectTo: '/'
 		});
+
+		$httpProvider.defaults.withCredentials = true;
+	}
+])
+
+.factory('env', [
+	'$location',
+	function ($location) {
+		var host = $location.host(),
+			dev = /^dev\.ezkeep\.com|localhost$/.test(host),
+			local = $location.port() === '9000',
+			origin = local ? $location.protocol() + '//' + host : 'https://www.kifi.com';
+
+		return {
+			local: local,
+			dev: dev,
+			production: !dev,
+			xhrBase: origin + '/site',
+			xhrBaseEliza: origin.replace('www', 'eliza') + '/eliza/site',
+			xhrBaseSearch: origin.replace('www', 'search') + '/search',
+			picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
+		};
 	}
 ])
 
 .controller('AppCtrl', [
-	function () {
-	}
+
+	function () {}
 ]);

@@ -24,10 +24,11 @@ import play.api.libs.json.JsObject
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
+import com.keepit.common.actor.FakeScheduler
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler())
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   // Fake ID counters
@@ -474,7 +475,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def setUserValue(userId: Id[User], key: String, value: String): Unit = allUserValues((userId, key)) = value
 
-  def getUserSegment(userId: Id[User]): Future[UserSegment] = Future.successful(UserSegment(Int.MaxValue, "foo"))
+  def getUserSegment(userId: Id[User]): Future[UserSegment] = Future.successful(UserSegment(Int.MaxValue))
 
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String] = Future.successful("dummy")
 

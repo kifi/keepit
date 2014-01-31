@@ -13,6 +13,7 @@ case class DevScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[AsyncScrapeProcessor].to[SimpleAsyncScrapeProcessor].in[AppScoped]
+    bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
   }
 
   @Singleton

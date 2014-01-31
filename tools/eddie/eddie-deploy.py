@@ -10,6 +10,8 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 import datetime
 
+userName = None
+
 class S3Asset(object):
 
   def __init__(self, key):
@@ -61,15 +63,6 @@ class ServiceInstance(object):
   def __repr__(self):
     return "%s (%s) %s on %s [%s]" % (self.service, self.mode, self.name, self.type, self.ip)
 
-def message_irc(msg):
-  data = {
-    'service': 'deployment',
-    'url': 'https://grove.io/app',
-    'icon_url': 'https://grove.io/static/img/avatar.png',
-    'message': msg
-  }
-  requests.post("https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/", data=data)
-
 def message_hipchat(msg):
   data = {
     "room_id": "Deploy",
@@ -80,9 +73,8 @@ def message_hipchat(msg):
   requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
 
 def log(msg):
-  amsg = "[" + getpass.getuser() + "] " + msg
+  amsg = "[" + userName + "] " + msg
   print amsg
-  message_irc(amsg)
   message_hipchat(amsg)
 
 def getAllInstances():
@@ -90,7 +82,7 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in ec2.get_only_instances()]
 
 if __name__=="__main__":
-  parser = argparse.ArgumentParser(description="Your friendly FortyTwo Deployment Service v0.42")
+  parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
   parser.add_argument(
     'serviceType',
     action = 'store',
@@ -106,19 +98,33 @@ if __name__=="__main__":
   parser.add_argument(
     '--mode',
     action = 'store',
-    help = "Wait for machines to come up or not (default: 'safe')",
-    metavar = "Host",
+    help = "Wait for machines to come up or not. Options: 'safe' or 'force'. (default: 'safe').",
+    metavar = "Mode",
     default = 'safe',
     choices = ['safe', 'force']
   )
   parser.add_argument(
     '--version',
     action = 'store',
-    help = "Target version",
+    help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
     metavar = "Version"
+  )
+  parser.add_argument(
+    '--iam',
+    action = 'store',
+    help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
+    metavar = "Name"
   )
 
   args = parser.parse_args(sys.argv[1:])
+
+  if args.iam:
+    userName = args.iam
+  else:
+    userName = getpass.getuser()
+    if userName=="fortytwo":
+      print "Yo, dude, set your name! ('--iam' option)"
+
   instances = getAllInstances()
 
   if args.host:
@@ -179,12 +185,14 @@ if __name__=="__main__":
       log("Manual Abort.")
   else:
     for instance in instances:
-      shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
+      shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn)
       remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
+      log("Deploy triggered on " + instance.name + ". Waiting for the machine to finish.")
       try:
         while remoteProc.is_running():
           time.sleep(0.1)
         remoteProc.wait_for_result()
+        log("Done with " + instance.name + ".")
       except KeyboardInterrupt:
         log("Manual Abort.")
         remoteProc.send_signal(2)

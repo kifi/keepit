@@ -103,7 +103,7 @@ a.kifi-pane-top-menu-a::before {
   background-image: inherit;
   background-size: 30px;
   background-repeat: no-repeat;
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 .kifi-pane-top-menu-a::after {
   content: ' ';
@@ -196,7 +196,7 @@ a.kifi-pane-top-menu-a.kifi-active {
   background-color: #474e54;
   color: #fff !important;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: 10px !important;
   z-index: 999999999999;
 }
 .kifi-signed-out-tooltip > .kifi-signed-out-icon {
@@ -359,7 +359,7 @@ a.kifi-notices-filter-page {
   height: 14px;
   line-height: 14px;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: 3px !important;
   font-size: 9px;
   font-weight: bold;
   background-color: #5e778f;
@@ -406,7 +406,7 @@ a.kifi-notices-filter-page {
   z-index: 1;
   white-space: nowrap;
   border: 1px solid #dbe1e7;
-  border-radius: 6px;
+  border-radius: 6px !important;
   background: #fff;
   padding: 6px 0;
   font-size: 12px;
