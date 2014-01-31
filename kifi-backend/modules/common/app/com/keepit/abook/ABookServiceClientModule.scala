@@ -16,15 +16,13 @@ case class ProdABookServiceClientModule() extends ABookServiceClientModule {
   @Singleton
   @Provides
   def ABookServiceClient(client: HttpClient,
-                         serviceDiscovery: ServiceDiscovery,
-                         serviceClientBinder: ScalaMultibinder[ServiceClient],
-                         airbrakeNotifier: AirbrakeNotifier): ABookServiceClient = {
-    val abook = new ABookServiceClientImpl(
+    serviceDiscovery: ServiceDiscovery,
+    airbrakeNotifier: AirbrakeNotifier): ABookServiceClient = {
+    new ABookServiceClientImpl(
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.ABOOK)
     )
-    serviceClientBinder.addBinding().toInstance(abook)
-    abook
+  }
 
 }
