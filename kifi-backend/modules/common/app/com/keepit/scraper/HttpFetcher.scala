@@ -158,9 +158,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     def run():Unit = {
       try {
         log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
-        if (q.isEmpty) {
-          // log.info(s"[enforcer] queue is empty")
-        } else {
+        if (!q.isEmpty) {
           val iter = q.iterator
           while (iter.hasNext) {
             val curr = System.currentTimeMillis

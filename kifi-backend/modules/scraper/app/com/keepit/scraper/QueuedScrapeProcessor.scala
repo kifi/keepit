@@ -91,7 +91,7 @@ class QueuedScrapeProcessor @Inject() (
   asyncHelper: ShoeboxDbCallbacks,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // adjust as needed
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // adjust as needed
   val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
   val pSize = Runtime.getRuntime.availableProcessors * 1024
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
@@ -151,9 +151,7 @@ class QueuedScrapeProcessor @Inject() (
     def run(): Unit = {
       try {
         log.info(s"[terminator] checking for long-running tasks to kill q.size=${submittedQ.size} fj(#submit)=${fjPool.getQueuedSubmissionCount} fj(#task)=${fjPool.getQueuedTaskCount} ...")
-        if (submittedQ.isEmpty) { // some low threshold
-          // check fjPool; do something useful
-        } else {
+        if (!submittedQ.isEmpty) { // some low threshold
           val iter = submittedQ.iterator
           while (iter.hasNext) {
             val curr = System.currentTimeMillis
@@ -162,7 +160,6 @@ class QueuedScrapeProcessor @Inject() (
               if (sc.callTS.get == 0) log.info(s"[terminator] $sc has not yet started")
               else if (fjTask.isDone) removeRef(iter)
               else if (sc.trRef.asOpt.isDefined && sc.trRef.get.isFailure) removeRef(iter, Some(s"[terminator] ${sc} isFailure=true; ${sc.trRef.get}; remove from q"))
-              // else if (sc.exRef.get != null) removeRef(iter, Some(s"[terminator] $sc caught error ${sc.exRef.get}; remove from q"))
               else {
                 val runMillis = curr - sc.callTS.get
                 if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
@@ -191,7 +188,7 @@ class QueuedScrapeProcessor @Inject() (
                 }
               }
             } orElse {
-              removeRef(iter) // Some(s"[terminator] remove collected entry $ref from queue")
+              removeRef(iter) // collected
               None
             }
           }
