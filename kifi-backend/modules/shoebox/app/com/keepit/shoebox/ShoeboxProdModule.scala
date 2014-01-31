@@ -27,6 +27,6 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
+    def servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.SHOEBOX :: Nil
   }
 }
