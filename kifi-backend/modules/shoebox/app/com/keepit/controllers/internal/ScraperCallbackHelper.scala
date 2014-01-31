@@ -35,17 +35,27 @@ class ScraperCallbackHelper @Inject()(
     withLock(lock) {
       val builder = Seq.newBuilder[ScrapeRequest]
       val res = db.readWrite(attempts = 2) { implicit rw =>
-        for (info <- scrapeInfoRepo.getOverdueList(max)) { // ACTIVE only
+        val overdues = scrapeInfoRepo.getOverdueList(max * 2)
+        var count = 0
+        for (info <- overdues if count < max) {
           val nuri = normUriRepo.get(info.uriId)
           if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(nuri.state)) {
             val proxy = urlPatternRuleRepo.getProxy(nuri.url)
             val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
+            log.info(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
+            count += 1
             builder += ScrapeRequest(nuri, savedInfo, proxy)
+          } else {
+            val saved = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+            log.warn(s"[assignTasks($zkId,$max)] ${nuri.state} in DO_NOT_SCRAPE list; uri=$nuri; deactivated scrapeInfo=$saved")
           }
         }
         builder.result
       }
-      res
+      if (res.length == 0) {
+        log.warn(s"[assignTask($zkId,$max)] 0 tasks assigned") // can be more aggressive
+      }
+      res.take(max)
     }
   }
 

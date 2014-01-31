@@ -8,12 +8,15 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient, DirectUrl}
+import com.keepit.common.net._
 import com.keepit.common.plugin._
 import com.keepit.model.{UserPictureRepo, UserStates, UserRepo, User}
 import akka.actor.ActorSystem
 import play.api.Plugin
 import play.api.http.Status.OK
+import com.keepit.common.net.NonOKResponseException
+import com.keepit.common.net.DirectUrl
+import scala.Some
 
 sealed abstract class ImageDataIntegrityMessage
 case object VerifyAllPictures extends ImageDataIntegrityMessage
@@ -28,7 +31,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
   ) extends FortyTwoActor(airbrake) with Logging {
 
   val TWO_MINUTES = 2 * 60 * 1000
-  private val httpClient: HttpClient = client.withTimeout(TWO_MINUTES)
+  private val httpClient: HttpClient = client.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES)))
 
   def receive = {
     case VerifyAllPictures =>

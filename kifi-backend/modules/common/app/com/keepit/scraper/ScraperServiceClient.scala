@@ -7,7 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent.{Future, Promise}
 import play.api.libs.json._
@@ -101,9 +101,12 @@ trait ScraperServiceClient extends ServiceClient {
 
 class ScraperServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
-  val httpClient: HttpClient,
+  defaultHttpClient: HttpClient,
   val serviceCluster: ServiceCluster
 ) extends ScraperServiceClient with Logging {
+
+  val longTimeout = CallTimeouts(responseTimeout = Some(60000))
+  val httpClient = defaultHttpClient.withTimeout(longTimeout)
 
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
     call(Scraper.internal.asyncScrapeArticle, Json.toJson(uri)).map{ r =>
@@ -139,13 +142,13 @@ class ScraperServiceClientImpl @Inject() (
   }
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    call(Scraper.internal.getBasicArticle, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), timeout = 30000).map{ r =>
+    call(Scraper.internal.getBasicArticle, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
       r.json.validate[BasicArticle].asOpt
     }
   }
 
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
-    call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), timeout = 30000).map{ r =>
+    call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
       r.json.asOpt[String].map(Signature(_))
     }
   }

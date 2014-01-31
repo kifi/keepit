@@ -279,7 +279,7 @@ class SyncScraper @Inject() (
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
     lazy val isFishy = helper.syncGetLatestBookmark(movedUri.id.get).filter(_.updatedAt.isAfter(currentDateTime.minusHours(1))) match {
       case Some(recentKeep) if recentKeep.source != BookmarkSource.bookmarkImport => true
-      case Some(importedBookmark) => (importedBookmark.url != movedUri.url) && (httpClient.get(DirectUrl(importedBookmark.url)).status != HttpStatus.SC_MOVED_PERMANENTLY)
+      case Some(importedBookmark) => (importedBookmark.url != movedUri.url) && (httpClient.get(DirectUrl(importedBookmark.url), httpClient.ignoreFailure).status != HttpStatus.SC_MOVED_PERMANENTLY)
       case None => false
     }
     hasFishy301Restriction || isFishy

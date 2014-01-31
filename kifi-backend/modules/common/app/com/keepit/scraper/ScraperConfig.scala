@@ -14,7 +14,7 @@ case class ScraperConfig(
   pull:Boolean = sys.props.get("scraper.pull.enable") map (_.toBoolean) getOrElse (true),
   push:Boolean = sys.props.get("scraper.push.enable") map (_.toBoolean) getOrElse (false),
   pullMultiplier:Int = sys.props.get("scraper.pull.multiplier") map (_.toInt) getOrElse (4),
-  pullFrequency: Int = sys.props.get("scraper.pull.freq") map (_.toInt) getOrElse (10), // seconds
+  pullFrequency: Int = sys.props.get("scraper.pull.freq") map (_.toInt) getOrElse (5), // seconds
   scrapePendingFrequency: Int = sys.props.get("scraper.pending.freq") map (_.toInt) getOrElse (30), // seconds
   queued: Boolean = sys.props.getOrElse("scraper.plugin.queued", "true").toBoolean,
   async: Boolean = sys.props.getOrElse("scraper.plugin.async", "false").toBoolean,

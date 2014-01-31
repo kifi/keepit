@@ -143,7 +143,7 @@ class FacebookSocialGraph @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     val accessToken = getAccessToken(socialUserInfo)
     val url = s"https://graph.facebook.com/${socialUserInfo.socialId}/permissions?access_token=$accessToken"
-    httpClient.withTimeout(TWO_MINUTES).deleteFuture(DirectUrl(url)).map(_ => ())
+    httpClient.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES), maxJsonParseTime = Some(20000))).deleteFuture(DirectUrl(url)).map(_ => ())
   }
 
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue) = {
@@ -172,7 +172,7 @@ class FacebookSocialGraph @Inject() (
   private[social] def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String].orElse((json \ "paging" \ "next").asOpt[String])
 
   private def get(url: String, socialUserInfo: SocialUserInfo): JsValue = timing(s"fetching FB JSON using $url") {
-    val client = httpClient.withTimeout(TWO_MINUTES)
+    val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES), maxJsonParseTime = Some(20000)))
     val tracer = new StackTrace()
     val myFailureHandler: Request => PartialFunction[Throwable, Unit] = url => {
       case nonOkRes: NonOKResponseException =>
