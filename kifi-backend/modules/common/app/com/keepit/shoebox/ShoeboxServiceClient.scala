@@ -637,7 +637,7 @@ class ShoeboxServiceClientImpl @Inject() (
       "redirectTime" -> Option(redirectTime)
     )
 
-    call(Shoebox.internal.updateNormalizedURI(), Json.obj(safeJsonParams: _*).stripJsNulls()).map { resp =>
+    call(Shoebox.internal.updateNormalizedURI(uriId), Json.obj(safeJsonParams: _*).stripJsNulls()).map { resp =>
       resp.json.asOpt[Boolean].getOrElse(false)
     }
   }

@@ -31,6 +31,7 @@ import com.keepit.normalizer.VerifiedCandidate
 import com.keepit.model.KifiInstallation
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
+import scala.util.{Try, Failure, Success}
 
 
 class ShoeboxController @Inject() (
@@ -138,7 +139,7 @@ class ShoeboxController @Inject() (
   }
 
   def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.json) { request =>
-     val saveResult = db.readWrite(attempts = 3) { implicit s =>
+     val saveResult = Try(db.readWrite(attempts = 3) { implicit s =>
        // Handle serialization in session to be transactional.
        val originalNormalizedUri = normUriRepo.get(uriId)
        val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
@@ -151,8 +152,16 @@ class ShoeboxController @Inject() (
        }, { normalizedUri =>
          Some(normUriRepo.save(normalizedUri))
        }).nonEmpty
+    })
+    saveResult match {
+      case Success(res) =>
+        Ok(Json.toJson(res))
+      case Failure(ex) =>
+        log.error(s"Could not deserialize NormalizedURI ($uriId) update: $ex\nbody: ${request.body}")
+        airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update", ex)
+        Ok(Json.toJson(false))
     }
-    Ok(Json.toJson(saveResult))
+
   }
 
   def scraped() = SafeAsyncAction(parse.json) { request =>
