@@ -24,7 +24,7 @@ case class ProdScraperServiceModule() extends ScraperServiceModule(
   scrapeProcessorModule = ProdScraperProcessorModule()
 ) with CommonProdModule {
 
-  override val httpClientModule = new ScraperHttpClientModule()
+  //override val httpClientModule = new ScraperHttpClientModule()
 
   val discoveryModule = new ProdDiscoveryModule {
     def servicesToListenOn = ServiceType.SHOEBOX :: Nil
