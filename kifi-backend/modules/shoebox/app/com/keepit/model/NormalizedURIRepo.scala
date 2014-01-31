@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
@@ -29,6 +29,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
+  def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   }
 
 @Singleton
@@ -107,7 +108,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
     uri.state match {
-      case INACTIVE | ACTIVE | REDIRECTED | UNSCRAPABLE => // ensure no ACTIVE scrapeInfo records
+      case e:State[NormalizedURI] if DO_NOT_SCRAPE.contains(e) => // ensure no ACTIVE scrapeInfo records
         scrapeRepo.getByUriId(saved.id.get) match {
           case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
             scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
@@ -126,6 +127,14 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           case Some(scrapeInfo) => // do nothing
           case None =>
             scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
+        }
+      case SCRAPE_LATER => // ensure that ScrapeInfo has an ACTIVE record for it.
+        scrapeRepo.getByUriId(saved.id.get) match {
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE, Some(END_OF_TIME))) // no scheduling at this point
+          case Some(scrapeInfo) => // do nothing
+          case None =>
+            scrapeRepo.save(ScrapeInfo(uriId = saved.id.get, nextScrape = END_OF_TIME))
         }
       case _ =>
         throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
@@ -203,6 +212,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       }
     }
   }
+
+  def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =
+    (for(t <- table if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
 
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
     (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list

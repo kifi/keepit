@@ -12,6 +12,7 @@ import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.healthcheck.FakeMemoryUsageModule
+import com.keepit.common.actor.FakeSchedulerModule
 
 class TestApplicationFromGlobal(override val path: File, _global: FortyTwoGlobal)
   extends play.api.test.FakeApplication(path = path) {
@@ -31,7 +32,8 @@ class TestApplication(overridingModules: Module*)(implicit path: File = new File
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
       TestFortyTwoModule(),
-      FakeDiscoveryModule()
+      FakeDiscoveryModule(),
+      FakeSchedulerModule()
     ), overridingModules
   ))
 

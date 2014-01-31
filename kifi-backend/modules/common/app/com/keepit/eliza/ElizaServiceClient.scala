@@ -6,7 +6,7 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -19,6 +19,8 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 import com.google.inject.Inject
 import com.google.inject.util.Providers
 import com.keepit.eliza.model.{UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
+
+import akka.actor.Scheduler
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
@@ -85,10 +87,11 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
-    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), timeout=10000).map{ response =>
-      val json = Json.parse(response.body).as[JsArray]
-      json.value.map(_.as[ThreadContent])
-    }
+    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), callTimeouts = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000)))
+      .map{ response =>
+        val json = Json.parse(response.body).as[JsArray]
+        json.value.map(_.as[ThreadContent])
+      }
   }
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = {
@@ -105,8 +108,8 @@ class ElizaServiceClientImpl @Inject() (
   }
 }
 
-class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ElizaServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}

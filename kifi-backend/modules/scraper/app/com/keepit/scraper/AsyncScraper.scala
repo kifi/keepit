@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.{Provider, Inject}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
 import com.keepit.common.store.S3ScreenshotStore
@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.URI
+import com.keepit.common.net.{HttpClient, DirectUrl, URI}
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
 import scala.concurrent.duration._
@@ -17,7 +17,7 @@ import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Failure
 import scala.util.Success
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{SafeFuture, FortyTwoActor}
 import play.api.Play
 import akka.routing.SmallestMailboxRouter
 import akka.util.Timeout
@@ -124,6 +124,7 @@ class AsyncScraper @Inject() (
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
+  httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
@@ -377,7 +378,10 @@ class AsyncScraper @Inject() (
 
   def asyncProcessRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
     redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => future { updateRedirectRestriction(uri, redirect) }
+      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => SafeFuture {
+        if (redirect.isPermanent) log.warn(s"Found fishy 301 $redirect for $uri")
+        updateRedirectRestriction(uri, redirect)
+      }
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.recordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       case _ => future { removeRedirectRestriction(uri) }
     }
@@ -396,12 +400,15 @@ class AsyncScraper @Inject() (
   private def hasFishy301(movedUri: NormalizedURI) = Await.result(asyncHasFishy301(movedUri), 5 seconds)
   private def asyncHasFishy301(movedUri: NormalizedURI): Future[Boolean] = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
-    helper.getLatestBookmark(movedUri.id.get).map { bookmarkOpt =>
-      val wasKeptRecently = bookmarkOpt map {
-        _.updatedAt.isAfter(currentDateTime.minusHours(1))
-      } getOrElse(false)
-      hasFishy301Restriction || wasKeptRecently
+    lazy val isFishy = helper.getLatestBookmark(movedUri.id.get).map { latestKeepOption =>
+      latestKeepOption.filter(_.updatedAt.isAfter(currentDateTime.minusHours(1))) match {
+        case Some(recentKeep) if recentKeep.source != BookmarkSource.bookmarkImport => true
+        case Some(importedBookmark) => (importedBookmark.url != movedUri.url) && (httpClient.get(DirectUrl(importedBookmark.url), httpClient.ignoreFailure).status != HttpStatus.SC_MOVED_PERMANENTLY)
+        case None => false
+      }
     }
+
+    if (hasFishy301Restriction) Future.successful(true) else isFishy
   }
 
   private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {

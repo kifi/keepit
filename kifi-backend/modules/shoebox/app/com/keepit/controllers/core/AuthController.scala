@@ -75,7 +75,6 @@ class AuthController @Inject() (
 
   def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
-      inviteCommander.markPendingInvitesAsAccepted(request.user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
       Redirect("/")
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -157,18 +156,15 @@ class AuthController @Inject() (
   def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
     Redirect("/")
   }, unauthenticatedAction = { request =>
-    request.request.headers.get(USER_AGENT) map { agentString =>
+    request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.name == "IE" || agent.name == "Safari") {
-        Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
       } else if (agent.isMobile) {
-        Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
-      } else if (!agent.isSupportedDesktop) {
-        Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
-      }
-    }
-    Ok(views.html.auth.authGrey("login"))
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
+      } else None
+    }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
   })
 
   // Finalize account
@@ -200,6 +196,8 @@ class AuthController @Inject() (
     }
     if (agentOpt.exists(ua => ua.name == "IE" || ua.name == "Safari")) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
+    } else if (agentOpt.exists(_.isMobile)) {
+      Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
     } else {
       (request.userOpt, request.identityOpt) match {
         case (Some(user), _) if user.state != UserStates.INCOMPLETE_SIGNUP =>

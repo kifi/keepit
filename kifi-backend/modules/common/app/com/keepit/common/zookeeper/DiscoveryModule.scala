@@ -22,6 +22,7 @@ import scala.Some
 import scala.concurrent.{Await, Future, Promise}
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
+import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
 
 trait DiscoveryModule extends ScalaModule
 
@@ -43,9 +44,11 @@ object DiscoveryModule {
 
 }
 
-case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
+abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
 
-  def configure() { }
+  def configure() {
+    install(ProdActorSystemModule())
+  }
 
   @Singleton
   @Provides
@@ -87,9 +90,12 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
-    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake, isCanary = DiscoveryModule.isCanary)
+  def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
+                       amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
+    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake, isCanary = DiscoveryModule.isCanary, servicesToListenOn = servicesToListenOn)
   }
+
+  def servicesToListenOn: Seq[ServiceType]
 
   @Singleton
   @Provides
@@ -101,9 +107,6 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
 abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
 
-  def configure() {}
-
-
   @Singleton
   @Provides
   def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyAmazonInstanceInfo = MyAmazonInstanceInfo(info)
@@ -114,9 +117,9 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Provides
   @Singleton
-  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo, airbrake: Provider[AirbrakeNotifier]): ServiceCluster =
-    new ServiceCluster(serviceType, airbrake) tap {
-      _.register(new ServiceInstance(Node(s"${serviceType.name}_0"), true).setRemoteService(RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType)))
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler): ServiceCluster =
+    new ServiceCluster(serviceType, airbrake, scheduler) tap { cluster =>
+      cluster.register(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType)))
     }
 
   @Singleton
@@ -124,7 +127,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
     new ServiceDiscovery {
       def timeSinceLastStatusChange: Long = 0L
-      def thisInstance = Some(new ServiceInstance(Node(cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
+      def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get
       def isLeader() = true
@@ -145,4 +148,8 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
 }
 
-case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE)
+case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE) {
+  override def configure() {
+    install(DevActorSystemModule())
+  }
+}

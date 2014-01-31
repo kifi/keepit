@@ -266,11 +266,14 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   threadLists.sent.includesOldest = arr.length < THREAD_BATCH_SIZE;
   threadLists.unread.includesOldest = threadLists.unread.ids.length >= numUnread;
 
-  ['all', 'sent', 'unread'].forEach(function (kind) {
-    (threadListCallbacks[kind] || []).forEach(function (callback) {
-      callback(threadLists[kind]);
-    });
-    delete threadListCallbacks[kind];
+  invokeThreadListCallbacks('all', threadLists.all);
+  ['sent', 'unread'].forEach(function (kind) {
+    var tl = threadLists[kind];
+    if (tl.ids.length || tl.includesOldest) {
+      invokeThreadListCallbacks(kind, tl);
+    } else {
+      socket.send(['get_' + kind + '_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, kind, tl));
+    }
   });
 
   tellVisibleTabsNoticeCountIfChanged();
@@ -291,6 +294,30 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   });
 
   api.tabs.eachSelected(kifify);
+}
+
+function gotFilteredThreads(kind, tl, arr, numTotal) {
+  log('[gotFilteredThreads]', kind, arr, numTotal || '')();
+  arr.forEach(function (n) {
+    standardizeNotification(n);
+    threadsById[n.thread] = n;
+  });
+  tl.ids = arr.map(getThreadId);
+  tl.includesOldest = arr.length < THREAD_BATCH_SIZE;
+  if (numTotal != null) {
+    tl.numTotal = numTotal;
+  }
+  invokeThreadListCallbacks(kind, tl);
+}
+
+function invokeThreadListCallbacks(key, tl, arg) {
+  var callbacks = threadListCallbacks[key];
+  if (callbacks) {
+    for (var i = 0; i < callbacks.length; i++) {
+      callbacks[i](tl, arg);
+    }
+    delete threadListCallbacks[key];
+  }
 }
 
 var socketHandlers = {
@@ -1065,6 +1092,12 @@ function markRead(threadId, messageId, time) {
 
     tellVisibleTabsNoticeCountIfChanged();
     return true;
+  } else {
+    log('#c00', '[markRead] noop', threadId, messageId, time,
+      th ? '' : 'not loaded',
+      th && !th.unread ? 'read' : '',
+      th && th.id !== messageId ? 'message: ' + th.id : '',
+      th && th.time > time ? 'newer: ' + th.time : '')();
   }
 }
 
@@ -1409,19 +1442,21 @@ function kififyWithPageData(tab, d) {
     tab.engaged = true;
     if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {
       if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
-        log("[initTab]", tab.id, "restricted")();
+        log('[initTab]', tab.id, 'restricted')();
       } else if (ruleSet.rules.shown && d.shown) {
-        log("[initTab]", tab.id, "shown before")();
+        log('[initTab]', tab.id, 'shown before')();
       } else {
+        var focused = api.tabs.isFocused(tab);
         if (ruleSet.rules.scroll) {
-          api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll, {queue: 1});
+          api.tabs.emit(tab, 'scroll_rule', ruleSet.rules.scroll, {queue: 1});
         }
-        tab.autoShowSec = (ruleSet.rules.focus || [])[0];
-        if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
-          scheduleAutoShow(tab);
+        if ((ruleSet.rules.focus || [])[0] != null) {
+          tab.buttonSec = ruleSet.rules.focus[0];
+          if (focused) scheduleAutoEngage(tab, 'button');
         }
         if (d.keepers.length) {
-          api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps}, {queue: 1});
+          tab.keepersSec = 20;
+          if (focused) scheduleAutoEngage(tab, 'keepers');
         }
       }
     }
@@ -1487,11 +1522,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
   pt.includesOldest = threads.length < THREAD_BATCH_SIZE;
 
   // invoking callbacks
-  var callbacks = threadListCallbacks[uri];
-  while (callbacks && callbacks.length) {
-    callbacks.shift()(pt, nUri);
-  }
-  delete threadListCallbacks[uri];
+  invokeThreadListCallbacks(uri, pt, nUri);
 
   // sending new page threads and count to any tabs on this page with pane open to page threads
   forEachTabAtUriAndLocator(uri, nUri, '/messages', function(tab) {
@@ -1627,22 +1658,18 @@ api.icon.on.click.add(function (tab) {
 
 api.tabs.on.focus.add(function(tab) {
   log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab)();
-
   for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
-
   delete tab.focusCallbacks;
   kifify(tab);
-  if (tab.autoShowSec != null && !tab.autoShowTimer) {
-    scheduleAutoShow(tab);
-  }
+  scheduleAutoEngage(tab, 'button');
+  scheduleAutoEngage(tab, 'keepers');
 });
 
 api.tabs.on.blur.add(function(tab) {
   log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab)();
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
+  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
 });
 
 api.tabs.on.loading.add(function(tab) {
@@ -1678,8 +1705,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   if (tabsTagging.length) {
     tabsTagging = tabsTagging.filter(idIsNot(tab.id));
   }
-  api.timers.clearTimeout(tab.autoShowTimer);
-  delete tab.autoShowTimer;
+  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
   delete tab.nUri;
   delete tab.count;
   delete tab.engaged;
@@ -1781,15 +1807,25 @@ function qualify(key) {
 
 // ===== Helper functions
 
-function scheduleAutoShow(tab) {
-  log("[scheduleAutoShow] scheduling tab:", tab.id)();
+function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
-  tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
-    delete tab.autoShowSec;
-    delete tab.autoShowTimer;
-    log('[autoShow]', tab.id)();
-    api.tabs.emit(tab, 'auto_show', null, {queue: 1});
-  }, tab.autoShowSec * 1000);
+  var secName = type + 'Sec', timerName = type + 'Timer';
+  if (tab[secName] == null || tab[timerName]) return;
+  log('[scheduleAutoEngage]', tab.id, type)();
+  tab[timerName] = api.timers.setTimeout(function autoEngage() {
+    delete tab[secName];
+    delete tab[timerName];
+    log('[autoEngage]', tab.id, type)();
+    api.tabs.emit(tab, 'auto_engage', type, {queue: 1});
+  }, tab[secName] * 1000);
+}
+
+function clearAutoEngageTimer(tab, type) {
+  var secName = type + 'Sec', timerName = type + 'Timer';
+  if (tab[timerName]) {
+    api.timers.clearTimeout(tab[timerName]);
+    delete tab[timerName];
+  }
 }
 
 function compilePatterns(arr) {

@@ -7,9 +7,12 @@ import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{HttpClientImpl, HttpClient}
+import com.keepit.common.net.{CallTimeouts, HttpClientImpl, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent._
+
+import akka.actor.Scheduler
+
 
 import scala.concurrent.{Future, Promise}
 
@@ -57,12 +60,14 @@ class ABookServiceClientImpl @Inject() (
     if (!htpClient.isInstanceOf[HttpClientImpl]) htpClient
     else htpClient.asInstanceOf[HttpClientImpl].copy(silentFail = true) // todo: revisit default behavior
 
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxJsonParseTime = Some(30000))
+
   def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
-    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), timeout = 30000).map { r => r.json }
+    call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), callTimeouts = longTimeout).map { r => r.json }
   }
 
   def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
-    call(ABook.internal.importContacts(userId, provider, accessToken), timeout = 30000).map { r => r.json }
+    call(ABook.internal.importContacts(userId, provider, accessToken), callTimeouts = longTimeout).map { r => r.json }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
@@ -104,13 +109,13 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = {
-    call(ABook.internal.getContacts(userId, maxRows)).map { r =>
+    call(ABook.internal.getContacts(userId, maxRows), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[Contact]](r.json).get
     }
   }
 
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = {
-    call(ABook.internal.getEContacts(userId, maxRows)).map { r =>
+    call(ABook.internal.getEContacts(userId, maxRows), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[EContact]](r.json).get
     }
   }
@@ -128,13 +133,13 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
-    call(ABook.internal.getEContactByEmail(userId, email)).map { r =>
+    call(ABook.internal.getEContactByEmail(userId, email), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Option[EContact]](r.json).get
     }
   }
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = {
-    call(ABook.internal.getABookRawInfos(userId)).map { r =>
+    call(ABook.internal.getABookRawInfos(userId), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[ABookRawInfo]](r.json).get
     }
   }
@@ -171,9 +176,9 @@ class ABookServiceClientImpl @Inject() (
   }
 }
 
-class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ABookServiceClient {
+class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
 
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier))
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 

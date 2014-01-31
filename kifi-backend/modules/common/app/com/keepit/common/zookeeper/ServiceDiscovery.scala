@@ -20,8 +20,6 @@ import play.api.libs.json._
 import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
-import com.keepit.common.akka.SlowRunningExecutionContext
-import com.keepit.common.time.Clock
 
 trait ServiceDiscovery {
   def serviceCluster(serviceType: ServiceType): ServiceCluster
@@ -47,8 +45,7 @@ class ServiceDiscoveryImpl(
     scheduler: Scheduler,
     airbrake: Provider[AirbrakeNotifier],
     val isCanary: Boolean = false,
-    servicesToListenOn: Seq[ServiceType] =
-        ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.C_SHOEBOX :: Nil)
+    servicesToListenOn: Seq[ServiceType])
   extends ServiceDiscovery with Logging {
 
   private var lastStatusChangeTime = System.currentTimeMillis
@@ -66,8 +63,11 @@ class ServiceDiscoveryImpl(
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
+    val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler)
+    clustersToInit(services.currentService) = myCluster
+    if (servicesToListenOn.contains(services.currentService)) throw new IllegalArgumentException(s"current service is included in servicesToListenOn: $servicesToListenOn")
     servicesToListenOn foreach {service =>
-      val cluster = new ServiceCluster(service, airbrake, if (services.currentService==ServiceType.SHOEBOX) Some(scheduler) else None)
+      val cluster = new ServiceCluster(service, airbrake, scheduler)
       clustersToInit(service) = cluster
     }
     log.info(s"registered clusters: $clustersToInit")
@@ -110,7 +110,7 @@ class ServiceDiscoveryImpl(
   private def watchServices(): Unit = clusters.values foreach watchService
 
   private def watchService(cluster: ServiceCluster): Unit = zkClient.session{ zk =>
-    zk.createPath(cluster.servicePath)
+    zk.create(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
       cluster.update(zk, children)
@@ -141,7 +141,7 @@ class ServiceDiscoveryImpl(
       myInstance foreach { instance =>
       try {
           log.warn(s"deleting instance $instance from zookeeper before re-registering itself")
-          zk.deleteNode(instance.node)
+          zk.delete(instance.node)
         } catch {
           case e: Throwable =>
             log.info("trying to delete node on re-registration, safe to ignore", e)
@@ -150,7 +150,7 @@ class ServiceDiscoveryImpl(
         }
       }
 
-      val myNode = zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
+      val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceType.name + "_", RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
       myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
@@ -161,7 +161,7 @@ class ServiceDiscoveryImpl(
   override def unRegister(): Unit = registrationLock.synchronized {
     registered = false
     unregistered = true
-    myInstance foreach {instance => zkClient.session{ zk => zk.deleteNode(instance.node) } }
+    myInstance foreach {instance => zkClient.session{ zk => zk.delete(instance.node) } }
     myInstance = None
   }
 
@@ -172,7 +172,7 @@ class ServiceDiscoveryImpl(
         thisRemoteService.status = newStatus
         instance.setRemoteService(thisRemoteService)
         lastStatusChangeTime = System.currentTimeMillis
-        zk.set(instance.node, RemoteService.toJson(instance.remoteService))
+        zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
       }
     }
   }
