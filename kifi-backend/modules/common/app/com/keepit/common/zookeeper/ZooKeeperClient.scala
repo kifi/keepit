@@ -300,7 +300,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     def deletedData {
       onDataChanged(None)
       if (zk.exists(node, dataGetter) != null) {
-        // Node was re-created by the time we called zk.exist
+        // Node was re-created by the time we called zk.exists
         updateData
       }
     }
@@ -361,8 +361,10 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             updateChildren(children)
             doWatchChildren(children)
           case EventType.NodeDeleted =>
-            updateChildren(List())
-            zk.exists(node, new ParentWatcher())
+            // the node may be re-created by the time we called zk.exists
+            val children = if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
+            updateChildren(children)
+            doWatchChildren(children)
           case _ => // session event, we intentionally lose this watch
         }
       }
@@ -374,7 +376,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           zk.getData(child.path, new ChildWatcher(child), new Stat())
           watchedChildren += child
         } catch {
-          case e:KeeperException =>
+          case e: KeeperException =>
             log.warn("Failed to place watch on a child node!")
         }
       }
@@ -382,13 +384,15 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
 
     //check immediately
     registerWatch(RegisteredChildWatch(node, updateChildren))
-    try{
-      val children = getChildren(node, new ParentWatcher())
-      updateChildren(children)
-      doWatchChildren(children)
+    val children = try{
+      getChildren(node, new ParentWatcher())
     } catch {
-      case e :KeeperException.NoNodeException => zk.exists(node, new ParentWatcher())
+      case e: KeeperException.NoNodeException =>
+        // the node may be re-created by the time we called zk.exists
+        if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
     }
+    updateChildren(children)
+    doWatchChildren(children)
   }
 
   /**
