@@ -97,7 +97,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
-  def isUnscrapableP(url: String, destinationUrl: Option[String])(implicit timeout:Int = 10000):Future[Boolean]
+  def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
   def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Bookmark]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Bookmark]]
