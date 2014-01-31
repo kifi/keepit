@@ -33,6 +33,7 @@ import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.{SSLException, SSLHandshakeException}
 import HttpStatus._
 import java.util.zip.ZipException
+import java.security.cert.CertPathBuilderException
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -126,7 +127,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
 
   val httpClient = httpClientBuilder.build()
 
-  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
+  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // Play reference can be removed
   val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   case class FetchInfo(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
@@ -158,9 +159,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     def run():Unit = {
       try {
         log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
-        if (q.isEmpty) {
-          // log.info(s"[enforcer] queue is empty")
-        } else {
+        if (!q.isEmpty) {
           val iter = q.iterator
           while (iter.hasNext) {
             val curr = System.currentTimeMillis
@@ -222,7 +221,8 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       thread
     }
   })
-  scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
+  val ENFORCER_FREQ: Int = sys.props.get("scraper.fetcher.enforcer.freq") map (_.toInt) getOrElse (5)
+  scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
 
   private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
   private object HttpFetchHandlerResult {
@@ -264,6 +264,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     } catch {
         case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
                                else fetchHandler(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+        case e:CertPathBuilderException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)

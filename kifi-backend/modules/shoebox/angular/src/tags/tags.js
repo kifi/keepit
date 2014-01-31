@@ -9,7 +9,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 			KEY_DOWN = 40,
 			KEY_ENTER = 13,
 			KEY_ESC = 27,
-			KEY_TAB = 9,
+			//KEY_TAB = 9,
 			KEY_DEL = 46,
 			KEY_F2 = 113;
 
@@ -18,11 +18,21 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 			templateUrl: 'tags/tags.tpl.html',
 			scope: {},
 			link: function (scope, element /*, attrs*/ ) {
-				scope.tags = [];
+				scope.tags = tagService.list;
 
 				scope.create = function (name) {
 					if (name) {
-						alert('create:' + name);
+						return tagService.create(name)
+							.then(function (tag) {
+								tag.isNew = true;
+								scope.clearFilter();
+
+								$timeout(function () {
+									delete tag.isNew;
+								}, 3000);
+
+								return tag;
+							});
 					}
 				};
 
@@ -33,8 +43,8 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 				};
 
 				scope.remove = function (tag) {
-					if (tag) {
-						alert('remove:' + tag.name);
+					if (tag && tag.id) {
+						return tagService.remove(tag.id);
 					}
 				};
 
@@ -90,6 +100,13 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 					}
 				};
 
+				scope.select = function () {
+					if (scope.highlight) {
+						return scope.viewTag(scope.highlight);
+					}
+					return scope.create(getFilterValue());
+				};
+
 				scope.onKeydown = function (e) {
 					switch (e.keyCode) {
 					case KEY_UP:
@@ -99,7 +116,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 						scope.highlightNext();
 						break;
 					case KEY_ENTER:
-						scope.viewTag(scope.highlight);
+						scope.select();
 						break;
 					case KEY_ESC:
 						scope.dehighlight();
@@ -246,9 +263,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 				scope.$watch('filter.name', scope.refreshScroll);
 				scope.$watch('tags', scope.refreshScroll);
 
-				tagService.getTags().then(function (tags) {
-					scope.tags = tags;
-				});
+				tagService.fetchAll();
 			}
 		};
 	}
