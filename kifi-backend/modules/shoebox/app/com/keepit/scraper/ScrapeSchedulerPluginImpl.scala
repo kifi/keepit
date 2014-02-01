@@ -19,6 +19,7 @@ import com.keepit.common.mail.{ElectronicMailCategory, EmailAddresses, Electroni
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.db.slick.Database.Slave
+import org.joda.time.DateTime
 
 case object ScheduleScrape
 
@@ -164,14 +165,14 @@ class ScrapeSchedulerPluginImpl @Inject() (
     super.onStop()
   }
 
-  def scheduleScrape(uri: NormalizedURI, delayMillis: Int)(implicit session: RWSession): Unit = {
+  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
     require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
     val uriId = uri.id.get
     if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
       val info = scrapeInfoRepo.getByUriId(uriId)
       val toSave = info match {
         case Some(s) => s.state match {
-          case ScrapeInfoStates.ACTIVE   => s.withNextScrape(currentDateTime.plus(delayMillis))
+          case ScrapeInfoStates.ACTIVE   => s.withNextScrape(date)
           case ScrapeInfoStates.PENDING | ScrapeInfoStates.ASSIGNED => s // no change
           case ScrapeInfoStates.INACTIVE => {
             val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
@@ -180,10 +181,10 @@ class ScrapeSchedulerPluginImpl @Inject() (
               subject = s"ScrapeScheduler.scheduleScrape($uri)",
               htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
               category = NotificationCategory.System.ADMIN))
-            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime) // dangerous; revisit
+            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // dangerous; revisit
           }
         }
-        case None => ScrapeInfo(uriId = uriId)
+        case None => ScrapeInfo(uriId = uriId, nextScrape = date)
       }
       val saved = scrapeInfoRepo.save(toSave)
       // todo: It may be nice to force trigger a scrape directly

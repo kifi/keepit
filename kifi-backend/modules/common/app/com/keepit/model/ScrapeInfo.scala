@@ -34,16 +34,13 @@ case class ScrapeInfo(
     this.copy(state = state)
   }
 
-  def withStateAndNextScrape(state: State[ScrapeInfo], nextScrape: Option[DateTime] = None) = {
+  def withStateAndNextScrape(state: State[ScrapeInfo]) = {
     val (curState, curNS) = (this.state, this.nextScrape)
-    val res = nextScrape match {
-      case Some(dateTime) => copy(state = state, nextScrape = dateTime)
-      case None => state match { // TODO: revisit
-        case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
-        case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
-        case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
-        case ScrapeInfoStates.ASSIGNED => copy(state = state, nextScrape = currentDateTime)
-      }
+    val res = state match { // TODO: revisit
+      case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
+      case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
+      case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
+      case ScrapeInfoStates.ASSIGNED => copy(state = state, nextScrape = currentDateTime)
     }
     log.debug(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
     res

@@ -15,6 +15,7 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.zookeeper.LongCentralConfigKey
+import com.keepit.commanders.BookmarkInterner
 
 
 trait DataIntegrityPlugin extends SchedulerPlugin
@@ -54,6 +55,7 @@ class OrphanCleaner @Inject() (
     renormalizedURLRepo: RenormalizedURLRepo,
     nuriRepo: NormalizedURIRepo,
     bookmarkRepo: BookmarkRepo,
+    bookmarkInterner: BookmarkInterner,
     centralConfig: CentralConfig,
     airbrake: AirbrakeNotifier
 ) extends Logging {
@@ -183,7 +185,7 @@ class OrphanCleaner @Inject() (
                 if (u.state == NormalizedURIStates.ACTIVE || u.state == NormalizedURIStates.INACTIVE) {
                   numUrisChangedToScrapeWanted += 1
                   if (!readOnly) {
-                    nuriRepo.save(u.withState(NormalizedURIStates.SCRAPE_WANTED)) // this will fix ScrapeInfo as well
+                    bookmarkInterner.internUri(u.withState(NormalizedURIStates.SCRAPE_WANTED))
                   }
                 }
               case BookmarkStates.INACTIVE =>
