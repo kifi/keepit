@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
@@ -120,14 +120,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
             scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
           case _ => // do nothing
         }
-      case SCRAPE_WANTED => // ensure that ScrapeInfo has an ACTIVE record for it.
-        scrapeRepo.getByUriId(saved.id.get) match {
-          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
-            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.ACTIVE))
-          case Some(scrapeInfo) => // do nothing
-          case None =>
-            scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
-        }
+      case SCRAPE_WANTED => // do nothing
       case _ =>
         throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
     }

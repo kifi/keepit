@@ -30,7 +30,10 @@ case class ProdHttpClientModule() extends HttpClientModule {
   def httpClientProvider(airbrake: Provider[AirbrakeNotifier],
         accessLog: AccessLog, serviceDiscovery: ServiceDiscovery,
         fastJsonParser: FastJsonParser, midFlightRequests: MidFlightRequests,
-        myInstanceInfo: MyAmazonInstanceInfo): HttpClient =
+        myInstanceInfo: MyAmazonInstanceInfo): HttpClient = {
+    val ecu = myInstanceInfo.info.instantTypeInfo.ecu
+    val callTimeouts = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(4000 / ecu), maxJsonParseTime = Some(2000 / ecu))
     new HttpClientImpl(airbrake = airbrake, accessLog = accessLog, serviceDiscovery = serviceDiscovery,
-      fastJsonParser = fastJsonParser, midFlightRequests = midFlightRequests, myInstanceInfo = myInstanceInfo)
+      fastJsonParser = fastJsonParser, midFlightRequests = midFlightRequests, callTimeouts = callTimeouts)
+  }
 }

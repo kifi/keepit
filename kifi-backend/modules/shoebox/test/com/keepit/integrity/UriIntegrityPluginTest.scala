@@ -22,7 +22,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val scrapeInfoRepo = inject[ScrapeInfoRepo]
         val bmRepo = inject[BookmarkRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
@@ -33,9 +32,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
             val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
             val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
-
-            scrapeInfoRepo.save(ScrapeInfo(uriId = nuri0.id.get))
-            scrapeInfoRepo.save(ScrapeInfo(uriId = nuri2.id.get))
 
             val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
@@ -67,9 +63,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           urlRepo.getByNormUri(uris(2).id.get).size === 2
           urlRepo.getByNormUri(uris(3).id.get).size === 0
 
-          scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.ACTIVE
-          scrapeInfoRepo.count === 2
-
           bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(0).id.get
 
         }
@@ -84,11 +77,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
           urlRepo.getByNormUri(uris(0).id.get) === Nil
-
-          scrapeInfoRepo.count === 3
-          scrapeInfoRepo.getByUriId(uris(0).id.get).head.state === ScrapeInfoStates.INACTIVE
-          scrapeInfoRepo.getByUriId(uris(1).id.get).head.state === ScrapeInfoStates.ACTIVE
-
 
           bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(1).id.get
           bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
@@ -108,9 +96,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
 
-          scrapeInfoRepo.count === 4
-          scrapeInfoRepo.getByUriId(uris(3).id.get).head.state === ScrapeInfoStates.ACTIVE
-
           bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
           bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
 
@@ -120,13 +105,12 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
       }
     }
 
-    "hanlde collections correctly when migrating bookmarks" in {
+    "handle collections correctly when migrating bookmarks" in {
 
       running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val scrapeInfoRepo = inject[ScrapeInfoRepo]
         val collectionRepo = inject[CollectionRepo]
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
         val bmRepo = inject[BookmarkRepo]

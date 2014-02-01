@@ -262,7 +262,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 
-    "delete documents with inactive, active, unscrapable, oe scrape_wanted state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "delete documents with inactive, active, unscrapable, scrape_wanted or scrape_later state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
       indexer.update()
       indexer.numDocs === 3
 

@@ -36,8 +36,7 @@ trait ClientResponse {
 
 class ClientResponseException(message: String, cause: Throwable) extends Exception(message, cause)
 
-
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, trackTimeThresholdFactor: Int) extends ClientResponse with Logging {
+class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, maxJsonParseTime: Int) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
@@ -80,22 +79,8 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
     val url = request.httpUri.url
     //todo: this list should be taken from some config or some smarter mechanizem then that
     //trackTimeThresholdFactor is basically a proxy to the machine speed (ECU). more ECU, faster the machine should be
-    val trackTimeThreshold = if(
-      url.contains("/internal/shoebox/database/getUriIdsInCollection")) {
-      500000 / trackTimeThresholdFactor //ms
-    } else if(
-        url.contains("/getEContacts") ||
-        url.contains("/getContacts") ||
-        url.contains("/internal/shoebox/database/getIndexable") ||
-        url.contains("/internal/eliza/getThreadContentForIndexing") ||
-        url.contains("graph.facebook.com/") ||
-        url.contains("api.linkedin.com/")) {
-      10000 / trackTimeThresholdFactor //ms
-    } else {
-      1000 / trackTimeThresholdFactor //ms
-    }
     try {
-      val (json, time, tracking) = jsonParser.parse(bytes, trackTimeThreshold)
+      val (json, time, tracking) = jsonParser.parse(bytes, maxJsonParseTime)
       _parsingTime = Some(time)
       tracking foreach { info =>
         val exception = request.tracer.withCause(SlowJsonParsingException(request, this, time, info))

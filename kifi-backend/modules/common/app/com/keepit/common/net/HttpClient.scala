@@ -23,7 +23,6 @@ import scala.xml._
 import org.apache.commons.lang3.RandomStringUtils
 import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
-import com.keepit.common.amazon.MyAmazonInstanceInfo
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
@@ -31,8 +30,8 @@ case class NonOKResponseException(url: HttpUri, response: ClientResponse, reques
 }
 
 
-case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientResponse)
-  extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}]"){
+case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientResponse, duration: Int)
+  extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}] total-time:${duration}ms is more then 20sec?"){
   override def toString(): String = getMessage
 }
 
@@ -54,6 +53,17 @@ trait HttpUri {
 }
 
 case class DirectUrl(val url: String) extends HttpUri
+
+case class CallTimeouts(responseTimeout: Option[Int] = None, maxWaitTime: Option[Int] = None, maxJsonParseTime: Option[Int] = None) {
+  def overrideWith(callTimeouts: CallTimeouts): CallTimeouts = CallTimeouts(
+    responseTimeout = callTimeouts.responseTimeout.orElse(responseTimeout),
+    maxWaitTime = callTimeouts.maxWaitTime.orElse(maxWaitTime),
+    maxJsonParseTime = callTimeouts.maxJsonParseTime.orElse(maxJsonParseTime))
+}
+
+object CallTimeouts {
+  val NoTimeouts = CallTimeouts(None, None, None)
+}
 
 trait HttpClient {
 
@@ -85,25 +95,22 @@ trait HttpClient {
   def delete(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
   def deleteFuture(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse]
 
-  def withTimeout(timeout: Int): HttpClient
+  def withTimeout(callTimeouts: CallTimeouts): HttpClient
 
   def withHeaders(hdrs: (String, String)*): HttpClient
 }
 
 case class HttpClientImpl(
-    timeout: Int = 10000,
+    callTimeouts: CallTimeouts,
     headers: List[(String, String)] = List(),
     airbrake: Provider[AirbrakeNotifier],
     fastJsonParser: FastJsonParser,
     accessLog: AccessLog,
     serviceDiscovery: ServiceDiscovery,
     midFlightRequests: MidFlightRequests,
-    myInstanceInfo: MyAmazonInstanceInfo,
     silentFail: Boolean = false) extends HttpClient with Logging {
 
   private val validResponseClass = 2
-  private lazy val trackTimeThresholdFactor = myInstanceInfo.info.instantTypeInfo.ecu
-  private lazy val longWaitTimeThreshold = 3000 / myInstanceInfo.info.instantTypeInfo.ecu //means that for c1.medium with 2 cores, 5 ecu its 600ms
 
   override val defaultFailureHandler: FailureHandler = { req =>
     {
@@ -164,37 +171,46 @@ case class HttpClientImpl(
   def deleteFuture(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
     report(req(url) tapWith {_.delete()}, onFailure)
 
-  private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, TimeUnit.MILLISECONDS))
-  private def req(url: HttpUri): Request = new Request(WS.url(url.url).withRequestTimeout(timeout), url, headers, accessLog, serviceDiscovery)
+  private def await[A](future: Future[A]): A = Await.result(future, Duration(callTimeouts.responseTimeout.get, TimeUnit.MILLISECONDS))
+  private def req(url: HttpUri): Request = new Request(WS.url(url.url).withRequestTimeout(callTimeouts.responseTimeout.get), url, headers, accessLog, serviceDiscovery)
 
   private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
-    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, trackTimeThresholdFactor)
+    val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, callTimeouts.maxJsonParseTime.get)
     val status = response.status
     if (status / 100 != validResponseClass) {
-      val exception = if (status == Status.SERVICE_UNAVAILABLE) {
+      if (status == Status.SERVICE_UNAVAILABLE) {
         request.httpUri match {
           case d: DirectUrl =>
             val msg = s"external service ${d.summary} is not available"
             log.error(msg)
-            new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+            Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
           case s: ServiceUri =>
-            s.serviceInstance.reportServiceUnavailable()
-            val msg = s"service ${s.serviceInstance} is not available, reported ${s.serviceInstance.reportedSentServiceUnavailableCount} times"
+            val count = s.serviceInstance.reportServiceUnavailable()
+            val msg = s"service ${s.serviceInstance} is not available, reported $count times"
             log.error(msg)
-            val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
-            airbrake.get.notify(err)
-            new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse)
+            if (count > 5) {
+              // if remote service is reporting shutdown, don’t immediately throw an exception.
+              // duration is expected to be more then 20sec!
+              val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
+              airbrake.get.notify(err)
+              Some(new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse, request.timer.done().duration))
+            } else {
+              None
+            }
         }
       } else {
-        new NonOKResponseException(request.httpUri, clientResponse, requestBody)
+        Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
+      } map {exception =>
+        if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
+        else throw exception
       }
-      if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
-      else throw exception
     }
     clientResponse
   }
 
-  def withTimeout(timeout: Int): HttpClient = copy(timeout = timeout)
+  def withTimeout(callTimeouts: CallTimeouts): HttpClient = {
+    copy(callTimeouts = this.callTimeouts.overrideWith(callTimeouts))
+  }
 
   private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
     val (request, responseFuture) = reqRes
@@ -226,11 +242,7 @@ case class HttpClientImpl(
         dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
-      val url = request.httpUri.url
-      if (waitTime > longWaitTimeThreshold && //could take in account remote service type
-          //some paths are not optimized for large data now but they're not a priority and we should not alert on them
-          //todo(eishay): make it configurable
-          !url.contains("/internal/shoebox/database/getUriIdsInCollection")) {
+      if (waitTime > callTimeouts.maxWaitTime.get) {
         val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(
           AirbrakeError.outgoing(

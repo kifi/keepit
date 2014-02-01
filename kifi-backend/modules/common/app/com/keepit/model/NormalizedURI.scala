@@ -44,6 +44,7 @@ case class NormalizedURI (
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
   def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen)))
+  def toShortString = s"NormalizedUri($id,$seq,$state,${url.take(50)})"
 }
 
 object NormalizedURI {
@@ -118,8 +119,8 @@ object NormalizedURIStates extends States[NormalizedURI] {
       (SCRAPED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
       (SCRAPE_FAILED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
       (UNSCRAPABLE -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
-      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)))
-      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED))
+      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)),
+      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),
