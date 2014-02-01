@@ -59,69 +59,68 @@ class ServiceClusterTest extends Specification {
     "find node" in {
       val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
       val zk = new FakeZooKeeperClient()
-      val basePath = "/fortytwo/services/TEST_MODE"
+      val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
-        zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
-        zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService2))
+        zk.setData(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
+        zk.setData(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService2))
       }
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000001")) === true
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000002")) === true
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000003")) === false
+      zk.nodes.exists(n => n == Node(basePath, "node_00000001")) === true
+      zk.nodes.exists(n => n == Node(basePath, "node_00000002")) === true
+      zk.nodes.exists(n => n == Node(basePath, "node_00000003")) === false
 
       zk.session{ zk =>
-        cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Nil)
-        cluster.update(zk, Node(s"$basePath/node_00000001") :: Node(s"$basePath/node_00000002") :: Nil) must throwA[Exception]
+        cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Nil)
       }
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000001"), false).setRemoteService(remoteService1)) === true
-      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000002"), false).setRemoteService(remoteService2)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000001"), false).setRemoteService(remoteService1)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false).setRemoteService(remoteService2)) === true
     }
 
     "dedup nodes" in {
       val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
       val zk = new FakeZooKeeperClient()
-      val basePath = "/fortytwo/services/TEST_MODE"
+      val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
-        zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
-        zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService1))//me a dup!
-        zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService2))
+        zk.setData(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
+        zk.setData(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService1))//me a dup!
+        zk.setData(Node(basePath, "node_00000003"), RemoteService.toJson(remoteService2))
       }
       zk.registeredCount === 3
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 3
 
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000001")) === true
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000002")) === true
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000003")) === true
-      zk.nodes.exists(n => n == Node(s"$basePath/node_00000004")) === false
+      zk.nodes.exists(n => n == Node(basePath, "node_00000001")) === true
+      zk.nodes.exists(n => n == Node(basePath, "node_00000002")) === true
+      zk.nodes.exists(n => n == Node(basePath, "node_00000003")) === true
+      zk.nodes.exists(n => n == Node(basePath, "node_00000004")) === false
 
       zk.session{ zk =>
-        cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
+        cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Node(basePath, "node_00000003") :: Nil)
       }
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000002"), false).setRemoteService(remoteService1)) === true
-      cluster.registered(new ServiceInstance(Node(s"$basePath/node_00000003"), false).setRemoteService(remoteService2)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false).setRemoteService(remoteService1)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000003"), false).setRemoteService(remoteService2)) === true
     }
 
     "RR router" in {
       val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
       val zk = new FakeZooKeeperClient()
-      val basePath = "/fortytwo/services/TEST_MODE"
+      val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
-        zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
-        zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService2))
-        zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService3))
-        cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
+        zk.setData(Node(basePath, "node_00000001"), RemoteService.toJson(remoteService1))
+        zk.setData(Node(basePath, "node_00000002"), RemoteService.toJson(remoteService2))
+        zk.setData(Node(basePath, "node_00000003"), RemoteService.toJson(remoteService3))
+        cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Node(basePath, "node_00000003") :: Nil)
       }
       val service1 = cluster.nextService.get
       val service2 = cluster.nextService.get
@@ -130,7 +129,7 @@ class ServiceClusterTest extends Specification {
       val service5 = cluster.nextService.get
       val service6 = cluster.nextService.get
       val service7 = cluster.nextService.get
-      Set(service1.node.name, service2.node.name, service3.node.name) === Set("/fortytwo/services/TEST_MODE/node_00000001", "/fortytwo/services/TEST_MODE/node_00000002", "/fortytwo/services/TEST_MODE/node_00000003")
+      Set(service1.node.path, service2.node.path, service3.node.path) === Set("/fortytwo/services/TEST_MODE/node_00000001", "/fortytwo/services/TEST_MODE/node_00000002", "/fortytwo/services/TEST_MODE/node_00000003")
       service1 === service4
       service2 === service5
       service3 === service6

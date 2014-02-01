@@ -4,7 +4,6 @@ import org.joda.time.DateTime
 import com.keepit.model.HttpProxy
 import org.apache.http.protocol.{BasicHttpContext, HttpContext}
 import org.apache.http._
-import com.keepit.common.net.URI
 import com.keepit.common.logging.Logging
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{PlainConnectionSocketFactory, ConnectionSocketFactory}
@@ -23,47 +22,26 @@ import com.keepit.common.time._
 import com.keepit.common.performance.{timing, timingWithResult}
 import java.util.concurrent.{ThreadFactory, TimeUnit, Executors, ConcurrentLinkedQueue}
 import scala.ref.WeakReference
-import play.api.{Logger, Play}
+import play.api.Play
 import Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
-import java.net.{SocketException, NoRouteToHostException, UnknownHostException, SocketTimeoutException}
+import java.net._
 import org.apache.http.conn.{HttpHostConnectException, ConnectTimeoutException}
 import org.apache.http.client.ClientProtocolException
 import javax.net.ssl.{SSLException, SSLHandshakeException}
 import HttpStatus._
 import java.util.zip.ZipException
+import java.security.cert.CertPathBuilderException
+import sun.security.validator.ValidatorException
+import com.keepit.common.plugin.SchedulingProperties
 
-trait HttpFetcher {
+trait HttpFetcher { // todo(ray): move to scraper
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
-case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
-  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
-  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
-}
-
-case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
-  def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
-  def isAbsolute = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
-  def isLocatedAt(url: String) = (currentLocation == url)
-}
-
-object HttpRedirect {
-  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.absoluteUrl(currentLocation, newDestination).getOrElse(newDestination))
-
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
-  implicit val format = (
-    (__ \ 'statusCode).format[Int] and
-    (__ \ 'currentLocation).format[String] and
-    (__ \ 'newDestination).format[String]
-  )(HttpRedirect.apply _, unlift(HttpRedirect.unapply))
-}
-
-
-class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging with ScraperUtils {
+class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties:SchedulingProperties) extends HttpFetcher with Logging with ScraperUtils {
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
@@ -126,7 +104,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
 
   val httpClient = httpClientBuilder.build()
 
-  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (5 * 1000 * 60) // Play reference can be removed
+  val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // Play reference can be removed
   val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
 
   case class FetchInfo(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
@@ -158,9 +136,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     def run():Unit = {
       try {
         log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
-        if (q.isEmpty) {
-          // log.info(s"[enforcer] queue is empty")
-        } else {
+        if (!q.isEmpty) {
           val iter = q.iterator
           while (iter.hasNext) {
             val curr = System.currentTimeMillis
@@ -222,7 +198,10 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       thread
     }
   })
-  scheduler.scheduleWithFixedDelay(enforcer, 30, 10, TimeUnit.SECONDS)
+  val ENFORCER_FREQ: Int = sys.props.get("scraper.fetcher.enforcer.freq") map (_.toInt) getOrElse (5)
+  if (schedulingProperties.enabled) {
+    scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
+  }
 
   private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
   private object HttpFetchHandlerResult {
@@ -264,6 +243,9 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     } catch {
         case e:ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
                                else fetchHandler(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+        case e:ConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:ValidatorException => logAndSet(fetchInfo, None)(e, "fetch", url)
+        case e:CertPathBuilderException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
         case e:NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)

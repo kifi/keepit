@@ -73,14 +73,17 @@ nav-item()
   white-space: nowrap
 
   &:hover
-    background-color: #e9ecf2
+    .kf-nav-link
+      background-color: #e9ecf2
 
   &.active
-    background-color: #e3e6ee
+    .kf-nav-link
+      background-color: #e3e6ee
 
   &.highlight
   &.drop-hover
-    background-color: #6fa6ef
+    .kf-nav-link
+      background-color: #6fa6ef
 
     .kf-tag-caption
     .kf-tag-name
@@ -91,12 +94,14 @@ nav-item()
       border-color: white
       background-color: white
 
+  &.new
+    .kf-nav-link
+      background-color: #f9edbe
+
   &.renaming
     background-color: white
 
-    a
-      cursor: text
-
+    .kf-nav-link
     .kf-tag-count
       display: none
 
@@ -184,6 +189,17 @@ nav-item()
   .dropdown-menu
     left: auto
     right: 0
+
+.kf-tag-rename.kf-tag-rename
+  width: 100%
+  padding: 0
+  padding-left: 62px
+  border: 0
+  margin: 0
+  font: inherit
+  line-height: 1.35
+  color: black
+  background-color: transparent
 
 .kf-tag-new
   background-color: #d4e4f9

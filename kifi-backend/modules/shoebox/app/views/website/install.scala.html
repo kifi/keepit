@@ -61,6 +61,20 @@
 <script src="/assets/js/install.js"></script>
 <script src="/assets/js/auth-footer.js"></script>
 <script type="text/javascript" src="/assets/js/track-ext.js"></script>
+<script type="text/javascript">
+var fb_param = {};
+fb_param.pixel_id = '6012675478096';
+fb_param.value = '0.00';
+fb_param.currency = 'USD';
+(function(){
+  var fpw = document.createElement('script');
+  fpw.async = true;
+  fpw.src = '//connect.facebook.net/en_US/fp.js';
+  var ref = document.getElementsByTagName('script')[0];
+  ref.parentNode.insertBefore(fpw, ref);
+})();
+</script>
+<noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/offsite_event.php?id=6012675478096&amp;value=0&amp;currency=USD" /></noscript>
 }
 
 @views.html.marketing.helper.page(title = "kifi • Install", headScripts = headScripts, styles = styles, content = content, scripts = scripts, dataTrack="install", isLoggedIn = false, headerType = "grey", footerType = "minimalist")
