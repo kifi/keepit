@@ -82,6 +82,7 @@ case class ScrapeInfo(
   def withNextScrape(nextScrape: DateTime) = copy(nextScrape = nextScrape)
 
   override def toString = s"[ScrapeInfo(id=$id, uriId=$uriId, worker=$workerId): state=$state, lastScrape=$lastScrape, nextScrape=$nextScrape, interval=$interval, failures=$failures, dstUrl=$destinationUrl]"
+  def toShortString = s"ScrapeInfo($id,$uriId,$workerId,$state,$nextScrape,${destinationUrl.take(50)})"
 }
 
 object ScrapeInfo {

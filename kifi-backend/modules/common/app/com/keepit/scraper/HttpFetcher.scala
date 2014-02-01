@@ -35,8 +35,9 @@ import HttpStatus._
 import java.util.zip.ZipException
 import java.security.cert.CertPathBuilderException
 import sun.security.validator.ValidatorException
+import com.keepit.common.plugin.SchedulingProperties
 
-trait HttpFetcher {
+trait HttpFetcher { // todo(ray): move to scraper
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
@@ -65,7 +66,7 @@ object HttpRedirect {
 }
 
 
-class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging with ScraperUtils {
+class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties:SchedulingProperties) extends HttpFetcher with Logging with ScraperUtils {
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
@@ -223,7 +224,9 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     }
   })
   val ENFORCER_FREQ: Int = sys.props.get("scraper.fetcher.enforcer.freq") map (_.toInt) getOrElse (5)
-  scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
+  if (schedulingProperties.enabled) {
+    scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
+  }
 
   private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
   private object HttpFetchHandlerResult {
