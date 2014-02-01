@@ -91,22 +91,30 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 					return scope.filter.type === type;
 				};
 
-				scope.getFilterUrl = function (type) {
-					var count;
+				function getFilterCount(type) {
 					switch (type) {
 					case 'm':
-						count = scope.results.myTotal;
-						break;
+						return scope.results.myTotal;
 					case 'f':
-						count = scope.results.friendsTotal;
-						break;
+						return scope.results.friendsTotal;
 					case 'a':
-						count = scope.results.othersTotal;
-						break;
+						return scope.results.othersTotal;
 					}
+				}
 
-					if (count) {
-						return '/find?q=' + (scope.results.query || '') + '&f=' + type + '&maxHits=30';
+				scope.isEnabled = function (type) {
+					if (scope.isSelected(type)) {
+						return false;
+					}
+					return !!getFilterCount(type);
+				};
+
+				scope.getFilterUrl = function (type) {
+					if (scope.isEnabled(type)) {
+						var count = getFilterCount(type);
+						if (count) {
+							return '/find?q=' + (scope.results.query || '') + '&f=' + type + '&maxHits=30';
+						}
 					}
 					return '';
 				};

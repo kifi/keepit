@@ -4628,38 +4628,6 @@ a.photo-dialog-submit:focus {
 	z-index: 10000;
 }
 
-.search-filters {
-	display: inline;
-}
-
-.search-filters::before {
-	content: ' | ';
-	color: #cccccc;
-	margin-left: 11px;
-	margin-right: 17px;
-}
-
-.search-filters li {
-	display: inline;
-	color: #cccccc;
-}
-
-.search-filters li::after {
-	content: '|';
-	color: #cccccc;
-	font-size: 0.9em;
-	margin: 0 5px;
-}
-
-.search-filters li:last-child::after {
-	display: none;
-	content: '';
-}
-
-.search-filter-selected {
-	color: #333333;
-}
-
 /* Email Verified Dialog */
 .email-verified-dialog .dialog-content {
   margin-top: -262px;

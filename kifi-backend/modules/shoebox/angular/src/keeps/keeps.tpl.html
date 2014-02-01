@@ -4,9 +4,9 @@
 		<span class="kf-check-all" ng-class="{ enabled: checkEnabled, checked: checked }" ng-click="toggleCheck()"></span>
 		<span class="kf-subtitle-text">{{getSubtitle()}}</span>
 		<span class="kf-search-filters" ng-if="subtitle.type === 'query' || true">
-			<a class="kf-search-filter" ng-class="{ selected: isSelected('m'), enabled: results.myTotal }" ng-href="{{getFilterUrl('m')}}">You ({{results.myTotal}})</a>
-			<a class="kf-search-filter" ng-class="{ selected: isSelected('f'), enabled: results.friendsTotal }" ng-href="{{getFilterUrl('f')}}">Friends ({{results.friendsTotal}})</a>
-			<a class="kf-search-filter" ng-class="{ selected: isSelected('a'), enabled: results.othersTotal }" ng-href="{{getFilterUrl('a')}}">All ({{results.othersTotal}})</a>
+			<a class="kf-search-filter" ng-class="{ selected: isSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">You ({{results.myTotal}})</a>
+			<a class="kf-search-filter" ng-class="{ selected: isSelected('f'), enabled: isEnabled('f') }" ng-href="{{getFilterUrl('f')}}">Friends ({{results.friendsTotal}})</a>
+			<a class="kf-search-filter" ng-class="{ selected: isSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All ({{results.othersTotal}})</a>
 		</span>
 	</div>
 </div>
