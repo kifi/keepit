@@ -4,7 +4,6 @@ import java.net.URL
 import com.keepit.common.time._
 import play.api.Play
 import org.joda.time.DateTime
-import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import play.api.Mode
@@ -29,7 +28,6 @@ sealed abstract class ServiceType(val name: String, val shortName: String, val i
 
   val minInstances  : Int = 1
   val warnInstances : Int = 2
-
 }
 
 object ServiceType {
@@ -57,11 +55,11 @@ object ServiceType {
     override val warnInstances = 0
   }
 
-  val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: Nil
-  val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
-  val all: List[ServiceType] = inProduction ::: notInProduction
-
-  val fromString = all.map(serviceType => (serviceType.name -> serviceType)).toMap
+  // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
+  lazy val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: Nil
+  lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
+  lazy val all: List[ServiceType] = inProduction ::: notInProduction
+  lazy val fromString: Map[String, ServiceType] = all.map(serviceType => (serviceType.name -> serviceType)).toMap
 
   implicit def format[T]: Format[ServiceType] = Format(
     __.read[String].map(fromString),

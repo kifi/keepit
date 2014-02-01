@@ -249,6 +249,7 @@ object Common {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")
     def version() = ServiceRoute(GET, "/internal/version")
     def threadDetails(name: Option[String], state: Option[String]) = ServiceRoute(GET, "/internal/common/threadDetails", Param("name", name), Param("state", state), Param("hideStack"))
+    def clearCache(prefix: Option[String]) = ServiceRoute(GET, "/internal/cache/clear", Param("prefix", prefix))
   }
 }
 

@@ -6,22 +6,24 @@ import scala.util.Random
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ServiceUnavailableException, ClientResponse, HttpClient, HttpUri}
+import com.keepit.common.net.{ClientResponse, HttpClient, HttpUri}
 import com.keepit.common.routes._
 import com.keepit.common.zookeeper.{ServiceCluster, ServiceInstance}
-import com.keepit.common.KestrelCombinator
+import com.keepit.common._
 import com.keepit.common.strings._
 
 import java.net.ConnectException
 
 import play.api.libs.json.{JsNull, JsValue}
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.routes.ServiceRoute
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
 
 object ServiceClient {
   val MaxUrlLength = 1000
+  val register = new HashSetRegister[ServiceClient]
 }
 
 class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: Int, path: String)
@@ -38,10 +40,10 @@ trait RoutingStrategy {
   def nextInstance:ServiceInstance
 }
 
-trait ServiceClient extends Logging {
+trait ServiceClient extends CommonServiceUtilities with Logging {
   protected def httpClient: HttpClient
 
-  val serviceCluster: ServiceCluster
+  def serviceCluster: ServiceCluster
   val airbrakeNotifier: AirbrakeNotifier
 
   val roundRobin = new RoutingStrategy {
@@ -151,4 +153,10 @@ trait ServiceClient extends Logging {
     val futures = Random.shuffle(urls(call.url)).take(teegree).map(callUrl(call, _, body)) //need to shuffle
     Future.firstCompletedOf(futures)
   }
+
+  ServiceClient.register.add(this)
+}
+
+trait CommonServiceUtilities { self: ServiceClient =>
+  def clearInMemoryCache(prefix: Option[String]): Future[Seq[ClientResponse]] = Future.sequence(broadcast(Common.internal.clearCache(prefix)))
 }

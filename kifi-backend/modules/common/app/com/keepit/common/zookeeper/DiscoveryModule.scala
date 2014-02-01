@@ -103,10 +103,6 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   def configStore(zk: ZooKeeperClient): ConfigStore = {
     new ZkConfigStore(zk)
   }
-
-  @Provides @Singleton
-  def serviceClientBinder: ScalaMultibinder[ServiceClient] = ScalaMultibinder.newSetBinder[ServiceClient](binder)
-
 }
 
 abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
@@ -150,7 +146,6 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   def configStore(): ConfigStore = {
     new InMemoryConfigStore()
   }
-
 }
 
 case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE) {
