@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
+import com.keepit.common.db.SequenceNumber
 
 @ImplementedBy(classOf[SearchFriendRepoImpl])
 trait SearchFriendRepo extends Repo[SearchFriend] {
@@ -32,10 +33,18 @@ class SearchFriendRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
+  private val sequence = db.getSequence("search_friend_sequence")
+
   override val table = new RepoTable[SearchFriend](db, "search_friend") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def friendId = column[Id[User]]("friend_id", O.NotNull)
-    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt <> (SearchFriend, SearchFriend.unapply _)
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt ~ seq <> (SearchFriend, SearchFriend.unapply _)
+  }
+
+  override def save(model: SearchFriend)(implicit session: RWSession): SearchFriend = {
+    val seqNum = sequence.incrementAndGet()
+    super.save(model.copy(seq = seqNum))
   }
 
   override def invalidateCache(model: SearchFriend)(implicit session: RSession): Unit = {

@@ -221,5 +221,32 @@ class TransactionalCachingTest extends Specification {
 
       cache1.get(TestKey1(1)) === Some("orElse invoked again")
     }
+
+    "skip the trasactional layer in directCacheAccess method" in {
+      cache1.clear()
+
+      txnCache1.direct.remove(TestKey1(1))
+      txnCache1.direct.remove(TestKey1(2))
+      txnCache1.direct.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+
+      txn.beginCacheTransaction()
+      txnCache1.remove(TestKey1(1))
+      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txn.rollbackCacheTransaction()
+      // changes should be gone after rollback
+      txnCache1.direct.get(TestKey1(1)) === Some("orElse invoked")
+      txnCache1.direct.get(TestKey1(2)) === None
+
+      // bypass the transaction layer
+      txn.beginCacheTransaction()
+      txn.directCacheAccess{
+        txnCache1.remove(TestKey1(1))
+        txnCache1.getOrElse(TestKey1(2)){ "orElse invoked" } === "orElse invoked"
+      }
+      txn.rollbackCacheTransaction()
+      // changes should be still there after rollback
+      txnCache1.direct.get(TestKey1(1)) === None
+      txnCache1.direct.get(TestKey1(2)) === Some("orElse invoked")
+    }
   }
 }
