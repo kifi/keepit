@@ -14,7 +14,7 @@ case class UserConnection(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     seq: SequenceNumber = SequenceNumber.ZERO
-  ) extends ModelWithState[UserConnection] {
+  ) extends ModelWithState[UserConnection] with ModelWithSeqNumber[UserConnection]{
   def withId(id: Id[UserConnection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserConnection]) = copy(state = state)

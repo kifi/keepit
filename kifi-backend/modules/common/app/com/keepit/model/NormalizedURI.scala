@@ -32,7 +32,7 @@ case class NormalizedURI (
   normalization: Option[Normalization] = None,
   redirect: Option[Id[NormalizedURI]] = None,
   redirectTime: Option[DateTime] = None
-) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with Logging {
+) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with ModelWithSeqNumber[NormalizedURI] with Logging {
 
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)

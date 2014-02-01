@@ -15,7 +15,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
          val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
          db.readOnly{ implicit s =>
-           changedURIRepo.getHighestSeqNum() === None
+           changedURIRepo.getHighestSeqNum() === Some(SequenceNumber.ZERO)
          }
 
          db.readWrite { implicit s =>
