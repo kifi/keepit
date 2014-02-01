@@ -6,6 +6,12 @@
         <th>Instance</th><td><a href="https://console.aws.amazon.com/ec2/home?region=@{amazonInstanceInfo.availabilityZone}#s=Instances">@{amazonInstanceInfo.instanceId}</a></td>
     </tr>
     <tr>
+        <th>Name</th><td>@{amazonInstanceInfo.name.getOrElse("-")}</td>
+    </tr>
+    <tr>
+        <th>Service</th><td>@{amazonInstanceInfo.service.getOrElse("-")}</td>
+    </tr>
+    <tr>
         <th>Local Hostname</th><td>@{amazonInstanceInfo.localHostname}</td>
     </tr>
     <tr>
