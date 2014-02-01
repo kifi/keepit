@@ -13,7 +13,7 @@ angular.module('kifi', [
 	'kifi.profileCard',
 	'kifi.profileService',
 	'kifi.tags',
-	'kifi.tagService',
+	'kifi.keeps',
 	'kifi.layout.leftCol',
 	'kifi.layout.main',
 	'kifi.layout.nav',
