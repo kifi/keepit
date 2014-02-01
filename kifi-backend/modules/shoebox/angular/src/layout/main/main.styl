@@ -1,3 +1,119 @@
 .kf-main
   min-width: 454px
   background: #fff
+
+.kf-query-wrap
+  position: relative
+  padding: 10px 120px 12px 0
+  background-color: #67829c
+  transition: padding-right .3s
+  white-space: nowrap
+  z-index: 1
+
+.kf-query-wrap.focus
+.kf-query-wrap:not(.empty)
+  padding-right: 0
+
+.kf-query.kf-query
+  width: 100%
+  height: 48px
+  padding: 9px 48px 9px 20px
+  border: none
+  font-size: 25px
+  font-family: inherit
+  font-weight: 300
+  line-height: 30px
+  font-smoothing: antialiased
+  box-sizing: border-box
+
+  &::-webkit-input-placeholder
+    color: #99a3b3
+
+  &::-moz-placeholder
+    color: #99a3b3
+
+  &::placeholder
+    color: #99a3b3
+
+  &::-ms-clear
+    display: none
+
+.kf-query-icon
+  position: relative
+  display: inline-block
+  right: 48px
+  height: 48px
+  width: 48px
+  vertical-align: bottom
+  overflow: hidden
+
+.kf-query-mag
+.kf-query-x
+  position: absolute
+  top: 0
+  bottom: 0
+  left: 0
+  width: 100%
+  padding-top: 13px
+  text-align: center
+  box-sizing: border-box
+  transition: left .15s .07s
+
+  &::before
+    content: " "
+    display: inline-block
+    vertical-align: bottom
+    height: 23px
+    background-image: url(../img/search.png)
+    background-size: auto 23px
+
+.kf-query-mag
+  cursor: text
+
+  &::before
+    width: 26px
+
+    .focus &
+      background-position: -26px
+
+.kf-query-x::before
+  width: 23px
+  background-position: -52px
+
+.kf-query-x:hover::before
+  background-position: -75px
+
+.kf-query-x:active::before
+  background-position: -98px
+
+.kf-query-wrap.empty .kf-query-x
+.kf-query-wrap:not(.empty) .kf-query-mag
+  left: 100%
+  transition-delay: 0
+
+.kf-undo
+  position: absolute
+  left: 0
+  right: 0
+  bottom: -12px
+  text-align: center
+  z-index: 1
+
+.kf-undo-box
+  display: inline-block
+  height: 18px
+  padding: 0 12px
+  border: 1px solid #f8f4e8
+  border-radius: 2px
+  font-size: 13px
+  font-weight: 300
+  line-height: 17px
+  background-color: #ffc
+  white-space: nowrap
+
+.kf-undo-link
+  font-weight: 500
+  margin-left: 4px
+
+  &:hover
+    text-decoration: underline
