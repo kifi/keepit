@@ -67,28 +67,12 @@
 }
 
 /* center col */
-.main>.page-col-inner::before {
-  content: " ";
-  position: absolute;
-  top: 70px;
-  bottom: 0;
-  border-left: 1px solid #dbdee3;
-}
 
 .main-head,
 .main-keeps {
   -webkit-box-shadow: inset -1px 0 #dbdee3;
   -moz-box-shadow: inset -1px 0 #dbdee3;
   box-shadow: inset -1px 0 #dbdee3;
-}
-
-.main-head {
-  padding: 13px 20px 0;
-  height: 73px;
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  position: relative;
 }
 
 .main-head>h1 {
