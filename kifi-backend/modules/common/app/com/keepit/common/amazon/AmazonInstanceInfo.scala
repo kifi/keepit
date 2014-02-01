@@ -18,6 +18,8 @@ object AmazonInstanceInfo {
 
   implicit val format: Format[AmazonInstanceInfo] = (
     (__ \ 'instanceId).format[AmazonInstanceId] and
+    (__ \ 'name).formatNullable[String] and
+    (__ \ 'service).formatNullable[String] and
     (__ \ 'localHostname).format[String] and
     (__ \ 'publicHostname).format[String] and
     (__ \ 'localIp).format[IpAddress] and
@@ -32,6 +34,8 @@ object AmazonInstanceInfo {
 
 case class AmazonInstanceInfo (
   instanceId: AmazonInstanceId,
+  name: Option[String],
+  service: Option[String],
   localHostname: String,
   publicHostname: String,
   localIp: IpAddress,
