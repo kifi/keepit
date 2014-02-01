@@ -36,7 +36,8 @@ import java.security.cert.CertPathBuilderException
 import sun.security.validator.ValidatorException
 import com.keepit.common.plugin.SchedulingProperties
 
-trait HttpFetcher { // todo(ray): move to scraper
+trait HttpFetcher {
+  val NO_OP = {is:HttpInputStream => }
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
