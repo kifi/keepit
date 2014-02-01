@@ -68,6 +68,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     result
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
+      session.directCacheAccess{
+        deleteCache(model)
+      }
       throw new MySQLIntegrityConstraintViolationException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}").initCause(m)
     case t: SQLException => throw new SQLException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}", t)
   }
@@ -228,3 +231,4 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
     model
   }
 }
+
