@@ -18,6 +18,7 @@ import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.mail.{ElectronicMailCategory, EmailAddresses, ElectronicMail, LocalPostOffice}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
+import com.keepit.common.db.slick.Database.Slave
 
 case object ScheduleScrape
 
@@ -41,45 +42,18 @@ private[scraper] class ScrapeScheduler @Inject() (
   implicit val config = scraperConfig
 
   def schedule(): Unit = {
-    val (overdues, pendingCount, pendingOverdues, assignedCount, assignedOverdues) = db.readOnly(attempts = 2) { implicit s =>
-      val overdues         = scrapeInfoRepo.getOverdueList()
-      val pendingCount     = scrapeInfoRepo.getPendingCount()
-      val pendingOverdues  = scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
-      val assignedCount    = if (scraperConfig.pull) scrapeInfoRepo.getAssignedCount() else 0
-      val assignedOverdues = if (scraperConfig.pull) scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold)) else Seq.empty[ScrapeInfo]
-      (overdues, pendingCount, pendingOverdues, assignedCount, assignedOverdues)
-    }
-    log.info(s"[schedule]: active:${overdues.length} pending:${pendingCount} pending-overdues:${pendingOverdues.length} assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
+    if (scraperConfig.pull)
+      checkAssigned
 
-    if (scraperConfig.pull) {
-      val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers
-      val workerIds = workers.map(_.id.id).toSet
-      val (assigned, orphaned) = assignedOverdues partition { info => info.workerId.isDefined } // no workerId (bug)
-      if (!orphaned.isEmpty) {
-        val msg = s"[schedule] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
-        log.error(msg) // shouldn't happen -- airbrake
-        db.readWrite(attempts = 2) { implicit rw =>
-          localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
-          orphaned.foreach { info =>
-            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
-          }
-        }
+    if (scraperConfig.push) { // todo(ray) removeme
+      val (overdues, pendingCount, pendingOverdues) = db.readOnly(attempts = 2) { implicit s =>
+        val overdues         = scrapeInfoRepo.getOverdueList()
+        val pendingCount     = scrapeInfoRepo.getPendingCount()
+        val pendingOverdues  = scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
+        (overdues, pendingCount, pendingOverdues)
       }
+      log.info(s"[schedule]: active:${overdues.length} pending:${pendingCount} pending-overdues:${pendingOverdues.length}")
 
-      val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) } // workers no longer exists
-      if (!abandoned.isEmpty) {
-        val msg = s"[schedule] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
-        log.warn(msg)
-        db.readWrite(attempts = 2) { implicit rw =>
-          localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
-          abandoned.foreach { info =>
-            scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
-          }
-        }
-      }
-    }
-
-    if (scraperConfig.push) {
       // update/remove if pulling works well
       val batchMax = scraperConfig.batchMax
       val pendingSkipThreshold = scraperConfig.pendingSkipThreshold
@@ -117,6 +91,49 @@ private[scraper] class ScrapeScheduler @Inject() (
         request foreach { req => scraperServiceClient.scheduleScrapeWithRequest(req) }
       }
       log.info(s"[schedule] submitted ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
+    }
+  }
+
+  def checkAssigned() = {
+    // todo(ray): check overdue count
+    val (assignedCount, assignedOverdues) = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
+      val assignedCount = if (scraperConfig.pull) scrapeInfoRepo.getAssignedCount() else 0
+      val assignedOverdues = if (scraperConfig.pull) scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold)) else Seq.empty[ScrapeInfo]
+      (assignedCount, assignedOverdues)
+    }
+    log.info(s"[checkAssigned]: assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
+
+    if (!assignedOverdues.isEmpty) {
+      val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers
+      if (workers.isEmpty) {
+        airbrake.panic("[ScrapeScheduler] Scraper cluster is EMPTY!")
+      } else {
+        val workerIds = workers.map(_.id.id).toSet
+        log.warn(s"[checkAssigned] #assigned-overdues=${assignedOverdues.length}; active workerIds=${workerIds}; assigned-overdues=${assignedOverdues.mkString(",")}")
+        val (assigned, orphaned) = assignedOverdues partition { info => info.workerId.isDefined }
+        if (!orphaned.isEmpty) {
+          val msg = s"[checkAssigned] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
+          log.error(msg) // shouldn't happen -- airbrake
+          db.readWrite(attempts = 2) { implicit rw =>
+            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
+            for (info <- orphaned) {
+              scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime))
+            }
+          }
+        }
+
+        val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) }
+        if (!abandoned.isEmpty) {
+          val msg = s"[checkAssigned] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
+          log.warn(msg)
+          db.readWrite(attempts = 2) { implicit rw =>
+            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
+            for (info <- abandoned) {
+              scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime)) // todo(ray): ask worker for status
+            }
+          }
+        }
+      }
     }
   }
 

@@ -138,6 +138,7 @@ class BookmarkInterner @Inject() (
           uriRepo.save(uri.withState(SCRAPE_WANTED))
           Try(scraper.scheduleScrape(uri, Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY)))
         }
+        case _ =>
       }
 
       Some(InternedUriAndBookmark(bookmark, uri, isNewKeep))
