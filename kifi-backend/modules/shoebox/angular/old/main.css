@@ -75,10 +75,6 @@
   box-shadow: inset -1px 0 #dbdee3;
 }
 
-.main-head>h1 {
-  margin-bottom: 8px;
-}
-
 .main-head>h1.tag-head {
   padding-left: 28px;
   background-image: url(../img/tag-icon-blue.2x.png);
@@ -140,7 +136,7 @@ h1 {
   -webkit-font-smoothing: antialiased;
 }
 
-.undo, .notification {
+.notification {
   position: absolute;
   bottom: -12px;
   left: 0;
@@ -150,7 +146,7 @@ h1 {
   display: none;
 }
 
-.undo-box, .notification-box {
+.notification-box {
   display: inline-block;
   background-color: #ffc;
   border: 1px solid #f8f4e8;
@@ -161,15 +157,6 @@ h1 {
   line-height: 17px;
   height: 18px;
   white-space: nowrap;
-}
-
-a.undo-link[href] {
-  margin-left: 4px;
-  font-weight: 500;
-}
-
-a.undo-link[href]:hover {
-  text-decoration: underline;
 }
 
 .profile {
@@ -2361,48 +2348,6 @@ a.friend-req-y[href],
 a.friend-req-n[href] {
   background-color: #6fa6ef;
   color: #fff;
-}
-
-.check-all {
-  position: absolute;
-  top: 1px;
-  left: 0;
-  height: 17px;
-  width: 17px;
-  background: url(../img/check.png) 99px/12px 8px no-repeat #fff;
-  border: 1px solid #e3e6ee;
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-}
-
-.check-all.live {
-  cursor: pointer;
-}
-
-.check-all.live:hover {
-  border-color: #b8c5d2;
-}
-
-.check-all.checked {
-  background-position: 2px 4px;
-}
-
-.main-head>.subtitle {
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 300;
-  color: #5b6670;
-  padding-left: 30px;
-  position: relative;
-}
-
-.result-query::before {
-  content: "\201c";
-}
-
-.result-query::after {
-  content: "\201d";
 }
 
 .main-keeps {
@@ -4681,38 +4626,6 @@ a.photo-dialog-submit:focus {
 	height: 100%;
 	background: transparent;
 	z-index: 10000;
-}
-
-.search-filters {
-	display: inline;
-}
-
-.search-filters::before {
-	content: ' | ';
-	color: #cccccc;
-	margin-left: 11px;
-	margin-right: 17px;
-}
-
-.search-filters li {
-	display: inline;
-	color: #cccccc;
-}
-
-.search-filters li::after {
-	content: '|';
-	color: #cccccc;
-	font-size: 0.9em;
-	margin: 0 5px;
-}
-
-.search-filters li:last-child::after {
-	display: none;
-	content: '';
-}
-
-.search-filter-selected {
-	color: #333333;
 }
 
 /* Email Verified Dialog */
