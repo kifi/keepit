@@ -23,13 +23,15 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 				scope.results = {
 					numShown: 0,
 					myTotal: 300,
-					friendsTotal: 1523,
+					friendsTotal: 0,
 					othersTotal: 12342
 				};
 
 				scope.filter = {
 					type: 'm'
 				};
+
+				scope.checkEnabled = true;
 
 				scope.getSubtitle = function () {
 					var subtitle = scope.subtitle;
@@ -38,7 +40,7 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 					case 'query':
 						switch (numShown) {
 						case 0:
-							return 'Sorry, no results found for &#x201c;{{query}}&#x202c;';
+							return 'Sorry, no results found for &#x201c;' + (scope.results.query || '') + '&#x202c;';
 						case 1:
 							return '1 result found';
 						}
@@ -107,6 +109,10 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 						return '/find?q=' + (scope.results.query || '') + '&f=' + type + '&maxHits=30';
 					}
 					return '';
+				};
+
+				scope.toggleCheck = function () {
+					scope.checked = !scope.checked;
 				};
 
 				scope.setLoading();

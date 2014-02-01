@@ -17,7 +17,39 @@
   box-shadow: inset -1px 0 #dbdee3
 
 .kf-main-title
-  margin-bottom: 8px
+  margin: 0 0 8px
+  font-size: 27px
+  line-height: 32px
+  font-weight: 300
+  font-smoothing: antialiased
+  color: #67829c
+
+.kf-subtitle
+  position: relative
+  padding-left: 30px
+  font-size: 13px
+  font-weight: 300
+  line-height: 20px
+  color: #5b6670
+
+.kf-check-all
+  position: absolute
+  top: 1px
+  left: 0
+  width: 17px
+  height: 17px
+  border: 1px solid #e3e6ee
+  background: url(../img/check.png) 99px/12px 8px no-repeat #fff
+  box-sizing: border-box
+
+  &.enabled
+    cursor: pointer
+
+    &:hover
+      border-color: #b8c5d2
+
+  &.checked
+    background-position: 2px 4px
 
 .kf-query-wrap
   position: relative
