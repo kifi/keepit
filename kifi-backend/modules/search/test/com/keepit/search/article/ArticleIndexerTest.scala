@@ -301,16 +301,6 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       indexer.search("content1").size === 0
       indexer.search("content2").size === 1
       indexer.search("content3").size === 1
-
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPE_LATER)).head
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
-      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
-
-      indexer.update()
-      indexer.numDocs === 2
-      indexer.search("content1").size === 0
-      indexer.search("content2").size === 1
-      indexer.search("content3").size === 1
     })
 
     "retrieve article records from index" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {

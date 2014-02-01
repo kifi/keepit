@@ -6,13 +6,15 @@ import com.keepit.common.db.slick._
 import com.keepit.test.ShoeboxTestInjector
 import javax.xml.bind.DatatypeConverter._
 import com.google.inject.Injector
+import com.keepit.integrity.DuplicateDocumentDetection
+import com.keepit.common.mail.TestMailModule
 
 class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjector {
 
   "Signature" should {
 
     "find similar documents of different thresholds" in {
-      withDb() { implicit injector: Injector =>
+      withDb(TestMailModule(), FakeScrapeSchedulerModule()) { implicit injector: Injector =>
 
         val builder1 = new SignatureBuilder(3)
         val builder2 = new SignatureBuilder(3)
@@ -31,6 +33,12 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
           val nuri4 = uriRepo.save(NormalizedURI.withHash("http://google.com/4", state = NormalizedURIStates.SCRAPE_WANTED))
           val nuri5 = uriRepo.save(NormalizedURI.withHash("http://google.com/5", state = NormalizedURIStates.SCRAPE_WANTED))
 
+          scrapeRepo.save(ScrapeInfo(uriId = nuri1.id.get))
+          scrapeRepo.save(ScrapeInfo(uriId = nuri2.id.get))
+          scrapeRepo.save(ScrapeInfo(uriId = nuri3.id.get))
+          scrapeRepo.save(ScrapeInfo(uriId = nuri4.id.get))
+          scrapeRepo.save(ScrapeInfo(uriId = nuri5.id.get))
+
           implicit val conf = com.keepit.scraper.ScraperConfig()
 
           scrapeRepo.save(scrapeRepo.getByUriId(nuri1.id.get).get.copy(signature = sig1.toBase64))
@@ -41,8 +49,8 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
 
           scrapeRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
         }
-/* BAD BAD BAD BAD - Tests for some reason are not working anymore, but the app is when running. If we want to get this in production, I commented out the tests. However, these will be fixed.
-        val dupe = new DuplicateDocumentDetection()
+
+        val dupe = inject[DuplicateDocumentDetection]
 
         val res1 = dupe.findDupeDocuments(1.0)
         val res2 = dupe.findDupeDocuments(0.9)
@@ -51,9 +59,8 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
         res1.map(_._1.id) === Seq(1L)
         res1.head._2.size === 1
 
-        res2.size == 2
-        res3.size == 3*/
-        1===1
+        res2.size === 2
+        res3.size === 3
       }
     }
   }
