@@ -14,7 +14,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.heimdal.HeimdalServiceClient
 
 @ImplementedBy(classOf[CollectionRepoImpl])
-trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
+trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
     (implicit session: RSession): Option[Collection]
@@ -32,18 +32,17 @@ class CollectionRepoImpl @Inject() (
   val heimdal: HeimdalServiceClient,
   val db: DataBaseComponent,
   val clock: Clock)
-  extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with Logging {
+  extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
   private val sequence = db.getSequence("collection_sequence")
 
-  override val table = new RepoTable[Collection](db, "collection") with ExternalIdColumn[Collection] {
+  override val table = new RepoTable[Collection](db, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection]{
     def userId = column[Id[User]]("user_id", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def lastKeptTo = column[Option[DateTime]]("last_kept_to", O.Nullable)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ externalId ~ userId ~ name ~ state ~ createdAt ~ updatedAt ~ lastKeptTo ~ seq <> (
       Collection.apply _, Collection.unapply _)
   }
@@ -96,6 +95,7 @@ class CollectionRepoImpl @Inject() (
     }
   }
 
-  def getCollectionsChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Collection] =
-    (for (c <- table if c.seq > num) yield c).sortBy(_.seq).take(limit).list
+  def getCollectionsChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
+
+
 }

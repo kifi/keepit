@@ -13,7 +13,7 @@ case class SearchFriend(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     seq: SequenceNumber = SequenceNumber.ZERO
-    ) extends ModelWithState[SearchFriend] {
+    ) extends ModelWithState[SearchFriend] with ModelWithSeqNumber[SearchFriend] {
   def withId(id: Id[SearchFriend]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SearchFriend]) = copy(state = state)

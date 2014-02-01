@@ -17,7 +17,7 @@ import com.keepit.scraper.ScraperConfig
 import NormalizedURIStates._
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
-trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
+trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
@@ -41,7 +41,7 @@ class NormalizedURIRepoImpl @Inject() (
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo])
-extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with Logging {
+extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -49,11 +49,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   private val sequence = db.getSequence("normalized_uri_sequence")
 
-  override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
+  override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI]{
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
     def restriction = column[Restriction]("restriction", O.Nullable)
     def normalization = column[Normalization]("normalization", O.Nullable)
@@ -64,8 +63,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
-    val q = (for (f <- table if f.seq > sequenceNumber) yield f).sortBy(_.seq)
-    (if (limit >= 0) q.take(limit) else q).list
+    super.getBySequenceNumber(sequenceNumber, limit)
   }
 
   def getChanged(sequenceNumber: SequenceNumber, states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {

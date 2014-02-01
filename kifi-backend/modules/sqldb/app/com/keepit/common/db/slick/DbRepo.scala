@@ -26,19 +26,6 @@ trait Repo[M <: Model[M]] {
   def deleteCache(model: M)(implicit session: RSession): Unit
 }
 
-trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
-  def delete(model: M)(implicit session:RWSession):Int
-
-  // potentially more efficient variant but we currently depend on having the model available for our caches
-  // def deleteCacheById(id: Id[M]): Int
-  // def deleteById(id: Id[M])(implicit ev$0:ClassTag[M], session:RWSession):Int
-}
-
-trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
-  def get(id: ExternalId[M])(implicit session: RSession): M
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
-}
-
 trait TableWithDDL {
   def ddl: DDL
   def tableName: String
@@ -162,6 +149,24 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     }
     def columnStrings(tableName: String = tableName) = _columnStrings.map(c => tableName + "." + c).mkString(", ")
   }
+
+  trait SeqNumberColumn[M <: ModelWithSeqNumber[M]] extends RepoTable[M] {
+    import FortyTwoTypeMappers.SequenceNumberTypeMapper
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+  }
+}
+
+
+///////////////////////////////////////////////////////////
+//                  more traits
+///////////////////////////////////////////////////////////
+
+trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
+  def delete(model: M)(implicit session:RWSession):Int
+
+  // potentially more efficient variant but we currently depend on having the model available for our caches
+  // def deleteCacheById(id: Id[M]): Int
+  // def deleteById(id: Id[M])(implicit ev$0:ClassTag[M], session:RWSession):Int
 }
 
 trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M] =>
@@ -178,12 +183,37 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
   }
 }
 
-trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] {
+
+trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
+  def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M]
+  def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M]
+}
+
+trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
+  import db.Driver.Implicit._
+  import FortyTwoTypeMappers.SequenceNumberTypeMapper
+
+  protected def tableWithSeq: SeqNumberColumn[M] = table.asInstanceOf[SeqNumberColumn[M]]
+
+  def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
+    val q = (for(t <- tableWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
+    if (fetchSize > 0) q.take(fetchSize).list else q.list
+  }
+
+  def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M] = {
+    if (lowerBound > upperBound) throw new IllegalArgumentException(s"expecting upperBound > lowerBound, received: lowerBound = ${lowerBound}, upperBound = ${upperBound}")
+    else if (lowerBound == upperBound) Seq()
+    else (for(t <- tableWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list
+  }
+}
+
+
+trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] { self: Repo[M] =>
   def get(id: ExternalId[M])(implicit session: RSession): M
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
 }
 
-trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
+trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalIdColumnFunction[M] { self: DbRepo[M] =>
   import db.Driver.Implicit._
   protected def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
 
