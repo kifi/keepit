@@ -2,7 +2,6 @@
 #INTERNAL ROUTES/ABook
 ##########################################
 
-POST    /internal/abook/:userId/importContactsP                 @com.keepit.abook.ABookController.importContactsP(userId:Id[User])
 POST    /internal/abook/:userId/importContacts                  @com.keepit.abook.ABookController.importContacts(userId:Id[User])
 
 POST     /internal/abook/:origin/uploadForUser                  @com.keepit.abook.ABookController.upload(userId:Id[User], origin:ABookOriginType) 
