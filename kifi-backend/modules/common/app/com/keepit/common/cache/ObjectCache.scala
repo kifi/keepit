@@ -46,16 +46,9 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def get(key: K): Option[T] = {
-    getFromInnerCache(key) match {
+    internalGetOpt(key) match {
       case Found(valueOpt) => valueOpt
-      case NotFound() => outerCache match {
-        case Some(cache) =>
-          val valueOpt = cache.get(key)
-          if (valueOpt.isDefined) setInnerCache(key, valueOpt)
-          valueOpt
-        case None => None
-      }
-      case Removed() => None // if removed at a transaction local cache, do not call outer cache
+      case _ => None
     }
   }
 
@@ -70,7 +63,7 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  protected[cache] def internalGetOpt(key: K): ObjectState[T] = {
+  private def internalGetOpt(key: K): ObjectState[T] = {
     getFromInnerCache(key) match {
       case state @ Found(_) => state
       case NotFound() => outerCache match {
