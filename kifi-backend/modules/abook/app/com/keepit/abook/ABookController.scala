@@ -76,33 +76,6 @@ class ABookController @Inject() (
     }
   }
 
-  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action.async { request =>
-    provider match {
-      case "google" => {
-        importGmailContacts(userId, accessToken, None)
-      }
-      case "facebook" => {
-        if (Play.maybeApplication.isDefined && (!Play.isProd)) {
-          val friendsUrl = "https://graph.facebook.com/me/friends"
-          WS.url(friendsUrl).withQueryString(("access_token", accessToken),("fields", "id,name,first_name,last_name,username,picture,email")).get map { resp =>
-            resp.status match {
-              case OK => {
-                val friends = resp.json
-                log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-                Ok(friends)
-              }
-              case _ => {
-                BadRequest("Unsuccessful attempt to invoke facebook API")
-              }
-            }
-          }
-        } else {
-          resolve(BadRequest("Unsupported provider"))
-        }
-      }
-    }
-  }
-
   def importGmailContacts(userId: Id[User], accessToken: String, tokenOpt:Option[OAuth2Token]): Future[SimpleResult] = {  // todo: move to commander
     val resF = importGmailContactsF(userId, accessToken, tokenOpt)
     resF.map { abookInfoOpt =>
