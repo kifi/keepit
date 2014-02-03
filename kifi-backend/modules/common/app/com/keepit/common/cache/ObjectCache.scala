@@ -1,29 +1,8 @@
 package com.keepit.common.cache
 
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.concurrent._
 import scala.concurrent.duration._
-
-import java.util.concurrent.atomic.AtomicInteger
-
-import net.codingwell.scalaguice.ScalaModule
-import net.sf.ehcache._
-import net.sf.ehcache.config.CacheConfiguration
-
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging._
-import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
-import com.keepit.common.logging.{AccessLogTimer, AccessLog}
-import com.keepit.common.logging.Access._
-
-import play.api.Logger
-import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-import play.modules.statsd.api.Statsd
-
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
