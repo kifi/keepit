@@ -148,7 +148,7 @@ class SearchCommanderImpl @Inject() (
       try {
         articleSearchResultStore += (res.uuid -> articleSearchResult)
       } catch {
-        case e: Throwable => airbrake.notify(AirbrakeError(e, Some("Could not store article search result.")))
+        case e: Throwable => airbrake.notify(AirbrakeError(e, Some(s"Could not store article search result for user id $userId.")))
       }
 
       val timeLimit = 1000

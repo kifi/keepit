@@ -1,21 +1,16 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.db.ExternalId
 import com.google.inject.Inject
-import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
-import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
+import com.keepit.model.User
 
-import play.api.Mode._
 import play.api.libs.json.Json
 
 import akka.actor._
 
-import java.io._
-import java.net._
 import scala.xml._
 
 case class AirbrakeErrorNotice(error: AirbrakeError, selfError: Boolean = false)
@@ -110,7 +105,6 @@ class AirbrakeSender @Inject() (
 }
 
 class PagerDutySender @Inject() (httpClient: HttpClient) {
-  import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   def openIncident(description: String, exception: Throwable, signature: Option[String]=None, moreInfo: Option[String] = None): Unit = {
     val incidentKey : String = signature.getOrElse(description.take(1000))
@@ -135,14 +129,24 @@ trait AirbrakeNotifier {
   def reportDeployment(): Unit
 
   def notify(error: AirbrakeError): AirbrakeError
+
   def notify(errorException: Throwable): AirbrakeError
   def notify(errorMessage: String, errorException: Throwable): AirbrakeError
   def notify(errorMessage: String): AirbrakeError
 
+  def notify(errorException: Throwable, user: User): AirbrakeError
+  def notify(errorMessage: String, errorException: Throwable, user: User): AirbrakeError
+  def notify(errorMessage: String, user: User): AirbrakeError
+
   def panic(error: AirbrakeError): AirbrakeError
+
   def panic(errorException: Throwable): AirbrakeError
   def panic(errorMessage: String, errorException: Throwable): AirbrakeError
   def panic(errorMessage: String): AirbrakeError
+
+  def panic(errorException: Throwable, user: User): AirbrakeError
+  def panic(errorMessage: String, errorException: Throwable, user: User): AirbrakeError
+  def panic(errorMessage: String, user: User): AirbrakeError
 }
 
 // apiKey is per service type (shoebox, search etc)
@@ -164,11 +168,23 @@ class AirbrakeNotifierImpl (actor: ActorInstance[AirbrakeNotifierActor], isCanar
     error
   }
 
+  def notify(errorException: Throwable, user: User): AirbrakeError = notify(AirbrakeError(exception = errorException, userId = user.id, userName = Some(user.fullName)))
+
+  def notify(errorMessage: String, errorException: Throwable, user: User): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), exception = errorException, userId = user.id, userName = Some(user.fullName)))
+
+  def notify(errorMessage: String, user: User): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
+
   def panic(errorException: Throwable): AirbrakeError = panic(AirbrakeError(exception = errorException))
 
   def panic(errorMessage: String, errorException: Throwable): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException))
 
   def panic(errorMessage: String): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage)))
+
+  def panic(errorException: Throwable, user: User): AirbrakeError = panic(AirbrakeError(exception = errorException, userId = user.id, userName = Some(user.fullName)))
+
+  def panic(errorMessage: String, errorException: Throwable, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException, userId = user.id, userName = Some(user.fullName)))
+
+  def panic(errorMessage: String, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
 
   def panic(error: AirbrakeError): AirbrakeError = {
     notify(error.copy(panic=true))

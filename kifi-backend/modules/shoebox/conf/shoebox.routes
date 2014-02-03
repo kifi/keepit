@@ -475,6 +475,7 @@ GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.in
 GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: Long, fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()
@@ -498,6 +499,7 @@ GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.in
 POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.internal.ShoeboxController.getScrapeInfo
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxController.saveNormalizedURI
+POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxController.updateNormalizedURI(uriId: Id[NormalizedURI])
 POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxController.recordPermanentRedirect
 POST     /internal/shoebox/database/recordScrapedNormalization @com.keepit.controllers.internal.ShoeboxController.recordScrapedNormalization
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxController.getProxy(url:String)

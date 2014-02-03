@@ -340,9 +340,9 @@ $(function () {
 	var searchResponse;
 	var searchTimeout;
 	var lastKeep;
-	var myTotal;
-	var friendsTotal;
-	var othersTotal;
+	var myTotal = 0;
+	var friendsTotal = 0;
+	var othersTotal = 0;
 	var prefetchedPreviewUrls = {};
 
 	function identity(a) {
@@ -2801,9 +2801,9 @@ $(function () {
 				var numShown = data.hits.length + (context ? $results.find('.keep').length : 0);
 
 				if (!(more || filterChange)) {
-					myTotal = data.myTotal;
-					friendsTotal = data.friendsTotal;
-					othersTotal = data.othersTotal;
+					myTotal = data.myTotal || 0;
+					friendsTotal = data.friendsTotal || 0;
+					othersTotal = data.othersTotal || 0;
 				}
 
 				if (!more) {
@@ -2814,9 +2814,10 @@ $(function () {
 					filter: filter,
 					numShown: numShown,
 					query: data.query,
-					myTotal: myTotal || 0,
-					friendsTotal: friendsTotal || 0,
-					othersTotal: othersTotal || 0
+					myTotal: myTotal,
+					friendsTotal: friendsTotal,
+					othersTotal: othersTotal,
+					allTotal: myTotal + friendsTotal + othersTotal
 				});
 
 				if (numShown) {

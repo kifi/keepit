@@ -28,7 +28,6 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
-  def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def getAllABookInfos():Future[Seq[ABookInfo]]
@@ -64,10 +63,6 @@ class ABookServiceClientImpl @Inject() (
 
   def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
     call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), callTimeouts = longTimeout).map { r => r.json }
-  }
-
-  def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
-    call(ABook.internal.importContacts(userId, provider, accessToken), callTimeouts = longTimeout).map { r => r.json }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
@@ -183,8 +178,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def importContactsP(userId: Id[User], oauth2Token: OAuth2Token): Future[JsValue] = ???
-
-  def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 

@@ -144,10 +144,12 @@ object AirbrakeError {
   import scala.collection.JavaConverters._
 
   val MaxMessageSize = 10 * 1024 //10KB
-  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String): AirbrakeError =
+  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None): AirbrakeError =
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
+          userId = user.map(_.id).flatten,
+          userName = user.map(_.fullName),
           url = Some(request.uri.abbreviate(MaxMessageSize)),
           params = request.queryString,
           method = Some(request.method),
