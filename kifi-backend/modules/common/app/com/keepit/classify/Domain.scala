@@ -48,7 +48,7 @@ object Domain {
 object DomainStates extends States[Domain]
 
 case class DomainKey(hostname: String) extends Key[Domain] {
-  override val version = 1
+  override val version = 2
   val namespace = "domain_by_hostname"
   def toKey(): String = hostname
 }
