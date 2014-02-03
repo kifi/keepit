@@ -153,7 +153,11 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   }
 
   def remove(key: K) {
-    try repo.remove(key.toString) catch {
+    val timer = accessLog.timer(CACHE)
+    try {
+      repo.remove(key.toString)
+      if (repo.logAccess) accessLog.add(timer.done(space = s"${repo.toString}.${key.namespace}", key = key.toString, result = "REMOVED"))
+    } catch {
       case e: Throwable =>
         repo.onError(AirbrakeError(e, Some(s"Failed removing key $key from $repo")))
         None
