@@ -144,7 +144,8 @@ class BookmarkInterner @Inject() (
       //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
       airbrake.notify(AirbrakeError(
         exception = e,
-        message = Some(s"Exception while loading one of the bookmarks of user $userId: ${e.getMessage} from: $rawBookmark source: $source")))
+        message = Some(s"Exception while loading one of the bookmarks of user $userId: ${e.getMessage} from: $rawBookmark source: $source"),
+        userId = Some(userId)))
       None
   }
 

@@ -382,12 +382,12 @@ class AuthHelper @Inject() (
 
   def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): SimpleResult = {
     request.userOpt.orElse(request.identityOpt) match {
-      case Some(_) =>
+      case Some(userInfo) =>
         s3ImageStore.uploadTemporaryPicture(request.body.file) match {
           case Success((token, pictureUrl)) =>
             Ok(Json.obj("token" -> token, "url" -> pictureUrl))
           case Failure(ex) =>
-            airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
+            airbrakeNotifier.notify("Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
             BadRequest(JsNumber(0))
         }
       case None => Forbidden(JsNumber(0))
