@@ -87,7 +87,7 @@ class BookmarkInterner @Inject() (
           val (_, failuresWithRaws) = singleAttempt.partition(_._2.isSuccess)
           val failedUrls = failuresWithRaws.map(_._1.url)
           if (failedUrls.nonEmpty) {
-            airbrake.notify(s"failed to persist ${failedUrls.size} raw keeps: ${failedUrls mkString ","}")
+            airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failedUrls.size} raw keeps: ${failedUrls mkString ","}"), userId = Some(userId)))
           }
         }
       }
@@ -113,14 +113,14 @@ class BookmarkInterner @Inject() (
     }.partition{ case (bm, res) => res.isSuccess }
 
     if (failed.nonEmpty) {
-      airbrake.notify(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls")
-      bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user ${userId} from ${source}: ${b.url}") }
+      airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
+      bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${b.url}") }
     }
 
     (persisted.values.map(_.get).flatten.toSeq, failed.keys.toList)
   }
 
-  val MAX_RANDOM_SCHEDULE_DELAY: Int = sys.props.get("scraper.queue.delay") map (_.toInt) getOrElse (600000)
+  val MAX_RANDOM_SCHEDULE_DELAY: Int = sys.props.get("scraper.queue.delay") map (_.toInt) getOrElse 600000
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
