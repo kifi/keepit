@@ -475,6 +475,7 @@ GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.in
 GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: Long, fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()

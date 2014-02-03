@@ -39,7 +39,7 @@ class SearchFriendRepoImpl @Inject() (
   override val table = new RepoTable[SearchFriend](db, "search_friend") with SeqNumberColumn[SearchFriend]{
     def userId = column[Id[User]]("user_id", O.NotNull)
     def friendId = column[Id[User]]("friend_id", O.NotNull)
-    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt ~ seq <> (SearchFriend, SearchFriend.unapply _)
+    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt ~ seq <> (SearchFriend.apply _, SearchFriend.unapply _)
   }
 
   override def save(model: SearchFriend)(implicit session: RWSession): SearchFriend = {

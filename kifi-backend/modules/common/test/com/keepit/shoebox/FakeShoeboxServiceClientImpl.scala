@@ -484,4 +484,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
     Future.successful()
   }
+
+  def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]] = ???
 }
