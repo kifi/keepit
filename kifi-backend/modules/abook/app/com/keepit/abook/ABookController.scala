@@ -120,43 +120,51 @@ class ABookController @Inject() (
     WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get flatMap { resp =>
       resp.status match {
         case OK => {
+          log.info(s"[importGmailContactsF($userId)] url=$USER_INFO_URL accessToken=$accessToken resp=${resp.body}")
           val userInfoJson = resp.json
-          val gUserInfo = userInfoJson.as[GmailABookOwnerInfo]
-          log.info(s"[g-contacts] userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
+          val gUserInfoOpt = userInfoJson.asOpt[GmailABookOwnerInfo]
+          gUserInfoOpt match {
+            case None =>
+              log.error(s"[importGmailContactsF($userId)] cannot parse userInfo response: ${resp.body}")
+              // email and/or airbrake
+              Future.successful(None)
+            case Some(gUserInfo) =>
+              log.info(s"[g-contacts] userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
 
-          WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
-            if (contactsResp.status == OK) {
-              val contacts = contactsResp.xml // TODO: optimize; hand-off
+              WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
+                if (contactsResp.status == OK) {
+                  val contacts = contactsResp.xml // TODO: optimize; hand-off
 
-              // todo: paging
-              val totalResults = (contacts \ "totalResults").text.toInt
-              val startIndex = (contacts \ "startIndex").text.toInt
-              val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
-              log.info(s"[g-contacts] total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
+                  // todo: paging
+                  val totalResults = (contacts \ "totalResults").text.toInt
+                  val startIndex = (contacts \ "startIndex").text.toInt
+                  val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
+                  log.info(s"[g-contacts] total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
 
-              log.info(s"[g-contacts] $contacts")
-              log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
-              val jsSeq = (contacts \ "entry") map { entry =>
-                val title = (entry \ "title").text
-                val emails = (entry \ "email") flatMap { email =>
-                  (email \ "@address") map ( _.text )
+                  log.info(s"[g-contacts] $contacts")
+                  log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
+                  val jsSeq = (contacts \ "entry") map { entry =>
+                    val title = (entry \ "title").text
+                    val emails = (entry \ "email") flatMap { email =>
+                      (email \ "@address") map ( _.text )
+                    }
+                    log.info(s"[g-contacts] title=$title email=$emails")
+                    Json.obj("name" -> title, "emails" -> Json.toJson(emails))
+                  }
+
+                  val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
+                  log.debug(Json.prettyPrint(abookUpload))
+                  abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
+                } else {
+                  log.error(s"Failed to retrieve gmail contacts") // todo: try later
+                  None
                 }
-                log.info(s"[g-contacts] title=$title email=$emails")
-                Json.obj("name" -> title, "emails" -> Json.toJson(emails))
               }
-
-              val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
-              log.debug(Json.prettyPrint(abookUpload))
-              abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
-            } else {
-              log.error(s"Failed to retrieve gmail contacts") // todo: try later
-              None
             }
           }
-        }
         case _ =>
           log.error("Failed to obtain access token")
-          future { None }
+          Future.successful(None)
       }
     }
   }
