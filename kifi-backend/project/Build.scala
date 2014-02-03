@@ -38,7 +38,7 @@ object ApplicationBuild extends Build {
     "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
     "org.clapper" %% "grizzled-slf4j" % "1.0.1",
     "com.typesafe.akka" %% "akka-testkit" % "2.2.3"  exclude("play", "*"),
-    "org.apache.httpcomponents" % "httpclient" % "4.3", // todo(andrew): remove from common when HttpFetcher is moved to scraper
+    "org.apache.httpcomponents" % "httpclient" % "4.3.2", // todo(andrew/ray): remove from common when all dependencies removed
     "org.apache.commons" % "commons-compress" % "1.4.1",
     "org.apache.commons" % "commons-math3" % "3.1.1",
     "commons-io" % "commons-io" % "2.4",
@@ -100,7 +100,7 @@ object ApplicationBuild extends Build {
   lazy val scraperDependencies = Seq(
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.tika" % "tika-parsers" % "1.3",
-    "org.apache.httpcomponents" % "httpclient" % "4.3"
+    "org.apache.httpcomponents" % "httpclient" % "4.3.2"
   )
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",

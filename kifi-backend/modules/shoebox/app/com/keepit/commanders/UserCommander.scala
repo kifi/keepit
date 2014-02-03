@@ -19,20 +19,17 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
+import com.keepit.search.SearchServiceClient
 import akka.actor.Scheduler
-
+import play.api.Play
 import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import com.google.inject.Inject
-
 import java.text.Normalizer
-
 import scala.concurrent.Future
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
-import play.api.Play
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -97,6 +94,7 @@ class UserCommander @Inject() (
   clock: Clock,
   scheduler: Scheduler,
   elizaServiceClient: ElizaServiceClient,
+  searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander) extends Logging {
 
@@ -126,7 +124,6 @@ class UserCommander @Inject() (
     // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
     // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
     val kifiSupport = Seq(
-      BasicUser(ExternalId[User]("742fa97c-c12a-4dcf-bff5-0f33280ef35a"), "Noah, Kifi Help", "", "Vjy5S.jpg"),
       BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg"))
     basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
   }
@@ -185,7 +182,7 @@ class UserCommander @Inject() (
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
-      ()
+      searchClient.warmUpUser(newUser.id.get)
     }
     newUser
   }

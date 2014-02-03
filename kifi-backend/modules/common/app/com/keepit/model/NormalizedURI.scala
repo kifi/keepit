@@ -48,6 +48,10 @@ case class NormalizedURI (
 }
 
 object NormalizedURI {
+  implicit val nIdFormat = Id.format[NormalizedURI]
+  implicit val extIdFormat = ExternalId.format[NormalizedURI]
+  implicit val stateFormat = State.format[NormalizedURI]
+  implicit val urlHashFormat = __.format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply))
 
   val TitleMaxLen = 2040
 

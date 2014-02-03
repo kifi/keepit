@@ -4,9 +4,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{State, ExternalId, Id, SequenceNumber}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.{CallTimeouts, HttpClient}
@@ -19,32 +17,30 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.social._
-import com.keepit.model.UserExperimentUserIdKey
 import com.keepit.model.ExperimentType
-import com.keepit.model.ExternalUserIdKey
-import com.keepit.model.SocialUserInfoUserKey
-import com.keepit.model.BookmarkUriUserKey
-import com.keepit.social.BasicUserUserIdKey
-import com.keepit.social.SocialId
-import com.keepit.model.NormalizedURIKey
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.UserConnectionIdKey
-import com.keepit.model.SocialUserInfoNetworkKey
-import com.keepit.model.UserSessionExternalIdKey
-import com.keepit.model.UserExternalIdKey
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
-import com.keepit.common.usersegment.UserSegmentKey
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.ImmediateMap
+import play.api.libs.json.Json.JsValueWrapper
+import org.joda.time.DateTime
+import play.api.libs.json.JsString
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsNumber
+import com.keepit.common.usersegment.UserSegmentKey
+import play.api.libs.json.JsObject
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
+  private val ? = null.asInstanceOf[Nothing]
+
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUser(userId: Id[User]): Future[Option[User]]
@@ -104,6 +100,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def updateNormalizedURI(uriId: Id[NormalizedURI], createdAt: DateTime = ?, updatedAt: DateTime = ?, externalId: ExternalId[NormalizedURI] = ?, title: Option[String] = ?, url: String = ?, urlHash: UrlHash = ?, state: State[NormalizedURI] = ?, seq: SequenceNumber = ?, screenshotUpdatedAt: Option[DateTime] = ?, restriction: Option[Restriction] = ?, normalization: Option[Normalization] = ?, redirect: Option[Id[NormalizedURI]] = ?, redirectTime: Option[DateTime] = ?)(implicit timeout:Int = 10000): Future[Boolean]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
@@ -117,6 +114,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
+  def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -611,9 +609,37 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       r.json.as[NormalizedURI]
+    }
+  }
+
+  def updateNormalizedURI(uriId: Id[NormalizedURI], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[NormalizedURI],
+                          title: Option[String], url: String, urlHash: UrlHash, state: State[NormalizedURI], seq: SequenceNumber,
+                          screenshotUpdatedAt: Option[DateTime], restriction: Option[Restriction], normalization: Option[Normalization],
+                          redirect: Option[Id[NormalizedURI]], redirectTime: Option[DateTime])(implicit timeout:Int): Future[Boolean] = {
+    import com.keepit.common.strings.OptionWrappedJsObject
+    import NormalizedURI._
+    val safeJsonParams: Seq[(String, JsValueWrapper)] = Seq(
+      "createdAt" -> Option(createdAt),
+      "updatedAt" -> Option(updatedAt),
+      "externalId" -> Option(externalId),
+      "title" -> Option(title),
+      "url" -> Option(url),
+      "urlHash" -> Option(urlHash),
+      "state" -> Option(state),
+      "seq" -> Option(seq),
+      "screenshotUpdatedAt" -> Option(screenshotUpdatedAt),
+      "restriction" -> Option(restriction),
+      "normalization" -> Option(normalization),
+      "redirect" -> Option(redirect),
+      "redirectTime" -> Option(redirectTime)
+    )
+
+    call(Shoebox.internal.updateNormalizedURI(uriId), Json.obj(safeJsonParams: _*).stripJsNulls()).map { resp =>
+      resp.json.asOpt[Boolean].getOrElse(false)
     }
   }
 
@@ -729,5 +755,11 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
     callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = CallTimeouts(responseTimeout = Some(300000))).map(_ => ())(ExecutionContext.immediate)
+  }
+
+  def getUserConnectionsChanged(seqNum: Long, fetchSize: Int): Future[Seq[UserConnection]] = {
+    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize)).map{ r =>
+      Json.fromJson[Seq[UserConnection]](r.json).get
+    }
   }
 }
