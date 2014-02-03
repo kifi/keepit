@@ -229,8 +229,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           uriRepo.save(uri1Redirected.withState(NormalizedURIStates.SCRAPED))
         }
 
-        uri1Scraped.redirect === None
-        uri1Scraped.redirectTime === None
+        uri1Scraped.state === NormalizedURIStates.REDIRECTED
+        uri1Scraped.redirect === Some(Id[NormalizedURI](2))
       }
     }
   }

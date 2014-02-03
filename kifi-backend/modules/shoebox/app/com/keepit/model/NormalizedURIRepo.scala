@@ -104,8 +104,8 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     val uriWithSeq = uri.copy(seq = num)
 
     val validatedUri = if ( uri.state != NormalizedURIStates.REDIRECTED && (uri.redirect.isDefined || uri.redirectTime.isDefined) ){
-      airbrake.notify(s"uri ${uri.id} had redirection info. We are trying to save it with state ${uri.state}. Going to clear redirection fields and save state as ${uri.state}.")
-      uriWithSeq.copy(redirect = None, redirectTime = None)
+      airbrake.notify(s"uri ${uri.id} had redirection info. We are trying to save it with state ${uri.state}. Going to save state as redirected.")
+      uriWithSeq.copy(state = NormalizedURIStates.REDIRECTED)
     } else uriWithSeq
 
     val saved = super.save(validatedUri.clean())
