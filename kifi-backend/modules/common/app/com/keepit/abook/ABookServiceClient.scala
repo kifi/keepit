@@ -28,6 +28,7 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]] // ios (see MobileUserController)
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def getAllABookInfos():Future[Seq[ABookInfo]]
@@ -41,7 +42,6 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
-  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
   def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
