@@ -25,6 +25,8 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
 
   def amazonInstanceInfo(id: Int) = new AmazonInstanceInfo(
       instanceId = AmazonInstanceId("i-f168c1a8"),
+      name = Some("some-name"),
+      service = Some("some-service"),
       localHostname = s"host$id",
       publicHostname = s"host$id",
       localIp = IpAddress(s"127.0.0.$id"),

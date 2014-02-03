@@ -130,7 +130,7 @@ if __name__=="__main__":
   if args.host:
     instances = [instance for instance in instances if instance.name==args.host]
   else:
-    instances = [instance for instance in instances if instance.service==args.serviceType]
+    instances = [instance for instance in instances if instance.service==args.serviceType and instance.mode!="canary"]
 
   assets = S3Assets(args.serviceType, "fortytwo-builds")
 

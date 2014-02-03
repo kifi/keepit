@@ -17,6 +17,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.commanders.BookmarkInterner
 
 trait UriChangeMessage
 
@@ -31,6 +32,7 @@ class UriIntegrityActor @Inject()(
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   bookmarkRepo: BookmarkRepo,
+  bookmarkInterner: BookmarkInterner,
   deepLinkRepo: DeepLinkRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   changedUriRepo: ChangedURIRepo,
@@ -106,9 +108,9 @@ class UriIntegrityActor @Inject()(
   private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {
     val (oldInfoOpt, newInfoOpt) = (scrapeInfoRepo.getByUriId(oldUri.id.get), scrapeInfoRepo.getByUriId(newUri.id.get))
     (oldInfoOpt, newInfoOpt) match {
-      case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
+      case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => bookmarkInterner.internUri(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
       case (Some(oldInfo), Some(newInfo)) if ( oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE ) && (newUri.state != NormalizedURIStates.UNSCRAPABLE)  =>
-        uriRepo.save(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
+        bookmarkInterner.internUri(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
       case _ =>
     }
   }

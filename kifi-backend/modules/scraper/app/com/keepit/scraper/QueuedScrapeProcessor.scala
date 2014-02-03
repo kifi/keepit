@@ -25,6 +25,7 @@ import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 import com.keepit.common.net.HttpClient
+import com.keepit.common.plugin.SchedulingProperties
 
 abstract class TracedCallable[T](val name:String, val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
@@ -89,6 +90,7 @@ class QueuedScrapeProcessor @Inject() (
   s3ScreenshotStore: S3ScreenshotStore,
   serviceDiscovery: ServiceDiscovery,
   asyncHelper: ShoeboxDbCallbacks,
+  schedulingProperties: SchedulingProperties,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // adjust as needed
@@ -121,24 +123,26 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  val PULL_THRESHOLD: Int = sys.props.get("scraper.pull.threshold") map (_.toInt) getOrElse (Runtime.getRuntime.availableProcessors / 2)
+  val NUM_CORES = Runtime.getRuntime.availableProcessors
+  val PULL_MAX = NUM_CORES * config.pullMultiplier
+  val PULL_THRESHOLD = sys.props.get("scraper.pull.threshold") map (_.toInt) getOrElse (NUM_CORES / 2)
+
   override def pull():Unit = {
     if (config.pull) {
       log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${PULL_THRESHOLD}")
-      if (submittedQ.isEmpty || submittedQ.size < PULL_THRESHOLD) {
+      if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
         serviceDiscovery.thisInstance map { inst =>
           if (inst.isHealthy) {
-            asyncHelper.assignTasks(inst.id.id, Runtime.getRuntime.availableProcessors() * config.pullMultiplier) onComplete {
-              trRequests =>
-                trRequests match {
-                  case Failure(t) =>
-                    log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
-                  case Success(requests) =>
-                    log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
-                    for (sr <- requests) {
-                      asyncScrape(sr.uri, sr.info, sr.proxyOpt)
-                    }
-                }
+            asyncHelper.assignTasks(inst.id.id, PULL_MAX) onComplete { trRequests =>
+              trRequests match {
+                case Failure(t) =>
+                  log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
+                case Success(requests) =>
+                  log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
+                  for (sr <- requests) {
+                    asyncScrape(sr.uri, sr.info, sr.proxyOpt)
+                  }
+              }
             }
           }
         }
@@ -201,7 +205,9 @@ class QueuedScrapeProcessor @Inject() (
 
   val scheduler = Executors.newSingleThreadScheduledExecutor
   val TERMINATOR_FREQ: Int = sys.props.get("scraper.terminator.freq") map (_.toInt) getOrElse (5)
-  scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
+  if (schedulingProperties.enabled){
+    scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
+  }
 
   private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, helper)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {

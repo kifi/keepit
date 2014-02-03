@@ -188,11 +188,11 @@ case class HttpClientImpl(
             val count = s.serviceInstance.reportServiceUnavailable()
             val msg = s"service ${s.serviceInstance} is not available, reported $count times"
             log.error(msg)
-            val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
-            airbrake.get.notify(err)
             if (count > 5) {
               // if remote service is reporting shutdown, don’t immediately throw an exception.
               // duration is expected to be more then 20sec!
+              val err = AirbrakeError(message = Some(msg), url = Some(s.summary))
+              airbrake.get.notify(err)
               Some(new ServiceUnavailableException(request.httpUri.asInstanceOf[ServiceUri], clientResponse, request.timer.done().duration))
             } else {
               None

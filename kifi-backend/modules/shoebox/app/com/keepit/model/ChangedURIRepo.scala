@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.State
 
 @ImplementedBy(classOf[ChangedURIRepoImpl])
-trait ChangedURIRepo extends Repo[ChangedURI] {
+trait ChangedURIRepo extends Repo[ChangedURI] with SeqNumberFunction[ChangedURI]{
   def getChangesSince(num: SequenceNumber, limit: Int, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
@@ -22,16 +22,15 @@ trait ChangedURIRepo extends Repo[ChangedURI] {
 class ChangedURIRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock
-) extends DbRepo[ChangedURI] with ChangedURIRepo {
+) extends DbRepo[ChangedURI] with ChangedURIRepo with SeqNumberDbFunction[ChangedURI]{
     import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
   private val sequence = db.getSequence("changed_uri_sequence")
 
-  override val table = new RepoTable[ChangedURI](db, "changed_uri") {
+  override val table = new RepoTable[ChangedURI](db, "changed_uri") with SeqNumberColumn[ChangedURI] {
     def oldUriId = column[Id[NormalizedURI]]("old_uri_id", O.NotNull)
     def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
-    def seq = column[SequenceNumber]("seq", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ oldUriId ~ newUriId ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
   }
 
@@ -44,17 +43,15 @@ class ChangedURIRepoImpl @Inject() (
   }
 
   def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
-    val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list
-    if (limit == -1) q else q.take(limit)
+    super.getBySequenceNumber(num, limit).filter(_.state == state)
   }
 
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
-    if (highSeq <= lowSeq) Nil
-    else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq && r.state === state) yield r).sortBy(_.seq).list
+    super.getBySequenceNumber(lowSeq, highSeq).filter(_.state == state)
   }
 
   def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber] = {
-    (for (r <- table) yield r.seq).sortBy(x => x).list.lastOption
+    Some(sequence.getLastGeneratedSeq())
   }
 
   override def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI] = {

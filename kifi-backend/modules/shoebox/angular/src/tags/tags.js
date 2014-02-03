@@ -2,6 +2,43 @@
 
 angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
+.controller('TagCtrl', [
+	'$scope', '$timeout', 'tagService',
+	function ($scope, $timeout, tagService) {
+		$scope.create = function (name) {
+			if (name) {
+				return tagService.create(name)
+					.then(function (tag) {
+						tag.isNew = true;
+						$scope.clearFilter();
+
+						$timeout(function () {
+							delete tag.isNew;
+						}, 3000);
+
+						return tag;
+					});
+			}
+		};
+
+		$scope.rename = function (tag) {
+			if (tag) {
+				$scope.lastHighlight = $scope.highlight;
+				$scope.renameTag = {
+					value: tag.name
+				};
+				$scope.renaming = tag;
+			}
+		};
+
+		$scope.remove = function (tag) {
+			if (tag && tag.id) {
+				return tagService.remove(tag.id);
+			}
+		};
+	}
+])
+
 .directive('kfTags', [
 	'$timeout', '$location', 'util', 'dom', 'tagService',
 	function ($timeout, $location, util, dom, tagService) {
@@ -17,40 +54,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 			restrict: 'A',
 			templateUrl: 'tags/tags.tpl.html',
 			scope: {},
+			controller: 'TagCtrl',
 			link: function (scope, element /*, attrs*/ ) {
 				scope.tags = tagService.list;
-
-				scope.create = function (name) {
-					if (name) {
-						return tagService.create(name)
-							.then(function (tag) {
-								tag.isNew = true;
-								scope.clearFilter();
-
-								$timeout(function () {
-									delete tag.isNew;
-								}, 3000);
-
-								return tag;
-							});
-					}
-				};
-
-				scope.rename = function (tag) {
-					if (tag) {
-						scope.lastHighlight = scope.highlight;
-						scope.renameTag = {
-							value: tag.name
-						};
-						scope.renaming = tag;
-					}
-				};
-
-				scope.remove = function (tag) {
-					if (tag && tag.id) {
-						return tagService.remove(tag.id);
-					}
-				};
 
 				scope.clearFilter = function (focus) {
 					scope.filter.name = '';

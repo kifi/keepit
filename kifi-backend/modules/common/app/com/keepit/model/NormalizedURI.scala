@@ -32,7 +32,7 @@ case class NormalizedURI (
   normalization: Option[Normalization] = None,
   redirect: Option[Id[NormalizedURI]] = None,
   redirectTime: Option[DateTime] = None
-) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with Logging {
+) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with ModelWithSeqNumber[NormalizedURI] with Logging {
 
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
@@ -44,6 +44,7 @@ case class NormalizedURI (
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
   def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen)))
+  def toShortString = s"NormalizedUri($id,$seq,$state,${url.take(50)})"
 }
 
 object NormalizedURI {
@@ -109,19 +110,17 @@ object NormalizedURIStates extends States[NormalizedURI] {
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val SCRAPE_WANTED = State[NormalizedURI]("scrape_wanted")
   val REDIRECTED = State[NormalizedURI]("redirected")
-  val SCRAPE_LATER = State[NormalizedURI]("scrape_later")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPE_WANTED, REDIRECTED, SCRAPE_LATER)),
+      (ACTIVE -> Set(SCRAPE_WANTED, REDIRECTED)),
       (SCRAPE_WANTED -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE, REDIRECTED)),
       (SCRAPED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
       (SCRAPE_FAILED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
       (UNSCRAPABLE -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
-      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED, SCRAPE_LATER)),
-      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)),
-      (SCRAPE_LATER -> Set(SCRAPE_WANTED)))
+      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)),
+      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),

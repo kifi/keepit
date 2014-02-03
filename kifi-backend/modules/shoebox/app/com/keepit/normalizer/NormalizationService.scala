@@ -92,10 +92,11 @@ class NormalizationServiceImpl @Inject() (
     } yield (normalization, uri)
   }
 
-  private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean =
+  private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean = {
     currentReference.normalization.isEmpty ||
     currentReference.normalization.get < candidate.normalization ||
     (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
+  }
 
   private case class FindStrongerCandidate(currentReference: NormalizationReference, oracle: NormalizationCandidate => Action) {
 

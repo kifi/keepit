@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.State
 
 @ImplementedBy(classOf[RenormalizedURLRepoImpl])
-trait RenormalizedURLRepo extends Repo[RenormalizedURL]{
+trait RenormalizedURLRepo extends Repo[RenormalizedURL] with SeqNumberFunction[RenormalizedURL]{
   def getChangesSince(num: SequenceNumber, limit: Int, state: State[RenormalizedURL] = RenormalizedURLStates.APPLIED)(implicit session: RSession): Seq[RenormalizedURL]
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[RenormalizedURL] = RenormalizedURLStates.APPLIED)(implicit session: RSession): Seq[RenormalizedURL]   // (low, high]
   def saveWithoutIncreSeqnum(model: RenormalizedURL)(implicit session: RWSession): RenormalizedURL     // useful when we track processed merge requests
@@ -21,17 +21,16 @@ class RenormalizedURLRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock,
   val urlRepo: URLRepoImpl
-) extends DbRepo[RenormalizedURL] with RenormalizedURLRepo {
+) extends DbRepo[RenormalizedURL] with RenormalizedURLRepo with SeqNumberDbFunction[RenormalizedURL]{
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
   private val sequence = db.getSequence("renormalized_url_sequence")
 
-  override val table = new RepoTable[RenormalizedURL](db, "renormalized_url"){
+  override val table = new RepoTable[RenormalizedURL](db, "renormalized_url") with SeqNumberColumn[RenormalizedURL]{
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
     def oldUriId = column[Id[NormalizedURI]]("old_uri_id", O.NotNull)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ urlId ~ oldUriId ~ newUriId ~ state ~ seq <> (RenormalizedURL.apply _, RenormalizedURL.unapply _)
   }
 
@@ -44,13 +43,11 @@ class RenormalizedURLRepoImpl @Inject()(
   override def invalidateCache(model: RenormalizedURL)(implicit session: RSession): Unit = {}
 
   def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[RenormalizedURL])(implicit session: RSession): Seq[RenormalizedURL] = {
-    val q = (for (r <- table if r.seq > num && r.state === state) yield r).sortBy(_.seq).list
-    if (limit == -1) q else q.take(limit)
+    super.getBySequenceNumber(num, limit).filter(_.state == state)
   }
 
   def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[RenormalizedURL])(implicit session: RSession): Seq[RenormalizedURL] = {
-    if (highSeq <= lowSeq) Nil
-    else (for (r <- table if r.seq > lowSeq && r.seq <= highSeq && r.state === state) yield r).sortBy(_.seq).list
+    super.getBySequenceNumber(lowSeq, highSeq).filter(_.state == state)
   }
 
   def saveWithoutIncreSeqnum(model: RenormalizedURL)(implicit session: RWSession): RenormalizedURL = {

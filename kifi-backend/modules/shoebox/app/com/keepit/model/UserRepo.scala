@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import scala.slick.session.PositionedResult
 
 @ImplementedBy(classOf[UserRepoImpl])
-trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] {
+trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User]{
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
   def allActiveTimes()(implicit session: RSession): Seq[DateTime]
   def pageExcluding(excludeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
@@ -39,7 +39,7 @@ class UserRepoImpl @Inject() (
     basicUserCache: BasicUserUserIdCache,
     heimdal: HeimdalServiceClient,
     expRepoProvider: Provider[UserExperimentRepoImpl])
-  extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
+  extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -51,12 +51,11 @@ class UserRepoImpl @Inject() (
   private lazy val expRepo = expRepoProvider.get
   implicit val userExperimentStateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[UserExperiment]
 
-  override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
+  override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
     def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
 
@@ -186,7 +185,5 @@ class UserRepoImpl @Inject() (
     (for (row <- table) yield row.id).list.toSet
   }
 
-  def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User] = {
-    (for (r <- table if r.seq > seq) yield r).sortBy(_.seq).take(fetchSize).list
-  }
+  def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User] = super.getBySequenceNumber(seq, fetchSize)
 }

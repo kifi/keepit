@@ -630,7 +630,7 @@ class ShoeboxServiceClientImpl @Inject() (
       "url" -> candidateUrl,
       "normalization" -> candidateNormalization
     )
-    call(Shoebox.internal.recordScrapedNormalization(), payload).imap(_ => {})
+    call(Shoebox.internal.recordScrapedNormalization(), payload, callTimeouts = longTimeout).imap(_ => {})
   }
 
   def getProxy(url:String):Future[Option[HttpProxy]] = {
