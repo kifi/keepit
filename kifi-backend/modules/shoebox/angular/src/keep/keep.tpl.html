@@ -15,24 +15,14 @@
 	</div>
 	<div class="keep-who">
 		<a class="pic me" title="You! You look great!" ng-attr-style="background-image: url({{getPicUrl(me)}})"></a>
-		<a class="pic" href="javascript:" data-id="{{id}}" data-name="{{getName(keeper)}}" ng-attr-style="background-image: url({{getPicUrl(keeper)}})" ng-repeat="keeper in keepers"></a>
-		{% if !keepers.length && others %}
-		<span class="others"></span>
-		{% endif %}
-		<span class="keep-who-text" data-after-template>
+		<a class="pic" href="javascript:" data-id="{{id}}" data-name="{{getName(keeper)}}" ng-attr-style="background-image: url({{getPicUrl(keeper)}})" ng-repeat="keeper in keep.keepers"></a>
+		<span class="others" ng-show="showOthers()"></span>
+		<span class="keep-who-text">
 			<span class="keep-you">
 				You
-				{% if (keepers.length || others) && isPrivate %}
-				<span class="keep-private on">Private</span>
-				{% endif %}{% if (keepers.length || others) && !isPrivate %}
-				<span class="keep-private">Private</span>
-				{% endif %}
+				<span class="keep-private" ng-class="{ on: isPrivate() }" ng-show="hasKeepers()">Private</span>
 			</span>
-			{% if keepers.length > 1 %}
-			<span class="keep-friends">{{keepers.length}} friends</span>
-			{% endif %}{% if keepers.length == 1 %}
-			<span class="keep-friends">1 friend</span>
-			{% endif %}
+			<span class="keep-friends" ng-show="hasKeepers()">{{getFriendText()}}</span>
 			{% if others > 1 %}
 			<span class="keep-others">{{others}} others</span>
 			{% endif %}{% if others == 1 %}

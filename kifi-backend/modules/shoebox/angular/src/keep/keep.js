@@ -62,6 +62,23 @@ angular.module('kifi.keep', ['kifi.profileService'])
 				scope.getName = function (user) {
 					return (user.firstName || '') + ' ' + (user.lastName || '');
 				};
+
+				scope.hasKeepers = function () {
+					var keep = scope.keep;
+					return !!(keep.keepers && keep.keepers.length);
+				};
+
+				scope.showOthers = function () {
+					return !scope.hasKeepers() && !!scope.keep.others;
+				};
+
+				scope.getFriendText = function () {
+					var len = scope.keepers && scope.keepers.length || 0;
+					if (scope.keepers.length === 1) {
+						return '1 friend';
+					}
+					return len + ' friends';
+				};
 			}
 		};
 	}
