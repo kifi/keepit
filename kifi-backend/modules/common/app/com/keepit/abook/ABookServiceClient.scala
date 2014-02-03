@@ -28,6 +28,7 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
+  def importContacts(userId:Id[User], oauth2Token:OAuth2Token):Future[Try[ABookInfo]] // gmail
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]] // ios (see MobileUserController)
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
@@ -63,6 +64,15 @@ class ABookServiceClientImpl @Inject() (
 
   def importContactsP(userId: Id[User], oauth2Token:OAuth2Token): Future[JsValue] = {
     call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), callTimeouts = longTimeout).map { r => r.json }
+  }
+
+  def importContacts(userId:Id[User], oauth2Token:OAuth2Token): Future[Try[ABookInfo]] = {
+    call(ABook.internal.importContacts(userId), Json.toJson(oauth2Token), callTimeouts = longTimeout).map{ r =>
+      r.status match {
+        case Status.OK => Success(Json.fromJson[ABookInfo](r.json).get)
+        case _ => Failure(new IllegalArgumentException((r.json \ "code").asOpt[String].getOrElse("invalid arguments")))
+      }
+    }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
@@ -178,6 +188,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def importContactsP(userId: Id[User], oauth2Token: OAuth2Token): Future[JsValue] = ???
+
+  def importContacts(userId: Id[User], oauth2Token: OAuth2Token): Future[Try[ABookInfo]] = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
