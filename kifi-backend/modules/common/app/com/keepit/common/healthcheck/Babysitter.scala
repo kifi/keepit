@@ -36,7 +36,7 @@ class BabysitterImpl @Inject() (
     }
     finally {
       val endTime = clock.now()
-      val difference = startTime.getMillis - endTime.getMillis
+      val difference = endTime.getMillis - startTime.getMillis
       val error = Option(pointer.get) map {he => s"error $he"} getOrElse "No Error"
       if(difference > timeout.warnTimeout.toMillis) {
         val e = new Exception(s"Babysitter timeout $error. Process took ${difference}ms, timeout was set to ${timeout.warnTimeout.toMillis} millis")
