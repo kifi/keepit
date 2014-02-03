@@ -117,6 +117,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
+  def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -729,5 +730,11 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
     callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = CallTimeouts(responseTimeout = Some(300000))).map(_ => ())(ExecutionContext.immediate)
+  }
+
+  def getUserConnectionsChanged(seqNum: Long, fetchSize: Int): Future[Seq[UserConnection]] = {
+    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize)).map{ r =>
+      Json.fromJson[Seq[UserConnection]](r.json).get
+    }
   }
 }
