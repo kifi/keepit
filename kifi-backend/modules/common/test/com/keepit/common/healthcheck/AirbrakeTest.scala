@@ -1,23 +1,21 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.controller.ReportedException
 import com.keepit.common.zookeeper._
 import com.keepit.test._
 import com.keepit.inject.TestFortyTwoModule
-import com.keepit.common.net._
 import com.keepit.common.actor._
 import org.specs2.mutable.Specification
 
 import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.Schema
 import javax.xml.validation.SchemaFactory
 import javax.xml.validation.{Validator => JValidator}
-import org.xml.sax.SAXException
 import java.io.StringReader
 
 import scala.xml._
 import akka.actor.ActorSystem
+import com.keepit.model.User
 
 class AirbrakeTest extends Specification with TestInjector {
 
@@ -96,6 +94,29 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
         (xml \ "request" \ "action").head === <action>POST</action>
+        (xml \ "request" \ "session" \ "var").head === <var key="Z-InternalErrorId">{error.id.toString}</var>
+        (xml \ "request" \ "session" \ "var").size === 1
+      }
+    }
+
+    "format with user info" in {
+      implicit val system = ActorSystem("test")
+      withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        val error = AirbrakeError(
+            exception = new IllegalArgumentException("hi there"),
+            message = None,
+            userId = Some(Id[User](42)),
+            userName = Some("Robert Heinlein"),
+            url = Some("http://www.kifi.com/hi"),
+            method = Some("POST")).cleanError
+        val xml = formatter.format(error)
+        validate(xml)
+        (xml \ "request" \ "session" \ "var")(0) === <var key="Z-InternalErrorId">{error.id.toString}</var>
+        ((xml \ "request" \ "session" \ "var")(1) \ "@key").toString === "Z-UserId"
+        (xml \ "request" \ "session" \ "var")(1).text === "https://admin.kifi.com/admin/user/42"
+        (xml \ "request" \ "session" \ "var")(2).toString === """<var key="Z-UserName">Robert Heinlein</var>"""
+        (xml \ "request" \ "session" \ "var").size === 3
       }
     }
 

@@ -5,7 +5,7 @@ import com.keepit.model.User
 import com.google.inject.Inject
 import com.keepit.model.BookmarkRepo
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 
 class AbuseMonitorException(message: String) extends Exception(message)
 
@@ -27,7 +27,7 @@ class KeepsAbuseMonitor @Inject() (
       throw new AbuseMonitorException(s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. max allowed is $absoluteError")
     }
     if (afterAdding > absoluteWarn) {
-      airbrake.notify(s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. warning threshold is $absoluteWarn")
+      airbrake.notify(AirbrakeError(message = Some(s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. warning threshold is $absoluteWarn"), userId = Some(userId)))
     }
   }
 

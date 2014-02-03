@@ -70,19 +70,18 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         abookInfo.state !== ABookInfoStates.UPLOAD_FAILURE
 
         // sanity check
-        // Todo(stephen) Figure out why this is failing randomly
-        // var nWait = 0
-        // while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
-        //   nWait += 1
-        //   result = controller.getABookInfo(Id[User](1), abookInfo.id.get)(FakeRequest())
-        //   status(result) must equalTo(OK)
-        //   contentType(result) must beSome("application/json")
-        //   val s = contentAsString(result)
-        //   s !== null
-        //   abookInfo = Json.fromJson[ABookInfo](Json.parse(s)).get
-        //   Thread.sleep(200)
-        // }
-        // abookInfo.state === ABookInfoStates.ACTIVE
+        var nWait = 0
+        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
+           nWait += 1
+           result = controller.getABookInfo(Id[User](1), abookInfo.id.get)(FakeRequest())
+           status(result) must equalTo(OK)
+           contentType(result) must beSome("application/json")
+           val s = contentAsString(result)
+           s !== null
+           abookInfo = Json.fromJson[ABookInfo](Json.parse(s)).get
+           Thread.sleep(200)
+        }
+        abookInfo.state === ABookInfoStates.ACTIVE
 
         // get all
         var resultQ = controller.queryEContacts(Id[User](1), 10, None, None)(FakeRequest())

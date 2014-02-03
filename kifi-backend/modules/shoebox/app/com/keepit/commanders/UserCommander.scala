@@ -19,20 +19,17 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
+import com.keepit.search.SearchServiceClient
 import akka.actor.Scheduler
-
+import play.api.Play
 import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import com.google.inject.Inject
-
 import java.text.Normalizer
-
 import scala.concurrent.Future
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
-import play.api.Play
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -97,6 +94,7 @@ class UserCommander @Inject() (
   clock: Clock,
   scheduler: Scheduler,
   elizaServiceClient: ElizaServiceClient,
+  searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander) extends Logging {
 
@@ -185,7 +183,7 @@ class UserCommander @Inject() (
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
       }
-      ()
+      searchClient.warmUpUser(newUser.id.get)
     }
     newUser
   }

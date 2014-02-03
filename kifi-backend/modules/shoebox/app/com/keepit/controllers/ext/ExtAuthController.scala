@@ -50,6 +50,8 @@ class ExtAuthController @Inject() (
              // They sent an invalid id. Bug on client side?
              airbrake.notify(AirbrakeError(
                method = Some(request.method.toUpperCase()),
+               userId = request.user.id,
+               userName = Some(request.user.fullName),
                url = Some(request.path),
                message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
          }

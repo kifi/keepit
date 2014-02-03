@@ -25,7 +25,7 @@ trait ProdStoreModule extends StoreModule {
   @Singleton
   @Provides
   def amazonS3Client(): AmazonS3 = {
-    val conf = current.configuration.getConfig("amazon.s3").get
+    val conf = current.configuration.getConfig("amazon").get
     val awsCredentials = new BasicAWSCredentials(
       conf.getString("accessKey").get,
       conf.getString("secretKey").get)
@@ -87,7 +87,7 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
   @Singleton
   @Provides
   def amazonS3Client(): AmazonS3 = {
-    val conf = current.configuration.getConfig("amazon.s3").get
+    val conf = current.configuration.getConfig("amazon").get
     val awsCredentials = new BasicAWSCredentials(
       conf.getString("accessKey").get,
       conf.getString("secretKey").get)
