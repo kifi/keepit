@@ -1,16 +1,13 @@
 package com.keepit.common.healthcheck
 
 import play.api._
-import play.api.libs.concurrent.Akka
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.google.inject._
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.Scheduler
-import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicReference
-import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
@@ -39,11 +36,10 @@ class BabysitterImpl @Inject() (
     }
     finally {
       val endTime = clock.now()
-      val difference = endTime.getMillis - endTime.getMillis
-      val error = Option(pointer.get) map {he => "error %s".format(he)} getOrElse "No Error"
+      val difference = endTime.getMillis - startTime.getMillis
+      val error = Option(pointer.get) map {he => s"error $he"} getOrElse "No Error"
       if(difference > timeout.warnTimeout.toMillis) {
-        val e = new Exception("Babysitter timeout [%s]. Process took %s millis, timeout was set to %s millis".
-                                format(error, difference, timeout.warnTimeout.toMillis))
+        val e = new Exception(s"Babysitter timeout $error. Process took ${difference}ms, timeout was set to ${timeout.warnTimeout.toMillis} millis")
         log.warn(e.getStackTrace() mkString "\n  ")
       }
       babysitter.cancel

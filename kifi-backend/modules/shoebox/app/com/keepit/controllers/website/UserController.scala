@@ -415,7 +415,7 @@ class UserController @Inject() (
           case Success((token, pictureUrl)) =>
             Ok(Json.obj("token" -> token, "url" -> pictureUrl))
           case Failure(ex) =>
-            airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (xhr direct)")))
+            airbrakeNotifier.notify("Couldn't upload temporary picture (xhr direct)", ex)
             BadRequest(JsNumber(0))
         }
       case Left(err) =>
