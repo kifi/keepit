@@ -54,6 +54,14 @@ angular.module('kifi.keep', ['kifi.profileService'])
 				scope.getTitle = function () {
 
 				};
+
+				scope.getPicUrl = function (user) {
+					return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
+				};
+
+				scope.getName = function (user) {
+					return (user.firstName || '') + ' ' + (user.lastName || '');
+				};
 			}
 		};
 	}
