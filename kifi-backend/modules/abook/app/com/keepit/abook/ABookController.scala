@@ -57,6 +57,7 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
+  // todo(ray):removeme
   def importContactsP(userId:Id[User]) = Action.async(parse.json) { request =>
     val tokenOpt = request.body.asOpt[OAuth2Token]
     log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
@@ -76,12 +77,31 @@ class ABookController @Inject() (
     }
   }
 
+  def importContacts(userId:Id[User]) = Action.async(parse.json) { request =>
+    val tokenOpt = request.body.asOpt[OAuth2Token]
+    log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
+    tokenOpt match {
+      case None =>
+        log.error(s"[importContactsP($userId)] token is invalid body=${request.body}")
+        resolve(BadRequest(Json.obj("code" -> s"Invalid token ${request.body}")))
+      case Some(tk) => tk.issuer match {
+        case OAuth2TokenIssuers.GOOGLE => {
+          val savedToken = db.readWrite(attempts = 2) { implicit s =>
+            oauth2TokenRepo.save(tk)
+          }
+          importGmailContacts(userId, tokenOpt.get.accessToken, Some(savedToken))
+        }
+        case _ => resolve(BadRequest(Json.obj("code" -> s"Unsupported issuer ${tk.issuer}")))
+      }
+    }
+  }
+
   def importGmailContacts(userId: Id[User], accessToken: String, tokenOpt:Option[OAuth2Token]): Future[SimpleResult] = {  // todo: move to commander
     val resF = importGmailContactsF(userId, accessToken, tokenOpt)
     resF.map { abookInfoOpt =>
       abookInfoOpt match {
         case Some(info) => Ok(Json.toJson(info))
-        case None => BadRequest("Failed to import gmail contacts")
+        case None => BadRequest(Json.obj("code" -> "Failed to import gmail contacts"))
       }
     }
   }
