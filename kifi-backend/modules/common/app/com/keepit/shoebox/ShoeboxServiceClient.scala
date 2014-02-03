@@ -131,7 +131,6 @@ case class ShoeboxCacheProvider @Inject() (
     userSessionExternalIdCache: UserSessionExternalIdCache,
     userConnectionsCache: UserConnectionIdCache,
     searchFriendsCache: SearchFriendsCache,
-    uriByUrlhashCache: NormalizedURIUrlHashCache,
     userValueCache: UserValueCache,
     userConnCountCache: UserConnectionCountCache,
     userBookmarkCountCache: BookmarkCountCache,
