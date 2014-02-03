@@ -1,59 +1,58 @@
 <li class="keep" ng-class="{ mine: isMine(), example: isExample(), private: isPrivate() }">
-<time datetime="{{keep.createdAt}}" ng-show="keep.createdAt">{{keep.createdAt}}</time>
-<div class="handle">
-	<div class="keep-checkbox"></div>
-</div>
-<div class="keep-title long-text">
-	<span class="example-tag">Example keep</span>
-	<a href="{{url | escape}}" target="_blank" title="{{titleHtml | escape | replace '</?b>', ''}}">{{titleHtml}}</a>
-</div>
-<div class="keep-url long-text" title="{{url | escape}}">{{descHtml}}</div>
-<div class="keep-colls">
-	<span class="keep-coll {{exampleClass}}" data-template-for="collections" data-id="{{id}}">
-		<a class="keep-coll-a" href="tag/{{id}}">{{name | escape}}</a>
-	</span>
-</div>
-<div class="keep-who">
-	<a class="pic me" title="You! You look great!"
-		data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
-	<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName | escape}} {{lastName | escape}}" data-id="{{id}}"
-		data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
-	{% if !keepers.length && others %}
-	<span class="others"></span>
-	{% endif %}
-	<span class="keep-who-text" data-after-template>
-		<span class="keep-you">
-			You
-			{% if (keepers.length || others) && isPrivate %}
+	<time ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+	<div class="handle">
+		<div class="keep-checkbox"></div>
+	</div>
+	<div class="keep-title long-text">
+		<span class="example-tag">Example keep</span>
+		<a ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml"></a>
+	</div>
+	<div class="keep-url long-text" ng-attr-title="{{keep.url}}" ng-bind-html="descHtml"></div>
+	<div class="keep-colls">
+		<span class="keep-coll" ng-class="{ example: isExampleTag(tag) }" ng-repeat="tag in keep.collections">
+			<a class="keep-coll-a" ng-href="/tag/{{tag.id}}">{{tag.name}}</a>
+		</span>
+	</div>
+	<div class="keep-who">
+		<a class="pic me" title="You! You look great!" ng-attr-style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}})"></a>
+		<a class="pic" href="javascript:" data-name="{{keeper.firstName}} {{keeper.lastName}}" data-id="{{id}}"
+			data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}" ng-repeat="keeper in keepers"></a>
+		{% if !keepers.length && others %}
+		<span class="others"></span>
+		{% endif %}
+		<span class="keep-who-text" data-after-template>
+			<span class="keep-you">
+				You
+				{% if (keepers.length || others) && isPrivate %}
+				<span class="keep-private on">Private</span>
+				{% endif %}{% if (keepers.length || others) && !isPrivate %}
+				<span class="keep-private">Private</span>
+				{% endif %}
+			</span>
+			{% if keepers.length > 1 %}
+			<span class="keep-friends">{{keepers.length}} friends</span>
+			{% endif %}{% if keepers.length == 1 %}
+			<span class="keep-friends">1 friend</span>
+			{% endif %}
+			{% if others > 1 %}
+			<span class="keep-others">{{others}} others</span>
+			{% endif %}{% if others == 1 %}
+			<span class="keep-others">1 other</span>
+			{% endif %}
+			<span class="keep-kept-this">kept this</span>
+			{% if !keepers.length && !others && isPrivate %}
 			<span class="keep-private on">Private</span>
-			{% endif %}{% if (keepers.length || others) && !isPrivate %}
+			{% endif %}{% if !keepers.length && !others && !isPrivate %}
 			<span class="keep-private">Private</span>
 			{% endif %}
 		</span>
-		{% if keepers.length > 1 %}
-		<span class="keep-friends">{{keepers.length}} friends</span>
-		{% endif %}{% if keepers.length == 1 %}
-		<span class="keep-friends">1 friend</span>
-		{% endif %}
-		{% if others > 1 %}
-		<span class="keep-others">{{others}} others</span>
-		{% endif %}{% if others == 1 %}
-		<span class="keep-others">1 other</span>
-		{% endif %}
-		<span class="keep-kept-this">kept this</span>
-		{% if !keepers.length && !others && isPrivate %}
-		<span class="keep-private on">Private</span>
-		{% endif %}{% if !keepers.length && !others && !isPrivate %}
-		<span class="keep-private">Private</span>
-		{% endif %}
-	</span>
-</div>
-<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
-<div class="keep-hover-button-wrapper">
-	<div class="keep-hover-button-table">
-		<div class="keep-hover-button-cell">
-			<div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
+	</div>
+	<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
+	<div class="keep-hover-button-wrapper">
+		<div class="keep-hover-button-table">
+			<div class="keep-hover-button-cell">
+				<div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
+			</div>
 		</div>
 	</div>
-</div>
 </li>
