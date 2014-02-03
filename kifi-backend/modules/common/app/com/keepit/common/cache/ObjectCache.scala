@@ -46,7 +46,7 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def get(key: K): Option[T] = {
-    internalGetOpt(key) match {
+    internalGet(key) match {
       case Found(valueOpt) => valueOpt
       case _ => None
     }
@@ -63,12 +63,12 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  private def internalGetOpt(key: K): ObjectState[T] = {
+  private def internalGet(key: K): ObjectState[T] = {
     getFromInnerCache(key) match {
       case state @ Found(_) => state
       case NotFound() => outerCache match {
         case Some(cache) =>
-          val state = cache.internalGetOpt(key)
+          val state = cache.internalGet(key)
           state match {
             case Found(valueOpt) => setInnerCache(key, valueOpt)
             case _ =>
@@ -81,7 +81,7 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def getOrElseOpt(key: K)(orElse: => Option[T]): Option[T] = {
-    internalGetOpt(key) match {
+    internalGet(key) match {
       case Found(valueOpt) => valueOpt
       case _ =>
         val valueOpt = orElse
@@ -101,7 +101,7 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
-    internalGetOpt(key) match {
+    internalGet(key) match {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
         val valueOptFuture = orElse
