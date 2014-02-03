@@ -193,7 +193,7 @@ class NormalizationServiceImpl @Inject() (
         case (NormalizedURIStates.INACTIVE, _) => None
         case (NormalizedURIStates.REDIRECTED, Some(id)) => {
           val redirectionURI = normalizedURIRepo.get(id)
-          if (redirectionURI.state != NormalizedURIStates.INACTIVE) Some(redirectionURI) else None
+          if (redirectionURI.state != NormalizedURIStates.INACTIVE && redirectionURI.normalization.get <= newReference.normalization.get) Some(redirectionURI) else None
         }
         case (_, _) => Some(normalizedURI)
       }
