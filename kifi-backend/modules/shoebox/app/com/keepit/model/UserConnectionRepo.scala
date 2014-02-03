@@ -110,19 +110,21 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit = {
+    val seq = sequence.incrementAndGet()
     val changedUserIds = (for {
       c <- table if c.user1 === userId || c.user1 === userId
     } yield (c.user1, c.user2)).list.foldLeft(Set[Id[User]]()) { case (set, (a, b)) => set + a + b }
     (for {
       c <- table if c.user1 === userId || c.user1 === userId
-    } yield c.state ~ c.updatedAt).update(UserConnectionStates.INACTIVE -> clock.now())
+    } yield c.state ~ c.updatedAt ~ c.seq).update(UserConnectionStates.INACTIVE, clock.now(), seq)
     changedUserIds foreach invalidateCache
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
+    val seq = sequence.incrementAndGet()
     val res = (for {
       c <- table if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
-    } yield c.state).update(UserConnectionStates.UNFRIENDED)
+    } yield c.state ~ c.seq).update(UserConnectionStates.UNFRIENDED, seq)
 
     (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
         friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
@@ -134,10 +136,11 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession) {
+    val seq = sequence.incrementAndGet()
     (for {
       c <- table if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
         (if (requested) c.state =!= UserConnectionStates.ACTIVE else c.state === UserConnectionStates.INACTIVE)
-    } yield c.state).update(UserConnectionStates.ACTIVE)
+    } yield c.state ~ c.seq).update(UserConnectionStates.ACTIVE, seq)
     val toInsert = users -- {
       (for (c <- table if c.user1 === userId) yield c.user2) union
         (for (c <- table if c.user2 === userId) yield c.user1)
@@ -149,7 +152,8 @@ class UserConnectionRepoImpl @Inject() (
     }
 
     (users + userId) foreach invalidateCache
-    table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)
+
+    table.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = seq)}.toSeq: _*)
   }
 
   def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)

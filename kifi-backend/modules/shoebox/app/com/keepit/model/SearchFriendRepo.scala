@@ -66,11 +66,14 @@ class SearchFriendRepoImpl @Inject() (
   }
 
   def excludeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {
+    val seq = sequence.incrementAndGet()
     val numUpdated = (for {
       f <- table if f.userId === userId && f.state === SearchFriendStates.INCLUDED && f.friendId.inSet(friendIds)
-    } yield f.state ~ f.updatedAt).update(SearchFriendStates.EXCLUDED -> clock.now())
+    } yield f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.EXCLUDED, clock.now(), seq)
+
+
     val idsToInsert = friendIds -- (for (f <- table if f.userId === userId) yield f.friendId).list
-    table.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId) }.toSeq: _*)
+    table.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId, seq = seq) }.toSeq: _*)
     val numChanged = idsToInsert.size + numUpdated
     if (numChanged > 0) {
       searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
@@ -79,9 +82,10 @@ class SearchFriendRepoImpl @Inject() (
   }
 
   def includeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {
+    val seq = sequence.incrementAndGet()
     val numUpdated = (for {
       f <- table if f.userId === userId && f.state === SearchFriendStates.EXCLUDED && f.friendId.inSet(friendIds)
-    } yield f.state ~ f.updatedAt).update(SearchFriendStates.INCLUDED -> clock.now())
+    } yield f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.INCLUDED , clock.now(), seq)
     if (numUpdated > 0) {
       searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
     }

@@ -3,6 +3,7 @@ package com.keepit.model
 import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
 
 class SearchFriendTest extends Specification with ShoeboxTestInjector {
   "SearchFriendRepo" should {
@@ -29,6 +30,30 @@ class SearchFriendTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "seqNum works" in {
+      withDb(){ implicit injector =>
+        val users = (1 to 4).map(Id[User](_))
+        db.readWrite { implicit s =>
+          userConnRepo.addConnections(users.head, users.tail.toSet)
+          searchFriendRepo.excludeFriends(users(0), Set(users(1)))
+
+          userConnRepo.getUserConnectionChanged(SequenceNumber.ZERO, fetchSize = 10).map{_.seq.value}.toSet === Set(1)
+          searchFriendRepo.getSearchFriendsChanged(SequenceNumber.ZERO, fetchSize = 10).map{_.seq.value}.toSet === Set(1)
+
+          searchFriendRepo.excludeFriend(users(0), users(2))
+          searchFriendRepo.getSearchFriendsChanged(SequenceNumber(1), fetchSize = 10).map{_.seq.value}.toSet === Set(2)
+          searchFriendRepo.includeFriend(users(0), users(1))
+          searchFriendRepo.getSearchFriendsChanged(SequenceNumber(2), fetchSize = 10).map{_.seq.value}.toSet === Set(3)
+
+          userConnRepo.unfriendConnections(users(0), Set(users(1)))
+          userConnRepo.getUserConnectionChanged(SequenceNumber(1), fetchSize = 10).map{_.seq.value}.toSet === Set(2)
+          userConnRepo.deactivateAllConnections(users(0))
+          userConnRepo.getUserConnectionChanged(SequenceNumber(2), fetchSize = 10).map{_.seq.value}.toSet === Set(3)
+        }
+      }
+    }
+
     "use cache properly" in {
       withDb() { implicit injector =>
         val users = (1 to 3).map(Id[User](_))
