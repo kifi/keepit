@@ -26,6 +26,7 @@ const self = require("sdk/self"), data = self.data, load = data.load.bind(data),
 const timers = require("sdk/timers");
 const { Ci, Cc } = require("chrome");
 const {deps} = require("./deps");
+const {Airbrake} = require('./airbrake.min');
 const {Listeners} = require("./listeners");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
@@ -57,9 +58,9 @@ exports.icon = {
       }
     }
   }};
-function onIconClick(win) {
+var onIconClick = Airbrake.wrap(function onIconClick(win) {
   dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
-}
+});
 
 exports.isPackaged = function() {
   return true; // TODO: detect development environment
@@ -115,13 +116,8 @@ exports.toggleLogging = exports.noop = function () {};
 
 exports.on = {
   beforeSearch: new Listeners,
-  search: new Listeners,
-  install: new Listeners,
-  update: new Listeners,
-  startup: new Listeners};
-
-// Call handlers for load reason async (after main.js has finished).
-timers.setTimeout(dispatch.bind(exports.on[exports.loadReason] || []), 0);
+  search: new Listeners
+};
 
 var nsISound, nsIIO;
 exports.play = function(path) {
@@ -132,19 +128,20 @@ exports.play = function(path) {
 
 exports.popup = {
   open: function(options, handlers) {
+    var onReady = Airbrake.wrap(function onReady(tab) {
+      handlers.navigate.call(tab, tab.url);
+    });
     var win = windows.open({
       url: options.url,
-      onOpen: function() {
+      onOpen: Airbrake.wrap(function() {
         if (handlers && handlers.navigate) {
           win.tabs.activeTab.on("ready", onReady);
         }
-      },
-      onClose: function() {
+      }),
+      onClose: Airbrake.wrap(function() {
         win.tabs.activeTab.removeListener("ready", onReady);
-      }});
-    function onReady(tab) {
-      handlers.navigate.call(tab, tab.url);
-    }
+      })
+    });
 
     // Below are some failed attempts at opening a popup window...
     // UPDATE: see https://addons.mozilla.org/en-US/developers/docs/sdk/1.12/modules/sdk/frame/utils.html
@@ -176,7 +173,7 @@ exports.popup = {
 
 var portHandlers, portMessageTypes;
 exports.port = {
-  on: function(handlers) {
+  on: function (handlers) {
     if (portHandlers) throw Error("api.port.on already called");
     portHandlers = handlers;
     portMessageTypes = Object.keys(handlers);
@@ -187,19 +184,19 @@ exports.port = {
     }
   }};
 function bindPortHandlers(worker, page) {
-  portMessageTypes.forEach(function(type) {
+  portMessageTypes.forEach(function (type) {
     worker.port.on(type, onPortMessage.bind(worker, page, type));
   });
 }
-function onPortMessage(page, type, data, callbackId) {
+var onPortMessage = Airbrake.wrap(function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
   portHandlers[type](data, this.port.emit.bind(this.port, 'api:respond', callbackId), page);
-}
+});
 
 exports.request = function(method, url, data, done, fail) {
   var options = {
     url: url,
-    onComplete: function(resp) {
+    onComplete: Airbrake.wrap(function (resp) {
       var keys = [];
       for (var key in resp) {
         keys.push(key);
@@ -210,22 +207,22 @@ exports.request = function(method, url, data, done, fail) {
         fail(resp);
       }
       done = fail = null;
-    }
+    })
   };
-  if (data) {
+  if (data != null && data !== '') {
     options.contentType = "application/json; charset=utf-8";
-    options.content = JSON.stringify(data);
+    options.content = typeof data === 'string' ? data : JSON.stringify(data);
   }
-  require("sdk/request").Request(options)[method.toLowerCase()]();
+  require('sdk/request').Request(options)[method.toLowerCase()]();
 };
 
 exports.postRawAsForm = function(url, data) {
   var options = {
     url: url,
-    contentType: "application/x-www-form-urlencoded",
+    contentType: 'application/x-www-form-urlencoded',
     content: data
   }
-  require("sdk/request").Request(options).post();
+  require('sdk/request').Request(options).post();
 };
 
 exports.util = {
@@ -239,7 +236,7 @@ exports.browser = {
   userAgent: Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).userAgent
 };
 
-exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupported");
+exports.requestUpdateCheck = exports.log.bind(null, '[requestUpdateCheck] unsupported');
 
 var socketPage, sockets = [,];
 var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
@@ -253,39 +250,39 @@ exports.socket = {
           socketCallbacks[id] = callback;
           arr.splice(1, 0, id);
         }
-        socketPage.port.emit("socket_send", socketId, arr);
+        socketPage.port.emit('socket_send', socketId, arr);
       },
       close: function() {
-        log("[api.socket.close]", socketId);
+        log('[api.socket.close]', socketId);
         delete sockets[socketId];
-        socketPage.port.emit("close_socket", socketId);
+        socketPage.port.emit('close_socket', socketId);
         if (!sockets.some(function(h) {return h})) {
           socketPage.destroy();
           socketPage = null;
         }
         this.send = this.close = exports.noop;
       }};
-    log("[api.socket.open]", socketId, url);
+    log('[api.socket.open]', socketId, url);
     sockets.push({socket: socket, handlers: handlers, onConnect: onConnect, onDisconnect: onDisconnect});
     if (socketPage) {
-      socketPage.port.emit("open_socket", socketId, url);
+      socketPage.port.emit('open_socket', socketId, url);
     } else {
-      socketPage = require("sdk/page-worker").Page({
+      socketPage = require('sdk/page-worker').Page({
         contentScriptFile: [
-          data.url("scripts/lib/rwsocket.js"),
+          data.url('scripts/lib/rwsocket.js'),
           data.url("scripts/workers/socket.js")],
-        contentScriptWhen: "start",
+        contentScriptWhen: 'start',
         contentScriptOptions: {socketId: socketId, url: url},
-        contentURL: data.url("html/workers/socket.html")
+        contentURL: data.url('html/workers/socket.html')
       });
-      socketPage.port.on("socket_connect", onSocketConnect);
-      socketPage.port.on("socket_disconnect", onSocketDisconnect);
-      socketPage.port.on("socket_message", onSocketMessage);
+      socketPage.port.on('socket_connect', onSocketConnect);
+      socketPage.port.on('socket_disconnect', onSocketDisconnect);
+      socketPage.port.on('socket_message', onSocketMessage);
     }
     return socket;
   }
 }
-function onSocketConnect(socketId) {
+var onSocketConnect = Airbrake.wrap(function onSocketConnect(socketId) {
   var socket = sockets[socketId];
   if (socket) {
     socket.socket.seq++;
@@ -297,8 +294,8 @@ function onSocketConnect(socketId) {
   } else {
     log("[onSocketConnect] Ignoring, no socket", socketId);
   }
-}
-function onSocketDisconnect(socketId, why) {
+});
+var onSocketDisconnect = Airbrake.wrap(function onSocketDisconnect(socketId, why) {
   var socket = sockets[socketId];
   if (socket) {
     try {
@@ -309,8 +306,8 @@ function onSocketDisconnect(socketId, why) {
   } else {
     log("[onSocketDisconnect] Ignoring, no socket", socketId);
   }
-}
-function onSocketMessage(socketId, data) {
+});
+var onSocketMessage = Airbrake.wrap(function onSocketMessage(socketId, data) {
   try {
     var msg = JSON.parse(data);
     if (Array.isArray(msg)) {
@@ -342,9 +339,9 @@ function onSocketMessage(socketId, data) {
   } catch (e) {
     exports.log.error(e, "api.socket.receive:" + socketId + ":" + data);
   }
-}
+});
 
-exports.storage = require("sdk/simple-storage").storage;
+exports.storage = require('sdk/simple-storage').storage;
 
 exports.tabs = {
   anyAt: function(url) {
@@ -355,19 +352,20 @@ exports.tabs = {
     }
   },
   select: function(tabId) {
-    log("[api.tabs.select]", tabId);
+    log('[api.tabs.select]', tabId);
     var tab = tabsById[tabId];
     tab.activate();
     tab.window.activate();
   },
   open: function(url, callback) {
-    log("[api.tabs.open]", url);
-    tabs.open({
-      url: url,
-      onOpen: function(tab) {
+    log('[api.tabs.open]', url);
+    var params = {url: url};
+    if (callback) {
+      params.onOpen = Airbrake.wrap(function (tab) {
         callback && callback(tab.id);
-      }
-    });
+      });
+    }
+    tabs.open(params);
   },
   each: function(callback) {
     for each (let page in pages) {
@@ -446,22 +444,31 @@ exports.tabs = {
     }
   }};
 
-exports.timers = timers;
+exports.timers = {
+  setTimeout: function (f, ms) {
+    timers.setTimeout(Airbrake.wrap(f), ms);
+  },
+  setInterval: function (f, ms) {
+    timers.setInterval(Airbrake.wrap(f), ms);
+  },
+  clearTimeout: timers.clearTimeout.bind(timers),
+  clearInterval: timers.clearInterval.bind(timers)
+};
 exports.version = self.version;
 
 // initializing tabs and pages
 
 tabs
-.on("open", function(tab) {
+.on('open', Airbrake.wrap(function onTabOpen(tab) {
   log("[tabs.open]", tab.id, tab.url);
   tabsById[tab.id] = tab;
-})
-.on("close", function(tab) {
+}))
+.on('close', Airbrake.wrap(function onTabClose(tab) {
   log("[tabs.close]", tab.id, tab.url);
   onPageHide(tab.id);
   delete tabsById[tab.id];
-})
-.on("activate", function(tab) {
+}))
+.on('activate', Airbrake.wrap(function onTabActivate(tab) {
   var page = pages[tab.id];
   if (!page || !page.active) {
     log("[tabs.activate]", tab.id, tab.url);
@@ -480,8 +487,8 @@ tabs
       }
     }
   }
-})
-.on("deactivate", function(tab) {  // note: can fire after "close"
+}))
+.on('deactivate', Airbrake.wrap(function onTabDeactivate(tab) {  // note: can fire after "close"
   log("[tabs.deactivate]", tab.id, tab.url);
   if (tab.window === windows.activeWindow) {
     var page = pages[tab.id];
@@ -489,35 +496,35 @@ tabs
       dispatch.call(exports.tabs.on.blur, page);
     }
   }
-})
-.on("ready", function(tab) {
+}))
+.on('ready', Airbrake.wrap(function onTabReady(tab) {
   log("[tabs.ready]", tab.id, tab.url);
-});
+}));
 
 var activeWinHasFocus = true;
 windows
-.on("open", function(win) {
+.on('open', Airbrake.wrap(function onWindowOpen(win) {
   log("[windows.open]", win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
-})
-.on("close", function(win) {
+}))
+.on('close', Airbrake.wrap(function onWindowClose(win) {
   log("[windows.close]", win.title);
   removeFromWindow(win);
-})
-.on("activate", function(win) {
+}))
+.on('activate', Airbrake.wrap(function onWindowActivate(win) {
   activeWinHasFocus = true;
   var page = pages[win.tabs.activeTab.id];
   if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
-})
-.on("deactivate", function(win) {
+}))
+.on('deactivate', Airbrake.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
   var page = pages[win.tabs.activeTab.id];
   if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);
   }
-});
+}));
 
 for each (let win in windows) {
   if (!win.removeIcon) {
@@ -533,7 +540,7 @@ for each (let win in windows) {
 
 // before search
 
-require('./location').onFocus(dispatch.bind(exports.on.beforeSearch));
+require('./location').onFocus(Airbrake.wrap(dispatch.bind(exports.on.beforeSearch)));
 
 // navigation handling
 
@@ -541,7 +548,7 @@ const stripHashRe = /^[^#]*/;
 const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
 const plusRe = /\+/g;
 
-require('./location').onChange(function (tabId, newPage) { // called before onAttach for all pages except images
+require('./location').onChange(Airbrake.wrap(function onLocationChange(tabId, newPage) { // called before onAttach for all pages except images
   const tab = tabsById[tabId];
   log('[location:change]', tabId, 'newPage:', newPage, tab.url);
   if (newPage) {
@@ -566,7 +573,7 @@ require('./location').onChange(function (tabId, newPage) { // called before onAt
       }
     }
   }
-});
+}));
 
 // This function is needed because location:change and onAttach do not fire in a consistent order.
 // location:change fires first for all pages except images.
@@ -596,67 +603,77 @@ function onPageHide(tabId) {
 
 // attaching content scripts
   const {PageMod} = require("sdk/page-mod");
-  require("./meta").contentScripts.forEach(function(arr) {
+  require('./meta').contentScripts.forEach(function (arr) {
     const path = arr[0], urlRe = arr[1], o = deps(path);
-    log("defining PageMod:", path, "deps:", o);
+    log('defining PageMod:', path, 'deps:', o);
     PageMod({
       include: urlRe,
       contentStyleFile: o.styles.map(url),
       contentScriptFile: o.scripts.map(url),
-      contentScriptWhen: arr[2] ? "start" : "ready",
+      contentScriptWhen: arr[2] ? 'start' : 'ready',
       contentScriptOptions: {dataUriPrefix: url(''), dev: exports.mode.isDev(), version: self.version},
-      attachTo: ["existing", "top"],
-      onAttach: function (worker) { // called before location:change for pages that are images
+      attachTo: ['existing', 'top'],
+      onAttach: Airbrake.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
         const tab = worker.tab;
         const page = getPageOrHideOldAndCreatePage(tab);
 
         log('[onAttach]', tab.id, this.contentScriptFile, tab.url, page);
         page.injectedCss = mergeArr({}, o.styles);
         const injectedJs = mergeArr({}, o.scripts);
-        const workers = workerNs(page).workers;
-        workers.push(worker);
-        worker.on("pageshow", function() {  // pageshow/pagehide discussion at bugzil.la/766088#c2
-          if (pages[tab.id] !== page) {  // bfcache used
-            log("[api:pageshow] tab:", tab.id, "updating:", pages[tab.id], "->", page);
-            pages[tab.id] = page;
-          } else if (page.url !== tab.url) {  // shouldn’t happen
-            log("[api:pageshow] tab:", tab.id, "updating:", page.url, "->", tab.url);
-            page.url = tab.url;
-          } else {
-            log("[api:pageshow] tab:", tab.id, "url:", tab.url);
-          }
-          emitQueuedMessages(page, worker);
-        }).on("pagehide", function() {
-          log("[pagehide] tab:", tab.id);
-          onPageHide(tab.id);
-        });
+        workerNs(page).workers.push(worker);
+        worker
+          .on('pageshow', workerOnPageShow.bind(null, tab, page, worker))  // pageshow/pagehide discussion at bugzil.la/766088#c2
+          .on('pagehide', workerOnPageHide.bind(null, tab.id));
         if (portHandlers) {
           bindPortHandlers(worker, page);
         }
         worker.handling = {};
-        worker.port.on("api:handling", function(types) {
-          log("[api:handling]", types);
-          for each (let type in types) {
-            worker.handling[type] = true;
-          }
-          emitQueuedMessages(page, worker);
-        });
-        worker.port.on("api:require", function(paths, callbackId) {
-          var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
-          log("[api:require] tab:", tab.id, o);
-          mergeArr(page.injectedCss, o.styles);
-          mergeArr(injectedJs, o.scripts);
-          worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
-        });
-      }});
+        worker.port
+        .on('api:handling', workerOnApiHandling.bind(null, page, worker))
+        .on('api:require', workerOnApiRequire.bind(null, page, worker, injectedJs));
+      })});
   });
+
+var workerOnPageShow = Airbrake.wrap(function workerOnPageShow(tab, page, worker) {
+  if (pages[tab.id] !== page) {  // bfcache used
+    log('[api:pageshow] tab:', tab.id, 'updating:', pages[tab.id], '->', page);
+    pages[tab.id] = page;
+  } else if (page.url !== tab.url) {  // shouldn’t happen
+    log('[api:pageshow] tab:', tab.id, 'updating:', page.url, '->', tab.url);
+    page.url = tab.url;
+  } else {
+    log('[api:pageshow] tab:', tab.id, 'url:', tab.url);
+  }
+  emitQueuedMessages(page, worker);
+});
+
+var workerOnPageHide = Airbrake.wrap(function workerOnPageHide(tabId) {
+  log('[pagehide] tab:', tabId);
+  onPageHide(tabId);
+});
+
+var workerOnApiHandling = Airbrake.wrap(function workerOnApiHandling(page, worker, types) {
+  log('[api:handling]', types);
+  for each (let type in types) {
+    worker.handling[type] = true;
+  }
+  emitQueuedMessages(page, worker);
+});
+
+var workerOnApiRequire = Airbrake.wrap(function workerOnApiRequire(page, worker, injectedJs, paths, callbackId) {
+  var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
+  log('[api:require] tab:', page.id, o);
+  mergeArr(page.injectedCss, o.styles);
+  mergeArr(injectedJs, o.scripts);
+  worker.port.emit('api:inject', o.styles.map(load), o.scripts.map(load), callbackId);
+});
 
 function emitQueuedMessages(page, worker) {
   if (page.toEmit) {
     for (var i = 0; i < page.toEmit.length;) {
       var m = page.toEmit[i];
       if (worker.handling[m[0]]) {
-        log("[emitQueuedMessages]", page.id, m[0], m[1] != null ? m[1] : "");
+        log('[emitQueuedMessages]', page.id, m[0], m[1] != null ? m[1] : '');
         worker.port.emit.apply(worker.port, m);
         page.toEmit.splice(i, 1);
       } else {
@@ -676,7 +693,7 @@ function removeFromWindow(win) {
   }
 }
 
-exports.onUnload = function(reason) {
+exports.onUnload = function (reason) {
   for each (let win in windows) {
     removeFromWindow(win);
   }

@@ -29,20 +29,20 @@ object ABookOwnerInfo {
   val EMPTY = ABookOwnerInfo(None, None)
 }
 
-class GmailABookOwnerInfo(id:Option[String], email:Option[String], val verified:Option[Boolean] = None, val hd:Option[String] = None) extends ABookOwnerInfo(id, email)
+class GmailABookOwnerInfo(id:Option[String], email:Option[String], /* val verified:Option[Boolean] = None, */ val hd:Option[String] = None) extends ABookOwnerInfo(id, email)
 
 object GmailABookOwnerInfo {
-  def apply(id:Option[String], email:Option[String], verified:Option[Boolean], hd:Option[String]) = new GmailABookOwnerInfo(id, email, verified, hd)
-  def unapply(userInfo:GmailABookOwnerInfo):Option[(Option[String], Option[String], Option[Boolean], Option[String])] = Some(userInfo.id, userInfo.email, userInfo.verified, userInfo.hd)
+  def apply(id:Option[String], email:Option[String], /* verified:Option[Boolean],*/ hd:Option[String]) = new GmailABookOwnerInfo(id, email, hd)
+  def unapply(userInfo:GmailABookOwnerInfo):Option[(Option[String], Option[String], /* Option[Boolean],*/ Option[String])] = Some(userInfo.id, userInfo.email, /* userInfo.verified, */ userInfo.hd)
 
   implicit val format = (
     (__ \ 'id).formatNullable[String] and
     (__ \ 'email).formatNullable[String] and
-    (__ \ 'verified_email).formatNullable[Boolean] and
+//    (__ \ 'verified_email).formatNullable[Boolean] and
     (__ \ 'hd).formatNullable[String]
   )(GmailABookOwnerInfo.apply, unlift(GmailABookOwnerInfo.unapply))
 
-  val EMPTY = GmailABookOwnerInfo(None, None, None, None)
+  val EMPTY = GmailABookOwnerInfo(None, None, /* None, */ None)
 }
 
 class ABookController @Inject() (
@@ -57,6 +57,7 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
+  // todo(ray):removeme
   def importContactsP(userId:Id[User]) = Action.async(parse.json) { request =>
     val tokenOpt = request.body.asOpt[OAuth2Token]
     log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
@@ -76,29 +77,21 @@ class ABookController @Inject() (
     }
   }
 
-  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action.async { request =>
-    provider match {
-      case "google" => {
-        importGmailContacts(userId, accessToken, None)
-      }
-      case "facebook" => {
-        if (Play.maybeApplication.isDefined && (!Play.isProd)) {
-          val friendsUrl = "https://graph.facebook.com/me/friends"
-          WS.url(friendsUrl).withQueryString(("access_token", accessToken),("fields", "id,name,first_name,last_name,username,picture,email")).get map { resp =>
-            resp.status match {
-              case OK => {
-                val friends = resp.json
-                log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-                Ok(friends)
-              }
-              case _ => {
-                BadRequest("Unsuccessful attempt to invoke facebook API")
-              }
-            }
+  def importContacts(userId:Id[User]) = Action.async(parse.json) { request =>
+    val tokenOpt = request.body.asOpt[OAuth2Token]
+    log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
+    tokenOpt match {
+      case None =>
+        log.error(s"[importContactsP($userId)] token is invalid body=${request.body}")
+        resolve(BadRequest(Json.obj("code" -> s"Invalid token ${request.body}")))
+      case Some(tk) => tk.issuer match {
+        case OAuth2TokenIssuers.GOOGLE => {
+          val savedToken = db.readWrite(attempts = 2) { implicit s =>
+            oauth2TokenRepo.save(tk)
           }
-        } else {
-          resolve(BadRequest("Unsupported provider"))
+          importGmailContacts(userId, tokenOpt.get.accessToken, Some(savedToken))
         }
+        case _ => resolve(BadRequest(Json.obj("code" -> s"Unsupported issuer ${tk.issuer}")))
       }
     }
   }
@@ -108,7 +101,7 @@ class ABookController @Inject() (
     resF.map { abookInfoOpt =>
       abookInfoOpt match {
         case Some(info) => Ok(Json.toJson(info))
-        case None => BadRequest("Failed to import gmail contacts")
+        case None => BadRequest(Json.obj("code" -> "Failed to import gmail contacts"))
       }
     }
   }

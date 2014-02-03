@@ -1,29 +1,8 @@
 package com.keepit.common.cache
 
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.concurrent._
 import scala.concurrent.duration._
-
-import java.util.concurrent.atomic.AtomicInteger
-
-import net.codingwell.scalaguice.ScalaModule
-import net.sf.ehcache._
-import net.sf.ehcache.config.CacheConfiguration
-
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging._
-import com.keepit.common.time._
-import com.keepit.serializer.{Serializer, BinaryFormat}
-import com.keepit.common.logging.{AccessLogTimer, AccessLog}
-import com.keepit.common.logging.Access._
-
-import play.api.Logger
-import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-import play.modules.statsd.api.Statsd
-
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
@@ -46,16 +25,9 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def get(key: K): Option[T] = {
-    getFromInnerCache(key) match {
+    internalGet(key) match {
       case Found(valueOpt) => valueOpt
-      case NotFound() => outerCache match {
-        case Some(cache) =>
-          val valueOpt = cache.get(key)
-          if (valueOpt.isDefined) setInnerCache(key, valueOpt)
-          valueOpt
-        case None => None
-      }
-      case Removed() => None // if removed at a transaction local cache, do not call outer cache
+      case _ => None
     }
   }
 
@@ -70,12 +42,12 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  protected[cache] def internalGetOpt(key: K): ObjectState[T] = {
+  private def internalGet(key: K): ObjectState[T] = {
     getFromInnerCache(key) match {
       case state @ Found(_) => state
       case NotFound() => outerCache match {
         case Some(cache) =>
-          val state = cache.internalGetOpt(key)
+          val state = cache.internalGet(key)
           state match {
             case Found(valueOpt) => setInnerCache(key, valueOpt)
             case _ =>
@@ -88,7 +60,7 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def getOrElseOpt(key: K)(orElse: => Option[T]): Option[T] = {
-    internalGetOpt(key) match {
+    internalGet(key) match {
       case Found(valueOpt) => valueOpt
       case _ =>
         val valueOpt = orElse
@@ -108,7 +80,7 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
-    internalGetOpt(key) match {
+    internalGet(key) match {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
         val valueOptFuture = orElse

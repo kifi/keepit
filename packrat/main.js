@@ -505,6 +505,20 @@ function makeRequest(name, method, url, data, callbacks) {
   });
 }
 
+// ===== Error reporting
+
+var Airbrake = Airbrake || require('./airbrake.min').Airbrake;
+Airbrake.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
+Airbrake.setEnvironmentName(api.isPackaged() && !api.mode.isDev() ? 'production' : 'development');
+Airbrake.addReporter(function airbrake(notice, opts) {
+  notice.context.version = api.version;
+  notice.context.userAgent = api.browser.userAgent;
+  notice.context.userId = me && me.id;
+  api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
+    log('#c00', '[airbrake] report', o.id, o.url)();
+  });
+});
+
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
@@ -1760,13 +1774,6 @@ function getPrefetched(request, cb) {
     return true;
   }
 }
-
-api.on.install.add(function() {
-  log('[api.on.install]')();
-});
-api.on.update.add(function() {
-  log('[api.on.update]')();
-});
 
 // ===== Local storage
 
