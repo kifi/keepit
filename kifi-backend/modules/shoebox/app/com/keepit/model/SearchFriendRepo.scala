@@ -66,15 +66,17 @@ class SearchFriendRepoImpl @Inject() (
   }
 
   def excludeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {
-    val seq = sequence.incrementAndGet()
-    val numUpdated = (for {
+    val ids = (for {
       f <- table if f.userId === userId && f.state === SearchFriendStates.INCLUDED && f.friendId.inSet(friendIds)
-    } yield f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.EXCLUDED, clock.now(), seq)
+    } yield f.id).list
 
+    ids.foreach{ id =>
+      (for(f <- table if f.id === id) yield  f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.EXCLUDED, clock.now(), sequence.incrementAndGet())
+    }
 
     val idsToInsert = friendIds -- (for (f <- table if f.userId === userId) yield f.friendId).list
-    table.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId, seq = seq) }.toSeq: _*)
-    val numChanged = idsToInsert.size + numUpdated
+    table.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId, seq = sequence.incrementAndGet()) }.toSeq: _*)
+    val numChanged = idsToInsert.size + ids.size
     if (numChanged > 0) {
       searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
     }
@@ -82,14 +84,18 @@ class SearchFriendRepoImpl @Inject() (
   }
 
   def includeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {
-    val seq = sequence.incrementAndGet()
-    val numUpdated = (for {
+    val ids = (for {
       f <- table if f.userId === userId && f.state === SearchFriendStates.EXCLUDED && f.friendId.inSet(friendIds)
-    } yield f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.INCLUDED , clock.now(), seq)
-    if (numUpdated > 0) {
+    } yield f.id).list
+
+    ids.foreach{ id =>
+      (for(f <- table if f.id === id) yield f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.INCLUDED , clock.now(), sequence.incrementAndGet())
+    }
+
+    if (ids.size > 0) {
       searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
     }
-    numUpdated
+    ids.size
   }
 
   private def getSearchFriendsFromDb(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {

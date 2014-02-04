@@ -38,7 +38,7 @@ class SearchFriendTest extends Specification with ShoeboxTestInjector {
           userConnRepo.addConnections(users.head, users.tail.toSet)
           searchFriendRepo.excludeFriends(users(0), Set(users(1)))
 
-          userConnRepo.getUserConnectionChanged(SequenceNumber.ZERO, fetchSize = 10).map{_.seq.value}.toSet === Set(1)
+          userConnRepo.getUserConnectionChanged(SequenceNumber.ZERO, fetchSize = 10).map{_.seq.value}.toSet === Set(1, 2, 3)
           searchFriendRepo.getSearchFriendsChanged(SequenceNumber.ZERO, fetchSize = 10).map{_.seq.value}.toSet === Set(1)
 
           searchFriendRepo.excludeFriend(users(0), users(2))
@@ -47,9 +47,9 @@ class SearchFriendTest extends Specification with ShoeboxTestInjector {
           searchFriendRepo.getSearchFriendsChanged(SequenceNumber(2), fetchSize = 10).map{_.seq.value}.toSet === Set(3)
 
           userConnRepo.unfriendConnections(users(0), Set(users(1)))
-          userConnRepo.getUserConnectionChanged(SequenceNumber(1), fetchSize = 10).map{_.seq.value}.toSet === Set(2)
+          userConnRepo.getUserConnectionChanged(SequenceNumber(3), fetchSize = 10).map{_.seq.value}.toSet === Set(4)
           userConnRepo.deactivateAllConnections(users(0))
-          userConnRepo.getUserConnectionChanged(SequenceNumber(2), fetchSize = 10).map{_.seq.value}.toSet === Set(3)
+          userConnRepo.getUserConnectionChanged(SequenceNumber(4), fetchSize = 10).map{_.seq.value}.toSet === Set(5, 6, 7)
         }
       }
     }
