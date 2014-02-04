@@ -4,6 +4,7 @@ angular.module('kifi', [
 	'ngCookies',
 	'ngResource',
 	'ngRoute',
+	'ngSanitize',
 	'ui.bootstrap',
 	'util',
 	'dom',

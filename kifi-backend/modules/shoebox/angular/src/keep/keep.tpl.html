@@ -5,11 +5,12 @@
 	</div>
 	<div class="keep-title long-text">
 		<span class="example-tag">Example keep</span>
-		<a ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml"></a>
+		<a ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
+		</a>
 	</div>
-	<div class="keep-url long-text" ng-attr-title="{{keep.url}}" ng-bind-html="descHtml"></div>
+	<div class="keep-url long-text" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
 	<div class="keep-colls">
-		<span class="keep-coll" ng-class="{ example: isExampleTag(tag) }" ng-repeat="tag in keep.collections">
+		<span class="keep-coll" ng-class="{ example: isExampleTag(tag) }" ng-repeat="tag in getTags()">
 			<a class="keep-coll-a" ng-href="/tag/{{tag.id}}">{{tag.name}}</a>
 		</span>
 	</div>
