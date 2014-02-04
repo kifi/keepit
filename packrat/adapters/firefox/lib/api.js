@@ -383,7 +383,7 @@ exports.tabs = {
     const page = pages[tab.id];
     if (page === tab) {
       for (let worker of workerNs(page).workers) {
-        if (worker.handling[type]) {
+        if (worker.handling && worker.handling[type]) {
           worker.port.emit(type, data);
           if (!emitted) {
             emitted = true;
