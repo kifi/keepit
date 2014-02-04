@@ -58,3 +58,4 @@ class FastJsonParser() {
     Json.parse(bytes)
   }
 }
+

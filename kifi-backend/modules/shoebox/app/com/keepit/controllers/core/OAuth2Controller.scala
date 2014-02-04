@@ -19,6 +19,7 @@ import com.keepit.model.{ABookInfo, User, OAuth2Token}
 import com.keepit.common.db.Id
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.util.{Failure, Success}
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -207,11 +208,16 @@ class OAuth2Controller @Inject() (
           case Some(tokenResp) => {
             provider match {
               case "google" => {
-                val resF = abookServiceClient.importContactsP(request.userId, tokenResp.toOAuth2Token(request.userId))
-                resF map { res =>
-                  log.info(s"[google] abook import $res")
-                  // Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(request.userId)) // todo: for admin page
-                  redirectInvite // forces one consent per acct; may need to be revisited
+                val resF = abookServiceClient.importContacts(request.userId, tokenResp.toOAuth2Token(request.userId))
+                resF map { trRes =>
+                  trRes match {
+                    case Failure(t) =>
+                      airbrake.notify(s"[oauth2.callback(${request.userId}, $provider)] Caught exception $t while importing contacts", t)
+                      redirectHome
+                    case Success(abookInfo) =>
+                      log.info(s"[google] abook import $abookInfo")
+                      redirectInvite // forces one consent per acct; may need to be revisited
+                  }
                 }
               }
               case "facebook" => {
@@ -244,6 +250,7 @@ class OAuth2Controller @Inject() (
   }
 
   def refreshContacts(abookId:Id[ABookInfo], provider:Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+    val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
     log.info(s"[oauth2.refreshContacts] abookId=$abookId provider=$provider userId=${request.userId}")
     val userId = request.userId
     val tokenRespOptF = abookServiceClient.getOAuth2Token(userId, abookId) flatMap { tokenOpt =>
@@ -284,7 +291,13 @@ class OAuth2Controller @Inject() (
         case None => future { JsNull }
         case Some(tokenResp) =>
           log.info(s"[oauth2.refreshContacts] invoking importContacts(${request.userId}, ${tokenResp})")
-          abookServiceClient.importContactsP(request.userId, tokenResp.toOAuth2Token(request.userId))
+          abookServiceClient.importContacts(request.userId, tokenResp.toOAuth2Token(request.userId)) map { trRes =>
+            trRes match {
+              case Failure(t) => log.error(s"[oauth2.refreshContacts] Caught exception $t", t)
+              case Success(abookInfo) => abookInfo
+            }
+            redirectInvite
+          }
       }
     }
     jsF map { js =>
