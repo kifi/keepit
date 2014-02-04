@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.common.db.Id
+import com.keepit.common.performance._
 import com.keepit.model._
 import play.api.libs.json.{JsArray, Json, JsValue}
 import scala.ref.WeakReference
@@ -176,7 +177,7 @@ class ABookCommander @Inject() (
   }
 
   // todo: removeme (inefficient)
-  def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = {
+  def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"queryEContacts($userId,$limit,$search,$after)") {
     @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
     @inline def mkId(email:String) = s"email/$email"
     val searchTerms = search match {

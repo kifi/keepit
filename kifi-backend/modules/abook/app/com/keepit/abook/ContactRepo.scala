@@ -14,6 +14,7 @@ import scala.slick.jdbc.{StaticQuery => Q}
 import Q.interpolation
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance._
 
 @ImplementedBy(classOf[ContactRepoImpl])
 trait ContactRepo extends Repo[Contact] {
@@ -73,23 +74,23 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     Q.queryNA[Int](s"select count(*) from contact where user_id=$userId").first
   }
 
-  def insertAll(userId: Id[User], abookInfoId: Id[ABookInfo], origin:ABookOriginType, contactInfos: Seq[Contact])(implicit session:RWSession): Unit = {
-    val ts = System.currentTimeMillis
-    var i = 0
-    contactInfos.grouped(500).foreach { g =>
-      val t = System.currentTimeMillis
-      i += 1
-      table.forInsert insertAll(g: _*)
-      log.info(s"[insertAll($userId, $abookInfoId, $origin, batch($i, sz=${g.length}))] time-lapsed: ${System.currentTimeMillis - t}")
+  def insertAll(userId: Id[User], abookInfoId: Id[ABookInfo], origin:ABookOriginType, contactInfos: Seq[Contact])(implicit session:RWSession): Unit =
+    timing(s"contactRepo.insertAll($userId,$abookInfoId,$origin) #contacts=${contactInfos.length}") {
+      var i = 0
+      contactInfos.grouped(500).foreach { g =>
+        i += 1
+        timing(s"contactRepo.insertBatch($userId,$abookInfoId,$origin,batch($i,sz=${g.length}))") {
+          table.forInsert insertAll(g: _*)
+        }
+      }
     }
-    log.info(s"[insertAll($userId, $abookInfoId, $origin, ${contactInfos.length})] time-lapsed: ${System.currentTimeMillis - ts}")
-  }
 
-  def deleteAndInsertAll(userId: Id[User], abookInfoId: Id[ABookInfo], origin: ABookOriginType, contactInfos: Seq[Contact])(implicit session: RWSession): Int = {
-    val rows = deleteByUserIdAndABookInfoId(userId, abookInfoId)
-    insertAll(userId, abookInfoId, origin, contactInfos)
-    rows
-  }
+  def deleteAndInsertAll(userId: Id[User], abookInfoId: Id[ABookInfo], origin: ABookOriginType, contactInfos: Seq[Contact])(implicit session: RWSession): Int =
+    timing(s"contactRepo.deleteAndInsertAll($userId,$abookInfoId,$origin) #contacts=${contactInfos.length}") {
+      val rows = deleteByUserIdAndABookInfoId(userId, abookInfoId)
+      insertAll(userId, abookInfoId, origin, contactInfos)
+      rows
+    }
 }
 
 

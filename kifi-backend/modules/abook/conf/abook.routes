@@ -3,10 +3,7 @@
 ##########################################
 
 POST     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User])
-
 POST     /internal/abook/:origin/uploadContacts                 @com.keepit.abook.ABookController.uploadContacts(userId:Id[User], origin:ABookOriginType)
-POST     /internal/abook/:origin/uploadForUser                  @com.keepit.abook.ABookController.uploadContacts(userId:Id[User], origin:ABookOriginType)
-
 POST     /internal/abook/:userId/formUpload                     @com.keepit.abook.ABookController.formUpload(userId:Id[User])
 
 GET      /internal/abooks                                       @com.keepit.abook.ABookController.getAllABookInfos()
