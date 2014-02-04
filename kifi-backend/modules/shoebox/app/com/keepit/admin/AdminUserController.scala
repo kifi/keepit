@@ -1,39 +1,37 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration._
-import scala.concurrent.duration.Duration
+import scala.Some
+import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.duration.{Duration, DurationInt}
+import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.abook.ABookServiceClient
+import com.keepit.commanders.UserCommander
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.model.UserThreadStats
+import com.keepit.heimdal._
 import com.keepit.model._
+import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
-import play.api.data.Forms._
 import play.api.data._
-import play.api.libs.json._
-import views.html
-import com.keepit.abook.ABookServiceClient
-import com.keepit.common.store.S3ImageStore
-import com.keepit.heimdal._
+import play.api.data.Forms._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.KifiInstallation
-import com.keepit.model.SocialConnection
-import com.keepit.model.EmailAddress
-import scala.Some
-import com.keepit.model.KeepToCollection
-import com.keepit.model.UserExperiment
-import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.UserCommander
-import com.keepit.eliza.model.UserThreadStats
+import play.api.libs.json._
+import play.api.mvc.{AnyContent, SimpleResult}
+
+import views.html
 
 case class UserStatistics(
     user: User,
@@ -178,6 +176,33 @@ class AdminUserController @Inject() (
   }
 
   def userView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    doUserViewById(userId, showPrivates)
+  }
+
+  def userViewByEitherId(userIdStr: String, showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    Try(userIdStr.toLong).toOption map { id =>
+      doUserViewById(Id[User](id), showPrivates)
+    } orElse {
+      ExternalId.asOpt[User](userIdStr) flatMap { userExtId =>
+        db.readOnly { implicit session =>
+          userRepo.getOpt(userExtId)
+        }
+      } map { user =>
+        doUserView(user, showPrivates)
+      }
+    } getOrElse Promise.successful(NotFound).future
+  }
+
+  private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+    db.readOnly { implicit session =>
+      userRepo.getOpt(userId)
+    } map { user =>
+      doUserView(user, showPrivates)
+    } getOrElse Promise.successful(NotFound).future
+  }
+
+  private def doUserView(user: User, showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+    var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = abookClient.getEContacts(userId, 500)
@@ -186,8 +211,7 @@ class AdminUserController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps")
     }
 
-    val (user, bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
-      val user = userRepo.get(userId)
+    val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
       val bookmarks = bookmarkRepo.getByUser(userId, Some(BookmarkStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
@@ -196,9 +220,9 @@ class AdminUserController @Inject() (
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      val allowedInvites = userValueRepo.getValue(user.id.get, "availableInvites").getOrElse("1000").toInt
-      val emails = emailRepo.getAllByUser(user.id.get)
-      (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
+      val allowedInvites = userValueRepo.getValue(userId, "availableInvites").getOrElse("1000").toInt
+      val emails = emailRepo.getAllByUser(userId)
+      ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
 
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }

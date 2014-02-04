@@ -15,18 +15,19 @@ import com.keepit.common.cache.ABookCacheModule
 import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
-import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
   def setup()(implicit injector:Injector) = {
     val db = inject[Database]
+    val airbrake = inject[AirbrakeNotifier]
     val abookInfoRepo = inject[ABookInfoRepo]
     val contactRepo = inject[ContactRepo]
     val econtactRepo = inject[EContactRepo]
     val contactsUpdater = inject[ContactsUpdaterPlugin]
     val s3 = inject[ABookRawInfoStore]
-    val commander = new ABookCommander(db, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
+    val commander = new ABookCommander(db, airbrake, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
     commander
   }
 

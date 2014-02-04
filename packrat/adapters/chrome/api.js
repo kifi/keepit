@@ -36,12 +36,12 @@ var api = function() {
       if (tab.status === 'complete') {
         injectContentScripts(page);
       } else if (tab.status === "loading") {
-        chrome.tabs.executeScript(tab.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady);
+        chrome.tabs.executeScript(tab.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady.bind(null, page));
       }
     }
   }
 
-  var injectContentScriptsIfDomReady = Airbrake.wrap(function (arr) {
+  var injectContentScriptsIfDomReady = Airbrake.wrap(function (page, arr) {
     if (arr && (arr[0] === 'interactive' || arr[0] === 'complete')) {
       injectContentScripts(page);
     }

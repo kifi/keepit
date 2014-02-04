@@ -42,12 +42,16 @@ exports.addToWindow = function(win, click) {
 exports.show = function(win, uri) {
   let xpcomWin = getXpcomWindow(win);
   let iconEl = xpcomWin.document.getElementById(ICON_ID);
-  iconEl.setAttribute("src", uri);
-  iconEl.removeAttribute("collapsed");
+  if (iconEl) {
+    iconEl.setAttribute("src", uri);
+    iconEl.removeAttribute("collapsed");
+  }
 };
 
 exports.hide = function(win) {
   let xpcomWin = getXpcomWindow(win);
   let iconEl = xpcomWin.document.getElementById(ICON_ID);
-  iconEl.setAttribute("collapsed", true);
+  if (iconEl) {
+    iconEl.setAttribute("collapsed", true);
+  }
 };
