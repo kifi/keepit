@@ -161,6 +161,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
     new ServiceDiscovery {
       def timeSinceLastStatusChange: Long = 0L
       def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
+      def thisService: ServiceType = cluster.serviceType
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get
       def isLeader() = true

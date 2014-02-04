@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.Provides
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -17,6 +17,7 @@ import com.keepit.common.plugin.SchedulingProperties
 trait HeimdalServiceClientModule extends ScalaModule
 
 case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
+
   def configure() {}
 
   @Provides
@@ -33,7 +34,7 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.HEIMDAL),
-      actor, 
+      actor,
       clock,
       scheduling
     )

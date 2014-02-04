@@ -7,7 +7,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 
 case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
 
-  def configure {}
+  def configure() {}
 
   @Singleton
   @Provides
@@ -20,7 +20,7 @@ case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
 }
 
 case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
-  def configure(): Unit = {
+  override def configure(): Unit = {
     install(FakeAirbrakeModule())
   }
 

@@ -4,7 +4,6 @@ import java.net.URL
 import com.keepit.common.time._
 import play.api.Play
 import org.joda.time.DateTime
-import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import play.api.Mode
@@ -29,7 +28,6 @@ sealed abstract class ServiceType(val name: String, val shortName: String, val i
 
   val minInstances  : Int = 1
   val warnInstances : Int = 2
-
 }
 
 object ServiceType {
@@ -57,17 +55,11 @@ object ServiceType {
     override val warnInstances = 0
   }
 
-  def fromString(str: String) = str match {
-    case SHOEBOX.name => SHOEBOX
-    case SEARCH.name => SEARCH
-    case ELIZA.name => ELIZA
-    case HEIMDAL.name => HEIMDAL
-    case ABOOK.name => ABOOK
-    case SCRAPER.name => SCRAPER
-    case DEV_MODE.name => DEV_MODE
-    case TEST_MODE.name => TEST_MODE
-    case C_SHOEBOX.name => C_SHOEBOX
-  }
+  // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
+  lazy val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: Nil
+  lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
+  lazy val all: List[ServiceType] = inProduction ::: notInProduction
+  lazy val fromString: Map[String, ServiceType] = all.map(serviceType => (serviceType.name -> serviceType)).toMap
 
   implicit def format[T]: Format[ServiceType] = Format(
     __.read[String].map(fromString),
@@ -83,21 +75,10 @@ class FortyTwoServices(
 
   val started = clock.now
 
-  val serviceByCode = Map(
-    ServiceType.SHOEBOX.name -> ServiceType.SHOEBOX,
-    ServiceType.DEV_MODE.name -> ServiceType.DEV_MODE,
-    ServiceType.SEARCH.name -> ServiceType.SEARCH,
-    ServiceType.ELIZA.name -> ServiceType.ELIZA,
-    ServiceType.HEIMDAL.name -> ServiceType.HEIMDAL,
-    ServiceType.ABOOK.name -> ServiceType.ABOOK,
-    ServiceType.SCRAPER.name -> ServiceType.SCRAPER,
-    ServiceType.C_SHOEBOX.name -> ServiceType.C_SHOEBOX
-  )
-
   lazy val currentService: ServiceType = playMode match {
     case Mode.Test => ServiceType.TEST_MODE
     case Mode.Dev => ServiceType.DEV_MODE
-    case Mode.Prod => serviceByCode(Play.current.configuration.getString("application.name").get)
+    case Mode.Prod => ServiceType.fromString(Play.current.configuration.getString("application.name").get)
   }
 
   lazy val currentVersion: ServiceVersion = playMode match {

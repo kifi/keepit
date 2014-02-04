@@ -33,10 +33,13 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def thisService: ServiceType
   def timeSinceLastStatusChange: Long
   def amIUp: Boolean
   def isCanary: Boolean
 }
+
+class UnknownServiceException(message: String) extends Exception(message)
 
 class ServiceDiscoveryImpl(
     zkClient: ZooKeeperClient,
@@ -60,6 +63,7 @@ class ServiceDiscoveryImpl(
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
   def thisInstance: Option[ServiceInstance] = myInstance
+  def thisService: ServiceType = services.currentService
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
@@ -76,7 +80,8 @@ class ServiceDiscoveryImpl(
 
   private val myCluster = clusters(services.currentService)
 
-  def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
+  def serviceCluster(serviceType: ServiceType): ServiceCluster =
+    clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service ${serviceType}."))
 
   def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
