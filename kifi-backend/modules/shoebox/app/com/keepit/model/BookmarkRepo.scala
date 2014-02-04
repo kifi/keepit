@@ -205,14 +205,14 @@ class BookmarkRepoImpl @Inject() (
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
 
-    val sql = sql"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='#${BookmarkStates.ACTIVE.value}'"
+    val sql = sql"select count(*) as c from bookmark where updated_at between ${from} and ${to} and state='#${BookmarkStates.ACTIVE.value}';"
     sql.as[Int].first
   }
 
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
 
-    val sql = sql"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='#${BookmarkStates.ACTIVE.value}' and source='${source.value}'"
+    val sql = sql"select count(*) as c from bookmark b where b.state='#${BookmarkStates.ACTIVE.value}' and b.source=${source.value} and updated_at between ${from} and ${to};"
     sql.as[Int].first
   }
 
