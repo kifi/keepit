@@ -150,7 +150,7 @@ class S3ScreenshotStoreImpl(
             } catch {
               case ex: Throwable =>
                 airbrake.notify(AirbrakeError(
-                  exception = trace.withCause(e),
+                  exception = trace.withCause(ex),
                   message = Some(s"Failed to update normalized uri ($url) to S3")
                 ))
             }
