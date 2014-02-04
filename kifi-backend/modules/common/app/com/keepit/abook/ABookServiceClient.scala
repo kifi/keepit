@@ -29,8 +29,7 @@ trait ABookServiceClient extends ServiceClient {
 
   def importContacts(userId:Id[User], oauth2Token:OAuth2Token):Future[Try[ABookInfo]] // gmail
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]] // ios (see MobileUserController)
-  def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
-  def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
+  def formUpload(userId:Id[User], json:JsValue):Future[JsValue]
   def getAllABookInfos():Future[Seq[ABookInfo]]
   def getPagedABookInfos(page:Int, size:Int):Future[Seq[ABookInfo]]
   def getABooksCount():Future[Int]
@@ -70,12 +69,8 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
-    call(ABook.internal.upload(userId, origin), json).map { r => r.json }
-  }
-
-  def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = {
-    call(ABook.internal.uploadDirect(userId, origin), json).map { r => r.json }
+  def formUpload(userId:Id[User], json:JsValue):Future[JsValue] = {
+    call(ABook.internal.formUpload(userId), json).map { r => r.json }
   }
 
   def getABookInfo(userId:Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
@@ -145,7 +140,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue): Future[Try[ABookInfo]] = {
-    call(ABook.internal.uploadForUser(userId, origin), data).map{ r =>
+    call(ABook.internal.uploadContacts(userId, origin), data).map{ r =>
       r.status match {
         case Status.OK => Success(Json.fromJson[ABookInfo](r.json).get)
         case _ => Failure(new IllegalArgumentException((r.json \ "code").asOpt[String].getOrElse("invalid arguments")))
@@ -184,9 +179,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def importContacts(userId: Id[User], oauth2Token: OAuth2Token): Future[Try[ABookInfo]] = ???
 
-  def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
-
-  def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
+  def formUpload(userId: Id[User], json: JsValue): Future[JsValue] = ???
 
   def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
 

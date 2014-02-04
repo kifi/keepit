@@ -226,15 +226,13 @@ class AdminUserController @Inject() (
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    val abookEP = com.keepit.common.routes.ABook.internal.upload(userId, ABookOrigins.IOS).url
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       econtacts <- econtactsF
     } yield {
       Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, abookEP,
-        collections, collectionFilter))
+        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, collections, collectionFilter))
     }
   }
 
