@@ -36,7 +36,7 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
   "ExtSearchController" should {
     "search keeps" in {
       running(new SearchApplication(modules:_*)) {
-        val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None).toString
+        val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).toString
         path === "/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName="prénom", lastName="nom")
@@ -175,7 +175,8 @@ class FixedResultSearchCommander extends SearchCommander {
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None
+    coll: Option[String] = None,
+    debug: Option[String] = None
   ) : DecoratedResult = {
     results(query)
   }

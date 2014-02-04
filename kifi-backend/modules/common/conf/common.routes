@@ -20,6 +20,7 @@ GET		  /internal/clusters/mystatus			      @com.keepit.common.admin.ServiceContr
 GET		  /internal/clusters/topology			      @com.keepit.common.admin.ServiceController.topology
 GET     /internal/common/threadSummary        @com.keepit.common.admin.ServiceController.threadSummary
 GET     /internal/common/threadDetails        @com.keepit.common.admin.ServiceController.threadDetails(name: String ?= "", state: String ?= "", stack: String ?= "", sort: String ?= "")
+GET     /internal/cache/removeAll                 @com.keepit.common.admin.ServiceController.removeAllFromLocalCache(prefix: Option[String] ?= None)
 
 
 # OAuth provider entry points (e.g. "facebook")

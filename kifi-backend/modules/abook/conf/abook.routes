@@ -2,13 +2,10 @@
 #INTERNAL ROUTES/ABook
 ##########################################
 
-POST    /internal/abook/:userId/importContactsP                 @com.keepit.abook.ABookController.importContactsP(userId:Id[User])
-POST    /internal/abook/:userId/importContacts                  @com.keepit.abook.ABookController.importContacts(userId:Id[User])
+POST     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User])
+POST     /internal/abook/:origin/uploadContacts                 @com.keepit.abook.ABookController.uploadContacts(userId:Id[User], origin:ABookOriginType)
+POST     /internal/abook/:userId/formUpload                     @com.keepit.abook.ABookController.formUpload(userId:Id[User])
 
-POST     /internal/abook/:origin/uploadForUser                  @com.keepit.abook.ABookController.upload(userId:Id[User], origin:ABookOriginType) 
-
-POST     /internal/abook/:userId/:origin/upload                 @com.keepit.abook.ABookController.uploadJson(userId:Id[User], origin:ABookOriginType)
-POST     /internal/abook/:userId/:origin/uploadDirect           @com.keepit.abook.ABookController.uploadJsonDirect(userId:Id[User], origin:ABookOriginType)
 GET      /internal/abooks                                       @com.keepit.abook.ABookController.getAllABookInfos()
 GET      /internal/abooks/page/:page                            @com.keepit.abook.ABookController.getPagedABookInfos(page:Int, size:Int ?= 50)
 GET      /internal/abooksCount/                                 @com.keepit.abook.ABookController.getABooksCount()

@@ -22,5 +22,12 @@ class HashMapMemoryCache extends InMemoryCachePlugin {
   }
 
   override def toString = "HashMapMemoryCache"
+
+  def removeAll(prefix: Option[String]): Unit = {
+    if (prefix.isDefined)
+      cache --= cache.keysIterator.filter(_.startsWith(prefix.get))
+    else
+      cache.clear()
+  }
 }
 

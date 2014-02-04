@@ -6,6 +6,7 @@ import scala.collection.mutable
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooKeeper
 import com.keepit.common.actor.{FakeSchedulerModule, TestActorSystemModule}
+import org.apache.zookeeper.KeeperException
 
 
 case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
@@ -21,7 +22,7 @@ case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_M
 }
 
 class FakeZooKeeperClient() extends ZooKeeperClient {
-  private val db = new mutable.HashMap[Node, Array[Byte]]()
+  private val db = new mutable.HashMap[Node, Option[Array[Byte]]]()
   def registeredCount = db.size
   def nodes = db.keys
 
@@ -32,18 +33,29 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
   def close() = {}
 }
 
-class FakeZooKeeperSession(db: mutable.HashMap[Node, Array[Byte]]) extends ZooKeeperSession {
+class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) extends ZooKeeperSession {
+
   def getState() = ZooKeeper.States.CONNECTED
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
   def watchChildren(node: Node, updateChildren : Seq[Node] => Unit) {}
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
 
-  def create(node: Node): Node = node
+  def create(node: Node): Node = db.synchronized {
+    db(node) = None
+    node
+  }
 
-  def createChild(parent: Node, name: String, data: Array[Byte] = null, createMode: CreateMode = CreateMode.PERSISTENT): Node = {
+  def createChild(parent: Node, name: String, createMode: CreateMode = CreateMode.PERSISTENT): Node = db.synchronized {
     val child = Node(parent, name)
-    setData(Node(parent, name), data)
+    db(child) = None
+    child
+  }
+
+  def createChild[T](parent: Node, name: String, data: T, createMode: CreateMode = CreateMode.PERSISTENT)(implicit serializer: T => Array[Byte]): Node = db.synchronized {
+    val child = Node(parent, name)
+    db(child) = None
+    setData(child, data)
     child
   }
 
@@ -53,12 +65,36 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Array[Byte]]) extends ZooKe
     if (db.contains(node)) Some(node) else None
   }
 
-  def getData(node: Node): Array[Byte] = db.get(node).getOrElse(Array[Byte](0))
-  def setData(node: Node, data: Array[Byte]) {
-    db(node) = data
+  def getData[T](node: Node)(implicit deserializer: Array[Byte] => T): Option[T] = db.synchronized {
+    db.get(node) match {
+      case Some(valOpt) => valOpt.map(deserializer)
+      case None => throw new KeeperException.NoNodeException
+    }
   }
 
-  def delete(node: Node) { db.remove(node) }
-  def deleteRecursive(node: Node) { db.remove(node) }
+  def setData[T](node: Node, data: T)(implicit serializer: T => Array[Byte]): Unit = db.synchronized {
+    db.get(node) match {
+      case Some(valOpt) => db(node) = Some(serializer(data))
+      case None => throw new KeeperException.NoNodeException
+    }
+  }
+
+  def deleteData[T](node: Node): Unit = db.synchronized {
+    db.get(node) match {
+      case Some(valOpt) => db(node) = None
+      case None => throw new KeeperException.NoNodeException
+    }
+  }
+
+  def delete(node: Node): Unit = db.synchronized {
+    db.remove(node)
+  }
+
+  def deleteRecursive(node: Node): Unit = db.synchronized {
+    val prefix = node.path + "/"
+    val descendants = db.keySet.filter{ _.path startsWith prefix }
+    descendants.foreach{ db.remove(_) }
+    db.remove(node)
+  }
 }
 

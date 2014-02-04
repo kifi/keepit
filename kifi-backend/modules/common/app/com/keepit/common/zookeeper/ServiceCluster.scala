@@ -71,7 +71,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
 
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperSession) = try {
-    val nodeData: String = zk.getData(childNode)
+    val nodeData = zk.getData[String](childNode).get
     log.info(s"data for node $childNode is $nodeData")
     val remoteService = RemoteService.fromJson(nodeData)
     if (newInstances.isDefinedAt(childNode)){

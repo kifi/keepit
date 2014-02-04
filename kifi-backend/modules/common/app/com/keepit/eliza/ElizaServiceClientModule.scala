@@ -12,6 +12,7 @@ import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 trait ElizaServiceClientModule extends ScalaModule
 
 case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
+
   def configure() {}
 
   @Singleton
@@ -25,7 +26,8 @@ case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.ELIZA),
-      userThreadStatsForUserIdCache)
+      userThreadStatsForUserIdCache
+    )
   }
 }
 

@@ -10,6 +10,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.FakeScheduler
 
 case class TestABookServiceClientModule() extends ABookServiceClientModule {
+
   def configure() {}
 
   @Singleton
