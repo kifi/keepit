@@ -1,24 +1,32 @@
 'use strict';
 
-angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
+angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.tagService'])
 
 .controller('KeepsCtrl', [
-	'$scope', '$timeout', 'keepService',
-	function ($scope, $timeout, keepService) {}
+	'$scope', 'profileService', 'keepService', 'tagService', '$q',
+	function ($scope, profileService, keepService, tagService, $q) {
+		$scope.me = profileService.me;
+		$scope.keeps = keepService.list;
+
+		var promise = keepService.getList();
+		$q.all([promise, tagService.fetchAll()]).then(function () {
+			console.log(
+				keepService.list,
+				tagService.list
+			);
+		});
+	}
 ])
 
 .directive('kfKeeps', [
-	'$timeout', '$location', 'util', 'dom', 'keepService',
-	function ($timeout, $location, util, dom, keepService) {
+
+	function () {
 		return {
 			restrict: 'A',
 			scope: {},
 			controller: 'KeepsCtrl',
 			templateUrl: 'keeps/keeps.tpl.html',
 			link: function (scope, element, attrs) {
-				scope.keeps = keepService.list;
-
-				keepService.getList();
 
 				scope.page = {
 					title: 'Browse your Keeps'

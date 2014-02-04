@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keep', ['kifi.profileService', 'kifi.tagService'])
+angular.module('kifi.keep', [])
 
 .controller('KeepCtrl', [
 	'$scope',
@@ -8,18 +8,14 @@ angular.module('kifi.keep', ['kifi.profileService', 'kifi.tagService'])
 ])
 
 .directive('kfKeep', [
-	'profileService', 'tagService', '$document',
-	function (profileService, tagService, $document) {
+	'$document',
+	function ($document) {
 		return {
 			restrict: 'A',
-			scope: {
-				keep: '='
-			},
+			scope: true,
 			controller: 'KeepCtrl',
 			templateUrl: 'keep/keep.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				scope.me = profileService.me;
-
 				scope.isMine = function () {
 					return scope.keep.isMyBookmark || false;
 				};
