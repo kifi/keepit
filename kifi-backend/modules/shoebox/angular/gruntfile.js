@@ -47,6 +47,7 @@ module.exports = function (grunt) {
 					'lib/antiscroll/antiscroll.css'
 				],
 				libJs: [
+					'lib/lodash/dist/lodash.js',
 					'lib/jquery/jquery.js',
 					'lib/angular/angular.js',
 					'lib/angular-cookies/angular-cookies.js',
@@ -64,6 +65,7 @@ module.exports = function (grunt) {
 					'lib/angular-moment/angular-moment.js'
 				],
 				libMinJs: [
+					'lib/lodash/dist/lodash.min.js',
 					'lib/jquery/jquery.min.js',
 					'lib/angular/angular.min.js',
 					'lib/angular-cookies/angular-cookies.min.js',

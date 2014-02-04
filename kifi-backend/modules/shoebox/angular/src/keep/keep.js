@@ -40,7 +40,7 @@ angular.module('kifi.keep', [])
 				};
 
 				scope.getTags = function () {
-					return scope.keep.tags || scope.keep.collections;
+					return scope.keep.tagList;
 				};
 
 				scope.isExample = function () {

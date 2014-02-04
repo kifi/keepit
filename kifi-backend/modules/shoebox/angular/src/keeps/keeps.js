@@ -10,10 +10,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 
 		var promise = keepService.getList();
 		$q.all([promise, tagService.fetchAll()]).then(function () {
-			console.log(
-				keepService.list,
-				tagService.list
-			);
+			keepService.joinTags(keepService.list, tagService.list);
 		});
 	}
 ])
