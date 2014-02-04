@@ -1049,7 +1049,13 @@ function markUnread(threadId, messageId) {
     var thOld = clone(th);
     th.unread = true;
     th.unreadAuthors = th.unreadMessages = 1;
-    threadLists.unread.insertOrReplace(thOld, th);
+    (function insertIntoUnread(tl) {
+      if (tl && tl.includesAllSince(th)) {
+        tl.insertOrReplace(thOld, th);
+      } else if (tl) {
+        tl.numTotal++;
+      }
+    }(threadLists.unread));
     if (!th.muted) {
       var tlKeys = ['all', th.url];
       if (isSent(th)) {
@@ -1082,7 +1088,16 @@ function markRead(threadId, messageId, time) {
   if (th && th.unread && (th.id === messageId || th.time <= time)) {
     th.unread = false;
     th.unreadAuthors = th.unreadMessages = 0;
-    threadLists.unread.remove(th.thread);
+    (function removeFromUnread(tl) {
+      if (!tl) return;
+      var numRemoved = tl.remove(th.thread);
+      if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
+        tl.numTotal--;
+        if (tl.ids.length === tl.numTotal) {
+          tl.includesOldest = true;
+        }
+      }
+    }(threadLists.unread));
     if (!th.muted) {
       var tlKeys = ['all', 'unread', th.url];
       if (isSent(th)) {
