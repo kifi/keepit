@@ -174,8 +174,7 @@ class BookmarkRepoImpl @Inject() (
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
-                order by bm.created_at desc, bm.id desc limit     import StaticQuery.interpolation
-$count;"""
+                order by bm.created_at desc, bm.id desc limit $count"""
       case (Some(before), Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
