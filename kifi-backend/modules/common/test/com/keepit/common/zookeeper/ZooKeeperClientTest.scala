@@ -1,5 +1,6 @@
 package com.keepit.common.zookeeper
 
+import com.keepit.common.strings._
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode._
 import org.apache.zookeeper.KeeperException
@@ -33,8 +34,8 @@ class ZooKeeperClientTest extends Specification {
         zk.create(Node(s"${node.path}/a/b/d"))
         val children = zk.getChildren(Node(s"${node.path}/a/b"))
         children.toSet === Set(Node(s"${node.path}/a/b/c"), Node(s"${node.path}/a/b/d"))
-        zk.setData(Node(s"${node.path}/a/b/c"), "foo".getBytes())
-        val s = new String(zk.getData(Node(s"${node.path}/a/b/c")))
+        zk.setData(Node(s"${node.path}/a/b/c"), "foo")
+        val s = zk.getData[String](Node(s"${node.path}/a/b/c")).get
         s === "foo"
       }
     }
@@ -50,20 +51,20 @@ class ZooKeeperClientTest extends Specification {
           }
         })
 
-        new String(zk.getData(testNode)) === "foo"
+        zk.getData[String](testNode) === Some("foo")
 
-        zk.setData(testNode, "bar".getBytes)
-        new String(zk.getData(testNode)) === "bar"
+        zk.setData(testNode, "bar")
+        zk.getData[String](testNode) === Some("bar")
 
-        zk.setData(testNode, "baz".getBytes)
-        new String(zk.getData(testNode)) === "baz"
+        zk.setData(testNode, "baz")
+        zk.getData[String](testNode) === Some("baz")
         zk.delete(testNode)
 
-        zk.getData(testNode) must throwA[KeeperException.NoNodeException]
+        zk.getData[String](testNode) must throwA[KeeperException.NoNodeException]
       }
       withZKSession { zk =>
         val testNode = zk.createChild(node, "testNode")
-        zk.getData(testNode) === null
+        zk.getData[String](testNode) === None
       }
     }
 
@@ -175,7 +176,7 @@ class ZooKeeperClientTest extends Specification {
         updateCount.get === 3
 
         mkLatch
-        zk.setData(child2, "bar2".getBytes)
+        zk.setData(child2, "bar2")
         awaitLatch
         childMap === Map(Node(parent, "b") -> "bar2")
         updateCount.get === 4

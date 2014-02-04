@@ -42,10 +42,10 @@
       }
       return iOld < 0;
     },
-    insertOlder: function(olderThreadIds) {
+    insertOlder: function (olderThreadIds) {
       Array.prototype.push.apply(this.ids, olderThreadIds);
     },
-    remove: function(threadId) {
+    remove: function (threadId) {
       var nRemoved = 0, i;
       while (~(i = this.ids.indexOf(threadId))) {
         var n = this.ids.splice(i, 1)[0];
@@ -58,6 +58,9 @@
         nRemoved++;
       }
       return nRemoved;
+    },
+    includesAllSince: function (th) {
+      return this.includesOldest || this.ids.length && th.time >= this.allById[this.ids[this.ids.length - 1]].time;
     },
     forEachUnread: function (f) {
       for (var i = 0; i < this.ids.length; i++) {

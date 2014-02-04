@@ -172,7 +172,7 @@ class ServiceDiscoveryImpl(
         thisRemoteService.status = newStatus
         instance.setRemoteService(thisRemoteService)
         lastStatusChangeTime = System.currentTimeMillis
-        zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
+        zk.setData(instance.node, instance.remoteService)(RemoteService.toJson)
       }
     }
   }

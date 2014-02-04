@@ -138,6 +138,12 @@ if __name__=="__main__":
     help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
     metavar = "Name"
   )
+  parser.add_argument(
+    '--nolock',
+    action = 'store_true',
+    help = "Do *not* try to prevent simultaneous deploys with a local lock",
+  )
+
 
   args = parser.parse_args(sys.argv[1:])
 
@@ -180,7 +186,7 @@ if __name__=="__main__":
   if args.mode and args.mode=="force":
     command.append("force")
   else:
-    if not lock.lock():
+    if (not args.nolock) and (not lock.lock()):
       print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
       sys.exit(0)
 

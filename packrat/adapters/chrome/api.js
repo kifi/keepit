@@ -33,51 +33,51 @@ var api = function() {
   function createPageAndInjectContentScripts(tab, skipOnLoading) {
     var page = createPage(tab.id, tab.url, skipOnLoading);
     if (httpRe.test(tab.url)) {
-      if (tab.status === "complete") {
+      if (tab.status === 'complete') {
         injectContentScripts(page);
       } else if (tab.status === "loading") {
-        chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
-          if (arr && (arr[0] === "interactive" || arr[0] === "complete")) {
-            injectContentScripts(page);
-          }
-        });
+        chrome.tabs.executeScript(tab.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady);
       }
     }
   }
 
-  chrome.pageAction.onClicked.addListener(function(tab) {
-    log("[pageAction.onClicked]", tab)();
-    dispatch.call(api.icon.on.click, pages[tab.id]);
-  });
-
-  chrome.runtime.onStartup.addListener(function() {
-    log("[onStartup]")();
-    api.loadReason = "startup";
-    dispatch.call(api.on.startup);
-  });
-
-  chrome.runtime.onInstalled.addListener(function(details) {
-    log("[onInstalled] details:", details)();
-    if (details.reason === "install" || details.reason === "update") {
-      api.loadReason = details.reason;
-      dispatch.call(api.on[details.reason]);
+  var injectContentScriptsIfDomReady = Airbrake.wrap(function (arr) {
+    if (arr && (arr[0] === 'interactive' || arr[0] === 'complete')) {
+      injectContentScripts(page);
     }
   });
 
+  chrome.pageAction.onClicked.addListener(Airbrake.wrap(function (tab) {
+    log("[pageAction.onClicked]", tab)();
+    dispatch.call(api.icon.on.click, pages[tab.id]);
+  }));
+
+  chrome.runtime.onStartup.addListener(Airbrake.wrap(function () {
+    log("[onStartup]")();
+    api.loadReason = "startup";
+  }));
+
+  chrome.runtime.onInstalled.addListener(Airbrake.wrap(function (details) {
+    log("[onInstalled] details:", details)();
+    if (details.reason === "install" || details.reason === "update") {
+      api.loadReason = details.reason;
+    }
+  }));
+
   var updateCheckRequested, updateVersion;
-  chrome.runtime.onUpdateAvailable.addListener(function(details) {
+  chrome.runtime.onUpdateAvailable.addListener(Airbrake.wrap(function (details) {
     log("#666", "[onUpdateAvailable]", updateVersion = details.version)();
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
-  });
+  }));
 
-  chrome.tabs.onCreated.addListener(function(tab) {
+  chrome.tabs.onCreated.addListener(Airbrake.wrap(function (tab) {
     log("#666", "[tabs.onCreated]", tab.id, tab.url)();
     normalTab[tab.id] = !!selectedTabIds[tab.windowId];
-  });
+  }));
 
-  chrome.tabs.onActivated.addListener(function(info) {
+  chrome.tabs.onActivated.addListener(Airbrake.wrap(function (info) {
     log("#666", "[tabs.onActivated] tab info:", info)();
     var prevPageId = selectedTabIds[info.windowId];
     if (prevPageId) { // ignore popups, etc.
@@ -91,21 +91,21 @@ var api = function() {
         dispatch.call(api.tabs.on.focus, page);
       }
     }
-  });
+  }));
 
   var stripHashRe = /^[^#]*/;
   var googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
   var plusRe = /\+/g;
 
-  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+  chrome.webNavigation.onBeforeNavigate.addListener(Airbrake.wrap(function (details) {
     var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
       var query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
       if (query) dispatch.call(api.on.search, query);
     }
-  });
+  }));
 
-  chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
+  chrome.webNavigation.onDOMContentLoaded.addListener(Airbrake.wrap(function (details) {
     if (!details.frameId && httpRe.test(details.url)) {
       var page = pages[details.tabId];
       if (page) {
@@ -119,16 +119,16 @@ var api = function() {
         log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url)();
       }
     }
-  });
+  }));
 
-  chrome.webNavigation.onCommitted.addListener(function(e) {
+  chrome.webNavigation.onCommitted.addListener(Airbrake.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
     log("#666", "[onCommitted]", e.tabId, e)();
     onRemoved(e.tabId, {temp: true});
     createPage(e.tabId, e.url);
-  });
+  }));
 
-  chrome.webNavigation.onHistoryStateUpdated.addListener(function(e) {
+  chrome.webNavigation.onHistoryStateUpdated.addListener(Airbrake.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
     log("#666", "[onHistoryStateUpdated]", e.tabId, e)();
     var page = pages[e.tabId];
@@ -141,21 +141,21 @@ var api = function() {
         page.url = e.url;
       }
     }
-  });
+  }));
 
-  chrome.webNavigation.onReferenceFragmentUpdated.addListener(function(e) {
+  chrome.webNavigation.onReferenceFragmentUpdated.addListener(Airbrake.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
     log("#666", "[onReferenceFragmentUpdated]", e.tabId, e)();
     pages[e.tabId].url = e.url;
-  });
+  }));
 
-  chrome.tabs.onUpdated.addListener(function(tabId, change) {
+  chrome.tabs.onUpdated.addListener(Airbrake.wrap(function (tabId, change) {
     if ((change.status || change.url) && normalTab[tabId]) {
       log("#666", "[tabs.onUpdated] %i change: %o", tabId, change)();
     }
-  });
+  }));
 
-  chrome.tabs.onReplaced.addListener(function(newTabId, oldTabId) {
+  chrome.tabs.onReplaced.addListener(Airbrake.wrap(function (newTabId, oldTabId) {
     log("#666", "[tabs.onReplaced]", oldTabId, "->", newTabId)();
     normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
@@ -164,12 +164,13 @@ var api = function() {
         selectedTabIds[winId] = newTabId; break;
       }
     }
-    chrome.tabs.get(newTabId, function(tab) {
-      createPageAndInjectContentScripts(tab);
-    });
+    chrome.tabs.get(newTabId, safeCreatePageAndInjectContentScripts);
+  }));
+  var safeCreatePageAndInjectContentScripts = Airbrake.wrap(function (tab) {
+    createPageAndInjectContentScripts(tab);
   });
 
-  chrome.tabs.onRemoved.addListener(onRemoved);
+  chrome.tabs.onRemoved.addListener(Airbrake.wrap(onRemoved));
   function onRemoved(tabId, info) {
     if (!info || !info.temp) {
       delete normalTab[tabId];
@@ -183,22 +184,22 @@ var api = function() {
     }
   }
 
-  chrome.windows.onCreated.addListener(function(win) {
+  chrome.windows.onCreated.addListener(Airbrake.wrap(function (win) {
     if (win.type === "normal") {
       selectedTabIds[win.id] = -1;  // indicates that the window is normal (supports tabs)
     }
-  });
+  }));
 
-  chrome.windows.onRemoved.addListener(function(winId) {
+  chrome.windows.onRemoved.addListener(Airbrake.wrap(function (winId) {
     delete selectedTabIds[winId];
-  });
+  }));
 
   var focusedWinId, topNormalWinId;
-  chrome.windows.getLastFocused(null, function(win) {
+  chrome.windows.getLastFocused(null, Airbrake.wrap(function (win) {
     focusedWinId = win && win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
     topNormalWinId = win && win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
-  });
-  chrome.windows.onFocusChanged.addListener(function(winId) {
+  }));
+  chrome.windows.onFocusChanged.addListener(Airbrake.wrap(function (winId) {
     log("[onFocusChanged] win %o -> %o", focusedWinId, winId)();
     if (focusedWinId > 0) {
       var page = pages[selectedTabIds[focusedWinId]];
@@ -216,11 +217,11 @@ var api = function() {
         dispatch.call(api.tabs.on.focus, page);
       }
     }
-  });
+  }));
 
-  chrome.webRequest.onBeforeRequest.addListener(function () {
+  chrome.webRequest.onBeforeRequest.addListener(Airbrake.wrap(function () {
     dispatch.call(api.on.beforeSearch);
-  }, {
+  }), {
     tabId: -1,
     types: ['main_frame', 'other'],
     urls: [
@@ -232,8 +233,8 @@ var api = function() {
   var pages = {};  // by tab.id in "normal" windows only
   var normalTab = {};  // by tab.id (true if tab is in a "normal" window)
   var selectedTabIds = {};  // by window.id in "normal" windows only
-  chrome.tabs.query({windowType: "normal"}, function(tabs) {
-    tabs.forEach(function(tab) {
+  chrome.tabs.query({windowType: 'normal'}, Airbrake.wrap(function (tabs) {
+    tabs.forEach(function (tab) {
       normalTab[tab.id] = true;
       if (!pages[tab.id]) {
         createPageAndInjectContentScripts(tab, true);
@@ -242,7 +243,7 @@ var api = function() {
         selectedTabIds[tab.windowId] = tab.id;
       }
     });
-  });
+  }));
 
   var ports = {}, portHandlers = {
     "api:handling": function(data, _, page, port) {
@@ -284,7 +285,7 @@ var api = function() {
     "api:require": function(data, respond, page) {
       injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
-  chrome.runtime.onConnect.addListener(function (port) {
+  chrome.runtime.onConnect.addListener(Airbrake.wrap(function (port) {
     var tab = port.sender.tab;
     var tabId = tab && tab.id;
     log('#0a0', '[onConnect]', tabId, port.name, tab ? tab.url : '')();
@@ -295,27 +296,31 @@ var api = function() {
       }
       ports[tabId] = port;
       port.handling = {};
-      port.onMessage.addListener(function (msg) {
-        var page = pages[tabId];
-        var kind = msg[0], data = msg[1], callbackId = msg[2];
-        var handler = portHandlers[kind];
-        if (page && handler) {
-          log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '')();
-          handler(data, respondToTab.bind(port, callbackId), page, port);
-        } else {
-          log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler)();
-        }
-      });
-      port.onDisconnect.addListener(function () {
-        log('#0a0', '[onDisconnect]', tabId)();
-        delete ports[tabId].handling;
-        delete ports[tabId];
-      });
+      port.onMessage.addListener(onPortMessage.bind(null, tabId, port));
+      port.onDisconnect.addListener(onPortDisconnect.bind(null, tabId));
+    }
+  }));
+  var onPortMessage = Airbrake.wrap(function (tabId, port, msg) {
+    var page = pages[tabId];
+    var kind = msg[0], data = msg[1], callbackId = msg[2];
+    var handler = portHandlers[kind];
+    if (page && handler) {
+      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '')();
+      handler(data, respondToTab.bind(null, port, callbackId), page, port);
+    } else {
+      log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler)();
     }
   });
+  var onPortDisconnect = Airbrake.wrap(function (tabId) {
+    log('#0a0', '[onDisconnect]', tabId)();
+    delete ports[tabId].handling;
+    delete ports[tabId];
+  });
 
-  function respondToTab(callbackId, response) {
-    this.handling && this.postMessage(["api:respond", callbackId, response]);
+  function respondToTab(port, callbackId, response) {
+    if (port.handling) {
+      port.postMessage(['api:respond', callbackId, response]);
+    }
   }
 
   var doLogging = false;
@@ -329,8 +334,11 @@ var api = function() {
 
     var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
 
-    var js = doLogging ? '' : 'function log() {return log}', injected;
-    chrome.tabs.executeScript(page.id, {code: js + "this.api&&api.injected", runAt: "document_start"}, function(arr) {
+    var injected;
+    chrome.tabs.executeScript(page.id, {
+      code: (doLogging ? '' : 'function log() {return log}') + 'this.api&&api.injected',
+      runAt: 'document_start'
+    }, function (arr) {
       injected = arr && arr[0] || {};
       done(0);
     });
@@ -339,7 +347,7 @@ var api = function() {
       if (page !== pages[page.id]) {
         return;
       } else if (n < scripts.length) {
-        injectWithDeps(page.id, scripts[n][0], injected, function(paths) {
+        injectWithDeps(page.id, scripts[n][0], injected, function (paths) {
           for (var i in paths) {
             injected[paths[i]] = true;
           }
@@ -347,9 +355,9 @@ var api = function() {
         });
       } else {
         if (api.mode.isDev()) {
-          chrome.tabs.executeScript(page.id, {code: "api.dev=1", runAt: "document_start"}, api.noop);
+          chrome.tabs.executeScript(page.id, {code: 'api.dev=1', runAt: 'document_start'}, api.noop);
         }
-        api.tabs.emit(page, "api:injected", Object.keys(injected));
+        api.tabs.emit(page, 'api:injected', Object.keys(injected));
         page.injected = true;
         delete page.injecting;
       }
@@ -358,27 +366,29 @@ var api = function() {
 
   function injectWithDeps(tabId, paths, injected, callback) {
     var o = deps(paths, injected), n = 0;
-    injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
-    injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
+    injectAll(tabId, chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
+    injectAll(tabId, chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
     function done() {
       if (++n == 2) {
         callback(o.styles.concat(o.scripts));
       }
     }
-    function injectAll(inject, paths, callback) {
-      var n = 0, N = paths.length;
-      if (N) {
-        paths.forEach(function(path) {
-          log("#bbb", "[injectWithDeps] %i %s", tabId, path)();
-          inject(tabId, {file: path, runAt: "document_end"}, function() {
-            if (++n === N) {
-              callback();
-            }
-          });
-        });
-      } else {
-        callback();
-      }
+  }
+
+  function injectAll(tabId, inject, paths, callback) {
+    var n = 0, N = paths.length;
+    if (N) {
+      var afterInject = Airbrake.wrap(function () {
+        if (++n === N) {
+          callback();
+        }
+      });
+      paths.forEach(function (path) {
+        log("#bbb", "[injectWithDeps] %i %s", tabId, path)();
+        inject(tabId, {file: path, runAt: 'document_end'}, afterInject);
+      });
+    } else {
+      callback();
     }
   }
 
@@ -386,18 +396,18 @@ var api = function() {
   return {
     bookmarks: {
       create: function(parentId, name, url, callback) {
-        chrome.bookmarks.create({parentId: parentId, title: name, url: url}, callback);
+        chrome.bookmarks.create({parentId: parentId, title: name, url: url}, Airbrake.wrap(callback));
       },
       createFolder: function(parentId, name, callback) {
-        chrome.bookmarks.create({parentId: parentId, title: name}, callback);
+        chrome.bookmarks.create({parentId: parentId, title: name}, Airbrake.wrap(callback));
       },
       get: function(id, callback) {
-        chrome.bookmarks.get(id, function(bm) {
+        chrome.bookmarks.get(id, Airbrake.wrap(function (bm) {
           callback(bm && bm[0]);
-        });
+        }));
       },
       getAll: function(callback) {
-        chrome.bookmarks.getTree(function(bm) {
+        chrome.bookmarks.getTree(Airbrake.wrap(function (bm) {
           var arr = [];
           !function traverse(b) {
             if (b.children) {
@@ -407,7 +417,7 @@ var api = function() {
             }
           }(bm && bm[0]);
           callback(arr);
-        });
+        }));
       },
       getBarFolder: function(callback) {
         chrome.bookmarks.getChildren("0", function(bm) {
@@ -454,10 +464,8 @@ var api = function() {
     },
     on: {
       beforeSearch: new Listeners,
-      search: new Listeners,
-      install: new Listeners,
-      update: new Listeners,
-      startup: new Listeners},
+      search: new Listeners
+    },
     noop: function() {},
     play: function(path) {
       var el = document.createElement("audio");
@@ -469,57 +477,59 @@ var api = function() {
         var popupWinId, popupTabId;
         options.type = "popup";
         delete options.name;
-        chrome.windows.create(options, function(win) {
+        chrome.windows.create(options, Airbrake.wrap(function (win) {
           popupWinId = win.id;
           popupTabId = win.tabs[0].id;
-        });
+        }));
         if (handlers && handlers.navigate) {
+          var onUpdated = Airbrake.wrap(function (tabId, changed, tab) {
+            if (tabId == popupTabId && changed.status === 'loading') {
+              handlers.navigate.call({close: function() {
+                chrome.windows.remove(popupWinId);
+              }}, changed.url);
+            }
+          });
+          var onClosed = Airbrake.wrap(function (winId) {
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            chrome.windows.onRemoved.removeListener(onClosed);
+          });
           chrome.tabs.onUpdated.addListener(onUpdated);
           chrome.windows.onRemoved.addListener(onClosed);
         }
-        function onUpdated(tabId, changed, tab) {
-          if (tabId == popupTabId && changed.status === "loading") {
-            handlers.navigate.call({close: function() {
-              chrome.windows.remove(popupWinId);
-            }}, changed.url);
-          }
-        }
-        function onClosed(winId) {
-          chrome.tabs.onUpdated.removeListener(onUpdated);
-          chrome.windows.onRemoved.removeListener(onClosed);
-        }
       }},
     port: {
-      on: function(handlers) {
+      on: function (handlers) {
         for (var k in handlers) {
-          if (portHandlers[k]) throw Error(k + " handler already defined");
+          if (portHandlers[k]) throw Error(k + ' handler already defined');
           portHandlers[k] = handlers[k];
         }
       }
     },
     request: function(method, uri, data, done, fail) {
       var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = function() {
+      xhr.onreadystatechange = Airbrake.wrap(function() {
         if (this.readyState == 4) {
           if (this.status >= 200 && this.status < 300) {
-            done && done(/^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this);
+            done && done(/^application\/json/.test(this.getResponseHeader('Content-Type')) ? JSON.parse(this.responseText) : this);
           } else if (fail) {
             fail(this);
           }
           done = fail = null;
         }
-      }
+      });
       xhr.open(method, uri, true);
-      if (data) {
-        data = JSON.stringify(data);
-        xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+      if (data != null && data !== '') {
+        if (typeof data !== 'string') {
+          data = JSON.stringify(data);
+        }
+        xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
       }
       xhr.send(data);
     },
     postRawAsForm: function(uri, data) {
       var xhr = new XMLHttpRequest();
-      xhr.open("POST", uri, true);
-      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.open('POST', uri, true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
       xhr.send(data);
     },
     util: {
@@ -534,9 +544,9 @@ var api = function() {
         chrome.runtime.reload();
       } else {
         updateCheckRequested = true;
-        chrome.runtime.requestUpdateCheck(function(status) {
+        chrome.runtime.requestUpdateCheck(Airbrake.wrap(function (status) {
           log("[requestUpdateCheck]", status)();
-        });
+        }));
       }
     },
     socket: {
@@ -605,16 +615,16 @@ var api = function() {
         }
       },
       select: function(tabId) {
-        chrome.tabs.update(tabId, {active: true}, function(tab) {
+        chrome.tabs.update(tabId, {active: true}, Airbrake.wrap(function (tab) {
           if (tab) {
             chrome.windows.update(tab.windowId, {focused: true});
           }
-        });
+        }));
       },
       open: function(url, callback) {
-        chrome.tabs.create({url: url}, function(tab) {
+        chrome.tabs.create({url: url}, Airbrake.wrap(function (tab) {
           callback && callback(tab.id);
-        });
+        }));
       },
       each: function(callback) {
         for (var id in pages) {
@@ -665,9 +675,9 @@ var api = function() {
         return selectedTabIds[focusedWinId] === tab.id;
       },
       navigate: function(tabId, url) {
-        chrome.tabs.update(tabId, {url: url, active: true}, function(tab) {
+        chrome.tabs.update(tabId, {url: url, active: true}, Airbrake.wrap(function (tab) {
           if (tab) chrome.windows.update(tab.windowId, {focused: true});
-        });
+        }));
       },
       on: {
         focus: new Listeners,
@@ -681,8 +691,18 @@ var api = function() {
     toggleLogging: function (bool) {
       doLogging = bool;
     },
-    timers: window,
-    version: chrome.app.getDetails().version};
+    timers: {
+      setTimeout: function (f, ms) {
+        window.setTimeout(Airbrake.wrap(f), ms);
+      },
+      setInterval: function (f, ms) {
+        window.setInterval(Airbrake.wrap(f), ms);
+      },
+      clearTimeout: window.clearTimeout.bind(window),
+      clearInterval: window.clearInterval.bind(window)
+    },
+    version: chrome.app.getDetails().version
+  };
 }();
 
 // TODO: remove Feb 20

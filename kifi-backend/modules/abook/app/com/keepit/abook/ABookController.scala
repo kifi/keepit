@@ -29,20 +29,20 @@ object ABookOwnerInfo {
   val EMPTY = ABookOwnerInfo(None, None)
 }
 
-class GmailABookOwnerInfo(id:Option[String], email:Option[String], val verified:Option[Boolean] = None, val hd:Option[String] = None) extends ABookOwnerInfo(id, email)
+class GmailABookOwnerInfo(id:Option[String], email:Option[String], /* val verified:Option[Boolean] = None, */ val hd:Option[String] = None) extends ABookOwnerInfo(id, email)
 
 object GmailABookOwnerInfo {
-  def apply(id:Option[String], email:Option[String], verified:Option[Boolean], hd:Option[String]) = new GmailABookOwnerInfo(id, email, verified, hd)
-  def unapply(userInfo:GmailABookOwnerInfo):Option[(Option[String], Option[String], Option[Boolean], Option[String])] = Some(userInfo.id, userInfo.email, userInfo.verified, userInfo.hd)
+  def apply(id:Option[String], email:Option[String], /* verified:Option[Boolean],*/ hd:Option[String]) = new GmailABookOwnerInfo(id, email, hd)
+  def unapply(userInfo:GmailABookOwnerInfo):Option[(Option[String], Option[String], /* Option[Boolean],*/ Option[String])] = Some(userInfo.id, userInfo.email, /* userInfo.verified, */ userInfo.hd)
 
   implicit val format = (
     (__ \ 'id).formatNullable[String] and
     (__ \ 'email).formatNullable[String] and
-    (__ \ 'verified_email).formatNullable[Boolean] and
+//    (__ \ 'verified_email).formatNullable[Boolean] and
     (__ \ 'hd).formatNullable[String]
   )(GmailABookOwnerInfo.apply, unlift(GmailABookOwnerInfo.unapply))
 
-  val EMPTY = GmailABookOwnerInfo(None, None, None, None)
+  val EMPTY = GmailABookOwnerInfo(None, None, /* None, */ None)
 }
 
 class ABookController @Inject() (
@@ -57,13 +57,13 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
-  def importContactsP(userId:Id[User]) = Action.async(parse.json) { request =>
+  def importContacts(userId:Id[User]) = Action.async(parse.json) { request =>
     val tokenOpt = request.body.asOpt[OAuth2Token]
     log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
     tokenOpt match {
       case None =>
         log.error(s"[importContactsP($userId)] token is invalid body=${request.body}")
-        resolve(BadRequest("Invalid token"))
+        resolve(BadRequest(Json.obj("code" -> s"Invalid token ${request.body}")))
       case Some(tk) => tk.issuer match {
         case OAuth2TokenIssuers.GOOGLE => {
           val savedToken = db.readWrite(attempts = 2) { implicit s =>
@@ -71,7 +71,7 @@ class ABookController @Inject() (
           }
           importGmailContacts(userId, tokenOpt.get.accessToken, Some(savedToken))
         }
-        case _ => resolve(BadRequest(s"Unsupported issuer ${tk.issuer}"))
+        case _ => resolve(BadRequest(Json.obj("code" -> s"Unsupported issuer ${tk.issuer}")))
       }
     }
   }
@@ -81,7 +81,7 @@ class ABookController @Inject() (
     resF.map { abookInfoOpt =>
       abookInfoOpt match {
         case Some(info) => Ok(Json.toJson(info))
-        case None => BadRequest("Failed to import gmail contacts")
+        case None => BadRequest(Json.obj("code" -> "Failed to import gmail contacts"))
       }
     }
   }
@@ -142,7 +142,7 @@ class ABookController @Inject() (
     }
   }
 
-  def upload(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
+  def uploadContacts(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
     val abookRepoEntryOpt: Option[ABookInfo] = abookCommander.processUpload(userId, origin, None, None, json)
     abookRepoEntryOpt match {
@@ -151,23 +151,15 @@ class ABookController @Inject() (
     }
   }
 
-  // upload JSON file via form (for testing only)
-  def uploadJson(userId:Id[User], origin:ABookOriginType) = Action(parse.multipartFormData) { request =>
+  // upload JSON file via form (for admin-page testing)
+  def formUpload(userId:Id[User], origin:ABookOriginType = ABookOrigins.IOS) = Action(parse.multipartFormData) { request =>
     val jsonFilePart = request.body.file("abook_json")
     val jsonFile = File.createTempFile("abook_json", "json")
     jsonFilePart.getOrElse(throw new IllegalArgumentException("form field ios_json not found")).ref.moveTo(jsonFile, true)
     val jsonSrc = Source.fromFile(jsonFile)(io.Codec("UTF-8")).getLines.foldLeft("") { (a,c) => a + c }
-    log.info(s"[upload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
+    log.info(s"[formUpload($userId, $origin)] jsonFile=$jsonFile jsonSrc=$jsonSrc")
     val json = Json.parse(jsonSrc) // for testing
-    log.info(s"[uploadJson] json=${Json.prettyPrint(json)}")
-    val abookInfoRepoEntryOpt = abookCommander.processUpload(userId, origin, None, None, json)
-    Ok(Json.toJson(abookInfoRepoEntryOpt))
-  }
-
-  // direct JSON-upload (for testing only)
-  def uploadJsonDirect(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
-    val json = request.body
-    log.info(s"[uploadJsonDirect($userId,$origin)] json=${Json.prettyPrint(json)}")
+    log.info(s"[formUpload] json=${Json.prettyPrint(json)}")
     val abookInfoRepoEntryOpt = abookCommander.processUpload(userId, origin, None, None, json)
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
