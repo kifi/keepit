@@ -5,21 +5,17 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
-import play.api.mvc.{SimpleResult, AsyncResult, Action}
+import play.api.mvc.Action
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
 import java.io.File
 import scala.collection.mutable
 import scala.io.Source
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.WS
-import scala.concurrent._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.Play
-import play.api.Play.current
 import scala.util.{Success, Failure}
-import com.keepit.common.logging.{LogPrefix, Logging}
+import com.keepit.common.logging.Logging
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -59,92 +55,33 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
+  // gmail
   def importContacts(userId:Id[User]) = Action.async(parse.json) { request =>
+    implicit val prefix = s"importContacts($userId)"
     val tokenOpt = request.body.asOpt[OAuth2Token]
-    log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
+    log.infoP(s"tokenOpt=$tokenOpt")
     tokenOpt match {
       case None =>
-        log.error(s"[importContactsP($userId)] token is invalid body=${request.body}")
+        log.errorP(s"token is invalid body=${request.body}")
         resolve(BadRequest(Json.obj("code" -> s"Invalid token ${request.body}")))
       case Some(tk) => tk.issuer match {
         case OAuth2TokenIssuers.GOOGLE => {
-          val savedToken = db.readWrite(attempts = 2) { implicit s =>
-            oauth2TokenRepo.save(tk)
+          val saved = db.readWrite(attempts = 2) { implicit s =>
+            oauth2TokenRepo.save(tk) // for future use
           }
-          importGmailContacts(userId, tokenOpt.get.accessToken, Some(savedToken))
+          abookCommander.importGmailContacts(userId, tk.accessToken, Some(saved)) map { info =>
+            Ok(Json.toJson(info))
+          } recover {
+            case t:Throwable =>
+              BadRequest(Json.obj("code" -> s"Failed to import gmail contacts; exception:$t ;cause=${t.getCause}; stackTrace=${t.getStackTraceString}"))
+          }
         }
         case _ => resolve(BadRequest(Json.obj("code" -> s"Unsupported issuer ${tk.issuer}")))
       }
     }
   }
 
-  def importGmailContacts(userId: Id[User], accessToken: String, tokenOpt:Option[OAuth2Token]): Future[SimpleResult] = {  // todo: move to commander
-    val resF = importGmailContactsF(userId, accessToken, tokenOpt)
-    resF.map { abookInfoOpt =>
-      abookInfoOpt match {
-        case Some(info) => Ok(Json.toJson(info))
-        case None => BadRequest(Json.obj("code" -> "Failed to import gmail contacts"))
-      }
-    }
-  }
-
-  def importGmailContactsF(userId: Id[User],accessToken: String, tokenOpt:Option[OAuth2Token]):Future[Option[ABookInfo]] = {  // todo: move to commander
-    implicit val prefix = LogPrefix(s"importGmailContacts($userId)")
-    val USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-    val CONTACTS_URL = "https://www.google.com/m8/feeds/contacts/default/full" // TODO: paging (alt=json ignored)
-
-    WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get flatMap { resp =>
-      resp.status match {
-        case OK => {
-          log.infoP(s"url=$USER_INFO_URL resp=${resp.body}")
-          val userInfoJson = resp.json
-          val gUserInfoOpt = userInfoJson.asOpt[GmailABookOwnerInfo]
-          gUserInfoOpt match {
-            case None =>
-              log.errorP(s"cannot parse userinfo response: ${resp.body}")
-              // email and/or airbrake
-              resolve(None)
-            case Some(gUserInfo) =>
-              log.infoP(s"userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
-
-              WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
-                if (contactsResp.status == OK) {
-                  val contacts = contactsResp.xml // TODO: optimize; hand-off
-
-                  // todo: paging
-                  val totalResults = (contacts \ "totalResults").text.toInt
-                  val startIndex = (contacts \ "startIndex").text.toInt
-                  val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
-                  log.infoP(s"total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
-
-                  log.infoP(s"$contacts")
-                  log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
-                  val jsSeq = (contacts \ "entry") map { entry =>
-                    val title = (entry \ "title").text
-                    val emails = (entry \ "email") flatMap { email =>
-                      (email \ "@address") map ( _.text )
-                    }
-                    log.infoP(s"title=$title email=$emails")
-                    Json.obj("name" -> title, "emails" -> Json.toJson(emails))
-                  }
-
-                  val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
-                  log.debug(Json.prettyPrint(abookUpload))
-                  abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
-                } else {
-                  log.errorP(s"Failed to retrieve gmail contacts") // todo: try later
-                  None
-                }
-              }
-            }
-          }
-        case _ =>
-          log.errorP("Failed to obtain access token")
-          resolve(None)
-      }
-    }
-  }
-
+  // ios
   def uploadContacts(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
     val json : JsValue = request.body
     val abookRepoEntryOpt: Option[ABookInfo] = abookCommander.processUpload(userId, origin, None, None, json)
