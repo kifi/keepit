@@ -65,7 +65,6 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         val cxAll = db.readOnly {implicit s =>
           bookmarkRepo.all
         }
-        println(cxAll mkString "\n")
         val all = inject[Database].readOnly(implicit session => bookmarkRepo.all)
         all.map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"), None)
       }
@@ -102,9 +101,7 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         setup()
         val clock = inject[FakeClock]
         db.readOnly {implicit s =>
-          println(bookmarkRepo.all.map(_.updatedAt).map(SQL_DATETIME_FORMAT.print).mkString("\n"))
           val now = clock.now
-          println("now = " + now + " = " + SQL_DATETIME_FORMAT.print(now))
           bookmarkRepo.getCountByTime(now.minusHours(3), now.plusMinutes(1)) === 3
           bookmarkRepo.getCountByTime(now.minusHours(6), now.minusHours(3)) === 0
         }
@@ -148,11 +145,7 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         db.readWrite{ implicit s =>
           bookmarkRepo.count === 4
           val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-          println(bm)
-          println(bookmarkRepo.all.mkString("\n"))
           bookmarkRepo.delete(bm.get.id.get)
-          println("=============================")
-          println(bookmarkRepo.all.mkString("\n"))
         }
         db.readWrite{ implicit s =>
           bookmarkRepo.all.size === 3
