@@ -51,7 +51,10 @@ object NormalizedURI {
   implicit val nIdFormat = Id.format[NormalizedURI]
   implicit val extIdFormat = ExternalId.format[NormalizedURI]
   implicit val stateFormat = State.format[NormalizedURI]
-  implicit val urlHashFormat = __.format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply))
+  implicit val urlHashFormat = Format(
+    __.read[String].map(UrlHash(_)),
+    new Writes[UrlHash]{ def writes(o: UrlHash) = JsString(o.hash)}
+  )
 
   val TitleMaxLen = 2040
 

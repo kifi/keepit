@@ -452,10 +452,20 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveNormalizedURI(uri: NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = ???
 
-  def updateNormalizedURI(uriId: Id[NormalizedURI], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[NormalizedURI],
-                          title: Option[String], url: String, urlHash: UrlHash, state: State[NormalizedURI], seq: SequenceNumber,
-                          screenshotUpdatedAt: Option[DateTime], restriction: Option[Restriction], normalization: Option[Normalization],
-                          redirect: Option[Id[NormalizedURI]], redirectTime: Option[DateTime])(implicit timeout:Int): Future[Boolean] = Future.successful(true)
+  def updateNormalizedURI(uriId: => Id[NormalizedURI],
+                          createdAt: => DateTime,
+                          updatedAt: => DateTime,
+                          externalId: => ExternalId[NormalizedURI],
+                          title: => Option[String],
+                          url: => String,
+                          urlHash: => UrlHash,
+                          state: => State[NormalizedURI],
+                          seq: => SequenceNumber,
+                          screenshotUpdatedAt: => Option[DateTime],
+                          restriction: => Option[Restriction],
+                          normalization: => Option[Normalization],
+                          redirect: => Option[Id[NormalizedURI]],
+                          redirectTime: => Option[DateTime])(implicit timeout:Int): Future[Boolean] = Future.successful(true)
 
   def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
 
