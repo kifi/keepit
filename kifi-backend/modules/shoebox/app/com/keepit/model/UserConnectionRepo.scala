@@ -165,10 +165,7 @@ class UserConnectionRepoImpl @Inject() (
 
     (users + userId) foreach invalidateCache
 
-    println(s"\n==\ntoInsert: ${toInsert}")
-
     table.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = sequence.incrementAndGet())}.toSeq: _*)
-    println(s"current seq: ${sequence.getLastGeneratedSeq()}")
   }
 
   def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
