@@ -33,6 +33,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def thisService: ServiceType
   def timeSinceLastStatusChange: Long
   def amIUp: Boolean
   def isCanary: Boolean
@@ -62,6 +63,7 @@ class ServiceDiscoveryImpl(
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
   def thisInstance: Option[ServiceInstance] = myInstance
+  def thisService: ServiceType = services.currentService
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()

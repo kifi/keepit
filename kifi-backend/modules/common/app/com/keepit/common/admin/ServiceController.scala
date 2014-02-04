@@ -11,7 +11,7 @@ import com.keepit.common.cache.InMemoryCachePlugin
 class ServiceController @Inject() (
     serviceDiscovery: ServiceDiscovery,
     service: FortyTwoServices,
-    cache: InMemoryCachePlugin
+    localCache: InMemoryCachePlugin
     ) extends com.keepit.common.controller.ServiceController with Logging {
 
     override lazy val serviceType: ServiceType = service.currentService
@@ -105,8 +105,8 @@ class ServiceController @Inject() (
       Ok(displayOut + "\n\n")
     }
 
-  def clearInMemoryCache(prefix: Option[String]) = Action { request =>
-    cache.clear(prefix)
+  def clearLocalCache(prefix: Option[String]) = Action { request =>
+    localCache.removeAll(prefix)
     Ok
   }
 
