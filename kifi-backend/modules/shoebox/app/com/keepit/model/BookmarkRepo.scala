@@ -135,20 +135,20 @@ class BookmarkRepoImpl @Inject() (
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries instead of raw strings.
     val interpolated = (beforeId map get, afterId map get) match {
       case (None, None) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = 'active' order by bm.created_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = 'active' order by bm.created_at desc, bm.id desc limit $count;"""
       case (None, Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
-               order by bm.created_at desc limit $count;"""
+               order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
-               order by bm.created_at desc limit $count;"""
+               order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
                and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
-               order by bm.created_at desc limit $count;"""
+               order by bm.created_at desc, bm.id desc limit $count;"""
     }
     interpolated.as[Bookmark].list
   }
@@ -157,28 +157,31 @@ class BookmarkRepoImpl @Inject() (
     import keepToCollectionRepo.{stateTypeMapper => ktcStateMapper}
     import StaticQuery.interpolation
 
+
     // Performance sensitive call.
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries.
     val interpolated = (beforeId map get, afterId map get) match {
       case (None, None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' order by bm.created_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' order by bm.created_at desc, bm.id desc limit $count;"""
       case (None, Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
-                order by bm.created_at desc limit $count;"""
+                order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
-                order by bm.created_at desc limit $count;"""
+                order by bm.created_at desc, bm.id desc limit     import StaticQuery.interpolation
+$count;"""
       case (Some(before), Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
-                and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id})) order by bm.created_at desc limit $count;"""
+                and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
+                order by bm.created_at desc, bm.id desc limit $count;"""
     }
     interpolated.as[Bookmark].list
   }
@@ -201,15 +204,17 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
-    val sql = s"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='${BookmarkStates.ACTIVE.value}'"
-    val q = StaticQuery.queryNA[Int](sql)
-    q.first
+    import StaticQuery.interpolation
+
+    val sql = sql"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='#${BookmarkStates.ACTIVE.value}'"
+    sql.as[Int].first
   }
 
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int = {
-    val sql = s"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='${BookmarkStates.ACTIVE.value}' and source='${source.value}'"
-    val q = StaticQuery.queryNA[Int](sql)
-    q.first
+    import StaticQuery.interpolation
+
+    val sql = sql"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='#${BookmarkStates.ACTIVE.value}' and source='${source.value}'"
+    sql.as[Int].first
   }
 
   def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] = super.getBySequenceNumber(num, limit)
