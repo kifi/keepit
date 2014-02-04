@@ -79,7 +79,7 @@ trait ZooKeeperSession {
   def getState(): ZooKeeper.States
 
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit): Unit
-  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit): Unit
+  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit, watchData: Boolean = true): Unit
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit
 
@@ -92,7 +92,7 @@ trait ZooKeeperSession {
 
   def getData[T](node: Node)(implicit deserializer: Array[Byte] => T): Option[T]
   def setData[T](node: Node, data: T)(implicit serializer: T => Array[Byte]): Unit
-  def deleteData[T](node: Node): Unit
+  def deleteData(node: Node): Unit
 
   def delete(node: Node): Unit
   def deleteRecursive(node: Node): Unit
@@ -277,7 +277,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     zk.setData(node, serializer(data), -1)
   }
 
-  def deleteData[T](node: Node): Unit = {
+  def deleteData(node: Node): Unit = {
     zk.setData(node, null, -1)
   }
 
@@ -342,7 +342,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
    * for each NodeChildrenChanged event and runs the supplied updateChildren function and
    * re-watches the node's children.
    */
-  def watchChildren(node: Node, updateChildren: Seq[Node] => Unit){
+  def watchChildren(node: Node, updateChildren: Seq[Node] => Unit, watchData: Boolean = true){
     val watchedChildren = scala.collection.mutable.HashSet[Node]()
 
     class ChildWatcher(child: Node) extends Watcher {
@@ -383,14 +383,18 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
       }
     }
 
-    def doWatchChildren(children: Seq[Node]) : Unit = watchedChildren.synchronized {
-      children.filterNot(watchedChildren.contains _).foreach{ child =>
-        try {
-          zk.getData(child.path, new ChildWatcher(child), new Stat())
-          watchedChildren += child
-        } catch {
-          case e: KeeperException =>
-            log.warn("Failed to place watch on a child node!")
+    def doWatchChildren(children: Seq[Node]) : Unit = {
+      if (watchData) {
+        watchedChildren.synchronized {
+          children.filterNot(watchedChildren.contains _).foreach{ child =>
+            try {
+              zk.getData(child.path, new ChildWatcher(child), new Stat())
+              watchedChildren += child
+            } catch {
+              case e: KeeperException =>
+                log.warn("Failed to place watch on a child node!")
+            }
+          }
         }
       }
     }
