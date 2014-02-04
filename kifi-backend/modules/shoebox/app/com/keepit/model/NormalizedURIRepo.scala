@@ -152,7 +152,6 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  //using readonly db when exist, don't use cache
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String] = {
     val prenormalizedUrl = prenormalize(url)
     log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
