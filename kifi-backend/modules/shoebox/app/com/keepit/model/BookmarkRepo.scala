@@ -6,8 +6,9 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{GetResult, StaticQuery}
+import scala.slick.jdbc.{SetParameter, GetResult, StaticQuery}
 import com.keepit.common.logging.Logging
+import scala.slick.session.PositionedParameters
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] with SeqNumberFunction[Bookmark] {
@@ -38,14 +39,14 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
 
 @Singleton
 class BookmarkRepoImpl @Inject() (
-   val db: DataBaseComponent,
-   val clock: Clock,
-   val countCache: BookmarkCountCache,
-   val keepToCollectionRepo: KeepToCollectionRepoImpl,
-   collectionRepo: CollectionRepo,
-   bookmarkUriUserCache: BookmarkUriUserCache,
-   latestBookmarkUriCache: LatestBookmarkUriCache
-) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {
+                                   val db: DataBaseComponent,
+                                   val clock: Clock,
+                                   val countCache: BookmarkCountCache,
+                                   val keepToCollectionRepo: KeepToCollectionRepoImpl,
+                                   collectionRepo: CollectionRepo,
+                                   bookmarkUriUserCache: BookmarkUriUserCache,
+                                   latestBookmarkUriCache: LatestBookmarkUriCache
+                                   ) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -65,7 +66,7 @@ class BookmarkRepoImpl @Inject() (
     def source = column[BookmarkSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
-        userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
+      userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
   }
 
   private implicit val getBookmarkResult = GetResult(r => table.*.getResult(db.Driver.profile, r))
@@ -136,11 +137,18 @@ class BookmarkRepoImpl @Inject() (
       case (None, None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = 'active' order by bm.created_at desc limit $count;"""
       case (None, Some(after)) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.id > ${after.id.get.id} order by bm.created_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
+               and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
+               order by bm.created_at desc limit $count;"""
       case (Some(before), None) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.id < ${before.id.get.id} order by bm.created_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
+               and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
+               order by bm.created_at desc limit $count;"""
       case (Some(before), Some(after)) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.id < ${before.id.get.id} and bm.id > ${after.id.get.id} order by bm.created_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
+               and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
+               and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
+               order by bm.created_at desc limit $count;"""
     }
     interpolated.as[Bookmark].list
   }
@@ -159,15 +167,18 @@ class BookmarkRepoImpl @Inject() (
       case (None, Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.id > ${after.id.get.id} order by bm.updated_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
+                order by bm.created_at desc limit $count;"""
       case (Some(before), None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.id < ${before.id.get.id} order by bm.created_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
+                order by bm.created_at desc limit $count;"""
       case (Some(before), Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.id < ${before.id.get.id} and bm.id > ${after.id.get.id} order by bm.created_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
+                and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id})) order by bm.created_at desc limit $count;"""
     }
     interpolated.as[Bookmark].list
   }
@@ -190,13 +201,13 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
-    val sql = s"select count(*) from bookmark where updated_at between '${SQL_DATETIME_FORMAT.print(from)}' and '${SQL_DATETIME_FORMAT.print(to)}' and state='${BookmarkStates.ACTIVE.value}'"
+    val sql = s"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='${BookmarkStates.ACTIVE.value}'"
     val q = StaticQuery.queryNA[Int](sql)
     q.first
   }
 
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int = {
-    val sql = s"select count(*) from bookmark where updated_at between '${SQL_DATETIME_FORMAT.print(from)}' and '${SQL_DATETIME_FORMAT.print(to)}' and state='${BookmarkStates.ACTIVE.value}' and source='${source.value}'"
+    val sql = s"select count(*) from bookmark where updated_at between '${from}' and '${to}' and state='${BookmarkStates.ACTIVE.value}' and source='${source.value}'"
     val q = StaticQuery.queryNA[Int](sql)
     q.first
   }
