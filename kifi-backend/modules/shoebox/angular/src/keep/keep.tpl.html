@@ -1,11 +1,11 @@
 <li class="kf-keep" ng-class="{ mine: isMine(), example: isExample(), private: isPrivate() }">
-	<time ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+	<time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
 	<div class="kf-keep-handle">
 		<div class="kf-keep-checkbox"></div>
 	</div>
 	<div class="kf-keep-title">
 		<span class="kf-example-tag">Example keep</span>
-		<a ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
+		<a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
 		</a>
 	</div>
 	<div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
