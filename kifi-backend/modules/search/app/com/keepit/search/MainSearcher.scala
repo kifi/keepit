@@ -108,6 +108,7 @@ class MainSearcher(
   def debug(debugMode: String) {
     val debugFlags = debugMode.split(",").map(_.toLowerCase).toSet
     noBookmarkCheck = debugFlags.contains("nobookmarkcheck")
+    log.info(s"debug option: $debugFlags")
   }
 
   // tailCutting is set to low when a non-default filter is in use
