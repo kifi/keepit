@@ -5,11 +5,14 @@ import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 import scala.collection.JavaConversions._
-import com.keepit.common.service.{ServiceType, FortyTwoServices}
+import com.keepit.common.service.{ServiceClient, ServiceType, FortyTwoServices}
+import com.keepit.common.cache.InMemoryCachePlugin
 
 class ServiceController @Inject() (
     serviceDiscovery: ServiceDiscovery,
-    service: FortyTwoServices) extends com.keepit.common.controller.ServiceController with Logging {
+    service: FortyTwoServices,
+    localCache: InMemoryCachePlugin
+    ) extends com.keepit.common.controller.ServiceController with Logging {
 
     override lazy val serviceType: ServiceType = service.currentService
 
@@ -101,5 +104,10 @@ class ServiceController @Inject() (
 
       Ok(displayOut + "\n\n")
     }
+
+  def removeAllFromLocalCache(prefix: Option[String]) = Action { request =>
+    localCache.removeAll(prefix)
+    Ok
+  }
 
 }

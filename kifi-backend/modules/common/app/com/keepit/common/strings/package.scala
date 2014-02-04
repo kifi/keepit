@@ -2,7 +2,7 @@ package com.keepit.common
 
 import org.apache.commons.lang3.StringUtils
 import play.api.libs.json.Json.JsValueWrapper
-import play.api.libs.json.{JsValue, JsNull, Json, JsObject}
+import play.api.libs.json.{Json, JsObject, JsNull, JsString, JsUndefined}
 
 package object strings {
   val UTF8 = "UTF-8"
@@ -38,7 +38,14 @@ package object strings {
   implicit class OptionWrappedJsObject(obj: JsObject) {
     def stripJsNulls(): JsObject = {
       JsObject(obj.value.map { v =>
-        if (v._2 == JsNull) Some(v._1 -> v._2) else None
+        v._2 match {
+          case null => None
+          case s: JsUndefined => None
+          case JsNull => None
+          case JsString(null) => None
+          case JsString("null") => None
+          case other => Some(v._1 -> v._2)
+        }
       }.flatten.toSeq)
     }
   }

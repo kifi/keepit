@@ -4,6 +4,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import scala.slick.util.CloseableIterator
 import com.keepit.common.db.slick._
 import com.keepit.model._
+import com.keepit.common.performance._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import scala.slick.jdbc.{StaticQuery => Q, StaticQuery0}
@@ -66,16 +67,13 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], contacts: Seq[EContact])(implicit session:RWSession): Unit = {
-    val ts = System.currentTimeMillis
+  def insertAll(userId: Id[User], contacts: Seq[EContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
     var i = 0
     contacts.grouped(500).foreach { g =>
       val t = System.currentTimeMillis
       i += 1
-      table.forInsert insertAll(g: _*)
-      log.info(s"[insertAll($userId, batch($i, sz=${g.length}))] time-lapsed: ${System.currentTimeMillis - t}")
+      timing(s"econtactRepo.batchInsertAll($userId,batch($i,sz=${g.length}))") { table.forInsert insertAll(g: _*) }
     }
-    log.info(s"[insertAll($userId, ${contacts.length})] time-lapsed: ${System.currentTimeMillis - ts}")
   }
 
   def deleteByUserId(userId: Id[User])(implicit session: RWSession): Int = {

@@ -144,8 +144,16 @@ class S3ScreenshotStoreImpl(
       }
       future onComplete {
         case Success(result) =>
-          if (result) {
-            shoeboxServiceClient.updateNormalizedURI(uriId = normalizedUri.id.get, screenshotUpdatedAt = Some(clock.now))
+          if (result && normalizedUri.id.nonEmpty) {
+            try {
+              shoeboxServiceClient.updateNormalizedURI(uriId = normalizedUri.id.get, screenshotUpdatedAt = Some(clock.now))
+            } catch {
+              case ex: Throwable =>
+                airbrake.notify(AirbrakeError(
+                  exception = trace.withCause(ex),
+                  message = Some(s"Failed to update normalized uri ($url) to S3")
+                ))
+            }
           }
         case Failure(e) =>
           airbrake.notify(AirbrakeError(

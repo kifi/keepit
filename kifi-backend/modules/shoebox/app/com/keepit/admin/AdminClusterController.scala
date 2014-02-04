@@ -18,8 +18,6 @@ class AdminClusterController @Inject() (
     httpClient: HttpClient,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
-    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
-
     val machineNames = Map[String, String](
         "50.18.183.73"    -> "b01",
         "184.169.164.108" -> "b02",
@@ -33,7 +31,7 @@ class AdminClusterController @Inject() (
         "54.219.29.184"   -> "b11"
     )
 
-    def clustersInfo : Seq[ClusterMemberInfo] = serviceTypes.flatMap{ serviceType =>
+    def clustersInfo : Seq[ClusterMemberInfo] = ServiceType.inProduction.flatMap{ serviceType =>
       val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
       serviceCluster.allMembers.map { serviceInstance =>
       val isLeader = serviceCluster.leader.exists(_ == serviceInstance)

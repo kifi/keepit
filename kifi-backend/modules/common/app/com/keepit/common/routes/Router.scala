@@ -212,11 +212,9 @@ object Heimdal extends Service {
 
 object ABook extends Service {
   object internal {
-    def importContactsP(userId:Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/importContactsP")
-    def importContacts(userId:Id[User], provider:String, accessToken:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/importContacts", Param("provider", provider), Param("accessToken", accessToken))
-    def uploadForUser(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/uploadForUser?userId=${userId.id}")
-    def upload(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/upload")
-    def uploadDirect(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${userId.id}/${origin.name}/uploadDirect")
+    def importContacts(userId:Id[User])  = ServiceRoute(POST, s"/internal/abook/${userId.id}/importContacts")
+    def uploadContacts(userId:Id[User], origin:ABookOriginType) = ServiceRoute(POST, s"/internal/abook/${origin.name}/uploadContacts?userId=${userId.id}")
+    def formUpload(userId:Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/formUpload")
     def getABookInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfos")
     def getAllABookInfos() = ServiceRoute(GET, s"/internal/abooks")
     def getPagedABookInfos(page:Int, size:Int) = ServiceRoute(GET, s"/internal/abooks/page/${page}?size=${size}")
@@ -251,6 +249,7 @@ object Common {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")
     def version() = ServiceRoute(GET, "/internal/version")
     def threadDetails(name: Option[String], state: Option[String]) = ServiceRoute(GET, "/internal/common/threadDetails", Param("name", name), Param("state", state), Param("hideStack"))
+    def removeAllFromLocalCache(prefix: Option[String]) = ServiceRoute(GET, "/internal/cache/removeAll", Param("prefix", prefix))
   }
 }
 

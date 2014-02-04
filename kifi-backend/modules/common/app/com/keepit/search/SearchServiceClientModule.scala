@@ -12,7 +12,7 @@ trait SearchServiceClientModule extends ScalaModule
 
 case class ProdSearchServiceClientModule() extends SearchServiceClientModule {
 
-  def configure {}
+  def configure() {}
 
   @Singleton
   @Provides
@@ -24,7 +24,8 @@ case class ProdSearchServiceClientModule() extends SearchServiceClientModule {
       serviceDiscovery.serviceCluster(ServiceType.SEARCH),
       current.configuration.getInt("service.search.port").get,
       client,
-      airbrakeNotifier)
+      airbrakeNotifier
+    )
   }
 
 }

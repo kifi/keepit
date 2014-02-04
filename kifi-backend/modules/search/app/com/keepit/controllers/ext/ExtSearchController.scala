@@ -11,6 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
+import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.IdFilterCompressor
 import com.keepit.search.result.KifiSearchResult
@@ -32,13 +33,16 @@ class ExtSearchController @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None) = JsonAction.authenticated { request =>
+    coll: Option[String] = None,
+    debug: Option[String] = None) = JsonAction.authenticated { request =>
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
     val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll)
+    val debugOpt = debug.flatMap{ v => if (request.experiments.contains(ADMIN)) Some(v) else None } // debug is only for admin
+
+    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debug)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
@@ -83,7 +87,7 @@ class ExtSearchController @Inject() (
     coll: Option[String] = None
   ) = Action { request =>
 
-    val decoratedResult = searchCommander.search(Id[User](userId), acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll)
+    val decoratedResult = searchCommander.search(Id[User](userId), acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }

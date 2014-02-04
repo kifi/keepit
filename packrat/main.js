@@ -505,6 +505,20 @@ function makeRequest(name, method, url, data, callbacks) {
   });
 }
 
+// ===== Error reporting
+
+var Airbrake = Airbrake || require('./airbrake.min').Airbrake;
+Airbrake.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
+Airbrake.setEnvironmentName(api.isPackaged() && !api.mode.isDev() ? 'production' : 'development');
+Airbrake.addReporter(function airbrake(notice, opts) {
+  notice.context.version = api.version;
+  notice.context.userAgent = api.browser.userAgent;
+  notice.context.userId = me && me.id;
+  api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
+    log('#c00', '[airbrake] report', o.id, o.url)();
+  });
+});
+
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
@@ -1035,7 +1049,13 @@ function markUnread(threadId, messageId) {
     var thOld = clone(th);
     th.unread = true;
     th.unreadAuthors = th.unreadMessages = 1;
-    threadLists.unread.insertOrReplace(thOld, th);
+    (function insertIntoUnread(tl) {
+      if (tl && tl.includesAllSince(th)) {
+        tl.insertOrReplace(thOld, th);
+      } else if (tl) {
+        tl.numTotal++;
+      }
+    }(threadLists.unread));
     if (!th.muted) {
       var tlKeys = ['all', th.url];
       if (isSent(th)) {
@@ -1068,7 +1088,16 @@ function markRead(threadId, messageId, time) {
   if (th && th.unread && (th.id === messageId || th.time <= time)) {
     th.unread = false;
     th.unreadAuthors = th.unreadMessages = 0;
-    threadLists.unread.remove(th.thread);
+    (function removeFromUnread(tl) {
+      if (!tl) return;
+      var numRemoved = tl.remove(th.thread);
+      if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
+        tl.numTotal--;
+        if (tl.ids.length === tl.numTotal) {
+          tl.includesOldest = true;
+        }
+      }
+    }(threadLists.unread));
     if (!th.muted) {
       var tlKeys = ['all', 'unread', th.url];
       if (isSent(th)) {
@@ -1760,13 +1789,6 @@ function getPrefetched(request, cb) {
     return true;
   }
 }
-
-api.on.install.add(function() {
-  log('[api.on.install]')();
-});
-api.on.update.add(function() {
-  log('[api.on.update]')();
-});
 
 // ===== Local storage
 

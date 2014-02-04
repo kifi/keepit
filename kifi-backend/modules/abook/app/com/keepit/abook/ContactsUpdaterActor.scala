@@ -21,7 +21,8 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.sql.SQLException
 import play.api.libs.iteratee.{Step, Iteratee}
-import scala.util.{Failure, Success}
+import com.keepit.common.performance._
+import scala.util.{Try, Failure, Success}
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -84,7 +85,7 @@ class ContactsUpdater @Inject() (
     }
     )
 
-  private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo) = {
+  private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo) = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
     val existingContacts = db.readOnly(attempts = 2) { implicit s =>
         econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
     }
@@ -101,7 +102,7 @@ class ContactsUpdater @Inject() (
     existingEmailSet
   }
 
-  def processABookUpload(userId:Id[User], origin:ABookOriginType, abookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue]) = {
+  def processABookUpload(userId:Id[User], origin:ABookOriginType, abookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue]) = timing(s"upload($userId,$origin,$abookInfo,$s3Key)") {
     log.info(s"[upload($userId, $origin, $abookInfo, $s3Key): Begin processing ...")
     val ts = System.currentTimeMillis
     var abookEntry = abookInfo
@@ -192,10 +193,8 @@ class ContactsUpdater @Inject() (
           }
 
           val contacts = cBuilder.result
-          if (!contacts.isEmpty) { // todo(ray) -- removeme
-            db.readWrite(attempts = 2) { implicit session =>
-              contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
-            }
+          if (!contacts.isEmpty) {
+            asyncUpdateContactsRepo(userId, abookInfo, origin, contacts)
           }
           log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
         }
@@ -213,6 +212,21 @@ class ContactsUpdater @Inject() (
           abookInfoRepo.save(abookEntry.withState(ABookInfoStates.UPLOAD_FAILURE))
         }
         airbrake.notify(s"[upload($userId, $abookInfo)] failed")
+      }
+    }
+  }
+
+  def asyncUpdateContactsRepo(userId: Id[User], abookInfo: ABookInfo, origin: ABookOriginType, contacts: Array[Contact]) {
+    future {
+      Try {
+        db.readWrite(attempts = 2) { implicit session =>
+          contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
+        }
+      }
+    } onComplete { tr =>
+      tr match {
+        case Failure(t) => airbrake.notify(s"[upload($userId,$origin)] (minor) failed to update contacts table") // email?
+        case Success(n) => log.info(s"[upload($userId,$origin)] contacts table updated")
       }
     }
   }

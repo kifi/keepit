@@ -1,6 +1,5 @@
 package com.keepit.common.zookeeper
 
-import com.keepit.common.strings.{fromByteArray, toByteArray}
 import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import scala.concurrent.future
@@ -61,6 +60,7 @@ trait ConfigStore {
 }
 
 class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
+  import com.keepit.common.strings.{fromByteArray, toByteArray}
 
   private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
 
@@ -68,12 +68,12 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
-      Option(zk.getData(key.toNode)).map(fromByteArray)
+      zk.getData(key.toNode)
     } catch {
       case e: KeeperException.NoNodeException => None
       case e: KeeperException.ConnectionLossException =>
         try {
-          Option(zk.getData(key.toNode)).map(fromByteArray)
+          zk.getData(key.toNode)
         } catch {
           case e: KeeperException.NoNodeException => None
         }

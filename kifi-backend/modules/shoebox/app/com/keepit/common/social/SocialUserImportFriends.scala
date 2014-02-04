@@ -39,12 +39,15 @@ class SocialUserImportFriends @Inject() (
     log.info(s"Importing ${socialUserInfo.userId} (${socialUserInfo.fullName})'s friends.")
 
     val socialUserInfos = db.readWriteBatch(socialUserInfosNeedToUpdate, attempts = 3) { case (session, friend) =>
-      try {
-        Some(repo.save(friend)(session))
-      } catch {
-        case e: Exception =>
-          airbrake.notify(s"Error persisting single social user info for userId ${socialUserInfo.userId} (${socialUserInfo.fullName})", e)
-          None
+      repo.getOpt(friend.socialId, friend.networkType)(session).orElse {
+        try {
+          Some(repo.save(friend)(session))
+        } catch {
+          case e: Exception =>
+            repo.deleteCache(friend)(session)
+            airbrake.notify(s"Error persisting single social user info for userId ${socialUserInfo.userId} (${socialUserInfo.fullName})", e)
+            None
+        }
       }
     }.values.toList.map { v =>
       v.toOption.flatten

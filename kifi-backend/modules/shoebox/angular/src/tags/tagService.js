@@ -20,8 +20,14 @@ angular.module('kifi.tagService', [])
 			list: list,
 
 			fetchAll: function () {
-				var url = env.xhrBase + '/collections/all?sort=user&_=' + Date.now().toString(36);
-				return $http.get(url).then(function (res) {
+				var url = env.xhrBase + '/collections/all';
+				var config = {
+					params: {
+						sort: 'user',
+						_: Date.now().toString(36)
+					}
+				};
+				return $http.get(url, config).then(function (res) {
 					var tags = res.data && res.data.collections || [];
 					list.length = 0;
 					list.push.apply(list, tags);

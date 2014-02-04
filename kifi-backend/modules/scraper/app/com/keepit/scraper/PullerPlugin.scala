@@ -27,7 +27,7 @@ class PullerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     if (Play.maybeApplication.isDefined) {
-      val (initDelay, freq) = if (Play.isDev) (2 seconds, 2 seconds) else (scraperConfig.pullFrequency seconds, scraperConfig.pullFrequency seconds)
+      val (initDelay, freq) = if (Play.isDev) (5 seconds, 5 seconds) else (scraperConfig.pullFrequency seconds, scraperConfig.pullFrequency seconds)
       log.info(s"[onStart] PullerPlugin started with initDelay=$initDelay freq=$freq")
       scheduleTaskOnAllMachines(actor.system, initDelay, freq, actor.ref, Pull)
     } else {
