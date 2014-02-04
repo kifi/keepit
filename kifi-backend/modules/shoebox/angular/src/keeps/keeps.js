@@ -2,7 +2,7 @@
 
 angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 
-.controller('KeepCtrl', [
+.controller('KeepsCtrl', [
 	'$scope', '$timeout', 'keepService',
 	function ($scope, $timeout, keepService) {}
 ])
@@ -13,9 +13,13 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 		return {
 			restrict: 'A',
 			scope: {},
-			controller: 'KeepCtrl',
+			controller: 'KeepsCtrl',
 			templateUrl: 'keeps/keeps.tpl.html',
 			link: function (scope, element, attrs) {
+				scope.keeps = keepService.list;
+
+				keepService.getList();
+
 				scope.page = {
 					title: 'Browse your Keeps'
 				};
