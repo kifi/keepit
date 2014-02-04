@@ -34,7 +34,7 @@ class AdminCacheController  @Inject() (
         Some(serviceDiscovery.thisInstance.get.instanceInfo.instanceId.id -> true)
       } else None
 
-      serviceClient.clearLocalCache(prefix).map { responses =>
+      serviceClient.removeAllFromLocalCache(prefix).map { responses =>
         serviceClient.serviceCluster.serviceType -> {
           val clearedRemoteInstances = responses.map { response =>
             response.request.instance.get.instanceInfo.instanceId.id -> (response.status == HttpStatus.SC_OK)

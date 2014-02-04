@@ -362,7 +362,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
-GET     /admin/cache/clear          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: Option[String] ?= None, prefix: Option[String] ?= None)
+GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: Option[String] ?= None, prefix: Option[String] ?= None)
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
 GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage

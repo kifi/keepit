@@ -105,7 +105,7 @@ class ServiceController @Inject() (
       Ok(displayOut + "\n\n")
     }
 
-  def clearLocalCache(prefix: Option[String]) = Action { request =>
+  def removeAllFromLocalCache(prefix: Option[String]) = Action { request =>
     localCache.removeAll(prefix)
     Ok
   }
