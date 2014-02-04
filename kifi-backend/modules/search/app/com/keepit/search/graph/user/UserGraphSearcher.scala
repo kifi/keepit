@@ -12,15 +12,9 @@ class UserGraphSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher) 
   import UserGraphFields._
 
   override def getURIList(field: String, docid: Int): URIList = throw new UnsupportedOperationException
-  override def getLongArray(field: String, docid: Int): Array[Long] = throw new UnsupportedOperationException
 
   def getFriends(userId: Id[User]): Set[Long] = {
     val docid = getDocId(userId.id)
-    val docValues = reader.inner.getBinaryDocValues(friendsList)
-    if (docValues == null){
-      var ref = new BytesRef()
-      docValues.get(docid, ref)
-      if (ref.length > 0) Util.unpackLongArray(ref.bytes, ref.offset, ref.length).toSet else Set()
-    } else Set()
+    getLongArray(friendsList, docid).toSet
   }
 }

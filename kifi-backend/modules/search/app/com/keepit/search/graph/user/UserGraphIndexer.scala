@@ -10,11 +10,17 @@ import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.collection.mutable.{Map => MutableMap}
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.Future
+
 
 
 object UserGraphFields {
   val friendsList = "friends"
-  def decoders() = Map
 }
 
 class UserGraphIndexer(
@@ -27,18 +33,30 @@ class UserGraphIndexer(
   import UserGraphIndexer._
 
   override val commitBatchSize = 500
-  private val fetchSize = commitBatchSize
+  private val fetchSize = commitBatchSize/2              // one userConnection's seqNum corresponds to two userGraphIndexable's seqNum. Divide by 2 to make sure these two indexables are committed together.
 
   private def getIndexables(): Seq[UserGraphIndexable] = {
-    // get userConn changed since seqNum
+    // get userConn changed
+    val conns = Await.result(shoeboxClient.getUserConnectionsChanged(sequenceNumber.value, fetchSize), 30 seconds)
 
-    // find users affected
+    // find users affected, order by seqNum
+    val m = MutableMap.empty[Id[User], Long]
+    conns.foreach{ c =>
+      val (u1, u2, seq) = (c.user1, c.user2, c.seq.value)
+      m(u1) = m.getOrElse(u1, SequenceNumber.MinValue.value) max seq
+      m(u2) = m.getOrElse(u2, SequenceNumber.MinValue.value) max seq
+    }
 
-    // for each user, find current friend list
+    val userAndSeq = m.toArray.sortBy(_._2).toList
 
-    // conver to indexable
+    // friend list
+    val friendsListsFuture = Future.traverse(userAndSeq.map(_._1))(u => shoeboxClient.getFriends(u))
+    val friendsLists = Await.result(friendsListsFuture, 30 seconds)
 
-    null
+    // convert to indexable
+    (userAndSeq zip friendsLists) map { case ((user, seq), friends) =>
+      new UserGraphIndexable(user, SequenceNumber(seq), friends.isEmpty, friends.toSeq)
+    }
   }
 
   override def onFailure(indexable: Indexable[User], e: Throwable): Unit = {
@@ -62,13 +80,7 @@ class UserGraphIndexer(
     total
   }
 
-  // for tmp test only
-  def update(indexables: Seq[UserGraphIndexable]): Int = updateLock.synchronized{
-    resetSequenceNumberIfReindex()
-    doUpdate("UserGraphIndex")(indexables.toIterator)
-  }
 }
-
 
 object UserGraphIndexer {
   import UserGraphFields._
@@ -88,5 +100,4 @@ object UserGraphIndexer {
       doc
     }
   }
-
 }

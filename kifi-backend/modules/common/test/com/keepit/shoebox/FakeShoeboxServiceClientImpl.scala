@@ -61,6 +61,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val friendRequestIdCounter = new AtomicInteger(0)
   private def nextFriendRequestId = Id[FriendRequest](friendRequestIdCounter.incrementAndGet())
 
+  private val userConnIdCounter = new AtomicInteger(0)
+  private def nextUserConnId = Id[UserConnection](userConnIdCounter.incrementAndGet())
+
   // Fake sequence counters
 
   private val userSeqCounter = new AtomicInteger(0)
@@ -78,11 +81,15 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val commentSeqCounter = new AtomicInteger(0)
   private def nextCommentSeqNum() = { SequenceNumber(commentSeqCounter.incrementAndGet()) }
 
+  private val userConnSeqCounter = new AtomicInteger(0)
+  private def nextUserConnSeqNum() = SequenceNumber(userConnSeqCounter.incrementAndGet())
+
   // Fake repos
 
   val allUsers = MutableMap[Id[User], User]()
   val allUserExternalIds = MutableMap[ExternalId[User], User]()
   val allUserConnections = MutableMap[Id[User], Set[Id[User]]]()
+  val allConnections = MutableMap[Id[UserConnection], UserConnection]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
   val allUserBookmarks = MutableMap[Id[User], Set[Id[Bookmark]]]()
   val allBookmarks = MutableMap[Id[Bookmark], Bookmark]()
@@ -124,12 +131,36 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
     connections.foreach { case (userId, friends) =>
       allUserConnections(userId) = allUserConnections.getOrElse(userId, Set.empty) ++ friends
+      friends.foreach{ f =>
+        val conn = getConnection(userId, f)
+        if (conn.isEmpty){
+          val id = nextUserConnId
+          val seq = nextUserConnSeqNum
+          allConnections(id) = UserConnection(id = Some(id), user1 = userId, user2 = f, seq = seq)
+        } else {
+          val c = conn.get
+          if (c.state != UserConnectionStates.ACTIVE){
+            allConnections(c.id.get) = c.copy(state = UserConnectionStates.ACTIVE, seq = nextUriSeqNum())
+          }
+        }
+      }
     }
+  }
+
+  def getConnection(user1: Id[User], user2: Id[User]): Option[UserConnection] = {
+    allConnections.flatMap{case (id, c) => if (Set(user1, user2) == Set(c.user1, c.user2)) Some(c) else None}.headOption
   }
 
   def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
     connections.foreach { case (userId, friends) =>
       allUserConnections(userId) = allUserConnections.getOrElse(userId, Set.empty) -- friends
+    }
+
+    val pairs = connections.map{ case (uid, friends) => friends.map{f => if (uid.id < f.id) (uid, f) else (f, uid)}}.flatten.toSet
+    pairs.map{ case (u1, u2) =>
+      getConnection(u1, u2).foreach{ c =>
+        allConnections(c.id.get) = c.copy(state = UserConnectionStates.UNFRIENDED, seq = nextUserConnSeqNum)
+      }
     }
   }
 
@@ -501,5 +532,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful()
   }
 
-  def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]] = ???
+  def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]] = {
+    val changed = allConnections.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
+    Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
+  }
 }
