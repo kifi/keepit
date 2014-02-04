@@ -215,6 +215,24 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "correctly handle bad states transition when redirect info is present" in {
+      withDb() { implicit injector =>
+        val uri1Redirected = db.readWrite { implicit s =>
+         val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+         val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
+         val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
+         uriRepo.save(uri1.withRedirect(uri2.id.get, t))
+        }
+
+        val uri1Scraped = db.readWrite{ implicit s =>
+          uriRepo.save(uri1Redirected.withState(NormalizedURIStates.SCRAPED))
+        }
+
+        uri1Scraped.state === NormalizedURIStates.REDIRECTED
+        uri1Scraped.redirect === Some(Id[NormalizedURI](2))
+      }
+    }
   }
 
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit

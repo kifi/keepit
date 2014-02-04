@@ -84,14 +84,15 @@ trait ZooKeeperSession {
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit
 
   def create(node: Node): Node
-  def createChild(parent: Node, childName: String, data: Array[Byte] = null, createMode: CreateMode = CreateMode.PERSISTENT): Node
+  def createChild(parent: Node, childName: String, createMode: CreateMode = CreateMode.PERSISTENT): Node
+  def createChild[T](parent: Node, childName: String, data: T, createMode: CreateMode = CreateMode.PERSISTENT)(implicit serializer: T => Array[Byte]): Node
 
   def get(node: Node): Option[Node]
   def getChildren(node: Node): Seq[Node]
 
-  def getData(node: Node): Array[Byte]
-
-  def setData(node: Node, data: Array[Byte]): Unit
+  def getData[T](node: Node)(implicit deserializer: Array[Byte] => T): Option[T]
+  def setData[T](node: Node, data: T)(implicit serializer: T => Array[Byte]): Unit
+  def deleteData[T](node: Node): Unit
 
   def delete(node: Node): Unit
   def deleteRecursive(node: Node): Unit
@@ -256,17 +257,29 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     }
   }
 
-  def createChild(parent: Node, childName: String, data: Array[Byte] = null, createMode: CreateMode = CreateMode.PERSISTENT): Node = {
-    Node(zk.create(Node(parent, childName), data, Ids.OPEN_ACL_UNSAFE, createMode))
+  def createChild(parent: Node, childName: String, createMode: CreateMode = CreateMode.PERSISTENT): Node = {
+    Node(zk.create(Node(parent, childName), null, Ids.OPEN_ACL_UNSAFE, createMode))
+  }
+
+  def createChild[T](parent: Node, childName: String, data: T, createMode: CreateMode = CreateMode.PERSISTENT)(implicit serializer: T => Array[Byte]): Node = {
+    Node(zk.create(Node(parent, childName), serializer(data), Ids.OPEN_ACL_UNSAFE, createMode))
   }
 
   def get(node: Node): Option[Node] = {
     if (zk.exists(node, null) != null) Some(node) else None
   }
 
-  def getData(node: Node): Array[Byte] = zk.getData(node, false, null)
+  def getData[T](node: Node)(implicit deserializer: Array[Byte] => T): Option[T] = {
+    Option(zk.getData(node, false, null)).map(deserializer)
+  }
 
-  def setData(node: Node, data: Array[Byte]): Unit = zk.setData(node, data, -1)
+  def setData[T](node: Node, data: T)(implicit serializer: T => Array[Byte]): Unit = {
+    zk.setData(node, serializer(data), -1)
+  }
+
+  def deleteData[T](node: Node): Unit = {
+    zk.setData(node, null, -1)
+  }
 
   def delete(node: Node): Unit = zk.delete(node, -1)
 
