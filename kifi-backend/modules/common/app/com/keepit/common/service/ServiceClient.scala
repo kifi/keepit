@@ -158,5 +158,5 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
 }
 
 trait CommonServiceUtilities { self: ServiceClient =>
-  def removeAllFromLocalCache(prefix: Option[String]): Future[Seq[ClientResponse]] = Future.sequence(broadcast(Common.internal.removeAllFromLocalCache(prefix)))
+  def removeAllFromLocalCaches(prefix: Option[String]): Future[Seq[ClientResponse]] = Future.sequence(broadcast(Common.internal.removeAllFromLocalCache(prefix)))
 }
