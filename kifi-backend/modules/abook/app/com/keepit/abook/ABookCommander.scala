@@ -16,10 +16,16 @@ import com.keepit.common.time._
 import com.keepit.common.db.slick._
 import scala.util.{Try, Failure, Success}
 import java.text.Normalizer
+import play.api.libs.concurrent.Execution.Implicits._
 
 import Logging._
+import play.api.libs.ws.WS
+import play.api.http.Status
+import com.keepit.common.healthcheck.AirbrakeNotifier
+
 class ABookCommander @Inject() (
   db:Database,
+  airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
@@ -44,6 +50,66 @@ class ABookCommander @Inject() (
     }
   }
 
+  def failWithEx(s:String)(implicit prefix:LogPrefix) = {
+    log.errorP(s)
+    Failure(new IllegalStateException(s))
+  }
+
+  val USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+  def getGmailOwnerInfo(userId: Id[User],accessToken: String):Future[GmailABookOwnerInfo] = {
+    implicit val prefix = LogPrefix(s"getGmailOwnerInfo($userId)")
+
+    WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get map { resp =>
+      log.infoP(s"userinfo response=${resp.body}")
+      resp.status match {
+        case Status.OK => resp.json.asOpt[GmailABookOwnerInfo] match {
+          case Some(info) => info
+          case None => throw new IllegalStateException(s"$prefix cannot parse userinfo response: ${resp.body}")
+        }
+        case _ => throw new IllegalStateException(s"$prefix failed to obtain info about user/owner")
+      }
+    }
+  }
+
+  val CONTACTS_URL = "https://www.google.com/m8/feeds/contacts/default/full"
+  def importGmailContacts(userId: Id[User],accessToken: String, tokenOpt:Option[OAuth2Token]):Future[ABookInfo] = {
+    implicit val prefix = LogPrefix(s"importGmailContacts($userId)")
+
+    getGmailOwnerInfo(userId, accessToken) flatMap { gUserInfo =>
+      WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
+        if (contactsResp.status == Status.OK) {
+          val contacts = timing(s"$prefix parse XML") { contactsResp.xml } // todo(ray): optimize; hand-off
+
+          // todo(ray): paging
+          val totalResults = (contacts \ "totalResults").text.toInt
+          val startIndex = (contacts \ "startIndex").text.toInt
+          val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
+          log.infoP(s"total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
+
+          log.infoP(s"$contacts")
+          log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
+          val jsSeq = (contacts \ "entry") map { entry =>
+            val title = (entry \ "title").text
+            val emails = (entry \ "email") flatMap { email =>
+              (email \ "@address") map ( _.text )
+            }
+            log.infoP(s"title=$title email=$emails")
+            Json.obj("name" -> title, "emails" -> Json.toJson(emails))
+          }
+
+          val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
+          log.debug(Json.prettyPrint(abookUpload))
+          val abookInfoOpt = processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
+          abookInfoOpt match {
+            case Some(abookInfo) => abookInfo
+            case None => throw new IllegalStateException(s"$prefix failed to upload gmail contacts")
+          }
+        } else {
+          throw new IllegalStateException(s"$prefix failed to retrieve gmail contacts") // todo(ray): try later
+        }
+      }
+    }
+  }
 
   def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): Option[ABookInfo] = {
     implicit val prefix = LogPrefix(s"processUpload($userId,$origin)")
@@ -52,7 +118,7 @@ class ABookCommander @Inject() (
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
     log.infoP(s"rawInfo=$abookRawInfo")
 
-    val numContacts = abookRawInfo.numContacts orElse { // todo: remove when ios supplies numContacts
+    val numContacts = abookRawInfo.numContacts orElse { // todo(ray): remove when ios supplies numContacts
       (json \ "contacts").asOpt[JsArray] map { _.value.length }
     } getOrElse 0
 
