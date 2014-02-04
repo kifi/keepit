@@ -1,19 +1,18 @@
 package com.keepit.common.db.slick
 
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.Session
+import scala.slick.jdbc.ResultSetConcurrency
+
 import scala.concurrent._
-import scala.slick.session.ResultSetConcurrency
-import scala.slick.session.Session
-import scala.slick.session.{Database => SlickDatabase}
 import scala.util.DynamicVariable
-import com.google.inject.{Singleton, ImplementedBy, Inject, Provider}
+import com.google.inject.{Singleton, ImplementedBy, Inject}
 import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.logging.Logging
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Mode.Mode
-import play.api.Mode.Test
 import play.modules.statsd.api.Statsd
-import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure

@@ -2,17 +2,22 @@ package com.keepit.common.db.slick
 
 import java.sql._
 import scala.collection.mutable
-import scala.slick.session.{Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.concurrent._
 import scala.util.{Success, Failure, Try}
 import play.api.Logger
 import com.keepit.common.time._
-import scala.Some
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
+import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType, ResultSetHoldability}
+import scala.slick.driver.JdbcDriver.simple._
+import scala.slick.jdbc.JdbcBackend.Session
+import scala.slick.driver.JdbcProfile
+
+
 
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session with Logging with TransactionalCaching {
+    val database = masterSlave
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
@@ -105,7 +110,7 @@ object DBSession {
   abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
   class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
   class RWSession(rwSession: => Session) extends RSession("RW", Database.Master, rwSession) //RWSession is always reading from master
-
-  implicit def roToSession(roSession: ROSession): Session = roSession
-  implicit def rwToSession(rwSession: RWSession): Session = rwSession
+//
+//  implicit def roToSession(roSession: ROSession): Session = roSession.session
+//  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
 }

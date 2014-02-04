@@ -3,18 +3,14 @@ package com.keepit.common.db.slick
 import com.keepit.common.strings._
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.inject._
 import org.joda.time.DateTime
-import play.api.Play.current
-import scala.slick.driver._
-import scala.slick.session._
-import scala.slick.lifted._
 import DBSession._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Logger
-import scala.reflect.ClassTag
+import scala.slick.driver.JdbcDriver.DDL
+import scala.slick.ast.{TypedType, ColumnOption}
+import scala.slick.driver.{JdbcProfile, H2Driver, SQLiteDriver}
 
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
@@ -32,27 +28,30 @@ trait TableWithDDL {
 }
 
 trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
-  import FortyTwoTypeMappers._
   val db: DataBaseComponent
   val clock: Clock
-  import db.Driver.Implicit._ // here's the driver, abstracted away
-  import db.Driver.Table
+  val profile = db.Driver.profile
+
+  import db.Driver.profile.Table
+  import profile.simple._
 
   lazy val dbLog = Logger("com.keepit.db")
 
   implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
-  protected def table: RepoTable[M]
+  protected def table(tag: Tag): RepoTable[M]
+  protected val tableQuery = TableQuery(table)
+
 
   //we must call the init after the underlying constructor finish defining its ddl.
   def delayedInit(body: => Unit) = {
     body
-    db.initTable(table)
+    //db.initTable(table) FIXME
   }
 
-  def descTable(): String = db.masterDb.withSession {
-    table.ddl.createStatements mkString "\n"
+  def descTable(): String = db.masterDb.withSession { session =>
+    table(???).ddl.createStatements mkString "\n" // FIXME
   }
 
   def save(model: M)(implicit session: RWSession): M = try {
@@ -75,36 +74,36 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     case t: SQLException => throw new SQLException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}", t)
   }
 
-  def count(implicit session: RSession): Int = Query(table.length).first
+  def count(implicit session: RSession): Int = Query(tableQuery.length).first
 
   def get(id: Id[M])(implicit session: RSession): M = {
     val startTime = System.currentTimeMillis()
-    val model = (for(f <- table if f.id is id) yield f).first
+    val model = (for(f <- tableQuery if f.id is id) yield f).first
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 
-  def all()(implicit session: RSession): Seq[M] = table.map(t => t).list
+  def all()(implicit session: RSession): Seq[M] = tableQuery.list()
 
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] =  {
     val q = for {
-      t <- table if !t.state.inSet(excludeStates)
+      t <- tableQuery if !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  private def insert(model: M)(implicit session: RWSession) = {
+  private def insert(model: M)(implicit session: RWSession): Id[M] = {
     val startTime = System.currentTimeMillis()
-    val inserted = table.autoInc.insert(model)
+    val inserted = tableQuery.insert(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:${inserted.getClass.getSimpleName()}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    inserted
+    Id[M](inserted.toLong) // FIXME
   }
 
   private def update(model: M)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis()
-    val target = for(t <- table if t.id === model.id.get) yield t
+    val target = for(t <- tableQuery if t.id === model.id.get) yield t
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
@@ -115,10 +114,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     model
   }
 
-  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) with TableWithDDL {
+  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name)) with TableWithDDL {
 
-    implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
+    //implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
     implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
+
+    implicit val idMapper = MappedColumnType.base[Id[M], Long](_.id, Id[M])
+    implicit val stateMapper = MappedColumnType.base[State[M], String](_.value, State[M])
 
     //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
@@ -127,18 +129,16 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     //state may not exist in all entities, if it does then its column name is standardized as well.
     def state = column[State[M]]("state", O.NotNull)
 
-    def autoInc = * returning id
+    //def autoInc = * returning id FIXME
 
     //H2 likes its column names in upper case where mysql does not mind.
     //the db component should figure it out
-    override def column[C : TypeMapper](name: String, options: ColumnOption[C]*) =
+    override def column[C](name: String, options: ColumnOption[C]*)(implicit tm: TypedType[C]) =
       super.column(db.entityName(name), options:_*)
   }
 
   trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
-    implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
-      def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M](profile)
-    }
+    implicit val externalIdMapper = MappedColumnType.base[ExternalId[M], String](_.value, ExternalId[M])
 
     def externalId = column[ExternalId[M]]("external_id", O.NotNull)
   }
@@ -151,7 +151,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   }
 
   trait SeqNumberColumn[M <: ModelWithSeqNumber[M]] extends RepoTable[M] {
-    import FortyTwoTypeMappers.SequenceNumberTypeMapper
     def seq = column[SequenceNumber]("seq", O.NotNull)
   }
 }
@@ -170,11 +169,12 @@ trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
 }
 
 trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M] =>
-  import db.Driver.Implicit._
+  import db.Driver.profile.Table
+  import profile.simple._
 
   def delete(model: M)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis()
-    val target = (for(t <- table if t.id === model.id.get) yield t)
+    val target = for(t <- tableQuery if t.id === model.id.get) yield t
     val count = target.delete
     deleteCache(model)
     val time = System.currentTimeMillis - startTime
@@ -190,20 +190,20 @@ trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
-  import db.Driver.Implicit._
-  import FortyTwoTypeMappers.SequenceNumberTypeMapper
+  import profile.simple._
 
-  protected def tableWithSeq: SeqNumberColumn[M] = table.asInstanceOf[SeqNumberColumn[M]]
+  protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
+  protected def tableQueryWithSeq = TableQuery(tableWithSeq)
 
   def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
-    val q = (for(t <- tableWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
+    val q = (for(t <- tableQueryWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
     if (fetchSize > 0) q.take(fetchSize).list else q.list
   }
 
   def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M] = {
     if (lowerBound > upperBound) throw new IllegalArgumentException(s"expecting upperBound > lowerBound, received: lowerBound = ${lowerBound}, upperBound = ${upperBound}")
     else if (lowerBound == upperBound) Seq()
-    else (for(t <- tableWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list
+    else (for(t <- tableQueryWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list
   }
 }
 
@@ -214,18 +214,16 @@ trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] { self: Repo[M] =>
 }
 
 trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalIdColumnFunction[M] { self: DbRepo[M] =>
-  import db.Driver.Implicit._
-  protected def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
+  import profile.simple._
 
-  implicit val ExternalIdMapperDelegate = new BaseTypeMapper[ExternalId[M]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M](profile)
-  }
+  protected def tableWithExternalIdColumn(tag: Tag) = table(tag).asInstanceOf[ExternalIdColumn[M]]
+  protected def tableQueryWithExternalIdColumn = TableQuery(tableWithExternalIdColumn)
 
   def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
 
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = {
     val startTime = System.currentTimeMillis()
-    val model = (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
+    val model = (for(f <- tableQueryWithExternalIdColumn if f.externalId === id) yield f).firstOption
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model

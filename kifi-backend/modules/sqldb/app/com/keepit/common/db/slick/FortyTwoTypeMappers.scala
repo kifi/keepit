@@ -27,11 +27,11 @@ import scala.slick.jdbc.SetParameter
 
 object FortyTwoGenericTypeMappers {
   def idMapper[M <: Model[M]] = new BaseTypeMapper[Id[M]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
+    def apply(profile: JdbcProfile) = new IdMapperDelegate[M](profile)
   }
 
   def stateTypeMapper[M <: Model[M]] = new BaseTypeMapper[State[M]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
+    def apply(profile: JdbcProfile) = new StateMapperDelegate[M](profile)
   }
 }
 

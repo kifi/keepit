@@ -4,8 +4,8 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.{DbSequence, SequenceNumber, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
-import scala.slick.lifted.DDL
-import scala.slick.session.{Database => SlickDatabase}
+import scala.slick.driver.JdbcDriver.DDL
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 
 trait TableInitListener {
   def init(table: TableWithDDL): Unit

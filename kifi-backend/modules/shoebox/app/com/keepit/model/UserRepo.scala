@@ -10,9 +10,11 @@ import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.heimdal.{HeimdalContextBuilder, HeimdalServiceClient}
 import com.keepit.common.akka.SafeFuture
-import scala.slick.jdbc.{GetResult, StaticQuery}
+import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
 import org.joda.time.DateTime
-import scala.slick.session.PositionedResult
+import scala.slick.lifted.{TableQuery, Tag}
+import scala.slick.driver.JdbcDriver.simple._
+
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User]{
@@ -51,14 +53,13 @@ class UserRepoImpl @Inject() (
   private lazy val expRepo = expRepoProvider.get
   implicit val userExperimentStateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[UserExperiment]
 
-  override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
+  def table(tag: Tag) = new RepoTable[User](db, tag, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state ~ pictureName.? ~ userPictureId.? ~ seq  ~ primaryEmailId.? <> (User.apply _, User.unapply _)
-
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmailId.?) <> (User.tupled, User.unapply)
   }
 
   def allActiveTimes()(implicit session: RSession): Seq[DateTime] = {
