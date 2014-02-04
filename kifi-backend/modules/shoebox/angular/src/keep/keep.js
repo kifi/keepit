@@ -17,7 +17,7 @@ angular.module('kifi.keep', ['kifi.profileService'])
 			},
 			controller: 'KeepCtrl',
 			templateUrl: 'keep/keep.tpl.html',
-			link: function (scope, element, attrs) {
+			link: function (scope/*, element, attrs*/) {
 				scope.me = profileService.me;
 
 				scope.isMine = function () {
@@ -69,15 +69,28 @@ angular.module('kifi.keep', ['kifi.profileService'])
 				};
 
 				scope.showOthers = function () {
-					return !scope.hasKeepers() && !!scope.keep.others;
+					return !scope.hasKeepers() && !! scope.keep.others;
 				};
 
 				scope.getFriendText = function () {
-					var len = scope.keepers && scope.keepers.length || 0;
-					if (scope.keepers.length === 1) {
+					var keepers = scope.keep.keepers,
+						len = keepers && keepers.length || 0;
+					if (keepers.length === 1) {
 						return '1 friend';
 					}
 					return len + ' friends';
+				};
+
+				scope.getOthersText = function () {
+					var others = scope.keep.others || 0;
+					if (others === 1) {
+						return '1 other';
+					}
+					return others + ' others';
+				};
+
+				scope.isOnlyMine = function () {
+					return !scope.hasKeepers() && !scope.keep.others;
 				};
 			}
 		};

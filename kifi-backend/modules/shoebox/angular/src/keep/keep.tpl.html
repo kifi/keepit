@@ -23,24 +23,26 @@
 				<span class="keep-private" ng-class="{ on: isPrivate() }" ng-show="hasKeepers()">Private</span>
 			</span>
 			<span class="keep-friends" ng-show="hasKeepers()">{{getFriendText()}}</span>
-			{% if others > 1 %}
-			<span class="keep-others">{{others}} others</span>
-			{% endif %}{% if others == 1 %}
-			<span class="keep-others">1 other</span>
-			{% endif %}
+			<span class="keep-others" ng-show="hasOthers()">{{getOthersText()}}</span>
 			<span class="keep-kept-this">kept this</span>
-			{% if !keepers.length && !others && isPrivate %}
-			<span class="keep-private on">Private</span>
-			{% endif %}{% if !keepers.length && !others && !isPrivate %}
-			<span class="keep-private">Private</span>
-			{% endif %}
+			<span class="keep-private" ng-class="{ on: isPrivate() }" ng-show="isOnlyMine()">Private</span>
 		</span>
 	</div>
-	<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
+	<div class="keep-arrow-1">
+		<div class="keep-arrow-2">
+			<div class="keep-arrow-3">
+				<div class="keep-arrow-4">
+				</div>
+			</div>
+		</div>
+	</div>
 	<div class="keep-hover-button-wrapper">
 		<div class="keep-hover-button-table">
 			<div class="keep-hover-button-cell">
-				<div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
+				<div class="keep-hover-button">
+					<span class="keep-button-preview">Preview</span>
+					<span class="keep-button-close">Close</span>
+				</div>
 			</div>
 		</div>
 	</div>

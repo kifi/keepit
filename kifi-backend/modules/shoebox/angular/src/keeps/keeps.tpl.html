@@ -9,4 +9,15 @@
 			<a class="kf-search-filter" ng-class="{ selected: isSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All ({{results.myTotal + results.friendsTotal + results.othersTotal}})</a>
 		</span>
 	</div>
+	<div class="main-keeps">
+		<div class="antiscroll-inner">
+			<ol id="search-results"></ol>
+			<ol id="my-keeps">
+				<div kf-keep keep="keep" ng-repeat="keep in keeps"></div>
+			</ol>
+			<div class="keep-group-title-fixed"></div>
+			<img class="keeps-loading" src="/assets/img/wait.gif">
+			<a class="keeps-load-more hidden" href="javascript:">Show more</a>
+		</div>
+	</div>
 </div>

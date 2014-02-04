@@ -16,6 +16,10 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 			controller: 'KeepsCtrl',
 			templateUrl: 'keeps/keeps.tpl.html',
 			link: function (scope, element, attrs) {
+				scope.keeps = keepService.list;
+
+				keepService.getList();
+
 				scope.page = {
 					title: 'Browse your Keeps'
 				};
