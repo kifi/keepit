@@ -134,13 +134,13 @@ class BookmarkRepoImpl @Inject() (
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries instead of raw strings.
     val interpolated = (beforeId map get, afterId map get) match {
       case (None, None) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = 'active' order by bm.updated_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = 'active' order by bm.created_at desc limit $count;"""
       case (None, Some(after)) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.id > ${after.id.get.id} order by bm.updated_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.created_at > ${SQL_DATETIME_FORMAT.print(after.createdAt)} order by bm.created_at desc limit $count;"""
       case (Some(before), None) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.id < ${before.id.get.id} order by bm.updated_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.created_at < ${SQL_DATETIME_FORMAT.print(before.createdAt)} order by bm.created_at desc limit $count;"""
       case (Some(before), Some(after)) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.id < ${before.id.get.id} and bm.id > ${after.id.get.id} order by bm.updated_at desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}' and bm.created_at < ${SQL_DATETIME_FORMAT.print(before.createdAt)} and bm.created_at > ${SQL_DATETIME_FORMAT.print(after.createdAt)} order by bm.created_at desc limit $count;"""
     }
     interpolated.as[Bookmark].list
   }
@@ -155,19 +155,19 @@ class BookmarkRepoImpl @Inject() (
       case (None, None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' order by bm.updated_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' order by bm.created_at desc limit $count;"""
       case (None, Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.id > ${after.id.get.id} order by bm.updated_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.created_at > ${SQL_DATETIME_FORMAT.print(after.createdAt)} order by bm.created_at desc limit $count;"""
       case (Some(before), None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.id < ${before.id.get.id} order by bm.updated_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.created_at < ${SQL_DATETIME_FORMAT.print(before.createdAt)} order by bm.created_at desc limit $count;"""
       case (Some(before), Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.id < ${before.id.get.id} and bm.id > ${after.id.get.id} order by bm.updated_at desc limit $count;"""
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and bm.created_at < ${SQL_DATETIME_FORMAT.print(before.createdAt)} and bm.id > ${SQL_DATETIME_FORMAT.print(after.createdAt)} order by bm.created_at desc limit $count;"""
     }
     interpolated.as[Bookmark].list
   }
