@@ -8,7 +8,7 @@ import com.keepit.common.performance._
 import com.keepit.model._
 import play.api.libs.json.{JsArray, Json, JsValue}
 import scala.ref.WeakReference
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 import scala.collection.mutable
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -17,6 +17,7 @@ import com.keepit.common.db.slick._
 import scala.util.{Try, Failure, Success}
 import java.text.Normalizer
 
+import Logging._
 class ABookCommander @Inject() (
   db:Database,
   s3:ABookRawInfoStore,
@@ -45,10 +46,11 @@ class ABookCommander @Inject() (
 
 
   def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): Option[ABookInfo] = {
-    log.info(s"[processUpload($userId,$origin,$ownerInfoOpt)] json=$json")
+    implicit val prefix = LogPrefix(s"processUpload($userId,$origin)")
+    log.infoP(s"ownerInfo=$ownerInfoOpt; oauth2Token=$oauth2TokenOpt; json=$json")
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
-    log.info(s"[processUpload($userId,$origin,$ownerInfoOpt)] rawInfo=$abookRawInfo")
+    log.infoP(s"rawInfo=$abookRawInfo")
 
     val numContacts = abookRawInfo.numContacts orElse { // todo: remove when ios supplies numContacts
       (json \ "contacts").asOpt[JsArray] map { _.value.length }
@@ -58,7 +60,7 @@ class ABookCommander @Inject() (
     else {
       val s3Key = toS3Key(userId, origin, ownerInfoOpt)
       s3 += (s3Key -> abookRawInfo)
-      log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
+      log.infoP(s"s3Key=$s3Key rawInfo=$abookRawInfo}")
 
       val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
         val (abookInfo, dbEntryOpt) = origin match {
@@ -79,7 +81,7 @@ class ABookCommander @Inject() (
         }
         val savedEntry = dbEntryOpt match {
           case Some(currEntry) => {
-            log.info(s"[upload($userId,$origin)] current entry: $currEntry")
+            log.infoP(s"current entry: $currEntry")
             abookInfoRepo.save(currEntry.withNumContacts(Some(numContacts)))
           }
           case None => abookInfoRepo.save(abookInfo)
@@ -95,13 +97,13 @@ class ABookCommander @Inject() (
         val isOverdue = db.readOnly(attempts = 2) { implicit s =>
           abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
         }
-        log.warn(s"[upload($userId,$origin)] $savedABookInfo already in PENDING state; overdue=$isOverdue")
+        log.warnP(s"$savedABookInfo already in PENDING state; overdue=$isOverdue")
         (isOverdue, savedABookInfo)
       }
 
       if (proceed) {
         contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
-        log.info(s"[upload($userId,$origin)] scheduled for processing: $updatedEntry")
+        log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
     }

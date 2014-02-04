@@ -19,6 +19,7 @@ import play.api.libs.json._
 import play.api.Play
 import play.api.Play.current
 import scala.util.{Success, Failure}
+import com.keepit.common.logging.{LogPrefix, Logging}
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -45,6 +46,7 @@ object GmailABookOwnerInfo {
   val EMPTY = GmailABookOwnerInfo(None, None, /* None, */ None)
 }
 
+import Logging._
 class ABookController @Inject() (
   actionAuthenticator:ActionAuthenticator,
   db:Database,
@@ -87,22 +89,23 @@ class ABookController @Inject() (
   }
 
   def importGmailContactsF(userId: Id[User],accessToken: String, tokenOpt:Option[OAuth2Token]):Future[Option[ABookInfo]] = {  // todo: move to commander
+    implicit val prefix = LogPrefix(s"importGmailContacts($userId)")
     val USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
     val CONTACTS_URL = "https://www.google.com/m8/feeds/contacts/default/full" // TODO: paging (alt=json ignored)
 
     WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get flatMap { resp =>
       resp.status match {
         case OK => {
-          log.info(s"[importGmailContactsF($userId)] url=$USER_INFO_URL accessToken=$accessToken resp=${resp.body}")
+          log.infoP(s"url=$USER_INFO_URL resp=${resp.body}")
           val userInfoJson = resp.json
           val gUserInfoOpt = userInfoJson.asOpt[GmailABookOwnerInfo]
           gUserInfoOpt match {
             case None =>
-              log.error(s"[importGmailContactsF($userId)] cannot parse userInfo response: ${resp.body}")
+              log.errorP(s"cannot parse userinfo response: ${resp.body}")
               // email and/or airbrake
-              Future.successful(None)
+              resolve(None)
             case Some(gUserInfo) =>
-              log.info(s"[g-contacts] userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
+              log.infoP(s"userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
 
               WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
                 if (contactsResp.status == OK) {
@@ -112,16 +115,16 @@ class ABookController @Inject() (
                   val totalResults = (contacts \ "totalResults").text.toInt
                   val startIndex = (contacts \ "startIndex").text.toInt
                   val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
-                  log.info(s"[g-contacts] total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
+                  log.infoP(s"total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
 
-                  log.info(s"[g-contacts] $contacts")
+                  log.infoP(s"$contacts")
                   log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
                   val jsSeq = (contacts \ "entry") map { entry =>
                     val title = (entry \ "title").text
                     val emails = (entry \ "email") flatMap { email =>
                       (email \ "@address") map ( _.text )
                     }
-                    log.info(s"[g-contacts] title=$title email=$emails")
+                    log.infoP(s"title=$title email=$emails")
                     Json.obj("name" -> title, "emails" -> Json.toJson(emails))
                   }
 
@@ -129,15 +132,15 @@ class ABookController @Inject() (
                   log.debug(Json.prettyPrint(abookUpload))
                   abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
                 } else {
-                  log.error(s"Failed to retrieve gmail contacts") // todo: try later
+                  log.errorP(s"Failed to retrieve gmail contacts") // todo: try later
                   None
                 }
               }
             }
           }
         case _ =>
-          log.error("Failed to obtain access token")
-          Future.successful(None)
+          log.errorP("Failed to obtain access token")
+          resolve(None)
       }
     }
   }
