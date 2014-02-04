@@ -103,6 +103,13 @@ class MainSearcher(
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
+  // debug flags
+  private[this] var noBookmarkCheck = false
+  def debug(debugMode: String) {
+    val debugFlags = debugMode.split(",").map(_.toLowerCase).toSet
+    noBookmarkCheck = debugFlags.contains("nobookmarkcheck")
+    log.info(s"debug option: $debugFlags")
+  }
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.0f
@@ -314,7 +321,7 @@ class MainSearcher(
         val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         if (score > othersThreshold) {
           h.bookmarkCount = getPublicBookmarkCount(h.id)
-          if (h.bookmarkCount > 0) {
+          if (h.bookmarkCount > 0 || noBookmarkCheck) {
             val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
             queue.insert(newScore, scoring, h)

@@ -42,7 +42,8 @@ trait SearchCommander {
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None) : DecoratedResult
+    coll: Option[String] = None,
+    debug: Option[String] = None) : DecoratedResult
 
   def warmUp(userId: Id[User]): Unit
 }
@@ -71,7 +72,8 @@ class SearchCommanderImpl @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None) : DecoratedResult = {
+    coll: Option[String] = None,
+    debug: Option[String] = None) : DecoratedResult = {
 
     if (maxHits <= 0) throw new IllegalArgumentException("maxHits is zero")
 
@@ -99,6 +101,7 @@ class SearchCommanderImpl @Inject() (
       timing.factory
       val future = Future.traverse(shards.shards){ shard =>
         val searcher = mainSearcherFactory(shard, userId, query, lang, maxHits, searchFilter, config)
+        debug.foreach{ searcher.debug(_) }
         SafeFuture{ searcher.search() }
       }
 
