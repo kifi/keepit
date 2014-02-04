@@ -61,7 +61,7 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
           val registeredInstance = discovery.register()
           println("registerred:::::")
           println(registeredInstance)
-          println(new String(zk.getData(registeredInstance.node)))
+          println(zk.getData[String](registeredInstance.node))
           discovery.startSelfCheck()
           val thirdNode = zk.createChild(path, "SHOEBOX_", remoteServiceJson(3), EPHEMERAL_SEQUENTIAL)
           println("new node: " + thirdNode, null, EPHEMERAL_SEQUENTIAL)
@@ -84,7 +84,7 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
 
           discovery.myClusterSize === 1
           discovery.isLeader() === true
-          println(new String(zk.getData(registeredInstance.node)))
+          println(zk.getData[String](registeredInstance.node))
           discovery.unRegister()
           println("sleeping 4")
           Thread.sleep(10000)
