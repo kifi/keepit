@@ -11,6 +11,7 @@ import net.codingwell.scalaguice.ScalaModule
 trait ShoeboxServiceClientModule extends ScalaModule
 
 case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
+
   def configure() {}
 
   @Singleton
@@ -23,7 +24,8 @@ case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
     new ShoeboxServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
       current.configuration.getInt("service.shoebox.port").get,
-      client, airbrakeNotifier, cacheProvider)
+      client, airbrakeNotifier, cacheProvider
+    )
   }
 
 }

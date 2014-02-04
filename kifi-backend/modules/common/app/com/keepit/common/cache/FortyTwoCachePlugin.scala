@@ -45,7 +45,9 @@ trait FortyTwoCachePlugin extends Plugin {
   override def toString = "Cache"
 }
 
-trait InMemoryCachePlugin extends FortyTwoCachePlugin
+trait InMemoryCachePlugin extends FortyTwoCachePlugin {
+  def removeAll(prefix: Option[String]): Unit
+}
 
 @Singleton
 class MemcachedCache @Inject() (
@@ -222,5 +224,7 @@ class EhCacheCache @Inject() (
   }
 
   override def toString = "EhCache"
+
+  def removeAll(prefix: Option[String]): Unit = prefix.map(manager.clearAllStartingWith) getOrElse manager.clearAll()
 
 }

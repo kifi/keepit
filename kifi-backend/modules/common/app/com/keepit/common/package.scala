@@ -3,7 +3,7 @@ package com.keepit
 import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
 import java.io._
 import org.apache.commons.io.{IOUtils, FileUtils}
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{SynchronizedSet, HashSet, Set => MutableSet, ListBuffer}
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
 package object common {
@@ -116,4 +116,7 @@ package object common {
       finally { inputStream.close() }
     }
   }
+
+  trait Register[V] extends MutableSet[V]
+  class HashSetRegister[V] extends HashSet[V] with SynchronizedSet[V] with Register[V]
 }

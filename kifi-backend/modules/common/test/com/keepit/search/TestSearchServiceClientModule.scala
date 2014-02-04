@@ -5,7 +5,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{FakeHttpPostClient, FakeHttpClient}
 
-case class TestSearchServiceClientModule() extends SearchServiceClientModule {
+case class
+TestSearchServiceClientModule() extends SearchServiceClientModule {
 
   def configure() {}
 

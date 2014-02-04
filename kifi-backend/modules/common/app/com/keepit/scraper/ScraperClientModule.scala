@@ -12,14 +12,15 @@ import akka.actor.Scheduler
 trait ScraperServiceClientModule extends ScalaModule
 
 case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
-  def configure() {
-  }
+
+  def configure() {}
 
   @Singleton
   @Provides
-  def ScraperServiceClient(client: HttpClient,
-                           serviceDiscovery: ServiceDiscovery,
-                           airbrakeNotifier: AirbrakeNotifier): ScraperServiceClient = {
+  def ScraperServiceClient(
+    client: HttpClient,
+    serviceDiscovery: ServiceDiscovery,
+    airbrakeNotifier: AirbrakeNotifier): ScraperServiceClient = {
     new ScraperServiceClientImpl(
       airbrakeNotifier,
       client,
@@ -31,6 +32,7 @@ case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
 
 
 case class TestScraperServiceClientModule() extends ScraperServiceClientModule {
+
   def configure() {}
 
   @Singleton
