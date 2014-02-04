@@ -29,7 +29,7 @@ trait S3ScreenshotStore {
 
   def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String]
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String]
-  def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]]
+  def updatePicture(normalizedUri: NormalizedURI): Future[Boolean]
 }
 
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
@@ -76,10 +76,10 @@ class S3ScreenshotStoreImpl(
     }
   }
 
-  def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]] = {
+  def updatePicture(normalizedUri: NormalizedURI): Future[Boolean] = {
     val trace = new StackTrace()
     if (config.isLocal) {
-      Promise.successful(None).future
+      Promise.successful(true).future
     } else {
       val url = normalizedUri.url
       val externalId = normalizedUri.externalId
@@ -88,7 +88,7 @@ class S3ScreenshotStoreImpl(
           case Some("True") =>
             log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
             Statsd.increment(s"screenshot.fetch.fails")
-            None
+            false
           case _ =>
 
             val originalStream = response.getAHCResponse.getResponseBodyAsStream
@@ -121,7 +121,12 @@ class S3ScreenshotStoreImpl(
                   ex match {
                     case e: java.lang.IllegalArgumentException =>
                       // This happens when the image stream is null, coming from javax.imageio.ImageIO
+                      // todo(andrew): Excellent candidate for a persistent queue!
                       log.warn(s"null image for $url. Will retry later.")
+                    case e: javax.imageio.IIOException =>
+                      // This happens when the provider gave a corrupted jpeg.
+                      // todo(andrew): Excellent candidate for a persistent queue!
+                      log.warn(s"Provider gave invalid screenshot for $url. Will retry later.")
                     case _ =>
                       airbrake.notify(AirbrakeError(
                         exception = trace.withCause(ex),
@@ -134,16 +139,13 @@ class S3ScreenshotStoreImpl(
 
             originalStream.close()
 
-            Some(storedObjects)
+            storedObjects.forall(_.nonEmpty)
         }
       }
       future onComplete {
         case Success(result) =>
-          result.map { s =>
-            if(s.exists(_.isDefined)) { // *an* image persisted successfully
-              // todo(andrew): create Screenshot model, track what sizes we have and when they were captured
-              shoeboxServiceClient.saveNormalizedURI(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
-            }
+          if (result) {
+            shoeboxServiceClient.updateNormalizedURI(uriId = normalizedUri.id.get, screenshotUpdatedAt = Some(clock.now))
           }
         case Failure(e) =>
           airbrake.notify(AirbrakeError(

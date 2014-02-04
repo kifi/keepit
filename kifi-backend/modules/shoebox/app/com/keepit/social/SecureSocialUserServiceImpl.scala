@@ -216,7 +216,7 @@ class SecureSocialUserPluginImpl @Inject() (
             try {
               imageStore.uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
             } catch {
-              case e: Exception => airbrake.notify(s"on user $user", e)
+              case e: Exception => airbrake.notify(s"on user $user", e, user)
             }
           }
           try {
@@ -224,7 +224,7 @@ class SecureSocialUserPluginImpl @Inject() (
               saveVerifiedEmail(sui.userId.get, sui.credentials.get)
             }
           } catch {
-            case e: Exception => airbrake.notify(s"on saving mail of $sui", e)
+            case e: Exception => airbrake.notify(s"on saving mail of $sui", e, user)
           }
         }
         sui

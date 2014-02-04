@@ -8,7 +8,7 @@ import com.keepit.common.time._
 import com.keepit.common.db.SequenceNumber
 
 @ImplementedBy(classOf[SearchFriendRepoImpl])
-trait SearchFriendRepo extends Repo[SearchFriend] {
+trait SearchFriendRepo extends Repo[SearchFriend] with SeqNumberFunction[SearchFriend] {
   def getSearchFriends(userId: Id[User])(implicit session: RSession): Set[Id[User]]
   def excludeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int
   def includeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int
@@ -19,6 +19,7 @@ trait SearchFriendRepo extends Repo[SearchFriend] {
   def includeFriend(userId: Id[User], friendId: Id[User])(implicit session: RWSession): Boolean = {
     includeFriends(userId, Set(friendId)) > 0
   }
+  def getSearchFriendsChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[SearchFriend]
 }
 
 @Singleton
@@ -27,7 +28,7 @@ class SearchFriendRepoImpl @Inject() (
     val clock: Clock,
     userConnectionRepo: UserConnectionRepo,
     searchFriendsCache: SearchFriendsCache)
-    extends DbRepo[SearchFriend] with SearchFriendRepo {
+    extends DbRepo[SearchFriend] with SearchFriendRepo with SeqNumberDbFunction[SearchFriend]{
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -35,11 +36,10 @@ class SearchFriendRepoImpl @Inject() (
 
   private val sequence = db.getSequence("search_friend_sequence")
 
-  override val table = new RepoTable[SearchFriend](db, "search_friend") {
+  override val table = new RepoTable[SearchFriend](db, "search_friend") with SeqNumberColumn[SearchFriend]{
     def userId = column[Id[User]]("user_id", O.NotNull)
     def friendId = column[Id[User]]("friend_id", O.NotNull)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt ~ seq <> (SearchFriend, SearchFriend.unapply _)
+    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt ~ seq <> (SearchFriend.apply _, SearchFriend.unapply _)
   }
 
   override def save(model: SearchFriend)(implicit session: RWSession): SearchFriend = {
@@ -95,4 +95,6 @@ class SearchFriendRepoImpl @Inject() (
     } yield f.friendId).list.toSet
     allConnections -- excludedConnections
   }
+
+  def getSearchFriendsChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[SearchFriend] = super.getBySequenceNumber(seq, fetchSize)
 }

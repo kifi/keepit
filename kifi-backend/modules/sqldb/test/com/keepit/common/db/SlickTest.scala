@@ -178,7 +178,7 @@ class SlickTest extends Specification with DbTestInjector {
         }
 
         //could be easily mocked up
-        trait BarRepo extends Repo[Bar] with RepoWithExternalId[Bar] {
+        trait BarRepo extends Repo[Bar] with ExternalIdColumnFunction[Bar] {
           //here you may have model specific queries...
           def getByName(name: String)(implicit session: ROSession): Seq[Bar]
         }

@@ -1,6 +1,6 @@
 package com.keepit.common.zookeeper
 
-import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
+import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Singleton, Provides, Provider}
 
@@ -9,21 +9,25 @@ import akka.actor.Scheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
+import com.keepit.common.net.{HttpClient,DirectUrl}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.KestrelCombinator
+import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 
 import play.api.Play.current
 
+import scala.Some
 import scala.concurrent.{Await, Future, Promise}
+import scala.collection.JavaConversions._
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
-import com.keepit.common.actor.ProdActorSystemModule
-import com.keepit.common.amazon.MyAmazonInstanceInfo
-import scala.Some
-import com.keepit.common.amazon.AmazonInstanceId
-import com.keepit.common.actor.DevActorSystemModule
+import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
+import com.amazonaws.services._
+import com.amazonaws.services.ec2.model.{DescribeInstancesResult, DescribeInstancesRequest}
+import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
+import com.amazonaws.auth.BasicAWSCredentials
 
 trait DiscoveryModule extends ScalaModule
 
@@ -34,6 +38,8 @@ object DiscoveryModule {
 
   val LOCAL_AMZN_INFO = AmazonInstanceInfo(AmazonInstanceId("i-f168c1a8"),
     localHostname = "localhost",
+    name = None,
+    service = None,
     publicHostname = "localhost",
     localIp = IpAddress("127.0.0.1"),
     publicIp = IpAddress("127.0.0.1"),
@@ -53,7 +59,19 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def amazonInstanceInfo(): AmazonInstanceInfo = {
+  def amazonEC2Client(): AmazonEC2 = {
+    val conf = current.configuration.getConfig("amazon").get
+    val awsCredentials = new BasicAWSCredentials(
+      conf.getString("accessKey").get,
+      conf.getString("secretKey").get)
+    val ec2Client = new AmazonEC2Client(awsCredentials)
+    conf.getString("ec2.endpoint") map { ec2Client.setEndpoint(_) }
+    ec2Client
+  }
+
+  @Singleton
+  @Provides
+  def amazonInstanceInfo(amazonEC2Client: AmazonEC2): AmazonInstanceInfo = {
 
     val instance = if (DiscoveryModule.isCanary && DiscoveryModule.isLocal) {
       DiscoveryModule.LOCAL_AMZN_INFO
@@ -61,8 +79,22 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
       def get(path: String): String = {
         Await.result(WS.url("http://169.254.169.254/latest/meta-data/" + path).get(), 1 minute).body
       }
+      val instanceId: String = get("instance-id")
+      val request = new DescribeInstancesRequest
+      request.setInstanceIds(Seq(instanceId))
+      val result = amazonEC2Client.describeInstances(request)
+      val tags = for {
+        reservation <- result.getReservations.headOption.toSeq
+        instance <- reservation.getInstances.headOption.toSeq
+        tag <- instance.getTags
+      } yield tag
+      val name = tags.filter(_.getKey == "Name").headOption map { _.getValue }
+      val service = tags.filter(_.getKey == "Service").headOption map { _.getValue }
+
       AmazonInstanceInfo(
-        instanceId = AmazonInstanceId(get("instance-id")),
+        instanceId = AmazonInstanceId(instanceId),
+        name = name,
+        service = service,
         localHostname = get("local-hostname"),
         publicHostname = get("public-hostname"),
         localIp = IpAddress(get("local-ipv4")),
@@ -103,6 +135,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   def configStore(zk: ZooKeeperClient): ConfigStore = {
     new ZkConfigStore(zk)
   }
+
 }
 
 abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
@@ -129,7 +162,6 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def timeSinceLastStatusChange: Long = 0L
       def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
-      def isListeningOn(serviceType: ServiceType): Boolean = serviceType == cluster.serviceType
       def register() = thisInstance.get
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = {}
@@ -146,6 +178,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   def configStore(): ConfigStore = {
     new InMemoryConfigStore()
   }
+
 }
 
 case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE) {

@@ -24,12 +24,13 @@ case class User(
   userPictureId: Option[Id[UserPicture]] = None,
   seq: SequenceNumber = SequenceNumber.ZERO,
   primaryEmailId: Option[Id[EmailAddress]] = None
-) extends ModelWithExternalId[User] with ModelWithState[User] {
+) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User]{
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
   def withState(state: State[User]) = copy(state = state)
+  def fullName = s"$firstName $lastName"
   override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",state=$state]"""
 }
 

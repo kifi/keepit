@@ -148,13 +148,13 @@
 								</li>
 								<li>
 								{% if filter == 'a' %}
-								<span class="search-filter-selected">All ({{othersTotal}})</span>
+								<span class="search-filter-selected">All ({{allTotal}})</span>
 								{% endif %}
-								{% if filter != 'a' && othersTotal > 0 %}
-								<a class="search-filter-all" href="javascript:">All ({{othersTotal}})</a>
+								{% if filter != 'a' && allTotal > 0 %}
+								<a class="search-filter-all" href="javascript:">All ({{allTotal}})</a>
 								{% endif %}
-								{% if filter != 'a' && othersTotal <= 0 %}
-								All ({{othersTotal}})
+								{% if filter != 'a' && allTotal <= 0 %}
+								All ({{allTotal}})
 								{% endif %}
 								</li>
 							</ul>

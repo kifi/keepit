@@ -16,3 +16,7 @@ trait ModelWithState[M] extends Model[M]{ self: Model[M] =>
 trait ModelWithExternalId[M] extends Model[M] { self: Model[M] =>
   def externalId: ExternalId[M]
 }
+
+trait ModelWithSeqNumber[M] extends Model[M] { self: Model[M]=>
+  val seq: SequenceNumber
+}

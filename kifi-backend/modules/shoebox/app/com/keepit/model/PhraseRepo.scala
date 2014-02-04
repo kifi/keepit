@@ -10,7 +10,7 @@ import com.keepit.search.Lang
 import scala.Some
 
 @ImplementedBy(classOf[PhraseRepoImpl])
-trait PhraseRepo extends Repo[Phrase] {
+trait PhraseRepo extends Repo[Phrase] with SeqNumberFunction[Phrase]{
   def get(phrase: String, lang: Lang, excludeState: Option[State[Phrase]] = Some(PhraseStates.INACTIVE))(implicit session: RSession): Option[Phrase]
   def insertAll(phrases: Seq[Phrase])(implicit session: RWSession): Option[Int]
   def allIterator(implicit session: RSession): CloseableIterator[Phrase]
@@ -18,18 +18,17 @@ trait PhraseRepo extends Repo[Phrase] {
 }
 
 @Singleton
-class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Phrase] with PhraseRepo {
+class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Phrase] with PhraseRepo with SeqNumberDbFunction[Phrase]{
   import db.Driver.Implicit._
   import DBSession._
   import FortyTwoTypeMappers._
 
   private val sequence = db.getSequence("phrase_sequence")
 
-  override val table = new RepoTable[Phrase](db, "phrase") {
+  override val table = new RepoTable[Phrase](db, "phrase") with SeqNumberColumn[Phrase]{
     def phrase = column[String]("phrase", O.NotNull)
     def source = column[String]("source", O.NotNull)
     def lang = column[Lang]("lang", O.NotNull)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ phrase ~ lang ~ source ~ state ~ seq <> (Phrase.apply _, Phrase.unapply _)
   }
 
@@ -48,7 +47,5 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     table.map(t => t).elements
   }
 
-  def getPhrasesChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Phrase] = {
-    (for (r <- table if r.seq > seq) yield r).sortBy(_.seq).take(fetchSize).list
-  }
+  def getPhrasesChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Phrase] = super.getBySequenceNumber(seq, fetchSize)
 }

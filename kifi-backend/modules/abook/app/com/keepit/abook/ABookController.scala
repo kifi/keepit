@@ -29,20 +29,20 @@ object ABookOwnerInfo {
   val EMPTY = ABookOwnerInfo(None, None)
 }
 
-class GmailABookOwnerInfo(id:Option[String], email:Option[String], val verified:Option[Boolean] = None, val hd:Option[String] = None) extends ABookOwnerInfo(id, email)
+class GmailABookOwnerInfo(id:Option[String], email:Option[String], /* val verified:Option[Boolean] = None, */ val hd:Option[String] = None) extends ABookOwnerInfo(id, email)
 
 object GmailABookOwnerInfo {
-  def apply(id:Option[String], email:Option[String], verified:Option[Boolean], hd:Option[String]) = new GmailABookOwnerInfo(id, email, verified, hd)
-  def unapply(userInfo:GmailABookOwnerInfo):Option[(Option[String], Option[String], Option[Boolean], Option[String])] = Some(userInfo.id, userInfo.email, userInfo.verified, userInfo.hd)
+  def apply(id:Option[String], email:Option[String], /* verified:Option[Boolean],*/ hd:Option[String]) = new GmailABookOwnerInfo(id, email, hd)
+  def unapply(userInfo:GmailABookOwnerInfo):Option[(Option[String], Option[String], /* Option[Boolean],*/ Option[String])] = Some(userInfo.id, userInfo.email, /* userInfo.verified, */ userInfo.hd)
 
   implicit val format = (
     (__ \ 'id).formatNullable[String] and
     (__ \ 'email).formatNullable[String] and
-    (__ \ 'verified_email).formatNullable[Boolean] and
+//    (__ \ 'verified_email).formatNullable[Boolean] and
     (__ \ 'hd).formatNullable[String]
   )(GmailABookOwnerInfo.apply, unlift(GmailABookOwnerInfo.unapply))
 
-  val EMPTY = GmailABookOwnerInfo(None, None, None, None)
+  val EMPTY = GmailABookOwnerInfo(None, None, /* None, */ None)
 }
 
 class ABookController @Inject() (
@@ -57,6 +57,7 @@ class ABookController @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
+  // todo(ray):removeme
   def importContactsP(userId:Id[User]) = Action.async(parse.json) { request =>
     val tokenOpt = request.body.asOpt[OAuth2Token]
     log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
@@ -76,29 +77,21 @@ class ABookController @Inject() (
     }
   }
 
-  def importContacts(userId:Id[User], provider:String, accessToken:String) = Action.async { request =>
-    provider match {
-      case "google" => {
-        importGmailContacts(userId, accessToken, None)
-      }
-      case "facebook" => {
-        if (Play.maybeApplication.isDefined && (!Play.isProd)) {
-          val friendsUrl = "https://graph.facebook.com/me/friends"
-          WS.url(friendsUrl).withQueryString(("access_token", accessToken),("fields", "id,name,first_name,last_name,username,picture,email")).get map { resp =>
-            resp.status match {
-              case OK => {
-                val friends = resp.json
-                log.info(s"[facebook] friends:\n${Json.prettyPrint(friends)}")
-                Ok(friends)
-              }
-              case _ => {
-                BadRequest("Unsuccessful attempt to invoke facebook API")
-              }
-            }
+  def importContacts(userId:Id[User]) = Action.async(parse.json) { request =>
+    val tokenOpt = request.body.asOpt[OAuth2Token]
+    log.info(s"[importContactsP($userId)] tokenOpt=$tokenOpt")
+    tokenOpt match {
+      case None =>
+        log.error(s"[importContactsP($userId)] token is invalid body=${request.body}")
+        resolve(BadRequest(Json.obj("code" -> s"Invalid token ${request.body}")))
+      case Some(tk) => tk.issuer match {
+        case OAuth2TokenIssuers.GOOGLE => {
+          val savedToken = db.readWrite(attempts = 2) { implicit s =>
+            oauth2TokenRepo.save(tk)
           }
-        } else {
-          resolve(BadRequest("Unsupported provider"))
+          importGmailContacts(userId, tokenOpt.get.accessToken, Some(savedToken))
         }
+        case _ => resolve(BadRequest(Json.obj("code" -> s"Unsupported issuer ${tk.issuer}")))
       }
     }
   }
@@ -108,7 +101,7 @@ class ABookController @Inject() (
     resF.map { abookInfoOpt =>
       abookInfoOpt match {
         case Some(info) => Ok(Json.toJson(info))
-        case None => BadRequest("Failed to import gmail contacts")
+        case None => BadRequest(Json.obj("code" -> "Failed to import gmail contacts"))
       }
     }
   }
@@ -120,43 +113,51 @@ class ABookController @Inject() (
     WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get flatMap { resp =>
       resp.status match {
         case OK => {
+          log.info(s"[importGmailContactsF($userId)] url=$USER_INFO_URL accessToken=$accessToken resp=${resp.body}")
           val userInfoJson = resp.json
-          val gUserInfo = userInfoJson.as[GmailABookOwnerInfo]
-          log.info(s"[g-contacts] userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
+          val gUserInfoOpt = userInfoJson.asOpt[GmailABookOwnerInfo]
+          gUserInfoOpt match {
+            case None =>
+              log.error(s"[importGmailContactsF($userId)] cannot parse userInfo response: ${resp.body}")
+              // email and/or airbrake
+              Future.successful(None)
+            case Some(gUserInfo) =>
+              log.info(s"[g-contacts] userInfoResp=${userInfoJson} googleUserInfo=${gUserInfo}")
 
-          WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
-            if (contactsResp.status == OK) {
-              val contacts = contactsResp.xml // TODO: optimize; hand-off
+              WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
+                if (contactsResp.status == OK) {
+                  val contacts = contactsResp.xml // TODO: optimize; hand-off
 
-              // todo: paging
-              val totalResults = (contacts \ "totalResults").text.toInt
-              val startIndex = (contacts \ "startIndex").text.toInt
-              val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
-              log.info(s"[g-contacts] total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
+                  // todo: paging
+                  val totalResults = (contacts \ "totalResults").text.toInt
+                  val startIndex = (contacts \ "startIndex").text.toInt
+                  val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
+                  log.info(s"[g-contacts] total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
 
-              log.info(s"[g-contacts] $contacts")
-              log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
-              val jsSeq = (contacts \ "entry") map { entry =>
-                val title = (entry \ "title").text
-                val emails = (entry \ "email") flatMap { email =>
-                  (email \ "@address") map ( _.text )
+                  log.info(s"[g-contacts] $contacts")
+                  log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
+                  val jsSeq = (contacts \ "entry") map { entry =>
+                    val title = (entry \ "title").text
+                    val emails = (entry \ "email") flatMap { email =>
+                      (email \ "@address") map ( _.text )
+                    }
+                    log.info(s"[g-contacts] title=$title email=$emails")
+                    Json.obj("name" -> title, "emails" -> Json.toJson(emails))
+                  }
+
+                  val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
+                  log.debug(Json.prettyPrint(abookUpload))
+                  abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
+                } else {
+                  log.error(s"Failed to retrieve gmail contacts") // todo: try later
+                  None
                 }
-                log.info(s"[g-contacts] title=$title email=$emails")
-                Json.obj("name" -> title, "emails" -> Json.toJson(emails))
               }
-
-              val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
-              log.debug(Json.prettyPrint(abookUpload))
-              abookCommander.processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
-            } else {
-              log.error(s"Failed to retrieve gmail contacts") // todo: try later
-              None
             }
           }
-        }
         case _ =>
           log.error("Failed to obtain access token")
-          future { None }
+          Future.successful(None)
       }
     }
   }

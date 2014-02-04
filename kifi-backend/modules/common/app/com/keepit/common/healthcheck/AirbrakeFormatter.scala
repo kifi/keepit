@@ -1,7 +1,7 @@
 package com.keepit.common.healthcheck
 
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorInstance
@@ -22,6 +22,7 @@ import scala.xml._
 import play.api.mvc._
 
 import AirbrakeError.MaxMessageSize
+import com.keepit.model.User
 
 case class ErrorWithStack(error: Throwable, stack: Seq[StackTraceElement]) {
   override def toString(): String = error.toString.abbreviate(MaxMessageSize)
@@ -86,30 +87,30 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
 
   private def formatParams(params: Map[String, Seq[String]]) = params.isEmpty match {
     case false =>
-      (<params>{params.flatMap(e => {
+      <params>{params.flatMap(e => {
           <var key={e._1}>{e._2.mkString(" ")}</var>
-      })}</params>)::Nil
+      })}</params> :: Nil
     case true => Nil
   }
 
-  private def formatHeaders(params: Map[String, Seq[String]], id: ExternalId[AirbrakeError]) = params.isEmpty match {
-    case false =>
-      (<session>
-        <var key="InternalErrorId">{id.id}</var>
-        {params.flatMap(e => {
-          <var key={e._1}>{e._2.mkString(" ")}</var>
-        }
-      )}</session>)::Nil
-    case true => Nil
+  private def formatHeaders(params: Map[String, Seq[String]], id: ExternalId[AirbrakeError], userId: Option[Id[User]], userName: Option[String]) = {
+    <session>
+      {params.flatMap(e => {
+        Some(<var key={e._1}>{e._2.mkString(" ")}</var>)
+      })}
+      <var key="Z-InternalErrorId">{id.id}</var>
+      { ({userId.map   {id =>   <var key="Z-UserId">https://admin.kifi.com/admin/user/{id.id}</var> }} ::
+       {userName.map {name => <var key="Z-UserName">{name}</var> }} :: Nil).flatten }
+    </session> :: Nil
   }
 
-  private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]], id: ExternalId[AirbrakeError]) =
+  private def noticeRequest(url: String, params: Map[String, Seq[String]], method: Option[String], headers: Map[String, Seq[String]], id: ExternalId[AirbrakeError], userId: Option[Id[User]], userName: Option[String]) =
     <request>
       <url>{url}</url>
       <component/>
       { formatParams(params) }
       { method.map(m => <action>{m}</action>).getOrElse(<action/>) }
-      { formatHeaders(headers.toMap, id) }
+      { formatHeaders(headers.toMap, id, userId, userName) }
     </request>
 
   def noticeError(error: ErrorWithStack, message: Option[String]) =
@@ -130,7 +131,9 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     </error>
 
   private def noticeEntities(error: AirbrakeError) =
-    (Some(noticeError(ErrorWithStack(error.exception), error.trimmedMessage)) :: error.url.map{u => noticeRequest(u, error.params, error.method, error.headers, error.id)} :: Nil).flatten
+    (Some(noticeError(ErrorWithStack(error.exception), error.trimmedMessage)) :: error.url.map { u =>
+      noticeRequest(u, error.params, error.method, error.headers, error.id, error.userId, error.userName)
+    } :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
   private[healthcheck] def format(error: AirbrakeError) =

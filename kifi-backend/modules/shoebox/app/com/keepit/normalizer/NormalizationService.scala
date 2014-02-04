@@ -92,10 +92,11 @@ class NormalizationServiceImpl @Inject() (
     } yield (normalization, uri)
   }
 
-  private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean =
+  private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean = {
     currentReference.normalization.isEmpty ||
     currentReference.normalization.get < candidate.normalization ||
     (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
+  }
 
   private case class FindStrongerCandidate(currentReference: NormalizationReference, oracle: NormalizationCandidate => Action) {
 
@@ -192,7 +193,7 @@ class NormalizationServiceImpl @Inject() (
         case (NormalizedURIStates.INACTIVE, _) => None
         case (NormalizedURIStates.REDIRECTED, Some(id)) => {
           val redirectionURI = normalizedURIRepo.get(id)
-          if (redirectionURI.state != NormalizedURIStates.INACTIVE) Some(redirectionURI) else None
+          if (redirectionURI.state != NormalizedURIStates.INACTIVE && redirectionURI.normalization.get <= newReference.normalization.get) Some(redirectionURI) else None
         }
         case (_, _) => Some(normalizedURI)
       }

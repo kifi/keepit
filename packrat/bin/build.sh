@@ -14,8 +14,8 @@ rm -rf out/*/* out/*.*
 mkdir -p out
 cp -R adapters/chrome out/
 cp -R adapters/firefox out/
-cp adapters/shared/*.js out/chrome/
-cp adapters/shared/*.js out/firefox/lib/
+cp adapters/shared/*.js adapters/shared/*.min.map out/chrome/
+cp adapters/shared/*.js adapters/shared/*.min.map out/firefox/lib/
 
 for d in icons images media scripts; do
   cp -R $d out/chrome/

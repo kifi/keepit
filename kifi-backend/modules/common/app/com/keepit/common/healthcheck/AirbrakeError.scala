@@ -1,7 +1,7 @@
 package com.keepit.common.healthcheck
 
 import com.keepit.common.controller.ReportedException
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import org.joda.time.DateTime
@@ -15,6 +15,7 @@ import play.api.mvc._
 import play.api.libs.ws.Response
 import play.api.libs.ws.WS.WSRequestHolder
 import com.ning.http.client.FluentCaseInsensitiveStringsMap
+import com.keepit.model.User
 
 case class AirbrakeErrorSignature(value: String) extends AnyVal
 class DefaultAirbrakeException extends Exception
@@ -22,6 +23,8 @@ class DefaultAirbrakeException extends Exception
 case class AirbrakeError(
     exception: Throwable = new DefaultAirbrakeException(),
     message: Option[String] = None,
+    userId: Option[Id[User]] = None,
+    userName: Option[String] = None,
     url: Option[String] = None,
     params: Map[String, Seq[String]] = Map(),
     method: Option[String] = None,
@@ -141,10 +144,12 @@ object AirbrakeError {
   import scala.collection.JavaConverters._
 
   val MaxMessageSize = 10 * 1024 //10KB
-  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String): AirbrakeError =
+  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None): AirbrakeError =
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
+          userId = user.map(_.id).flatten,
+          userName = user.map(_.fullName),
           url = Some(request.uri.abbreviate(MaxMessageSize)),
           params = request.queryString,
           method = Some(request.method),

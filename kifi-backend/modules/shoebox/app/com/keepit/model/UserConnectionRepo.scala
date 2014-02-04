@@ -13,7 +13,7 @@ import com.keepit.common.time._
 import com.keepit.serializer.TraversableFormat
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
-trait UserConnectionRepo extends Repo[UserConnection] {
+trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
@@ -21,6 +21,7 @@ trait UserConnectionRepo extends Repo[UserConnection] {
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
+  def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
 }
 
 case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]] {
@@ -40,7 +41,7 @@ class UserConnectionRepoImpl @Inject() (
   val userConnCache: UserConnectionIdCache,
   val unfriendedCache: UnfriendedConnectionsCache,
   val searchFriendsCache: SearchFriendsCache)
-  extends DbRepo[UserConnection] with UserConnectionRepo {
+  extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection]{
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -81,11 +82,10 @@ class UserConnectionRepoImpl @Inject() (
     }
   }
 
-  override val table = new RepoTable[UserConnection](db, "user_connection") {
+  override val table = new RepoTable[UserConnection](db, "user_connection") with SeqNumberColumn[UserConnection]{
     def user1 = column[Id[User]]("user_1", O.NotNull)
     def user2 = column[Id[User]]("user_2", O.NotNull)
-    def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ user1 ~ user2 ~ state ~ createdAt ~ updatedAt ~ seq <> (UserConnection, UserConnection.unapply _)
+    def * = id.? ~ user1 ~ user2 ~ state ~ createdAt ~ updatedAt ~ seq <> (UserConnection.apply _, UserConnection.unapply _)
   }
 
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection] =
@@ -151,4 +151,6 @@ class UserConnectionRepoImpl @Inject() (
     (users + userId) foreach invalidateCache
     table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)
   }
+
+  def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
 }

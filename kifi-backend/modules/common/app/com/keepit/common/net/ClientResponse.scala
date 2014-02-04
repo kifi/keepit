@@ -76,9 +76,6 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
   }
 
   lazy val json: JsValue = {
-    val url = request.httpUri.url
-    //todo: this list should be taken from some config or some smarter mechanizem then that
-    //trackTimeThresholdFactor is basically a proxy to the machine speed (ECU). more ECU, faster the machine should be
     try {
       val (json, time, tracking) = jsonParser.parse(bytes, maxJsonParseTime)
       _parsingTime = Some(time)

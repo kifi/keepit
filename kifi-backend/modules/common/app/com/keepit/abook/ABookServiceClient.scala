@@ -28,7 +28,8 @@ trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
 
   def importContactsP(userId:Id[User], oauth2Token:OAuth2Token):Future[JsValue]
-  def importContacts(userId:Id[User], provider:String, accessToken:String):Future[JsValue]
+  def importContacts(userId:Id[User], oauth2Token:OAuth2Token):Future[Try[ABookInfo]] // gmail
+  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]] // ios (see MobileUserController)
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def getAllABookInfos():Future[Seq[ABookInfo]]
@@ -42,7 +43,6 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
-  def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
   def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
@@ -66,8 +66,13 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.importContactsP(userId), Json.toJson(oauth2Token), callTimeouts = longTimeout).map { r => r.json }
   }
 
-  def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = {
-    call(ABook.internal.importContacts(userId, provider, accessToken), callTimeouts = longTimeout).map { r => r.json }
+  def importContacts(userId:Id[User], oauth2Token:OAuth2Token): Future[Try[ABookInfo]] = {
+    call(ABook.internal.importContacts(userId), Json.toJson(oauth2Token), callTimeouts = longTimeout).map{ r =>
+      r.status match {
+        case Status.OK => Success(Json.fromJson[ABookInfo](r.json).get)
+        case _ => Failure(new IllegalArgumentException((r.json \ "code").asOpt[String].getOrElse("invalid arguments")))
+      }
+    }
   }
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
@@ -184,7 +189,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def importContactsP(userId: Id[User], oauth2Token: OAuth2Token): Future[JsValue] = ???
 
-  def importContacts(userId: Id[User], provider: String, accessToken: String): Future[JsValue] = ???
+  def importContacts(userId: Id[User], oauth2Token: OAuth2Token): Future[Try[ABookInfo]] = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 

@@ -12,6 +12,8 @@ class ServiceClusterTest extends Specification {
 
   val instance1 = new AmazonInstanceInfo(
     instanceId = AmazonInstanceId("i-f168c1a8"),
+    name = Some("some-name"),
+    service = Some("some-service"),
     localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
     publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
     localIp = IpAddress("10.160.95.26"),
@@ -27,6 +29,8 @@ class ServiceClusterTest extends Specification {
 
   val instance2 = new AmazonInstanceInfo(
     instanceId = AmazonInstanceId("i-f168c1a9"),
+    name = Some("some-name"),
+    service = Some("some-service"),
     localHostname = "ip-10-160-95-25.us-west-1.compute.internal",
     publicHostname = "ec2-50-18-183-74.us-west-1.compute.amazonaws.com",
     localIp = IpAddress("10.160.95.23"),
@@ -42,6 +46,8 @@ class ServiceClusterTest extends Specification {
 
   val instance3 = new AmazonInstanceInfo(
     instanceId = AmazonInstanceId("i-f168c1a8"),
+    name = Some("some-name"),
+    service = Some("some-service"),
     localHostname = "ip-10-160-95-2.us-west-1.compute.internal",
     publicHostname = "ec2-50-18-183-7.us-west-1.compute.amazonaws.com",
     localIp = IpAddress("10.160.95.2"),
