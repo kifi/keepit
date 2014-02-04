@@ -30,7 +30,6 @@ trait ABookServiceClient extends ServiceClient {
   def importContacts(userId:Id[User], oauth2Token:OAuth2Token):Future[Try[ABookInfo]] // gmail
   def uploadContacts(userId:Id[User], origin:ABookOriginType, data:JsValue):Future[Try[ABookInfo]] // ios (see MobileUserController)
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
-  def uploadDirect(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue]
   def getAllABookInfos():Future[Seq[ABookInfo]]
   def getPagedABookInfos(page:Int, size:Int):Future[Seq[ABookInfo]]
   def getABooksCount():Future[Int]
@@ -72,10 +71,6 @@ class ABookServiceClientImpl @Inject() (
 
   def upload(userId:Id[User], origin:ABookOriginType, json:JsValue):Future[JsValue] = {
     call(ABook.internal.upload(userId, origin), json).map { r => r.json }
-  }
-
-  def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = {
-    call(ABook.internal.uploadDirect(userId, origin), json).map { r => r.json }
   }
 
   def getABookInfo(userId:Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
@@ -185,8 +180,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def importContacts(userId: Id[User], oauth2Token: OAuth2Token): Future[Try[ABookInfo]] = ???
 
   def upload(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
-
-  def uploadDirect(userId: Id[User], origin: ABookOriginType, json: JsValue): Future[JsValue] = ???
 
   def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
 

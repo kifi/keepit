@@ -165,12 +165,12 @@ class ABookController @Inject() (
   }
 
   // direct JSON-upload (for testing only)
-  def uploadJsonDirect(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
-    val json = request.body
-    log.info(s"[uploadJsonDirect($userId,$origin)] json=${Json.prettyPrint(json)}")
-    val abookInfoRepoEntryOpt = abookCommander.processUpload(userId, origin, None, None, json)
-    Ok(Json.toJson(abookInfoRepoEntryOpt))
-  }
+//  def uploadJsonDirect(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
+//    val json = request.body
+//    log.info(s"[uploadJsonDirect($userId,$origin)] json=${Json.prettyPrint(json)}")
+//    val abookInfoRepoEntryOpt = abookCommander.processUpload(userId, origin, None, None, json)
+//    Ok(Json.toJson(abookInfoRepoEntryOpt))
+//  }
 
   def getContacts(userId:Id[User], maxRows:Int) = Action { request =>
     Ok(abookCommander.getContactsDirect(userId, maxRows))
