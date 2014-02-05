@@ -784,5 +784,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]] = ???
+  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]] = {
+    call(Shoebox.internal.getSearchFriendsChanged(seq, fetchSize)).map{ r =>
+      Json.fromJson[Seq[SearchFriend]](r.json).get
+    }
+  }
 }
