@@ -10,6 +10,7 @@ import com.keepit.common.db.SequenceNumber
 @ImplementedBy(classOf[SearchFriendRepoImpl])
 trait SearchFriendRepo extends Repo[SearchFriend] with SeqNumberFunction[SearchFriend] {
   def getSearchFriends(userId: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getUnfriends(userId: Id[User])(implicit session: RSession): Set[Id[User]]
   def excludeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int
   def includeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int
 
@@ -63,6 +64,10 @@ class SearchFriendRepoImpl @Inject() (
         searchFriendsCache.set(SearchFriendsKey(userId), friends.map(_.id).toArray)
         friends
     }
+  }
+
+  def getUnfriends(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
+    (for { f <- table if f.userId === userId && f.state === SearchFriendStates.EXCLUDED } yield f.friendId).list.toSet
   }
 
   def excludeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {

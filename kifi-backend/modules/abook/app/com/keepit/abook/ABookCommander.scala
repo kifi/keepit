@@ -6,7 +6,7 @@ import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.common.db.Id
 import com.keepit.common.performance._
 import com.keepit.model._
-import play.api.libs.json.{JsArray, Json, JsValue}
+import play.api.libs.json.{JsObject, JsArray, Json, JsValue}
 import scala.ref.WeakReference
 import com.keepit.common.logging.{LogPrefix, Logging}
 import scala.collection.mutable
@@ -19,9 +19,10 @@ import java.text.Normalizer
 import play.api.libs.concurrent.Execution.Implicits._
 
 import Logging._
-import play.api.libs.ws.WS
+import play.api.libs.ws.{Response, WS}
 import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.xml.Elem
 
 class ABookCommander @Inject() (
   db:Database,
@@ -59,7 +60,9 @@ class ABookCommander @Inject() (
   def getGmailOwnerInfo(userId: Id[User],accessToken: String):Future[GmailABookOwnerInfo] = {
     implicit val prefix = LogPrefix(s"getGmailOwnerInfo($userId)")
 
-    WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get map { resp =>
+    for {
+      resp <- WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get
+    } yield {
       log.infoP(s"userinfo response=${resp.body}")
       resp.status match {
         case Status.OK => resp.json.asOpt[GmailABookOwnerInfo] match {
@@ -75,38 +78,41 @@ class ABookCommander @Inject() (
   def importGmailContacts(userId: Id[User],accessToken: String, tokenOpt:Option[OAuth2Token]):Future[ABookInfo] = {
     implicit val prefix = LogPrefix(s"importGmailContacts($userId)")
 
-    getGmailOwnerInfo(userId, accessToken) flatMap { gUserInfo =>
-      WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get map { contactsResp =>
-        if (contactsResp.status == Status.OK) {
-          val contacts = timing(s"$prefix parse XML") { contactsResp.xml } // todo(ray): optimize; hand-off
+    @inline def xml2Js(contacts:Elem):Seq[JsObject] = {
+      (contacts \ "entry") map { entry =>
+        val title = (entry \ "title").text
+        val emails = for {
+          email <- (entry \ "email")
+          addr  <- (email \ "@address")
+        } yield {
+          addr.text
+        }
+        log.infoP(s"title=$title email=$emails")
+        Json.obj("name" -> title, "emails" -> Json.toJson(emails))
+      }
+    }
 
-          // todo(ray): paging
+    val userInfoF:Future[GmailABookOwnerInfo] = getGmailOwnerInfo(userId, accessToken)
+    val contactsRespF:Future[Response] = WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
+    for {
+      userInfo <- userInfoF
+      contactsResp <- contactsRespF
+    } yield {
+      contactsResp.status match {
+        case Status.OK =>
+          val contacts = timingWithResult[Elem](s"$prefix parse-XML") { contactsResp.xml } // todo(ray): paging
+
           val totalResults = (contacts \ "totalResults").text.toInt
-          val startIndex = (contacts \ "startIndex").text.toInt
+          val startIndex   = (contacts \ "startIndex").text.toInt
           val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
           log.infoP(s"total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
 
-          log.infoP(s"$contacts")
-          log.debug(new scala.xml.PrettyPrinter(300, 2).format(contacts))
-          val jsSeq = (contacts \ "entry") map { entry =>
-            val title = (entry \ "title").text
-            val emails = (entry \ "email") flatMap { email =>
-              (email \ "@address") map ( _.text )
-            }
-            log.infoP(s"title=$title email=$emails")
-            Json.obj("name" -> title, "emails" -> Json.toJson(emails))
-          }
+          val jsSeq = timingWithResult[Seq[JsObject]](s"$prefix xml2Js") { xml2Js(contacts) }
 
-          val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> gUserInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq)
-          log.debug(Json.prettyPrint(abookUpload))
-          val abookInfoOpt = processUpload(userId, ABookOrigins.GMAIL, Some(gUserInfo), tokenOpt, abookUpload)
-          abookInfoOpt match {
-            case Some(abookInfo) => abookInfo
-            case None => throw new IllegalStateException(s"$prefix failed to upload gmail contacts")
-          }
-        } else {
-          throw new IllegalStateException(s"$prefix failed to retrieve gmail contacts") // todo(ray): try later
-        }
+          val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> userInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq) // todo(ray): removeme
+          processUpload(userId, ABookOrigins.GMAIL, Some(userInfo), tokenOpt, abookUpload) getOrElse (throw new IllegalStateException(s"$prefix failed to upload contacts ($abookUpload)"))
+        case _ =>
+          throw new IllegalStateException(s"$prefix failed to retrieve contacts; response: $contactsResp") // todo(ray): retry
       }
     }
   }

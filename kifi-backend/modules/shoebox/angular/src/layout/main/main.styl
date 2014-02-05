@@ -14,7 +14,6 @@
   height: 73px
   padding: 13px 20px 0
   box-sizing: border-box
-  box-shadow: inset -1px 0 #dbdee3
 
 .kf-main-title
   margin: 0 0 8px
@@ -31,6 +30,31 @@
   font-weight: 300
   line-height: 20px
   color: #5b6670
+
+.kf-main-head
+.kf-main-keeps
+  box-shadow: inset -1px 0 #dbdee3
+
+.kf-main-keeps
+  position: absolute
+  top: 143px
+  bottom: 0
+  left: 0
+  right: 0
+  overflow: hidden
+
+  body[data-view=search] &
+    top: 108px
+
+  & > .antiscroll-inner
+    height: 100%
+    width: 100%
+    padding: 0 19px 0 18px
+    box-sizing: border-box
+    overflow-x: hidden
+
+  & > .antiscroll-scrollbar
+    z-index: 1
 
 .kf-check-all
   position: absolute

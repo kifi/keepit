@@ -37,6 +37,19 @@ angular.module('kifi.keepService', [])
 					list.push.apply(list, keeps);
 					return list;
 				});
+			},
+
+			joinTags: function (keeps, tags) {
+				var idMap = _.reduce(tags, function (map, tag) {
+					map[tag.id] = tag;
+					return map;
+				}, {});
+
+				_.forEach(keeps, function (keep) {
+					keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
+						return idMap[tagId] || null;
+					});
+				});
 			}
 		};
 	}
