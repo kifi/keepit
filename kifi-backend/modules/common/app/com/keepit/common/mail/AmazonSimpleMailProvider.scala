@@ -23,8 +23,7 @@ trait AmazonSimpleMailProvider {
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-api.html
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-formatted.html
  */
-@Singleton
-class AmazonSimpleMailProviderImpl @Inject() (
+class AmazonSimpleMailProviderImpl(
      client: AmazonSimpleEmailServiceClient,
      airbrake: AirbrakeNotifier)
   extends AmazonSimpleMailProvider with Logging {

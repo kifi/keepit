@@ -324,7 +324,7 @@ class MessagingCommander @Inject() (
   )
 
   def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val loadedUser = userExtIds.map {
+    val loadedUser = userExtIds.filter(_!=ExternalId[User]("00000000-0000-0000-0000-000000000000"))map {
       case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
         engineers.map(ExternalId[User])
       case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family

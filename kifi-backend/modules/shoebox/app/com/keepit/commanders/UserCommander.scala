@@ -121,11 +121,20 @@ class UserCommander @Inject() (
       Seq()
     }
 
+
+
+    //Tricking the client into letting you message yourself. *Not* the final solution for this.
+    val doppelgänger = if (experiments.contains(ExperimentType.SELF_MESSAGE)) {
+      Seq(BasicUser(ExternalId[User]("00000000-0000-0000-0000-000000000000"), user.firstName, user.lastName, "0.jpg"))
+    } else {
+      Seq()
+    }
+
     // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
     // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
     val kifiSupport = Seq(
       BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg"))
-    basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
+    basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport ++ doppelgänger
   }
 
   private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
