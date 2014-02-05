@@ -64,6 +64,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val userConnIdCounter = new AtomicInteger(0)
   private def nextUserConnId = Id[UserConnection](userConnIdCounter.incrementAndGet())
 
+  private val searchFriendIdCounter = new AtomicInteger(0)
+  private val nextSearchFriendId = Id[SearchFriend](searchFriendIdCounter.incrementAndGet())
+
   // Fake sequence counters
 
   private val userSeqCounter = new AtomicInteger(0)
@@ -84,12 +87,16 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val userConnSeqCounter = new AtomicInteger(0)
   private def nextUserConnSeqNum() = SequenceNumber(userConnSeqCounter.incrementAndGet())
 
+  private val searchFriendSeqCounter = new AtomicInteger(0)
+  private def nextSearchFriendSeqNum() = SequenceNumber(searchFriendSeqCounter.incrementAndGet())
+
   // Fake repos
 
   val allUsers = MutableMap[Id[User], User]()
   val allUserExternalIds = MutableMap[ExternalId[User], User]()
   val allUserConnections = MutableMap[Id[User], Set[Id[User]]]()
   val allConnections = MutableMap[Id[UserConnection], UserConnection]()
+  val allSearchFriends = MutableMap[Id[SearchFriend], SearchFriend]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
   val allUserBookmarks = MutableMap[Id[User], Set[Id[Bookmark]]]()
   val allBookmarks = MutableMap[Id[Bookmark], Bookmark]()
@@ -166,6 +173,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def clearUserConnections(userIds: Id[User]*) {
     userIds.map(allUserConnections(_) = Set.empty[Id[User]])
+  }
+
+  def excludeFriend(userId: Id[User], friendId: Id[User]){
+    allSearchFriends.values.filter(x => x.userId == userId && x.friendId == friendId).headOption match {
+      case Some(r) if (r.state != SearchFriendStates.EXCLUDED) => allSearchFriends(r.id.get) = r.copy(state = SearchFriendStates.EXCLUDED, seq = nextSearchFriendSeqNum)
+      case None => val id = nextSearchFriendId; allSearchFriends(id) = SearchFriend(id = Some(id), userId = userId, friendId = friendId, seq = nextSearchFriendSeqNum)
+    }
   }
 
   def saveBookmarks(bookmarks: Bookmark*): Seq[Bookmark] = {
@@ -534,6 +548,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]] = {
     val changed = allConnections.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
+    Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
+  }
+
+  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]] = {
+    val changed = allSearchFriends.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 }

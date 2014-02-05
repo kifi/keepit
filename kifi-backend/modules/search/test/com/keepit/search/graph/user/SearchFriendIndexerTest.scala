@@ -1,0 +1,45 @@
+package com.keepit.search.graph.user
+
+import org.specs2.mutable._
+import com.keepit.common.db.Id
+import com.keepit.model.User
+import com.keepit.common.db.SequenceNumber
+import org.apache.lucene.index.IndexWriterConfig
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
+import play.api.test.Helpers._
+import org.apache.lucene.util.Version
+import com.keepit.inject._
+import com.keepit.test._
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+
+
+class SearchFriendIndexerTest extends Specification with ApplicationInjector {
+
+  def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl) = {
+    new SearchFriendIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+  }
+
+  "searchFriend indexer" should {
+    "work" in {
+       running(new TestApplication(FakeShoeboxServiceModule())) {
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val uids = (1 to 4).map{Id[User](_)}
+        client.excludeFriend(uids(1), uids(2))
+        client.excludeFriend(uids(1), uids(3))
+        client.excludeFriend(uids(2), uids(3))
+
+        val indexer = mkSearchFriendIndexer()
+        indexer.update()
+        indexer.numDocs === 2
+
+        var searcher = new SearchFriendSearcher(indexer.getSearcher)
+        searcher.getUnfriended(uids(0)) === Set(2, 3)
+        searcher.getUnfriended(uids(1)) === Set(3)
+       }
+    }
+  }
+
+}
