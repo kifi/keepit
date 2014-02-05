@@ -10,6 +10,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.FakeScheduler
 
 case class FakeElizaServiceClientModule() extends ElizaServiceClientModule {
+
   def configure() {}
 
   @Singleton

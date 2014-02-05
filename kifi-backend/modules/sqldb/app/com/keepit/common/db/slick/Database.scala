@@ -9,7 +9,6 @@ import scala.util.DynamicVariable
 import com.google.inject.{Singleton, ImplementedBy, Inject}
 import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.logging.Logging
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 import play.api.Mode.Mode
 import play.modules.statsd.api.Statsd
@@ -111,8 +110,6 @@ class Database @Inject() (
       try {
         return readOnly(f)
       } catch {
-        case ex: MySQLIntegrityConstraintViolationException =>
-          throw ex
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readOnly transaction attempt $attempt of $attempts")
@@ -137,8 +134,6 @@ class Database @Inject() (
       try {
         return readWrite(f)
       } catch {
-        case ex: MySQLIntegrityConstraintViolationException =>
-          throw ex
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts")
@@ -182,7 +177,6 @@ class Database @Inject() (
       results ++= partialResults
       pending = batch.filter{ d =>
         results(d) match {
-          case Failure(e: MySQLIntegrityConstraintViolationException) => false // do not retry if an integrity constraint violation occurred for this item
           case Failure(e: SQLException) => true                                // retry for other SQLException
           case Failure(e: ExecutionSkipped) => true                            // retry skipped items
           case _ => false                                                      // no retry for all other cases

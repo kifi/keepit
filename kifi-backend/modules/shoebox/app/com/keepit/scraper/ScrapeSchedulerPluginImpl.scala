@@ -45,9 +45,12 @@ private[scraper] class ScrapeScheduler @Inject() (
   def schedule(): Unit = {
     if (scraperConfig.pull)
       checkAssigned
+    if (scraperConfig.push) // todo(ray): removeme
+      pushTasks
+  }
 
-    if (scraperConfig.push) { // todo(ray) removeme
-      val (overdues, pendingCount, pendingOverdues) = db.readOnly(attempts = 2) { implicit s =>
+  def pushTasks() = { // todo(ray) removeme
+    val (overdues, pendingCount, pendingOverdues) = db.readOnly(attempts = 2) { implicit s =>
         val overdues         = scrapeInfoRepo.getOverdueList()
         val pendingCount     = scrapeInfoRepo.getPendingCount()
         val pendingOverdues  = scrapeInfoRepo.getOverduePendingList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
@@ -92,7 +95,6 @@ private[scraper] class ScrapeScheduler @Inject() (
         request foreach { req => scraperServiceClient.scheduleScrapeWithRequest(req) }
       }
       log.info(s"[schedule] submitted ${tasks.length} uris for scraping. time-lapsed:${System.currentTimeMillis - ts}")
-    }
   }
 
   def checkAssigned() = {
@@ -123,7 +125,7 @@ private[scraper] class ScrapeScheduler @Inject() (
           }
         }
 
-        val abandoned = assigned filter { info => !workerIds.contains(info.workerId.get.id) }
+        val (stalled, abandoned) = assigned partition { info => workerIds.contains(info.workerId.get.id) }
         if (!abandoned.isEmpty) {
           val msg = s"[checkAssigned] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
           log.warn(msg)
@@ -131,6 +133,16 @@ private[scraper] class ScrapeScheduler @Inject() (
             localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
             for (info <- abandoned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime)) // todo(ray): ask worker for status
+            }
+          }
+        }
+        if (!stalled.isEmpty) { // likely due to failed db updates
+          val msg = s"[checkAssigned] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
+          log.warn(msg)
+          db.readWrite(attempts = 2) { implicit rw =>
+            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-stalled", htmlBody = msg))
+            for (info <- stalled) {
+              scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime.plusMinutes(util.Random.nextInt(30)))) // todo(ray): ask worker for status
             }
           }
         }

@@ -85,6 +85,7 @@
 
 	// Globals
 	"globals": {
-		"angular": true
+		"angular": true,
+		"_": true
 	}
 }

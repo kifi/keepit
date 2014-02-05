@@ -37,7 +37,7 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
 
   def getState() = ZooKeeper.States.CONNECTED
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
-  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit) {}
+  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit, watchData: Boolean = false) {}
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
   def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
 
@@ -79,7 +79,7 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
     }
   }
 
-  def deleteData[T](node: Node): Unit = db.synchronized {
+  def deleteData(node: Node): Unit = db.synchronized {
     db.get(node) match {
       case Some(valOpt) => db(node) = None
       case None => throw new KeeperException.NoNodeException

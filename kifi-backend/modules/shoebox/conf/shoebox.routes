@@ -298,7 +298,7 @@ GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminContr
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
 GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
 GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
-GET     /admin/data/scraper_pending     @com.keepit.controllers.admin.ScraperAdminController.pendingScraperRequests(stateFilter: Option[String] ?= None)
+GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
 GET     /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 
@@ -329,7 +329,7 @@ GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.realUsersView(page: Int)
 GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
-GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
 POST    /admin/user/:user1/connect  @com.keepit.controllers.admin.AdminUserController.connectUsers(user1: Id[User])
@@ -351,6 +351,7 @@ POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthContr
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
 GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
+GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 
@@ -362,6 +363,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
+GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: Option[String] ?= None, prefix: Option[String] ?= None)
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
 GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
@@ -488,6 +490,7 @@ GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepi
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
+GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.internal.ExpertRecommenderController.suggestExperts()
 

@@ -8,12 +8,15 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.DiscoveryModule
 import scala.sys.process._
+import com.keepit.common.mail.{ProdAmazonMailModule, AmazonSimpleMailProvider}
 
 trait HealthCheckModule extends ScalaModule
 
 case class ProdHealthCheckModule() extends HealthCheckModule {
 
-  def configure() {}
+  def configure() {
+    install(new ProdAmazonMailModule())
+  }
 
   @Provides
   @AppScoped
@@ -22,7 +25,7 @@ case class ProdHealthCheckModule() extends HealthCheckModule {
   @Provides
   @AppScoped
   def healthcheckProvider(actor: ActorInstance[HealthcheckActor],
-    services: FortyTwoServices, host: HealthcheckHost, scheduling: SchedulingProperties): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actor, services, host, scheduling, isCanary = DiscoveryModule.isCanary)
+    services: FortyTwoServices, host: HealthcheckHost, scheduling: SchedulingProperties, amazonSimpleMailProvider: AmazonSimpleMailProvider): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actor, services, host, scheduling, DiscoveryModule.isCanary, amazonSimpleMailProvider)
   }
 }

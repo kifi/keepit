@@ -9,7 +9,6 @@ import akka.actor.Scheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
-import com.keepit.common.net.{HttpClient,DirectUrl}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.AmazonInstanceId
@@ -24,10 +23,10 @@ import scala.collection.JavaConversions._
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
 import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
-import com.amazonaws.services._
-import com.amazonaws.services.ec2.model.{DescribeInstancesResult, DescribeInstancesRequest}
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
 import com.amazonaws.auth.BasicAWSCredentials
+import com.keepit.common.aws.AwsModule
 
 trait DiscoveryModule extends ScalaModule
 
@@ -59,12 +58,9 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def amazonEC2Client(): AmazonEC2 = {
+  def amazonEC2Client(basicAWSCredentials: BasicAWSCredentials): AmazonEC2 = {
     val conf = current.configuration.getConfig("amazon").get
-    val awsCredentials = new BasicAWSCredentials(
-      conf.getString("accessKey").get,
-      conf.getString("secretKey").get)
-    val ec2Client = new AmazonEC2Client(awsCredentials)
+    val ec2Client = new AmazonEC2Client(basicAWSCredentials)
     conf.getString("ec2.endpoint") map { ec2Client.setEndpoint(_) }
     ec2Client
   }
@@ -161,6 +157,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
     new ServiceDiscovery {
       def timeSinceLastStatusChange: Long = 0L
       def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
+      def thisService: ServiceType = cluster.serviceType
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get
       def isLeader() = true

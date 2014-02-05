@@ -23,7 +23,6 @@ import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
 import scala.util.control.NonFatal
-import java.util.concurrent.atomic.AtomicInteger
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
