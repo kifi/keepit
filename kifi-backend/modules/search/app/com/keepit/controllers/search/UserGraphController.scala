@@ -6,7 +6,7 @@ import com.keepit.search.graph.user._
 import play.api.mvc.Action
 
 
-class UserGraphController (
+class UserGraphController @Inject()(
   userGraph: UserGraphPlugin,
   searchFriendGraph: SearchFriendGraphPlugin
 ) extends SearchServiceController {
