@@ -6,10 +6,18 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject._
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.healthcheck.{LocalHealthcheckMailSender, HealthcheckMailSender}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, LocalHealthcheckMailSender, HealthcheckMailSender}
+import com.amazonaws.auth.BasicAWSCredentials
 
 case class TestMailModule() extends MailModule {
   def configure() {}
+
+  @Singleton
+  @Provides
+  def amazonSimpleMailProvider(): AmazonSimpleMailProvider =
+    new AmazonSimpleMailProvider(){
+      def sendMail(mail: ElectronicMail): Unit = println(mail)
+    }
 
   @Provides
   @Singleton
@@ -40,6 +48,13 @@ case class FakeMailModule() extends MailModule {
   override def configure(): Unit = {
     bind[FakeOutbox].toInstance(new FakeOutbox())
   }
+
+  @Singleton
+  @Provides
+  def amazonSimpleMailProvider(): AmazonSimpleMailProvider =
+    new AmazonSimpleMailProvider(){
+      def sendMail(mail: ElectronicMail): Unit = println(mail)
+    }
 
   @Provides
   def postOfficeProvider(mailRepo: ElectronicMailRepo, emails: FakeOutbox): LocalPostOffice = {

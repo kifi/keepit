@@ -5,9 +5,11 @@ import play.api.Play._
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.abook.store.{InMemoryABookRawInfoStoreImpl, S3ABookRawInfoStoreImpl, ABookRawInfoStore}
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.aws.AwsModule
 
 case class ABookProdStoreModule() extends ProdStoreModule {
   def configure() {
+    install(new AwsModule())
   }
 
   @Singleton
@@ -20,8 +22,7 @@ case class ABookProdStoreModule() extends ProdStoreModule {
 }
 
 case class ABookDevStoreModule() extends DevStoreModule(ABookProdStoreModule()) {
-  def configure() {
-  }
+  def configure() { }
 
   @Singleton
   @Provides

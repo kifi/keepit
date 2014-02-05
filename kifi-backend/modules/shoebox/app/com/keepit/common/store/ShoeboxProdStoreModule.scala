@@ -9,9 +9,11 @@ import com.keepit.common.time.Clock
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 import play.api.Play._
+import com.keepit.common.aws.AwsModule
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {
+    install(new AwsModule())
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
   }
 
@@ -41,6 +43,7 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) {
   def configure() {
+    install(new AwsModule())
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
   }
 

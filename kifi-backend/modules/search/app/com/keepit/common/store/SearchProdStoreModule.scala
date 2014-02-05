@@ -17,9 +17,12 @@ import com.keepit.search.tracker.InMemoryClickHistoryStoreImpl
 import com.keepit.search.tracker.ClickHistoryUserIdCache
 import com.keepit.search.tracker.ClickHistoryStore
 import com.keepit.search.tracker.ClickHistoryBuilder
+import com.keepit.common.aws.AwsModule
 
 case class SearchProdStoreModule() extends ProdStoreModule {
-  def configure {}
+  def configure {
+    install(new AwsModule())
+  }
 
   @Provides @Singleton
   def browsingHistoryStore(amazonS3Client: AmazonS3, accessLog: AccessLog, cache: BrowsingHistoryUserIdCache, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
@@ -41,7 +44,9 @@ case class SearchProdStoreModule() extends ProdStoreModule {
 }
 
 case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()) {
-  def configure() {}
+  def configure() {
+    install(new AwsModule())
+  }
 
   @Provides @Singleton
   def browsingHistoryStore(amazonS3Client: AmazonS3, accessLog: AccessLog, cache: BrowsingHistoryUserIdCache, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {

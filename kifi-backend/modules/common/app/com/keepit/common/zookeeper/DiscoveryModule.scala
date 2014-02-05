@@ -28,6 +28,7 @@ import com.amazonaws.services._
 import com.amazonaws.services.ec2.model.{DescribeInstancesResult, DescribeInstancesRequest}
 import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
 import com.amazonaws.auth.BasicAWSCredentials
+import com.keepit.common.aws.AwsModule
 
 trait DiscoveryModule extends ScalaModule
 
@@ -54,17 +55,15 @@ object DiscoveryModule {
 abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
 
   def configure() {
+    install(new AwsModule())
     install(ProdActorSystemModule())
   }
 
   @Singleton
   @Provides
-  def amazonEC2Client(): AmazonEC2 = {
+  def amazonEC2Client(basicAWSCredentials: BasicAWSCredentials): AmazonEC2 = {
     val conf = current.configuration.getConfig("amazon").get
-    val awsCredentials = new BasicAWSCredentials(
-      conf.getString("accessKey").get,
-      conf.getString("secretKey").get)
-    val ec2Client = new AmazonEC2Client(awsCredentials)
+    val ec2Client = new AmazonEC2Client(basicAWSCredentials)
     conf.getString("ec2.endpoint") map { ec2Client.setEndpoint(_) }
     ec2Client
   }
