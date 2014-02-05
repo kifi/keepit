@@ -72,6 +72,7 @@ class AdminUserController @Inject() (
     socialUserRawInfoStore: SocialUserRawInfoStore,
     bookmarkRepo: BookmarkRepo,
     socialConnectionRepo: SocialConnectionRepo,
+    searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     emailRepo: EmailAddressRepo,
@@ -611,6 +612,31 @@ class AdminUserController @Inject() (
         userValueRepo.getValue(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
+    }
+  }
+
+  def bumpUpSeqNumForConnections() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    SafeFuture{
+      val conns = db.readOnly{ implicit s =>
+        userConnectionRepo.all()
+      }
+
+      conns.grouped(100).foreach{ cs =>
+        db.readWrite{ implicit s =>
+          cs.foreach{ c => userConnectionRepo.save(c)}
+        }
+      }
+
+      val friends = db.readOnly{ implicit s =>
+        searchFriendRepo.all()
+      }
+
+      friends.grouped(100).foreach{ fs =>
+        db.readWrite{ implicit s =>
+          fs.foreach{f => searchFriendRepo.save(f)}
+        }
+      }
+      Ok("bump up seqNum for userConnRepo and searchFriendRepo")
     }
   }
 }
