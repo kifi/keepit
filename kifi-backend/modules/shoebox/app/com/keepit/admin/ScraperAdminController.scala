@@ -33,16 +33,16 @@ class ScraperAdminController @Inject() (
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
   def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val assignedFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY) }
-    val overdueFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY) }
-    val assignedCountFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getAssignedCount() }
-    val overdueCountFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getOverdueCount() }
+    val resultsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => (
+      scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY),
+      scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY),
+      scrapeInfoRepo.getAssignedCount(),
+      scrapeInfoRepo.getOverdueCount()
+      )
+    }
     val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
     for {
-      assigned <- assignedFuture
-      overdue <- overdueFuture
-      assignedCount <- assignedCountFuture
-      overdueCount <- overdueCountFuture
+      (assigned, overdue, assignedCount, overdueCount) <- resultsFuture
       threadDetails <- threadDetailsFuture
     } yield Ok(html.admin.scraperRequests(assigned, overdue, assignedCount, overdueCount, threadDetails))
   }
