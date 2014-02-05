@@ -20,7 +20,8 @@ class ShoeboxDataPipeController @Inject() (
     bookmarkRepo: BookmarkRepo,
     changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo,
-    userConnRepo: UserConnectionRepo
+    userConnRepo: UserConnectionRepo,
+    searchFriendRepo: SearchFriendRepo
   ) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
@@ -96,6 +97,13 @@ class ShoeboxDataPipeController @Inject() (
   def getUserConnectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
     val changes = db.readOnly(2, Slave) { implicit s =>
       userConnRepo.getUserConnectionChanged(SequenceNumber(seqNum), fetchSize)
+    }
+    Ok(Json.toJson(changes))
+  }
+
+  def getSearchFriendsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
+    val changes = db.readOnly(2, Slave){ implicit s =>
+      searchFriendRepo.getSearchFriendsChanged(SequenceNumber(seqNum), fetchSize)
     }
     Ok(Json.toJson(changes))
   }
