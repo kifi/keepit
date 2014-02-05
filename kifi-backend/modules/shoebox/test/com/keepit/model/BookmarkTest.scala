@@ -96,25 +96,23 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       }
     }
     "count all by time" in {
-      skipped("tmp skip this one, time zone issues")
       withDb(FakeClockModule()) { implicit injector =>
         setup()
         val clock = inject[FakeClock]
         db.readOnly {implicit s =>
           val now = clock.now
-          bookmarkRepo.getCountByTime(now.minusHours(3), now.plusMinutes(1)) === 3
+          bookmarkRepo.getCountByTime(now.minusHours(3), now.plusMinutes(1)) === 4
           bookmarkRepo.getCountByTime(now.minusHours(6), now.minusHours(3)) === 0
         }
       }
     }
     "count all by time and source" in {
-      skipped("tmp skip this one, time zone issues")
       withDb(FakeClockModule()) { implicit injector =>
         setup()
         val clock = inject[FakeClock]
         db.readOnly {implicit s =>
           bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, initLoad) === 1
-          bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, hover) === 2
+          bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, hover) === 3
         }
       }
     }

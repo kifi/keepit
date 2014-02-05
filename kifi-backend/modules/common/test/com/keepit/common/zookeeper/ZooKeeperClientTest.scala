@@ -84,7 +84,7 @@ class ZooKeeperClientTest extends Specification {
         zk.watchChildren(parent, { (children : Seq[Node]) =>
           childSet = children.toSet
           updateCount.incrementAndGet()
-          println(s"""#${updateCount.get} Children: ${format(children.mkString(", "))}""")
+          println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
           latch.map(l => l.countDown())
         })
         awaitLatch
@@ -151,7 +151,7 @@ class ZooKeeperClientTest extends Specification {
         zk.watchChildren(parent, { (children : Seq[Node]) =>
           childSet = children.toSet
           updateCount.incrementAndGet()
-          println(s"""#${updateCount.get} Children: ${format(children.mkString(", "))}""")
+          println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
           latch.map(l => l.countDown())
         }, watchData = false)
         awaitLatch
