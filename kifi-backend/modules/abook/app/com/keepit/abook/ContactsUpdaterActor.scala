@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.abook.store.ABookRawInfoStore
 import play.api.libs.json.{JsValue, Json}
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.db.slick.Database
 import play.api.{Play, Plugin}
 import scala.ref.WeakReference
@@ -62,6 +62,7 @@ class ContactsUpdaterActor @Inject() (
 
 }
 
+import Logging._
 class ContactsUpdater @Inject() (
   db:Database,
   s3:ABookRawInfoStore,
@@ -103,8 +104,8 @@ class ContactsUpdater @Inject() (
   }
 
   def processABookUpload(userId:Id[User], origin:ABookOriginType, abookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue]) = timing(s"upload($userId,$origin,$abookInfo,$s3Key)") {
-    log.info(s"[upload($userId, $origin, $abookInfo, $s3Key): Begin processing ...")
-    val ts = System.currentTimeMillis
+    implicit val prefix = LogPrefix(s"processABookUpload($userId,$origin,${abookInfo.id}})")
+    log.infoP(s"abookInfo=$abookInfo s3Key=$s3Key: Begin processing ...")
     var abookEntry = abookInfo
     var processed = 0
     var batchNum = 0
@@ -115,11 +116,11 @@ class ContactsUpdater @Inject() (
           db.readWrite(attempts = 2) { implicit s =>
             abookInfoRepo.save(abookEntry.withState(ABookInfoStates.UPLOAD_FAILURE))
           }
-          airbrake.notify(s"[upload($userId, $origin, ${abookInfo.id}] failure -- cannot retrieve/process json input")
+          airbrake.notify(s"[$prefix failure -- cannot retrieve/process json input")
         case Some(abookRawInfo) => {
           val existingEmails = existingEmailSet(userId, origin, abookInfo)
 
-          log.info(s"[upload($userId, $origin, ${abookInfo.id}] abookRawInfo=$abookRawInfo existingEmails=$existingEmails")
+          log.infoP(s"abookRawInfo=$abookRawInfo existingEmails=$existingEmails")
           val cBuilder = mutable.ArrayBuilder.make[Contact]
           abookRawInfo.contacts.value.grouped(batchSize).foreach { g =>
             val econtactsToAddBuilder = mutable.ArrayBuilder.make[EContact]
@@ -139,9 +140,9 @@ class ContactsUpdater @Inject() (
                 if (parseResult.successful) {
                   val parsedEmail:Email = parseResult.get
                   if (parsedEmail.host.domain.length <= 1) {
-                    log.warn(s"[upload] $email domain=${parsedEmail.host.domain} not supported; discarded")
+                    log.warnP(s"$email domain=${parsedEmail.host.domain} not supported; discarded")
                   } else if (existingEmails.contains(parsedEmail.toString)) {
-                    log.info(s"[upload($userId, $origin, ${abookInfo.id}] DUP $email; discarded")
+                    log.infoP(s"DUP $email; discarded")
                   } else {
                     val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
                     val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
@@ -149,14 +150,14 @@ class ContactsUpdater @Inject() (
                     econtactsToAddBuilder += e
                   }
                 } else {
-                  log.warn(s"[upload($userId, $origin)] cannot parse $email; discarded") // todo: revisit
+                  log.warnP(s"cannot parse $email; discarded") // todo: revisit
                 }
               }
 
               for (email <- emails.headOption) {
                 val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
                 val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, nameOpt, fName, lName, None)
-                log.info(s"[upload($userId,$origin)] $c")
+                log.debugP(s"$c")
                 cBuilder += c
               }
             }
@@ -166,20 +167,20 @@ class ContactsUpdater @Inject() (
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
               try {
                 econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
-                log.info(s"[insertAll($userId)] added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
+                log.infoP(s"added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
               } catch {
                 case ex:MySQLIntegrityConstraintViolationException => {
-                  log.error(s"[insertAll($userId, processed=$processed)] Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
-                  log.error(s"[insertAll($userId)] ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                  log.errorP(s"Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
+                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
                   // moving along
                 }
-                case be:java.sql.BatchUpdateException => {
-                  log.error(s"[insertAll($userId, processed=$processed)] Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
-                  log.error(s"[insertAll($userId)] ex: $be; cause: ${be.getCause}; stack trace: ${be.getStackTraceString}")
+                case ex:java.sql.BatchUpdateException => {
+                  log.errorP(s"Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
+                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
                   // moving along
                 }
                 case t:Throwable => {
-                  log.error(s"[insertAll($userId)] Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+                  log.errorP(s"Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
                   throw t // this will fail
                 }
               }
@@ -188,7 +189,7 @@ class ContactsUpdater @Inject() (
           }
           abookEntry = db.readWrite(attempts = 2) { implicit s => // don't wait for contact table
             val saved = abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
-            log.info(s"[upload($userId,${saved.id})] abook is ACTIVE! $saved")
+            log.infoP(s"abook is ACTIVE! saved=$saved")
             saved
           }
 
@@ -196,15 +197,14 @@ class ContactsUpdater @Inject() (
           if (!contacts.isEmpty) {
             asyncUpdateContactsRepo(userId, abookInfo, origin, contacts)
           }
-          log.info(s"[upload($userId,$origin)] time-lapsed: ${System.currentTimeMillis - ts}")
         }
       }
     } catch {
       case ex:SQLException => {
-        log.warn(s"[ContactsUpdater.upload($userId, $abookInfo)] Caught SQLException $ex; code=${ex.getErrorCode}; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+        log.warnP(s"Caught SQLException $ex; code=${ex.getErrorCode}; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
       }
       case t:Throwable => {
-        log.warn(s"[ContactsUpdater.upload($userId, $abookInfo)] Caught unhandled exception $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+        log.warnP(s"Caught unhandled exception $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
       }
     } finally {
       if (abookEntry.state != ABookInfoStates.ACTIVE) {

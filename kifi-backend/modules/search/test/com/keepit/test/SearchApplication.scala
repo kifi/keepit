@@ -17,7 +17,7 @@ import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.search.index.DevIndexModule
 import com.keepit.search.tracker.DevTrackingModule
-import com.keepit.common.store.SearchDevStoreModule
+import com.keepit.common.store.{SearchFakeStoreModule, SearchDevStoreModule}
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 
@@ -32,7 +32,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
       FakeHealthcheckModule(),
       TestFortyTwoModule(),
       DevTrackingModule(),
-      SearchDevStoreModule(),
+      SearchFakeStoreModule(),
       DevIndexModule(),
       FakeDiscoveryModule(),
       TestShoeboxServiceClientModule(),
@@ -52,7 +52,7 @@ trait SearchTestInjector extends EmptyInjector with SearchInjectionHelpers {
     FakeClockModule(),
     FakeHealthcheckModule(),
     DevTrackingModule(),
-    SearchDevStoreModule(),
+    SearchFakeStoreModule(),
     DevIndexModule(),
     TestShoeboxServiceClientModule(),
     FakeElizaServiceClientModule(),

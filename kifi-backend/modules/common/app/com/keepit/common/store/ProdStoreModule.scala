@@ -1,17 +1,10 @@
 package com.keepit.common.store
 
-import play.api.Mode
-import play.api.Mode._
 import play.api.Play.current
-import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.time.Clock
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.{Provider, Provides, Singleton}
 import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.search._
-import com.keepit.common.analytics._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.learning.topicmodel._
 import com.keepit.common.logging.AccessLog
@@ -24,12 +17,8 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def amazonS3Client(): AmazonS3 = {
-    val conf = current.configuration.getConfig("amazon").get
-    val awsCredentials = new BasicAWSCredentials(
-      conf.getString("accessKey").get,
-      conf.getString("secretKey").get)
-    new AmazonS3Client(awsCredentials)
+  def amazonS3Client(basicAWSCredentials: BasicAWSCredentials): AmazonS3 = {
+    new AmazonS3Client(basicAWSCredentials)
   }
 
   @Singleton
@@ -93,11 +82,7 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   @Singleton
   @Provides
-  def amazonS3Client(): AmazonS3 = {
-    val conf = current.configuration.getConfig("amazon").get
-    val awsCredentials = new BasicAWSCredentials(
-      conf.getString("accessKey").get,
-      conf.getString("secretKey").get)
+  def amazonS3Client(awsCredentials: BasicAWSCredentials): AmazonS3 = {
     new AmazonS3Client(awsCredentials)
   }
 

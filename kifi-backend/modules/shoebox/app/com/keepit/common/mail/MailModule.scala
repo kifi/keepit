@@ -3,10 +3,12 @@ package com.keepit.common.mail
 import com.google.inject.{Provides, Singleton}
 import play.api.Play._
 import com.keepit.inject.AppScoped
-import com.keepit.common.healthcheck.{HealthcheckMailSender, LocalHealthcheckMailSender}
+import com.keepit.common.healthcheck.{AirbrakeNotifier, HealthcheckMailSender, LocalHealthcheckMailSender}
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.actor.ActorInstance
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClient
+import com.amazonaws.auth.BasicAWSCredentials
 
 trait MailModule extends ScalaModule
 
@@ -31,11 +33,12 @@ case class ProdMailModule() extends MailModule {
 
 case class DevMailModule() extends MailModule {
 
-  def configure {
+  def configure() {
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
   }
+
   @Provides
   @Singleton
   def mailToKeepServerSettingsOpt: Option[MailToKeepServerSettings] =

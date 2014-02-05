@@ -5,7 +5,8 @@ angular.module('kifi.tagService', [])
 .factory('tagService', [
 	'$http', 'env', '$q',
 	function ($http, env, $q) {
-		var list = [];
+		var list = [],
+			fetchAllPromise = null;
 
 		function indexById(id) {
 			for (var i = 0, l = list.length; i < l; i++) {
@@ -19,7 +20,11 @@ angular.module('kifi.tagService', [])
 		return {
 			list: list,
 
-			fetchAll: function () {
+			fetchAll: function (force) {
+				if (!force && fetchAllPromise) {
+					return fetchAllPromise;
+				}
+
 				var url = env.xhrBase + '/collections/all';
 				var config = {
 					params: {
@@ -27,12 +32,15 @@ angular.module('kifi.tagService', [])
 						_: Date.now().toString(36)
 					}
 				};
-				return $http.get(url, config).then(function (res) {
+
+				fetchAllPromise = $http.get(url, config).then(function (res) {
 					var tags = res.data && res.data.collections || [];
 					list.length = 0;
 					list.push.apply(list, tags);
 					return list;
 				});
+
+				return fetchAllPromise;
 			},
 
 			create: function (name) {

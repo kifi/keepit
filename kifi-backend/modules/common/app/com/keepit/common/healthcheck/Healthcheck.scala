@@ -164,7 +164,8 @@ class HealthcheckPluginImpl @Inject() (
     services: FortyTwoServices,
     host: HealthcheckHost,
     val scheduling: SchedulingProperties,
-    isCanary: Boolean
+    isCanary: Boolean,
+    amazonSimpleMailProvider: AmazonSimpleMailProvider
 ) extends HealthcheckPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
@@ -195,8 +196,17 @@ class HealthcheckPluginImpl @Inject() (
     val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = NotificationCategory.System.HEALTHCHECK)
+
     if (!isCanary) {
       actor.ref ! email
+      val amazonEmail = ElectronicMail(from = EmailAddresses.EISHAY, to = List(EmailAddresses.EISHAY),
+        subject = "sent through AmazonSimpleMailProvider", htmlBody = "Working!",
+        category = NotificationCategory.System.ADMIN)
+      try {
+        amazonSimpleMailProvider.sendMail(amazonEmail)
+      } catch {
+        case t: Throwable => log.error(s"error sending email using sms: $amazonEmail", t)
+      }
     }
     email
   }

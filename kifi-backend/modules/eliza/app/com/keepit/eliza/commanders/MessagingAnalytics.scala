@@ -61,6 +61,7 @@ class MessagingAnalytics @Inject() (
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
       contextBuilder += ("action", "sent")
+      contextBuilder += ("channel", kifi)
       contextBuilder.addNotificationCategory(category)
       contextBuilder += ("global", true)
       contextBuilder += ("messageId", message.externalId.id)

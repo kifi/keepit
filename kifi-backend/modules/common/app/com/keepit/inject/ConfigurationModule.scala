@@ -8,6 +8,7 @@ import com.keepit.common.zookeeper.{DiscoveryModule, DevDiscoveryModule}
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.common.healthcheck.{ProdAirbrakeModule, DevAirbrakeModule, ProdMemoryUsageModule, DevMemoryUsageModule}
+import com.keepit.common.aws.AwsModule
 
 abstract class AbstractModuleAccessor extends ScalaModule {
   protected def install0(module: ScalaModule) = install(module)
@@ -34,6 +35,8 @@ trait CommonServiceModule {
   val cryptoModule = ShoeboxCryptoModule()
   val healthCheckModule = ProdHealthCheckModule()
   val httpClientModule = ProdHttpClientModule()
+
+  val awsModule = new AwsModule()
 }
 
 trait CommonProdModule extends CommonServiceModule {

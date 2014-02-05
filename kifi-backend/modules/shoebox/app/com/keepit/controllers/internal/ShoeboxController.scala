@@ -549,6 +549,12 @@ class ShoeboxController @Inject() (
     }
   }
 
+  def getUnfriends(userId: Id[User]) = Action { request =>
+    db.readOnly{ implicit s =>
+      Ok(Json.toJson(searchFriendRepo.getUnfriends(userId).map(_.id)))
+    }
+  }
+
   def clickAttribution() = SafeAsyncAction(parse.json) { request =>
     val json = request.body
     val clicker = Id.format[User].reads(json \ "clicker").get
