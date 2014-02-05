@@ -82,7 +82,8 @@ object ApplicationBuild extends Build {
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
-    "org.feijoas" %% "mango" % "0.10"
+    "org.feijoas" %% "mango" % "0.10",
+    "fortytwo.franz" % "franz_2.10" % "0.1.0"
   )
 
   lazy val heimdalDependencies = Seq(
