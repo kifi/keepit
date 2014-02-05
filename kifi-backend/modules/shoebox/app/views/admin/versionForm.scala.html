@@ -1,5 +1,123 @@
+@(versions: Seq[(KifiVersion, org.joda.time.DateTime, Int)], details: com.keepit.common.store.KifiInstallationDetails)
+
+@import com.keepit.common.store._
+
 @admin("Latest KiFi Extension Version", stylesheets = List("admin_slider")) {
   <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
+
+<style>
+.gold {
+  box-shadow: inset 0px 0px 11px -7px #fff6af;
+  background: linear-gradient(to bottom, #fff4b0 5%, #ffe121 100%);
+  background-color: #fff4b0;
+  background-image: url(https://cdn1.iconfinder.com/data/icons/finance_icons/PNG/png256/gold_bullion.png);
+  background-size: 28px;
+  background-repeat: no-repeat;
+  background-position: 6px;
+  border-radius: 9px;
+  border: 1px solid #ffdb24;
+  display: inline-block;
+  cursor: pointer;
+  color: #333333;
+  font-family: arial;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 14px 4px 40px;
+}
+.gold:active {
+  position:relative;
+  top:1px;
+}
+
+.gold-release {
+  background-image: url(https://cdn1.iconfinder.com/data/icons/finance_icons/PNG/png256/gold_bullion.png);
+  background-repeat: no-repeat;
+  background-position: 6px;
+  background-size: 35px;
+  display: inline-block;
+  color: #333333;
+  font-family: arial;
+  font-size: 0;
+  font-weight: bold;
+  padding: 0px 80px;
+}
+
+.gold-row {
+  background-color: #FFFBDC;
+}
+
+.nuke {
+  background: rgb(230, 108, 108);
+  border-radius: 9px;
+  border: 1px solid #000000;
+  display: inline-block;
+  cursor: pointer;
+  color: #3C4C4F;
+  font-family: arial;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 20px 4px 20px;
+}
+.nuke:active {
+  position:relative;
+  top:1px;
+}
+
+.nuked {
+  display: inline-block;
+  cursor: pointer;
+  color: #220000;
+  font-family: arial;
+  font-size: 30px;
+  font-weight: bold;
+  padding: 0px 20px 0px 20px;
+}
+
+.version {
+  font-size: 18px;
+  font-weight:bold;
+}
+</style>
+
+<div class="row">
+  <table class="kifi-versions table table-bordered span6">
+  <thead>
+    <tr>
+      <th>Version</th>
+      <th>Earliest activity</th>
+      <th>User Count</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    @for(version <- versions) {
+      @if(details.gold == version._1) {
+      <tr class="gold-row">
+        <td class="version">@version._1</td>
+        <td>@adminHelper.dateTimeDisplay(version._2)</td>
+        <td>@version._3</td>
+        <td><span class="gold-release">GOLD RELEASE</span></td>
+      </tr>
+      } else {
+      <tr>
+        <td class="version">@version._1</td>
+        <td>@adminHelper.dateTimeDisplay(version._2)</td>
+        <td>@version._3</td>
+        <td>@if(details.killed.contains(version._1)) {
+          <span class="nuked">☠</span>
+        } else {
+          <a href="#" class="gold">make it gold!</a> <a href="#" class="nuke">毙 kill it</a>
+        }</td>
+      </tr>
+      }
+    }
+  </tbody>
+</table>
+</div>
+
+
+
+
     <input name="ver" type="text" class="input-small" autofocus autocomplete="off" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}" title="The current latest version (e.g. &quot;2.3.99)&quot;">
     <button>Broadcast</button>
   </form>
@@ -7,6 +125,32 @@
 
 <script>
 $(function() {
+  var killAction = '@com.keepit.controllers.admin.routes.SliderAdminController.killVersion("X")';
+  $('.kifi-versions').on('click', '.nuke', function() {
+    var $self = $(this);
+    var version = $self.parents('tr').find('.version').text();
+    $.post(killAction.replace('X', version))
+    .done(function () {
+      console.log("OKKKKK!", $self, this)
+      $self.after($("<i class=icon-ok-sign style=margin-left:10px>").delay(1000).fadeOut(function() {
+        $(this).remove();
+      }));
+    });
+  });
+
+  var goldAction = '@com.keepit.controllers.admin.routes.SliderAdminController.goldenVersion("X")';
+  $('.kifi-versions').on('click', '.gold', function() {
+    var $self = $(this);
+    var version = $(this).parents('tr').find('.version').text();
+    $.post(goldAction.replace('X', version))
+    .done(function () {
+      console.log("YOU DID IT NOW!", $self, this)
+      $self.after($("<i class=icon-ok-sign style=margin-left:10px>").delay(1000).fadeOut(function() {
+        $(this).remove();
+      }));
+    });
+  });
+
   var $f = $(".kifi-ver-form").submit(function(e) {
     e.preventDefault();
     $.post(this.action.replace("X", $f.find("input[name=ver]").val()))

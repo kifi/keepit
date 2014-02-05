@@ -10,8 +10,7 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
-import com.keepit.model.{URLPatternRepo, URLPatternStates}
+import com.keepit.model._
 import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -20,20 +19,22 @@ import com.keepit.heimdal.{SystemEventTypes, HeimdalContext, SystemEvent, Heimda
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsBoolean
 import com.keepit.classify.DomainTag
-import com.keepit.model.URLPattern
 import play.api.libs.json.JsObject
+import com.keepit.common.store.{KifiInstallationDetails, KifInstallationStore}
 
 
 class SliderAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   sliderRuleRepo: SliderRuleRepo,
+  kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   domainTagRepo: DomainTagRepo,
   domainClassifier: DomainClassifier,
   sensitivityUpdater: SensitivityUpdater,
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
+  kifInstallationStore: KifInstallationStore,
   domainTagImporter: DomainTagImporter,
   heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
@@ -212,7 +213,26 @@ class SliderAdminController @Inject() (
   }
 
   def getVersionForm = AdminHtmlAction.authenticated { implicit request =>
-    Ok(html.admin.versionForm())
+    val details = kifInstallationStore.getRaw()
+
+    val installations = db.readOnly { implicit session =>
+      kifiInstallationRepo.getLatestActive(20)
+    }
+    Ok(html.admin.versionForm(installations, details))
+  }
+
+  def killVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+    val details = kifInstallationStore.getRaw()
+    val newDetails = details.copy(killed = details.killed :+ KifiVersion(ver))
+    kifInstallationStore.set(newDetails)
+    Ok("0")
+  }
+
+  def goldenVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+    val details = kifInstallationStore.getRaw()
+    val newDetails = details.copy(gold = KifiVersion(ver))
+    kifInstallationStore.set(newDetails)
+    Ok("0")
   }
 
   def broadcastLatestVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
