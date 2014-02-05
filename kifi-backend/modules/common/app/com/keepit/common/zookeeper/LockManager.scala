@@ -37,8 +37,6 @@ object LockManager {
 
   def lock(name: String): LockBuilder = new LockBuilder(name)
 
-  implicit def buildLock(builder: LockBuilder)(implicit lockService: LockManager, executionContext: ExecutionContext): Lock = builder.build(lockService, executionContext)
-
   sealed class LockMode(val name: String) {
     override def toString(): String = name
   }
@@ -68,7 +66,7 @@ object LockManager {
     // returns a new LockBuilder instance replacing the onBlocking handler
     def onBlocking(handler: Lock=>Unit): LockBuilder = new LockBuilder(name, onGrantedHandler, Some(handler))
 
-    def build(lockService: LockManager, executionContext: ExecutionContext): Lock = lockService.createLock(Node(name), onGrantedHandler, onBlockingHandler, executionContext)
+    def build(implicit lockService: LockManager, executionContext: ExecutionContext): Lock = lockService.createLock(Node(name), onGrantedHandler, onBlockingHandler, executionContext)
   }
 }
 
