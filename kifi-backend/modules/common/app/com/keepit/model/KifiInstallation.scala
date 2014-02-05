@@ -22,7 +22,7 @@ case class KifiVersion(major: Int, minor: Int, patch: Int, tag: String = "") ext
 }
 
 object KifiVersion extends Logging {
-  private val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:-([a-zA-Z0-9-])+)?""".r
+  private val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,7})(?:-([a-zA-Z0-9-])+)?""".r
 
   def apply(version: String): KifiVersion = {
     version match {
