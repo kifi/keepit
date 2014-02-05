@@ -32,15 +32,19 @@ class ScraperAdminController @Inject() (
 
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
-  def pendingScraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
-    val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
+  def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val assignedFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY) }
+    val overdueFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY) }
+    val assignedCountFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getAssignedCount() }
+    val overdueCountFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getOverdueCount() }
     val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
     for {
-      requests <- requestsFuture
-      count <- countFuture
+      assigned <- assignedFuture
+      overdue <- overdueFuture
+      assignedCount <- assignedCountFuture
+      overdueCount <- overdueCountFuture
       threadDetails <- threadDetailsFuture
-    } yield Ok(html.admin.pendingScraperRequests(requests, count, threadDetails))
+    } yield Ok(html.admin.scraperRequests(assigned, overdue, assignedCount, overdueCount, threadDetails))
   }
 
   def scrapeArticle(url:String) = AdminHtmlAction.authenticatedAsync { implicit request =>

@@ -10,9 +10,13 @@
         </label>
     </div>
 
-    <h2>Pending Queue <span class="title-hint"></span></h2>
+    <h2>Assigned Queue <span class="assigned-title-hint"></span></h2>
 
-    <div class="request-table"></div>
+    <div class="assigned-request-table"></div>
+
+    <h2>Overdue Queue <span class="overdue-title-hint"></span></h2>
+
+    <div class="overdue-request-table"></div>
 
     <h2>Fetch URL Content</h2>
     <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.scrapeArticle()" method="GET">
@@ -56,23 +60,27 @@
         };
         var loadrequests = function(){
             if (runnableFilterEnabled()) {
-                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(Some("RUNNABLE"))"
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.scraperRequests(Some("RUNNABLE"))"
             } else {
-                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.pendingScraperRequests(None)"
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.scraperRequests(None)"
             }
             $.ajax({
                 url : url,
                 dataType: "html",
                 success: function(data){
-                    $("span.title-hint").replaceWith($(data).find("span.title-hint"));
-                    $("div.request-table").replaceWith($(data).find("div.request-table"));
+                    $("span.assigned-title-hint").replaceWith($(data).find("span.assigned-title-hint"));
+                    $("div.assigned-request-table").replaceWith($(data).find("div.assigned-request-table"));
+                    $("span.overdue-title-hint").replaceWith($(data).find("span.overdue-title-hint"));
+                    $("div.overdue-request-table").replaceWith($(data).find("div.overdue-request-table"));
                     $("span.thread-details-hint").replaceWith($(data).find("span.thread-details-hint"));
                     $("div.thread-details").replaceWith($(data).find("div.thread-details"));
                     registerModalEvents();
                 },
                 error: function(){
-                    $("span.title-hint").html("(loading failed)");
-                    $("div.request-table").html("");
+                    $("span.assigned-title-hint").html("(loading failed)");
+                    $("div.assigned-request-table").html("");
+                    $("span.overdue-title-hint").html("(loading failed)");
+                    $("div.overdue-request-table").html("");
                     $("span.thread-details-hint").html("(loading failed)");
                     $("div.thread-details").html("");
                 },
