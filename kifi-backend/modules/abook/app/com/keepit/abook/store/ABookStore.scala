@@ -9,7 +9,6 @@ import com.keepit.common.aws.AwsModule
 
 case class ABookProdStoreModule() extends ProdStoreModule {
   def configure() {
-    install(new AwsModule())
   }
 
   @Singleton

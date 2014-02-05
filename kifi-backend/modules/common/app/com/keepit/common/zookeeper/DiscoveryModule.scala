@@ -9,7 +9,6 @@ import akka.actor.Scheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
-import com.keepit.common.net.{HttpClient,DirectUrl}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.AmazonInstanceId
@@ -24,8 +23,7 @@ import scala.collection.JavaConversions._
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
 import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
-import com.amazonaws.services._
-import com.amazonaws.services.ec2.model.{DescribeInstancesResult, DescribeInstancesRequest}
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.aws.AwsModule
@@ -55,7 +53,6 @@ object DiscoveryModule {
 abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
 
   def configure() {
-    install(new AwsModule())
     install(ProdActorSystemModule())
   }
 

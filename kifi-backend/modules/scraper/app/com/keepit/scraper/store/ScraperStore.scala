@@ -11,7 +11,6 @@ import com.keepit.common.aws.AwsModule
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
-    install(new AwsModule())
   }
 
   @Singleton
@@ -34,7 +33,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
 
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
   def configure() {
-    install(new AwsModule())
   }
 
   @Singleton

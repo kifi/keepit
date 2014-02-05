@@ -8,13 +8,15 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.DiscoveryModule
 import scala.sys.process._
-import com.keepit.common.mail.AmazonSimpleMailProvider
+import com.keepit.common.mail.{ProdAmazonMailModule, AmazonSimpleMailProvider}
 
 trait HealthCheckModule extends ScalaModule
 
 case class ProdHealthCheckModule() extends HealthCheckModule {
 
-  def configure() {}
+  def configure() {
+    install(new ProdAmazonMailModule())
+  }
 
   @Provides
   @AppScoped

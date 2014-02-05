@@ -35,6 +35,7 @@ import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.tracker.ProbablisticLRU
 import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding._
+import com.keepit.common.aws.AwsModule
 
 trait SearchTestHelper { self: SearchApplicationInjector =>
 
@@ -185,7 +186,8 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     implicit val system = ActorSystem("test")
     new SearchApplication(
       StandaloneTestActorSystemModule(),
-      FakeShoeboxServiceModule()
+      FakeShoeboxServiceModule(),
+      new AwsModule()
     )
   }
 }

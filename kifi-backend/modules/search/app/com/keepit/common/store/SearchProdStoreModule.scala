@@ -21,7 +21,6 @@ import com.keepit.common.aws.AwsModule
 
 case class SearchProdStoreModule() extends ProdStoreModule {
   def configure {
-    install(new AwsModule())
   }
 
   @Provides @Singleton
@@ -45,7 +44,6 @@ case class SearchProdStoreModule() extends ProdStoreModule {
 
 case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()) {
   def configure() {
-    install(new AwsModule())
   }
 
   @Provides @Singleton

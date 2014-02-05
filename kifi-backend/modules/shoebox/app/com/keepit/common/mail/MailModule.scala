@@ -22,11 +22,6 @@ case class ProdMailModule() extends MailModule {
 
   @Singleton
   @Provides
-  def amazonSimpleMailProvider(basicAWSCredentials: BasicAWSCredentials, airbrake: AirbrakeNotifier): AmazonSimpleMailProvider =
-    new AmazonSimpleMailProviderImpl(new AmazonSimpleEmailServiceClient(basicAWSCredentials), airbrake)
-
-  @Singleton
-  @Provides
   def mailToKeepServerSettings: MailToKeepServerSettings = {
     val username = current.configuration.getString("mailtokeep.username").get
     val password = current.configuration.getString("mailtokeep.password").get
@@ -43,13 +38,6 @@ case class DevMailModule() extends MailModule {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
   }
-
-  @Singleton
-  @Provides
-  def amazonSimpleMailProvider(): AmazonSimpleMailProvider =
-    new AmazonSimpleMailProvider(){
-      def sendMail(mail: ElectronicMail): Unit = println(mail)
-    }
 
   @Provides
   @Singleton
