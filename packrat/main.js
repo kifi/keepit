@@ -224,10 +224,7 @@ logEvent.catchUp = function() {
 // ===== WebSocket
 
 function onSocketConnect() {
-  socket.send(['get_latest_threads', THREAD_BATCH_SIZE], gotLatestThreads);
-  threadListCallbacks.all = threadListCallbacks.all || [];
-  threadListCallbacks.sent = threadListCallbacks.sent || [];
-  threadListCallbacks.unread = threadListCallbacks.unread || [];
+  getLatestThreads();
 
   // http data refresh
   getRules();
@@ -238,6 +235,13 @@ function onSocketConnect() {
 
 function onSocketDisconnect(why) {
   reportError('socket disconnect (' + why + ')');
+}
+
+function getLatestThreads() {
+  socket.send(['get_latest_threads', THREAD_BATCH_SIZE], gotLatestThreads);
+  threadListCallbacks.all = threadListCallbacks.all || [];
+  threadListCallbacks.sent = threadListCallbacks.sent || [];
+  threadListCallbacks.unread = threadListCallbacks.unread || [];
 }
 
 function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
@@ -728,6 +732,16 @@ api.port.on({
     // Note: This would be a good place to potentially ask the server if there are any new threads
     // if we ever notice that we sometimes don't have them all.
     function reply(tl) {
+      if (kind === 'unread' && tl.ids.map(idToThread).filter(isUnread).length < tl.ids.length) {
+        getLatestThreads();
+        threadListCallbacks.unread.push(reply);
+        Airbrake.push({error: Error('Read threads found in threadLists.unread'), params: {
+          threads: tl.ids.map(idToThread).map(function (th) {
+            return {thread: th.thread, id: th.id, time: th.time, unread: th.unread, readAt: threadReadAt[th.thread]};
+          })
+        }});
+        return;
+      }
       respond({
         threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread),
         includesOldest: list.includesOldest && tl.ids.length <= THREAD_BATCH_SIZE

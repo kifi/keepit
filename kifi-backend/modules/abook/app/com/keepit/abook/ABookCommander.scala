@@ -6,9 +6,9 @@ import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.common.db.Id
 import com.keepit.common.performance._
 import com.keepit.model._
-import play.api.libs.json.{JsArray, Json, JsValue}
+import play.api.libs.json.{JsObject, JsArray, Json, JsValue}
 import scala.ref.WeakReference
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 import scala.collection.mutable
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -16,9 +16,17 @@ import com.keepit.common.time._
 import com.keepit.common.db.slick._
 import scala.util.{Try, Failure, Success}
 import java.text.Normalizer
+import play.api.libs.concurrent.Execution.Implicits._
+
+import Logging._
+import play.api.libs.ws.{Response, WS}
+import play.api.http.Status
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.xml.Elem
 
 class ABookCommander @Inject() (
   db:Database,
+  airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
@@ -43,14 +51,80 @@ class ABookCommander @Inject() (
     }
   }
 
+  def failWithEx(s:String)(implicit prefix:LogPrefix) = {
+    log.errorP(s)
+    Failure(new IllegalStateException(s))
+  }
+
+  val USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+  def getGmailOwnerInfo(userId: Id[User],accessToken: String):Future[GmailABookOwnerInfo] = {
+    implicit val prefix = LogPrefix(s"getGmailOwnerInfo($userId)")
+
+    for {
+      resp <- WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get
+    } yield {
+      log.infoP(s"userinfo response=${resp.body}")
+      resp.status match {
+        case Status.OK => resp.json.asOpt[GmailABookOwnerInfo] match {
+          case Some(info) => info
+          case None => throw new IllegalStateException(s"$prefix cannot parse userinfo response: ${resp.body}")
+        }
+        case _ => throw new IllegalStateException(s"$prefix failed to obtain info about user/owner")
+      }
+    }
+  }
+
+  val CONTACTS_URL = "https://www.google.com/m8/feeds/contacts/default/full"
+  def importGmailContacts(userId: Id[User],accessToken: String, tokenOpt:Option[OAuth2Token]):Future[ABookInfo] = {
+    implicit val prefix = LogPrefix(s"importGmailContacts($userId)")
+
+    @inline def xml2Js(contacts:Elem):Seq[JsObject] = {
+      (contacts \ "entry") map { entry =>
+        val title = (entry \ "title").text
+        val emails = for {
+          email <- (entry \ "email")
+          addr  <- (email \ "@address")
+        } yield {
+          addr.text
+        }
+        log.infoP(s"title=$title email=$emails")
+        Json.obj("name" -> title, "emails" -> Json.toJson(emails))
+      }
+    }
+
+    val userInfoF:Future[GmailABookOwnerInfo] = getGmailOwnerInfo(userId, accessToken)
+    val contactsRespF:Future[Response] = WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
+    for {
+      userInfo <- userInfoF
+      contactsResp <- contactsRespF
+    } yield {
+      contactsResp.status match {
+        case Status.OK =>
+          val contacts = timingWithResult[Elem](s"$prefix parse-XML") { contactsResp.xml } // todo(ray): paging
+
+          val totalResults = (contacts \ "totalResults").text.toInt
+          val startIndex   = (contacts \ "startIndex").text.toInt
+          val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
+          log.infoP(s"total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
+
+          val jsSeq = timingWithResult[Seq[JsObject]](s"$prefix xml2Js") { xml2Js(contacts) }
+
+          val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> userInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq) // todo(ray): removeme
+          processUpload(userId, ABookOrigins.GMAIL, Some(userInfo), tokenOpt, abookUpload) getOrElse (throw new IllegalStateException(s"$prefix failed to upload contacts ($abookUpload)"))
+        case _ =>
+          throw new IllegalStateException(s"$prefix failed to retrieve contacts; response: $contactsResp") // todo(ray): retry
+      }
+    }
+  }
 
   def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt:Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): Option[ABookInfo] = {
-    log.info(s"[processUpload($userId,$origin,$ownerInfoOpt)] json=$json")
+    implicit val prefix = LogPrefix(s"processUpload($userId,$origin)")
+    log.infoP(s"ownerInfo=$ownerInfoOpt; oauth2Token=$oauth2TokenOpt; json=$json")
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
-    log.info(s"[processUpload($userId,$origin,$ownerInfoOpt)] rawInfo=$abookRawInfo")
+    log.infoP(s"rawInfo=$abookRawInfo")
 
-    val numContacts = abookRawInfo.numContacts orElse { // todo: remove when ios supplies numContacts
+    val numContacts = abookRawInfo.numContacts orElse { // todo(ray): remove when ios supplies numContacts
       (json \ "contacts").asOpt[JsArray] map { _.value.length }
     } getOrElse 0
 
@@ -58,7 +132,7 @@ class ABookCommander @Inject() (
     else {
       val s3Key = toS3Key(userId, origin, ownerInfoOpt)
       s3 += (s3Key -> abookRawInfo)
-      log.info(s"[upload($userId,$origin)] s3Key=$s3Key rawInfo=$abookRawInfo}")
+      log.infoP(s"s3Key=$s3Key rawInfo=$abookRawInfo}")
 
       val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
         val (abookInfo, dbEntryOpt) = origin match {
@@ -79,7 +153,7 @@ class ABookCommander @Inject() (
         }
         val savedEntry = dbEntryOpt match {
           case Some(currEntry) => {
-            log.info(s"[upload($userId,$origin)] current entry: $currEntry")
+            log.infoP(s"current entry: $currEntry")
             abookInfoRepo.save(currEntry.withNumContacts(Some(numContacts)))
           }
           case None => abookInfoRepo.save(abookInfo)
@@ -95,13 +169,13 @@ class ABookCommander @Inject() (
         val isOverdue = db.readOnly(attempts = 2) { implicit s =>
           abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
         }
-        log.warn(s"[upload($userId,$origin)] $savedABookInfo already in PENDING state; overdue=$isOverdue")
+        log.warnP(s"$savedABookInfo already in PENDING state; overdue=$isOverdue")
         (isOverdue, savedABookInfo)
       }
 
       if (proceed) {
         contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
-        log.info(s"[upload($userId,$origin)] scheduled for processing: $updatedEntry")
+        log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
     }
