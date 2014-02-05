@@ -23,7 +23,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 			scope: {},
 			controller: 'KeepsCtrl',
 			templateUrl: 'keeps/keeps.tpl.html',
-			link: function (scope, element, attrs) {
+			link: function (scope /*, element, attrs*/ ) {
 
 				scope.page = {
 					title: 'Browse your Keeps'
@@ -39,6 +39,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 				scope.filter = {
 					type: 'm'
 				};
+
+				scope.selectedKeep = null;
 
 				scope.checkEnabled = true;
 
@@ -96,7 +98,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 					};
 				};
 
-				scope.isSelected = function (type) {
+				scope.isFilterSelected = function (type) {
 					return scope.filter.type === type;
 				};
 
@@ -112,7 +114,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 				}
 
 				scope.isEnabled = function (type) {
-					if (scope.isSelected(type)) {
+					if (scope.isFilterSelected(type)) {
 						return false;
 					}
 					return !!getFilterCount(type);
@@ -133,6 +135,24 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 				};
 
 				scope.setLoading();
+
+				scope.preview = function (keep, $event) {
+					if ($event.target.tagName === 'A') {
+						return;
+					}
+
+					var prev = scope.selectedKeep;
+					if (prev) {
+						delete prev.isDetailed;
+						if (prev === keep) {
+							scope.selectedKeep = null;
+							return;
+						}
+					}
+
+					scope.selectedKeep = keep;
+					keep.isDetailed = true;
+				};
 			}
 		};
 	}

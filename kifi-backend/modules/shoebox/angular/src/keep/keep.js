@@ -24,6 +24,10 @@ angular.module('kifi.keep', [])
 					return scope.keep.isPrivate || false;
 				};
 
+				scope.isDetailed = function () {
+					return scope.keep.isDetailed || false;
+				};
+
 				function hasExampleTag(tags) {
 					if (tags && tags.length) {
 						for (var i = 0, l = tags.length; i < l; i++) {
