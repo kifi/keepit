@@ -1,4 +1,4 @@
-@(pending:Seq[ScrapeInfo], count:Int, threadInstanceInfoSeq:Seq[com.keepit.scraper.ScraperThreadInstanceInfo])(implicit flash: Flash)
+@(assigned:Seq[ScrapeInfo], overdue:Seq[ScrapeInfo], assignedCount:Int, overdueCount:Int, threadInstanceInfoSeq:Seq[com.keepit.scraper.ScraperThreadInstanceInfo])(implicit flash: Flash)
 
 @import com.keepit.controllers.admin.routes
 @import com.keepit.common.amazon.AmazonInstanceInfo
@@ -10,18 +10,20 @@
     }
 }
 
-<div>
-    <span class="title-hint">
+@titleHint(id: String, availableCount: Int, count: Int) = {
+    <span class="@id">
         @defining(if (count == 1) "result" else "results") { result =>
-            @if(pending.length == count) {
+            @if(assigned.length == count) {
                 <span>(@count @result)</span>
             } else {
-                <span>(showing @pending.length out of @count @result)</span>
+                <span>(showing @availableCount out of @count @result)</span>
             }
         }
     </span>
+}
 
-    <div class="request-table">
+@requestTable(id: String, requests:Seq[ScrapeInfo]) = {
+    <div class="@id">
         <table class="table table-condensed table-striped">
             <tr>
                 <th class="span1">Id</th>
@@ -34,7 +36,7 @@
                 <th class="span1">signature</th>
                 <th class="span2">destUrl</th>
             </tr>
-            @for(info <- pending) {
+            @for(info <- requests) {
             <tr>
                 <td>@info.id</td>
                 <td><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.editFirstBookmarkForUri(info.uriId)">@info.uriId</a></td>
@@ -49,6 +51,17 @@
             }
         </table>
     </div>
+}
+
+<div>
+    @titleHint("assigned-title-hint", assigned.length, assignedCount)
+
+    @requestTable("assigned-request-table", assigned)
+
+    @titleHint("overdue-title-hint", overdue.length, overdueCount)
+
+    @requestTable("overdue-request-table", overdue)
+
 
     <span class="thread-details-hint">(@threadInstanceInfoSeq.length @if(threadInstanceInfoSeq.length == 1) {instance} else {instances})</span>
 
