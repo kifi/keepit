@@ -9,6 +9,7 @@ import com.keepit.common.time.Clock
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 import play.api.Play._
+import com.keepit.common.aws.AwsModule
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {

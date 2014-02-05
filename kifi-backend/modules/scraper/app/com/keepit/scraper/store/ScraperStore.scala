@@ -7,6 +7,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.time.Clock
 
 import play.api.Play._
+import com.keepit.common.aws.AwsModule
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
