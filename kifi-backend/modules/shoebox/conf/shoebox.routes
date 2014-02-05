@@ -351,6 +351,7 @@ POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthContr
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
 GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
+GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 
