@@ -3,10 +3,6 @@ package com.keepit.common.mail
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-
-import com.google.inject.{Inject, Singleton}
-
-
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
 
@@ -23,8 +19,7 @@ trait AmazonSimpleMailProvider {
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-api.html
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-formatted.html
  */
-@Singleton
-class AmazonSimpleMailProviderImpl @Inject() (
+class AmazonSimpleMailProviderImpl(
      client: AmazonSimpleEmailServiceClient,
      airbrake: AirbrakeNotifier)
   extends AmazonSimpleMailProvider with Logging {

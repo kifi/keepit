@@ -147,10 +147,10 @@ class AdminBookmarksController @Inject() (
       (infos filter (_.name.startsWith("BookmarkStore"))).map{_.numDocs}.sum
     }
     val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
-      bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
+      bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
     }}}
     val bookmarkTodayOthersCountFuture = future { timing("load bookmarks other counts from today") { db.readOnly { implicit s =>
-      bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).toDateMidnight().toDateTime(zones.UTC), clock.now())
+      bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now())
     }}}
 
 

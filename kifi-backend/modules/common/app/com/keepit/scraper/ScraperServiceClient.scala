@@ -2,6 +2,7 @@ package com.keepit.scraper
 
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import java.io.IOException
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -9,20 +10,16 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
-import scala.concurrent.{Future, Promise}
-import play.api.libs.json._
-import com.google.inject.{ImplementedBy, Inject}
+import scala.concurrent.Future
+import com.google.inject.Inject
 import com.google.inject.util.Providers
 import com.keepit.common.routes.{Common, Scraper}
 import com.keepit.search.Article
-import play.api.libs.json.JsArray
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.amazon.AmazonInstanceInfo
-import scala.util.matching.Regex
 import org.joda.time.DateTime
-import org.codehaus.jackson.JsonProcessingException
 import akka.actor.Scheduler
 
 
@@ -72,8 +69,11 @@ object ScraperThreadDetails {
     val reNoTask = """^(ForkJoinPool\S*)\s+(\w+)\s+(.*)\s+share""".r
     reWithTask findFirstIn details match {
       case Some(reWithTask(name,task,state,share)) => {
-        try ScraperThreadDetails(name, Some(state), Some(share), Json.parse(task).asOpt[ScraperTaskDetails])
-        catch { case _:JsonProcessingException => ScraperThreadDetails(name, Some(state), Some(share), None) }
+        try {
+          ScraperThreadDetails(name, Some(state), Some(share), Json.parse(task).asOpt[ScraperTaskDetails])
+        } catch {
+          case _: IOException => ScraperThreadDetails(name, Some(state), Some(share), None)
+        }
       }
       case None => reNoTask findFirstIn details match {
         case Some(reNoTask(name,state,share)) => ScraperThreadDetails(name, Some(state), Some(share), None)

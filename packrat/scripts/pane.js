@@ -151,6 +151,7 @@ var pane = pane || function () {  // idempotent for Chrome
           $pane.before(tile);
         }
         $pane.data('state', 'open');
+        keepLastAndCleanUpIfRemoved();
         $box.data("shown", true).triggerHandler("kifi:shown");
         notifyPageOfResize(true);
       })
@@ -302,16 +303,50 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function observePaneAncestry() {
     if (paneObserver) paneObserver.disconnect();
-    paneObserver = new MutationObserver(cleanUpIfRemoved);
+    paneObserver = new MutationObserver(keepLastAndCleanUpIfRemoved);
     var what = {childList: true};
     for (var node = $pane[0].parentNode; node !== document; node = node.parentNode) {
       paneObserver.observe(node, what);
     }
   }
 
-  function cleanUpIfRemoved() {
-    if ($pane ? !document.contains($pane[0]) : $('html').attr('kifi-pane-parent') != null) {
-      cleanUpDom($pane && $pane[0]);
+  function keepLastAndCleanUpIfRemoved() {
+    if ($pane && document.contains($pane[0])) {
+      if ($pane.data('state') === 'open') {  // do not interrupt transition
+        var parent = tile.parentNode;
+        var child = parent.lastElementChild, ours = [], others;
+        while (child !== tile) {
+          if (child.classList.contains('kifi-root')) {
+            ours.unshift(child);
+          } else {
+            others = true;
+          }
+          child = child.previousElementSibling;
+        }
+        if (others) {
+          var frag = document.createDocumentFragment();
+          var activeEl = document.activeElement, reactivateEl;
+          ours.unshift(tile);
+          ours.forEach(function (el) {
+            if (activeEl && activeEl.contains(activeEl)) {
+              reactivateEl = activeEl;
+              activeEl.blur();  // required in firefox even without using DF
+              activeEl = null;
+            }
+            frag.appendChild(el);
+          });
+          parent.appendChild(frag);
+          if (reactivateEl) {
+            setTimeout(function () {
+              reactivateEl.focus();
+            });
+          }
+        }
+      }
+    } else if ($pane) {
+      cleanUpDom($pane[0]);
+    } else if (document.documentElement.hasAttribute('kifi-pane-parent')) {
+      cleanUpDom();
     }
   }
 
