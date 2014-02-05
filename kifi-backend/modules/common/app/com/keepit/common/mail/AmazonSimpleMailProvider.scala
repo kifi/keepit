@@ -3,10 +3,6 @@ package com.keepit.common.mail
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-
-import com.google.inject.{Inject, Singleton}
-
-
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
 
