@@ -118,7 +118,6 @@ import play.api.mvc.{Action, Controller}
 import securesocial.core._
 import play.api.Play
 import Play.current
-import providers.UsernamePasswordProvider
 import providers.utils.RoutesHelper
 
 
@@ -127,6 +126,7 @@ import providers.utils.RoutesHelper
  */
 object LoginPage extends Controller
 {
+  import providers.UsernamePasswordProvider
   /**
    * The property that specifies the page the user is redirected to after logging out.
    */
