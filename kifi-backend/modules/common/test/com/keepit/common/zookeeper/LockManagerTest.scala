@@ -15,7 +15,7 @@ import LockManager._
 
 class LockManagerTest extends Specification {
 
-//  args(skipAll = true)
+  args(skipAll = true)
 
   val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some( {zk1 => println(s"in callback, got $zk1")} ))
   implicit val lockMgr = new LockManager(zkClient)
