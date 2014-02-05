@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.util.{Success, Failure}
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -57,7 +57,7 @@ class ABookController @Inject() (
 
   // gmail
   def importContacts(userId:Id[User]) = Action.async(parse.json) { request =>
-    implicit val prefix = s"importContacts($userId)"
+    implicit val prefix = LogPrefix(s"importContacts($userId)")
     val tokenOpt = request.body.asOpt[OAuth2Token]
     log.infoP(s"tokenOpt=$tokenOpt")
     tokenOpt match {
@@ -83,10 +83,8 @@ class ABookController @Inject() (
 
   // ios
   def uploadContacts(userId:Id[User], origin:ABookOriginType) = Action(parse.json(maxLength = 1024 * 50000)) { request =>
-    val json : JsValue = request.body
-    val abookRepoEntryOpt: Option[ABookInfo] = abookCommander.processUpload(userId, origin, None, None, json)
-    abookRepoEntryOpt match {
-      case Some(e) => Ok(Json.toJson(e))
+    abookCommander.processUpload(userId, origin, None, None, request.body) match {
+      case Some(info) => Ok(Json.toJson(info))
       case None => BadRequest(Json.obj("code" -> "abook_empty_not_created"))
     }
   }
