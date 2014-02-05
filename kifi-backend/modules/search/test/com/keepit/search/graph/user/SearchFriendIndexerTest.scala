@@ -27,17 +27,17 @@ class SearchFriendIndexerTest extends Specification with ApplicationInjector {
        running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val uids = (1 to 4).map{Id[User](_)}
-        client.excludeFriend(uids(1), uids(2))
+        client.excludeFriend(uids(0), uids(1))
+        client.excludeFriend(uids(0), uids(2))
         client.excludeFriend(uids(1), uids(3))
-        client.excludeFriend(uids(2), uids(3))
 
         val indexer = mkSearchFriendIndexer()
         indexer.update()
         indexer.numDocs === 2
 
         var searcher = new SearchFriendSearcher(indexer.getSearcher)
-        searcher.getUnfriended(uids(0)) === Set(2, 3)
-        searcher.getUnfriended(uids(1)) === Set(3)
+        searcher.getUnfriended(uids(0)) === Set(uids(1).id, uids(2).id)
+        searcher.getUnfriended(uids(1)) === Set(uids(3).id)
        }
     }
   }

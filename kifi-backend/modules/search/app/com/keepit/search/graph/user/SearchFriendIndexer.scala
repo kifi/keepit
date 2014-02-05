@@ -38,7 +38,7 @@ class SearchFriendIndexer (
       (a, SequenceNumber(b.map{_.seq.value}.max))
     }.toSeq.sortBy(_._2)
 
-    val unfriendList = Await.result(Future.traverse(userAndSeq.map{_._1})(u => shoeboxClient.getSearchFriends(u)), 5 seconds) // fix
+    val unfriendList = Await.result(Future.traverse(userAndSeq.map{_._1})(u => shoeboxClient.getUnfriends(u)), 5 seconds)
 
     (userAndSeq zip unfriendList).map{ case ((u, seq), unfriends) =>
       new SearchFriendIndexable(u, seq, unfriends.isEmpty, unfriends.toSeq)

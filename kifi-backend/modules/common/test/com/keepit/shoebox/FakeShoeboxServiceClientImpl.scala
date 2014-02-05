@@ -65,7 +65,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private def nextUserConnId = Id[UserConnection](userConnIdCounter.incrementAndGet())
 
   private val searchFriendIdCounter = new AtomicInteger(0)
-  private val nextSearchFriendId = Id[SearchFriend](searchFriendIdCounter.incrementAndGet())
+  private def nextSearchFriendId = Id[SearchFriend](searchFriendIdCounter.incrementAndGet())
 
   // Fake sequence counters
 
@@ -482,7 +482,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]] = {
-    ???
+    val unfriends = allSearchFriends.values.filter(x => x.userId == userId && x.state == SearchFriendStates.EXCLUDED).map{_.friendId}
+    Future.successful(unfriends.toSet)
   }
 
   def logEvent(userId: Id[User], event: JsObject) = {}
