@@ -45,7 +45,7 @@ object ApplicationBuild extends Build {
     "commons-codec" % "commons-codec" % "1.6",
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
-    "com.amazonaws" % "aws-java-sdk" % "1.3.20",
+    "com.amazonaws" % "aws-java-sdk" % "1.6.12",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
