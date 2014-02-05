@@ -116,6 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerRawKeepImport(): Unit
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]]
+  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -782,4 +783,6 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[Seq[UserConnection]](r.json).get
     }
   }
+
+  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]] = ???
 }
