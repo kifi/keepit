@@ -7,22 +7,18 @@ import java.sql.Date
 import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
-import scala.slick.driver.JdbcDriver.simple._
 
-trait FortyTwoGenericTypeMappers {
+trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
+  import db.Driver.simple._
+
   implicit def idMapper[M <: Model[M]] = MappedColumnType.base[Id[M], Long](_.id, Id[M])
   implicit def stateTypeMapper[M <: Model[M]] = MappedColumnType.base[State[M], String](_.value, State[M])
   implicit def externalIdTypeMapper[M <: Model[M]] = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
   implicit def dateTimeMapper[M <: Model[M]] = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
 
+  implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
-
-}
-
-object FortyTwoGenericTypeMappers extends FortyTwoGenericTypeMappers
-
-object FortyTwoTypeMappers extends FortyTwoGenericTypeMappers {
 
   def seqParam[A](implicit pconv: SetParameter[A]): SetParameter[Seq[A]] = SetParameter {
     case (seq, pp) =>
@@ -50,6 +46,12 @@ object FortyTwoTypeMappers extends FortyTwoGenericTypeMappers {
   }
 
   implicit val listLocalDateSP: SetParameter[Seq[LocalDate]] = seqParam[LocalDate]
+
+
+}
+
+object FortyTwoTypeMappers {
+
 
   //ExternalIds
 //  implicit object ArticleSearchResultExternalIdTypeMapper extends BaseTypeMapper[ExternalId[ArticleSearchResult]] {
@@ -170,8 +172,6 @@ object FortyTwoTypeMappers extends FortyTwoGenericTypeMappers {
 //  implicit object UrlHashTypeMapper extends BaseTypeMapper[UrlHash] {
 //    def apply(profile: BasicProfile) = new UrlHashTypeMapperDelegate(profile)
 //  }
-
-  implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
 
 
 //  implicit object URLHistorySeqHistoryTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {

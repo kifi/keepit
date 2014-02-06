@@ -13,7 +13,6 @@ import com.keepit.common.akka.SafeFuture
 import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
 import org.joda.time.DateTime
 import scala.slick.lifted.{TableQuery, Tag}
-import scala.slick.driver.JdbcDriver.simple._
 
 
 @ImplementedBy(classOf[UserRepoImpl])

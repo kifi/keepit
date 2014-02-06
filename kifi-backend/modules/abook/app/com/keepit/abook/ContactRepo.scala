@@ -15,7 +15,6 @@ import Q.interpolation
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
-import scala.slick.driver.JdbcDriver.simple._
 
 
 @ImplementedBy(classOf[ContactRepoImpl])
@@ -33,6 +32,8 @@ trait ContactRepo extends Repo[Contact] {
 class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Contact] with ContactRepo with Logging {
   import FortyTwoTypeMappers._
   import DBSession._
+  import db.Driver.simple._
+
 
 
   type RepoImpl = ContactTable

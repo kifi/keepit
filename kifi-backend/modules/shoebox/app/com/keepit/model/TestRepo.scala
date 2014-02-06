@@ -3,7 +3,6 @@ package com.keepit.model
 import scala.slick.driver.JdbcDriver.Table
 import scala.slick.lifted.{TableQuery, Tag}
 import scala.slick.driver.JdbcProfile
-import scala.slick.driver.JdbcDriver.simple._
 
 
 case class UserA(id: Option[Int], first: String, last: String)
