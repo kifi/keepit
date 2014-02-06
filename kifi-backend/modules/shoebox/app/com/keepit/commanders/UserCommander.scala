@@ -441,6 +441,7 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+            searchClient.updateUserGraph()
 
             SafeFuture{
               //sending 'friend request accepted' email && Notification
@@ -538,6 +539,7 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
+        searchClient.updateUserGraph()
       }
       success
     }

@@ -79,8 +79,10 @@ class AuthHelper @Inject() (
           case emailAddr =>
             // Someone is trying to register with someone else's unverified + non-login email address.
             (false, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
+        }.flatMap {
+          case candidate if candidate._2.isDefined => Some((candidate._1, candidate._2.get))
+          case otherwise => None
         }
-        None
       }
     }
   }
