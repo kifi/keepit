@@ -3,11 +3,16 @@ package com.keepit.common.cache
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.service.RequestConsolidator
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
   val ttl: Duration
   outerCache map {outer => require(ttl <= outer.ttl)}
+
+  private val consolidationTtl: Duration = 100 milliseconds // example
+  private val consolidateValue = new RequestConsolidator[K, T](consolidationTtl)
+  private val consolidateValueOpt = new RequestConsolidator[K, Option[T]](consolidationTtl)
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
@@ -73,7 +78,7 @@ trait ObjectCache[K <: Key[T], T] {
     get(key) match {
       case Some(value) => Promise.successful(value).future
       case None =>
-        val valueFuture = orElse
+        val valueFuture = consolidateValue(key)(_ => orElse)
         valueFuture.onSuccess{ case value => set(key, value) }
         valueFuture
     }
@@ -83,7 +88,7 @@ trait ObjectCache[K <: Key[T], T] {
     internalGet(key) match {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
-        val valueOptFuture = orElse
+        val valueOptFuture = consolidateValueOpt(key)(_ => orElse)
         valueOptFuture.onSuccess{ case valueOpt => set(key, valueOpt) }
         valueOptFuture
     }
