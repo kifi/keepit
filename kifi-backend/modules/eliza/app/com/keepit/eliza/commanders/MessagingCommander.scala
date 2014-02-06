@@ -466,26 +466,23 @@ class MessagingCommander @Inject() (
       sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
-    //=== BEGIN
-    (new SafeFuture(shoebox.getUserExperiments(from))).map{ userExperiments =>
-      val notifJson = buildMessageNotificationJson(
-        message = message,
-        thread = thread,
-        messageWithBasicUser = orderedMessageWithBasicUser,
-        locator = "/messages/" + thread.externalId,
-        unread = false,
-        originalAuthorIdx = originalAuthor,
-        unseenAuthors = 0,
-        numAuthors = numAuthors,
-        numMessages = numMessages,
-        numUnread = numUnread,
-        muted = false)
-      db.readWrite(attempts=2) { implicit session =>
-        userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
-      }
-      notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
+
+    val notifJson = buildMessageNotificationJson(
+      message = message,
+      thread = thread,
+      messageWithBasicUser = orderedMessageWithBasicUser,
+      locator = "/messages/" + thread.externalId,
+      unread = false,
+      originalAuthorIdx = originalAuthor,
+      unseenAuthors = 0,
+      numAuthors = numAuthors,
+      numMessages = numMessages,
+      numUnread = numUnread,
+      muted = false)
+    db.readWrite(attempts=2) { implicit session =>
+      userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
     }
-    //=== END
+    notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
 
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
@@ -1020,6 +1017,7 @@ class MessagingCommander @Inject() (
     } yield {
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
       val messageThreadFut = getThreadMessagesWithBasicUser(thread, None)
+
       val threadInfoOpt = url.map { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
       }.flatten
@@ -1030,7 +1028,10 @@ class MessagingCommander @Inject() (
         (message, threadInfoOpt, messages)
       }
     }
-    res.flatMap(r => r) // why scala.concurrent.Future doesn't have a .flatten is beyond me
+    res.flatMap{ fut => fut.flatMap { case (message, threadInfoOpt, messages) =>
+        Future.sequence(messages.map(modifyMessageWithAuxData)).map( (message, threadInfoOpt, _) )
+      }
+    }
   }
 
   def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {

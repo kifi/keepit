@@ -14,7 +14,6 @@ import com.keepit.model._
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import com.keepit.common.KestrelCombinator
 
-
 import play.api.Play.current
 import play.api.{Application, Play}
 import securesocial.core._
@@ -26,7 +25,7 @@ import scala.Some
 import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -41,7 +40,7 @@ class SecureSocialUserPluginImpl @Inject() (
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userCommander: UserCommander,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
 
@@ -98,21 +97,18 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def updateExperimentIfTestUser(userId: Id[User]): Unit = timing(s"updateExperimentIfTestUser $userId") {
-    db.readWrite(attempts = 3) { implicit rw =>
-      @inline def setExp(exp: ExperimentType) {
-        val marked = userExperimentRepo.hasExperiment(userId, exp)
-        if (marked)
-          log.info(s"test user $userId is already marked as $exp")
-        else {
-          log.info(s"setting test user $userId as $exp")
-          userExperimentRepo.save(UserExperiment(userId = userId, experimentType = exp))
-        }
+    @inline def setExp(exp: ExperimentType) {
+      val marked = userExperimentCommander.userHasExperiment(userId, exp)
+      if (marked)
+        log.info(s"test user $userId is already marked as $exp")
+      else {
+        log.info(s"setting test user $userId as $exp")
+        userExperimentCommander.addExperimentForUser(userId, exp)
       }
-
-      val emailAddresses = emailRepo.getAllByUser(userId)
-      val testExperiments = emailAddresses.flatMap(ExperimentType.getTestExperiments)
-      testExperiments.foreach(setExp)
     }
+    val emailAddresses = db.readWrite(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId) }
+    val testExperiments = emailAddresses.flatMap(ExperimentType.getTestExperiments)
+    testExperiments.foreach(setExp)
   }
 
   private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean, Boolean) = {

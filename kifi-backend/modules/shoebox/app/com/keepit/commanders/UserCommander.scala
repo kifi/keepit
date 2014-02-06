@@ -78,7 +78,7 @@ class UserCommander @Inject() (
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   bookmarkRepo: BookmarkRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
@@ -137,8 +137,8 @@ class UserCommander @Inject() (
     basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport ++ doppelgänger
   }
 
-  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
-    userExperimentRepo.hasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
+  private def canMessageAllUsers(userId: Id[User]): Boolean = {
+    userExperimentCommander.userHasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
