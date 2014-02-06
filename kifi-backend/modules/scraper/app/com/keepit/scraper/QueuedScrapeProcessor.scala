@@ -77,28 +77,6 @@ abstract class ScrapeCallable(val uri:NormalizedURI, val info:ScrapeInfo, val pr
   override def getTaskDetails(name:String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE, uri.id, info.id, Some(killCount.get), None)
 }
 
-class FetchBasicCallable(
-  httpFetcher:HttpFetcher,
-  helper:SyncShoeboxDbCallbacks,
-  worker:SyncScraper,
-  extractor:Extractor,
-  val url:String,
-  val proxyOpt:Option[HttpProxy],
-  val extractorProviderTypeOpt:Option[ExtractorProviderType])
-  extends TracedCallable[Option[BasicArticle]] {
-
-  def doWork = {
-    val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
-    val res = fetchStatus.statusCode match {
-      case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(worker.basicArticle(url, extractor))
-      case _ => None
-    }
-    res
-  }
-
-  override def getTaskDetails(name:String) = ScraperTaskDetails(name, url, submitDateTime, callDateTime, ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map {_.name})
-}
-
 @Singleton
 class QueuedScrapeProcessor @Inject() (
   val airbrake:AirbrakeNotifier,
@@ -260,7 +238,18 @@ class QueuedScrapeProcessor @Inject() (
       case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
       case _ => extractorFactory(url)
     }
-    val callable = new FetchBasicCallable(httpFetcher, helper, worker, extractor, url, proxyOpt, extractorProviderTypeOpt)
+
+    val callable = new TracedCallable[Option[BasicArticle]] {
+      def doWork = {
+        val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
+        val res = fetchStatus.statusCode match {
+          case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(worker.basicArticle(url, extractor))
+          case _ => None
+        }
+        res
+      }
+      override def getTaskDetails(name:String) = ScraperTaskDetails(name, url, submitDateTime, callDateTime, ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map {_.name})
+    }
     compSvc.submit(callable)
     val res = compSvc.take().get() match {
       case Success(articleOpt) => articleOpt
