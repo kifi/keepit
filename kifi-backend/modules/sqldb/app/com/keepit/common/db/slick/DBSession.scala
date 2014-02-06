@@ -13,11 +13,9 @@ import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
 
-
-
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session with Logging with TransactionalCaching {
-    val database = masterSlave
+    def database = _session.database
     private var open = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None

@@ -31,8 +31,12 @@ trait PictureComponent {
     def * = (url, id.?) <> (Picture.tupled, Picture.unapply)
   }
 
-  val pictures = TableQuery[Pictures]
+  val picturesQuery = TableQuery[Pictures]
 
-  private val picturesAutoInc = pictures returning pictures.map(_.id) into { case (p, id) => p.copy(id = id) }
-  def insert(picture: Picture)(implicit session: Session): Picture = picturesAutoInc.insert(picture)
+  for {
+    t <- picturesQuery if (t.id < 0)
+  } yield t
+
+  private val picturesAutoInc = picturesQuery returning picturesQuery.map(_.id) into { case (p, id) => p.copy(id = Option(id)) }
+  //def insert(picture: Picture)(implicit session: Session): Picture = picturesAutoInc.insert(picture)
 }
