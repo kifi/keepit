@@ -5,9 +5,12 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.logging.AccessLog
+import scala.concurrent.duration.Duration
+import com.keepit.serializer.TraversableFormat
 
 case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
-  require(density.nonEmpty, "Provided density is empty")
   require(density.forall(_._2 >= 0), "Probabilities must ne non-negative")
   require(density.map(_._2).sum <= 1, "Probabilities sum up to more than 1")
   val cumulative: Seq[(A, Double)] = {
@@ -22,7 +25,7 @@ case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
 }
 
 object ProbabilityDensity {
-  def format[A](implicit aFormat: Format[A]): Format[ProbabilityDensity[A]] = Format(
+  def format[A](implicit outcomeFormat: Format[A]): Format[ProbabilityDensity[A]] = Format(
     Json.reads[JsArray].fmap { case JsArray(density) => ProbabilityDensity(density.sliding(2, 2).map { case Seq(outcome, JsNumber(probability)) => (outcome.as[A], probability.toDouble)}.toSeq) },
     Writes({ density: ProbabilityDensity[A] => JsArray(density.density.flatMap { case (outcome, probability) => Seq(Json.toJson(outcome), JsNumber(probability)) }) })
   )
@@ -64,3 +67,14 @@ object RandomUserExperiment {
 }
 
 object RandomUserExperimentStates extends States[RandomUserExperiment]
+
+trait RandomUserExperimentAllKey extends Key[Seq[RandomUserExperiment]] {
+  override val version = 1
+  val namespace = "random_user_experiment_all"
+  def toKey(): String = "all"
+}
+
+object RandomUserExperimentAllKey extends RandomUserExperimentAllKey
+
+class RandomUserExperimentAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[RandomUserExperimentAllKey, Seq[RandomUserExperiment]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq[RandomUserExperiment])
