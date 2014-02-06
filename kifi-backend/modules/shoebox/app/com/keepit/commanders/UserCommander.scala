@@ -350,9 +350,9 @@ class UserCommander @Inject() (
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
-    @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
+    @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(sci: SocialConnectionInfo): Int = {
+    @inline def searchScore(sci: SocialUserBasicInfo): Int = {
       if (network.exists(sci.networkType.name !=)) 0
       else if (searchTerms.isEmpty) 1
       else {
@@ -367,7 +367,7 @@ class UserCommander @Inject() (
       }
     }
 
-    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) = {
+    def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
       sci -> sci.userId.map(_ => "joined").getOrElse {
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
           case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
@@ -382,7 +382,7 @@ class UserCommander @Inject() (
       }
     }
 
-    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
+    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserBasicInfo] =
       if (sui.networkType == SocialNetworks.FORTYTWO) Nil
       else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
 

@@ -31,6 +31,7 @@ class SocialUserInfoRepoImpl @Inject() (
     val socialUserCache: SocialUserCache,
     val countCache: SocialUserInfoCountCache,
     val networkCache: SocialUserInfoNetworkCache,
+    val basicInfoCache: SocialUserBasicInfoCache,
     val socialUserNetworkCache: SocialUserNetworkCache)
   extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SocialUserInfoRepo {
 
@@ -64,6 +65,7 @@ class SocialUserInfoRepoImpl @Inject() (
       socialUserCache.remove(SocialUserKey(userId))
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
+    basicInfoCache.remove(SocialUserBasicInfoKey(socialUser.id.get))
     socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
     countCache.remove(SocialUserInfoCountKey())
   }
@@ -115,4 +117,21 @@ class SocialUserInfoRepoImpl @Inject() (
       (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
     }
 
+  def getSocialUserBasicInfo(id: Id[SocialUserInfo])(implicit session: RSession): Option[SocialUserBasicInfo] = {
+    basicInfoCache.getOrElseOpt(SocialUserBasicInfoKey(id)){
+      val sui = get(id)
+      if (sui.state != SocialUserInfoStates.INACTIVE) Some(SocialUserBasicInfo.fromSocialUser(sui)) else None
+    }
+  }
+
+  def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {
+    val valueMap = basicInfoCache.bulkGetOrElse(ids.map(SocialUserBasicInfoKey(_)).toSet){ keys =>
+      val missing = keys.map(_.id)
+      val suis = (for(f <- table if f.id.inSet(missing)) yield f).list
+      suis.collect{ case sui if sui.state != SocialUserInfoStates.INACTIVE =>
+        (SocialUserBasicInfoKey(sui.id.get) -> SocialUserBasicInfo.fromSocialUser(sui))
+      }.toMap
+    }
+    valueMap.map{ case (k, v) => (k.id -> v) }
+  }
 }

@@ -20,49 +20,12 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit session: RSession): Option[SocialConnection]
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
-  def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo]
+  def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int
 }
 
-case class SocialConnectionInfo(
-  id: Id[SocialUserInfo],
-  userId: Option[Id[User]],
-  fullName: String,
-  pictureUrl: Option[String],
-  socialId: SocialId,
-  networkType: SocialNetworkType) {
-
-  def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
-    case SocialNetworks.FACEBOOK =>
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
-    case _ => pictureUrl
-  }
-}
-
-object SocialConnectionInfo {
-  // This is an intentionally compact representation to support storing large social graphs
-  implicit val format = Format[SocialConnectionInfo](
-    __.read[Seq[JsValue]].map {
-      case Seq(JsNumber(id), JsNumber(userId), JsString(fullName), JsString(pictureUrl), JsString(socialId), JsString(networkType)) =>
-        SocialConnectionInfo(
-          Id[SocialUserInfo](id.toLong),
-          Some(userId).filter(_ != 0).map(id => Id[User](id.toLong)),
-          fullName,
-          Some(pictureUrl).filterNot(_.isEmpty),
-          SocialId(socialId),
-          SocialNetworkType(networkType))
-    },
-    new Writes[SocialConnectionInfo] {
-      def writes(o: SocialConnectionInfo): JsValue =
-        Json.arr(o.id.id, o.userId.getOrElse(Id(0)).id, o.fullName, o.pictureUrl.getOrElse[String](""), o.socialId.id, o.networkType.name)
-    })
-
-  def fromSocialUser(sui: SocialUserInfo): SocialConnectionInfo =
-    SocialConnectionInfo(sui.id.get, sui.userId, sui.fullName, sui.pictureUrl, sui.socialId, sui.networkType)
-}
-
-case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialConnectionInfo]] {
+case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialUserBasicInfo]] {
   val namespace = "social_user_connections"
   override val version = 2
   def toKey(): String = id.id.toString
@@ -70,7 +33,7 @@ case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[Soci
 
 // todo(eishay): this cache should be invalidated when a connection is updated in SocialUserInfoRepo, but as it is, it would be very expensive to find all the keys that need invalidation
 class SocialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialConnectionInfo]](stats, accessLog, inner, outer: _*)
+    extends JsonCacheImpl[SocialUserConnectionsKey, Seq[SocialUserBasicInfo]](stats, accessLog, inner, outer: _*)
 
 @Singleton
 class SocialConnectionRepoImpl @Inject() (
@@ -173,9 +136,9 @@ class SocialConnectionRepoImpl @Inject() (
     }
   }
 
-  def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialConnectionInfo] = {
+  def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo] = {
     socialUserConnectionsCache.getOrElse(SocialUserConnectionsKey(id)) {
-      getSocialUserConnections(id) map SocialConnectionInfo.fromSocialUser
+      getSocialUserConnections(id) map SocialUserBasicInfo.fromSocialUser
     }
   }
 
