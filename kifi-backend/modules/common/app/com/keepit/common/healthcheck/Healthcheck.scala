@@ -37,29 +37,6 @@ object Healthcheck {
   case object BOOTSTRAP extends CallType
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
-
-  def OPS_OF_THE_WEEK = {
-    import EmailAddresses._
-    val offset = if (currentDateTime.getDayOfWeek == 1 && currentDateTime.getHourOfDay < 9) -1 else 0
-    val weekNumber = currentDateTime.getWeekOfWeekyear + offset
-    val selflessEngineers = Map(
-      41 -> LÉO,
-      42 -> EISHAY,
-      43 -> RAY,
-      44 -> STEPHEN,
-      45 -> ANDREW,
-      47 -> LÉO,
-      48 -> EISHAY,
-      49 -> RAY,
-      50 -> STEPHEN,
-      51 -> ANDREW,
-      52 -> LÉO,
-      1  -> EISHAY,
-      2  -> RAY,
-      3  -> STEPHEN
-    )
-    selflessEngineers.getOrElse(weekNumber, ANDREW) // punishment if I don't keep this updated
-  }
 }
 
 case object ReportErrorsAction
@@ -71,32 +48,9 @@ case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
 }
 
-@ImplementedBy(classOf[RemoteHealthcheckMailSender])
-trait HealthcheckMailSender extends Logging {
-  def sendMail(email: ElectronicMail): Unit
-}
-
-class RemoteHealthcheckMailSender @Inject() (
-    postOffice: RemotePostOffice,
-    amazonSimpleMailProvider: AmazonSimpleMailProvider,
-    airbreak: AirbrakeNotifier,
-    playMode: Mode) extends HealthcheckMailSender {
-
-  def sendMail(email: ElectronicMail): Unit = playMode match {
-    case Prod =>
-      try {
-        amazonSimpleMailProvider.sendMail(email)
-      } catch {
-        case t: Throwable =>
-          airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
-          postOffice.queueMail(email)
-      }
-    case _ =>
-      log.info(s"skip sending email: $email")
-  }
-}
-
-class MailSender @Inject() (sender: HealthcheckMailSender, playMode: Mode) extends Logging {
+class MailSender @Inject() (
+    sender: SystemAdminMailSender,
+    playMode: Mode) extends Logging {
   def sendMail(email: ElectronicMail): Unit = playMode match {
     case Prod => sender.sendMail(email)
     case _ => log.info(s"skip sending email: $email")

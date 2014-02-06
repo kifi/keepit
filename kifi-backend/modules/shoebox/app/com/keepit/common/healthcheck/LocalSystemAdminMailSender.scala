@@ -7,12 +7,12 @@ import com.keepit.common.db.slick.Database
 import play.api.Mode
 import play.api.Mode._
 
-class LocalHealthcheckMailSender @Inject() (
+class LocalSystemAdminMailSender @Inject() (
     postOffice: LocalPostOffice,
     amazonSimpleMailProvider: AmazonSimpleMailProvider,
     db: Database,
     airbreak: AirbrakeNotifier,
-    playMode: Mode) extends HealthcheckMailSender {
+    playMode: Mode) extends SystemAdminMailSender {
   def sendMail(email: ElectronicMail) = playMode match {
     case Prod =>
       try {
