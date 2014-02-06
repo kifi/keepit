@@ -8,7 +8,7 @@ CREATE TABLE probabilistic_experiment_generator (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     description tinytext NOT NULL,
-    condition varchar(20) NULL,
+    cond varchar(20) NULL,
     salt varchar(32) NOT NULL,
     density text NOT NULL,
 
