@@ -11,6 +11,7 @@ import scala.concurrent.duration.Duration
 import com.keepit.serializer.TraversableFormat
 import scala.util.hashing.MurmurHash3
 
+//Note: The order of the argument Seq here is very important. It, along with the salt, uniquely determines which users go in which bin.
 case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
   require(density.forall(_._2 >= 0), "Probabilities must ne non-negative")
   require(density.map(_._2).sum <= 1, "Probabilities sum up to more than 1")
