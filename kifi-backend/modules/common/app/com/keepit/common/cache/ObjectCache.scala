@@ -11,8 +11,8 @@ trait ObjectCache[K <: Key[T], T] {
   val ttl: Duration
   outerCache map {outer => require(ttl <= outer.ttl)}
 
-  private val consolidationTtl: Duration = 100 milliseconds // example
-  private val consolidate = new RequestConsolidator[K, Option[T]](consolidationTtl)
+  val consolidationTtl: Option[Duration] = Some(100 milliseconds) // None would turn off consolidation entirely
+  private val consolidator = consolidationTtl.map(new RequestConsolidator[K, Option[T]](_))
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
@@ -74,24 +74,28 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseFuture(key: K)(orElse: => Future[T]): Future[T] = {
+  def getOrElseFuture(key: K, consolidate: Boolean = true)(orElse: => Future[T]): Future[T] = {
     get(key) match {
       case Some(value) => Promise.successful(value).future
       case None =>
-        val valueFuture = consolidate(key)(_ => orElse.imap(Some)).flatMap {
-          case Some(value) => Future.successful(value)
-          case None => orElse
+        val valueFuture = {
+          if (consolidator.isDefined && consolidate)
+            consolidator.get(key)(_ => orElse.imap(Some)).flatMap {
+              case Some(value) => Future.successful(value)
+              case None => orElse
+            }
+          else orElse
         }
         valueFuture.onSuccess{ case value => set(key, value) }
         valueFuture
     }
   }
 
-  def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
+  def getOrElseFutureOpt(key: K, consolidate: Boolean = true)(orElse: => Future[Option[T]]): Future[Option[T]] = {
     internalGet(key) match {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
-        val valueOptFuture = consolidate(key)(_ => orElse)
+        val valueOptFuture = if (consolidator.isDefined && consolidate) consolidator.get(key)(_ => orElse) else orElse
         valueOptFuture.onSuccess{ case valueOpt => set(key, valueOpt) }
         valueOptFuture
     }
