@@ -205,6 +205,6 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def randomUserExperimentAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new RandomUserExperimentAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, Duration.Inf))
+  def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, Duration.Inf))
 }

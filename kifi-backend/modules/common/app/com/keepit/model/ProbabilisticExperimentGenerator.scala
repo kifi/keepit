@@ -23,13 +23,13 @@ case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
     }
   }
 
-  def sample(x: Double): Option[A] = cumulative.collectFirst { case (outcome, cdf) if cdf <= x => outcome }
+  def sample(x: Double): Option[A] = cumulative.collectFirst { case (outcome, cdf) if x <= cdf => outcome }
 }
 
 object ProbabilityDensity {
-  def format[A](implicit outcomeFormat: Format[A]): Format[ProbabilityDensity[A]] = Format(
-    Json.reads[JsArray].fmap { case JsArray(density) => ProbabilityDensity(density.sliding(2, 2).map { case Seq(outcome, JsNumber(probability)) => (outcome.as[A], probability.toDouble)}.toSeq) },
-    Writes({ density: ProbabilityDensity[A] => JsArray(density.density.flatMap { case (outcome, probability) => Seq(Json.toJson(outcome), JsNumber(probability)) }) })
+  def format[A](implicit outcomeFormat: Format[A]): Format[ProbabilityDensity[A]] = Json.format[JsArray].inmap(
+    { case JsArray(density) => ProbabilityDensity(density.sliding(2, 2).map { case Seq(outcome, JsNumber(probability)) => (outcome.as[A], probability.toDouble)}.toSeq) },
+    { density: ProbabilityDensity[A] => JsArray(density.density.flatMap { case (outcome, probability) => Seq(Json.toJson(outcome), JsNumber(probability)) }) }
   )
 }
 
@@ -37,7 +37,7 @@ case class ProbabilisticExperimentGenerator(
   id: Option[Id[ProbabilisticExperimentGenerator]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  state: State[ProbabilisticExperimentGenerator] = RandomUserExperimentStates.ACTIVE,
+  state: State[ProbabilisticExperimentGenerator] = ProbabilisticExperimentGeneratorStates.ACTIVE,
   description: String,
   condition: Option[ExperimentType],
   salt: String,
@@ -47,9 +47,9 @@ case class ProbabilisticExperimentGenerator(
   def withId(id: Id[ProbabilisticExperimentGenerator]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[ProbabilisticExperimentGenerator]) = this.copy(state = state)
-  def isActive: Boolean = this.state == RandomUserExperimentStates.ACTIVE
+  def isActive: Boolean = this.state == ProbabilisticExperimentGeneratorStates.ACTIVE
 
-  private def hash(userId: Id[User]): Double = {
+  protected[model] def hash(userId: Id[User]): Double = {
     val h = MurmurHash3.stringHashing.hash(salt + userId.toString)
     (Int.MaxValue.toDouble - h) / (Int.MaxValue.toDouble - Int.MinValue.toDouble)
   }
@@ -69,19 +69,19 @@ object ProbabilisticExperimentGenerator {
     (__ \ 'description).format[String] and
     (__ \ 'condition).formatNullable[ExperimentType] and
     (__ \ 'salt).format[String] and
-    (__ \ 'distribution).format(ProbabilityDensity.format[ExperimentType])
+    (__ \ 'density).format(ProbabilityDensity.format[ExperimentType])
   )(ProbabilisticExperimentGenerator.apply, unlift(ProbabilisticExperimentGenerator.unapply))
 }
 
-object RandomUserExperimentStates extends States[ProbabilisticExperimentGenerator]
+object ProbabilisticExperimentGeneratorStates extends States[ProbabilisticExperimentGenerator]
 
-trait RandomUserExperimentAllKey extends Key[Seq[ProbabilisticExperimentGenerator]] {
+trait ProbabilisticExperimentGeneratorAllKey extends Key[Seq[ProbabilisticExperimentGenerator]] {
   override val version = 1
-  val namespace = "random_user_experiment_all"
+  val namespace = "probabilistic_experiment_generator_all"
   def toKey(): String = "all"
 }
 
-object RandomUserExperimentAllKey extends RandomUserExperimentAllKey
+object ProbabilisticExperimentGeneratorAllKey extends ProbabilisticExperimentGeneratorAllKey
 
-class RandomUserExperimentAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[RandomUserExperimentAllKey, Seq[ProbabilisticExperimentGenerator]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq[ProbabilisticExperimentGenerator])
+class ProbabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ProbabilisticExperimentGeneratorAllKey, Seq[ProbabilisticExperimentGenerator]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq[ProbabilisticExperimentGenerator])

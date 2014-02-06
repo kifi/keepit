@@ -14,7 +14,7 @@ trait ProbabilisticExperimentGeneratorRepo extends Repo[ProbabilisticExperimentG
 class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock,
-  randomUserExperimentCache: RandomUserExperimentAllCache
+  probabilisticExperimentGeneratorCache:ProbabilisticExperimentGeneratorAllCache
 ) extends DbRepo[ProbabilisticExperimentGenerator] with ProbabilisticExperimentGeneratorRepo {
 
   import DBSession._
@@ -30,15 +30,15 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
   }
 
   def invalidateCache(model: ProbabilisticExperimentGenerator)(implicit session: RSession): Unit = {
-    randomUserExperimentCache.set(RandomUserExperimentAllKey, allActive())
+    probabilisticExperimentGeneratorCache.set(ProbabilisticExperimentGeneratorAllKey, allActive())
   }
 
   def deleteCache(model: ProbabilisticExperimentGenerator)(implicit session: RSession):Unit = {
-    randomUserExperimentCache.remove(RandomUserExperimentAllKey)
+    probabilisticExperimentGeneratorCache.remove(ProbabilisticExperimentGeneratorAllKey)
   }
 
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator] = {
-    (for(f <- table if f.state === RandomUserExperimentStates.ACTIVE) yield f).list
+    (for(f <- table if f.state === ProbabilisticExperimentGeneratorStates.ACTIVE) yield f).list
   }
 }
 

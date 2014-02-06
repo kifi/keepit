@@ -699,7 +699,7 @@ class SimpleKeyValueMapperDelegate(profile: BasicProfile) extends StringMapperDe
 //******************************************
 class ProbabilityDensityMapperDelegate[A](profile: BasicProfile)(implicit outcomeFormat: Format[A]) extends StringMapperDelegate[ProbabilityDensity[A]](profile) {
   def zero = ProbabilityDensity(Seq.empty[(A, Double)])
-  def sourceToDest(value: ProbabilityDensity[A]): String = ProbabilityDensity.format[A].writes(value).toString()
-  def safeDestToSource(value: String): ProbabilityDensity[A] = Json.parse(value).as(ProbabilityDensity.format[A])
+  def sourceToDest(value: ProbabilityDensity[A]): String = Json.stringify(ProbabilityDensity.format[A].writes(value))
+  def safeDestToSource(str: String): ProbabilityDensity[A] = Json.parse(str).as(ProbabilityDensity.format[A])
 }
 
