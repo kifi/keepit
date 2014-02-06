@@ -84,9 +84,8 @@
                     </div>
                     @if(!threadInstanceInfo.scrapeThreadDetails.isEmpty) {
                         <h5>Scrape Threads</h5>
-                        @for(details <- threadInstanceInfo.scrapeThreadDetails) {
-                            <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
-                                <thead>
+                        <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                            <thead>
                                 <tr>
                                     <th class="span2">Thread ID</th>
                                     <th class="span1">Submitted</th>
@@ -98,8 +97,9 @@
                                     <th class="span2">State</th>
                                     <th class="span1">Share</th>
                                 </tr>
-                                </thead>
-                                <tbody>
+                            </thead>
+                            <tbody>
+                                @for(details <- threadInstanceInfo.scrapeThreadDetails) {
                                     @details.description match {
                                         case Left(task) => {
                                             <tr>
@@ -116,28 +116,28 @@
                                         }
                                         case _ => {}
                                     }
-                                </tbody>
-                            </table>
-                        }
+                                }
+                            </tbody>
+                        </table>
                     } else {
                         <h5>No scrape tasks</h5>
                     }
                     @if(!threadInstanceInfo.fetchBasicThreadDetails.isEmpty) {
                         <h5>Fetch Threads</h5>
-                        @for(details <- threadInstanceInfo.fetchBasicThreadDetails) {
-                            <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
-                                <thead>
-                                    <tr>
-                                        <th class="span2">Thread ID</th>
-                                        <th class="span1">Submitted</th>
-                                        <th class="span1">Called</th>
-                                        <th class="span2">URL</th>
-                                        <th class="span2">Extractor</th>
-                                        <th class="span2">State</th>
-                                        <th class="span1">Share</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                        <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                            <thead>
+                                <tr>
+                                    <th class="span2">Thread ID</th>
+                                    <th class="span1">Submitted</th>
+                                    <th class="span1">Called</th>
+                                    <th class="span2">URL</th>
+                                    <th class="span2">Extractor</th>
+                                    <th class="span2">State</th>
+                                    <th class="span1">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for(details <- threadInstanceInfo.fetchBasicThreadDetails) {
                                     @details.description match {
                                         case Left(task) => {
                                             <tr>
@@ -152,24 +152,24 @@
                                         }
                                         case _ => {}
                                     }
-                                </tbody>
-                            </table>
-                        }
+                                }
+                            </tbody>
+                        </table>
                     } else {
                         <h5>No fetch tasks</h5>
                     }
                     @if(!threadInstanceInfo.otherThreadDetails.isEmpty) {
                         <h5>Other Threads</h5>
-                        @for(details <- threadInstanceInfo.otherThreadDetails) {
-                            <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
-                                <thead>
-                                    <tr>
-                                        <th class="span9">Thread Id</th>
-                                        <th class="span2">State</th>
-                                        <th class="span1">Share</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                        <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                            <thead>
+                                <tr>
+                                    <th class="span9">Thread Id</th>
+                                    <th class="span2">State</th>
+                                    <th class="span1">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for(details <- threadInstanceInfo.otherThreadDetails) {
                                     @details.description match {
                                         case Right(description) => {
                                             <tr>
@@ -180,9 +180,9 @@
                                         }
                                         case _ => {}
                                     }
-                                </tbody>
-                            </table>
-                        }
+                                }
+                            </tbody>
+                        </table>
                     }
                 </div>
             }
