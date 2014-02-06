@@ -4,6 +4,7 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.ImmediateMap
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
@@ -11,8 +12,7 @@ trait ObjectCache[K <: Key[T], T] {
   outerCache map {outer => require(ttl <= outer.ttl)}
 
   private val consolidationTtl: Duration = 100 milliseconds // example
-  private val consolidateValue = new RequestConsolidator[K, T](consolidationTtl)
-  private val consolidateValueOpt = new RequestConsolidator[K, Option[T]](consolidationTtl)
+  private val consolidate = new RequestConsolidator[K, Option[T]](consolidationTtl)
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
@@ -78,7 +78,10 @@ trait ObjectCache[K <: Key[T], T] {
     get(key) match {
       case Some(value) => Promise.successful(value).future
       case None =>
-        val valueFuture = consolidateValue(key)(_ => orElse)
+        val valueFuture = consolidate(key)(_ => orElse.imap(Some)).flatMap {
+          case Some(value) => Future.successful(value)
+          case None => orElse
+        }
         valueFuture.onSuccess{ case value => set(key, value) }
         valueFuture
     }
@@ -88,7 +91,7 @@ trait ObjectCache[K <: Key[T], T] {
     internalGet(key) match {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
-        val valueOptFuture = consolidateValueOpt(key)(_ => orElse)
+        val valueOptFuture = consolidate(key)(_ => orElse)
         valueOptFuture.onSuccess{ case valueOpt => set(key, valueOpt) }
         valueOptFuture
     }
