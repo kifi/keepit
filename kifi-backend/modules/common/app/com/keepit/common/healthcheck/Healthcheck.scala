@@ -76,13 +76,25 @@ trait HealthcheckMailSender extends Logging {
   def sendMail(email: ElectronicMail): Unit
 }
 
-class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice, playMode: Mode) extends HealthcheckMailSender {
+class RemoteHealthcheckMailSender @Inject() (
+    postOffice: RemotePostOffice,
+    amazonSimpleMailProvider: AmazonSimpleMailProvider,
+    airbreak: AirbrakeNotifier,
+    playMode: Mode) extends HealthcheckMailSender {
+
   def sendMail(email: ElectronicMail): Unit = playMode match {
-    case Prod => postOffice.queueMail(email)
-    case _ => log.info(s"skip sending email: $email")
+    case Prod =>
+      try {
+        amazonSimpleMailProvider.sendMail(email)
+      } catch {
+        case t: Throwable =>
+          airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
+          postOffice.queueMail(email)
+      }
+    case _ =>
+      log.info(s"skip sending email: $email")
   }
 }
-
 
 class MailSender @Inject() (sender: HealthcheckMailSender, playMode: Mode) extends Logging {
   def sendMail(email: ElectronicMail): Unit = playMode match {
@@ -199,14 +211,6 @@ class HealthcheckPluginImpl @Inject() (
 
     if (!isCanary) {
       actor.ref ! email
-      val amazonEmail = ElectronicMail(from = EmailAddresses.EISHAY, to = List(EmailAddresses.EISHAY),
-        subject = "sent through AmazonSimpleMailProvider", htmlBody = "Working!",
-        category = NotificationCategory.System.ADMIN)
-      try {
-        amazonSimpleMailProvider.sendMail(amazonEmail)
-      } catch {
-        case t: Throwable => log.error(s"error sending email using sms: $amazonEmail", t)
-      }
     }
     email
   }
