@@ -1,13 +1,11 @@
 package com.keepit.controllers.admin
 
 
-import play.api.Play.current
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.mail._
-import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -18,22 +16,20 @@ import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.normalizer.{NormalizationReference, NormalizationService, VerifiedCandidate}
 import com.keepit.model.DuplicateDocument
-import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.common.healthcheck.{SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier}
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.integrity.RenormalizationCheckKey
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
-
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  postOffice: LocalPostOffice,
+  systemAdminMailSender: SystemAdminMailSender,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   changedUriRepo: ChangedURIRepo,
@@ -98,19 +94,17 @@ class UrlController @Inject() (
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
       val msg = s"domainRegex = ${domainRegex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
-      db.readWrite{ implicit s =>
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+      systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
-      }
     }
 
     def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
       val batchChanges = batch[(URL, Option[NormalizedURI])](changes, batchSize = 1000)
       batchChanges.zipWithIndex.map{ case (batch, i) =>
-        val title = "Renormalization Report: " + s"part ${i+1} of ${batchChanges.size}. ReadOnly Mode = ${readOnly}. Num of affected URL: ${changes.size}"
+        val title = "Renormalization Report: " + s"part ${i+1} of ${batchChanges.size}. ReadOnly Mode = $readOnly. Num of affected URL: ${changes.size}"
         val msg = batch.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN))
+        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+          subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN))
       }
     }
 

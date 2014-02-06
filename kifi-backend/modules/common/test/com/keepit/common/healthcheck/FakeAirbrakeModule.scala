@@ -1,12 +1,8 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.db.Id
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.google.inject.{Singleton, Inject, Provides}
-import com.keepit.common.mail.{PostOffice, ElectronicMail}
-import com.keepit.common.mail.EmailAddresses.ENG
-import scala.collection.mutable.MutableList
-import com.keepit.common.service.{FortyTwoServices, ServiceVersion}
+import com.google.inject.{Singleton, Provides}
+import com.keepit.common.service.FortyTwoServices
 import play.api.Mode
 import play.api.Mode.Mode
 import com.keepit.common.time._
