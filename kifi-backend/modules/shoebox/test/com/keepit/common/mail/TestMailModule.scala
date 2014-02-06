@@ -8,6 +8,7 @@ import com.google.inject._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.{AirbrakeNotifier, LocalSystemAdminMailSender, SystemAdminMailSender}
 import com.amazonaws.auth.BasicAWSCredentials
+import com.keepit.common.logging.Logging
 
 case class TestMailModule() extends MailModule {
   def configure() {}
@@ -22,6 +23,14 @@ case class TestMailModule() extends MailModule {
   @Provides
   @Singleton
   def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
+
+  @Provides
+  @Singleton
+  def fakeSystemAdminMailSender(): SystemAdminMailSender = new FakeSystemAdminMailSender()
+}
+
+class FakeSystemAdminMailSender extends SystemAdminMailSender {
+  def sendMail(email: ElectronicMail): Unit = println(email.toString)
 }
 
 class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
