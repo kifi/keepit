@@ -105,7 +105,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     }
   }
 
-  lazy val searchFriendEdgeSet = UserToUserEdgeSet(myUserId, friendIds)
+  lazy val searchFriendEdgeSet = UserToUserEdgeSet(myUserId, searchFriendIds)
 
   lazy val searchFriendsUriEdgeSets = {
     searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
