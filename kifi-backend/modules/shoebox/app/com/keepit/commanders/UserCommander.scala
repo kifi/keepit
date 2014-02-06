@@ -78,7 +78,7 @@ class UserCommander @Inject() (
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   bookmarkRepo: BookmarkRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
@@ -137,8 +137,8 @@ class UserCommander @Inject() (
     basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport ++ doppelgänger
   }
 
-  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
-    userExperimentRepo.hasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
+  private def canMessageAllUsers(userId: Id[User]): Boolean = {
+    userExperimentCommander.userHasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
@@ -441,6 +441,7 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+            searchClient.updateUserGraph()
 
             SafeFuture{
               //sending 'friend request accepted' email && Notification
@@ -538,6 +539,7 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
+        searchClient.updateUserGraph()
       }
       success
     }

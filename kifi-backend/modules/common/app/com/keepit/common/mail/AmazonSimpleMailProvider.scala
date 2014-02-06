@@ -20,17 +20,27 @@ trait AmazonSimpleMailProvider {
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-formatted.html
  */
 class AmazonSimpleMailProviderImpl(
-     client: AmazonSimpleEmailServiceClient,
-     airbrake: AirbrakeNotifier)
+     client: AmazonSimpleEmailServiceClient)
   extends AmazonSimpleMailProvider with Logging {
 
   private def isSystemEmail(mail: ElectronicMail): Boolean =
     NotificationCategory.System.all.contains(NotificationCategory.fromElectronicMailCategory(mail.category))
 
+  private def isInternalEmailRecipients(mail: ElectronicMail): Boolean = mail.to.forall { to =>
+    EmailAddresses.ALL_EMAILS.contains(to)
+  }
+
   def sendMail(mail: ElectronicMail): Unit = {
     if (!isSystemEmail(mail)) {
       throw new Exception(s"This mail provider will not send emails unless they have a System category. Not sending: $mail")
     }
+    if (!isInternalEmailRecipients(mail)) {
+      throw new Exception(s"This mail provider will not send emails unless all recipients are part of the internal email group [${EmailAddresses.ALL_EMAILS.mkString(",")}}]: $mail")
+    }
+    doSendMail(mail)
+  }
+
+  private def doSendMail(mail: ElectronicMail): Unit = {
     val request = new SendEmailRequest().withSource(mail.from.address)
     val dest = new Destination().withToAddresses(mail.to.map(_.address))
     request.setDestination(dest)

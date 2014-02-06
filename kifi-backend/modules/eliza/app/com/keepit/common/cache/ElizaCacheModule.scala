@@ -125,4 +125,9 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, Duration.Inf))
 }

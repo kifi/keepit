@@ -33,6 +33,7 @@ import com.keepit.search.user.UserSearchResult
 import com.keepit.search.IdFilterCompressor
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.search.user.UserSearchRequest
+import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.sharding.ActiveShards
 
@@ -44,7 +45,8 @@ class SearchController @Inject()(
     userSearchFilterFactory: UserSearchFilterFactory,
     shoeboxClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
-    searchCommander: SearchCommander
+    searchCommander: SearchCommander,
+    userExperimentCommander: RemoteUserExperimentCommander
   ) extends SearchServiceController {
 
   //internal (from eliza/shoebox)
@@ -95,7 +97,7 @@ class SearchController @Inject()(
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
-    val excludeFromExperiments = Await.result(shoeboxClient.getUserExperiments(userId), 5 seconds).contains(NO_SEARCH_EXPERIMENTS)
+    val excludeFromExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds).contains(NO_SEARCH_EXPERIMENTS)
     val (config, _) = searchConfigManager.getConfig(userId, query, excludeFromExperiments)
 
     shards.find(uriId) match {
