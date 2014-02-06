@@ -18,19 +18,17 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
+import scala.concurrent._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.SharingUserInfo
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
-import com.keepit.search.graph.DocIdSetEdgeSet
-import com.keepit.search.graph.EdgeSet
-import com.keepit.search.graph.IdSetEdgeSet
-import com.keepit.search.graph.LuceneBackedEdgeSet
-import com.keepit.search.graph.URIList
-import com.keepit.search.graph.Util
+import com.keepit.search.graph._
 import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 import com.keepit.search.graph.LongSetEdgeSet
+import com.keepit.search.graph.user.UserGraphsCommander
 
 
 object URIGraphSearcher {
@@ -39,9 +37,9 @@ object URIGraphSearcher {
     new URIGraphSearcher(indexSearcher, storeSearcher)
   }
 
-  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
+  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
-    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
+    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, userGraphsCommander, monitoredAwait)
   }
 }
 
@@ -79,11 +77,11 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
   }
 }
 
-class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait)
+class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait)
   extends URIGraphSearcher(searcher, storeSearcher) {
 
-  private[this] val friendIdsFuture = shoeboxClient.getFriends(myUserId)
-  private[this] val searchFriendIdsFuture = shoeboxClient.getSearchFriends(myUserId)
+  private[this] val friendIdsFuture = Future{userGraphsCommander.getConnectedUsers(myUserId)}
+  private[this] val unfriendedFuture = Future{userGraphsCommander.getUnfriended(myUserId)}
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
@@ -97,9 +95,10 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
 
   lazy val friendEdgeSet = {
-    val friendIds = monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friends edges")
-    UserToUserEdgeSet(myUserId, friendIds)
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
+    UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
   }
+
   lazy val friendsUriEdgeSets = {
     friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
@@ -107,9 +106,10 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
 
   lazy val searchFriendEdgeSet = {
-    val friendIds = monitoredAwait.result(searchFriendIdsFuture, 5 seconds, s"getting search friends edges")
-    UserToUserEdgeSet(myUserId, friendIds)
+    val List(unfriended, friendIds) = Await.result(Future.sequence(List(unfriendedFuture, friendIdsFuture)), 5 seconds)
+    UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
   }
+
   lazy val searchFriendsUriEdgeSets = {
     searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
