@@ -125,4 +125,9 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ExtensionVersionInstallationIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def randomUserExperimentAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RandomUserExperimentAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, Duration.Inf))
 }

@@ -119,4 +119,9 @@ case class ScraperCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def randomUserExperimentAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RandomUserExperimentAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, Duration.Inf))
 }
