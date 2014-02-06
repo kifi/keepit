@@ -14,7 +14,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.SimpleDESCrypt
-import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice, RemotePostOffice}
+import com.keepit.common.mail.{ElectronicMail, EmailAddresses}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
@@ -26,7 +26,6 @@ import com.google.inject.Inject
 import scala.concurrent.Future
 
 class SharedWsMessagingController @Inject() (
-    postOffice: RemotePostOffice,
     messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
     notificationRouter: NotificationRouter,
@@ -69,10 +68,6 @@ class SharedWsMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
-      if (threadId == "undefined") {
-        postOffice.queueMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.JARED),
-          subject = "get_thread undefined", htmlBody = s"user: ${socket.userId}, info: ${socket}", category = NotificationCategory.System.ADMIN))
-      } else  // TODO: Remove "undefined" check above (and postOffice) once mystery is solved
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         log.info(s"[get_thread] got messages: $msgs")
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
