@@ -9,13 +9,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import scala.collection.mutable.{Map => MutableMap}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
+import com.keepit.search.IndexInfo
 
 
 
@@ -78,6 +77,10 @@ class UserGraphIndexer(
       }
     }
     total
+  }
+
+  override def indexInfos(name: String): Seq[IndexInfo] = {
+    super.indexInfos("UserGraphIndex" + name)
   }
 
 }
