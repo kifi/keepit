@@ -41,11 +41,9 @@ class SlickTest extends Specification with DbTestInjector {
 
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
-          import db.Driver.Implicit._ // here's the driver, abstracted away
-
-          implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
-            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
-          }
+          import FortyTwoTypeMappers._
+          import DBSession._
+          import scala.slick.driver.JdbcDriver.simple._
 
           private val sequence = db.getSequence("normalized_uri_sequence")
 
@@ -55,13 +53,17 @@ class SlickTest extends Specification with DbTestInjector {
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
           override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
-          override val table = new RepoTable[Bar](db, "foo") {
+          type RepoImpl = BarTable
+          class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") {
+            import scala.slick.driver.JdbcDriver.simple._
             def name = column[String]("name")
-            def * = id.? ~ name <> (Bar, Bar.unapply _)
+            def * = (id.?, name) <> (Bar.tupled, Bar.unapply _)
           }
 
+          def table(tag: Tag) = new BarTable(tag)
+
           def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
-            val q = for ( f <- table if f.name is name ) yield (f)
+            val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
             q.list
           }
         }
@@ -103,22 +105,28 @@ class SlickTest extends Specification with DbTestInjector {
 
       withDb() { implicit injector =>
         val db = inject[Database]
-        import db.db.Driver.Implicit._ // here's the driver, abstracted away
-        import db.db.Driver.Table
+        import FortyTwoTypeMappers._
+        import DBSession._
+        import scala.slick.driver.JdbcDriver.simple._
 
-        val T = new Table[Int]("t") {
+
+        val table = (tag: Tag) => new Table[Int](tag, "t") {
           def a = column[Int]("a")
           def * = a
         }
 
+        val rows = TableQuery(table)
+
+        rows.ddl
+
         db.readWrite{ implicit session =>
-          T.ddl.create
+          rows.ddl.create
         }
 
-        val q = Query(T)
+        val q = rows.map(s => s)
 
         db.readWrite{ implicit session =>
-          T.insert(42)
+          rows.insert(42)
           q.firstOption === Some(42)
           session.rollback()
         }
@@ -128,11 +136,11 @@ class SlickTest extends Specification with DbTestInjector {
         }
 
         db.readWrite{ implicit session =>
-          T.insert(1)
+          rows.insert(1)
         }
 
         db.readWrite{ implicit session =>
-          Query(T).delete
+          rows.map(s => s).delete
           q.firstOption === None
           session.rollback()
         }
@@ -143,7 +151,7 @@ class SlickTest extends Specification with DbTestInjector {
 
         try {
           db.readWrite{ implicit session =>
-            Query(T).delete
+            rows.map(s => s).delete
             q.firstOption === None
             throw new Exception
           }
@@ -156,7 +164,7 @@ class SlickTest extends Specification with DbTestInjector {
         }
 
         db.readWrite{ implicit session =>
-          Query(T).delete
+          rows.map(s => s).delete
         }
 
         db.readOnly{ implicit session =>
@@ -185,22 +193,26 @@ class SlickTest extends Specification with DbTestInjector {
 
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
-          import db.Driver.Implicit._ // here's the driver, abstracted away
+          import FortyTwoTypeMappers._
+          import DBSession._
+          import scala.slick.driver.JdbcDriver.simple._
 
-          implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
-            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
-          }
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
           override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
-          override val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {
+
+          type RepoImpl = BarTable
+          class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") with ExternalIdColumn[Bar] {
+            import scala.slick.driver.JdbcDriver.simple._
             def name = column[String]("name")
-            def * = id.? ~ externalId ~ name <> (Bar, Bar.unapply _)
+            def * = (id.?, externalId, name) <> (Bar.tupled, Bar.unapply _)
           }
 
+          def table(tag: Tag) = new BarTable(tag)
+
           def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
-            val q = for ( f <- table if f.name is name ) yield (f)
+            val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name)) ) yield (f)
             q.list
           }
         }

@@ -6,18 +6,19 @@ import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
 import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import com.keepit.common.logging.Logging
 
 trait TableInitListener {
-  def init(table: TableWithDDL): Unit
+  def init(repo: DbRepo[_]): Unit
   def initSequence(sequence: String): Unit
 }
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
-    extends DataBaseComponent {
+    extends DataBaseComponent with Logging {
   println("initiating H2 driver")
   val Driver = H2Driver
-  val tablesToInit = new TrieMap[String, TableWithDDL]
+  val tablesToInit = new TrieMap[String, DbRepo[_]]
   val sequencesToInit = new TrieMap[String, String]
   var initListener: Option[TableInitListener] = None
 
@@ -60,16 +61,16 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     listener.initSequence(sequence)
   }
 
-  override def initTable(table: TableWithDDL) {
-    if (!tablesToInit.contains(table.tableName)) {
-      tablesToInit(table.tableName) = table
+  override def initTable(repo: DbRepo[_]) {
+    if (!tablesToInit.contains(repo._taggedTable.tableName)) {
+      tablesToInit(repo._taggedTable.tableName) = repo
       //after the db has been initiated we would like to initiate tables as they come through
-      initTableNow(table)
+      initTableNow(repo)
     }
   }
 
-  private def initTableNow(table: TableWithDDL) = initListener map {listener =>
-    listener.init(table)
+  private def initTableNow(repo: DbRepo[_]) = initListener map {listener =>
+    listener.init(repo)
   }
 
 }

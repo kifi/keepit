@@ -12,8 +12,15 @@ import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{TypedType, ColumnOption}
 import scala.slick.driver.{JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver}
 
-import scala.slick.lifted.{TableQuery, Tag, Query, ColumnExtensionMethods}
+import scala.slick.lifted._
 import scala.slick.driver.JdbcDriver.simple._
+import scala.Some
+import scala.Some
+import scala.Some
+import scala.slick.lifted.Tag
+import scala.slick.lifted.TableQuery
+import scala.slick.lifted.Query
+import com.keepit.common.logging.Logging
 
 
 trait Repo[M <: Model[M]] {
@@ -31,12 +38,10 @@ trait TableWithDDL {
   def tableName: String
 }
 
-trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with DelayedInit {
+trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with Logging {
   val db: DataBaseComponent
   val clock: Clock
   val profile = db.Driver.profile
-  val ddl = db.Driver.DDL
-
 
   import scala.slick.driver.JdbcDriver.Table
   //import db.Driver.simple._
@@ -51,19 +56,24 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
 
   type RepoImpl <: RepoTable[M]
-  protected def table(tag: Tag): RepoImpl
-  protected val rows: TableQuery[RepoImpl] = TableQuery(table)
+  def table(tag: Tag): RepoImpl
+  lazy val _taggedTable = table(new BaseTag { base =>
+    def taggedAs(path: List[scala.slick.ast.Symbol]): AbstractTable[_] = base.taggedAs(path)
+  })
+  val rows: TableQuery[RepoImpl] = TableQuery(table)
+  val ddl = rows.ddl
 
 
   //we must call the init after the underlying constructor finish defining its ddl.
-  def delayedInit(body: => Unit) = {
-    body
-    //db.initTable(table) FIXME
-  }
+//  def delayedInit(body: => Unit) = {
+//    body
+//    log.info("DELAYED INIT: " + _taggedTable.tableName)
+//    db.initTable(this)
+//  }
+  db.initTable(this)
 
   def descTable(): String = db.masterDb.withSession { session =>
-//    table(???).ddl.createStatements mkString "\n" // FIXME
-    ???
+    ddl.createStatements mkString "\n"
   }
 
   def save(model: M)(implicit session: RWSession): M = try {
@@ -107,10 +117,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   private def insert(model: M)(implicit session: RWSession): Id[M] = {
     val startTime = System.currentTimeMillis()
-    val inserted = rows.insert(model)
+    val inserted = (rows returning rows.map(_.id)) += model
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:${inserted.getClass.getSimpleName()}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    Id[M](inserted.toLong) // FIXME
+    inserted
   }
 
   private def update(model: M)(implicit session: RWSession) = {
@@ -126,9 +136,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     model
   }
 
-  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name))  with FortyTwoGenericTypeMappers {
-
-
+  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name))  with FortyTwoGenericTypeMappers with Logging {
     //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
     def createdAt = column[DateTime]("created_at", O.NotNull)
@@ -136,7 +144,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     //state may not exist in all entities, if it does then its column name is standardized as well.
     def state = column[State[M]]("state", O.NotNull)
 
-//    def autoInc = * returning id // FIXME
+     def autoInc = this returning Query(id)
 
     //H2 likes its column names in upper case where mysql does not mind.
     //the db component should figure it out

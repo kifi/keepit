@@ -1,17 +1,17 @@
 package com.keepit.test
 
 import com.keepit.inject._
-import com.keepit.common.db.slick.{SlickSessionProvider, Database}
+import com.keepit.common.db.slick.{SlickSessionProvider}
 import com.keepit.model._
-import com.keepit.common.db.TestSlickSessionProvider
-import com.google.inject.Injector
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.TestDbInfo
 import com.google.inject.{Injector, Module}
-import scala.slick.session.ResultSetConcurrency
+import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType}
+import scala.slick.driver.JdbcDriver.simple.{Database => SlickDatabase, _}
 import java.sql.{Driver, DriverManager}
 import com.keepit.common.logging.Logging
+import scala.slick.lifted.{RefTag, AbstractTable, BaseTag}
 
 trait DbInjectionHelper extends Logging { self: InjectorProvider =>
 
@@ -24,7 +24,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
     withInjector(overridingModules:_*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
-        def init(table: TableWithDDL) = executeTableDDL(h2, table)
+        def init(repo: DbRepo[_]) = executeTableDDL(h2, repo)
         def initSequence(sequence: String) = executeSequenceinit(h2, sequence)
       })
       try {
@@ -40,6 +40,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
           // h2.sequencesToInit.values foreach { sequence =>
           //   conn.createStatement().execute(s"DROP SEQUENCE IF EXISTS $sequence")
           // }
+          log.info("DROPPING LIKE ITS HOT")
           conn.createStatement().execute("DROP ALL OBJECTS")
         }
       }
@@ -71,21 +72,23 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
     }
   }
 
-  def executeTableDDL(db: H2, table: TableWithDDL): Unit = {
-    log.debug(s"initiating table [${table.tableName}]")
+  def executeTableDDL(db: H2, repo: DbRepo[_]): Unit = {
+    log.info(s"initiating table [${repo._taggedTable.tableName}]")
+
+
     readWrite(db) { implicit session =>
       try {
-        val ddl = table.ddl
+        val ddl = repo.ddl
         for (s <- ddl.createStatements) {
           val statement = s.replace("create table ", "create table IF NOT EXISTS ")
           try {
             session.withPreparedStatement(statement)(_.execute)
           } catch {
-            case t: Throwable => throw new Exception(s"fail initiating table ${table.tableName}, statement: [$statement]", t)
+            case t: Throwable => throw new Exception(s"fail initiating table ${repo._taggedTable.tableName}, statement: [$statement]", t)
           }
         }
       } catch {
-        case t: Throwable => throw new Exception(s"fail initiating table ${table.tableName}", t)
+        case t: Throwable => throw new Exception(s"fail initiating table ${repo._taggedTable.tableName}", t)
       }
     }
   }

@@ -3,8 +3,6 @@ package com.keepit.db
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
-import scala.slick.lifted._
-import scala.slick.driver._
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
@@ -31,22 +29,24 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
       }
 
       class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
-        import db.Driver.Implicit._ // here's the driver, abstracted away
-
-        implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
-          def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
-        }
+        import FortyTwoTypeMappers._
+        import DBSession._
+        import scala.slick.driver.JdbcDriver.simple._
 
         override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
         override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
-        override val table = new RepoTable[Bar](db, "foo") {
+        type RepoImpl = BarTable
+        class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") {
+          import scala.slick.driver.JdbcDriver.simple._
           def name = column[String]("name")
-          def * = id.? ~ name <> (Bar, Bar.unapply _)
+          def * = (id.?, name) <> (Bar.tupled, Bar.unapply _)
         }
 
+        def table(tag: Tag) = new BarTable(tag)
+
         def getByName(name: String)(implicit session: RSession): Seq[Bar] = {
-          val q = for ( f <- table if f.name is name ) yield (f)
+          val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
           q.list
         }
       }

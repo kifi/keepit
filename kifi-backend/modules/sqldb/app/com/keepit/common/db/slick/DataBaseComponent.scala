@@ -23,5 +23,5 @@ trait DataBaseComponent {
   // H2 specifically rather have them in upper case
   def entityName(name: String): String = name
 
-  def initTable(table: TableWithDDL): Unit = {}
+  def initTable(repo: DbRepo[_]): Unit = {}
 }

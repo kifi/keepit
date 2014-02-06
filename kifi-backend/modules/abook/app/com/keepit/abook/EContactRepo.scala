@@ -34,7 +34,6 @@ trait EContactRepo extends Repo[EContact] {
 @Singleton
 class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EContact] with EContactRepo with Logging {
   import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
   import DBSession._
 
   type RepoImpl = EContactTable

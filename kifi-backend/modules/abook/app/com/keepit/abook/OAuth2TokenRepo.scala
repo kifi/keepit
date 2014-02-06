@@ -10,7 +10,6 @@ import org.joda.time.DateTime
 import com.keepit.common.db.slick.DBSession.RSession
 import scala.slick.driver.JdbcDriver.simple._
 
-
 @ImplementedBy(classOf[OAuth2TokenRepoImpl])
 trait OAuth2TokenRepo extends Repo[OAuth2Token] {
   def getById(id:Id[OAuth2Token])(implicit session:RSession):Option[OAuth2Token]
@@ -19,9 +18,8 @@ trait OAuth2TokenRepo extends Repo[OAuth2Token] {
 
 class OAuth2TokenRepoImpl @Inject() (val db:DataBaseComponent, val clock: Clock) extends DbRepo[OAuth2Token] with OAuth2TokenRepo with Logging {
 
-  import db.Driver.Implicit._
-  import DBSession._
   import FortyTwoTypeMappers._
+  import DBSession._
 
   type RepoImpl = OAuth2TokenTable
   class OAuth2TokenTable(tag: Tag) extends RepoTable[OAuth2Token](db, tag, "oauth2_token") {
