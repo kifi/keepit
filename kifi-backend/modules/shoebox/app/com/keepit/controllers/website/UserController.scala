@@ -52,7 +52,7 @@ import play.api.libs.json.JsObject
 class UserController @Inject() (
   db: Database,
   userRepo: UserRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -341,9 +341,8 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val (user, experiments) = db.readOnly { implicit session =>
-      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
-    }
+    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++

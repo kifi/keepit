@@ -11,6 +11,7 @@ import com.keepit.common.net.{UserAgent, URI}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.commanders.LocalUserExperimentCommander
 import play.api.mvc._
 import securesocial.core._
 import scala.concurrent.Future
@@ -19,7 +20,7 @@ import scala.concurrent.Future
 class ShoeboxActionAuthenticator @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   userRepo: UserRepo,
   fortyTwoServices: FortyTwoServices,
   airbrake: AirbrakeNotifier,
@@ -42,7 +43,7 @@ class ShoeboxActionAuthenticator @Inject() (
     }
   }
 
-  private def getExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = userExperimentRepo.getUserExperiments(userId)
+  private def getExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = userExperimentCommander.getExperimentsByUser(userId)
 
   private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[SimpleResult]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
     val socialUser = request.user
@@ -104,7 +105,7 @@ class ShoeboxActionAuthenticator @Inject() (
   private[controller] def isAdmin(experiments: Set[ExperimentType]) = experiments.contains(ExperimentType.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
-    userExperimentRepo.hasExperiment(userId, ExperimentType.ADMIN)
+    userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Future[SimpleResult], userId: Id[User], identity: Identity,

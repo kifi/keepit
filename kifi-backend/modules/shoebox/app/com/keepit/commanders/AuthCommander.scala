@@ -102,7 +102,7 @@ class AuthCommander @Inject()(
   s3ImageStore: S3ImageStore,
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   heimdalServiceClient: HeimdalServiceClient
 ) extends Logging {
 
@@ -233,7 +233,7 @@ class AuthCommander @Inject()(
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= existingContext.data
     contextBuilder += ("action", "registered")
-    val experiments = db.readOnly() { implicit session => userExperimentRepo.getUserExperiments(userId) }
+    val experiments = userExperimentCommander.getExperimentsByUser(userId)
     contextBuilder.addExperiments(experiments)
     inviteExtIdOpt.foreach { invite => contextBuilder += ("acceptedInvite", invite.id) }
 
