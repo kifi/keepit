@@ -180,6 +180,9 @@ object Search extends Service {
     def visualizeSemanticVector() = ServiceRoute(POST, "/internal/search/semanticVector/visualize")
     def semanticLoss(queryText: String) = ServiceRoute(GET, "/internal/search/semanticVector/semanticLoss", Param("queryText", queryText))
     def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
+    def updateUserGraph()= ServiceRoute(POST, "/internal/search/userGraph/update")
+    def updateSearchFriendGraph() = ServiceRoute(POST, "/internal/search/searchFriendGraph/update")
+    def reindexUserGraphs() = ServiceRoute(POST, "/internal/search/userGraphs/reindex")
   }
 }
 

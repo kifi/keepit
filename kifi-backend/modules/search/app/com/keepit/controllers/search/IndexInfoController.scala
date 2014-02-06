@@ -7,6 +7,7 @@ import play.api.mvc.Action
 import com.keepit.search.article.ArticleIndexerPlugin
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.collection.CollectionGraphPlugin
+import com.keepit.search.graph.user._
 import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.message.MessageIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
@@ -16,6 +17,8 @@ class IndexInfoController @Inject() (
   urlGraphPlugin: URIGraphPlugin,
   collectionGraphPlugin: CollectionGraphPlugin,
   userIndexerPlugin: UserIndexerPlugin,
+  userGraphPlugin: UserGraphPlugin,
+  searchFriendPlugin: SearchFriendGraphPlugin,
   messageIndexerPlugin: MessageIndexerPlugin,
   phraseIndexerPlugin: PhraseIndexerPlugin
 ) extends SearchServiceController {
@@ -26,6 +29,8 @@ class IndexInfoController @Inject() (
       urlGraphPlugin.indexInfos ++
       collectionGraphPlugin.indexInfos ++
       userIndexerPlugin.indexInfos ++
+      userGraphPlugin.indexInfos ++
+      searchFriendPlugin.indexInfos ++
       messageIndexerPlugin.indexInfos ++
       phraseIndexerPlugin.indexInfos
     )

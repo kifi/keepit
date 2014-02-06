@@ -37,6 +37,10 @@ trait SearchServiceClient extends ServiceClient {
   def reindexURIGraph(): Unit
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
 
+  def updateUserGraph(): Unit
+  def updateSearchFriendGraph(): Unit
+  def reindexUserGraphs(): Unit
+
   def index(): Unit
   def reindex(): Unit
   def articleIndexerSequenceNumber(): Future[Int]
@@ -281,5 +285,15 @@ class SearchServiceClientImpl(
     serviceCluster.allServices.map(new ServiceUri(_, protocol, port, url.url)).map{ case u: ServiceUri =>
       callUrl(url, u, JsNull).map{ r => (u.serviceInstance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }
+  }
+
+  def updateUserGraph(){
+    broadcast(Search.internal.updateUserGraph())
+  }
+  def updateSearchFriendGraph(){
+    broadcast(Search.internal.updateSearchFriendGraph())
+  }
+  def reindexUserGraphs(){
+    broadcast(Search.internal.reindexUserGraphs())
   }
 }
