@@ -13,8 +13,8 @@
 @titleHint(id: String, availableCount: Int, count: Int) = {
     <span class="@id">
         @defining(if (count == 1) "result" else "results") { result =>
-            @if(assigned.length >= count) {
-                <span>(@count @result)</span>
+            @if(availableCount >= count) {
+                <span>(@availableCount @result)</span>
             } else {
                 <span>(showing @availableCount out of @count @result)</span>
             }
@@ -100,7 +100,7 @@
                                 </tr>
                                 </thead>
                                 <tbody>
-                                    @{details.description match {
+                                    @details.description match {
                                         case Left(task) => {
                                             <tr>
                                                 <td>@task.name</td>
@@ -114,11 +114,13 @@
                                                 <td>@details.share.getOrElse("-")</td>
                                             </tr>
                                         }
-                                        case _ =>
-                                    }}
+                                        case _ => {}
+                                    }
                                 </tbody>
                             </table>
                         }
+                    } else {
+                        <h5>No scrape tasks</h5>
                     }
                     @if(!threadInstanceInfo.fetchBasicThreadDetails.isEmpty) {
                         <h5>Fetch Threads</h5>
@@ -136,7 +138,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @{details.description match {
+                                    @details.description match {
                                         case Left(task) => {
                                             <tr>
                                                 <td>@task.name</td>
@@ -148,11 +150,13 @@
                                                 <td>@details.share.getOrElse("-")</td>
                                             </tr>
                                         }
-                                        case _ =>
-                                    }}
+                                        case _ => {}
+                                    }
                                 </tbody>
                             </table>
                         }
+                    } else {
+                        <h5>No fetch tasks</h5>
                     }
                     @if(!threadInstanceInfo.otherThreadDetails.isEmpty) {
                         <h5>Other Threads</h5>
@@ -166,7 +170,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @{details.description match {
+                                    @details.description match {
                                         case Right(description) => {
                                             <tr>
                                                 <td>@description</td>
@@ -174,8 +178,8 @@
                                                 <td>@details.share.getOrElse("-")</td>
                                             </tr>
                                         }
-                                        case _ =>
-                                    }}
+                                        case _ => {}
+                                    }
                                 </tbody>
                             </table>
                         }
