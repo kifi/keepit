@@ -49,11 +49,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   implicit val selfFdMapper = FortyTwoGenericTypeMappers.idMapper[M]
   implicit val selfStateMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
-  protected def table[E <: RepoTable[M]](tag: Tag): E
-  
 
-
-  protected val rows = new TableQuery[RepoTable[M]](table)
+  type RepoImpl <: RepoTable[M]
+  protected def table(tag: Tag): RepoImpl
+  protected val rows: TableQuery[RepoImpl] = TableQuery(table)
 
 
   //we must call the init after the underlying constructor finish defining its ddl.

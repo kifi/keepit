@@ -8,9 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
-import scala.slick.lifted.Tag
 import scala.slick.driver.JdbcDriver.simple._
-import scala.slick.driver.JdbcDriver
 
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
@@ -29,8 +27,8 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
   import DBSession._
   import FortyTwoTypeMappers._
 
-
-  def table(tag: Tag) = new RepoTable[ABookInfo](db, tag, "abook_info") {
+  type RepoImpl = ABookTable
+  class ABookTable(tag: Tag) extends RepoTable[ABookInfo](db, tag, "abook_info") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def origin = column[ABookOriginType]("origin", O.NotNull)
     def ownerId = column[String]("owner_id")
@@ -42,18 +40,8 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     def * = (id.?, createdAt, updatedAt, state, userId, origin, ownerId.?, ownerEmail.?, rawInfoLoc.?, oauth2TokenId.?, numContacts.?, numProcessed.?) <> ((ABookInfo.apply _).tupled, ABookInfo.unapply _)
   }
 
-  def table2(tag: Tag): P = new RepoTable[ABookInfo](db, tag, "abook_info") {
-    def userId = column[Id[User]]("user_id", O.NotNull)
-    def origin = column[ABookOriginType]("origin", O.NotNull)
-    def ownerId = column[String]("owner_id")
-    def ownerEmail = column[String]("owner_email")
-    def rawInfoLoc = column[String]("raw_info_loc")
-    def oauth2TokenId = column[Id[OAuth2Token]]("oauth2_token_id")
-    def numContacts = column[Int]("num_contacts", O.Nullable)
-    def numProcessed = column[Int]("num_processed", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, userId, origin, ownerId.?, ownerEmail.?, rawInfoLoc.?, oauth2TokenId.?, numContacts.?, numProcessed.?) <> ((ABookInfo.apply _).tupled, ABookInfo.unapply _)
-  }
-
+  def table(tag: Tag) = new ABookTable(tag)
+//  val rows = TableQuery(table)
 
 
   override def deleteCache(model: ABookInfo)(implicit session: RSession): Unit = {}

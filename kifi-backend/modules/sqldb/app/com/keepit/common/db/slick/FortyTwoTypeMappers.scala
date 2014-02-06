@@ -53,6 +53,7 @@ trait FortyTwoGenericTypeMappers {
   implicit def dateTimeMapper[M <: Model[M]] = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
 
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
+  implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
 }
 
 object FortyTwoGenericTypeMappers extends FortyTwoGenericTypeMappers
