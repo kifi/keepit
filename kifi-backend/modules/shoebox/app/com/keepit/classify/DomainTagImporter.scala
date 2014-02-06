@@ -21,13 +21,12 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice, PostOffice}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.time._
 
 import akka.pattern.ask
-import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
 import com.keepit.heimdal._
@@ -56,12 +55,12 @@ object DomainTagImportEvents {
 private[classify] class DomainTagImportActor @Inject() (
   db: Database,
   updater: SensitivityUpdater,
+  systemAdminMailSender: SystemAdminMailSender,
   implicit private val clock: Clock,
   domainRepo: DomainRepo,
   tagRepo: DomainTagRepo,
   domainToTagRepo: DomainToTagRepo,
   settings: DomainTagImportSettings,
-  postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   heimdal: HeimdalServiceClient,
   implicit private val fortyTwoServices: FortyTwoServices)
@@ -86,11 +85,9 @@ private[classify] class DomainTagImportActor @Inject() (
         WS.url(settings.url).get().onSuccess { case res =>
           persistEvent(IMPORT_START, new HeimdalContextBuilder)
           val startTime = currentDateTime
-          db.readWrite { implicit s =>
-            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-              subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
-              category = NotificationCategory.System.ADMIN))
-          }
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+            subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
+            category = NotificationCategory.System.ADMIN))
           val s = new FileOutputStream(outputPath)
           try {
             IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
@@ -124,15 +121,13 @@ private[classify] class DomainTagImportActor @Inject() (
           persistEvent(IMPORT_SUCCESS, context)
 
           val endTime = currentDateTime
-          db.readWrite { implicit s =>
-            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-              subject = "Domain import finished",
-              htmlBody =
-                  s"Domain import started at $startTime and completed successfully at $endTime " +
-                  s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
-                  s"and $total total domain-tag pairs.",
-              category = NotificationCategory.System.ADMIN))
-          }
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+            subject = "Domain import finished",
+            htmlBody =
+                s"Domain import started at $startTime and completed successfully at $endTime " +
+                s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
+                s"and $total total domain-tag pairs.",
+            category = NotificationCategory.System.ADMIN))
         }
       } catch {
         case e: Exception => failWithException(IMPORT_FAILURE, e)

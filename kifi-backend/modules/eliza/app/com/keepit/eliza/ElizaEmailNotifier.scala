@@ -81,7 +81,7 @@ class ElizaEmailNotifierActor @Inject() (
           val email = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("Kifi Notifications"),
             to = List(),
-            subject = s"""New messages on "${formattedTitle}" with $authorFirst""",
+            subject = s"""New messages on "$formattedTitle" with $authorFirst""",
             htmlBody = emailBody,
             textBody = Some(textBody),
             category = NotificationCategory.User.MESSAGE
