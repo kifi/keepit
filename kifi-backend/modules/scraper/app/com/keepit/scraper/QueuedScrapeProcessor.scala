@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.scraper.extractor.{LinkedInIdExtractor, ExtractorProviderTypes, ExtractorProviderType, ExtractorFactory}
+import com.keepit.scraper.extractor._
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.logging.Logging
 import play.api.Play
@@ -22,12 +22,11 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
 import com.keepit.common.net.HttpClient
 import com.keepit.common.plugin.SchedulingProperties
+import scala.Some
 
-abstract class TracedCallable[T](val name:String, val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
+abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
   def doWork:T
 
@@ -44,11 +43,13 @@ abstract class TracedCallable[T](val name:String, val submitTS:Long = System.cur
   def runMillis(curr:Long) = curr - callTS.get
   def runDuration(curr:Long) = Duration(runMillis(curr), TimeUnit.MILLISECONDS)
 
+  def getTaskDetails(name:String): ScraperTaskDetails
+
   def call(): Try[T] = {
     threadRef.set(Thread.currentThread())
     callTS.set(System.currentTimeMillis)
     val name = Thread.currentThread.getName
-    Thread.currentThread().setName(s"$name##${toString}")
+    Thread.currentThread().setName(Json.stringify(Json.toJson(getTaskDetails(name))))
     try {
       val r = Try(doWork)
       trRef.set(r)
@@ -59,7 +60,7 @@ abstract class TracedCallable[T](val name:String, val submitTS:Long = System.cur
     }
   }
 
-  override def toString = s"[$name] $submitDateTime ${callDateTime}"
+  override def toString = Thread.currentThread.getName
 }
 
 object TracedCallable {
@@ -72,11 +73,30 @@ object TracedCallable {
 }
 
 abstract class ScrapeCallable(val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy])
-  extends TracedCallable[(NormalizedURI, Option[Article])]("Scrape") {
-  override def toString = {
-    val taskDetails = ScraperTaskDetails(uri.id, info.id, uri.url, submitDateTime, callDateTime, killCount.get)
-    s"[Task:${Json.stringify(Json.toJson(taskDetails))}]"
+  extends TracedCallable[(NormalizedURI, Option[Article])] {
+  override def getTaskDetails(name:String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE, uri.id, info.id, Some(killCount.get), None)
+}
+
+class FetchBasicCallable(
+  httpFetcher:HttpFetcher,
+  helper:SyncShoeboxDbCallbacks,
+  worker:SyncScraper,
+  extractor:Extractor,
+  val url:String,
+  val proxyOpt:Option[HttpProxy],
+  val extractorProviderTypeOpt:Option[ExtractorProviderType])
+  extends TracedCallable[Option[BasicArticle]] {
+
+  def doWork = {
+    val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
+    val res = fetchStatus.statusCode match {
+      case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(worker.basicArticle(url, extractor))
+      case _ => None
+    }
+    res
   }
+
+  override def getTaskDetails(name:String) = ScraperTaskDetails(name, url, submitDateTime, callDateTime, ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map {_.name})
 }
 
 @Singleton
@@ -240,17 +260,7 @@ class QueuedScrapeProcessor @Inject() (
       case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
       case _ => extractorFactory(url)
     }
-
-    val callable = new TracedCallable[Option[BasicArticle]](s"FetchBasic($url,$proxyOpt,$extractor)") {
-      def doWork = {
-        val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
-        val res = fetchStatus.statusCode match {
-          case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(worker.basicArticle(url, extractor))
-          case _ => None
-        }
-        res
-      }
-    }
+    val callable = new FetchBasicCallable(httpFetcher, helper, worker, extractor, url, proxyOpt, extractorProviderTypeOpt)
     compSvc.submit(callable)
     val res = compSvc.take().get() match {
       case Success(articleOpt) => articleOpt

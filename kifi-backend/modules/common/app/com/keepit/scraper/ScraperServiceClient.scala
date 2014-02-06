@@ -44,48 +44,71 @@ object ScrapeRequest {
   )(ScrapeRequest.apply _, unlift(ScrapeRequest.unapply))
 }
 
+case class ScraperTaskType(value: String)
+object ScraperTaskType {
+  val SCRAPE = ScraperTaskType("scrape")
+  val FETCH_BASIC = ScraperTaskType("fetch_basic")
+  val UNKNOWN = ScraperTaskType("unknown")
+  val ALL:Seq[ScraperTaskType] = Seq(SCRAPE, FETCH_BASIC)
+  implicit val format = new Format[ScraperTaskType] {
+    def reads(json: JsValue) = JsSuccess(ALL.find(_.value == json.asOpt[String].getOrElse("")) getOrElse UNKNOWN)
+    def writes(taskType: ScraperTaskType) = JsString(taskType.value)
+  }
+}
+
 case class ScraperTaskDetails(
-  uriId:Option[Id[NormalizedURI]],
-  scrapeId:Option[Id[ScrapeInfo]],
+  name:String,
   url:String,
   submitDateTime:DateTime,
   callDateTime:DateTime,
-  killCount:Int)
+  taskType:ScraperTaskType,
+  uriId:Option[Id[NormalizedURI]],
+  scrapeId:Option[Id[ScrapeInfo]],
+  killCount:Option[Int],
+  extractor:Option[String])
 object ScraperTaskDetails {
   implicit val format = (
-    (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
-    (__ \ 'scrapeId).formatNullable(Id.format[ScrapeInfo]) and
+    (__ \ 'name).format[String] and
     (__ \ 'url).format[String] and
     (__ \ 'submitDateTime).format[DateTime] and
     (__ \ 'callDateTime).format[DateTime] and
-    (__ \ 'killCount).format[Int]
-  )(ScraperTaskDetails.apply _, unlift(ScraperTaskDetails.unapply))
+    (__ \ 'taskType).format[ScraperTaskType] and
+    (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
+    (__ \ 'scrapeId).formatNullable(Id.format[ScrapeInfo]) and
+    (__ \ 'killCount).formatNullable[Int] and
+    (__ \ 'extractor).formatNullable[String]
+    )(ScraperTaskDetails.apply _, unlift(ScraperTaskDetails.unapply))
 }
 
-case class ScraperThreadDetails(name:String, state:Option[String], share:Option[String], task:Option[ScraperTaskDetails])
+case class ScraperThreadDetails(state:Option[String], share:Option[String], description:Either[ScraperTaskDetails,String])
 object ScraperThreadDetails {
-  def buildFromString(details:String): ScraperThreadDetails = {
-    val reWithTask = """^(ForkJoinPool\S*)##\[Task:(.*)\]\s+(\w+)\s+(.*)\s+share""".r
-    val reNoTask = """^(ForkJoinPool\S*)\s+(\w+)\s+(.*)\s+share""".r
-    reWithTask findFirstIn details match {
-      case Some(reWithTask(name,task,state,share)) => {
-        try {
-          ScraperThreadDetails(name, Some(state), Some(share), Json.parse(task).asOpt[ScraperTaskDetails])
-        } catch {
-          case _: IOException => ScraperThreadDetails(name, Some(state), Some(share), None)
-        }
+  def buildFromString(details:String): Option[ScraperThreadDetails] = {
+    val re = """^(.*?)\s+(\w+)\s+([0-9]*\.?[0-9]*%)\s+share""".r
+    re findFirstIn details match {
+      case Some(re(task,state,share)) => {
+        try Some(ScraperThreadDetails(Some(state), Some(share), Left(Json.parse(task).as[ScraperTaskDetails])))
+        catch { case (_:IOException | _:JsResultException) => Some(ScraperThreadDetails(Some(state), Some(share), Right(task))) }
       }
-      case None => reNoTask findFirstIn details match {
-        case Some(reNoTask(name,state,share)) => ScraperThreadDetails(name, Some(state), Some(share), None)
-        case None => ScraperThreadDetails(details, None, None, None)
-      }
+      case None => None
     }
   }
 }
 
 case class ScraperThreadInstanceInfo(info:AmazonInstanceInfo, details:String) {
   lazy val forkJoinThreadDetails: Seq[ScraperThreadDetails] = {
-    (details.lines filter { !_.isEmpty } toList) map { ScraperThreadDetails.buildFromString(_) }
+    (details.lines filter { !_.isEmpty } toList) map { ScraperThreadDetails.buildFromString(_) } collect { case Some(x) => x }
+  }
+  lazy val scrapeThreadDetails: Seq[ScraperThreadDetails] = threadDetailsForTaskType(ScraperTaskType.SCRAPE)
+  lazy val fetchBasicThreadDetails: Seq[ScraperThreadDetails] = threadDetailsForTaskType(ScraperTaskType.FETCH_BASIC)
+  lazy val otherThreadDetails: Seq[ScraperThreadDetails] = forkJoinThreadDetails.filter(_.description.isRight)
+
+  def threadDetailsForTaskType(taskType:ScraperTaskType): Seq[ScraperThreadDetails] = {
+    forkJoinThreadDetails.filter{ threadDetails =>
+      threadDetails.description match {
+        case Left(details) => details.taskType == taskType
+        case Right(_) => false
+      }
+    }
   }
 }
 

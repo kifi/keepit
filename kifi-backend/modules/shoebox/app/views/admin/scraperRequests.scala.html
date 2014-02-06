@@ -13,7 +13,7 @@
 @titleHint(id: String, availableCount: Int, count: Int) = {
     <span class="@id">
         @defining(if (count == 1) "result" else "results") { result =>
-            @if(assigned.length == count) {
+            @if(assigned.length >= count) {
                 <span>(@count @result)</span>
             } else {
                 <span>(showing @availableCount out of @count @result)</span>
@@ -22,19 +22,23 @@
     </span>
 }
 
-@requestTable(id: String, requests:Seq[ScrapeInfo]) = {
+@requestTable(id: String, requests:Seq[ScrapeInfo], assigned: Boolean) = {
     <div class="@id">
-        <table class="table table-condensed table-striped">
+        <table class="table table-condensed table-striped" style="table-layout:fixed;word-wrap:break-word;">
             <tr>
                 <th class="span1">Id</th>
                 <th class="span1">uriId</th>
-                <th class="span2">lastScrape</th>
-                <th class="span2">nextScrape</th>
+                <th class="span1">lastScrape</th>
+                <th class="span1">nextScrape</th>
                 <th class="span1">interval</th>
                 <th class="span1">failures</th>
-                <th class="span1">state</th>
+                @if(assigned) {
+                    <th class="span1">workerId</th>
+                } else {
+                    <th class="span1">state</th>
+                }
                 <th class="span1">signature</th>
-                <th class="span2">destUrl</th>
+                <th class="span4">destUrl</th>
             </tr>
             @for(info <- requests) {
             <tr>
@@ -44,7 +48,11 @@
                 <td>@adminHelper.dateTimeDisplay(info.nextScrape)</td>
                 <td>@info.interval</td>
                 <td>@info.failures</td>
-                <td>@info.state</td>
+                @if(assigned) {
+                    <td>@info.workerId.getOrElse("-")</td>
+                } else {
+                    <td>@info.state</td>
+                }
                 <td>@info.signature.take(20)</td>
                 <td><a href="@info.destinationUrl">@info.destinationUrl</a></td>
             </tr>
@@ -56,11 +64,11 @@
 <div>
     @titleHint("assigned-title-hint", assigned.length, assignedCount)
 
-    @requestTable("assigned-request-table", assigned)
+    @requestTable("assigned-request-table", assigned, true)
 
     @titleHint("overdue-title-hint", overdue.length, overdueCount)
 
-    @requestTable("overdue-request-table", overdue)
+    @requestTable("overdue-request-table", overdue, false)
 
 
     <span class="thread-details-hint">(@threadInstanceInfoSeq.length @if(threadInstanceInfoSeq.length == 1) {instance} else {instances})</span>
@@ -74,48 +82,104 @@
                         <div style="float:left"><h4 style="padding:0;margin:0">@instanceTitle(threadInstanceInfo.info)</h4></div>
                         <div style="float:right"><button type="button" data-toggle="modal" data-target="#@threadInstanceInfo.info.instanceId.toString">Show Info</button></div>
                     </div>
-                    <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
-                        <thead>
-                            <tr>
-                                <th class="span2">Thread ID</th>
-                                <th class="span1">Submitted</th>
-                                <th class="span1">Called</th>
-                                <th class="span1">Kill Count</th>
-                                <th class="span1">URI ID</th>
-                                <th class="span1">Scrape ID</th>
-                                <th class="span2">URL</th>
-                                <th class="span2">State</th>
-                                <th class="span1">Share</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for(details <- threadInstanceInfo.forkJoinThreadDetails) {
+                    @if(!threadInstanceInfo.scrapeThreadDetails.isEmpty) {
+                        <h5>Scrape Threads</h5>
+                        @for(details <- threadInstanceInfo.scrapeThreadDetails) {
+                            <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                                <thead>
                                 <tr>
-                                    <td>@details.name</td>
-                                    @details.task match {
-                                        case Some(task) => {
-                                            <td>@adminHelper.timeDisplay(task.submitDateTime)</td>
-                                            <td>@adminHelper.timeDisplay(task.callDateTime)</td>
-                                            <td>@task.killCount</td>
-                                            <td>@task.uriId.getOrElse("-")</td>
-                                            <td>@task.scrapeId.getOrElse("-")</td>
-                                            <td>@task.url</td>
-                                        }
-                                        case None => {
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                        }
-                                    }
-                                    <td>@details.state.getOrElse("-")</td>
-                                    <td>@details.share.getOrElse("-")</td>
+                                    <th class="span2">Thread ID</th>
+                                    <th class="span1">Submitted</th>
+                                    <th class="span1">Called</th>
+                                    <th class="span1">Kill Count</th>
+                                    <th class="span1">URI ID</th>
+                                    <th class="span1">Scrape ID</th>
+                                    <th class="span2">URL</th>
+                                    <th class="span2">State</th>
+                                    <th class="span1">Share</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                                </thead>
+                                <tbody>
+                                    @{details.description match {
+                                        case Left(task) => {
+                                            <tr>
+                                                <td>@task.name</td>
+                                                <td>@adminHelper.timeDisplay(task.submitDateTime)</td>
+                                                <td>@adminHelper.timeDisplay(task.callDateTime)</td>
+                                                <td>@task.killCount.getOrElse(0)</td>
+                                                <td>@task.uriId.getOrElse("-")</td>
+                                                <td>@task.scrapeId.getOrElse("-")</td>
+                                                <td>@task.url</td>
+                                                <td>@details.state.getOrElse("-")</td>
+                                                <td>@details.share.getOrElse("-")</td>
+                                            </tr>
+                                        }
+                                        case _ =>
+                                    }}
+                                </tbody>
+                            </table>
+                        }
+                    }
+                    @if(!threadInstanceInfo.fetchBasicThreadDetails.isEmpty) {
+                        <h5>Fetch Threads</h5>
+                        @for(details <- threadInstanceInfo.fetchBasicThreadDetails) {
+                            <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                                <thead>
+                                    <tr>
+                                        <th class="span2">Thread ID</th>
+                                        <th class="span1">Submitted</th>
+                                        <th class="span1">Called</th>
+                                        <th class="span2">URL</th>
+                                        <th class="span2">Extractor</th>
+                                        <th class="span2">State</th>
+                                        <th class="span1">Share</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{details.description match {
+                                        case Left(task) => {
+                                            <tr>
+                                                <td>@task.name</td>
+                                                <td>@adminHelper.timeDisplay(task.submitDateTime)</td>
+                                                <td>@adminHelper.timeDisplay(task.callDateTime)</td>
+                                                <td>@task.url</td>
+                                                <td>@task.extractor.getOrElse("-")</td>
+                                                <td>@details.state.getOrElse("-")</td>
+                                                <td>@details.share.getOrElse("-")</td>
+                                            </tr>
+                                        }
+                                        case _ =>
+                                    }}
+                                </tbody>
+                            </table>
+                        }
+                    }
+                    @if(!threadInstanceInfo.otherThreadDetails.isEmpty) {
+                        <h5>Other Threads</h5>
+                        @for(details <- threadInstanceInfo.otherThreadDetails) {
+                            <table class="table table-condensed table-bordered" style="padding:0;margin:0;table-layout:fixed;word-wrap:break-word;">
+                                <thead>
+                                    <tr>
+                                        <th class="span9">Thread Id</th>
+                                        <th class="span2">State</th>
+                                        <th class="span1">Share</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{details.description match {
+                                        case Right(description) => {
+                                            <tr>
+                                                <td>@description</td>
+                                                <td>@details.state.getOrElse("-")</td>
+                                                <td>@details.share.getOrElse("-")</td>
+                                            </tr>
+                                        }
+                                        case _ =>
+                                    }}
+                                </tbody>
+                            </table>
+                        }
+                    }
                 </div>
             }
         </div>
