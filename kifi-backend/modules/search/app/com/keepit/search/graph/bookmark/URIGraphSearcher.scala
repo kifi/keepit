@@ -18,15 +18,12 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
+import scala.concurrent._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.SharingUserInfo
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
-import com.keepit.search.graph.DocIdSetEdgeSet
-import com.keepit.search.graph.EdgeSet
-import com.keepit.search.graph.IdSetEdgeSet
-import com.keepit.search.graph.LuceneBackedEdgeSet
-import com.keepit.search.graph.URIList
-import com.keepit.search.graph.Util
+import com.keepit.search.graph._
 import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
@@ -83,8 +80,8 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
 class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait)
   extends URIGraphSearcher(searcher, storeSearcher) {
 
-  private[this] val friendIds = userGraphsCommander.getConnectedUsers(myUserId).map{Id[User]}
-  private[this] val searchFriendIds = friendIds -- userGraphsCommander.getUnfriended(myUserId).map{Id[User]}
+  private[this] val friendIdsFuture = Future{userGraphsCommander.getConnectedUsers(myUserId)}
+  private[this] val unfriendedFuture = Future{userGraphsCommander.getUnfriended(myUserId)}
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
@@ -97,7 +94,10 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   lazy val myUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
   lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
 
-  lazy val friendEdgeSet = UserToUserEdgeSet(myUserId, friendIds)
+  lazy val friendEdgeSet = {
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
+    UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
+  }
 
   lazy val friendsUriEdgeSets = {
     friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
@@ -105,7 +105,10 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     }
   }
 
-  lazy val searchFriendEdgeSet = UserToUserEdgeSet(myUserId, searchFriendIds)
+  lazy val searchFriendEdgeSet = {
+    val List(unfriended, friendIds) = Await.result(Future.sequence(List(unfriendedFuture, friendIdsFuture)), 5 seconds)
+    UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
+  }
 
   lazy val searchFriendsUriEdgeSets = {
     searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
