@@ -31,6 +31,7 @@ import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 import com.keepit.search.graph.LongSetEdgeSet
+import com.keepit.search.graph.user.UserGraphsCommander
 
 
 object URIGraphSearcher {
@@ -39,9 +40,9 @@ object URIGraphSearcher {
     new URIGraphSearcher(indexSearcher, storeSearcher)
   }
 
-  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
+  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
-    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
+    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, userGraphsCommander, monitoredAwait)
   }
 }
 
@@ -79,11 +80,11 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
   }
 }
 
-class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait)
+class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait)
   extends URIGraphSearcher(searcher, storeSearcher) {
 
-  private[this] val friendIdsFuture = shoeboxClient.getFriends(myUserId)
-  private[this] val searchFriendIdsFuture = shoeboxClient.getSearchFriends(myUserId)
+  private[this] val friendIds = userGraphsCommander.getConnectedUsers(myUserId).map{Id[User]}
+  private[this] val searchFriendIds = friendIds -- userGraphsCommander.getUnfriended(myUserId).map{Id[User]}
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
@@ -96,20 +97,16 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   lazy val myUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
   lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
 
-  lazy val friendEdgeSet = {
-    val friendIds = monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friends edges")
-    UserToUserEdgeSet(myUserId, friendIds)
-  }
+  lazy val friendEdgeSet = UserToUserEdgeSet(myUserId, friendIds)
+
   lazy val friendsUriEdgeSets = {
     friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
     }
   }
 
-  lazy val searchFriendEdgeSet = {
-    val friendIds = monitoredAwait.result(searchFriendIdsFuture, 5 seconds, s"getting search friends edges")
-    UserToUserEdgeSet(myUserId, friendIds)
-  }
+  lazy val searchFriendEdgeSet = UserToUserEdgeSet(myUserId, friendIds)
+
   lazy val searchFriendsUriEdgeSets = {
     searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))

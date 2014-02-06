@@ -29,7 +29,7 @@ class UserGraphIndexTest extends Specification with ApplicationInjector{
         val uids = (1 to 8).map{Id[User](_)}
         val (oddIds, evenIds) = uids.partition( id => id.id % 2 == 1)
         val initConn = uids.map{ id =>
-          val conn = if (id.id % 2 == 0) evenIds.filter(_.id != id.id) else oddIds.filter(_.id != id.id)
+          val conn = if (id.id % 2 == 0) evenIds.filter(_.id > id.id) else oddIds.filter(_.id > id.id)
           (id, conn.toSet)
         }.toMap
 
@@ -43,8 +43,8 @@ class UserGraphIndexTest extends Specification with ApplicationInjector{
         searcher.getFriends(uids(0)).toSet === oddIds.filter(_.id != 1).map{_.id}.toSet
         searcher.getFriends(uids(1)).toSet === evenIds.filter(_.id != 2).map{_.id}.toSet
 
-        val del1 = Map(uids(0) -> Set(uids(2)), uids(2) -> Set(uids(0)))
-        val del2 = Map(uids(1) -> Set(uids(3), uids(5), uids(7)), uids(3) -> Set(uids(1)), uids(5) -> Set(uids(1)), uids(7) -> Set(uids(1)))
+        val del1 = Map(uids(0) -> Set(uids(2)))
+        val del2 = Map(uids(1) -> Set(uids(3), uids(5), uids(7)))
         client.deleteConnections(del1)
         client.deleteConnections(del2)
 
