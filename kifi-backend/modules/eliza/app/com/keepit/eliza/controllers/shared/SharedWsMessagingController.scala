@@ -15,6 +15,7 @@ import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice, RemotePostOffice}
+import com.keepit.commanders.RemoteUserExperimentCommander
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
@@ -38,7 +39,8 @@ class SharedWsMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val heimdalContextBuilder: HeimdalContextBuilderFactory
+    protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
+    protected val userExperimentCommander: RemoteUserExperimentCommander
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
