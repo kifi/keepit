@@ -14,9 +14,6 @@ import scala.slick.driver.{JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver}
 
 import scala.slick.lifted._
 import scala.slick.driver.JdbcDriver.simple._
-import scala.Some
-import scala.Some
-import scala.Some
 import scala.slick.lifted.Tag
 import scala.slick.lifted.TableQuery
 import scala.slick.lifted.Query
@@ -63,13 +60,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   val rows: TableQuery[RepoImpl] = TableQuery(table)
   val ddl = rows.ddl
 
-
-  //we must call the init after the underlying constructor finish defining its ddl.
-//  def delayedInit(body: => Unit) = {
-//    body
-//    log.info("DELAYED INIT: " + _taggedTable.tableName)
-//    db.initTable(this)
-//  }
   db.initTable(this)
 
   def descTable(): String = db.masterDb.withSession { session =>
@@ -144,7 +134,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     //state may not exist in all entities, if it does then its column name is standardized as well.
     def state = column[State[M]]("state", O.NotNull)
 
-     def autoInc = this returning Query(id)
+    def autoInc = this returning Query(id)
 
     //H2 likes its column names in upper case where mysql does not mind.
     //the db component should figure it out
@@ -153,8 +143,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
-    implicit val externalIdMapper = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
-
     def externalId = column[ExternalId[M]]("external_id", O.NotNull)
   }
 
@@ -209,8 +197,6 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
   protected def rowsWithSeq = TableQuery(tableWithSeq)
   implicit val seqMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
-
-
 
   def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
     val q = (for(t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)

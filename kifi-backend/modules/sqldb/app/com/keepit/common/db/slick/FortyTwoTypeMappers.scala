@@ -1,50 +1,13 @@
 package com.keepit.common.db.slick
 
-import com.keepit.classify.DomainTag
-import com.keepit.classify.DomainToTag
-import com.keepit.classify.{DomainTagName, Domain}
 import com.keepit.common.db._
-import com.keepit.common.mail._
 import com.keepit.common.time._
-import com.keepit.common.net.UserAgent
 import com.keepit.model._
-import com.keepit.search._
-import com.keepit.serializer.SocialUserSerializer
-import java.sql.{Timestamp, Clob, Blob, Date}
-import javax.sql.rowset.serial.{SerialBlob, SerialClob}
+import java.sql.Date
 import org.joda.time.{DateTime, LocalDate}
-import play.api.libs.json._
-import scala.slick.driver._
-import securesocial.core.AuthenticationMethod
-import securesocial.core.SocialUser
-import securesocial.core.IdentityId
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
-import java.sql.{Timestamp, SQLException}
-import play.api.Logger
-import scala.slick.driver.JdbcDriver.DDL
-import scala.slick.ast.{TypedType, ColumnOption}
-import scala.slick.driver.{JdbcProfile, H2Driver, SQLiteDriver}
-import scala.slick.lifted.{TableQuery, Tag, Query, ColumnExtensionMethods}
+import java.sql.Timestamp
 import scala.slick.driver.JdbcDriver.simple._
-import com.keepit.model.URL
-import play.api.libs.json.JsArray
-import com.keepit.classify.DomainToTag
-import com.keepit.model.KifiInstallation
-import securesocial.core.IdentityId
-import com.keepit.model.EmailAddress
-import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.model.KeepToCollection
-import com.keepit.model.UserPictureSource
-import com.keepit.common.mail.GenericEmailAddress
-import com.keepit.social.SocialId
-import com.keepit.model.UrlHash
-import com.keepit.common.mail.ElectronicMailCategory
-import com.keepit.model.UserToDomainKind
-import com.keepit.classify.DomainTag
-import play.api.libs.json.JsObject
-import com.keepit.model.DeepLocator
 
 trait FortyTwoGenericTypeMappers {
   implicit def idMapper[M <: Model[M]] = MappedColumnType.base[Id[M], Long](_.id, Id[M])
@@ -54,6 +17,7 @@ trait FortyTwoGenericTypeMappers {
 
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
+
 }
 
 object FortyTwoGenericTypeMappers extends FortyTwoGenericTypeMappers
