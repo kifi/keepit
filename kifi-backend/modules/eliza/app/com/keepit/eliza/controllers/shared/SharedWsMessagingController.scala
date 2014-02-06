@@ -13,6 +13,8 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.commanders.RemoteUserExperimentCommander
+
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
@@ -34,7 +36,8 @@ class SharedWsMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val heimdalContextBuilder: HeimdalContextBuilderFactory
+    protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
+    protected val userExperimentCommander: RemoteUserExperimentCommander
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
