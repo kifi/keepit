@@ -127,7 +127,6 @@ class UserController @Inject() (
 
   def unfriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     if (userCommander.unfriend(request.userId, id)) {
-      searchClient.updateUserGraph()
       Ok(Json.obj("removed" -> true))
     } else {
       NotFound(Json.obj("error" -> s"User with id $id not found."))
@@ -137,7 +136,6 @@ class UserController @Inject() (
   def friend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, id)
     if (success) {
-      searchClient.updateUserGraph()
       Ok(Json.obj("success" -> true, code -> true))
     } else {
       NotFound(Json.obj("error" -> code))
