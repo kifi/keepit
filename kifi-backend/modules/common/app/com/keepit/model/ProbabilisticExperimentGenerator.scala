@@ -42,7 +42,7 @@ case class ProbabilisticExperimentGenerator(
   condition: Option[ExperimentType],
   salt: String,
   density: ProbabilityDensity[ExperimentType]
-) extends ((Id[User], Set[ExperimentType]) => Option[ExperimentType]) with ModelWithState[ProbabilisticExperimentGenerator]  {
+) extends ModelWithState[ProbabilisticExperimentGenerator] {
 
   def withId(id: Id[ProbabilisticExperimentGenerator]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
