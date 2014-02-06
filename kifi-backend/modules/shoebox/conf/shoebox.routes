@@ -298,7 +298,7 @@ GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminContr
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
 GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
 GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
-GET     /admin/data/scraper_pending     @com.keepit.controllers.admin.ScraperAdminController.pendingScraperRequests(stateFilter: Option[String] ?= None)
+GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
 GET     /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
 GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 
@@ -478,6 +478,7 @@ GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.in
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: Long, fetchSize: Int) 
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()
@@ -490,6 +491,7 @@ GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepi
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
+GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.internal.ExpertRecommenderController.suggestExperts()
 

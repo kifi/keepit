@@ -1,24 +1,29 @@
 'use strict';
 
-angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
+angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.tagService'])
 
 .controller('KeepsCtrl', [
-	'$scope', '$timeout', 'keepService',
-	function ($scope, $timeout, keepService) {}
+	'$scope', 'profileService', 'keepService', 'tagService', '$q',
+	function ($scope, profileService, keepService, tagService, $q) {
+		$scope.me = profileService.me;
+		$scope.keeps = keepService.list;
+
+		var promise = keepService.getList();
+		$q.all([promise, tagService.fetchAll()]).then(function () {
+			keepService.joinTags(keepService.list, tagService.list);
+		});
+	}
 ])
 
 .directive('kfKeeps', [
-	'$timeout', '$location', 'util', 'dom', 'keepService',
-	function ($timeout, $location, util, dom, keepService) {
+
+	function () {
 		return {
 			restrict: 'A',
 			scope: {},
 			controller: 'KeepsCtrl',
 			templateUrl: 'keeps/keeps.tpl.html',
-			link: function (scope, element, attrs) {
-				scope.keeps = keepService.list;
-
-				keepService.getList();
+			link: function (scope /*, element, attrs*/ ) {
 
 				scope.page = {
 					title: 'Browse your Keeps'
@@ -34,6 +39,8 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 				scope.filter = {
 					type: 'm'
 				};
+
+				scope.selectedKeep = null;
 
 				scope.checkEnabled = true;
 
@@ -91,7 +98,7 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 					};
 				};
 
-				scope.isSelected = function (type) {
+				scope.isFilterSelected = function (type) {
 					return scope.filter.type === type;
 				};
 
@@ -107,7 +114,7 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 				}
 
 				scope.isEnabled = function (type) {
-					if (scope.isSelected(type)) {
+					if (scope.isFilterSelected(type)) {
 						return false;
 					}
 					return !!getFilterCount(type);
@@ -128,6 +135,24 @@ angular.module('kifi.keeps', ['util', 'dom', 'kifi.keepService'])
 				};
 
 				scope.setLoading();
+
+				scope.preview = function (keep, $event) {
+					if ($event.target.tagName === 'A') {
+						return;
+					}
+
+					var prev = scope.selectedKeep;
+					if (prev) {
+						delete prev.isDetailed;
+						if (prev === keep) {
+							scope.selectedKeep = null;
+							return;
+						}
+					}
+
+					scope.selectedKeep = keep;
+					keep.isDetailed = true;
+				};
 			}
 		};
 	}

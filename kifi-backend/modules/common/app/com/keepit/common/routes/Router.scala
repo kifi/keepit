@@ -100,6 +100,7 @@ object Shoebox extends Service {
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
     def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
+    def getUnfriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/unfriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
@@ -125,6 +126,7 @@ object Shoebox extends Service {
     def triggerRawKeepImport() = ServiceRoute(POST, "/internal/shoebox/database/triggerRawKeepImport")
     def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = ServiceRoute(POST, "/internal/shoebox/database/triggerSocialGraphFetch", Param("id", socialUserInfoId))
     def getUserConnectionsChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserConnectionsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getSearchFriendsChanged(seqNum: Long, fetchSize: Int)  = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -178,6 +180,9 @@ object Search extends Service {
     def visualizeSemanticVector() = ServiceRoute(POST, "/internal/search/semanticVector/visualize")
     def semanticLoss(queryText: String) = ServiceRoute(GET, "/internal/search/semanticVector/semanticLoss", Param("queryText", queryText))
     def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
+    def updateUserGraph()= ServiceRoute(POST, "/internal/search/userGraph/update")
+    def updateSearchFriendGraph() = ServiceRoute(POST, "/internal/search/searchFriendGraph/update")
+    def reindexUserGraphs() = ServiceRoute(POST, "/internal/search/userGraphs/reindex")
   }
 }
 

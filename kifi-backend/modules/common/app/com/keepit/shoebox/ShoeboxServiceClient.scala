@@ -85,6 +85,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
   def uriChannelCountFanout(): Seq[Future[Int]]
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
+  def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
@@ -115,6 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerRawKeepImport(): Unit
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]]
+  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -328,6 +330,12 @@ class ShoeboxServiceClientImpl @Inject() (
           r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
         }
     }
+  }
+
+  def getUnfriends(userId: Id[User]): Future[Set[Id[User]]] = {
+   call(Shoebox.internal.getUnfriends(userId)).map{ r =>
+     Json.fromJson[Set[Long]](r.json).get.map{Id[User](_)}
+   }
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI] = {
@@ -773,6 +781,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserConnectionsChanged(seqNum: Long, fetchSize: Int): Future[Seq[UserConnection]] = {
     call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize)).map{ r =>
       Json.fromJson[Seq[UserConnection]](r.json).get
+    }
+  }
+
+  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]] = {
+    call(Shoebox.internal.getSearchFriendsChanged(seq, fetchSize)).map{ r =>
+      Json.fromJson[Seq[SearchFriend]](r.json).get
     }
   }
 }

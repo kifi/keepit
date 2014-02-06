@@ -32,15 +32,19 @@ class ScraperAdminController @Inject() (
 
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
-  def pendingScraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val requestsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingList(MAX_COUNT_DISPLAY) }
-    val countFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => scrapeInfoRepo.getPendingCount() }
+  def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val resultsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => (
+      scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY),
+      scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY),
+      scrapeInfoRepo.getAssignedCount(),
+      scrapeInfoRepo.getOverdueCount()
+      )
+    }
     val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
     for {
-      requests <- requestsFuture
-      count <- countFuture
+      (assigned, overdue, assignedCount, overdueCount) <- resultsFuture
       threadDetails <- threadDetailsFuture
-    } yield Ok(html.admin.pendingScraperRequests(requests, count, threadDetails))
+    } yield Ok(html.admin.scraperRequests(assigned, overdue, assignedCount, overdueCount, threadDetails))
   }
 
   def scrapeArticle(url:String) = AdminHtmlAction.authenticatedAsync { implicit request =>

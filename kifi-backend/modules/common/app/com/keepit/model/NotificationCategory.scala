@@ -1,9 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.mail.ElectronicMailCategory
 import play.api.libs.json._
-import com.keepit.common.mail.ElectronicMailCategory
-import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.mail.ElectronicMailCategory
 
 case class NotificationCategory(category: String)

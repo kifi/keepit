@@ -17,8 +17,8 @@ class LockManagerTest extends Specification {
 
   args(skipAll = true)
 
-  val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some( {zk1 => println(s"in callback, got $zk1")} ))
-  implicit val lockMgr = new LockManager(zkClient)
+  lazy val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some( {zk1 => println(s"in callback, got $zk1")} ))
+  implicit lazy val lockMgr = new LockManager(zkClient)
 
   def withZKSession[T](block: (ZooKeeperSession) => T)(implicit node: Node, cleanup: Boolean = true): T = {
     println(s"starting test with root path ${node.path}")
@@ -37,7 +37,7 @@ class LockManagerTest extends Specification {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         val lockNode = Node(node, "simplelock")
-        val lock: Lock = LockManager.lock(lockNode.path)
+        val lock: Lock = LockManager.lock(lockNode.path).build
 
         zk.get(lockNode) === Some(lockNode)
         zk.getChildren(lockNode).size === 0
@@ -57,13 +57,25 @@ class LockManagerTest extends Specification {
       }
     }
 
+    "detects duplicate lock requests" in {
+      implicit val node = Node("/test" + Random.nextLong.abs)
+      withZKSession { zk =>
+        val lockNode = Node(node, "duplicateRequest")
+        val lock: Lock = LockManager.lock(lockNode.path).build
+
+        lock.request(SharedMode)
+        lock.request(SharedMode) must throwA[LockRequestAlreadyPlacedException]
+        lock.request(ExclusiveMode) must throwA[LockRequestAlreadyPlacedException]
+      }
+    }
+
 
     "creates a shared lock" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         val lockNode = Node(node, "s_lock")
-        val lockA: Lock = LockManager.lock(lockNode.path)
-        val lockB: Lock = LockManager.lock(lockNode.path)
+        val lockA: Lock = LockManager.lock(lockNode.path).build
+        val lockB: Lock = LockManager.lock(lockNode.path).build
 
         zk.get(lockNode) === Some(lockNode)
         zk.getChildren(lockNode).size === 0
@@ -79,7 +91,7 @@ class LockManagerTest extends Specification {
         lockA.mode === Some(SharedMode)
         lockB.mode === Some(SharedMode)
 
-        val lockC: Lock = LockManager.lock(lockNode.path)
+        val lockC: Lock = LockManager.lock(lockNode.path).build
         lockC.request(ExclusiveMode)
         lockC.await(Duration(500, MILLISECONDS)) must throwA[TimeoutException]
         lockC.mode === None
@@ -95,8 +107,8 @@ class LockManagerTest extends Specification {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         val lockNode = Node(node, "x_lock")
-        val lockA: Lock = LockManager.lock(lockNode.path)
-        val lockB: Lock = LockManager.lock(lockNode.path)
+        val lockA: Lock = LockManager.lock(lockNode.path).build
+        val lockB: Lock = LockManager.lock(lockNode.path).build
 
         zk.get(lockNode) === Some(lockNode)
         zk.getChildren(lockNode).size === 0
@@ -139,21 +151,21 @@ class LockManagerTest extends Specification {
         val lockNode = Node(node, "lock")
 
         var grantedA = false
-        val lockA: Lock = LockManager.lock(lockNode.path).onGranted(lck => grantedA = true)
+        val lockA: Lock = LockManager.lock(lockNode.path).onGranted(lck => grantedA = true).build
 
         lockA.request(SharedMode)
         lockA.await(Duration(500, MILLISECONDS))
         grantedA === true
 
         var grantedB = false
-        val lockB: Lock = LockManager.lock(lockNode.path).onGranted(lck => grantedB = true)
+        val lockB: Lock = LockManager.lock(lockNode.path).onGranted(lck => grantedB = true).build
 
         lockB.request(SharedMode)
         lockB.await(Duration(500, MILLISECONDS))
         grantedB === true
 
         var grantedC = false
-        val lockC: Lock = LockManager.lock(lockNode.path).onGranted(lck => grantedC = true)
+        val lockC: Lock = LockManager.lock(lockNode.path).onGranted(lck => grantedC = true).build
 
         lockC.request(ExclusiveMode)
         lockC.await(Duration(500, MILLISECONDS)) must throwA[TimeoutException]
@@ -190,8 +202,8 @@ class LockManagerTest extends Specification {
         var blockingA = false
         var blockingB = false
         val lockNode = Node(node, "s_blocker")
-        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blockingA = true }
-        val lockB: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blockingB = true }
+        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blockingA = true }.build
+        val lockB: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blockingB = true }.build
 
         lockA.request(SharedMode)
         lockA.await(Duration(500, MILLISECONDS))
@@ -199,7 +211,7 @@ class LockManagerTest extends Specification {
         lockB.request(SharedMode)
         lockB.await(Duration(500, MILLISECONDS))
 
-        val lockC: Lock = LockManager.lock(lockNode.path)
+        val lockC: Lock = LockManager.lock(lockNode.path).build
         lockC.request(ExclusiveMode)
         lockC.await(Duration(500, MILLISECONDS)) must throwA[TimeoutException]
         lockC.cancel()
@@ -217,12 +229,12 @@ class LockManagerTest extends Specification {
       withZKSession { zk =>
         var blocking = false
         val lockNode = Node(node, "x_blocker")
-        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blocking = true }
+        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blocking = true }.build
 
         lockA.request(ExclusiveMode)
         lockA.await(Duration(500, MILLISECONDS))
 
-        val lockB: Lock = LockManager.lock(lockNode.path)
+        val lockB: Lock = LockManager.lock(lockNode.path).build
         lockB.request(ExclusiveMode)
         lockB.await(Duration(500, MILLISECONDS)) must throwA[TimeoutException]
         lockB.mode === None
@@ -232,7 +244,7 @@ class LockManagerTest extends Specification {
 
         // there should not be the second onBlocking call
         blocking = false
-        val lockC: Lock = LockManager.lock(lockNode.path)
+        val lockC: Lock = LockManager.lock(lockNode.path).build
         lockC.request(SharedMode)
         lockC.await(Duration(500, MILLISECONDS)) must throwA[TimeoutException]
         lockC.mode === None

@@ -45,7 +45,7 @@ object ApplicationBuild extends Build {
     "commons-codec" % "commons-codec" % "1.6",
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
-    "com.amazonaws" % "aws-java-sdk" % "1.3.20",
+    "com.amazonaws" % "aws-java-sdk" % "1.6.12",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -82,7 +82,8 @@ object ApplicationBuild extends Build {
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
-    "org.feijoas" %% "mango" % "0.10"
+    "org.feijoas" %% "mango" % "0.10",
+    "fortytwo.franz" % "franz_2.10" % "0.1.0"
   )
 
   lazy val heimdalDependencies = Seq(
