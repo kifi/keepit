@@ -1,13 +1,9 @@
 package com.keepit.model
 
-import com.google.inject.{Provides, Inject, Singleton, ImplementedBy}
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
-<<<<<<< HEAD
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-=======
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
->>>>>>> 94766e83cbb898d36a1f6b67d8cc62dcf6399708
 import com.keepit.common.time.Clock
 import scala.Some
 import com.keepit.search.MultiHashFilter
