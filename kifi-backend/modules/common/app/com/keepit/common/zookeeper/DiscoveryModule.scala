@@ -46,7 +46,8 @@ object DiscoveryModule {
     availabilityZone = "us-west-1b",
     securityGroups = "default",
     amiId = "ami-1bf9de5e",
-    amiLaunchIndex = "0")
+    amiLaunchIndex = "0",
+    loadBalancer = None)
 
 }
 
@@ -86,6 +87,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
       } yield tag
       val name = tags.filter(_.getKey == "Name").headOption map { _.getValue }
       val service = tags.filter(_.getKey == "Service").headOption map { _.getValue }
+      val loadBalancer = tags.filter(_.getKey == "ELB").headOption map { _.getValue }
 
       AmazonInstanceInfo(
         instanceId = AmazonInstanceId(instanceId),
@@ -99,7 +101,8 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
         availabilityZone = get("placement/availability-zone"),
         securityGroups = get("security-groups"),
         amiId = get("ami-id"),
-        amiLaunchIndex = get("ami-launch-index")
+        amiLaunchIndex = get("ami-launch-index"),
+        loadBalancer = loadBalancer
       )
     }
     log.info(s"my amazon instance is ${instance.toString}")
