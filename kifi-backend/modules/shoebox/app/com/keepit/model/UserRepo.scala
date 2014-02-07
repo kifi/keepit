@@ -60,6 +60,9 @@ class UserRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmailId.?) <> ((User.apply _).tupled, User.unapply)
   }
 
+  def table(tag: Tag) = new UserTable(tag)
+  initTable()
+
   def allActiveTimes()(implicit session: RSession): Seq[DateTime] = {
     implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] {
       def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC)
