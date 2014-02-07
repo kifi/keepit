@@ -19,7 +19,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   mailModule = DevMailModule(),
   reaperModule = DevReaperModule(),
   storeModule = ShoeboxDevStoreModule(),
-  sqsModule = DevSimpleQueueModule(),
+  sqsModule = ProdSimpleQueueModule(),
 
   // Shoebox Functional Modules
   analyticsModule = DevAnalyticsModule(),
