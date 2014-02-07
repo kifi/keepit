@@ -66,6 +66,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         case t:Throwable => {
           //todo(martin): find a solution
           //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          println(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           Play.stop()
           Thread.sleep(10000)
           System.exit(1)
@@ -86,6 +87,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       } catch {
         case t:AmazonClientException => {
           //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
+          println(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
           Thread.sleep(18000)
         }
       }
