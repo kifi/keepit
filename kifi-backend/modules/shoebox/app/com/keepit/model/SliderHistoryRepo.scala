@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.{Provides, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.Clock
 import scala.Some
 import com.keepit.search.MultiHashFilter
@@ -15,12 +15,13 @@ trait SliderHistoryRepo extends Repo[SliderHistory] {
 
 @Singleton
 class SliderHistoryRepoImpl @Inject() (
-                                        val db: DataBaseComponent,
-                                        val clock: Clock,
-                                        val browsingCache: SliderHistoryUserIdCache)
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val browsingCache: SliderHistoryUserIdCache)
   extends DbRepo[SliderHistory] with SliderHistoryRepo {
   import db.Driver.simple._
 
+  type RepoImpl = SliderHistoryTable
   class SliderHistoryTable(tag: Tag) extends RepoTable[SliderHistory](db, tag, "slider_history") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def tableSize = column[Int]("table_size", O.NotNull)
