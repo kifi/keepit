@@ -43,6 +43,10 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
   implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
   implicit val emailAddressHolderMapper = MappedColumnType.base[EmailAddressHolder, String](_.address, GenericEmailAddress.apply)
+  implicit val seqEmailAddressHolderMapper = MappedColumnType.base[Seq[EmailAddressHolder], String](v => v.map {e => e.address} mkString(","), v => v.trim match {
+    case "" => Nil
+    case trimmed => trimmed.split(",") map { addr => new GenericEmailAddress(addr.trim) }
+  })
   implicit val kifiVersionMapper = MappedColumnType.base[KifiVersion, String](_.toString, KifiVersion.apply)
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
