@@ -51,7 +51,7 @@ class UserRepoImpl @Inject() (
   private lazy val expRepo = expRepoProvider.get
 
   type RepoImpl = UserTable
-  class UserTable(tag: Tag) extends RepoTable[Contact](db, tag, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
+  class UserTable(tag: Tag) extends RepoTable[User](db, tag, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
     def pictureName = column[String]("picture_name", O.Nullable)
