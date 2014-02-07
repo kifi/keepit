@@ -36,6 +36,10 @@ object PimpMyFuture {
 
     }
 
+    def flatten[E](implicit ev: <:<[T, Future[E]]): Future[E] = {
+      fut.flatMap(r => ev(r))
+    }
+
   }
 
 }
