@@ -22,7 +22,6 @@ import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
 import com.keepit.search.query.parser.{MainQueryParser, MainQueryParserFactory}
 import com.keepit.search.semantic.SemanticVector
-import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
@@ -61,7 +60,6 @@ class MainSearcher(
     clickBoostsFuture: Future[ResultClickBoosts],
     browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
-    shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier)
@@ -143,7 +141,7 @@ class MainSearcher(
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.mySearchUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, shoeboxClient, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
+    PersonalizedSearcher(userId, indexReader, socialGraphInfo.mySearchUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
