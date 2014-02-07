@@ -14,7 +14,7 @@ import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.queue.{NormalizationUpdateTaskQ, SimpleQueueService}
+import com.keepit.common.queue.{NormalizationUpdateJobQueue, SimpleQueueService}
 import com.keepit.normalizer.NormalizationReference
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -26,10 +26,10 @@ case class NormalizationUpdateTask(uriId:Id[NormalizedURI], isNew:Boolean, candi
 
 object NormalizationUpdateTask {
   implicit val format = (
-      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-      (__ \ 'isNew).format[Boolean] and
-      (__ \ 'candidates).format[Seq[NormalizationCandidate]]
-    )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'isNew).format[Boolean] and
+    (__ \ 'candidates).format[Seq[NormalizationCandidate]]
+  )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
 }
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -57,7 +57,7 @@ class NormalizedURIRepoImpl @Inject() (
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo],
-  taskQ:NormalizationUpdateTaskQ,
+  taskQ:NormalizationUpdateJobQueue,
   airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 

@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import com.keepit.common.logging.Logging
-import com.keepit.common.queue.{NormalizationUpdateTaskQ, SimpleQueueService}
+import com.keepit.common.queue.{NormalizationUpdateJobQueue, SimpleQueueService}
 import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import com.keepit.common.actor.ActorInstance
 import akka.util.Timeout
@@ -22,7 +22,7 @@ class NormalizationWorker @Inject()(
   nuriRepo:NormalizedURIRepo,
   airbrake:AirbrakeNotifier,
   sqs:SimpleQueueService,
-  q:NormalizationUpdateTaskQ,
+  q:NormalizationUpdateJobQueue,
   normalizationService:NormalizationService,
   val scheduling: SchedulingProperties
 ) extends FortyTwoActor(airbrake) with Logging {

@@ -2,8 +2,9 @@ package com.keepit.common.queue
 
 import scala.collection.JavaConversions._
 import java.util.concurrent.{ConcurrentLinkedQueue, ConcurrentHashMap}
+import com.keepit.common.logging.Logging
 
-class InMemSimpleQueueService extends SimpleQueueService {
+class InMemSimpleQueueService extends SimpleQueueService with Logging {
 
   val base = "http://dev.ezkeep.com:9000/queues/"
 
@@ -19,6 +20,7 @@ class InMemSimpleQueueService extends SimpleQueueService {
 
   def getByUrl(url: String):Option[SimpleQueue] = {
     val res = queues.get(url)
+    println(s"[getByUrl($url)] res=$res")
     if (res == null) None else Some(res)
   }
 
@@ -35,6 +37,7 @@ class InMemSimpleQueueService extends SimpleQueueService {
     urls.putIfAbsent(name, url)
     val q = new InMemSimpleQueue(url, name)
     queues.putIfAbsent(name, q)
+    println(s"[create($name)] queue=$q")
     url
   }
 

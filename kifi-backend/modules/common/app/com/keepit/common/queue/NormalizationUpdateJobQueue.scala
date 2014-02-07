@@ -1,6 +1,6 @@
 package com.keepit.common.queue
 
 
-trait NormalizationUpdateTaskQ extends SimpleQueue {
+trait NormalizationUpdateJobQueue extends SimpleQueue {
   override val name = "NTest"
 }
