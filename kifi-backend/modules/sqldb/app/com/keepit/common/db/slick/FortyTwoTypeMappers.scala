@@ -7,6 +7,10 @@ import java.sql.Date
 import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
+import play.api.libs.json.JsArray
+import play.api.libs.json.Json
+
+case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
 trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   import db.Driver.simple._
@@ -19,6 +23,15 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
+  implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
+    Json.stringify(json)
+  }, { src =>
+    Json.parse(src) match {
+      case x: JsArray => x
+      case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for JsArray: $src")
+    }
+  })
+
 
   def seqParam[A](implicit pconv: SetParameter[A]): SetParameter[Seq[A]] = SetParameter {
     case (seq, pp) =>
