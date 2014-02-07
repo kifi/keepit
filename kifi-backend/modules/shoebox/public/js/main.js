@@ -2189,12 +2189,7 @@ $(function () {
 	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
 
 	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function (ev) {
-		var o = ev.item, $f = $(ev.element).data('o', o), url;
-		for (var nw in o.networks) {  // TODO: move networks to template (Tempo seems broken)
-			if (o.networks[nw].connected && (url = o.networks[nw].profileUrl)) {
-				$f.find('.friend-nw-' + nw).attr('href', url);
-			}
-		}
+		$(ev.element).data('o', ev.item);
 	}).when(TempoEvent.Types.RENDER_COMPLETE, function () {
 		$friendsLoading.hide();
 		friendsScroller.refresh();
