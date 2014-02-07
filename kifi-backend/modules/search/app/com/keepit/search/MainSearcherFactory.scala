@@ -100,12 +100,10 @@ class MainSearcherFactory @Inject() (
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
     log.info(s"warming up $userId")
     Statsd.increment(s"warmup.$userId")
-    val searchFriendsFuture = Future{userGraphsCommander.getConnectedUsers(userId)}
-    val unfriendsFuture = Future{userGraphsCommander.getUnfriended(userId)}
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
-    Seq(searchFriendsFuture, unfriendsFuture, browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
+    Seq(browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
   }
 
   def clear(): Unit = {
