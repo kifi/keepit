@@ -16,7 +16,6 @@ import com.keepit.model.{InvitationStates, Invitation, SocialUserInfo, User}
 import play.api.mvc.Result
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
-import scala.slick.session.Database
 
 
 class MobileInviteController @Inject()(

@@ -5,10 +5,7 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
 import com.keepit.common.time._
-import MessagingTypeMappers._
-
-import scala.slick.lifted.Query
-
+import play.api.libs.json.{Json, JsArray, JsNumber}
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 
 import org.joda.time.DateTime
@@ -21,25 +18,42 @@ trait UriRenormalizationTrackingRepo extends Repo[UriRenormalizationEvent] {
   def addNew(sequenceNumber: Long, numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession) : Unit
 }
 
+@Singleton
 class UriRenormalizationTrackingRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent
   ) extends DbRepo[UriRenormalizationEvent] with UriRenormalizationTrackingRepo {
 
-  override val table = new RepoTable[UriRenormalizationEvent](db, "uri_renormalization_event") {
+  import db.Driver.simple._
+  implicit def seqNormalizedUriIdMapper[M <: Model[M]] = MappedColumnType.base[Seq[Id[NormalizedURI]], String]({ dest =>
+    Json.stringify(JsArray(dest.map( x => JsNumber(x.id) )))
+  }, { source =>
+    Json.parse(source) match {
+      case x: JsArray => {
+        x.value.map(_.as[Id[NormalizedURI]])
+      }
+      case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Seq of Normalized URI ids: $source")
+    }
+  })
+
+
+  type RepoImpl = UriRenormalizationEventTable
+  class UriRenormalizationEventTable(tag: Tag) extends RepoTable[UriRenormalizationEvent](db, tag, "uri_renormalization_event") {
     def sequenceNumber = column[Long]("sequence_number", O.NotNull)
     def numIdsChanged = column[Long]("num_ids_changed", O.NotNull)
     def idsRetired = column[Seq[Id[NormalizedURI]]]("ids_retired", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ sequenceNumber ~ numIdsChanged ~ idsRetired <> (UriRenormalizationEvent.apply _, UriRenormalizationEvent.unapply _)
+    def * = (id.?, createdAt, updatedAt, sequenceNumber, numIdsChanged, idsRetired) <> ((UriRenormalizationEvent.apply _).tupled, UriRenormalizationEvent.unapply _)
   }
+  def table(tag: Tag) = new UriRenormalizationEventTable(tag)
 
-  import db.Driver.Implicit._
-
+  
   override def deleteCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
 
   def getCurrentSequenceNumber()(implicit session: RSession): Long = {
-    Query(table.map(_.sequenceNumber).max).first.getOrElse(0)
+    import scala.slick.jdbc.StaticQuery.interpolation
+    val sql = sql"select max(sequenceNumber) as max from uri_renormalization_event"
+    sql.as[Long].firstOption().getOrElse(0L)
   }
 
   def addNew(sequenceNumber: Long, numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession) : Unit = {

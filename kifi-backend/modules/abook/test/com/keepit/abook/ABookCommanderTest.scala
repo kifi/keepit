@@ -50,6 +50,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       withDb(modules: _*) { implicit injector =>
         val (commander) = setup()
 
+      db.readOnly(inject[ABookInfoRepo].count(_))
         // empty abook upload
         val emptyABookRawInfo = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray(Seq.empty))
         val emptyABookOpt = commander.processUpload(u42, ABookOrigins.IOS, None, None, Json.toJson(emptyABookRawInfo))

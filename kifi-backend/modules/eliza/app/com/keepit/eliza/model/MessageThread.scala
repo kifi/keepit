@@ -2,8 +2,6 @@ package com.keepit.eliza.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
-import com.keepit.common.db.slick.FortyTwoTypeMappers._
-import com.keepit.common.db.slick.{StringMapperDelegate}
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
@@ -14,10 +12,8 @@ import com.keepit.model.{User, NormalizedURI}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.time.{DateTimeJsonFormat}
-import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
-import scala.slick.driver.{BasicProfile}
+
 import scala.util.hashing.MurmurHash3
-import MessagingTypeMappers._
 import scala.concurrent.duration.Duration
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin}
 import com.keepit.common.strings.StringWithNoLineBreaks

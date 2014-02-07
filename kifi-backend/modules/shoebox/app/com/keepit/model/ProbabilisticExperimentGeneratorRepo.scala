@@ -17,17 +17,19 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
   probabilisticExperimentGeneratorCache:ProbabilisticExperimentGeneratorAllCache
 ) extends DbRepo[ProbabilisticExperimentGenerator] with ProbabilisticExperimentGeneratorRepo {
 
-  import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
-  override val table = new RepoTable[ProbabilisticExperimentGenerator](db, "probabilistic_experiment_generator") {
+  type RepoImpl = ProbabilisticExperimentGeneratorTable
+  class ProbabilisticExperimentGeneratorTable(tag: Tag) extends RepoTable[ProbabilisticExperimentGenerator](db, tag, "probabilistic_experiment_generator") {
     def description = column[String]("description", O.NotNull)
     def condition = column[ExperimentType]("cond", O.Nullable)
     def salt = column[String]("salt", O.NotNull)
     def density = column[ProbabilityDensity[ExperimentType]]("density", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ description ~ condition.? ~ salt ~ density <> (ProbabilisticExperimentGenerator.apply _, ProbabilisticExperimentGenerator.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, description, condition.?, salt, density) <> ((ProbabilisticExperimentGenerator.apply _).tupled, ProbabilisticExperimentGenerator.unapply _)
   }
+
+  def table(tag: Tag) = new ProbabilisticExperimentGeneratorTable(tag)
+  initTable()
 
   def invalidateCache(model: ProbabilisticExperimentGenerator)(implicit session: RSession): Unit = {
     probabilisticExperimentGeneratorCache.set(ProbabilisticExperimentGeneratorAllKey, allActive())
@@ -38,7 +40,7 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
   }
 
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator] = {
-    (for(f <- table if f.state === ProbabilisticExperimentGeneratorStates.ACTIVE) yield f).list
+    (for(f <- rows if f.state === ProbabilisticExperimentGeneratorStates.ACTIVE) yield f).list
   }
 }
 

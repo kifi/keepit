@@ -7,7 +7,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import scala.concurrent.Await
-import scala.slick.util.CloseableIterator
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.search.IndexInfo
 import com.keepit.search.Lang

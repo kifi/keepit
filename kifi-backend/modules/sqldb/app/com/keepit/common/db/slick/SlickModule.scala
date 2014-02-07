@@ -1,8 +1,6 @@
 package com.keepit.common.db.slick
 
-import scala.slick.lifted.DDL
-import scala.slick.session.{Database => SlickDatabase}
-
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Provides, Singleton}

@@ -10,9 +10,6 @@ import com.keepit.common.db.slick.DBSession._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
-import com.keepit.common.db.slick.FortyTwoTypeMappers.ByteArrayTypeMapper
-import com.keepit.common.db.slick.FortyTwoTypeMappers.UserIdTypeMapper
-import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import scala.annotation.elidable
 import scala.annotation.elidable.ASSERTION
@@ -100,14 +97,18 @@ abstract  class UserTopicRepoBase(
   val clock: Clock,
   val userTopicCache: UserTopicCache
 ) extends DbRepo[UserTopic] with UserTopicRepo with Logging{
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
 
-  override val table = new RepoTable[UserTopic](db, tableName){
+  import db.Driver.simple._
+
+  type RepoImpl = UserTopicTable
+  class UserTopicTable(tag: Tag) extends RepoTable[UserTopic](db, tag, tableName) {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
-    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
+    def * = (id.?, userId, topic, createdAt, updatedAt) <> ((UserTopic.apply _).tupled, UserTopic.unapply _)
   }
+
+  def table(tag: Tag) = new UserTopicTable(tag)
+  initTable()
 
   override def invalidateCache(topic: UserTopic)(implicit session: RSession): Unit = {
     userTopicCache.set(UserTopicKey(topic.userId, flag), topic)
@@ -119,14 +120,14 @@ abstract  class UserTopicRepoBase(
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
     userTopicCache.getOrElseOpt(UserTopicKey(userId, flag)){
-      (for(r <- table if r.userId === userId) yield r).firstOption
+      (for(r <- rows if r.userId === userId) yield r).firstOption
     }
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
-    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId, flag)))
+    (for(r <- rows) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId, flag)))
     log.info(s"All cached userTopics (flag = ${flag}) have been removed")
-    (for(r <- table) yield r).delete
+    (for(r <- rows) yield r).delete
   }
 }
 
