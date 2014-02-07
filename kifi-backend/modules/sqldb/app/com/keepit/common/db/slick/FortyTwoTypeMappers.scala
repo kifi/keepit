@@ -37,6 +37,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
   implicit val userToDomainKindMapper = MappedColumnType.base[UserToDomainKind, String](_.value, UserToDomainKind.apply)
+  implicit val userPictureSource = MappedColumnType.base[UserPictureSource, String](_.name, UserPictureSource.apply)
   implicit val restrictionMapper = MappedColumnType.base[Restriction, String](_.context, Restriction.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
@@ -89,6 +90,12 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
       case x: JsArray => x
       case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for JsArray: $src")
     }
+  })
+
+  implicit val jsObjectMapper = MappedColumnType.base[JsObject, String]({ json =>
+    Json.stringify(json)
+  }, { src =>
+    Json.parse(src).as[JsObject]
   })
 
   implicit val jsValueMapper = MappedColumnType.base[JsValue, String]({ json =>
