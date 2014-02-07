@@ -2,9 +2,10 @@ package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{LargeString, Id}
+import com.keepit.common.db.{LargeString, State, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
@@ -20,8 +21,6 @@ class UserValueRepoImpl @Inject() (
   val valueCache: UserValueCache,
   val clock: Clock)
     extends DbRepo[UserValue] with UserValueRepo {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
   import db.Driver.simple._
   import DBSession._
 
@@ -31,16 +30,16 @@ class UserValueRepoImpl @Inject() (
     def value = column[LargeString]("value", O.NotNull)
     def name = column[String]("name", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, userId, name, value, state) <> (
-      apply => apply match {
-        case (id, createdAt, updatedAt, userId, name, value, state) =>
-          UserValue(id, createdAt, updatedAt, userId, name, value, state)
-      },
-      unapply => unapply match {
-        case UserValue(id, createdAt, updatedAt, userId, name, value, state) =>
-          Some((id, createdAt, updatedAt, userId, name, LargeString(value), state))
-        case _ => None
-      })
+    def * = (id.?, createdAt, updatedAt, userId, name, value, state) <> (rowToObj, objToRow)
+  }
+
+  private val rowToObj: ((Option[Id[UserValue]], DateTime, DateTime, Id[User], String, LargeString, State[UserValue])) => UserValue = {
+    case (id, createdAt, updatedAt, userId, name, LargeString(value), state) => UserValue(id, createdAt, updatedAt, userId, name, value, state)
+  }
+
+  private val objToRow: UserValue => Option[(Option[Id[UserValue]], DateTime, DateTime, Id[User], String, LargeString, State[UserValue])] = {
+    case UserValue(id, createdAt, updatedAt, userId, name, value, state) => Some((id, createdAt, updatedAt, userId, name, LargeString(value), state))
+    case _ => None
   }
 
   def table(tag: Tag) = new UserValueTable(tag)
