@@ -117,7 +117,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!orphaned.isEmpty) {
           val msg = s"[checkAssigned] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
           log.error(msg) // shouldn't happen -- airbrake
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-orphaned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- orphaned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime))
@@ -129,7 +129,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!abandoned.isEmpty) {
           val msg = s"[checkAssigned] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
           log.warn(msg)
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-abandoned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- abandoned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime)) // todo(ray): ask worker for status
@@ -139,7 +139,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!stalled.isEmpty) { // likely due to failed db updates
           val msg = s"[checkAssigned] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
           log.warn(msg)
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-stalled", htmlBody = msg))
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-stalled", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- stalled) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime.plusMinutes(util.Random.nextInt(30)))) // todo(ray): ask worker for status

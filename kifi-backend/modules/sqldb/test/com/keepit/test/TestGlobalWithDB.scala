@@ -6,7 +6,6 @@ import com.keepit.common.db.{TestDbInfo}
 import java.sql.{Driver, DriverManager}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RWSession
-import scala.slick.session.ResultSetConcurrency
 
 import com.keepit.common.db.TestSlickModule
 import com.google.inject.util.Modules

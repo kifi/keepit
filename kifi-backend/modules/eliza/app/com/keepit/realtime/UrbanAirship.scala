@@ -2,9 +2,7 @@ package com.keepit.realtime
 
 import java.util.concurrent.TimeoutException
 
-import scala.concurrent.{Future, future, Promise}
-import scala.slick.driver.BasicProfile
-import scala.slick.lifted.BaseTypeMapper
+import scala.concurrent.{Future, future}
 
 import org.joda.time.{Days, DateTime}
 
@@ -21,7 +19,6 @@ import com.keepit.eliza.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
-import com.keepit.common.healthcheck.AirbrakeError
 
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
@@ -48,38 +45,29 @@ trait DeviceRepo extends Repo[Device] {
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
 }
 
-class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DeviceRepo with DbRepo[Device] {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import DBSession._
+class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DeviceRepo with DbRepo[Device] with MessagingTypeMappers {
 
-  implicit object DeviceIdTypeMapper extends BaseTypeMapper[Id[Device]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Device](profile)
-  }
-  implicit object DeviceTypeTypeMapper extends BaseTypeMapper[DeviceType] {
-    def apply(profile: BasicProfile) = new StringMapperDelegate[DeviceType](profile) {
-      def sourceToDest(dest: DeviceType) = dest.name
-      def safeDestToSource(source: String) = DeviceType(source)
-      def zero = DeviceType.IOS
-    }
-  }
+  import db.Driver.simple._
+  implicit val deviceTypeTypeMapper = MappedColumnType.base[DeviceType, String](_.name, DeviceType.apply)
 
-  override val table = new RepoTable[Device](db, "device") {
+  type RepoImpl = DeviceTable
+  class DeviceTable(tag: Tag) extends RepoTable[Device](db, tag, "device") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def token = column[String]("token", O.NotNull)
     def deviceType = column[DeviceType]("device_type", O.NotNull)
-    def * = id.? ~ userId ~ token ~ deviceType ~ state ~ createdAt ~ updatedAt <> (Device.apply _, Device.unapply _)
+    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt) <> ((Device.apply _).tupled, Device.unapply _)
   }
+  def table(tag: Tag) = new DeviceTable(tag)
 
   override def deleteCache(model: Device)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: Device)(implicit session: RSession): Unit = {}
 
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]])(implicit s: RSession): Seq[Device] = {
-    (for (t <- table if t.userId === userId && t.state =!= excludeState.orNull) yield t).list
+    (for (t <- rows if t.userId === userId && t.state =!= excludeState.orNull) yield t).list
   }
 
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device] = {
-    (for (t <- table if t.userId === userId && t.token === token && t.deviceType === deviceType) yield t).firstOption
+    (for (t <- rows if t.userId === userId && t.token === token && t.deviceType === deviceType) yield t).firstOption
   }
 }
 

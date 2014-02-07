@@ -2,10 +2,13 @@ package com.keepit.common.mail
 
 import com.keepit.common.db._
 import com.keepit.common.db.LargeString._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import com.keepit.model.User
 import com.keepit.common.strings.StringWithNoLineBreaks
+import com.keepit.common.time._
+import com.keepit.model.User
+
+import org.joda.time.DateTime
+
+import play.api.mvc.PathBindable
 
 case class ElectronicMailMessageId(id: String) {
   def toEmailHeader = s"<$id>"
@@ -18,7 +21,16 @@ object ElectronicMailMessageId {
       case id => id
     })
 }
+
 case class ElectronicMailCategory(val category: String)
+object ElectronicMailCategory {
+  implicit def pathBinder = new PathBindable[ElectronicMailCategory] {
+    override def bind(key: String, value: String): Either[String, ElectronicMailCategory] =
+      Right(ElectronicMailCategory(value))
+
+    override def unbind(key: String, value: ElectronicMailCategory): String = value.category
+  }
+}
 
 case class ElectronicMail (
   id: Option[Id[ElectronicMail]] = None,

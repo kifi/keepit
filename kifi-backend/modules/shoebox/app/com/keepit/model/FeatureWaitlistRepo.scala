@@ -25,13 +25,19 @@ case class FeatureWaitlistEntry(
 
 @Singleton
 class FeatureWaitlistRepo @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[FeatureWaitlistEntry] with ExternalIdColumnDbFunction[FeatureWaitlistEntry] {
+  import db.Driver.simple._
 
-  override val table = new RepoTable[FeatureWaitlistEntry](db, "feature_waitlist") with ExternalIdColumn[FeatureWaitlistEntry] {
+  type RepoImpl = FeatureWaitlistTable
+
+  class FeatureWaitlistTable(tag: Tag) extends RepoTable[FeatureWaitlistEntry](db, tag, "feature_waitlist") with ExternalIdColumn[FeatureWaitlistEntry] {
     def email = column[String]("email", O.NotNull)
     def feature = column[String]("feature", O.NotNull)
     def userAgent = column[String]("user_agent", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ email ~ feature ~ userAgent <> (FeatureWaitlistEntry.apply _, FeatureWaitlistEntry.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, email, feature, userAgent) <> (FeatureWaitlistEntry.tupled, FeatureWaitlistEntry.unapply _)
   }
+
+  def table(tag: Tag) = new FeatureWaitlistTable(tag)
+  initTable()
 
   override def deleteCache(model: FeatureWaitlistEntry)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: FeatureWaitlistEntry)(implicit session: RSession): Unit = {}

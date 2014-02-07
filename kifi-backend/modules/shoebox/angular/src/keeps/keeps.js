@@ -8,6 +8,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		$scope.me = profileService.me;
 		$scope.keeps = keepService.list;
 
+		$scope.$watch('keeps', function () {
+			$scope.refreshScroll();
+		});
+
 		var promise = keepService.getList();
 		$q.all([promise, tagService.fetchAll()]).then(function () {
 			keepService.joinTags(keepService.list, tagService.list);

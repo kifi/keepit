@@ -24,43 +24,46 @@ trait EmailOptOutRepo extends Repo[EmailOptOut] {
 
 @Singleton
 class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EmailOptOut] with EmailOptOutRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import DBSession._
 
-  override val table = new RepoTable[EmailOptOut](db, "email_opt_out") {
+  import db.Driver.simple._
+
+  type RepoImpl = EmailOptOutTable
+  class EmailOptOutTable(tag: Tag) extends RepoTable[EmailOptOut](db, tag, "email_opt_out") {
     def address = column[EmailAddressHolder]("address", O.NotNull)
     def category = column[ElectronicMailCategory]("category", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ address ~ category ~ state <> (EmailOptOut, EmailOptOut.unapply _)
+    def * = (id.?, createdAt, updatedAt, address, category, state) <> ((EmailOptOut.apply _).tupled, EmailOptOut.unapply _)
   }
+
+  def table(tag: Tag) = new EmailOptOutTable(tag)
+  initTable()
 
   override def deleteCache(model: EmailOptOut)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: EmailOptOut)(implicit session: RSession): Unit = {}
 
   def getByEmailAddress(address: EmailAddressHolder, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut] = {
-    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).list
+    (for(f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
   }
 
   def hasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory = NotificationCategory.ALL)(implicit session: RSession): Boolean = {
     val all : ElectronicMailCategory = NotificationCategory.ALL
     val q = if (category == all) {
-      for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE) yield f
+      for(f <- rows if f.address === address && f.state =!= EmailOptOutStates.INACTIVE) yield f
     } else {
-      for(f <- table if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === all)) yield f
+      for(f <- rows if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === all)) yield f
     }
     q.firstOption.exists(_ => true)
   }
 
   def optOut(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RWSession): Unit = {
-    val existingRecord = table.filter(f => f.address === address && f.category === category)
-      .map(r => r.state ~ r.updatedAt).update((EmailOptOutStates.ACTIVE, clock.now())) > 0
+    val existingRecord = rows.filter(f => f.address === address && f.category === category)
+      .map(r => (r.state, r.updatedAt)).update((EmailOptOutStates.ACTIVE, clock.now())) > 0
     if (!existingRecord) {
       save(EmailOptOut(address = address, category = category))
     }
   }
 
   def optIn(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RWSession): Unit = {
-    table.filter(f => f.address === address && f.category === category)
-      .map(r => r.state ~ r.updatedAt).update((EmailOptOutStates.INACTIVE, clock.now()))
+    rows.filter(f => f.address === address && f.category === category)
+      .map(r => (r.state, r.updatedAt)).update((EmailOptOutStates.INACTIVE, clock.now()))
   }
 }

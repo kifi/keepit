@@ -19,6 +19,7 @@ import com.google.inject.Singleton
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.graph.user._
 
 
 class URIGraphSearcherTest extends Specification with GraphTestHelper {
@@ -214,8 +215,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         addConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
 
-        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
-        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        userGraph.update()
+
+        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
+        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
 
         searcher0.search(personaltitle).keySet === Set(2L, 4L, 6L)
         searcher1.search(personaltitle).keySet === Set(1L, 3L, 5L)
@@ -239,8 +243,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
+        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        userGraph.update()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
 
         def mkSiteQuery(site: String) = {
           new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
@@ -278,8 +284,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
+        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        userGraph.update()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
 
         def mkQuery(word: String) = new TermQuery(new Term("title", word))
 
@@ -315,8 +323,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
+        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        userGraph.update()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
 
         uris.take(3).foreach{ uri =>
           val uriId =  uri.id.get

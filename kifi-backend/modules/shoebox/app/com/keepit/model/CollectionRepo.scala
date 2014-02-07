@@ -34,22 +34,26 @@ class CollectionRepoImpl @Inject() (
   val clock: Clock)
   extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
   private val sequence = db.getSequence("collection_sequence")
 
-  override val table = new RepoTable[Collection](db, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection]{
+  type RepoImpl = CollectionTable
+
+  class CollectionTable(tag: Tag) extends RepoTable[Collection](db, tag, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection]{
     def userId = column[Id[User]]("user_id", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def lastKeptTo = column[Option[DateTime]]("last_kept_to", O.Nullable)
-    def * = id.? ~ externalId ~ userId ~ name ~ state ~ createdAt ~ updatedAt ~ lastKeptTo ~ seq <> (
-      Collection.apply _, Collection.unapply _)
+    def * = (id.?, externalId, userId, name, state, createdAt, updatedAt, lastKeptTo, seq) <> (
+      (Collection.apply _).tupled, Collection.unapply _)
   }
+
+  def table(tag: Tag) = new CollectionTable(tag)
+  initTable()
 
   override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.set(UserCollectionsKey(collection.userId),
-      (for (c <- table if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
+      (for (c <- rows if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
   }
 
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
@@ -58,19 +62,19 @@ class CollectionRepoImpl @Inject() (
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     (userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
-      (for (c <- table if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
+      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
     }).sortBy(_.lastKeptTo).reverse
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
                             (implicit session: RSession): Option[Collection] =
     (for {
-      c <- table if c.userId === userId && c.externalId === externalId && c.state === CollectionStates.ACTIVE
+      c <- rows if c.userId === userId && c.externalId === externalId && c.state === CollectionStates.ACTIVE
     } yield c).firstOption
 
   def getByUserAndName(userId: Id[User], name: String,
       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
       (implicit session: RSession): Option[Collection] =
-    (for (c <- table if c.userId === userId && c.name === name
+    (for (c <- rows if c.userId === userId && c.name === name
       && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
@@ -91,7 +95,7 @@ class CollectionRepoImpl @Inject() (
     if (isNewKeep) {
       save(get(collectionId) withLastKeptTo clock.now())
     } else {
-      (for (c <- table if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
+      (for (c <- rows if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
     }
   }
 

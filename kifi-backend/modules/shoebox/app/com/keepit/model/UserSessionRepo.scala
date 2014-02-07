@@ -3,7 +3,7 @@ package com.keepit.model
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
@@ -22,18 +22,20 @@ class UserSessionRepoImpl @Inject() (
   val externalIdCache: UserSessionExternalIdCache
 ) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
 
-  import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+    import db.Driver.simple._
 
-  override lazy val table = new RepoTable[UserSession](db, "user_session") with ExternalIdColumn[UserSession] {
+  type RepoImpl = UserSessionTable
+  class UserSessionTable(tag: Tag) extends RepoTable[UserSession](db, tag, "user_session") with ExternalIdColumn[UserSession] {
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def socialId = column[SocialId]("social_id", O.NotNull)
     def expires = column[DateTime]("expires", O.NotNull)
     def provider = column[SocialNetworkType]("provider", O.NotNull)
-    def * = id.? ~ userId ~ externalId ~ socialId ~ provider ~ expires ~ state ~ createdAt ~ updatedAt <>
-      (UserSession.apply _, UserSession.unapply _)
+    def * = (id.?, userId, externalId, socialId, provider, expires, state, createdAt, updatedAt) <>
+      ((UserSession.apply _).tupled, UserSession.unapply _)
   }
+
+  def table(tag: Tag) = new UserSessionTable(tag)
+  initTable
 
   override def invalidateCache(userSession: UserSession)(implicit session: RSession): Unit = {
     externalIdCache.set(UserSessionExternalIdKey(userSession.externalId), userSession)
@@ -45,17 +47,17 @@ class UserSessionRepoImpl @Inject() (
 
   override def getOpt(id: ExternalId[UserSession])(implicit session: RSession): Option[UserSession] = {
     externalIdCache.getOrElseOpt(UserSessionExternalIdKey(id)) {
-      (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
+      (for (f <- rows if f.externalId === id) yield f).firstOption
     }
   }
 
   override def get(id: ExternalId[UserSession])(implicit session: RSession): UserSession = getOpt(id).get
 
   def invalidateByUser(userId: Id[User])(implicit s: RWSession): Int = {
-    (for (s <- table if s.userId === userId) yield s.externalId).list.foreach { id =>
+    (for (s <- rows if s.userId === userId) yield s.externalId).list.foreach { id =>
       externalIdCache.remove(UserSessionExternalIdKey(id))
     }
-    (for (s <- table if s.userId === userId) yield s.state ~ s.updatedAt)
+    (for (s <- rows if s.userId === userId) yield (s.state, s.updatedAt))
       .update(UserSessionStates.INACTIVE -> clock.now())
   }
 

@@ -93,7 +93,6 @@ object ABookInfoStates extends States[ABookInfo] {
 }
 
 object ABookInfo {
-
   implicit val format = (
       (__ \ 'id).formatNullable(Id.format[ABookInfo]) and
       (__ \ 'createdAt).format[DateTime] and

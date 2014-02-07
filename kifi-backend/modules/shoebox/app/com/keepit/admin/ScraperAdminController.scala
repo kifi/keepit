@@ -28,7 +28,7 @@ class ScraperAdminController @Inject() (
   scraperServiceClient:ScraperServiceClient)
     extends AdminController(actionAuthenticator) {
 
-  val MAX_COUNT_DISPLAY = 50
+  val MAX_COUNT_DISPLAY = 25
 
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
