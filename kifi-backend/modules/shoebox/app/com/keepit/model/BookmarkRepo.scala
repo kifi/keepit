@@ -3,11 +3,12 @@ package com.keepit.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
+import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{GetResult, StaticQuery}
+import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
 import com.keepit.common.logging.Logging
+
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] with SeqNumberFunction[Bookmark] {
@@ -68,6 +69,18 @@ class BookmarkRepoImpl @Inject() (
 
   def table(tag: Tag) = new BookmarkTable(tag)
   initTable()
+
+  implicit object GetOptBookmarkId extends GetResult[Option[Id[Bookmark]]] { def apply(rs: PositionedResult) = rs.nextLongOption().map(Id[Bookmark](_)) }
+  implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] { def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC) }
+  implicit val GetBookmarkSource: GetResult[BookmarkSource] = new GetResult[BookmarkSource] { def apply(r: PositionedResult) = BookmarkSource(r.nextString()) }
+  implicit val GetSequenceNumber: GetResult[SequenceNumber] = new GetResult[SequenceNumber] { def apply(r: PositionedResult) = SequenceNumber(r.nextLong()) }
+
+  implicit object GetOptExtBookmarkId extends GetResult[Option[ExternalId[Bookmark]]] { def apply(rs: PositionedResult) = rs.nextStringOption().map(ExternalId[Bookmark](_)) }
+  implicit def GetGenericOptId[M <: Model[M]] = new GetResult[Option[Id[M]]] { def apply(rs: PositionedResult) = rs.nextLongOption().map(Id[M](_)) }
+  implicit def GetGenericId[M <: Model[M]] = new GetResult[Id[M]] { def apply(rs: PositionedResult) = Id[M](rs.nextLong()) }
+  implicit def GetGenericState[M <: Model[M]] = new GetResult[State[M]] { def apply(rs: PositionedResult) = State[M](rs.nextString()) }
+  implicit def GetGenericExtId[M <: Model[M]] = new GetResult[ExternalId[M]] { def apply(rs: PositionedResult) = ExternalId[M](rs.nextString()) }
+  implicit def GetGenericExtOptId[M <: Model[M]] = new GetResult[Option[ExternalId[M]]] { def apply(rs: PositionedResult) = rs.nextStringOption().map(ExternalId[M](_)) }
 
   private implicit val getBookmarkResult : GetResult[com.keepit.model.Bookmark] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
     Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[BookmarkSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber])
