@@ -16,7 +16,7 @@
 	</div>
 	<div class="kf-keep-who">
 		<a class="kf-keep-who-pic me" title="You! You look great!" ng-attr-style="background-image: url({{getPicUrl(me)}})"></a>
-		<a class="kf-keep-who-pic" href="javascript:" data-id="{{id}}" data-name="{{getName(keeper)}}" ng-attr-style="background-image: url({{getPicUrl(keeper)}})" ng-repeat="keeper in keep.keepers"></a>
+		<a class="kf-keep-who-pic" href="javascript:" data-id="{{id}}" data-name="{{getName(keeper)}}" ng-attr-style="background-image: url({{getPicUrl(keeper)}})" ng-repeat="keeper in keep.keepers | limitTo: 9"></a>
 		<span class="kf-keep-who-others" ng-if="showOthers()"></span>
 		<span class="kf-keep-who-text">
 			<span class="kf-keep-you">
