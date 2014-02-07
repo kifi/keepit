@@ -12,12 +12,8 @@ import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{TypedType, ColumnOption}
 import scala.slick.driver.{JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver}
 
-import scala.slick.lifted._
-import scala.slick.driver.JdbcDriver.simple._
-import scala.slick.lifted.Tag
-import scala.slick.lifted.TableQuery
-import scala.slick.lifted.Query
 import com.keepit.common.logging.Logging
+import scala.slick.lifted.{AbstractTable, BaseTag}
 
 
 trait Repo[M <: Model[M]] {
@@ -40,16 +36,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   val clock: Clock
   val profile = db.Driver.profile
 
-  import scala.slick.driver.JdbcDriver.Table
-  //import db.Driver.simple._
+  import db.Driver.simple._
 
   lazy val dbLog = Logger("com.keepit.db")
-
-
-  // In general, when needed, use `import FortyTwoGenericTypeMappers._` and you'll be fine.
-  // Listed explicitly here so subclasses can use it without an import.
-  implicit val selfFdMapper = FortyTwoGenericTypeMappers.idMapper[M]
-  implicit val selfStateMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
 
   type RepoImpl <: RepoTable[M]
@@ -126,7 +115,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     model
   }
 
-  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name))  with FortyTwoGenericTypeMappers with Logging {
+  abstract class RepoTable[M <: Model[M]](val db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name)) with FortyTwoGenericTypeMappers with Logging {
     //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
     def createdAt = column[DateTime]("created_at", O.NotNull)
@@ -174,6 +163,7 @@ trait RepoWithDelete[M <: Model[M]] { self: Repo[M] =>
 }
 
 trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M] =>
+  import db.Driver.simple._
 
   def delete(model: M)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis()
@@ -193,10 +183,10 @@ trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
+  import db.Driver.simple._
 
   protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
   protected def rowsWithSeq = TableQuery(tableWithSeq)
-  implicit val seqMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
 
   def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
     val q = (for(t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
@@ -217,6 +207,7 @@ trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] { self: Repo[M] =>
 }
 
 trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalIdColumnFunction[M] { self: DbRepo[M] =>
+  import db.Driver.simple._
 
   protected def tableWithExternalIdColumn(tag: Tag) = table(tag).asInstanceOf[ExternalIdColumn[M]]
   protected def rowsWithExternalIdColumn = TableQuery(tableWithExternalIdColumn)

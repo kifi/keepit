@@ -8,7 +8,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.{Model, Id}
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
-import scala.slick.driver.JdbcDriver.simple._
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
 trait ABookInfoRepo extends Repo[ABookInfo] {
@@ -21,6 +20,8 @@ trait ABookInfoRepo extends Repo[ABookInfo] {
 }
 
 class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[ABookInfo] with ABookInfoRepo with Logging {
+
+  import db.Driver.simple._
 
   type RepoImpl = ABookTable
   class ABookTable(tag: Tag) extends RepoTable[ABookInfo](db, tag, "abook_info") {
