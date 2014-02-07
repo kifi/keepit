@@ -49,9 +49,10 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
         uriGraph.update()
         indexer.update() === uris.size
+        userGraphIndexer.update()
 
         val numHitsPerCategory = 1000
         users.foreach{ user =>
@@ -59,6 +60,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
             val userId = user.id.get
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
             mainSearcherFactory.clear
+            userGraphIndexer.update()
             val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, numHitsPerCategory, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText(numHitsPerCategory)
@@ -101,7 +103,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -112,7 +114,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
           //println("user:" + userId)
           users.sliding(3).foreach{ friends =>
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
-
+            userGraphIndexer.update()
             mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, numHitsToReturn, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
@@ -153,7 +155,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
 
@@ -214,7 +216,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -242,7 +244,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -284,7 +286,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val bookmarkMap = bookmarks.map(b => (b.uriId -> b)).toMap
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -318,7 +320,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
             store
           }
         }
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -351,7 +353,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByUser(Seq((user1, privateUris)), isPrivate = true)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -375,12 +377,13 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByUser(Seq((user2, privateUris)), isPrivate = true)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
+        userGraphIndexer.update()
 
         val mainSearcher = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, uris.size, SearchFilter.friends(), noBoostConfig)
         val res = mainSearcher.search()
@@ -402,7 +405,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -437,7 +440,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksToCollection(coll2.id.get, coll2set:_*)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         indexer.update() === uris.size
@@ -486,7 +489,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         saveBookmarksToCollection(coll2.id.get, coll2set:_*)
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
         collectionGraph.update() == 2

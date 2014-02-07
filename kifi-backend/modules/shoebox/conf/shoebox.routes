@@ -98,6 +98,7 @@ POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showKeeperIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowKeeperIntro(show: Boolean)
 POST    /ext/pref/showSearchIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowSearchIntro(show: Boolean)
 POST    /ext/pref/showFindFriends   @com.keepit.controllers.ext.ExtPreferenceController.setShowFindFriends(show: Boolean)
+POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks          @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
@@ -478,7 +479,7 @@ GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.in
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: Long, fetchSize: Int) 
+GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: Long, fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()

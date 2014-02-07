@@ -41,7 +41,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
@@ -117,7 +117,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
@@ -189,7 +189,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           (fakeShoeboxClient.saveURIs(uris:_*), fakeShoeboxClient)
         }
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update() === 5                // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))   // a4
@@ -217,7 +217,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           normalizedUrl = "http://www.keepit.com/article" + n, state = state)}.toList
         val savedUris = shoebox.saveURIs(uris :_*)
         val store = mkStore(savedUris)
-        val (uriGraph, collectionGraph, indexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update === 5
         indexer.catchUpSeqNumber.value === 10

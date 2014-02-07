@@ -1,17 +1,18 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
+import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, WebsiteController, ActionAuthenticator}
-import com.keepit.common.db.slick._
-import com.keepit.model._
+import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.social.BasicUser
+import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
-import com.keepit.classify.{DomainRepo, Domain, DomainStates}
+import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.social.BasicUser
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, JsNumber, JsObject, Json}
@@ -26,6 +27,7 @@ class ExtPreferenceController @Inject() (
   urlPatternRepo: URLPatternRepo,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
+  notifyPreferenceRepo: UserNotifyPreferenceRepo,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
   normalizationService: NormalizationService)
@@ -36,14 +38,16 @@ class ExtPreferenceController @Inject() (
     maxResults: Int,
     showKeeperIntro: Boolean,
     showSearchIntro: Boolean,
-    showFindFriends: Boolean)
+    showFindFriends: Boolean,
+    messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
       (__ \ 'enterToSend).write[Boolean] and
       (__ \ 'maxResults).write[Int] and
       (__ \ 'showKeeperIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'showSearchIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-      (__ \ 'showFindFriends).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
+      (__ \ 'showFindFriends).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
     )(unlift(UserPrefs.unapply))
 
   private val crypt = new SimpleDESCrypt
@@ -90,6 +94,11 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
+  def setEmailNotifyPreference(kind: ElectronicMailCategory, send: Boolean) = JsonAction.authenticated { request =>
+    db.readWrite(implicit s => notifyPreferenceRepo.setNotifyPreference(request.user.id.get, kind, send))
+    Ok(JsNumber(0))
+  }
+
   def getPrefs() = JsonAction.authenticated { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
@@ -124,7 +133,8 @@ class ExtPreferenceController @Inject() (
         maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1),
         showKeeperIntro = userValueRepo.getValue(userId, "ext_show_keeper_intro").map(_.toBoolean).getOrElse(false),
         showSearchIntro = userValueRepo.getValue(userId, "ext_show_search_intro").map(_.toBoolean).getOrElse(false),
-        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(false))
+        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(false),
+        messagingEmails = notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE))
     }
   }
 }

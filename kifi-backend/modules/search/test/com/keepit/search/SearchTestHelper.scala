@@ -36,6 +36,7 @@ import com.keepit.search.tracker.ProbablisticLRU
 import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding._
 import com.keepit.common.aws.AwsModule
+import com.keepit.search.graph.user._
 
 trait SearchTestHelper { self: SearchApplicationInjector =>
 
@@ -80,6 +81,9 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[ShoeboxServiceClient])
 
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userGraphsCommander = new UserGraphsCommander(userGraphIndexer, searchFriendIndexer)
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -87,6 +91,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     val mainSearcherFactory = new MainSearcherFactory(
       shardedArticleIndexer,
       userIndexer,
+      userGraphsCommander,
       shardedUriGraphIndexer,
       shardedCollectionIndexer,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
@@ -99,7 +104,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
-    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, mainSearcherFactory)
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, mainSearcherFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
@@ -128,8 +133,9 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
   }
 
   def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].clearUserConnections(connections.keys.toSeq:_*)
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveConnections(connections)
+    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    shoebox.clearUserConnections(connections.keys.toSeq:_*)
+    shoebox.saveConnections(connections)
   }
 
   def saveCollections(collections: Collection*): Seq[Collection] = {
