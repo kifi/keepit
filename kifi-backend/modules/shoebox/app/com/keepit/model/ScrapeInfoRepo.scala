@@ -54,9 +54,12 @@ class ScrapeInfoRepoImpl @Inject() (
   override def invalidateCache(model: ScrapeInfo)(implicit session: RSession): Unit = {}
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
+    val repo = normUriRepo.get
+    import repo.db.Driver.simple._
     (for {
-      (s, u) <- rows innerJoin normUriRepo.get.rows on (_.uriId is _.id)
-    } yield s.*).list
+      s <- rows
+      u <- repo.rows if (s.uriId === u.id)
+    } yield s).list
   }
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo] =
