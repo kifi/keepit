@@ -4,7 +4,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 
 @ImplementedBy(classOf[SearchConfigExperimentRepoImpl])
 trait SearchConfigExperimentRepo extends Repo[SearchConfigExperiment] {
@@ -19,18 +19,20 @@ class SearchConfigExperimentRepoImpl @Inject()(
   val cache: ActiveExperimentsCache
 ) extends DbRepo[SearchConfigExperiment] with SearchConfigExperimentRepo {
 
-  import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
-  override val table = new RepoTable[SearchConfigExperiment](db, "search_config_experiment") {
+  type RepoImpl = SearchConfigExperimentTable
+  class SearchConfigExperimentTable(tag: Tag) extends RepoTable[SearchConfigExperiment](db, tag, "search_config_experiment") {
     def weight = column[Double]("weight", O.NotNull)
     def description = column[String]("description", O.NotNull)
     def config = column[SearchConfig]("config", O.NotNull)
     def startedAt = column[Option[DateTime]]("started_at", O.NotNull)
-    def * = id.? ~ weight ~ description ~ config ~ startedAt ~ state ~ createdAt ~ updatedAt <>
-      (SearchConfigExperiment.apply _, SearchConfigExperiment.unapply _)
+    def * = (id.?, weight, description, config, startedAt, state, createdAt, updatedAt) <>
+      ((SearchConfigExperiment.apply _).tupled, SearchConfigExperiment.unapply _)
   }
+
+  def table(tag: Tag) = new SearchConfigExperimentTable(tag)
+  initTable()
 
   override def deleteCache(model: SearchConfigExperiment)(implicit session: RSession): Unit = {
     cache.remove(ActiveExperimentsKey)
@@ -42,7 +44,7 @@ class SearchConfigExperimentRepoImpl @Inject()(
 
   def getActive()(implicit session: RSession): Seq[SearchConfigExperiment] = {
     cache.getOrElseUpdate {
-      (for (v <- table if v.state === SearchConfigExperimentStates.ACTIVE) yield v).list
+      (for (v <- rows if v.state === SearchConfigExperimentStates.ACTIVE) yield v).list
     }
   }
 
@@ -52,5 +54,5 @@ class SearchConfigExperimentRepoImpl @Inject()(
   }
 
   def getNotInactive()(implicit session: RSession): Seq[SearchConfigExperiment] =
-    (for (v <- table if v.state =!= SearchConfigExperimentStates.INACTIVE) yield v).list
+    (for (v <- rows if v.state =!= SearchConfigExperimentStates.INACTIVE) yield v).list
 }
