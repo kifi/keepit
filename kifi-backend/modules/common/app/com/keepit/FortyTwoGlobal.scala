@@ -89,7 +89,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           Thread.sleep(18000)
         }
       }
-    } getOrElse log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
