@@ -104,7 +104,7 @@ abstract  class UserTopicRepoBase(
   class UserTopicTable(tag: Tag) extends RepoTable[UserTopic](db, tag, tableName) {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
-    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> ((UserTopic.apply _).tupled, UserTopic.unapply _)
+    def * = (id.?, userId, topic, createdAt, updatedAt) <> ((UserTopic.apply _).tupled, UserTopic.unapply _)
   }
 
   def table(tag: Tag) = new UserTopicTable(tag)
