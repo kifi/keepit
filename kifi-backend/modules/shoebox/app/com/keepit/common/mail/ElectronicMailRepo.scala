@@ -21,7 +21,7 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
   import db.Driver.simple._
 
   type RepoImpl = ElectronicMailTable
-  class ElectronicMailTable(tag: Tag) extends RepoTable[ElectronicMail](db, tag, "user_thread") with ExternalIdColumn[ElectronicMail] {
+  class ElectronicMailTable(tag: Tag) extends RepoTable[ElectronicMail](db, tag, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
     def senderUserId = column[Id[User]]("user_id", O.Nullable)
     def from = column[SystemEmailAddress]("from_addr", O.NotNull)
     def fromName = column[String]("from_name", O.Nullable)
