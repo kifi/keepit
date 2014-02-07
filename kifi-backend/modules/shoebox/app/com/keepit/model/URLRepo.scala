@@ -18,7 +18,7 @@ trait URLRepo extends Repo[URL] {
 class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URL] with URLRepo {
   import db.Driver.simple._
 
-  type RepoTable = URLTable
+  type RepoImpl = URLTable
   class URLTable(tag: Tag) extends RepoTable[URL](db, tag, "url") {
     def url = column[String]("url", O.NotNull)
     def domain = column[String]("domain", O.Nullable)
