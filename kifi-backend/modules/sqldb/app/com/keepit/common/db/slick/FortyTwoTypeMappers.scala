@@ -11,14 +11,11 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import com.keepit.common.net.UserAgent
 import com.keepit.model.UrlHash
 import com.keepit.model.DeepLocator
-<<<<<<< Updated upstream
 import com.keepit.common.mail._
 import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-=======
 import com.keepit.search.Lang
->>>>>>> Stashed changes
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -48,7 +45,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val socialNetworkTypeMapper = MappedColumnType.base[SocialNetworkType, String](SocialNetworkType.unapply(_).get, SocialNetworkType.apply)
   implicit val socialUserMapper = MappedColumnType.base[SocialUser, String](SocialUserSerializer.userSerializer.writes(_).toString, s => SocialUserSerializer.userSerializer.reads(Json.parse(s)).get)
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
-  
+
 
   implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
     Json.stringify(json)
