@@ -19,7 +19,6 @@ import com.keepit.serializer.SocialUserSerializer
 import com.keepit.search.Lang
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
-import com.keepit.common.db.slick.InvalidDatabaseEncodingException
 import play.api.libs.json.JsObject
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
