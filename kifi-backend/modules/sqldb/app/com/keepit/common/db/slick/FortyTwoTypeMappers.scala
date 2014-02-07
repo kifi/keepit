@@ -11,6 +11,7 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import com.keepit.common.net.UserAgent
 import com.keepit.model.UrlHash
 import com.keepit.model.DeepLocator
+import com.keepit.classify.DomainTagName
 import com.keepit.common.mail._
 import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
@@ -41,11 +42,12 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[BookmarkSource, String](_.value, BookmarkSource.apply)
   implicit val systemEmailAddressMapper = MappedColumnType.base[SystemEmailAddress, String](_.address, EmailAddresses.apply)
+  implicit val domainTagNameMapper = MappedColumnType.base[DomainTagName, String](_.name, DomainTagName.apply)
   implicit val socialIdMapper = MappedColumnType.base[SocialId, String](_.id, SocialId.apply)
   implicit val socialNetworkTypeMapper = MappedColumnType.base[SocialNetworkType, String](SocialNetworkType.unapply(_).get, SocialNetworkType.apply)
   implicit val socialUserMapper = MappedColumnType.base[SocialUser, String](SocialUserSerializer.userSerializer.writes(_).toString, s => SocialUserSerializer.userSerializer.reads(Json.parse(s)).get)
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
-  
+
 
   implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
     Json.stringify(json)
@@ -331,24 +333,6 @@ object FortyTwoTypeMappers {
 //  }
 
 }
-
-////************************************
-////       Abstract mappers
-////************************************
-//abstract class DelegateMapperDelegate[S, D] extends TypeMapperDelegate[S] {
-//  protected def delegate: TypeMapperDelegate[D]
-//  def sqlType = delegate.sqlType
-//  def setValue(value: S, p: PositionedParameters) = delegate.setValue(sourceToDest(value), p)
-//  def setOption(valueOpt: Option[S], p: PositionedParameters) = delegate.setOption(valueOpt map sourceToDest, p)
-//  def nextValue(r: PositionedResult): S = destToSource(delegate.nextValue(r))
-//  def updateValue(value: S, r: PositionedResult) = delegate.updateValue(sourceToDest(value), r)
-//  override def valueToSQLLiteral(value: S) = delegate.valueToSQLLiteral(sourceToDest(value))
-//  override def sqlTypeName = delegate.sqlTypeName
-//
-//  def destToSource(dest: D): S = Option(dest) match {
-//    case None => zero
-//    case Some(value) => safeDestToSource(dest)
-//  }
 //
 //  def sourceToDest(dest: S): D
 //  def safeDestToSource(source: D): S
