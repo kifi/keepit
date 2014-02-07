@@ -24,45 +24,47 @@ trait PasswordResetRepo extends Repo[PasswordReset] {
 
 @Singleton
 class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[PasswordReset] with PasswordResetRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
   import DBSession._
+  import db.Driver.simple._
 
-  private lazy val random: SecureRandom = new SecureRandom()
   private val EXPIRATION_TIME = new Period(0, 30, 0 , 0) // 30 minutes
 
-  override val table = new RepoTable[PasswordReset](db, "password_reset") {
+  type RepoImpl = PasswordResetTable
+  class PasswordResetTable(tag: Tag) extends RepoTable[PasswordReset](db, tag, "password_reset") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def token = column[String]("token", O.NotNull)
     def usedAt = column[DateTime]("used_at", O.Nullable)
     def usedByIP = column[String]("used_by_ip", O.Nullable)
     def sentTo = column[String]("sent_to", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ token ~ usedAt.? ~ usedByIP.? ~ sentTo.? <> (PasswordReset, PasswordReset.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, state, token, usedAt.?, usedByIP.?, sentTo.?) <> ((PasswordReset.apply _).tupled, PasswordReset.unapply _)
   }
+
+  def table(tag: Tag) = new PasswordResetTable(tag)
+  initTable()
 
   override def deleteCache(model: PasswordReset)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: PasswordReset)(implicit session: RSession): Unit = {}
 
   def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset] =
     if (getPotentiallyExpired) {
-      (for(f <- table if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list
+      (for(f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list
     } else {
-      (for(f <- table if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE && f.createdAt > clock.now().minus(EXPIRATION_TIME)) yield f).list
+      (for(f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE && f.createdAt > clock.now().minus(EXPIRATION_TIME)) yield f).list
     }
 
   def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean = {
     val tokenCannotBeOlderThan = clock.now().minus(EXPIRATION_TIME)
-    val resetResult = table.filter(pr => pr.token === token.toLowerCase && pr.state === PasswordResetStates.ACTIVE && pr.createdAt > tokenCannotBeOlderThan)
-      .map(e => e.usedAt ~ e.updatedAt ~ e.usedByIP ~ e.state)
+    val resetResult = rows.filter(pr => pr.token === token.toLowerCase && pr.state === PasswordResetStates.ACTIVE && pr.createdAt > tokenCannotBeOlderThan)
+      .map(e => (e.usedAt, e.updatedAt, e.usedByIP, e.state))
       .update((clock.now(), clock.now(), ip.take(16), PasswordResetStates.USED)) > 0
     if (resetResult) {
-      table.filter(pr => pr.state === PasswordResetStates.ACTIVE).map(e => e.updatedAt ~ e.state).update((clock.now(), PasswordResetStates.INACTIVE))
+      rows.filter(pr => pr.state === PasswordResetStates.ACTIVE).map(e => (e.updatedAt, e.state)).update((clock.now(), PasswordResetStates.INACTIVE))
     }
     resetResult
   }
 
   def getByToken(passwordResetToken: String)(implicit session: RSession): Option[PasswordReset] = {
-    (for (e <- table if e.token === passwordResetToken.toLowerCase) yield e).firstOption
+    (for (e <- rows if e.token === passwordResetToken.toLowerCase) yield e).firstOption
   }
 
   def tokenIsNotExpired(passwordReset: PasswordReset): Boolean = {

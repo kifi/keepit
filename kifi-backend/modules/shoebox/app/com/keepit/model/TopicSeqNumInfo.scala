@@ -6,7 +6,6 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick.FortyTwoTypeMappers.SequenceNumberTypeMapper
 
 /**
  * This table is intended to have only one row: it's used to track two sequence numbers.
@@ -34,31 +33,35 @@ abstract class TopicSeqNumInfoRepoBase(
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[TopicSeqNumInfo] with TopicSeqNumInfoRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
 
-  override val table = new RepoTable[TopicSeqNumInfo](db, tableName){
+  import db.Driver.simple._
+
+  type RepoImpl = TopicSeqNumInfoTable
+  class TopicSeqNumInfoTable(tag: Tag) extends RepoTable[TopicSeqNumInfo](db, tag, tableName) {
     def uriSeq = column[SequenceNumber]("uri_seq", O.NotNull)
     def bookmarkSeq = column[SequenceNumber]("bookmark_seq", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ uriSeq ~ bookmarkSeq <> (TopicSeqNumInfo.apply _, TopicSeqNumInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriSeq, bookmarkSeq) <> ((TopicSeqNumInfo.apply _).tupled, TopicSeqNumInfo.unapply _)
   }
+
+  def table(tag: Tag) = new TopicSeqNumInfoTable(tag)
+  initTable()
 
   override def deleteCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
 
   def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)] = {
-    (for( r <- table ) yield (r.uriSeq, r.bookmarkSeq)).firstOption
+    (for( r <- rows ) yield (r.uriSeq, r.bookmarkSeq)).firstOption
   }
 
   def updateUriSeq(uriSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo = {
-    (for (r <- table) yield r).firstOption match {
+    (for (r <- rows) yield r).firstOption match {
       case Some(seqInfo) => save(seqInfo.copy(uriSeq = uriSeqNum))
       case None => save(TopicSeqNumInfo(uriSeq = uriSeqNum))
     }
   }
 
   def updateBookmarkSeq(bookmarkSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo = {
-    (for (r <- table) yield r).firstOption match {
+    (for (r <- rows) yield r).firstOption match {
       case Some(seqInfo) => save(seqInfo.copy(bookmarkSeq = bookmarkSeqNum))
       case None => save(TopicSeqNumInfo(bookmarkSeq = bookmarkSeqNum))
     }

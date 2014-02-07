@@ -457,6 +457,7 @@ GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keep
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])
 POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()
+GET     /internal/shoebox/database/getExperimentGenerators             @com.keepit.controllers.internal.ShoeboxController.getExperimentGenerators()
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.internal.ShoeboxDataPipeController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.internal.ShoeboxController.getConnectedUsers(userId: Id[User])

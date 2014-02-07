@@ -18,22 +18,25 @@ class UserBookmarkClicksRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[UserBookmarkClicks] with UserBookmarkClicksRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+    import db.Driver.simple._
 
-  override val table = new RepoTable[UserBookmarkClicks](db, "user_bookmark_clicks") {
+  type RepoImpl = UserBookmarkClicksTable
+  class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_bookmark_clicks") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def selfClicks = column[Int]("self_clicks", O.NotNull)
     def otherClicks = column[Int]("other_clicks", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ selfClicks ~ otherClicks <> (UserBookmarkClicks.apply _, UserBookmarkClicks.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, uriId, selfClicks, otherClicks) <> ((UserBookmarkClicks.apply _).tupled, UserBookmarkClicks.unapply _)
   }
+
+  def table(tag: Tag) = new UserBookmarkClicksTable(tag)
+  initTable()
 
   override def deleteCache(model: UserBookmarkClicks)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: UserBookmarkClicks)(implicit session: RSession): Unit = {}
 
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks] = {
-    (for( r<- table if (r.userId === userId && r.uriId === uriId) ) yield r).firstOption
+    (for( r<- rows if (r.userId === userId && r.uriId === uriId) ) yield r).firstOption
   }
 
   def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks = {
