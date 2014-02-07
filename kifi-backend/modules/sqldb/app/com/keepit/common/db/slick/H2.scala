@@ -9,7 +9,7 @@ import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 import com.keepit.common.logging.Logging
 
 trait TableInitListener {
-  def init(repo: DbRepo[_]): Unit
+  def init(tableName: String, ddl: { def createStatements: Iterator[String] }): Unit
   def initSequence(sequence: String): Unit
 }
 
@@ -18,12 +18,12 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     extends DataBaseComponent with Logging {
   println("initiating H2 driver")
   val Driver = H2Driver
-  val tablesToInit = new TrieMap[String, DbRepo[_]]
+  val tablesToInit = new TrieMap[String, { def createStatements: Iterator[String] }]
   val sequencesToInit = new TrieMap[String, String]
   var initListener: Option[TableInitListener] = None
 
   //first initiation of the table if they where loaded staticly by the injector before the db was initiated
-  tablesToInit.values foreach initTableNow
+  tablesToInit foreach { case (tableName, ddl) => initTableNow(tableName, ddl) }
   val dialect = H2DatabaseDialect
 
   def getSequence(name: String): DbSequence = new DbSequence(name) {
@@ -61,16 +61,16 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     listener.initSequence(sequence)
   }
 
-  override def initTable(repo: DbRepo[_]) {
-    if (!tablesToInit.contains(repo._taggedTable.tableName)) {
-      tablesToInit(repo._taggedTable.tableName) = repo
+  override def initTable(tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
+    if (!tablesToInit.contains(tableName)) {
+      tablesToInit(tableName) = ddl
       //after the db has been initiated we would like to initiate tables as they come through
-      initTableNow(repo)
+      initTableNow(tableName, ddl)
     }
   }
 
-  private def initTableNow(repo: DbRepo[_]) = initListener map {listener =>
-    listener.init(repo)
+  private def initTableNow(tableName: String, ddl: { def createStatements: Iterator[String] }) = initListener map {listener =>
+    listener.init(tableName, ddl)
   }
 
 }

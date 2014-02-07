@@ -46,14 +46,15 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   lazy val _taggedTable = table(new BaseTag { base =>
     def taggedAs(path: List[scala.slick.ast.Symbol]): AbstractTable[_] = base.taggedAs(path)
   })
-  val rows: TableQuery[RepoImpl] = TableQuery(table)
-  val ddl = rows.ddl
-
-  db.initTable(this)
-
-  def descTable(): String = db.masterDb.withSession { session =>
-    ddl.createStatements mkString "\n"
+  lazy val rows: TableQuery[RepoImpl] = {
+    val t = TableQuery(table)
+    db.initTable(_taggedTable.tableName, t.ddl)
+    t
   }
+
+//  def descTable(): String = db.masterDb.withSession { session =>
+//    ddl.createStatements mkString "\n"
+//  }
 
   def save(model: M)(implicit session: RWSession): M = try {
     val toUpdate = model.withUpdateTime(clock.now)

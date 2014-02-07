@@ -24,7 +24,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
     withInjector(overridingModules:_*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
-        def init(repo: DbRepo[_]) = executeTableDDL(h2, repo)
+        def init(tableName: String, ddl: { def createStatements: Iterator[String] }) = executeTableDDL(h2, tableName, ddl)
         def initSequence(sequence: String) = executeSequenceinit(h2, sequence)
       })
       try {
@@ -72,23 +72,22 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
     }
   }
 
-  def executeTableDDL(db: H2, repo: DbRepo[_]): Unit = {
-    log.info(s"initiating table [${repo._taggedTable.tableName}]")
+  def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
+    log.info(s"initiating table [$tableName]")
 
 
     readWrite(db) { implicit session =>
       try {
-        val ddl = repo.ddl
         for (s <- ddl.createStatements) {
           val statement = s.replace("create table ", "create table IF NOT EXISTS ")
           try {
             session.withPreparedStatement(statement)(_.execute)
           } catch {
-            case t: Throwable => throw new Exception(s"fail initiating table ${repo._taggedTable.tableName}, statement: [$statement]", t)
+            case t: Throwable => throw new Exception(s"fail initiating table ${tableName}, statement: [$statement]", t)
           }
         }
       } catch {
-        case t: Throwable => throw new Exception(s"fail initiating table ${repo._taggedTable.tableName}", t)
+        case t: Throwable => throw new Exception(s"fail initiating table ${tableName}", t)
       }
     }
   }
