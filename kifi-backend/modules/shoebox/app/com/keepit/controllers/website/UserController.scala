@@ -1,7 +1,6 @@
 package com.keepit.controllers.website
 
 import java.text.Normalizer
-
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
@@ -25,7 +24,6 @@ import com.keepit.common.time._
 import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
-
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.eliza.ElizaServiceClient
@@ -48,11 +46,12 @@ import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
+import com.keepit.search.SearchServiceClient
 
 class UserController @Inject() (
   db: Database,
   userRepo: UserRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -72,7 +71,8 @@ class UserController @Inject() (
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
   authCommander: AuthCommander,
-  emailAddressRepo: EmailAddressRepo
+  emailAddressRepo: EmailAddressRepo,
+  searchClient: SearchServiceClient
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // hotspot -- need optimization; gather timing info for analysis
@@ -183,6 +183,7 @@ class UserController @Inject() (
       }
       friendIdOpt map { friendId =>
         val changed = searchFriendRepo.excludeFriend(request.userId, friendId)
+        searchClient.updateSearchFriendGraph()
         Ok(Json.obj("changed" -> changed))
       } getOrElse {
         BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
@@ -197,6 +198,7 @@ class UserController @Inject() (
       }
       friendIdOpt map { friendId =>
         val changed = searchFriendRepo.includeFriend(request.userId, friendId)
+        searchClient.updateSearchFriendGraph()
         Ok(Json.obj("changed" -> changed))
       } getOrElse {
         BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
@@ -341,9 +343,8 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val (user, experiments) = db.readOnly { implicit session =>
-      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
-    }
+    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++

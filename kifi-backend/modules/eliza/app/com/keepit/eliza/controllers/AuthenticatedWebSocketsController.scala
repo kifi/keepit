@@ -12,6 +12,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.commanders.RemoteUserExperimentCommander
 
 import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -58,6 +59,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val airbrake: AirbrakeNotifier
   protected val heimdal: HeimdalServiceClient
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory
+  protected val userExperimentCommander: RemoteUserExperimentCommander
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -136,7 +138,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
       socialUserFuture.flatMap{ socialUser =>
         val userId = socialUser.userId.get
-        val experimentsFuture = shoebox.getUserExperiments(userId).map(_.toSet)
+        val experimentsFuture = userExperimentCommander.getExperimentsByUser(userId)
         experimentsFuture.flatMap{ experiments =>
           impersonatedUserIdOpt match {
             case Some(impExtUserId) if experiments.contains(ExperimentType.ADMIN) =>

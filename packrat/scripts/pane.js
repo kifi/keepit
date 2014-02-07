@@ -314,28 +314,30 @@ var pane = pane || function () {  // idempotent for Chrome
     if ($pane && document.contains($pane[0])) {
       if ($pane.data('state') === 'open') {  // do not interrupt transition
         var parent = tile.parentNode;
-        var child = parent.lastElementChild, ours = [], others;
+        var child = parent.lastElementChild, ours = [], covered, zIndex;
         while (child !== tile) {
           if (child.classList.contains('kifi-root')) {
             ours.unshift(child);
-          } else {
-            others = true;
+          } else if (+window.getComputedStyle(child).zIndex >= (zIndex || (zIndex = +window.getComputedStyle(tile).zIndex))) {
+            covered = true;
           }
           child = child.previousElementSibling;
         }
-        if (others) {
-          var frag = document.createDocumentFragment();
+        if (covered) {
           var activeEl = document.activeElement, reactivateEl;
           ours.unshift(tile);
-          ours.forEach(function (el) {
-            if (activeEl && activeEl.contains(activeEl)) {
+          for (var i = ours.length; i--;) {
+            var el = ours[i];
+            if (activeEl && el.contains(activeEl)) {
               reactivateEl = activeEl;
-              activeEl.blur();  // required in firefox even without using DF
+              activeEl.blur();  // required in firefox
               activeEl = null;
             }
-            frag.appendChild(el);
-          });
-          parent.appendChild(frag);
+            var $scroll = $(el).find('.kifi-scroll-inner');
+            var tops = $scroll.map(function () {return this.scrollTop}).get();
+            parent.insertBefore(el, ours[i + 1]);
+            $scroll.each(function (i) {this.scrollTop = tops[i]});
+          }
           if (reactivateEl) {
             setTimeout(function () {
               reactivateEl.focus();

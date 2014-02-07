@@ -466,26 +466,23 @@ class MessagingCommander @Inject() (
       sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
-    //=== BEGIN
-    (new SafeFuture(shoebox.getUserExperiments(from))).map{ userExperiments =>
-      val notifJson = buildMessageNotificationJson(
-        message = message,
-        thread = thread,
-        messageWithBasicUser = orderedMessageWithBasicUser,
-        locator = "/messages/" + thread.externalId,
-        unread = false,
-        originalAuthorIdx = originalAuthor,
-        unseenAuthors = 0,
-        numAuthors = numAuthors,
-        numMessages = numMessages,
-        numUnread = numUnread,
-        muted = false)
-      db.readWrite(attempts=2) { implicit session =>
-        userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
-      }
-      notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
+
+    val notifJson = buildMessageNotificationJson(
+      message = message,
+      thread = thread,
+      messageWithBasicUser = orderedMessageWithBasicUser,
+      locator = "/messages/" + thread.externalId,
+      unread = false,
+      originalAuthorIdx = originalAuthor,
+      unseenAuthors = 0,
+      numAuthors = numAuthors,
+      numMessages = numMessages,
+      numUnread = numUnread,
+      muted = false)
+    db.readWrite(attempts=2) { implicit session =>
+      userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
     }
-    //=== END
+    notificationRouter.sendToUser(from, Json.arr("notification", notifJson))
 
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)

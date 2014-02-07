@@ -110,6 +110,18 @@ trait ObjectCache[K <: Key[T], T] {
     result
   }
 
+  def bulkGetOrElse(keys: Set[K])(orElse: Set[K] => Map[K, T]): Map[K, T] = {
+    val found = bulkGet(keys).collect{ case (k, Some(v)) => (k, v) }
+    if (keys.size > found.size) {
+      val missing = keys -- found.keySet
+      val valueMap = orElse(missing)
+      valueMap.foreach{ kv => setInnerCache(kv._1, Some(kv._2)) }
+      found ++ valueMap
+    } else {
+      found
+    }
+  }
+
   def bulkGetOrElseFuture(keys: Set[K])(orElse: Set[K] => Future[Map[K, T]]): Future[Map[K, T]] = {
     val found = bulkGet(keys).collect{ case (k, Some(v)) => (k, v) }
     if (keys.size > found.size) {

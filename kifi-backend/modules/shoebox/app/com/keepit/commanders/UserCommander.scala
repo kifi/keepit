@@ -78,7 +78,7 @@ class UserCommander @Inject() (
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   bookmarkRepo: BookmarkRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
@@ -137,8 +137,8 @@ class UserCommander @Inject() (
     basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport ++ doppelgänger
   }
 
-  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
-    userExperimentRepo.hasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
+  private def canMessageAllUsers(userId: Id[User]): Boolean = {
+    userExperimentCommander.userHasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
   }
 
   def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
@@ -350,9 +350,9 @@ class UserCommander @Inject() (
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
-    @inline def socialIdString(sci: SocialConnectionInfo) = s"${sci.networkType}/${sci.socialId.id}"
+    @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
     val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(sci: SocialConnectionInfo): Int = {
+    @inline def searchScore(sci: SocialUserBasicInfo): Int = {
       if (network.exists(sci.networkType.name !=)) 0
       else if (searchTerms.isEmpty) 1
       else {
@@ -367,7 +367,7 @@ class UserCommander @Inject() (
       }
     }
 
-    def getWithInviteStatus(sci: SocialConnectionInfo)(implicit s: RSession): (SocialConnectionInfo, String) = {
+    def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
       sci -> sci.userId.map(_ => "joined").getOrElse {
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
           case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
@@ -382,7 +382,7 @@ class UserCommander @Inject() (
       }
     }
 
-    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialConnectionInfo] =
+    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserBasicInfo] =
       if (sui.networkType == SocialNetworks.FORTYTWO) Nil
       else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
 
@@ -441,6 +441,7 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+            searchClient.updateUserGraph()
 
             SafeFuture{
               //sending 'friend request accepted' email && Notification
@@ -538,6 +539,7 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
+        searchClient.updateUserGraph()
       }
       success
     }

@@ -66,6 +66,43 @@ object SocialUserInfo {
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
 
+case class SocialUserBasicInfo(
+  id: Id[SocialUserInfo],
+  userId: Option[Id[User]],
+  fullName: String,
+  pictureUrl: Option[String],
+  socialId: SocialId,
+  networkType: SocialNetworkType) {
+
+  def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
+    case SocialNetworks.FACEBOOK =>
+      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+    case _ => pictureUrl
+  }
+}
+
+object SocialUserBasicInfo {
+  // This is an intentionally compact representation to support storing large social graphs
+  implicit val format = Format[SocialUserBasicInfo](
+    __.read[Seq[JsValue]].map {
+      case Seq(JsNumber(id), JsNumber(userId), JsString(fullName), JsString(pictureUrl), JsString(socialId), JsString(networkType)) =>
+        SocialUserBasicInfo(
+          Id[SocialUserInfo](id.toLong),
+          Some(userId).filter(_ != 0).map(id => Id[User](id.toLong)),
+          fullName,
+          Some(pictureUrl).filterNot(_.isEmpty),
+          SocialId(socialId),
+          SocialNetworkType(networkType))
+    },
+    new Writes[SocialUserBasicInfo] {
+      def writes(o: SocialUserBasicInfo): JsValue =
+        Json.arr(o.id.id, o.userId.getOrElse(Id(0)).id, o.fullName, o.pictureUrl.getOrElse[String](""), o.socialId.id, o.networkType.name)
+    })
+
+  def fromSocialUser(sui: SocialUserInfo): SocialUserBasicInfo =
+    SocialUserBasicInfo(sui.id.get, sui.userId, sui.fullName, sui.pictureUrl, sui.socialId, sui.networkType)
+}
+
 case class SocialUserInfoCountKey() extends Key[Int] {
   override val version = 1
   val namespace = "social_user_info_count"
@@ -110,6 +147,16 @@ case class SocialUserNetworkKey(networkType: SocialNetworkType, id: SocialId) ex
 
 class SocialUserNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SocialUserNetworkKey, SocialUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+case class SocialUserBasicInfoKey(id: Id[SocialUserInfo]) extends Key[SocialUserBasicInfo] {
+  val namespace = "social_user_basic_info"
+  override val version = 1
+  def toKey(): String = id.id.toString
+}
+
+class SocialUserBasicInfoCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SocialUserBasicInfoKey, SocialUserBasicInfo](stats, accessLog, inner, outer: _*)
+
 
 object SocialUserInfoStates {
   val CREATED = State[SocialUserInfo]("created")

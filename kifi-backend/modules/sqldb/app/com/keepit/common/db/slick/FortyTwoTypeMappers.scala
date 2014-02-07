@@ -309,6 +309,9 @@ object FortyTwoTypeMappers {
     def apply(profile : BasicProfile) = new SimpleKeyValueMapperDelegate(profile)
   }
 
+  implicit object ExperimentTypeProbabilityDensityTypeMapper extends BaseTypeMapper[ProbabilityDensity[ExperimentType]] {
+     def apply(profile: BasicProfile) = new ProbabilityDensityMapperDelegate[ExperimentType](profile)
+  }
 }
 
 //************************************
@@ -689,5 +692,14 @@ class SimpleKeyValueMapperDelegate(profile: BasicProfile) extends StringMapperDe
   def zero = Map[String,String]()
   def sourceToDest(value: Map[String,String]): String = Json.stringify(JsObject(value.mapValues(JsString(_)).toSeq))
   def safeDestToSource(str: String): Map[String,String] = Json.parse(str).as[JsObject].fields.toMap.mapValues(_.as[JsString].value)
+}
+
+//******************************************
+//       ProbabilityDensity[A] -> String (json)
+//******************************************
+class ProbabilityDensityMapperDelegate[A](profile: BasicProfile)(implicit outcomeFormat: Format[A]) extends StringMapperDelegate[ProbabilityDensity[A]](profile) {
+  def zero = ProbabilityDensity(Seq.empty[(A, Double)])
+  def sourceToDest(value: ProbabilityDensity[A]): String = Json.stringify(ProbabilityDensity.format[A].writes(value))
+  def safeDestToSource(str: String): ProbabilityDensity[A] = Json.parse(str).as(ProbabilityDensity.format[A])
 }
 

@@ -30,7 +30,7 @@ class ExtSearchEventController @Inject() (
   resultClickedTracker: ResultClickTracker,
   articleSearchResultStore: ArticleSearchResultStore,
   searchAnalytics: SearchAnalytics,
-  healthCheckMailer: HealthcheckMailSender,
+  healthCheckMailer: SystemAdminMailSender,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)

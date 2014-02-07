@@ -70,6 +70,11 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
+  def socialUserBasicInfoCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SocialUserBasicInfoCache(stats, accessLog, (innerRepo, 3 hours), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def socialUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SocialUserCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
@@ -202,4 +207,9 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, Duration.Inf))
 }
