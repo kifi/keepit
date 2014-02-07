@@ -73,6 +73,11 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
 
+  implicit val seqURLHistoryMapper = MappedColumnType.base[Seq[URLHistory], String]({ value =>
+    Json.stringify(Json.toJson(value))
+  }, { value =>
+    Json.fromJson[Seq[URLHistory]](Json.parse(value)).get
+  })
 
   implicit val largeStringMapper = MappedColumnType.base[LargeString, Clob]({ value =>
     new SerialClob(value.value.toCharArray()) {
