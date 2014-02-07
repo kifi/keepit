@@ -39,6 +39,9 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     def * = (id.?, createdAt, updatedAt, userId, state, token, usedAt.?, usedByIP.?, sentTo.?) <> ((PasswordReset.apply _).tupled, PasswordReset.unapply _)
   }
 
+  def table(tag: Tag) = new PasswordResetTable(tag)
+  initTable()
+
   override def deleteCache(model: PasswordReset)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: PasswordReset)(implicit session: RSession): Unit = {}
 
