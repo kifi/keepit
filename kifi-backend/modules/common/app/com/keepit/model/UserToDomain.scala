@@ -12,7 +12,7 @@ case class UserToDomain(
   id: Option[Id[UserToDomain]] = None,
   userId: Id[User],
   domainId: Id[Domain],
-  kind: State[UserToDomainKind],
+  kind: UserToDomainKind,
   value: Option[JsValue],
   state: State[UserToDomain] = UserToDomainStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
@@ -28,10 +28,10 @@ case class UserToDomain(
 sealed case class UserToDomainKind(val value: String)
 
 object UserToDomainKinds {
-  val NEVER_SHOW = State[UserToDomainKind]("never_show")
-  val KEEPER_POSITION = State[UserToDomainKind]("keeper_position")
+  val NEVER_SHOW = UserToDomainKind("never_show")
+  val KEEPER_POSITION = UserToDomainKind("keeper_position")
 
-  def apply(str: String): State[UserToDomainKind] = str.toLowerCase.trim match {
+  def apply(str: String):UserToDomainKind = str.toLowerCase.trim match {
     case NEVER_SHOW.value => NEVER_SHOW
   }
 }

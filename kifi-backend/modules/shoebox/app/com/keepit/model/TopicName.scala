@@ -30,33 +30,36 @@ abstract class TopicNameRepoBase(
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[TopicName] with TopicNameRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+    import db.Driver.simple._
 
-  override val table = new RepoTable[TopicName](db, tableName){
+  type RepoImpl = TopicNameTable
+  class TopicNameTable(tag: Tag) extends RepoTable[TopicName](db, tag, "topic_name") {
     def topicName = column[String]("topic_name", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ topicName <> (TopicName.apply _, TopicName.unapply _)
+    def * = (id.?, createdAt, updatedAt, topicName) <> ((TopicName.apply _).tupled, TopicName.unapply _)
   }
+
+  def table(tag: Tag) = new TopicNameTable(tag)
+  initTable()
 
   override def deleteCache(model: TopicName)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: TopicName)(implicit session: RSession): Unit = {}
 
   def getAllNames()(implicit session: RSession): Seq[String] = {
-    (for(r <- table) yield r.topicName).list
+    (for(r <- rows) yield r.topicName).list
   }
 
   def getName(id: Id[TopicName])(implicit session: RSession): Option[String] = {
-    (for(r <- table if r.id === id) yield r.topicName).firstOption
+    (for(r <- rows if r.id === id) yield r.topicName).firstOption
   }
 
   def updateName(id: Id[TopicName], name: String)(implicit session: RWSession): Option[TopicName] = {
-    (for(r <- table if r.id === id) yield r).firstOption match {
+    (for(r <- rows if r.id === id) yield r).firstOption match {
       case Some(topic) => Some(super.save(topic.copy(topicName = name)))
       case None => None
     }
   }
   def deleteAll()(implicit session: RWSession): Int = {
-    (for(r <- table) yield r).delete
+    (for(r <- rows) yield r).delete
   }
 }
 

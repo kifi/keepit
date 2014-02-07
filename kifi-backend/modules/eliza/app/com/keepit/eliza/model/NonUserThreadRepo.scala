@@ -1,24 +1,16 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.{StringMapperDelegate, Repo, DbRepo, DataBaseComponent}
-import com.keepit.common.db.slick.FortyTwoTypeMappers._
+import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.db.{States, State, Model, Id}
-import com.keepit.model.{EContact, User, NormalizedURI}
-import play.api.libs.json._
-import scala.slick.lifted.{BaseTypeMapper, Query}
-import com.keepit.eliza._
-import play.api.libs.functional.syntax._
-import play.api.libs.json.JsObject
-import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
-import scala.slick.driver.BasicProfile
-import MessagingTypeMappers._
+import com.keepit.common.db.{State, Id}
+import com.keepit.model.{EContact, NormalizedURI}
+import com.keepit.common.mail.EmailAddressHolder
 import com.keepit.common.crypto.SimpleDESCrypt
-import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind, BasicUserLikeEntity}
+import com.keepit.social.{NonUserKind, NonUserKinds}
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {
@@ -49,19 +41,12 @@ class NonUserThreadRepoImpl @Inject() (
   )
   extends DbRepo[NonUserThread] with NonUserThreadRepo with Logging {
 
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
-  implicit object NonUserKindTypeMapper extends BaseTypeMapper[NonUserKind] {
-    def apply(profile: BasicProfile) = new NonUserKindTypeMapperDelegate(profile)
-  }
-  class NonUserKindTypeMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[NonUserKind](profile) {
-    def zero = NonUserKind("")
-    def sourceToDest(nonUserKind: NonUserKind) = NonUserKind.unapply(nonUserKind).get
-    def safeDestToSource(str: String) = NonUserKind(str)
-  }
+  implicit val nonUserKind = MappedColumnType.base[NonUserKind, String](_.name, NonUserKind.apply)
 
-  override val table = new RepoTable[NonUserThread](db, "non_user_thread") {
-
+  type RepoImpl = NonUserThreadTable
+  class NonUserThreadTable(tag: Tag) extends RepoTable[NonUserThread](db, tag, "non_user_thread") {
     def kind = column[NonUserKind]("kind", O.NotNull)
     def emailAddress = column[EmailAddressHolder]("email_address", O.Nullable)
     def econtactId = column[Id[EContact]]("econtact_id", O.Nullable)
@@ -72,14 +57,14 @@ class NonUserThreadRepoImpl @Inject() (
     def threadUpdatedAt = column[DateTime]("thread_updated_at", O.Nullable)
     def muted = column[Boolean]("muted", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ kind ~ emailAddress.? ~ econtactId.? ~ threadId ~ uriId.? ~ notifiedCount ~ lastNotifiedAt.? ~ threadUpdatedAt.? ~ muted ~ state <> (rowToObj _, objToRow _)
+    def * = (id.?, createdAt, updatedAt, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedAt.?, muted, state) <> (rowToObj2 _, objToRow _)
 
-    private def rowToObj(id: Option[Id[NonUserThread]], createdAt: DateTime, updatedAt: DateTime, kind: NonUserKind, emailAddress: Option[EmailAddressHolder], econtactId: Option[Id[EContact]], threadId: Id[MessageThread], uriId: Option[Id[NormalizedURI]], notifiedCount: Int, lastNotifiedAt: Option[DateTime], threadUpdatedAt: Option[DateTime], muted: Boolean, state: State[NonUserThread]): NonUserThread = {
-      val participant = kind match {
+    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, NonUserKind, Option[EmailAddressHolder], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread])): NonUserThread = {
+      val participant = t._4 match {
         case NonUserKinds.email =>
-          NonUserEmailParticipant(emailAddress.get, econtactId)
+          NonUserEmailParticipant(t._5.get, t._6)
       }
-      NonUserThread(id, createdAt, updatedAt, participant, threadId, uriId, notifiedCount, lastNotifiedAt, threadUpdatedAt, muted, state)
+      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, participant = participant, threadId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedAt = t._11, muted = t._12, state = t._13)
     }
 
     private def objToRow(n: NonUserThread) = {
@@ -90,25 +75,27 @@ class NonUserThreadRepoImpl @Inject() (
       Option((n.id, n.createdAt, n.updatedAt, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedAt, n.muted, n.state))
     }
   }
+  def table(tag: Tag) = new NonUserThreadTable(tag)
+
 
   override def deleteCache(model: NonUserThread)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: NonUserThread)(implicit session: RSession): Unit = {}
 
   def getThreadsByEmail(emailAddress: EmailAddressHolder)(implicit session: RSession): Seq[Id[MessageThread]] =
-    (for (row <- table if row.emailAddress === emailAddress) yield row.threadId).list
+    (for (row <- rows if row.emailAddress === emailAddress) yield row.threadId).list
 
   def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]] =
-    (for (row <- table if row.econtactId === econtactId) yield row.threadId).list
+    (for (row <- rows if row.econtactId === econtactId) yield row.threadId).list
 
   def getNonUserThreadsForEmailing(before: DateTime)(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- table if (row.lastNotifiedAt.isNull || row.lastNotifiedAt < row.threadUpdatedAt) && row.lastNotifiedAt < before) yield row).list
+    (for (row <- rows if (row.lastNotifiedAt.isNull || row.lastNotifiedAt < row.threadUpdatedAt) && row.lastNotifiedAt < before) yield row).list
 
   def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- table if row.threadId === messageThreadId) yield row).list
+    (for (row <- rows if row.threadId === messageThreadId) yield row).list
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit =
     updates.foreach{ case (oldId, newId) =>
-      (for (row <- table if row.uriId === oldId) yield row.uriId).update(newId)
+      (for (row <- rows if row.uriId === oldId) yield row.uriId).update(newId)
     }
 
   def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean =
@@ -117,7 +104,7 @@ class NonUserThreadRepoImpl @Inject() (
     }.getOrElse(false)
 
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean =
-    (for (row <- table if row.id === nonUserThreadId) yield row.muted).update(muted) > 0
+    (for (row <- rows if row.id === nonUserThreadId) yield row.muted).update(muted) > 0
 
   val crypt = new SimpleDESCrypt()
   val muteKey = crypt.stringToKey("non user thread id to muteKey key, word.")

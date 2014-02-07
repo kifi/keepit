@@ -1,67 +1,37 @@
 package com.keepit.eliza.model
 
-import scala.slick.lifted.{BaseTypeMapper}
-import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.{IdMapperDelegate, ExternalIdMapperDelegate, StringMapperDelegate}
-import scala.slick.driver.{BasicProfile}
+import com.keepit.common.db.{SequenceNumber, Id, ExternalId}
 import play.api.libs.json.{Json, JsValue, JsObject, JsSuccess, JsArray, JsNumber}
 import com.keepit.model.{User, NormalizedURI}
 import org.joda.time.DateTime
+import com.keepit.common.db.slick.DataBaseComponent
 
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
-object MessagingTypeMappers {
+trait MessagingTypeMappers { self: {val db: DataBaseComponent } =>
+  import db.Driver.simple._
 
-  implicit object ThreadIdTypeMapper extends BaseTypeMapper[Id[MessageThread]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[MessageThread](profile)
-  }
-
-  implicit object ThreadExtIdTypeMapper extends BaseTypeMapper[ExternalId[MessageThread]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[MessageThread](profile)
-  }
-
-  implicit object MessageIdTypeMapper extends BaseTypeMapper[Id[Message]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Message](profile)
-  }
-
-
-  implicit object MessageThreadParticipantsMapper extends BaseTypeMapper[MessageThreadParticipants] {
-    def apply(profile: BasicProfile) = new StringMapperDelegate[MessageThreadParticipants](profile) {
-
-      def safeDestToSource(source: String): MessageThreadParticipants = {
-        Json.parse(source).validate[MessageThreadParticipants] match {
-          case JsSuccess(mtps,_) => mtps
-          case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for MessageThreadParticipants: $source")
-        }
-      }
-
-      def sourceToDest(dest: MessageThreadParticipants): String = Json.stringify(Json.toJson(dest))
-
-      def zero: MessageThreadParticipants = MessageThreadParticipants(Set[Id[User]]())
-
+  implicit val messageThreadParticipantsMapper = MappedColumnType.base[MessageThreadParticipants, String]({ people =>
+    Json.stringify(Json.toJson(people))
+  }, { source =>
+    Json.parse(source).validate[MessageThreadParticipants] match {
+      case JsSuccess(mtps,_) => mtps
+      case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for MessageThreadParticipants: $source")
     }
-  }
-
-  implicit object NormalizedUriIdSeqMapper extends BaseTypeMapper[Seq[Id[NormalizedURI]]] {
-    def apply(profile: BasicProfile) = new StringMapperDelegate[Seq[Id[NormalizedURI]]](profile) {
-
-      implicit val nUriIdFormat = Id.format[NormalizedURI]
-
-      def safeDestToSource(source: String): Seq[Id[NormalizedURI]] = {
-        Json.parse(source) match {
-          case x: JsArray => {
-            x.value.map(_.as[Id[NormalizedURI]])
-          }
-          case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Seq of Normalized URI ids: $source")
-        }
+  })
+  private implicit val nUriIdFormat = Id.format[NormalizedURI]
+  implicit val normalizedUriIdSeqMapper = MappedColumnType.base[Seq[Id[NormalizedURI]], String]({ dest =>
+    Json.stringify(JsArray(dest.map( x => JsNumber(x.id) )))
+  }, { source =>
+    Json.parse(source) match {
+      case x: JsArray => {
+        x.value.map(_.as[Id[NormalizedURI]])
       }
-
-      def sourceToDest(dest: Seq[Id[NormalizedURI]]): String = {
-        Json.stringify(JsArray(dest.map( x => JsNumber(x.id) )))
-      }
-
-      def zero: Seq[Id[NormalizedURI]] = Seq[Id[NormalizedURI]]()
+      case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Seq of Normalized URI ids: $source")
     }
-  }
+  })
 }
+
+@deprecated("Not needed anymore!","2014-02-06")
+object MessagingTypeMappers
