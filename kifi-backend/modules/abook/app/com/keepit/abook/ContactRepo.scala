@@ -34,8 +34,6 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
   import DBSession._
   import db.Driver.simple._
 
-
-
   type RepoImpl = ContactTable
   class ContactTable(tag: Tag) extends RepoTable[Contact](db, tag, "contact") {
     def userId = column[Id[User]]("user_id", O.NotNull)
@@ -65,9 +63,9 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
 
   def deleteByUserIdAndABookInfoId(userId: Id[User], abookInfoId: Id[ABookInfo])(implicit session: RWSession): Int = {
     val ts = System.currentTimeMillis
-    val rows = sqlu"delete from contact where user_id=${userId.id} and abook_id=${abookInfoId.id}".first
+    val deleted = sqlu"delete from contact where user_id=${userId.id} and abook_id=${abookInfoId.id}".first
     log.info(s"[delete(user_id=$userId,abook_id=$abookInfoId)] $rows deleted. time-lapsed: ${System.currentTimeMillis - ts}")
-    rows
+    deleted
   }
 
   def getContactCount(userId: Id[User], abookInfoId: Id[ABookInfo])(implicit session: RSession): Int = {
