@@ -47,7 +47,7 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     rows.insertAll(phrases: _*)
 
   def allIterator(implicit session: RSession): CloseableIterator[Phrase] = {
-    rows.map(t => t).elements
+    rows.map(t => t).iterator
   }
 
   def getPhrasesChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Phrase] = super.getBySequenceNumber(seq, fetchSize)
