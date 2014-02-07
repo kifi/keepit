@@ -64,7 +64,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         log.info(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
         case t:Throwable => {
-          injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           Play.stop()
         }
       }
@@ -82,7 +82,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         log.info(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
       } catch {
         case t:AmazonClientException => {
-          injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
+          //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
           Thread.sleep(18000)
         }
       }
