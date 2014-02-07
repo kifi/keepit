@@ -32,6 +32,14 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		$scope.toggleSelectKeep = function (keep) {
 			return keepService.toggleSelect(keep);
 		};
+
+		$scope.toggleSelectAll = function () {
+			return keepService.toggleSelectAll();
+		};
+
+		$scope.isSelectedAll = function () {
+			return keepService.isSelectedAll();
+		};
 	}
 ])
 
@@ -148,10 +156,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 						}
 					}
 					return '';
-				};
-
-				scope.toggleCheck = function () {
-					scope.checked = !scope.checked;
 				};
 
 				scope.setLoading();

@@ -83,6 +83,28 @@ angular.module('kifi.keepService', [])
 				});
 			},
 
+			selectAll: function () {
+				selected = _.reduce(list, function (map, keep) {
+					map[keep.id] = true;
+					return map;
+				}, {});
+			},
+
+			unselectAll: function () {
+				selected = {};
+			},
+
+			isSelectedAll: function () {
+				return list.length && list.length === api.getSelectedLength();
+			},
+
+			toggleSelectAll: function () {
+				if (api.isSelectedAll()) {
+					return api.unselectAll();
+				}
+				return api.selectAll();
+			},
+
 			resetList: function () {
 				before = null;
 				list.length = 0;
