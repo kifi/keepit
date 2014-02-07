@@ -4,7 +4,6 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.Some
 import com.keepit.common.db.Id
 
 @ImplementedBy(classOf[UrlPatternRuleRepoImpl])
@@ -26,18 +25,21 @@ class UrlPatternRuleRepoImpl @Inject() (
   httpProxyRepo: HttpProxyRepo)
   extends DbRepo[UrlPatternRule] with UrlPatternRuleRepo {
   import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
   import DBSession._
 
-  override val table = new RepoTable[UrlPatternRule](db, "url_pattern_rule") {
+  type RepoImpl = UrlPatternRuleTable
+  case class UrlPatternRuleTable(tag: Tag) extends RepoTable[UrlPatternRule](db, tag, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)
     def example = column[String]("example", O.Nullable)
     def isUnscrapable = column[Boolean]("is_unscrapable", O.NotNull)
     def useProxy = column[Id[HttpProxy]]("use_proxy", O.Nullable)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def trustedDomain = column[String]("trusted_domain", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ pattern ~ example.? ~ isUnscrapable ~ useProxy.? ~ normalization.? ~ trustedDomain.? <> (UrlPatternRule.apply _, UrlPatternRule.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
   }
+
+  def table(tag: Tag) = new UrlPatternRuleTable(tag)
 
   private var allMemCache: Option[Seq[UrlPatternRule]] = None
 
@@ -54,7 +56,7 @@ class UrlPatternRuleRepoImpl @Inject() (
   def allActive()(implicit session: RSession): Seq[UrlPatternRule] =
     allMemCache.getOrElse {
       val result = urlPatternRuleAllCache.getOrElse(UrlPatternRuleAllKey()) {
-        (for(f <- table if f.state === UrlPatternRuleStates.ACTIVE) yield f).list
+        (for(f <- rows if f.state === UrlPatternRuleStates.ACTIVE) yield f).list
       }
       allMemCache = Some(result)
       result.sortBy(_.id.get.id)
