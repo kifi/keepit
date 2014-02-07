@@ -9,6 +9,7 @@ import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
 import play.api.libs.json.{JsValue, JsArray, Json}
 import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
+import com.keepit.common.net.UserAgent
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
