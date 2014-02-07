@@ -43,6 +43,7 @@ class ShoeboxController @Inject() (
   normalizationServiceProvider:Provider[NormalizationService],
   urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
+  probabilisticExperimentGeneratorRepo: ProbabilisticExperimentGeneratorRepo,
   userExperimentRepo: UserExperimentRepo,
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
@@ -517,6 +518,11 @@ class ShoeboxController @Inject() (
       }.toMap
     }
     Ok(Json.toJson(exps))
+  }
+
+  def getExperimentGenerators() = Action { request =>
+    val result = db.readOnly { implicit session => probabilisticExperimentGeneratorRepo.allActive() }
+    Ok(Json.toJson(result))
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
