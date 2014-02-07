@@ -82,7 +82,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           elbClient.deregisterInstancesFromLoadBalancer(request)
           log.info(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
         } catch {
-          case e:AmazonClientException => log.warn(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $e")
+          case e:AmazonClientException => {
+            log.warn(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $e - Delaying shutdown for a few seconds...")
+            Thread.sleep(18000)
+          }
         }
       }
       case None => log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
