@@ -8,8 +8,13 @@ import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
 import play.api.libs.json.{JsValue, JsArray, Json}
-import com.keepit.common.mail.{ElectronicMailCategory, GenericEmailAddress, EmailAddressHolder}
+import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent
+import com.keepit.model.UrlHash
+import play.api.libs.json.JsArray
+import com.keepit.common.db.slick.InvalidDatabaseEncodingException
+import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.model.DeepLocator
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -32,6 +37,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[BookmarkSource, String](_.value, BookmarkSource.apply)
+  implicit val systemEmailAddressMapper = MappedColumnType.base[SystemEmailAddress, String](_.address, EmailAddresses.apply)
 
 
 
