@@ -55,5 +55,5 @@ class DomainToTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock)
     (for (t <- rows if t.id inSet domainToTagIds) yield t.state).update(state)
 
   def getDomainsChangedSince(dateTime: DateTime)(implicit session: RSession): Set[Id[Domain]] =
-    (for (t <- rows if t.updatedAt >= dateTime) yield t.domainId).elements.toSet
+    (for (t <- rows if t.updatedAt >= dateTime) yield t.domainId).iterator.toSet
 }
