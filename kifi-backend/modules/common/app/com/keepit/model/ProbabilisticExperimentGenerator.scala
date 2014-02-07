@@ -38,7 +38,7 @@ case class ProbabilisticExperimentGenerator(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   state: State[ProbabilisticExperimentGenerator] = ProbabilisticExperimentGeneratorStates.ACTIVE,
-  description: String,
+  name: Name[ProbabilisticExperimentGenerator],
   condition: Option[ExperimentType],
   salt: String,
   density: ProbabilityDensity[ExperimentType]
@@ -66,7 +66,7 @@ object ProbabilisticExperimentGenerator {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[ProbabilisticExperimentGenerator]) and
-    (__ \ 'description).format[String] and
+    (__ \ 'name).format(Name.format[ProbabilisticExperimentGenerator]) and
     (__ \ 'condition).formatNullable[ExperimentType] and
     (__ \ 'salt).format[String] and
     (__ \ 'density).format(ProbabilityDensity.format[ExperimentType])
