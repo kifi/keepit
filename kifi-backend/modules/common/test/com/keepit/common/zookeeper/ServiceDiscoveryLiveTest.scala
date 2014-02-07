@@ -35,7 +35,8 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
       availabilityZone = "us-west-1b",
       securityGroups = "default",
       amiId = "ami-1bf9de5e",
-      amiLaunchIndex = "0"
+      amiLaunchIndex = "0",
+      loadBalancer = Some("some-elb")
   )
   def remoteServiceJson(id: Int) =  RemoteService.toJson(RemoteService(amazonInstanceInfo(id), ServiceStatus.UP, ServiceType.SHOEBOX))
 

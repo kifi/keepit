@@ -11,6 +11,7 @@ import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
 import com.keepit.model.IndexableUri
 import com.keepit.model.User
+import com.keepit.model.ProbabilisticExperimentGenerator
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
 import com.keepit.social.{SocialNetworkType, BasicUser}
@@ -481,6 +482,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       id -> exps
     }.toMap
     Future.successful(exps)
+  }
+
+  def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]] = {
+    Future.successful(Seq())
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
