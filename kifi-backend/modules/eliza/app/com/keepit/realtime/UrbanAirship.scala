@@ -57,6 +57,7 @@ class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
     def deviceType = column[DeviceType]("device_type", O.NotNull)
     def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt) <> ((Device.apply _).tupled, Device.unapply _)
   }
+  def table(tag: Tag) = new DeviceTable(tag)
 
   override def deleteCache(model: Device)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: Device)(implicit session: RSession): Unit = {}

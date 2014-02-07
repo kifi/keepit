@@ -38,7 +38,7 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
 
 
   type RepoImpl = UriRenormalizationEventTable
-  class UriRenormalizationEventTable(tag: Tag) extends RepoTable[UriRenormalizationEvent](db, tag, "uri_renormalization_event") with ExternalIdColumn[UriRenormalizationEvent] {
+  class UriRenormalizationEventTable(tag: Tag) extends RepoTable[UriRenormalizationEvent](db, tag, "uri_renormalization_event") {
     def sequenceNumber = column[Long]("sequence_number", O.NotNull)
     def numIdsChanged = column[Long]("num_ids_changed", O.NotNull)
     def idsRetired = column[Seq[Id[NormalizedURI]]]("ids_retired", O.NotNull)
