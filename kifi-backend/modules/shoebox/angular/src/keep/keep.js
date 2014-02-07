@@ -194,7 +194,9 @@ angular.module('kifi.keep', [])
 					return scope.isSelectedKeep(scope.keep);
 				};
 
-				scope.onCheck = function () {
+				scope.onCheck = function (e) {
+					// needed to prevent previewing
+					e.stopPropagation();
 					return scope.toggleSelectKeep(scope.keep);
 				};
 			}
