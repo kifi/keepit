@@ -15,6 +15,7 @@ import play.api.Play.current
 import play.api.Play
 import scala.util.{Success, Try, Failure}
 
+
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
   def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
@@ -31,37 +32,37 @@ trait EContactRepo extends Repo[EContact] {
 
 @Singleton
 class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EContact] with EContactRepo with Logging {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import DBSession._
+    import DBSession._
+  import db.Driver.simple._
 
-  override val table = new RepoTable[EContact](db, "econtact") {
+
+  type RepoImpl = EContactTable
+  class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
     def userId     = column[Id[User]]("user_id", O.NotNull)
     def email      = column[String]("email", O.NotNull)
     def name       = column[String]("name", O.Nullable)
     def firstName  = column[String]("first_name", O.Nullable)
     def lastName   = column[String]("last_name", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ email ~ name.? ~ firstName.? ~ lastName.? ~ state <> (EContact.apply _, EContact.unapply _)
-    def forInsert = createdAt ~ updatedAt ~ userId ~ email ~ name.? ~ firstName.? ~ lastName.? ~ state <> (
-      {t => EContact(None, t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8)},
-      {(c:EContact) => Some((c.createdAt, c.updatedAt, c.userId, c.email, c.name, c.firstName, c.lastName, c.state))})
+    def * = (id.?, createdAt, updatedAt, userId, email, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
+
+  def table(tag: Tag) = new EContactTable(tag)
 
   override def deleteCache(model: EContact)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: EContact)(implicit session: RSession): Unit = {}
 
   def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
-    (for(f <- table if f.id === econtactId) yield f).firstOption
+    (for(f <- rows if f.id === econtactId) yield f).firstOption
   }
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {
-    (for(f <- table if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
+    (for(f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
   }
 
   def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[EContact] =
-    (for(f <- table if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).elementsTo(maxRows)
+    (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(maxRows)
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] =
-    (for(f <- table if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
+    (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
 
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
@@ -72,7 +73,7 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     contacts.grouped(500).foreach { g =>
       val t = System.currentTimeMillis
       i += 1
-      timing(s"econtactRepo.batchInsertAll($userId,batch($i,sz=${g.length}))") { table.forInsert insertAll(g: _*) }
+      timing(s"econtactRepo.batchInsertAll($userId,batch($i,sz=${g.length}))") { rows.insertAll(g: _*) }
     }
   }
 

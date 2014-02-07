@@ -3,12 +3,12 @@ package com.keepit.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
+import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{SetParameter, GetResult, StaticQuery}
+import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
 import com.keepit.common.logging.Logging
-import scala.slick.session.PositionedParameters
+
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] with SeqNumberFunction[Bookmark] {
@@ -48,14 +48,12 @@ class BookmarkRepoImpl @Inject() (
   latestBookmarkUriCache: LatestBookmarkUriCache
 ) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {
 
-  import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import scala.slick.lifted.Query
+  import db.Driver.simple._
 
   private val sequence = db.getSequence("bookmark_sequence")
 
-  override val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] with NamedColumns with SeqNumberColumn[Bookmark]{
+  type RepoImpl = BookmarkTable
+  class BookmarkTable(tag: Tag) extends RepoTable[Bookmark](db, tag, "bookmark") with ExternalIdColumn[Bookmark] with NamedColumns with SeqNumberColumn[Bookmark]{
     def title = column[String]("title", O.Nullable)//indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)//indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
@@ -65,12 +63,29 @@ class BookmarkRepoImpl @Inject() (
     def isPrivate = column[Boolean]("is_private", O.NotNull)//indexd
     def source = column[BookmarkSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
-      userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, urlId.?, url, bookmarkPath.?, isPrivate,
+      userId, state, source, kifiInstallation.?, seq) <> ((Bookmark.apply _).tupled, Bookmark.unapply _)
   }
 
-  private implicit val getBookmarkResult = GetResult(r => table.*.getResult(db.Driver.profile, r))
-  private val bookmarkColumnOrder = table.columnStrings("bm")
+  def table(tag: Tag) = new BookmarkTable(tag)
+  initTable()
+
+  implicit object GetOptBookmarkId extends GetResult[Option[Id[Bookmark]]] { def apply(rs: PositionedResult) = rs.nextLongOption().map(Id[Bookmark](_)) }
+  implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] { def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC) }
+  implicit val GetBookmarkSource: GetResult[BookmarkSource] = new GetResult[BookmarkSource] { def apply(r: PositionedResult) = BookmarkSource(r.nextString()) }
+  implicit val GetSequenceNumber: GetResult[SequenceNumber] = new GetResult[SequenceNumber] { def apply(r: PositionedResult) = SequenceNumber(r.nextLong()) }
+
+  implicit object GetOptExtBookmarkId extends GetResult[Option[ExternalId[Bookmark]]] { def apply(rs: PositionedResult) = rs.nextStringOption().map(ExternalId[Bookmark](_)) }
+  implicit def GetGenericOptId[M <: Model[M]] = new GetResult[Option[Id[M]]] { def apply(rs: PositionedResult) = rs.nextLongOption().map(Id[M](_)) }
+  implicit def GetGenericId[M <: Model[M]] = new GetResult[Id[M]] { def apply(rs: PositionedResult) = Id[M](rs.nextLong()) }
+  implicit def GetGenericState[M <: Model[M]] = new GetResult[State[M]] { def apply(rs: PositionedResult) = State[M](rs.nextString()) }
+  implicit def GetGenericExtId[M <: Model[M]] = new GetResult[ExternalId[M]] { def apply(rs: PositionedResult) = ExternalId[M](rs.nextString()) }
+  implicit def GetGenericExtOptId[M <: Model[M]] = new GetResult[Option[ExternalId[M]]] { def apply(rs: PositionedResult) = rs.nextStringOption().map(ExternalId[M](_)) }
+
+  private implicit val getBookmarkResult : GetResult[com.keepit.model.Bookmark] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
+    Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[BookmarkSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber])
+  }
+  private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
 
   override def save(model: Bookmark)(implicit session: RWSession) = {
@@ -82,7 +97,7 @@ class BookmarkRepoImpl @Inject() (
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark] =  {
     val q = for {
-      t <- table if (t.isPrivate === false || includePrivate == true) && !t.state.inSet(excludeStates)
+      t <- rows if (t.isPrivate === false || includePrivate == true) && !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
@@ -105,26 +120,26 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
     bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
-      val bookmarks = (for(b <- table if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+      val bookmarks = (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
     }
 
   def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] ={
-    (for(b <- table if b.uriId === uriId && b.userId === userId ) yield b).firstOption
+    (for(b <- rows if b.uriId === uriId && b.userId === userId ) yield b).firstOption
   }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.title === title) yield b).list
+    (for(b <- rows if b.title === title) yield b).list
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).list
+    (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).list
 
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE && b.title.isNull) yield b).list
+    (for(b <- rows if b.uriId === uriId && b.state === BookmarkStates.ACTIVE && b.title.isNull) yield b).list
 
   def getByUser(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
+    (for(b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]], count: Int)(implicit session: RSession): Seq[Bookmark] = {
     import keepToCollectionRepo.{stateTypeMapper => ktcStateMapper}
@@ -154,7 +169,6 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]], count: Int)(implicit session: RSession): Seq[Bookmark] = {
-    import keepToCollectionRepo.{stateTypeMapper => ktcStateMapper}
     import StaticQuery.interpolation
 
 
@@ -220,30 +234,30 @@ class BookmarkRepoImpl @Inject() (
 
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int =
     Query((for {
-      b1 <- table if b1.userId === userId && b1.state === BookmarkStates.ACTIVE
-      b2 <- table if b2.userId === otherUserId && b2.state === BookmarkStates.ACTIVE && b2.uriId === b1.uriId && !b2.isPrivate
+      b1 <- rows if b1.userId === userId && b1.state === BookmarkStates.ACTIVE
+      b2 <- rows if b2.userId === otherUserId && b2.state === BookmarkStates.ACTIVE && b2.uriId === b1.uriId && !b2.isPrivate
     } yield b2.id).countDistinct).first
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.urlId === urlId) yield b).list
+    (for(b <- rows if b.urlId === urlId) yield b).list
 
   def delete(id: Id[Bookmark])(implicit sesion: RWSession): Unit = {
-    val q = (for(b <- table if b.id === id) yield b)
+    val q = (for(b <- rows if b.id === id) yield b)
     q.firstOption.map{ bm => deleteCache(bm) }
     q.delete
   }
 
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])] = {
     val q = for {
-      r <- table
-      s <- table if (r.userId === s.userId && r.uriId === s.uriId && r.id < s.id)
+      r <- rows
+      s <- rows if (r.userId === s.userId && r.uriId === s.uriId && r.id < s.id)
     } yield (r.userId, r.uriId)
     q.list.distinct
   }
 
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark] = {
     latestBookmarkUriCache.getOrElseOpt(LatestBookmarkUriKey(uriId)) {
-      val bookmarks = for { bookmark <- table if bookmark.uriId === uriId } yield bookmark
+      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId } yield bookmark
       val max = bookmarks.map(_.updatedAt).max
       val latest = for { bookmark <- bookmarks if bookmark.updatedAt >= max } yield bookmark
       latest.sortBy(_.updatedAt desc).firstOption
@@ -251,7 +265,7 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean = {
-    (for(b <- table if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
+    (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
   }
 
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[BookmarkSource]] =
@@ -260,7 +274,7 @@ class BookmarkRepoImpl @Inject() (
     }.groupBy(_._1).mapValues(_.map(_._2))
 
   def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark] = {
-    val bookmarks = for { bookmark <- table if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
+    val bookmarks = for { bookmark <- rows if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
     val min = bookmarks.map(_.createdAt).min
     val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark
     oldest.sortBy(_.createdAt asc).firstOption

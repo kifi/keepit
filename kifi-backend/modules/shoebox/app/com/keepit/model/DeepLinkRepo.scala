@@ -15,12 +15,11 @@ trait DeepLinkRepo extends Repo[DeepLink] {
 
 @Singleton
 class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[DeepLink] with DeepLinkRepo {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
-  import DBSession._
 
-  override val table = new RepoTable[DeepLink](db, "deep_link") {
+  import db.Driver.simple._
+
+  type RepoImpl = DeepLinkTable
+  class DeepLinkTable(tag: Tag) extends RepoTable[DeepLink](db, tag, "deep_link") {
     def initatorUserId = column[Id[User]]("initiator_user_id")
     def recipientUserId = column[Id[User]]("recipient_user_id")
     def uriId = column[Id[NormalizedURI]]("uri_id")
@@ -28,18 +27,21 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     def deepLocator = column[DeepLocator]("deep_locator", O.NotNull)
     def token = column[DeepLinkToken]("token", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ initatorUserId.? ~ recipientUserId.? ~ uriId.? ~ urlId.? ~ deepLocator ~ token ~ state <> (DeepLink, DeepLink.unapply _)
+    def * = (id.?, createdAt, updatedAt, initatorUserId.?, recipientUserId.?, uriId.?, urlId.?, deepLocator, token, state) <> ((DeepLink.apply _).tupled, DeepLink.unapply _)
   }
+
+  def table(tag: Tag) = new DeepLinkTable(tag)
+  initTable()
 
   override def invalidateCache(model: DeepLink)(implicit session: RSession): Unit = {}
   override def deleteCache(model: DeepLink)(implicit session: RSession): Unit = {}
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink] =
-    (for(b <- table if b.uriId === uriId) yield b).list
+    (for(b <- rows if b.uriId === uriId) yield b).list
 
   def getByUrl(urlId: Id[URL])(implicit session: RSession): Seq[DeepLink] =
-    (for(b <- table if b.urlId === urlId) yield b).list
+    (for(b <- rows if b.urlId === urlId) yield b).list
 
   def getByToken(token: DeepLinkToken)(implicit session: RSession): Option[DeepLink] =
-    (for(b <- table if b.token === token) yield b).firstOption
+    (for(b <- rows if b.token === token) yield b).firstOption
 }

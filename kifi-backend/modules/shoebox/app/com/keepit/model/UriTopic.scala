@@ -1,19 +1,13 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.common.db.Model
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
-import com.keepit.common.db.slick.FortyTwoTypeMappers.ByteArrayTypeMapper
-import com.keepit.common.db.slick.FortyTwoTypeMappers.NormalizedURIIdTypeMapper
-import scala.annotation.elidable
-import scala.annotation.elidable.ASSERTION
 import com.keepit.learning.topicmodel.TopicModelGlobal
 
 case class UriTopic(
@@ -92,38 +86,41 @@ abstract class UriTopicRepoBase (
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[UriTopic] with UriTopicRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
-  override val table = new RepoTable[UriTopic](db, tableName){
+  type RepoImpl = UriTopicTable
+  class UriTopicTable(tag: Tag) extends RepoTable[UriTopic](db, tag, tableName) {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def primaryTopic = column[Option[Int]]("primaryTopic")
     def secondaryTopic = column[Option[Int]]("secondaryTopic")
-    def * = id.? ~ uriId ~ topic ~ primaryTopic ~ secondaryTopic ~ createdAt ~ updatedAt <> (UriTopic, UriTopic.unapply _)
+    def * = (id.?, uriId, topic, primaryTopic, secondaryTopic, createdAt, updatedAt) <> ((UriTopic.apply _).tupled, UriTopic.unapply _)
   }
+
+  def table(tag: Tag) = new UriTopicTable(tag)
+  initTable()
 
   override def deleteCache(model: UriTopic)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: UriTopic)(implicit session: RSession): Unit = {}
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[UriTopic] = {
-    (for(r <- table if r.uriId === uriId) yield r).firstOption
+    (for(r <- rows if r.uriId === uriId) yield r).firstOption
   }
 
   def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])] = {
-    (for(r <- table if r.uriId === uriId) yield (r.primaryTopic, r.secondaryTopic)).firstOption
+    (for(r <- rows if r.uriId === uriId) yield (r.primaryTopic, r.secondaryTopic)).firstOption
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
-    (for(r <- table) yield r).delete
+    (for(r <- rows) yield r).delete
   }
 
   def getUrisByTopic(topic: Int)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
-    (for(r <- table if (r.primaryTopic === topic)) yield r.uriId).list
+    (for(r <- rows if (r.primaryTopic === topic)) yield r.uriId).list
   }
 
   def countByTopic()(implicit session: RSession): Map[Int, Int] = {
-    val uriAndTopic = (for (r <- table if r.primaryTopic.isNotNull) yield (r.uriId, r.primaryTopic)).list
+    val uriAndTopic = (for (r <- rows if r.primaryTopic.isNotNull) yield (r.uriId, r.primaryTopic)).list
     uriAndTopic.groupBy(_._2).map{case (topic, uris) => (topic.get, uris.size) }
   }
 }

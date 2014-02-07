@@ -1,13 +1,7 @@
 package com.keepit.common.db.slick
 
-import scala.slick.lifted.DDL
-import scala.slick.session.{Database => SlickDatabase}
-
-import com.google.inject.{Provides, Singleton}
-import com.keepit.common.db.slick._
-import play.api.db.DB
-import play.api.Play
-import akka.actor.ActorSystem
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.driver.JdbcDriver.DDL
 
 trait DbInfo {
   def masterDatabase: SlickDatabase
