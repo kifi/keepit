@@ -57,14 +57,14 @@ class NonUserThreadRepoImpl @Inject() (
     def threadUpdatedAt = column[DateTime]("thread_updated_at", O.Nullable)
     def muted = column[Boolean]("muted", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedAt.?, muted, state) <> (rowToObj _, objToRow _)
+    def * = (id.?, createdAt, updatedAt, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedAt.?, muted, state) <> (rowToObj2 _, objToRow _)
 
-    private def rowToObj(id: Option[Id[NonUserThread]], createdAt: DateTime, updatedAt: DateTime, kind: NonUserKind, emailAddress: Option[EmailAddressHolder], econtactId: Option[Id[EContact]], threadId: Id[MessageThread], uriId: Option[Id[NormalizedURI]], notifiedCount: Int, lastNotifiedAt: Option[DateTime], threadUpdatedAt: Option[DateTime], muted: Boolean, state: State[NonUserThread]): NonUserThread = {
-      val participant = kind match {
+    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, NonUserKind, Option[EmailAddressHolder], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread])): NonUserThread = {
+      val participant = t._4 match {
         case NonUserKinds.email =>
-          NonUserEmailParticipant(emailAddress.get, econtactId)
+          NonUserEmailParticipant(t._5.get, t._6)
       }
-      NonUserThread(id, createdAt, updatedAt, participant, threadId, uriId, notifiedCount, lastNotifiedAt, threadUpdatedAt, muted, state)
+      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, participant = participant, threadId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedAt = t._11, muted = t._12, state = t._13)
     }
 
     private def objToRow(n: NonUserThread) = {
