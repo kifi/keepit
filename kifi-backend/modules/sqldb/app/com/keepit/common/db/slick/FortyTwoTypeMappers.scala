@@ -10,27 +10,14 @@ import play.api.libs.json._
 import com.keepit.common.net.UserAgent
 import com.keepit.classify.DomainTagName
 import com.keepit.common.mail._
-import com.keepit.social.{SocialId, SocialNetworkType}
+import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.Lang
-import play.api.libs.json.JsArray
-import com.keepit.common.db.slick.InvalidDatabaseEncodingException
-import play.api.libs.json.JsObject
-import com.keepit.common.mail.GenericEmailAddress
-import com.keepit.social.SocialId
+import com.keepit.search.{SearchConfig, Lang}
 import javax.sql.rowset.serial.SerialClob
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsString
-import com.keepit.common.db.slick.InvalidDatabaseEncodingException
-import play.api.libs.json.JsObject
-import com.keepit.common.mail.GenericEmailAddress
-import com.keepit.social.SocialId
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
-import com.keepit.common.db.slick.InvalidDatabaseEncodingException
-import com.keepit.model.UserExperiment
 import play.api.libs.json.JsObject
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
@@ -49,6 +36,8 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
+  implicit val userToDomainKindMapper = MappedColumnType.base[UserToDomainKind, String](_.value, UserToDomainKind.apply)
+  implicit val userPictureSource = MappedColumnType.base[UserPictureSource, String](_.name, UserPictureSource.apply)
   implicit val restrictionMapper = MappedColumnType.base[Restriction, String](_.context, Restriction.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
@@ -73,6 +62,17 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
 
+  implicit val searchConfigMapper = MappedColumnType.base[SearchConfig, String]({ value =>
+    Json.stringify(JsObject(value.params.map { case (k, v) => k -> JsString(v) }.toSeq))
+  }, { value =>
+    SearchConfig(Json.parse(value).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap)
+  })
+
+  implicit val seqURLHistoryMapper = MappedColumnType.base[Seq[URLHistory], String]({ value =>
+    Json.stringify(Json.toJson(value))
+  }, { value =>
+    Json.fromJson[Seq[URLHistory]](Json.parse(value)).get
+  })
 
   implicit val largeStringMapper = MappedColumnType.base[LargeString, Clob]({ value =>
     new SerialClob(value.value.toCharArray()) {
@@ -96,6 +96,12 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
       case x: JsArray => x
       case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for JsArray: $src")
     }
+  })
+
+  implicit val jsObjectMapper = MappedColumnType.base[JsObject, String]({ json =>
+    Json.stringify(json)
+  }, { src =>
+    Json.parse(src).as[JsObject]
   })
 
   implicit val jsValueMapper = MappedColumnType.base[JsValue, String]({ json =>

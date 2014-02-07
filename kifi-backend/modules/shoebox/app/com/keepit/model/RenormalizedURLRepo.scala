@@ -61,7 +61,7 @@ class RenormalizedURLRepoImpl @Inject()(
   def pageView(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[RenormalizedURL] = {
     (for {
       r <- rows if r.state =!= RenormalizedURLStates.INACTIVE
-      s <- urlRepo.table if r.urlId === s.id
+      s <- urlRepo.rows if r.urlId === s.id
     } yield (r, s)).sortBy(_._2.url).drop(pageNum * pageSize).take(pageSize).map{_._1}.list
 
   }

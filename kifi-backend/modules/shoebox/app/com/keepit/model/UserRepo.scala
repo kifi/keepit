@@ -179,7 +179,7 @@ class UserRepoImpl @Inject() (
 
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {
-      (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
+      (for(f <- rows if f.externalId === id) yield f).firstOption
     }
   }
 

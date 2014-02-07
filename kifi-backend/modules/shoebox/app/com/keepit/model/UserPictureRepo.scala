@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsValue, JsObject}
 
 @ImplementedBy(classOf[UserPictureRepoImpl])
 trait UserPictureRepo extends Repo[UserPicture] {
@@ -22,6 +22,7 @@ class UserPictureRepoImpl @Inject() (
   extends DbRepo[UserPicture] with UserPictureRepo with Logging {
 
   import db.Driver.simple._
+  import FortyTwoTypeMappers._
 
   type RepoImpl = UserPictureTable
   class UserPictureTable(tag:Tag) extends RepoTable[UserPicture](db, tag, "user_picture") {
@@ -32,6 +33,9 @@ class UserPictureRepoImpl @Inject() (
 
     def * = (id.?,createdAt,updatedAt,userId,name,origin,state,attributes.?) <> ((UserPicture.apply _).tupled, UserPicture.unapply _)
   }
+
+  def table(tag:Tag) = new UserPictureTable(tag)
+  initTable()
 
   override def deleteCache(model: UserPicture)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: UserPicture)(implicit session: RSession): Unit = {}
