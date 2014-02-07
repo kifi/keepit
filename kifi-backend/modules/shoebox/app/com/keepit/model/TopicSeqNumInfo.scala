@@ -6,7 +6,6 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick.FortyTwoTypeMappers.SequenceNumberTypeMapper
 
 /**
  * This table is intended to have only one row: it's used to track two sequence numbers.
