@@ -22,17 +22,21 @@ class RenormalizedURLRepoImpl @Inject()(
   val clock: Clock,
   val urlRepo: URLRepoImpl
 ) extends DbRepo[RenormalizedURL] with RenormalizedURLRepo with SeqNumberDbFunction[RenormalizedURL]{
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
   private val sequence = db.getSequence("renormalized_url_sequence")
 
-  override val table = new RepoTable[RenormalizedURL](db, "renormalized_url") with SeqNumberColumn[RenormalizedURL]{
+  type RepoImpl = RenormalizedURLTable
+
+  class RenormalizedURLTable(tag: Tag) extends RepoTable[RenormalizedURL](db, tag, "renormalized_url") with SeqNumberColumn[RenormalizedURL]{
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
     def oldUriId = column[Id[NormalizedURI]]("old_uri_id", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ urlId ~ oldUriId ~ newUriId ~ state ~ seq <> (RenormalizedURL.apply _, RenormalizedURL.unapply _)
+    def * = (id.?, createdAt, updatedAt, urlId, oldUriId, newUriId, state, seq) <> ((RenormalizedURL.apply _).tupled, RenormalizedURL.unapply _)
   }
+
+  def table(tag: Tag) = new RenormalizedURLTable(tag)
+  initTable()
 
   override def save(model: RenormalizedURL)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
@@ -56,14 +60,14 @@ class RenormalizedURLRepoImpl @Inject()(
 
   def pageView(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[RenormalizedURL] = {
     (for {
-      r <- table if r.state =!= RenormalizedURLStates.INACTIVE
+      r <- rows if r.state =!= RenormalizedURLStates.INACTIVE
       s <- urlRepo.table if r.urlId === s.id
     } yield (r, s)).sortBy(_._2.url).drop(pageNum * pageSize).take(pageSize).map{_._1}.list
 
   }
 
   def activeCount()(implicit session: RSession): Int = {
-    (for (r <- table if r.state =!= RenormalizedURLStates.INACTIVE) yield r).list.size
+    (for (r <- rows if r.state =!= RenormalizedURLStates.INACTIVE) yield r).list.size
   }
 
 }

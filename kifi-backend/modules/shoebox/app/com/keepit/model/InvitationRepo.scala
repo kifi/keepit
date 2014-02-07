@@ -5,7 +5,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{Id, State}
 import com.keepit.common.time.Clock
-import scala.Some
 import scala.collection.mutable
 import scala.slick.jdbc.{StaticQuery => Q}
 
@@ -31,15 +30,18 @@ class InvitationRepoImpl @Inject() (
 
   import DBSession._
   import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
-  override lazy val table = new RepoTable[Invitation](db, "invitation") with ExternalIdColumn[Invitation] {
+  type RepoImpl = InvitationTable
+  case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
     def recipientEContactId   = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ recipientSocialUserId.? ~ recipientEContactId.? ~ state <> (Invitation.apply _, Invitation.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, state) <> ((Invitation.apply _).tupled, Invitation.unapply _)
   }
+
+  def table(tag: Tag) = new InvitationTable(tag)
 
   private implicit val userIdTypeMapper = userRepo.idMapper
   private implicit val userStateMapper = userRepo.stateTypeMapper
@@ -80,25 +82,25 @@ class InvitationRepoImpl @Inject() (
 
   // get invitations accepted by admin but not joined
   def getAdminAccepted()(implicit session: RSession): Seq[Invitation] =
-    (for (i <- table if i.state === InvitationStates.ADMIN_ACCEPTED) yield i).list
+    (for (i <- rows if i.state === InvitationStates.ADMIN_ACCEPTED) yield i).list
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
-    (for(b <- table if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
+    (for(b <- rows if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
 
   def countByUser(userId: Id[User])(implicit session: RSession): Int = {
     Q.queryNA[Int](s"select count(*) from invitation where sender_user_id=$userId and state != '${InvitationStates.INACTIVE.value}'").first
   }
 
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation] = {
-    (for(b <- table if b.recipientSocialUserId === socialUserInfoId) yield b).list
+    (for(b <- rows if b.recipientSocialUserId === socialUserInfoId) yield b).list
   }
 
   def getBySenderIdAndRecipientEContactId(senderId: Id[User], econtactId: Id[EContact])(implicit session: RSession): Option[Invitation] = {
-    (for(b <- table if b.senderUserId === senderId && b.recipientEContactId === econtactId) yield b).firstOption
+    (for(b <- rows if b.senderUserId === senderId && b.recipientEContactId === econtactId) yield b).firstOption
   }
 
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation] = {
-    (for(b <- table if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
+    (for(b <- rows if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
   }
 }
 

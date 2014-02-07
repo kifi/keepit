@@ -7,14 +7,11 @@ import java.sql.Date
 import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
-import play.api.libs.json.{JsValue, JsArray, Json}
-import com.keepit.common.mail._
+import play.api.libs.json.{JsArray, JsValue, Json}
 import com.keepit.common.net.UserAgent
 import com.keepit.model.UrlHash
-import play.api.libs.json.JsArray
-import com.keepit.common.db.slick.InvalidDatabaseEncodingException
-import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.model.DeepLocator
+import com.keepit.common.mail._
 import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
