@@ -506,6 +506,7 @@ class UserThreadRepoImpl @Inject() (
 
   def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats = {
     import StaticQuery.interpolation
+    rows
     userThreadStatsForUserIdCache.getOrElse(UserThreadStatsForUserIdKey(userId)) {
       UserThreadStats(
         all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
