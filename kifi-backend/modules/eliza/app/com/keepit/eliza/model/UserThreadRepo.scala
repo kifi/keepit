@@ -139,7 +139,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def table(tag: Tag) = new UserThreadTable(tag)
-  rows
+  initTable()
 
   override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
