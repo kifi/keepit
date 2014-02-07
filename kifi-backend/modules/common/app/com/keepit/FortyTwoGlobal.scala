@@ -108,8 +108,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
-    registerToLoadBalancer
-
     injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       Statsd.increment("deploys", 42)
@@ -117,6 +115,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
     }
+
+    registerToLoadBalancer
 
     serviceDiscoveryOpt map { serviceDiscovery =>
       val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), Duration.Inf)
