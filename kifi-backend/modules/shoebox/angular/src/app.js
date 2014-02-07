@@ -14,6 +14,7 @@ angular.module('kifi', [
 	'kifi.templates',
 	'kifi.profileCard',
 	'kifi.profileService',
+	'kifi.detail',
 	'kifi.tags',
 	'kifi.keeps',
 	'kifi.keep',

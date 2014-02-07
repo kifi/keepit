@@ -189,6 +189,14 @@ angular.module('kifi.keep', [])
 				scope.isOnlyMine = function () {
 					return !scope.hasKeepers() && !scope.keep.others;
 				};
+
+				scope.isSelected = function () {
+					return scope.isSelectedKeep(scope.keep);
+				};
+
+				scope.onCheck = function () {
+					return scope.toggleSelectKeep(scope.keep);
+				};
 			}
 		};
 	}
