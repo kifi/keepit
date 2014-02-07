@@ -13,7 +13,7 @@ import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.Lang
+import com.keepit.search.{SearchConfig, Lang}
 import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
@@ -61,6 +61,12 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
+
+  implicit val searchConfigMapper = MappedColumnType.base[SearchConfig, String]({ value =>
+    Json.stringify(JsObject(value.params.map { case (k, v) => k -> JsString(v) }.toSeq))
+  }, { value =>
+    SearchConfig(Json.parse(value).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap)
+  })
 
   implicit val seqURLHistoryMapper = MappedColumnType.base[Seq[URLHistory], String]({ value =>
     Json.stringify(Json.toJson(value))
