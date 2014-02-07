@@ -1,7 +1,7 @@
-<li class="kf-keep" ng-class="{ mine: isMine(), example: isExample(), private: isPrivate(), detailed: isDetailed() }">
+<li class="kf-keep" ng-class="{ mine: isMine(), example: isExample(), private: isPrivate(), detailed: isDetailed(), selected: isSelected() }">
 	<time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
 	<div class="kf-keep-handle">
-		<div class="kf-keep-checkbox"></div>
+		<div class="kf-keep-checkbox" ng-click="onCheck()"></div>
 	</div>
 	<div class="kf-keep-title">
 		<span class="kf-example-tag">Example keep</span>
@@ -32,8 +32,7 @@
 	<div class="kf-keep-arrow-1">
 		<div class="kf-keep-arrow-2">
 			<div class="kf-keep-arrow-3">
-				<div class="kf-keep-arrow-4">
-				</div>
+				<div class="kf-keep-arrow-4"></div>
 			</div>
 		</div>
 	</div>
