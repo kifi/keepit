@@ -69,10 +69,10 @@ class BookmarkRepoImpl @Inject() (
   def table(tag: Tag) = new BookmarkTable(tag)
   initTable()
 
-  private implicit val getBookmarkResult : GetResult[com.keepit.model.Bookmark] = ??? //FIXME
-  private val bookmarkColumnOrder : String = ???  ///FIXME
-
-
+  private implicit val getBookmarkResult : GetResult[com.keepit.model.Bookmark] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
+    Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[BookmarkSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber])
+  }
+  private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
 
   override def save(model: Bookmark)(implicit session: RWSession) = {
