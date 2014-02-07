@@ -11,11 +11,11 @@ import play.api.libs.json.JsValue
 
 @ImplementedBy(classOf[UserToDomainRepoImpl])
 trait UserToDomainRepo extends Repo[UserToDomain] {
-  def get(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
+  def get(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind,
           excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
          (implicit session: RSession): Option[UserToDomain]
 
-  def exists(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
+  def exists(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind,
              excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
             (implicit session: RSession): Boolean
 }
