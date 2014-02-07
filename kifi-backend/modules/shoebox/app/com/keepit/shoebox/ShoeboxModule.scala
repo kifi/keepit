@@ -18,12 +18,14 @@ import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.integration.ReaperModule
+import com.keepit.common.queue.SimpleQueueModule
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,
   val mailModule: MailModule,
   val reaperModule: ReaperModule,
   val storeModule: ShoeboxDevStoreModule,
+  val sqsModule: SimpleQueueModule,
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule,

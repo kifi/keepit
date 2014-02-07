@@ -7,14 +7,27 @@ import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
-import com.keepit.normalizer.{NormalizationReference, SchemeNormalizer, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
-import com.keepit.scraper.ScraperConfig
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.queue.{NormalizationUpdateTaskQ, SimpleQueueService}
+import com.keepit.normalizer.NormalizationReference
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
+case class NormalizationUpdateTask(uriId:Id[NormalizedURI], isNew:Boolean, candidates:Seq[NormalizationCandidate])
+
+object NormalizationUpdateTask {
+  implicit val format = (
+      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'isNew).format[Boolean] and
+      (__ \ 'candidates).format[Seq[NormalizationCandidate]]
+    )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
+}
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -41,12 +54,14 @@ class NormalizedURIRepoImpl @Inject() (
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo],
+  taskQ:NormalizationUpdateTaskQ,
   airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
+
 
   private val sequence = db.getSequence("normalized_uri_sequence")
 
@@ -188,14 +203,27 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
+    log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
-        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)); uri
+        case Left(uri) =>
+          session.onTransactionSuccess {
+            normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)
+
+            val task = NormalizationUpdateTask(uri.id.get, false, candidates)
+            taskQ.send(Json.stringify(Json.toJson(task)))
+          }
+          uri
         case Right(prenormalizedUrl) => {
           val normalization = findNormalization(prenormalizedUrl)
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*))
+          session.onTransactionSuccess{
+            normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*)
+
+            val task = NormalizationUpdateTask(newUri.id.get, true, candidates)
+            taskQ.send(Json.stringify(Json.toJson(task)))
+          }
           newUri
         }
       }
