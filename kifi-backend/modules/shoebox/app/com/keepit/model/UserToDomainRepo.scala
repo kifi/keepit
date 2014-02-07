@@ -24,7 +24,6 @@ trait UserToDomainRepo extends Repo[UserToDomain] {
 class UserToDomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DbRepo[UserToDomain] with UserToDomainRepo {
 
   import db.Driver.simple._
-  import FortyTwoTypeMappers._
 
   type RepoImpl = UserToDomainTable
   class UserToDomainTable(tag:Tag) extends RepoTable[UserToDomain](db, tag, "user_to_domain") {
