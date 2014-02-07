@@ -9,6 +9,7 @@ import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
 import play.api.libs.json.JsArray
 import play.api.libs.json.Json
+import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -23,6 +24,8 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
+  implicit val emailAddressHolderMapper = MappedColumnType.base[EmailAddressHolder, String](_.address, GenericEmailAddress.apply)
+
   implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
     Json.stringify(json)
   }, { src =>
