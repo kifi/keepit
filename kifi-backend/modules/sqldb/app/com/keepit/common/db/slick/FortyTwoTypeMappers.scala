@@ -8,22 +8,33 @@ import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
-import com.keepit.model.UrlHash
-import com.keepit.model.DeepLocator
 import com.keepit.classify.DomainTagName
 import com.keepit.common.mail._
 import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
 import com.keepit.search.Lang
-import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import com.keepit.common.db.slick.InvalidDatabaseEncodingException
 import play.api.libs.json.JsObject
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
-import com.keepit.model.DeepLocator
 import javax.sql.rowset.serial.SerialClob
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsString
+import com.keepit.common.db.slick.InvalidDatabaseEncodingException
+import play.api.libs.json.JsObject
+import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.social.SocialId
+import com.keepit.model.UrlHash
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsString
+import com.keepit.common.db.slick.InvalidDatabaseEncodingException
+import com.keepit.model.UserExperiment
+import play.api.libs.json.JsObject
+import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.social.SocialId
+import com.keepit.model.DeepLocator
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -60,6 +71,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
+  implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
 
 
   implicit val largeStringMapper = MappedColumnType.base[LargeString, Clob]({ value =>
