@@ -32,16 +32,19 @@ class SearchFriendRepoImpl @Inject() (
     extends DbRepo[SearchFriend] with SearchFriendRepo with SeqNumberDbFunction[SearchFriend]{
 
   import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
   private val sequence = db.getSequence("search_friend_sequence")
 
-  override val table = new RepoTable[SearchFriend](db, "search_friend") with SeqNumberColumn[SearchFriend]{
+  type RepoImpl = SearchFriendTable
+  class SearchFriendTable(tag: Tag) extends RepoTable[SearchFriend](db, tag, "search_friend") with SeqNumberColumn[SearchFriend] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def friendId = column[Id[User]]("friend_id", O.NotNull)
-    def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt ~ seq <> (SearchFriend.apply _, SearchFriend.unapply _)
+    def * = (id.?, userId, friendId, state, createdAt, updatedAt, seq) <> ((SearchFriend.apply _).tupled, SearchFriend.unapply _)
   }
+
+  def table(tag: Tag) = new SearchFriendTable(tag)
+  initTable()
 
   override def save(model: SearchFriend)(implicit session: RWSession): SearchFriend = {
     val seqNum = sequence.incrementAndGet()
@@ -67,20 +70,20 @@ class SearchFriendRepoImpl @Inject() (
   }
 
   def getUnfriends(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
-    (for { f <- table if f.userId === userId && f.state === SearchFriendStates.EXCLUDED } yield f.friendId).list.toSet
+    (for { f <- rows if f.userId === userId && f.state === SearchFriendStates.EXCLUDED } yield f.friendId).list.toSet
   }
 
   def excludeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {
     val ids = (for {
-      f <- table if f.userId === userId && f.state === SearchFriendStates.INCLUDED && f.friendId.inSet(friendIds)
+      f <- rows if f.userId === userId && f.state === SearchFriendStates.INCLUDED && f.friendId.inSet(friendIds)
     } yield f.id).list
 
     ids.foreach{ id =>
-      (for(f <- table if f.id === id) yield  f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.EXCLUDED, clock.now(), sequence.incrementAndGet())
+      (for(f <- rows if f.id === id) yield (f.state, f.updatedAt, f.seq)).update(SearchFriendStates.EXCLUDED, clock.now(), sequence.incrementAndGet())
     }
 
-    val idsToInsert = friendIds -- (for (f <- table if f.userId === userId) yield f.friendId).list
-    table.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId, seq = sequence.incrementAndGet()) }.toSeq: _*)
+    val idsToInsert = friendIds -- (for (f <- rows if f.userId === userId) yield f.friendId).list
+    rows.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId, seq = sequence.incrementAndGet()) }.toSeq: _*)
     val numChanged = idsToInsert.size + ids.size
     if (numChanged > 0) {
       searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
@@ -90,11 +93,11 @@ class SearchFriendRepoImpl @Inject() (
 
   def includeFriends(userId: Id[User], friendIds: Set[Id[User]])(implicit session: RWSession): Int = {
     val ids = (for {
-      f <- table if f.userId === userId && f.state === SearchFriendStates.EXCLUDED && f.friendId.inSet(friendIds)
+      f <- rows if f.userId === userId && f.state === SearchFriendStates.EXCLUDED && f.friendId.inSet(friendIds)
     } yield f.id).list
 
     ids.foreach{ id =>
-      (for(f <- table if f.id === id) yield f.state ~ f.updatedAt ~ f.seq).update(SearchFriendStates.INCLUDED , clock.now(), sequence.incrementAndGet())
+      (for(f <- rows if f.id === id) yield (f.state, f.updatedAt, f.seq)).update(SearchFriendStates.INCLUDED , clock.now(), sequence.incrementAndGet())
     }
 
     if (ids.size > 0) {
@@ -106,7 +109,7 @@ class SearchFriendRepoImpl @Inject() (
   private def getSearchFriendsFromDb(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
     val allConnections = userConnectionRepo.getConnectedUsers(userId)
     val excludedConnections = (for {
-      f <- table if f.userId === userId && f.state === SearchFriendStates.EXCLUDED
+      f <- rows if f.userId === userId && f.state === SearchFriendStates.EXCLUDED
     } yield f.friendId).list.toSet
     allConnections -- excludedConnections
   }
