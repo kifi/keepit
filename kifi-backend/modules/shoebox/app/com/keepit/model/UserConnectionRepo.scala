@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import scala.concurrent.duration.Duration
-import scala.slick.lifted.Query
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
 import com.keepit.common.logging.AccessLog
@@ -43,9 +42,7 @@ class UserConnectionRepoImpl @Inject() (
   val searchFriendsCache: SearchFriendsCache)
   extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection]{
 
-  import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
   private val sequence = db.getSequence("user_connection_sequence")
 
@@ -77,26 +74,30 @@ class UserConnectionRepoImpl @Inject() (
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int = {
     connCountCache.getOrElse(UserConnectionCountKey(userId)) {
       Query((for {
-        c <- table if (c.user1 === userId || c.user2 === userId) && c.state === UserConnectionStates.ACTIVE
+        c <- rows if (c.user1 === userId || c.user2 === userId) && c.state === UserConnectionStates.ACTIVE
       } yield c).length).first
     }
   }
 
-  override val table = new RepoTable[UserConnection](db, "user_connection") with SeqNumberColumn[UserConnection]{
+  type RepoImpl = UserConnectionTable
+  class UserConnectionTable(tag: Tag) extends RepoTable[UserConnection](db, tag, "user_connection") with SeqNumberColumn[UserConnection]{
     def user1 = column[Id[User]]("user_1", O.NotNull)
     def user2 = column[Id[User]]("user_2", O.NotNull)
-    def * = id.? ~ user1 ~ user2 ~ state ~ createdAt ~ updatedAt ~ seq <> (UserConnection.apply _, UserConnection.unapply _)
+    def * = (id.?, user1, user2, state, createdAt, updatedAt, seq) <> ((UserConnection.apply _).tupled, UserConnection.unapply _)
   }
 
+  def table(tag: Tag) = new UserConnectionTable(tag)
+  initTable()
+
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection] =
-    (for (c <- table if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c).firstOption
+    (for (c <- rows if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c).firstOption
 
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
     userConnCache.get(UserConnectionIdKey(id)) match {
       case Some(conns) => conns.map{ Id[User](_) }.toSet
       case _ =>
-        val conns = ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
-                      (for (c <- table if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
+        val conns = ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
+                      (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
         userConnCache.set(UserConnectionIdKey(id), conns.map(_.id).toArray)
         conns
     }
@@ -104,22 +105,22 @@ class UserConnectionRepoImpl @Inject() (
 
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
     unfriendedCache.getOrElse(UnfriendedConnectionsKey(id)) {
-      ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user2) union
-          (for (c <- table if c.user2 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user1)).list.toSet
+      ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user2) union
+          (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user1)).list.toSet
     }
   }
 
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit = {
     val changedUserIds = (for {
-      c <- table if c.user1 === userId || c.user1 === userId
+      c <- rows if c.user1 === userId || c.user1 === userId
     } yield (c.user1, c.user2)).list.foldLeft(Set[Id[User]]()) { case (set, (a, b)) => set + a + b }
 
     val ids = (for {
-      c <- table if c.user1 === userId || c.user1 === userId
+      c <- rows if c.user1 === userId || c.user1 === userId
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- table if c.id === id } yield c.state ~ c.updatedAt ~ c.seq).update(UserConnectionStates.INACTIVE, clock.now(), sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state, c.updatedAt, c.seq)).update(UserConnectionStates.INACTIVE, clock.now(), sequence.incrementAndGet())
     }
 
     changedUserIds foreach invalidateCache
@@ -127,11 +128,11 @@ class UserConnectionRepoImpl @Inject() (
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
     val ids = (for {
-      c <- table if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
+      c <- rows if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- table if c.id === id } yield c.state ~ c.seq).update(UserConnectionStates.UNFRIENDED, sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, sequence.incrementAndGet())
     }
 
     (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
@@ -145,17 +146,17 @@ class UserConnectionRepoImpl @Inject() (
 
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession) {
     val ids = (for {
-      c <- table if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
+      c <- rows if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
         (if (requested) c.state =!= UserConnectionStates.ACTIVE else c.state === UserConnectionStates.INACTIVE)
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- table if c.id === id } yield c.state ~ c.seq).update(UserConnectionStates.ACTIVE, sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state,c.seq)).update(UserConnectionStates.ACTIVE, sequence.incrementAndGet())
     }
 
     val toInsert = users -- {
-      (for (c <- table if c.user1 === userId) yield c.user2) union
-        (for (c <- table if c.user2 === userId) yield c.user1)
+      (for (c <- rows if c.user1 === userId) yield c.user2) union
+        (for (c <- rows if c.user2 === userId) yield c.user1)
       }.list.toSet
 
     (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
@@ -165,7 +166,7 @@ class UserConnectionRepoImpl @Inject() (
 
     (users + userId) foreach invalidateCache
 
-    table.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = sequence.incrementAndGet())}.toSeq: _*)
+    rows.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = sequence.incrementAndGet())}.toSeq: _*)
   }
 
   def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
