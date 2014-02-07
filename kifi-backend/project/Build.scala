@@ -67,18 +67,17 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
       from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
-    "org.apache.lucene" % "lucene-suggest" % "4.2.1",
-    "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*") // todo(andrew): Remove. Needed because of CloseableIterator. Implement yourself!
+    "org.apache.lucene" % "lucene-suggest" % "4.2.1"
   )
 
   lazy val sqldbDependencies = Seq(
     "mysql" % "mysql-connector-java" % "5.1.25",
-    "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*")
+    "com.typesafe.slick" %% "slick" % "2.0.0" exclude("play", "*")
   )
 
   lazy val shoeboxDependencies = Seq(
     "javax.mail" % "mail" % "1.4.5",
-    "com.typesafe.slick" %% "slick-testkit" % "1.0.1" exclude("play", "*"),
+    "com.typesafe.slick" %% "slick-testkit" % "2.0.0" exclude("play", "*"),
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",

@@ -2,7 +2,7 @@ package com.keepit.common.db
 
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick._
-import scala.slick.session.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 import scala.concurrent.ExecutionContext.Implicits.{global => globalExecutionContext}
 import com.keepit.common.db.slick.DbExecutionContext
 
