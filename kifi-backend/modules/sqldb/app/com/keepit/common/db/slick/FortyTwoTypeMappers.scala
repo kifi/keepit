@@ -16,6 +16,7 @@ import com.keepit.common.mail._
 import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
+import com.keepit.search.Lang
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -29,6 +30,8 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
 
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
+  implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
+  implicit val restrictionMapper = MappedColumnType.base[Restriction, String](_.context, Restriction.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
   implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
@@ -43,6 +46,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val socialIdMapper = MappedColumnType.base[SocialId, String](_.id, SocialId.apply)
   implicit val socialNetworkTypeMapper = MappedColumnType.base[SocialNetworkType, String](SocialNetworkType.unapply(_).get, SocialNetworkType.apply)
   implicit val socialUserMapper = MappedColumnType.base[SocialUser, String](SocialUserSerializer.userSerializer.writes(_).toString, s => SocialUserSerializer.userSerializer.reads(Json.parse(s)).get)
+  implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
 
 
   implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
