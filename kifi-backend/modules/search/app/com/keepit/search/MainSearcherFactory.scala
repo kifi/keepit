@@ -36,11 +36,13 @@ import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
 import com.keepit.search.sharding._
+import com.keepit.search.graph.user.UserGraphsCommander
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
+    userGraphsCommander: UserGraphsCommander,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
     shardedCollectionIndexer: ShardedCollectionIndexer,
     parserFactory: MainQueryParserFactory,
@@ -99,12 +101,12 @@ class MainSearcherFactory @Inject() (
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
     log.info(s"warming up $userId")
     Statsd.increment(s"warmup.$userId")
-    val searchFriendsFuture = shoeboxClient.getSearchFriends(userId)
-    val friendsFuture = shoeboxClient.getFriends(userId)
+    val searchFriendsFuture = Future{userGraphsCommander.getConnectedUsers(userId)}
+    val unfriendsFuture = Future{userGraphsCommander.getUnfriended(userId)}
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
-    Seq(searchFriendsFuture, friendsFuture, browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
+    Seq(searchFriendsFuture, unfriendsFuture, browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
   }
 
   def clear(): Unit = {
@@ -120,7 +122,7 @@ class MainSearcherFactory @Inject() (
 
   private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)).future
+    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander, monitoredAwait)).future
   }
 
   def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {
@@ -152,7 +154,7 @@ class MainSearcherFactory @Inject() (
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, shoeboxClient, monitoredAwait)
+    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander, monitoredAwait)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
