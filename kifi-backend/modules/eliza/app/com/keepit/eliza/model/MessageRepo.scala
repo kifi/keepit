@@ -45,7 +45,6 @@ class MessageRepoImpl @Inject() (
   import DBSession._
   import db.Driver.simple._
 
-
   type RepoImpl = MessageTable
   class MessageTable(tag: Tag) extends RepoTable[Message](db, tag, "message") with ExternalIdColumn[Message] {
     def from = column[Id[User]]("sender_id", O.Nullable)
@@ -59,7 +58,6 @@ class MessageRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, auxData.?, sentOnUrl.?, sentOnUriId.?) <> ((Message.apply _).tupled, Message.unapply _)
   }
   def table(tag: Tag) = new MessageTable(tag)
-
 
   override def invalidateCache(message:Message)(implicit session:RSession): Unit = {
     val key = MessagesForThreadIdKey(message.thread)
