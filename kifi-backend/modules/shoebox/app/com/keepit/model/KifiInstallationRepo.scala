@@ -28,6 +28,9 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
     def * = (id.?, createdAt, updatedAt, userId, externalId, version, userAgent, state) <> ((KifiInstallation.apply _).tupled, KifiInstallation.unapply _)
   }
 
+  def table(tag: Tag) = new KifiInstallationTable(tag)
+  initTable()
+
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation] =
     (for(k <- rows if k.userId === userId && k.state =!= excludeState.orNull) yield k).list
 
