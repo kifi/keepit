@@ -18,8 +18,7 @@ class UserBookmarkClicksRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[UserBookmarkClicks] with UserBookmarkClicksRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.simple._
+    import db.Driver.simple._
 
   type RepoImpl = UserBookmarkClicksTable
   class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_bookmark_clicks") {

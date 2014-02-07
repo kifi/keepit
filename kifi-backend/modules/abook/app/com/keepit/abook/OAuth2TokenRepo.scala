@@ -17,8 +17,7 @@ trait OAuth2TokenRepo extends Repo[OAuth2Token] {
 
 class OAuth2TokenRepoImpl @Inject() (val db:DataBaseComponent, val clock: Clock) extends DbRepo[OAuth2Token] with OAuth2TokenRepo with Logging {
 
-  import FortyTwoTypeMappers._
-  import DBSession._
+    import DBSession._
   import db.Driver.simple._
 
 

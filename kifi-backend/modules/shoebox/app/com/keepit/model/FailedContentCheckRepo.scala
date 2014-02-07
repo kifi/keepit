@@ -18,8 +18,7 @@ class FailedContentCheckRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[FailedContentCheck] with FailedContentCheckRepo{
-  import FortyTwoTypeMappers._
-  import db.Driver.simple._
+    import db.Driver.simple._
 
   type RepoImpl = FailedContentCheckTable
   case class FailedContentCheckTable(tag: Tag) extends RepoTable[FailedContentCheck](db, tag, "failed_content_check"){

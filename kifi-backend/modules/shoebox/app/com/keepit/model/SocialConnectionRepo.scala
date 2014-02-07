@@ -39,8 +39,7 @@ class SocialConnectionRepoImpl @Inject() (
   socialRepo: SocialUserInfoRepoImpl)
   extends DbRepo[SocialConnection] with SocialConnectionRepo {
 
-  import FortyTwoTypeMappers._
-  import scala.slick.jdbc.StaticQuery
+    import scala.slick.jdbc.StaticQuery
   import db.Driver.simple._
   import DBSession._
 

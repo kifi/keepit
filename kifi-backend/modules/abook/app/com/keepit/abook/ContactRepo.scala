@@ -8,7 +8,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
-import com.keepit.common.db.slick.FortyTwoTypeMappers
 import com.keepit.common.db.slick.DBSession
 import scala.slick.jdbc.{StaticQuery => Q}
 import Q.interpolation
@@ -30,8 +29,7 @@ trait ContactRepo extends Repo[Contact] {
 
 @Singleton
 class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Contact] with ContactRepo with Logging {
-  import FortyTwoTypeMappers._
-  import DBSession._
+    import DBSession._
   import db.Driver.simple._
 
   type RepoImpl = ContactTable

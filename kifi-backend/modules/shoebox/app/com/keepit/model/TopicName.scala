@@ -30,8 +30,7 @@ abstract class TopicNameRepoBase(
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[TopicName] with TopicNameRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.simple._
+    import db.Driver.simple._
 
   type RepoImpl = TopicNameTable
   class TopicNameTable(tag: Tag) extends RepoTable[TopicName](db, tag, "topic_name") {
