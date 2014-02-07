@@ -17,15 +17,15 @@ trait DomainTagRepo extends Repo[DomainTag] {
 
 @Singleton
 class DomainTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DbRepo[DomainTag] with DomainTagRepo {
-  import FortyTwoTypeMappers._
   import db.Driver.simple._
 
   type RepoImpl = DomainTagTable
 
+
   class DomainTagTable(tag: Tag) extends RepoTable[DomainTag](db, tag, "domain_tag") {
     def name = column[DomainTagName]("name", O.NotNull)
     def sensitive = column[Option[Boolean]]("sensitive", O.Nullable)
-    def * = (id.?, name, sensitive, state, createdAt, updatedAt) <> (DomainTag.apply, DomainTag.unapply _)
+    def * = (id.?, name, sensitive, state, createdAt, updatedAt) <> (DomainTag.tupled, DomainTag.unapply _)
   }
 
   def table(tag: Tag) = new DomainTagTable(tag)

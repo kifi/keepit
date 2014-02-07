@@ -14,6 +14,7 @@ import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.model.DeepLocator
+import com.keepit.classify.DomainTagName
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -37,7 +38,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[BookmarkSource, String](_.value, BookmarkSource.apply)
   implicit val systemEmailAddressMapper = MappedColumnType.base[SystemEmailAddress, String](_.address, EmailAddresses.apply)
-
+  implicit val domainTagNameMapper = MappedColumnType.base[DomainTagName, String](_.name, DomainTagName.apply)
 
 
 
@@ -326,24 +327,6 @@ object FortyTwoTypeMappers {
 //  }
 
 }
-
-////************************************
-////       Abstract mappers
-////************************************
-//abstract class DelegateMapperDelegate[S, D] extends TypeMapperDelegate[S] {
-//  protected def delegate: TypeMapperDelegate[D]
-//  def sqlType = delegate.sqlType
-//  def setValue(value: S, p: PositionedParameters) = delegate.setValue(sourceToDest(value), p)
-//  def setOption(valueOpt: Option[S], p: PositionedParameters) = delegate.setOption(valueOpt map sourceToDest, p)
-//  def nextValue(r: PositionedResult): S = destToSource(delegate.nextValue(r))
-//  def updateValue(value: S, r: PositionedResult) = delegate.updateValue(sourceToDest(value), r)
-//  override def valueToSQLLiteral(value: S) = delegate.valueToSQLLiteral(sourceToDest(value))
-//  override def sqlTypeName = delegate.sqlTypeName
-//
-//  def destToSource(dest: D): S = Option(dest) match {
-//    case None => zero
-//    case Some(value) => safeDestToSource(dest)
-//  }
 //
 //  def sourceToDest(dest: S): D
 //  def safeDestToSource(source: D): S
