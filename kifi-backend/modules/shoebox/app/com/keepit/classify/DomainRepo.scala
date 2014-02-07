@@ -26,8 +26,7 @@ class DomainRepoImpl @Inject()(
     val db: DataBaseComponent,
     val clock: Clock,
     domainCache: DomainCache) extends DbRepo[Domain] with DomainRepo {
-  import DBSession._
-  import db.Driver.Implicit._
+  import db.Driver.simple._
 
 
   //todo(martin) remove this default implementation so we force repos to implement it
@@ -39,39 +38,44 @@ class DomainRepoImpl @Inject()(
     domainCache.remove(DomainKey(domain.hostname))
   }
 
-  override val table = new RepoTable[Domain](db, "domain") {
+  type RepoImpl = DomainTable
+
+  class DomainTable(tag: Tag) extends RepoTable[Domain](db, tag, "domain") {
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
-    def * = id.? ~ hostname ~ autoSensitive ~ manualSensitive ~ state ~ createdAt ~ updatedAt <> (Domain.apply _, Domain.unapply _)
+    def * = (id.?, hostname, autoSensitive, manualSensitive, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
   }
+
+  def table(tag: Tag) = new DomainTable(tag)
+  initTable()
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] = {
     domainCache.getOrElseOpt(DomainKey(domain)) {
-      (for (d <- table if d.hostname === domain) yield d).firstOption
+      (for (d <- rows if d.hostname === domain) yield d).firstOption
     } filter { d => excludeState.map(s => d.state != s).getOrElse(true) }
   }
 
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
-    (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
+    (for (d <- rows if d.id.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
 
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
-    (for (d <- table if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
+    (for (d <- rows if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
 
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
-    (for (d <- table if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
+    (for (d <- rows if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
 
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int = {
-    val count = (for (d <- table if d.id.inSet(domainIds)) yield d.autoSensitive ~ d.updatedAt).update(value -> clock.now())
+    val count = (for (d <- rows if d.id.inSet(domainIds)) yield (d.autoSensitive, d.updatedAt)).update(value -> clock.now())
     domainIds foreach { id => invalidateCache(get(id)) }
     count
   }
 
   def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
-    (for (d <- table if d.hostname.startsWith(prefix) && d.state =!= excludeState.orNull) yield d).sortBy(_.hostname).list
+    (for (d <- rows if d.hostname.startsWith(prefix) && d.state =!= excludeState.orNull) yield d).sortBy(_.hostname).list
   }
 }

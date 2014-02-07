@@ -8,13 +8,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
-import com.keepit.common.db.slick.FortyTwoTypeMappers
 import com.keepit.common.db.slick.DBSession
 import scala.slick.jdbc.{StaticQuery => Q}
 import Q.interpolation
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
+
 
 @ImplementedBy(classOf[ContactRepoImpl])
 trait ContactRepo extends Repo[Contact] {
@@ -29,11 +29,11 @@ trait ContactRepo extends Repo[Contact] {
 
 @Singleton
 class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Contact] with ContactRepo with Logging {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import DBSession._
+    import DBSession._
+  import db.Driver.simple._
 
-  override val table = new RepoTable[Contact](db, "contact") {
+  type RepoImpl = ContactTable
+  class ContactTable(tag: Tag) extends RepoTable[Contact](db, tag, "contact") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def abookId = column[Id[ABookInfo]]("abook_id", O.NotNull)
     def email  = column[String]("email", O.NotNull)
@@ -43,27 +43,27 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def firstName = column[String]("first_name", O.Nullable)
     def lastName = column[String]("last_name", O.Nullable)
     def pictureUrl = column[String]("picture_url", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ abookId ~ email ~ emailList.? ~ origin ~ name.? ~ firstName.? ~ lastName.? ~ pictureUrl.? <> (Contact.apply _, Contact.unapply _)
-    def forInsert = createdAt ~ updatedAt ~ userId ~ abookId ~ email ~ emailList.? ~ origin ~ name.? ~ firstName.? ~ lastName.? ~ pictureUrl.? <> (
-      {t => Contact(None, t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8, t._9, t._10)},
-      {(c:Contact) => Some((c.createdAt, c.updatedAt, c.userId, c.abookId, c.email, c.altEmails, c.origin, c.name, c.firstName, c.lastName, c.pictureUrl))}
-      )
+    def * = (id.?, createdAt, updatedAt, userId, abookId, email, emailList.?, origin, name.?, firstName.?, lastName.?, pictureUrl.?) <> ((Contact.apply _).tupled, Contact.unapply _)
   }
+
+  def table(tag: Tag) = new ContactTable(tag)
+  initTable()
+
 
   override def deleteCache(model: Contact)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: Contact)(implicit session: RSession): Unit = {}
 
   def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[Contact] =
-    (for(f <- table if f.userId === userId) yield f).elementsTo(maxRows)
+    (for(f <- rows if f.userId === userId) yield f).iteratorTo(maxRows)
 
   def getByUserIdAndABookInfoIdIter(userId: Id[User], abookInfoId:Id[ABookInfo], maxRows:Int)(implicit session: RSession): CloseableIterator[Contact] =
-    (for(f <- table if f.userId === userId && f.abookId === abookInfoId) yield f).elementsTo(maxRows)
+    (for(f <- rows if f.userId === userId && f.abookId === abookInfoId) yield f).iteratorTo(maxRows)
 
   def deleteByUserIdAndABookInfoId(userId: Id[User], abookInfoId: Id[ABookInfo])(implicit session: RWSession): Int = {
     val ts = System.currentTimeMillis
-    val rows = sqlu"delete from contact where user_id=${userId.id} and abook_id=${abookInfoId.id}".first
+    val deleted = sqlu"delete from contact where user_id=${userId.id} and abook_id=${abookInfoId.id}".first
     log.info(s"[delete(user_id=$userId,abook_id=$abookInfoId)] $rows deleted. time-lapsed: ${System.currentTimeMillis - ts}")
-    rows
+    deleted
   }
 
   def getContactCount(userId: Id[User], abookInfoId: Id[ABookInfo])(implicit session: RSession): Int = {
@@ -80,7 +80,7 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
       contactInfos.grouped(500).foreach { g =>
         i += 1
         timing(s"contactRepo.insertBatch($userId,$abookInfoId,$origin,batch($i,sz=${g.length}))") {
-          table.forInsert insertAll(g: _*)
+          rows.insertAll(g: _*)
         }
       }
     }

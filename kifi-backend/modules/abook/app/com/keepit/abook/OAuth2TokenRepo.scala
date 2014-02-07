@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 import com.keepit.common.db.slick._
-import com.keepit.model.{User, OAuth2TokenIssuer, OAuth2Token}
+import com.keepit.model.{EContact, User, OAuth2TokenIssuer, OAuth2Token}
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
@@ -17,11 +17,13 @@ trait OAuth2TokenRepo extends Repo[OAuth2Token] {
 
 class OAuth2TokenRepoImpl @Inject() (val db:DataBaseComponent, val clock: Clock) extends DbRepo[OAuth2Token] with OAuth2TokenRepo with Logging {
 
-  import db.Driver.Implicit._
-  import DBSession._
-  import FortyTwoTypeMappers._
+    import DBSession._
+  import db.Driver.simple._
 
-  override val table = new RepoTable[OAuth2Token](db, "oauth2_token") {
+
+  type RepoImpl = OAuth2TokenTable
+  class OAuth2TokenTable(tag: Tag) extends RepoTable[OAuth2Token](db, tag, "oauth2_token") {
+
     def userId       = column[Id[User]]("user_id", O.NotNull)
     def issuer       = column[OAuth2TokenIssuer]("issuer", O.NotNull)
     def scope        = column[String]("scope", O.Nullable)
@@ -33,11 +35,12 @@ class OAuth2TokenRepoImpl @Inject() (val db:DataBaseComponent, val clock: Clock)
     def lastRefreshedAt = column[DateTime]("last_refreshed_at", O.Nullable)
     def idToken      = column[String]("id_token", O.Nullable)
     def rawToken     = column[String]("raw_token", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ issuer ~ scope.? ~ tokenType.? ~ accessToken ~ expiresIn.? ~ refreshToken.? ~ autoRefresh ~ lastRefreshedAt.? ~ idToken.? ~ rawToken.? <> (OAuth2Token.apply _, OAuth2Token.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, userId, issuer, scope.?, tokenType.?, accessToken, expiresIn.?, refreshToken.?, autoRefresh, lastRefreshedAt.?, idToken.?, rawToken.?) <> ((OAuth2Token.apply _).tupled, OAuth2Token.unapply _)
   }
+  def table(tag: Tag) = new OAuth2TokenTable(tag)
 
   def getById(id: Id[OAuth2Token])(implicit session: RSession): Option[OAuth2Token] = {
-    (for(t <- table if t.id === id) yield t).firstOption
+    (for(t <- rows if t.id === id) yield t).firstOption
   }
 
   override def deleteCache(model: OAuth2Token)(implicit session: RSession): Unit = {}

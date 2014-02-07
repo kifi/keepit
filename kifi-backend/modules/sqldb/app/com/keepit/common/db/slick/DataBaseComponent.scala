@@ -1,28 +1,15 @@
 package com.keepit.common.db.slick
 
-import com.google.inject.{Inject, Provider}
 import com.keepit.common.db.{ DbSequence, DatabaseDialect }
-import java.sql.{ PreparedStatement, Connection }
-import scala.collection.mutable
-import scala.slick.driver._
-import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
-import scala.annotation.tailrec
-import com.keepit.common.logging.Logging
-import scala.util.Failure
-import scala.util.Success
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
-import akka.actor.ActorSystem
-import scala.concurrent._
-import scala.slick.lifted.DDL
-import scala.util.DynamicVariable
-import com.keepit.common.healthcheck._
-import play.api.Mode.Mode
-import play.api.Mode.Test
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.driver.JdbcDriver
+
+//import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
   // the actual driver implementation by Slick (e.g. H2 & MySQL)
-  val Driver: ExtendedDriver
+  val Driver: JdbcDriver
   // dialect specific for this driver that Slick does not support
   val dialect: DatabaseDialect[_]
   // A database instance to which connections can be created.
@@ -36,5 +23,5 @@ trait DataBaseComponent {
   // H2 specifically rather have them in upper case
   def entityName(name: String): String = name
 
-  def initTable(table: TableWithDDL): Unit = {}
+  def initTable(tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {}
 }

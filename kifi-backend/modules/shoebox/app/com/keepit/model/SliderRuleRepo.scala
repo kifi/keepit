@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.State
 import com.keepit.common.time.Clock
 import scala.Some
@@ -18,17 +18,19 @@ trait SliderRuleRepo extends Repo[SliderRule] {
 
 @Singleton
 class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[SliderRule] with SliderRuleRepo {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
-  import DBSession._
 
-  override val table = new RepoTable[SliderRule](db, "slider_rule") {
+  import db.Driver.simple._
+
+  type RepoImpl = SliderRuleTable
+  class SliderRuleTable(tag: Tag) extends RepoTable[SliderRule](db, tag, "slider_rule") {
     def groupName = column[String]("group_name", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def parameters = column[JsArray]("parameters", O.Nullable)
-    def * = id.? ~ groupName ~ name ~ parameters.? ~ state ~ createdAt ~ updatedAt <> (SliderRule, SliderRule.unapply _)
+    def * = (id.?, groupName, name, parameters.?, state, createdAt, updatedAt) <> ((SliderRule.apply _).tupled, SliderRule.unapply _)
   }
+
+  def table(tag: Tag) = new SliderRuleTable(tag)
+  initTable()
 
   val groupCache: mutable.Map[String, SliderRuleGroup] =   // name -> group TODO: memcache?
     new mutable.HashMap[String, SliderRuleGroup] with mutable.SynchronizedMap[String, SliderRuleGroup] {}
@@ -43,10 +45,10 @@ class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
   override def invalidateCache(model: SliderRule)(implicit session: RSession): Unit = {}
 
   def getGroup(groupName: String)(implicit session: RSession): SliderRuleGroup =
-    groupCache.getOrElseUpdate(groupName, SliderRuleGroup((for(r <- table if r.groupName === groupName) yield r).list))
+    groupCache.getOrElseUpdate(groupName, SliderRuleGroup((for(r <- rows if r.groupName === groupName) yield r).list))
 
   def getByName(name: String, excludeState: Option[State[SliderRule]] = Some(SliderRuleStates.INACTIVE))
                (implicit session: RSession): Seq[SliderRule] =
-    (for(r <- table if r.name === name && r.state =!= excludeState.getOrElse(null)) yield r).list
+    (for(r <- rows if r.name === name && r.state =!= excludeState.getOrElse(null)) yield r).list
 }
 

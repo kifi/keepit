@@ -20,18 +20,22 @@ class HttpProxyRepoImpl @Inject() (
   val clock: Clock,
   val httpProxyAllCache: HttpProxyAllCache)
   extends DbRepo[HttpProxy] with HttpProxyRepo {
-  import db.Driver.Implicit._
-  import DBSession._
 
-  override val table = new RepoTable[HttpProxy](db, "http_proxy") {
+  import db.Driver.simple._
+
+  type RepoImpl = HttpProxyTable
+  class HttpProxyTable(tag: Tag) extends RepoTable[HttpProxy](db, tag, "http_proxy") {
     def alias = column[String]("alias", O.NotNull)
     def hostname = column[String]("hostname", O.NotNull)
     def port = column[Int]("port", O.NotNull)
     def scheme = column[String]("scheme", O.NotNull)
     def username = column[String]("username", O.Nullable)
     def password = column[String]("password", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ alias ~ hostname ~ port ~ scheme ~ username.? ~ password.? <> (HttpProxy.apply _, HttpProxy.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, alias, hostname, port, scheme, username.?, password.?) <> ((HttpProxy.apply _).tupled, HttpProxy.unapply _)
   }
+
+  def table(tag: Tag) = new HttpProxyTable(tag)
+  initTable()
 
   private var allMemCache: Option[Seq[HttpProxy]] = None
 
@@ -48,7 +52,7 @@ class HttpProxyRepoImpl @Inject() (
   def allActive()(implicit session: RSession): Seq[HttpProxy] =
     allMemCache.getOrElse {
       val result = httpProxyAllCache.getOrElse(HttpProxyAllKey()) {
-        (for(f <- table if f.state === HttpProxyStates.ACTIVE) yield f).list
+        (for(f <- rows if f.state === HttpProxyStates.ACTIVE) yield f).list
       }
       allMemCache = Some(result)
       result.sortBy(_.id.get.id)

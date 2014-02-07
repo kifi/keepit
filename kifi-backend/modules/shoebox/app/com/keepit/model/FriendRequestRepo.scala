@@ -37,16 +37,17 @@ class FriendRequestRepoImpl @Inject() (
     friendRequestCountCache: FriendRequestCountCache
   ) extends DbRepo[FriendRequest] with FriendRequestRepo with Logging {
 
-  import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import scala.slick.lifted.Query
+  import db.Driver.simple._
 
-  override val table = new RepoTable[FriendRequest](db, "friend_request") {
+  type RepoImpl = FriendRequestTable
+  class FriendRequestTable(tag: Tag) extends RepoTable[FriendRequest](db, tag, "friend_request") {
     def senderId = column[Id[User]]("sender_id", O.NotNull)
     def recipientId = column[Id[User]]("recipient_id", O.NotNull)
-    def * = id.? ~ senderId ~ recipientId ~ createdAt ~ updatedAt ~ state <> (FriendRequest.apply _, FriendRequest.unapply _)
+    def * = (id.?, senderId, recipientId, createdAt, updatedAt, state) <> ((FriendRequest.apply _).tupled, FriendRequest.unapply _)
   }
+
+  def table(tag: Tag) = new FriendRequestTable(tag)
+  initTable()
 
   override def invalidateCache(request: FriendRequest)(implicit session: RSession): Unit = {
     friendRequestCountCache.remove(FriendRequestCountKey(request.recipientId))
@@ -59,25 +60,25 @@ class FriendRequestRepoImpl @Inject() (
   def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int = {
     friendRequestCountCache.getOrElse(FriendRequestCountKey(userId)) {
       Query(
-        (for (fr <- table if fr.recipientId === userId && fr.state === FriendRequestStates.ACTIVE) yield fr).length
+        (for (fr <- rows if fr.recipientId === userId && fr.state === FriendRequestStates.ACTIVE) yield fr).length
       ).first
     }
   }
 
   def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
       (implicit s: RSession): Seq[FriendRequest] = {
-    (for (fr <- table if fr.senderId === userId && fr.state.inSet(states)) yield fr).list
+    (for (fr <- rows if fr.senderId === userId && fr.state.inSet(states)) yield fr).list
   }
 
   def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
       (implicit s: RSession): Seq[FriendRequest] = {
-    (for (fr <- table if fr.recipientId === userId && fr.state.inSet(states)) yield fr).list
+    (for (fr <- rows if fr.recipientId === userId && fr.state.inSet(states)) yield fr).list
   }
 
   def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
       states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
       (implicit s: RSession): Option[FriendRequest] = {
-    (for (fr <- table if fr.senderId === senderId && fr.recipientId === recipientId &&
+    (for (fr <- rows if fr.senderId === senderId && fr.recipientId === recipientId &&
       fr.state.inSet(states)) yield fr).sortBy(_.createdAt desc).firstOption
   }
 }
