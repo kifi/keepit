@@ -28,6 +28,7 @@ class UrlPatternRuleRepoImpl @Inject() (
   import db.Driver.simple._
   import DBSession._
 
+  type RepoImpl = UrlPatternRuleTable
   case class UrlPatternRuleTable(tag: Tag) extends RepoTable[UrlPatternRule](db, tag, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)
     def example = column[String]("example", O.Nullable)
@@ -37,6 +38,8 @@ class UrlPatternRuleRepoImpl @Inject() (
     def trustedDomain = column[String]("trusted_domain", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
   }
+
+  def table(tag: Tag) = new UrlPatternRuleTable(tag)
 
   private var allMemCache: Option[Seq[UrlPatternRule]] = None
 
