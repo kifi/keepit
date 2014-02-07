@@ -9,7 +9,6 @@ import com.keepit.common.time._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType, ResultSetHoldability}
-import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
 

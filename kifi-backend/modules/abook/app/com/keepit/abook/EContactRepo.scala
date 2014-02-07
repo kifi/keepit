@@ -14,7 +14,6 @@ import com.keepit.common.logging.Logging
 import play.api.Play.current
 import play.api.Play
 import scala.util.{Success, Try, Failure}
-import scala.slick.driver.JdbcDriver.simple._
 
 
 @ImplementedBy(classOf[EContactRepoImpl])
@@ -35,6 +34,8 @@ trait EContactRepo extends Repo[EContact] {
 class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EContact] with EContactRepo with Logging {
   import FortyTwoTypeMappers._
   import DBSession._
+  import db.Driver.simple._
+
 
   type RepoImpl = EContactTable
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
