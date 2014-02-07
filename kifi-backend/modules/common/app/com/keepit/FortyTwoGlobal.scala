@@ -53,7 +53,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   }
 
-  private def registerToLoadBalancer {
+  private def registerToLoadBalancer() {
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
     amazonInstanceInfo.loadBalancer map { loadBalancer =>
       val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
@@ -63,12 +63,16 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         elbClient.registerInstancesWithLoadBalancer(request)
         log.info(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
-        case e:AmazonClientException => log.warn(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $e")
+        case t:Throwable => {
+          log.warn(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          injector.instance[AirbrakeNotifier].panic(t)
+          Play.stop()
+        }
       }
     } getOrElse log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
-  private def deregisterFromLoadBalancer {
+  private def deregisterFromLoadBalancer() {
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
     amazonInstanceInfo.loadBalancer map { loadBalancer =>
       val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
@@ -78,8 +82,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         elbClient.deregisterInstancesFromLoadBalancer(request)
         log.info(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
       } catch {
-        case e:AmazonClientException => {
-          log.warn(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $e - Delaying shutdown for a few seconds...")
+        case t:AmazonClientException => {
+          log.warn(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
+          injector.instance[AirbrakeNotifier].notify(t)
           Thread.sleep(18000)
         }
       }
@@ -123,7 +128,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
     injector.instance[MemoryUsageMonitor].start()
 
-    registerToLoadBalancer
+    registerToLoadBalancer()
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
@@ -205,7 +210,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           val serviceDiscovery = injector.instance[ServiceDiscovery]
           serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
           println("[announceStopping] let clients and ELB know we're stopping")
-          deregisterFromLoadBalancer
+          deregisterFromLoadBalancer()
           injector.instance[HealthcheckPlugin].reportStop()
         } catch {
           case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
