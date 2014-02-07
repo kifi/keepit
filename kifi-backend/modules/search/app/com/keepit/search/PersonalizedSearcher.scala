@@ -27,7 +27,6 @@ object PersonalizedSearcher {
             clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
             svWeightMyBookMarks: Int,
             svWeightClickHistory: Int,
-            shoeboxServiceClient: ShoeboxServiceClient,
             monitoredAwait: MonitoredAwait,
             nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
             useNonPersonalizedContextVector: Boolean = false) = {

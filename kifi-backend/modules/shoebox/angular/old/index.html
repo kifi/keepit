@@ -19,77 +19,6 @@
 	<div class="page-cols">
 		<section class="main" data-view="mine">
 			<div class="page-col-inner">
-				<div class="main-keeps">
-					<div class="antiscroll-inner">
-						<ol id="search-results"></ol>
-						<ol id="my-keeps">
-							<li class="keep{% if isMyBookmark %} mine{% endif %}{% if isExample %} example{% endif %}" data-template data-id="{{id}}" style="display:none">
-							{% if typeof createdAt !== "undefined" %}
-							<time datetime="{{createdAt}}">{{createdAt}}</time>
-							{% endif %}
-							<div class="handle">
-								<div class="keep-checkbox"></div>
-							</div>
-							<div class="keep-title long-text">
-								<span class="example-tag">Example keep</span>
-								<a href="{{url | escape}}" target="_blank" title="{{titleHtml | escape | replace '</?b>', ''}}">{{titleHtml}}</a>
-							</div>
-							<div class="keep-url long-text" title="{{url | escape}}">{{descHtml}}</div>
-							<div class="keep-colls">
-								<span class="keep-coll {{exampleClass}}" data-template-for="collections" data-id="{{id}}">
-									<a class="keep-coll-a" href="tag/{{id}}">{{name | escape}}</a>
-								</span>
-							</div>
-							<div class="keep-who">
-								<a class="pic me" title="You! You look great!"
-									data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
-								<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName | escape}} {{lastName | escape}}" data-id="{{id}}"
-									data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
-								{% if !keepers.length && others %}
-								<span class="others"></span>
-								{% endif %}
-								<span class="keep-who-text" data-after-template>
-									<span class="keep-you">
-										You
-										{% if (keepers.length || others) && isPrivate %}
-										<span class="keep-private on">Private</span>
-										{% endif %}{% if (keepers.length || others) && !isPrivate %}
-										<span class="keep-private">Private</span>
-										{% endif %}
-									</span>
-									{% if keepers.length > 1 %}
-									<span class="keep-friends">{{keepers.length}} friends</span>
-									{% endif %}{% if keepers.length == 1 %}
-									<span class="keep-friends">1 friend</span>
-									{% endif %}
-									{% if others > 1 %}
-									<span class="keep-others">{{others}} others</span>
-									{% endif %}{% if others == 1 %}
-									<span class="keep-others">1 other</span>
-									{% endif %}
-									<span class="keep-kept-this">kept this</span>
-									{% if !keepers.length && !others && isPrivate %}
-									<span class="keep-private on">Private</span>
-									{% endif %}{% if !keepers.length && !others && !isPrivate %}
-									<span class="keep-private">Private</span>
-									{% endif %}
-								</span>
-							</div>
-							<div class="keep-arrow-1"><div class="keep-arrow-2"><div class="keep-arrow-3"><div class="keep-arrow-4"></div></div></div></div>
-							<div class="keep-hover-button-wrapper">
-								<div class="keep-hover-button-table">
-									<div class="keep-hover-button-cell">
-										<div class="keep-hover-button"><span class="keep-button-preview">Preview</span><span class="keep-button-close">Close</span></div>
-									</div>
-								</div>
-							</div>
-							</li>
-						</ol>
-						<div class="keep-group-title-fixed"></div>
-						<img class="keeps-loading" src="/assets/img/wait.gif">
-						<a class="keeps-load-more hidden" href="javascript:">Show more</a>
-					</div>
-				</div>
 				<div id="profile-template">
 					<div class="profile" data-template>
 						<div class="antiscroll-inner">
@@ -453,37 +382,6 @@ Kifi also lets you message your friends about what you keep and find alongside a
 
 		<aside class="right-col">
 			<div class="page-col-inner">
-				<nav class="top-right-nav">
-					<a href="/logout">Log out</a>
-				</nav>
-
-				<div class="splash">
-					<div class="antiscroll-inner">
-						<h2>Getting Started with kifi</h2>
-						<ul class="about-kifi splash-list">
-							<li><a class="kifi-tutorial" href="#"><span class="kifi-icon kifi-icon-tutorial"></span>Quick guide to get started</a></li>
-							<li class="install-kifi"><a href="/install"><span class="kifi-icon kifi-icon-install"></span>Install the extension</a></li>
-							<li><a href="friends/invite"><span class="kifi-icon kifi-icon-friends"></span>Find friends</a></li>
-						</ul>
-						<h2>kifi Support and Updates</h2>
-						<ul class="about-us splash-list">
-							<li><a href="http://support.kifi.com" class="support-center"><span class="kifi-icon kifi-icon-support"></span>Support center</a></li>
-							<li><a href="http://support.kifi.com/customer/portal/emails/new" class="contact-us"><span class="kifi-icon kifi-icon-contact"></span>Contact us</a></li>
-							<li><a href="http://blog.kifi.com" class="updates-features"><span class="kifi-icon kifi-icon-blog"></span>kifi blog</a></li>
-						</ul>
-						<div class="footer">
-							<a href="/privacy">Privacy</a>
-							<span class="footer-sep">|</span>
-							<a href="/terms">Terms</a>
-							<span class="footer-sep">|</span>
-							<a href="/about">About kifi</a>
-							<span class="footer-sep">|</span>
-							<a href="http://www.42go.com">About FortyTwo</a></li>
-						</div>
-					</div>
-				</div>
-
-
 				<div class="detail">
 					<div class="antiscroll-inner">
 						<div class="detail-inner" data-template data-kept="{{howKept}}">
