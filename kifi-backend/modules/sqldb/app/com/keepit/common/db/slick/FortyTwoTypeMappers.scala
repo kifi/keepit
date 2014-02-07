@@ -7,7 +7,7 @@ import java.sql.Date
 import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
-import play.api.libs.json.{JsArray, JsValue, Json}
+import play.api.libs.json._
 import com.keepit.common.net.UserAgent
 import com.keepit.model.UrlHash
 import com.keepit.model.DeepLocator
@@ -17,6 +17,13 @@ import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
 import com.keepit.search.Lang
+import com.keepit.model.UrlHash
+import play.api.libs.json.JsArray
+import com.keepit.common.db.slick.InvalidDatabaseEncodingException
+import play.api.libs.json.JsObject
+import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.social.SocialId
+import com.keepit.model.DeepLocator
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -47,6 +54,9 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val socialNetworkTypeMapper = MappedColumnType.base[SocialNetworkType, String](SocialNetworkType.unapply(_).get, SocialNetworkType.apply)
   implicit val socialUserMapper = MappedColumnType.base[SocialUser, String](SocialUserSerializer.userSerializer.writes(_).toString, s => SocialUserSerializer.userSerializer.reads(Json.parse(s)).get)
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
+  implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
+  implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
+
 
 
   implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
