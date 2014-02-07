@@ -28,7 +28,8 @@ object AmazonInstanceInfo {
     (__ \ 'availabilityZone).format[String] and
     (__ \ 'securityGroups).format[String] and
     (__ \ 'amiId).format[String] and
-    (__ \ 'amiLaunchIndex).format[String]
+    (__ \ 'amiLaunchIndex).format[String] and
+    (__ \ 'loadBalancer).formatNullable[String]
   )(AmazonInstanceInfo.apply, unlift(AmazonInstanceInfo.unapply))
 }
 
@@ -44,7 +45,8 @@ case class AmazonInstanceInfo (
   availabilityZone: String,
   securityGroups: String,
   amiId: String,
-  amiLaunchIndex: String
+  amiLaunchIndex: String,
+  loadBalancer: Option[String]
 ) {
 
   lazy val instantTypeInfo: AmazonInstanceType = instanceType match {
