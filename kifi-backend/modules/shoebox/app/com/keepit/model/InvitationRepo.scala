@@ -29,8 +29,7 @@ class InvitationRepoImpl @Inject() (
   extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
 
   import DBSession._
-  import FortyTwoTypeMappers._
-  import db.Driver.simple._
+    import db.Driver.simple._
 
   type RepoImpl = InvitationTable
   case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] {

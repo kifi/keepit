@@ -24,8 +24,7 @@ class UrlPatternRuleRepoImpl @Inject() (
   val urlPatternRuleAllCache: UrlPatternRuleAllCache,
   httpProxyRepo: HttpProxyRepo)
   extends DbRepo[UrlPatternRule] with UrlPatternRuleRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.simple._
+    import db.Driver.simple._
   import DBSession._
 
   type RepoImpl = UrlPatternRuleTable

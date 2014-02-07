@@ -22,7 +22,6 @@ class UserPictureRepoImpl @Inject() (
   extends DbRepo[UserPicture] with UserPictureRepo with Logging {
 
   import db.Driver.simple._
-  import FortyTwoTypeMappers._
 
   type RepoImpl = UserPictureTable
   class UserPictureTable(tag:Tag) extends RepoTable[UserPicture](db, tag, "user_picture") {

@@ -15,8 +15,7 @@ trait URLPatternRepo extends Repo[URLPattern] {
 
 @Singleton
 class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, ruleRepo: SliderRuleRepo) extends DbRepo[URLPattern] with URLPatternRepo {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
+    import scala.slick.lifted.Query
   import db.Driver.simple._
   import DBSession._
 

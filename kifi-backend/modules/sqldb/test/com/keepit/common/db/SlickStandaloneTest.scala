@@ -29,8 +29,7 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
       }
 
       class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
-        import FortyTwoTypeMappers._
-        import DBSession._
+                import DBSession._
         import scala.slick.driver.JdbcDriver.simple._
 
         override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}

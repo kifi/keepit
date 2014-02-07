@@ -41,8 +41,7 @@ class SlickTest extends Specification with DbTestInjector {
 
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
-          import FortyTwoTypeMappers._
-          import DBSession._
+                    import DBSession._
           import scala.slick.driver.JdbcDriver.simple._
 
           private val sequence = db.getSequence("normalized_uri_sequence")
@@ -105,8 +104,7 @@ class SlickTest extends Specification with DbTestInjector {
 
       withDb() { implicit injector =>
         val db = inject[Database]
-        import FortyTwoTypeMappers._
-        import DBSession._
+                import DBSession._
         import scala.slick.driver.JdbcDriver.simple._
 
 
@@ -193,8 +191,7 @@ class SlickTest extends Specification with DbTestInjector {
 
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
-          import FortyTwoTypeMappers._
-          import DBSession._
+                    import DBSession._
           import scala.slick.driver.JdbcDriver.simple._
 
 

@@ -22,8 +22,7 @@ class UserSessionRepoImpl @Inject() (
   val externalIdCache: UserSessionExternalIdCache
 ) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
 
-  import FortyTwoTypeMappers._
-  import db.Driver.simple._
+    import db.Driver.simple._
 
   type RepoImpl = UserSessionTable
   class UserSessionTable(tag: Tag) extends RepoTable[UserSession](db, tag, "user_session") with ExternalIdColumn[UserSession] {
