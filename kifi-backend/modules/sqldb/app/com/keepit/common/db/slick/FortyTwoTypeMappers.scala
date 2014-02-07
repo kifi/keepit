@@ -11,14 +11,11 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import com.keepit.common.net.UserAgent
 import com.keepit.model.UrlHash
 import com.keepit.model.DeepLocator
-<<<<<<< Updated upstream
 import com.keepit.common.mail._
 import com.keepit.social.{SocialId, SocialNetworkType}
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-=======
 import com.keepit.search.Lang
->>>>>>> Stashed changes
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
