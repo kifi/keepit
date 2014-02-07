@@ -34,7 +34,7 @@ abstract class TopicNameRepoBase(
   import db.Driver.simple._
 
   type RepoImpl = TopicNameTable
-  class TopicNameTable(tag: Tag) extends RepoTable[User](db, tag, "topic_name") {
+  class TopicNameTable(tag: Tag) extends RepoTable[TopicName](db, tag, "topic_name") {
     def topicName = column[String]("topic_name", O.NotNull)
     def * = (id.?, createdAt, updatedAt, topicName) <> ((TopicName.apply _).tupled, TopicName.unapply _)
   }
