@@ -46,7 +46,7 @@ class NonUserThreadRepoImpl @Inject() (
   implicit val nonUserKind = MappedColumnType.base[NonUserKind, String](_.name, NonUserKind.apply)
 
   type RepoImpl = NonUserThreadTable
-  class NonUserThreadTable(tag: Tag) extends RepoTable[NonUserThread](db, tag, "non_user_thread") with ExternalIdColumn[NonUserThread] {
+  class NonUserThreadTable(tag: Tag) extends RepoTable[NonUserThread](db, tag, "non_user_thread") {
     def kind = column[NonUserKind]("kind", O.NotNull)
     def emailAddress = column[EmailAddressHolder]("email_address", O.Nullable)
     def econtactId = column[Id[EContact]]("econtact_id", O.Nullable)
