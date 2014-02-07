@@ -61,14 +61,17 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
       try {
         elbClient.registerInstancesWithLoadBalancer(request)
-        log.info(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
+        println(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
         case t:Throwable => {
+          //todo(martin): find a solution
           //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           Play.stop()
+          Thread.sleep(10000)
+          System.exit(1)
         }
       }
-    } getOrElse log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   private def deregisterFromLoadBalancer() {
@@ -79,14 +82,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
       try {
         elbClient.deregisterInstancesFromLoadBalancer(request)
-        log.info(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
+        println(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
       } catch {
         case t:AmazonClientException => {
           //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
           Thread.sleep(18000)
         }
       }
-    } getOrElse log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
