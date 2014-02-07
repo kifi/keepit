@@ -51,7 +51,8 @@ class ContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
   }
 
   def table(tag: Tag) = new ContactTable(tag)
-//  val rows = TableQuery(table)
+  initTable()
+
 
   override def deleteCache(model: Contact)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: Contact)(implicit session: RSession): Unit = {}

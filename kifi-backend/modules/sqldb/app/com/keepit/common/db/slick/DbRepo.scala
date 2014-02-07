@@ -26,11 +26,6 @@ trait Repo[M <: Model[M]] {
   def deleteCache(model: M)(implicit session: RSession): Unit
 }
 
-trait TableWithDDL {
-  def ddl: DDL
-  def tableName: String
-}
-
 trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with Logging {
   val db: DataBaseComponent
   val clock: Clock
@@ -50,6 +45,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val t = TableQuery(table)
     db.initTable(_taggedTable.tableName, t.ddl)
     t
+  }
+
+  def initTable() = {
+    rows // force `rows` lazy evaluation
   }
 
 //  def descTable(): String = db.masterDb.withSession { session =>
@@ -116,7 +115,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     model
   }
 
-  abstract class RepoTable[M <: Model[M]](val db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name)) with FortyTwoGenericTypeMappers with Logging {
+  abstract class RepoTable[M <: Model[M]](val db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name)) with FortyTwoGenericTypeMappers with Logging  {
     //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
     def createdAt = column[DateTime]("created_at", O.NotNull)
