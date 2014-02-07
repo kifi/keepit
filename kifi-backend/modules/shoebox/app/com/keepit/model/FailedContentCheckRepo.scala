@@ -29,7 +29,7 @@ class FailedContentCheckRepoImpl @Inject()(
     def url2 = column[String]("url2", O.NotNull)
     def counts = column[Int]("counts", O.NotNull)
     def lastContentCheck = column[DateTime]("last_content_check", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, url1Hash, url2Hash, url1, url2, state, counts, lastContentCheck) <> ((FailedContentCheck.apply _).tupled, FailedContentCheck.unapply _)
+    def * = (id.?, createdAt, updatedAt, url1Hash, url2Hash, url1, url2, state, counts, lastContentCheck) <> (FailedContentCheck.tupled, FailedContentCheck.unapply _)
   }
 
   def table(tag: Tag) = new FailedContentCheckTable(tag)
