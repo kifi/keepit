@@ -52,10 +52,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     t
   }
 
-//  def descTable(): String = db.masterDb.withSession { session =>
-//    ddl.createStatements mkString "\n"
-//  }
-
   def save(model: M)(implicit session: RWSession): M = try {
     val toUpdate = model.withUpdateTime(clock.now)
     val result = model.id match {

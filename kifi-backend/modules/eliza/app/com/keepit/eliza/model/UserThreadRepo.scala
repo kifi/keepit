@@ -139,7 +139,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def table(tag: Tag) = new UserThreadTable(tag)
-
+  rows
 
   override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
@@ -506,7 +506,6 @@ class UserThreadRepoImpl @Inject() (
 
   def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats = {
     import StaticQuery.interpolation
-    rows
     userThreadStatsForUserIdCache.getOrElse(UserThreadStatsForUserIdKey(userId)) {
       UserThreadStats(
         all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
