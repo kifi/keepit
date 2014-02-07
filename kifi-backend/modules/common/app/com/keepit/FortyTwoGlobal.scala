@@ -121,9 +121,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       serviceDiscovery.forceUpdate()
     }
 
-    registerToLoadBalancer
-
     injector.instance[MemoryUsageMonitor].start()
+
+    registerToLoadBalancer
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
