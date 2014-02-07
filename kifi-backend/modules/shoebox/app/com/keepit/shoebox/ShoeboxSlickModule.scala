@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import scala.util._
-import scala.slick.session.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 
 
 import com.google.inject.{Provides, Singleton}
