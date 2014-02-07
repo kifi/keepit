@@ -91,7 +91,6 @@ class MainSearcherFactory @Inject() (
         clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,
-        shoeboxClient,
         spellCorrector,
         monitoredAwait,
         airbrake
