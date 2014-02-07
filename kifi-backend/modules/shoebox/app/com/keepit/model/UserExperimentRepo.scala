@@ -5,7 +5,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.db.slick.DBSession.{RSession,RWSession}
 import com.keepit.common.time.Clock
-import scala.Some
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] with RepoWithDelete[UserExperiment] {
@@ -32,8 +31,7 @@ class UserExperimentRepoImpl @Inject()(
   class UserExperimentTable(tag: Tag) extends RepoTable[UserExperiment](db, tag, "user_experiment") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def experimentType = column[ExperimentType]("experiment_type", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, experimentType, state) <> (UserExperiment.tupled,
-      UserExperiment.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, experimentType, state) <> ((UserExperiment.apply _).tupled, UserExperiment.unapply _)
   }
 
   def table(tag: Tag) = new UserExperimentTable(tag)
