@@ -55,41 +55,35 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   private def registerToLoadBalancer {
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
-    amazonInstanceInfo.loadBalancer match {
-      case Some(loadBalancer) => {
-        val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
-        val instance = new Instance(amazonInstanceInfo.instanceId.id)
-        val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
-        try {
-          elbClient.registerInstancesWithLoadBalancer(request)
-          log.info(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
-        } catch {
-          case e:AmazonClientException => log.warn(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $e")
-        }
+    amazonInstanceInfo.loadBalancer map { loadBalancer =>
+      val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
+      val instance = new Instance(amazonInstanceInfo.instanceId.id)
+      val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
+      try {
+        elbClient.registerInstancesWithLoadBalancer(request)
+        log.info(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
+      } catch {
+        case e:AmazonClientException => log.warn(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $e")
       }
-      case None => log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
-    }
+    } getOrElse log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   private def deregisterFromLoadBalancer {
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
-    amazonInstanceInfo.loadBalancer match {
-      case Some(loadBalancer) => {
-        val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
-        val instance = new Instance(amazonInstanceInfo.instanceId.id)
-        val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
-        try {
-          elbClient.deregisterInstancesFromLoadBalancer(request)
-          log.info(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
-        } catch {
-          case e:AmazonClientException => {
-            log.warn(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $e - Delaying shutdown for a few seconds...")
-            Thread.sleep(18000)
-          }
+    amazonInstanceInfo.loadBalancer map { loadBalancer =>
+      val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
+      val instance = new Instance(amazonInstanceInfo.instanceId.id)
+      val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
+      try {
+        elbClient.deregisterInstancesFromLoadBalancer(request)
+        log.info(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
+      } catch {
+        case e:AmazonClientException => {
+          log.warn(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $e - Delaying shutdown for a few seconds...")
+          Thread.sleep(18000)
         }
       }
-      case None => log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
-    }
+    } getOrElse log.info(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
@@ -119,8 +113,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
     }
 
-    registerToLoadBalancer
-
     serviceDiscoveryOpt map { serviceDiscovery =>
       val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), Duration.Inf)
       if (!selfCheckPassed) {
@@ -128,6 +120,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       }
       serviceDiscovery.forceUpdate()
     }
+
+    registerToLoadBalancer
 
     injector.instance[MemoryUsageMonitor].start()
   }
