@@ -2503,7 +2503,6 @@ a.friend-req-n[href] {
 
 /* right col */
 
-.splash,
 .detail {
   position: absolute;
   top: 70px;
@@ -2520,96 +2519,6 @@ a.friend-req-n[href] {
   right: 0;
   overflow-x: hidden;
   overflow-y: scroll;
-}
-
-.splash {
-  font-size: 14px;
-  background-color: #fff;
-  -webkit-font-smoothing: antialiased;
-}
-
-.splash .antiscroll-inner {
-  padding: 6px 0 0 36px;
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-}
-
-.splash h2 {
-  margin: 30px 0 6px;
-  font-size: 20px;
-  font-weight: 400;
-  line-height: 36px;
-  color: #556179;
-}
-
-.splash ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  line-height: 46px;
-}
-
-.splash-list>li>a {
-  display: inline-block;
-  color: #556179;
-  margin-left: -10px;
-  padding: 0 24px 0 10px;
-}
-
-.splash-list>li>a[href]:hover {
-  background-color: #f7fafe;
-}
-
-.splash-list>li>a[href]:active {
-  background-color: #eff2f7;
-}
-
-.splash-list .kifi-icon {
-  display: inline-block;
-  width: 30px;
-  vertical-align: -6px;
-  font-size: 0;
-  margin-right: 16px;
-  background-repeat: no-repeat;
-  vertical-align: middle;
-}
-
-.kifi-icon-tutorial {
-  background-image: url(../img/viewtutorial.png);
-  background-size: 24px 23px;
-  height: 23px;
-}
-
-.kifi-icon-install {
-  background-image: url(../img/installicon.png);
-  background-size: 22px 28px;
-  height: 28px;
-}
-
-.kifi-icon-friends {
-  background-image: url(../img/splash.png);
-  background-position: 0 -48px;
-  background-size: 30px auto;
-  height: 24px;
-}
-
-.kifi-icon-support {
-  background-image: url(../img/supporticon.png);
-  background-size: 24px 24px;
-  height: 24px;
-}
-
-.kifi-icon-contact {
-  background-image: url(../img/contacticon.png);
-  background-size: 23px 18px;
-  height: 18px;
-}
-
-.kifi-icon-blog {
-  background-image: url(../img/blogicon.png);
-  background-size: 25px 19px;
-  height: 19px;
 }
 
 .about-kifi>li:nth-child(2)>a::before {
@@ -4258,28 +4167,6 @@ a.photo-dialog-submit:focus {
 	background-color: #5f9cef;
 	-webkit-transition: none;
 	transition: none
-}
-
-.footer {
-	margin-top: 40px;
-	display: inline-block;
-	font-size: 14px;
-	border-top: 1px solid #dbdee3;
-	padding: 22px 0;
-	color: #99a3b3;
-}
-
-.footer a {
-	color: #99a3b3;
-}
-
-.footer-sep {
-	color: #dbdee3;
-	padding: 0 2px;
-}
-
-.footer > div:first-child {
-	margin-bottom: 8px;
 }
 
 /**
