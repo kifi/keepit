@@ -8,7 +8,7 @@ import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import java.sql.Timestamp
 import play.api.libs.json.{JsValue, JsArray, Json}
-import com.keepit.common.mail.{GenericEmailAddress, EmailAddressHolder}
+import com.keepit.common.mail.{ElectronicMailCategory, GenericEmailAddress, EmailAddressHolder}
 import com.keepit.common.net.UserAgent
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
@@ -24,7 +24,18 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
+  implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
+  implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
   implicit val emailAddressHolderMapper = MappedColumnType.base[EmailAddressHolder, String](_.address, GenericEmailAddress.apply)
+  implicit val kifiVersionMapper = MappedColumnType.base[KifiVersion, String](_.toString, KifiVersion.apply)
+  implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
+  implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
+  implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
+  implicit val bookmarkSourceMapper = MappedColumnType.base[BookmarkSource, String](_.value, BookmarkSource.apply)
+
+
+
+
 
   implicit val jsArrayMapper = MappedColumnType.base[JsArray, String]({ json =>
     Json.stringify(json)
