@@ -8,22 +8,20 @@ import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedParameters, SetParameter}
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
-import com.keepit.model.UrlHash
-import com.keepit.model.DeepLocator
 import com.keepit.classify.DomainTagName
 import com.keepit.common.mail._
-import com.keepit.social.{SocialId, SocialNetworkType}
+import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
 import com.keepit.search.Lang
+import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
-import com.keepit.common.db.slick.InvalidDatabaseEncodingException
+import play.api.libs.json.JsString
 import play.api.libs.json.JsObject
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
-import javax.sql.rowset.serial.SerialClob
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -38,6 +36,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
+  implicit val userToDomainKindMapper = MappedColumnType.base[UserToDomainKind, String](_.value, UserToDomainKind.apply)
   implicit val restrictionMapper = MappedColumnType.base[Restriction, String](_.context, Restriction.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
@@ -60,7 +59,13 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
+  implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
 
+  implicit val seqURLHistoryMapper = MappedColumnType.base[Seq[URLHistory], String]({ value =>
+    Json.stringify(Json.toJson(value))
+  }, { value =>
+    Json.fromJson[Seq[URLHistory]](Json.parse(value)).get
+  })
 
   implicit val largeStringMapper = MappedColumnType.base[LargeString, Clob]({ value =>
     new SerialClob(value.value.toCharArray()) {
