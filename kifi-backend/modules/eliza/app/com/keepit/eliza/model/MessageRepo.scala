@@ -127,7 +127,7 @@ class MessageRepoImpl @Inject() (
 
   def getMaxId()(implicit session: RSession): Id[Message] = {
     import StaticQuery.interpolation
-    val sql = sql"select max(*) as max from message"
+    val sql = sql"select max(id) as max from message"
     sql.as[Long].firstOption().map(Id[Message]).getOrElse(Id[Message](0))
   }
 
