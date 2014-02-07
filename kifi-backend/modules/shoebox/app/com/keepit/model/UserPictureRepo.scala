@@ -29,7 +29,7 @@ class UserPictureRepoImpl @Inject() (
     def name = column[String]("name", O.NotNull)
     def origin = column[UserPictureSource]("origin", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def attributes = column[JsValue]("attributes", O.Nullable)
+    def attributes = column[JsObject]("attributes", O.Nullable)
 
     def * = (id.?,createdAt,updatedAt,userId,name,origin,state,attributes.?) <> ((UserPicture.apply _).tupled, UserPicture.unapply _)
   }
