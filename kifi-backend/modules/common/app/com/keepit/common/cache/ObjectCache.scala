@@ -9,10 +9,9 @@ import com.keepit.common.ImmediateMap
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
   val ttl: Duration
-  outerCache map {outer => require(ttl <= outer.ttl)}
-
-  val consolidationTtl: Option[Duration] = Some(100 milliseconds) // None would turn off consolidation entirely
+  val consolidationTtl: Option[Duration] = None
   private val consolidator = consolidationTtl.map(new RequestConsolidator[K, Option[T]](_))
+  outerCache map {outer => require(ttl <= outer.ttl)}
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
