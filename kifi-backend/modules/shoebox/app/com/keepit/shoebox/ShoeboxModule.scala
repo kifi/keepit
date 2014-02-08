@@ -5,9 +5,8 @@ import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
-import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
-import com.keepit.scraper.{ScrapeSchedulerModule, ProdScraperServiceClientModule, ProdScrapeSchedulerModule}
+import com.keepit.scraper.{ScrapeSchedulerModule, ProdScraperServiceClientModule}
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
@@ -19,6 +18,7 @@ import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.integration.ReaperModule
 import com.keepit.common.queue.SimpleQueueModule
+import com.keepit.queue.{NormalizationUpdateJobQueueModule}
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,
@@ -26,6 +26,7 @@ abstract class ShoeboxModule(
   val reaperModule: ReaperModule,
   val storeModule: ShoeboxDevStoreModule,
   val sqsModule: SimpleQueueModule,
+  val normalizationQueueModule: NormalizationUpdateJobQueueModule,
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule,

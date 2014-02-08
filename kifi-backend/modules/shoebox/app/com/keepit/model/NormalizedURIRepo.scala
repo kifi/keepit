@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.db.{State, Id, SequenceNumber}
+import com.keepit.common.db.{State, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
@@ -14,23 +14,11 @@ import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.queue.{NormalizationUpdateJobQueue, SimpleQueueService}
-import com.keepit.normalizer.NormalizationReference
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import com.keepit.normalizer.NormalizationReference
 import scala.slick.lifted.Tag
 import com.keepit.common.db.{Model, Id}
-
-case class NormalizationUpdateTask(uriId:Id[NormalizedURI], isNew:Boolean, candidates:Seq[NormalizationCandidate])
-
-object NormalizationUpdateTask {
-  implicit val format = (
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'isNew).format[Boolean] and
-    (__ \ 'candidates).format[Seq[NormalizationCandidate]]
-  )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
-}
+import com.keepit.queue._
+import play.api.libs.json._
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{

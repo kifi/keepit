@@ -4,16 +4,17 @@ import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import com.keepit.common.logging.Logging
-import com.keepit.common.queue.{NormalizationUpdateJobQueue, SimpleQueueService}
+import com.keepit.common.queue.SimpleQueueService
 import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import com.keepit.common.actor.ActorInstance
 import akka.util.Timeout
 import scala.concurrent.duration._
 import play.api.Plugin
-import com.keepit.model.{NormalizedURIRepo, NormalizationUpdateTask}
+import com.keepit.model.{NormalizedURIRepo}
 import play.api.libs.json._
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.queue.{NormalizationUpdateTask, NormalizationUpdateJobQueue}
 
 case object Consume
 
@@ -45,7 +46,6 @@ class NormalizationWorker @Inject()(
           nuriRepo.get(task.uriId)
         }
         val ref = NormalizationReference(nuri, task.isNew)
-//        val candidates = task.candidates.map { c => TNormalizationCandidate.toNormalizedCandidate(c) }
         log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
         for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
           log.info(s"[consume] normalizationService.update result: $nuriOpt")

@@ -20,6 +20,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.{AbuseControlModule, FakeKeepImportsModule}
 import com.keepit.common.actor.TestSchedulerModule
 import com.keepit.common.queue.{FakeSimpleQueueModule}
+import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
@@ -40,7 +41,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       AbuseControlModule(),
       TestSchedulerModule(),
       FakeKeepImportsModule(),
-      FakeSimpleQueueModule()
+      FakeSimpleQueueModule(),
+      FakeNormalizationUpdateJobQueueModule()
     ), overridingModules
   ))
 
@@ -61,6 +63,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     TestScraperServiceClientModule(),
     AbuseControlModule(),
     TestSchedulerModule(),
-    FakeSimpleQueueModule()
+    FakeSimpleQueueModule(),
+    FakeNormalizationUpdateJobQueueModule()
   )
 }

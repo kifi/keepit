@@ -1,6 +1,6 @@
 package com.keepit.common.queue
 
-case class SQSMessage(id:String, receiptHandle:String, md5Body:String, body:String /* , attributes:Map[String, String] */) {
+case class SQSMessage(id:String, receiptHandle:String, md5Body:String, body:String) {
   override def toString = s"SQSMessage(id=$id,body=${body},receiptHandle=${receiptHandle.take(20)})"
 }
 

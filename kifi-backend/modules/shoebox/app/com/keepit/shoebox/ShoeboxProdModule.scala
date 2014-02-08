@@ -13,6 +13,7 @@ import com.keepit.scraper.ProdScrapeSchedulerModule
 import com.keepit.common.zookeeper.{DiscoveryModule, ProdDiscoveryModule}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.queue.ProdSimpleQueueModule
+import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 
 case class ShoeboxProdModule() extends ShoeboxModule (
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -20,6 +21,7 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   reaperModule = ProdReaperModule(),
   storeModule = ShoeboxDevStoreModule(),
   sqsModule = ProdSimpleQueueModule(),
+  normalizationQueueModule = ProdNormalizationUpdateJobQueueModule(),
 
   // Shoebox Functional Modules
   analyticsModule = ProdAnalyticsModule(),

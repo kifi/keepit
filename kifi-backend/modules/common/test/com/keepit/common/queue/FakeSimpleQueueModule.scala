@@ -18,13 +18,4 @@ case class FakeSimpleQueueModule() extends SimpleQueueModule {
     override def getByUrl(url: String): Option[SimpleQueue] = None
   }
 
-  @Singleton
-  @Provides
-  def normalizationUpdateTaskQ():NormalizationUpdateJobQueue = new NormalizationUpdateJobQueue {
-    override def queueUrl: String = "http://foo.com/barQ"
-    override def receive(): Seq[SQSMessage] = Seq.empty[SQSMessage]
-    override def send(s: String): Unit = {}
-    override def delete(msgHandle: String): Unit = {}
-  }
-
 }
