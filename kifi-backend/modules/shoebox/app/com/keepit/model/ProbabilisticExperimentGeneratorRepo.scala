@@ -4,10 +4,12 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time.Clock
+import com.keepit.common.db.State
 
 @ImplementedBy(classOf[ProbabilisticExperimentGeneratorRepoImpl])
 trait ProbabilisticExperimentGeneratorRepo extends Repo[ProbabilisticExperimentGenerator] {
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator]
+  def getByName(name: Name[ProbabilisticExperimentGenerator], exclude: Option[State[ProbabilisticExperimentGenerator]] = Some(ProbabilisticExperimentGeneratorStates.INACTIVE))(implicit session: RSession): Option[ProbabilisticExperimentGenerator]
 }
 
 @Singleton
@@ -41,6 +43,11 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
 
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator] = {
     (for(f <- rows if f.state === ProbabilisticExperimentGeneratorStates.ACTIVE) yield f).list
+  }
+
+  def getByName(name: Name[ProbabilisticExperimentGenerator], exclude: Option[State[ProbabilisticExperimentGenerator]])(implicit session: RSession): Option[ProbabilisticExperimentGenerator] = {
+    val q = (for(f <- rows if f.name === name && f.state =!= exclude.orNull) yield f)
+    q.firstOption
   }
 }
 
