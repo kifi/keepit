@@ -48,8 +48,8 @@ class InMemSimpleQueueService extends SimpleQueueService with Logging {
 
 class InMemSimpleQueue(override val queueUrl:String, override val name:String) extends SimpleQueue with Logging {
 
-  val q:ConcurrentLinkedQueue[SQSMessage] = new ConcurrentLinkedQueue[SQSMessage]
-  val messages = new ConcurrentHashMap[Int, SQSMessage]
+  val q:ConcurrentLinkedQueue[SimpleQueueMessage] = new ConcurrentLinkedQueue[SimpleQueueMessage]
+  val messages = new ConcurrentHashMap[Int, SimpleQueueMessage]
 
   val counter = new AtomicInteger(0)
 
@@ -63,7 +63,7 @@ class InMemSimpleQueue(override val queueUrl:String, override val name:String) e
     }
   }
 
-  def receive(): Seq[SQSMessage] = {
+  def receive(): Seq[SimpleQueueMessage] = {
     val res = q.iterator.toSeq
     log.info(s"[receive] res=${res.mkString(",")}")
     res
@@ -71,7 +71,7 @@ class InMemSimpleQueue(override val queueUrl:String, override val name:String) e
 
   def send(s: String): Unit = {
     val idx = counter.getAndIncrement
-    val m = SQSMessage(idx.toString, idx.toString, "md5", s)
+    val m = SimpleQueueMessage(idx.toString, idx.toString, "md5", s)
     q.add(m)
     log.info(s"[send($s)] msg ($m) sent")
   }

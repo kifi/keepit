@@ -3,7 +3,7 @@ package com.keepit.queue
 import com.keepit.common.queue.AmazonSQS
 import com.keepit.common.queue.AmazonSQSQueue
 import com.keepit.common.queue.SimpleQueueService
-import com.keepit.common.queue.SQSMessage
+import com.keepit.common.queue.SimpleQueueMessage
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.logging.Logging
@@ -41,7 +41,7 @@ case class DevNormalizationUpdateJobQueueModule() extends NormalizationUpdateJob
     log.info(s"[normalizationUpdateJobQueue] sQ=$sQ")
     new NormalizationUpdateJobQueue {
       def queueUrl = sQ.queueUrl
-      def receive(): Seq[SQSMessage] = sQ.receive()
+      def receive(): Seq[SimpleQueueMessage] = sQ.receive()
       def send(s: String): Unit = sQ.send(s)
       def delete(msgHandle: String): Unit = sQ.delete(msgHandle)
     }
