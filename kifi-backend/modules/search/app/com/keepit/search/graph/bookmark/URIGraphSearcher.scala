@@ -37,9 +37,9 @@ object URIGraphSearcher {
     new URIGraphSearcher(indexSearcher, storeSearcher)
   }
 
-  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait): URIGraphSearcherWithUser = {
+  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, friendsFuture: Future[Set[Long]], unfriendsFuture: Future[Set[Long]]): URIGraphSearcherWithUser = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
-    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, userGraphsCommander, monitoredAwait)
+    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, friendsFuture, unfriendsFuture)
   }
 }
 
@@ -77,11 +77,8 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
   }
 }
 
-class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsCommander: UserGraphsCommander, monitoredAwait: MonitoredAwait)
+class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], friendIdsFuture: Future[Set[Long]], unfriendedFuture: Future[Set[Long]])
   extends URIGraphSearcher(searcher, storeSearcher) {
-
-  private[this] val friendIdsFuture = Future{userGraphsCommander.getConnectedUsers(myUserId)}
-  private[this] val unfriendedFuture = Future{userGraphsCommander.getUnfriended(myUserId)}
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)

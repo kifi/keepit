@@ -104,7 +104,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
-    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, mainSearcherFactory)
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
