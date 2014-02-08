@@ -40,7 +40,6 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
           // h2.sequencesToInit.values foreach { sequence =>
           //   conn.createStatement().execute(s"DROP SEQUENCE IF EXISTS $sequence")
           // }
-          log.info("DROPPING LIKE ITS HOT")
           conn.createStatement().execute("DROP ALL OBJECTS")
         }
       }
