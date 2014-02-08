@@ -14,16 +14,17 @@ import play.api.libs.json._
 import views.html
 import com.keepit.heimdal.{UserEvent, HeimdalServiceClient}
 import scala.Predef._
+import com.keepit.commanders.LocalUserExperimentCommander
 
 class AdminSearchConfigController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   searchClient: SearchServiceClient,
   heimdal: HeimdalServiceClient
-  )
-    extends AdminController(actionAuthenticator) {
+) extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val searchConfigFuture = searchClient.showUserConfig(userId)
@@ -64,7 +65,7 @@ class AdminSearchConfigController @Inject() (
 
   def addNewExperiment = AdminHtmlAction.authenticated { implicit request =>
     val defaultConfig =  Await.result(searchClient.getSearchDefaultConfig, 5 seconds)
-    db.readWrite { implicit s => searchConfigExperimentRepo.save(SearchConfigExperiment(description = "New Experiment", config = defaultConfig)) }
+    saveSearchConfigExperiment(SearchConfigExperiment(description = "New Experiment", config = defaultConfig))
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments)
   }
 
@@ -73,7 +74,7 @@ class AdminSearchConfigController @Inject() (
        .get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     id.map { id =>
       val experiment = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
-      db.readWrite { implicit s => searchConfigExperimentRepo.save(experiment.withState(SearchConfigExperimentStates.INACTIVE)) }
+      saveSearchConfigExperiment(experiment.withState(SearchConfigExperimentStates.INACTIVE))
     }
     Ok(JsObject(Seq()))
   }
@@ -93,9 +94,21 @@ class AdminSearchConfigController @Inject() (
     id.map { id =>
       val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
       val toSave = exp.copy(description = desc, weight = weight, config = exp.config(params)).withState(state.getOrElse(exp.state))
-      db.readWrite { implicit s => searchConfigExperimentRepo.save(toSave) }
+      if (exp != toSave) saveSearchConfigExperiment(toSave, exp.weight != toSave.weight)
     }
     Ok(JsObject(Seq()))
+  }
+
+  private def saveSearchConfigExperiment(searchConfigExperiment: SearchConfigExperiment, updateDensity: Boolean = true): Unit = {
+    val allActive = db.readWrite { implicit s =>
+      searchConfigExperimentRepo.save(searchConfigExperiment)
+      searchConfigExperimentRepo.getActive()
+    }
+    if (updateDensity) {
+      val norm = allActive.map(_.weight).sum
+      val density = ProbabilityDensity(allActive.sortBy(_.id.get.id).map { se => se.experiment -> se.weight / norm })
+      userExperimentCommander.internProbabilisticExperimentGenerator(SearchConfigExperiment.generator, density)
+    }
   }
 
   private def kifiVsGoogle(experiments: Seq[Id[SearchConfigExperiment]]): Future[Map[Option[Id[SearchConfigExperiment]], JsArray]] = {

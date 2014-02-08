@@ -11,6 +11,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
 import com.keepit.common.cache.TransactionalCaching
+import com.keepit.model.{ProbabilisticExperimentGenerator, Name, ExperimentType}
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
@@ -33,9 +34,12 @@ case class SearchConfigExperiment(
   def isStartable = Seq(SearchConfigExperimentStates.PAUSED, SearchConfigExperimentStates.CREATED) contains state
   def isRunning = state == SearchConfigExperimentStates.ACTIVE
   def isEditable = state == SearchConfigExperimentStates.CREATED
+  def experiment: ExperimentType = ExperimentType("SE-" + id.get.toString)
 }
 
 object SearchConfigExperiment {
+  val generator = Name[ProbabilisticExperimentGenerator]("searchConfigExperiment")
+
   private implicit val idFormat = Id.format[SearchConfigExperiment]
   private implicit val stateFormat = State.format[SearchConfigExperiment]
   private implicit val searchConfigFormat = new Format[SearchConfig] {
