@@ -19,4 +19,7 @@ object NormalizationUpdateTask {
 
 trait NormalizationUpdateJobQueue extends SimpleQueue {
   override val name = "NTest"
+  def sendTask(task:NormalizationUpdateTask) = {
+    send(Json.stringify(Json.toJson(task)))
+  }
 }

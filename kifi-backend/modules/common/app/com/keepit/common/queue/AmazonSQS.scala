@@ -41,7 +41,7 @@ class AmazonSQSQueue(override val queueUrl:String, override val name:String, cli
 
   def receive(): Seq[SimpleQueueMessage] = {
     val messages = timing(s"SQS.receive($queueUrl)") {
-      client.receiveMessage(new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withVisibilityTimeout(300)).getMessages
+      client.receiveMessage(new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withVisibilityTimeout(300)).getMessages // todo(ray):from config
     }
     val res = messages.map { m =>
       SimpleQueueMessage(
