@@ -216,6 +216,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           deregisterFromLoadBalancer()
           Thread.sleep(5000)
           injector.instance[HealthcheckPlugin].reportStop()
+          println("[announceStopping] moving on")
         } catch {
           case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
         }
