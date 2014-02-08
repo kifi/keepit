@@ -84,6 +84,9 @@ html[kifi-pane-parent][kifi-with-pane]:not(.kifi-snapshot-mode) .kifi-pane {
 .kifi-pane[data-locator^='/messages/'] .kifi-pane-head-title::before {
   content: 'Same-Page Chat';
 }
+.kifi-pane[data-locator='/settings'] .kifi-pane-head-title::before {
+  content: 'Settings';
+}
 a.kifi-pane-top-menu-a {
   position: absolute;
   top: 0;
