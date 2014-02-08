@@ -5,6 +5,8 @@ import com.google.inject.{Provides, Singleton}
 import com.amazonaws.auth.BasicAWSCredentials
 import play.api.Play._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
+import com.amazonaws.regions._
+import play.api.Play
 
 class AwsModule extends ScalaModule {
   def configure: Unit = { }
@@ -21,6 +23,9 @@ class AwsModule extends ScalaModule {
   @Singleton
   @Provides
   def amazonELBClient(basicAWSCredentials: BasicAWSCredentials): AmazonElasticLoadBalancingClient = {
-    new AmazonElasticLoadBalancingClient(basicAWSCredentials)
+    val client = new AmazonElasticLoadBalancingClient(basicAWSCredentials)
+    val region: Regions = Regions.valueOf(Play.current.configuration.getString("amazon.region").get)
+    client.setRegion(Region.getRegion(region))
+    client
   }
 }
