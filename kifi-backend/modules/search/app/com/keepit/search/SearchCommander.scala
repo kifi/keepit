@@ -31,6 +31,8 @@ import com.keepit.search.result.ResultUtil
 trait SearchCommander {
   def search(
     userId: Id[User],
+    friendsFuture: Future[Set[Long]],
+    unfriendsFuture: Future[Set[Long]],
     acceptLangs: Seq[String],
     noSearchExperiments: Boolean,
     query: String,
@@ -61,6 +63,8 @@ class SearchCommanderImpl @Inject() (
 
   def search(
     userId: Id[User],
+    friendsFuture: Future[Set[Long]],
+    unfriendsFuture: Future[Set[Long]],
     acceptLangs: Seq[String],
     noSearchExperiments: Boolean,
     query: String,
@@ -100,7 +104,7 @@ class SearchCommanderImpl @Inject() (
     val mergedResult = {
       timing.factory
       val future = Future.traverse(shards.shards){ shard =>
-        val searcher = mainSearcherFactory(shard, userId, query, lang, maxHits, searchFilter, config)
+        val searcher = mainSearcherFactory(shard, userId, friendsFuture, unfriendsFuture, query, lang, maxHits, searchFilter, config)
         debug.foreach{ searcher.debug(_) }
         SafeFuture{ searcher.search() }
       }
