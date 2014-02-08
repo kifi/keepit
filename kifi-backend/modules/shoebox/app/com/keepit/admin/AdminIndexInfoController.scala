@@ -29,8 +29,10 @@ class AdminIndexInfoController @Inject()(
 
     val totalSizeInfo = infoFutures.map{ future =>
       val (serviceInstance, indexInfos) = Await.result(future, 10 seconds)
+      val totalArticleIndexSize = indexInfos.filter{_.name startsWith "ArticleIndex"}.flatMap{_.indexSize}.foldLeft(0L)(_ + _)
       val totalSize = indexInfos.flatMap{_.indexSize}.foldLeft(0L)(_ + _)
-       (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableSize(totalSize))
+
+      (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableSize(totalArticleIndexSize), IndexInfo.toReadableSize(totalSize))
     }
 
     Ok(views.html.admin.indexer(infos, totalSizeInfo))
