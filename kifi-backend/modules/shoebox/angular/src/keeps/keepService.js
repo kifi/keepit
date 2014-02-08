@@ -25,6 +25,10 @@ angular.module('kifi.keepService', [])
 		var api = {
 			list: list,
 
+			getPreviewed: function () {
+				return previewed || null;
+			},
+
 			isPreviewed: function (keep) {
 				return !!previewed && previewed === keep;
 			},

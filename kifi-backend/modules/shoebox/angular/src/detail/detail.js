@@ -25,6 +25,12 @@ angular.module('kifi.detail', ['kifi.keepService'])
 					}
 					return len + ' Keeps selected';
 				};
+
+				scope.$watch(function () {
+					return keepService.getPreviewed();
+				}, function (keep) {
+					scope.keep = keep;
+				});
 			}
 		};
 	}
