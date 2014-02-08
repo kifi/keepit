@@ -1,7 +1,27 @@
 @(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.ReadableIndexInfo)],
-  totalSizeInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], String)])
+  totalSizeInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], String, String)])
 
 @admin("Index Infos") {
+
+  <table class="table table-condensed table-striped">
+    <thead>
+      <th> ZK Id</th>
+      <th>IPs</th>
+      <th style="text-align:right;">Total ArticleIndex Size</th>
+      <th style="text-align:right;">Total Index Size</th>
+    </thead>
+
+    @totalSizeInfos.map{ case (cmi, asz, sz) =>
+      <tr>
+        <td>@{cmi.map(_.zkid).getOrElse("")}</td>
+        <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
+        <td style="text-align:right;">@{asz}</td>
+        <td style="text-align:right;">@{sz}</td>
+      </tr>
+    }
+  </table>
+  <br><br>
+  
   <table class="table table-condensed table-striped">
     <thead>
       <th> ZK Id</th>
@@ -24,21 +44,4 @@
       </tr>
     }
   </table>
-  <br><br>
-
-  <table class="table table-condensed table-striped">
-    <thead>
-      <th> ZK Id</th>
-      <th>IPs</th>
-      <th style="text-align:right;">Total Index Size</th>
-    </thead>
-
-   @totalSizeInfos.map{ case (cmi, sz) =>
-      <tr>
-        <td>@{cmi.map(_.zkid).getOrElse("")}</td>
-        <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
-        <td style="text-align:right;">@{sz}</td>
-      </tr>
-   }
-   </table>
 }
