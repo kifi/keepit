@@ -26,17 +26,18 @@ class AmazonSimpleMailProviderImpl(
   private def isSystemEmail(mail: ElectronicMail): Boolean =
     NotificationCategory.System.all.contains(NotificationCategory.fromElectronicMailCategory(mail.category))
 
-  private def isInternalEmailRecipients(mail: ElectronicMail): Boolean = mail.to.forall { to =>
-    EmailAddresses.ALL_EMAILS.contains(to)
+  private def isInternalEmailRecipients(mail: ElectronicMail): Unit = mail.to.foreach { to =>
+    val in = EmailAddresses.ALL_EMAILS.contains(to)
+    if (!in) {
+      throw new Exception(s"Recipient [$to] is not part of the internal email group [${EmailAddresses.ALL_EMAILS.mkString(",")}}]: $mail")
+    }
   }
 
   def sendMail(mail: ElectronicMail): Unit = {
     if (!isSystemEmail(mail)) {
       throw new Exception(s"This mail provider will not send emails unless they have a System category. Not sending: $mail")
     }
-    if (!isInternalEmailRecipients(mail)) {
-      throw new Exception(s"This mail provider will not send emails unless all recipients are part of the internal email group [${EmailAddresses.ALL_EMAILS.mkString(",")}}]: $mail")
-    }
+    isInternalEmailRecipients(mail)
     doSendMail(mail)
   }
 
