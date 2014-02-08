@@ -21,11 +21,11 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
 
   type RepoImpl = ProbabilisticExperimentGeneratorTable
   class ProbabilisticExperimentGeneratorTable(tag: Tag) extends RepoTable[ProbabilisticExperimentGenerator](db, tag, "probabilistic_experiment_generator") {
-    def description = column[String]("description", O.NotNull)
+    def name = column[Name[ProbabilisticExperimentGenerator]]("name", O.NotNull)
     def condition = column[ExperimentType]("cond", O.Nullable)
     def salt = column[String]("salt", O.NotNull)
     def density = column[ProbabilityDensity[ExperimentType]]("density", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, description, condition.?, salt, density) <> ((ProbabilisticExperimentGenerator.apply _).tupled, ProbabilisticExperimentGenerator.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, name, condition.?, salt, density) <> ((ProbabilisticExperimentGenerator.apply _).tupled, ProbabilisticExperimentGenerator.unapply _)
   }
 
   def table(tag: Tag) = new ProbabilisticExperimentGeneratorTable(tag)
