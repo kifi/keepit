@@ -2,6 +2,7 @@ package com.keepit.common.queue
 
 import com.google.inject.{Provides, Singleton}
 
+@Singleton
 case class FakeSimpleQueueModule() extends SimpleQueueModule {
 
   override def configure(): Unit = {

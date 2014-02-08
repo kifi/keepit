@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
 
-class AmazonSQS(client:AmazonSQSClient) extends SimpleQueueService with Logging {
+class AmazonSQS(val client:AmazonSQSClient) extends SimpleQueueService with Logging {
   def create(name: String) = {
     client.createQueue(new CreateQueueRequest(name)).getQueueUrl
   }
