@@ -24,10 +24,6 @@ angular.module('kifi.keep', [])
 					return scope.keep.isPrivate || false;
 				};
 
-				scope.isDetailed = function () {
-					return scope.keep.isDetailed || false;
-				};
-
 				function hasExampleTag(tags) {
 					if (tags && tags.length) {
 						for (var i = 0, l = tags.length; i < l; i++) {
@@ -192,6 +188,10 @@ angular.module('kifi.keep', [])
 
 				scope.isSelected = function () {
 					return scope.isSelectedKeep(scope.keep);
+				};
+
+				scope.isPreviewed = function () {
+					return scope.isPreviewedKeep(scope.keep);
 				};
 
 				scope.onCheck = function (e) {

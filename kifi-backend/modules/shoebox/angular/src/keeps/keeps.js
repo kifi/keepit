@@ -17,6 +17,14 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 			keepService.joinTags(keepService.list, tagService.list);
 		});
 
+		$scope.previewing = null;
+
+		$scope.$watch(function () {
+			return keepService.previewing;
+		}, function (val) {
+			$scope.previewing = val;
+		});
+
 		$scope.selectKeep = function (keep) {
 			return keepService.select(keep);
 		};
@@ -39,6 +47,14 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 
 		$scope.isSelectedAll = function () {
 			return keepService.isSelectedAll();
+		};
+
+		$scope.isPreviewedKeep = function (keep) {
+			return keepService.isPreviewed(keep);
+		};
+
+		$scope.togglePreviewKeep = function (keep) {
+			return keepService.togglePreview(keep);
 		};
 	}
 ])
@@ -161,21 +177,9 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 				scope.setLoading();
 
 				scope.preview = function (keep, $event) {
-					if ($event.target.tagName === 'A') {
-						return;
+					if ($event.target.tagName !== 'A') {
+						scope.togglePreviewKeep(keep);
 					}
-
-					var prev = scope.selectedKeep;
-					if (prev) {
-						delete prev.isDetailed;
-						if (prev === keep) {
-							scope.selectedKeep = null;
-							return;
-						}
-					}
-
-					scope.selectedKeep = keep;
-					keep.isDetailed = true;
 				};
 			}
 		};
