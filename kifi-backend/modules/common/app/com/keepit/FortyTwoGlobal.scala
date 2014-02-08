@@ -16,6 +16,7 @@ import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
+import scala.collection.JavaConversions._
 
 import play.api._
 import play.api.mvc.Results._
@@ -23,6 +24,10 @@ import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
 import scala.util.control.NonFatal
+import com.amazonaws.services.elasticloadbalancing.model._
+import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
+import com.amazonaws.AmazonClientException
+import com.amazonaws.services.ec2.AmazonEC2Client
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
@@ -46,6 +51,47 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       case None => println(s"starting app $appName without db")
     }
 
+  }
+
+  private def registerToLoadBalancer() {
+    val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
+    amazonInstanceInfo.loadBalancer map { loadBalancer =>
+      val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
+      val instance = new Instance(amazonInstanceInfo.instanceId.id)
+      val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
+      try {
+        elbClient.registerInstancesWithLoadBalancer(request)
+        println(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
+      } catch {
+        case t:Throwable => {
+          //todo(martin): find a solution
+          //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          println(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          Play.stop()
+          Thread.sleep(10000)
+          System.exit(1)
+        }
+      }
+    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+  }
+
+  private def deregisterFromLoadBalancer() {
+    val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
+    amazonInstanceInfo.loadBalancer map { loadBalancer =>
+      val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
+      val instance = new Instance(amazonInstanceInfo.instanceId.id)
+      val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
+      try {
+        elbClient.deregisterInstancesFromLoadBalancer(request)
+        println(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
+      } catch {
+        case t:AmazonClientException => {
+          //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
+          println(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
+          Thread.sleep(18000)
+        }
+      }
+    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
@@ -84,6 +130,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
 
     injector.instance[MemoryUsageMonitor].start()
+
+    registerToLoadBalancer()
   }
 
   // Get a file within the .fortytwo folder in the user's home directory
@@ -164,10 +212,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         try {
           val serviceDiscovery = injector.instance[ServiceDiscovery]
           serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-          println("[announceStopping] about to pause for 10 seconds and let clients and ELB know we're stopping")
-          Thread.sleep(18000)
+          println("[announceStopping] let clients and ELB know we're stopping")
+          deregisterFromLoadBalancer()
           injector.instance[HealthcheckPlugin].reportStop()
-          println("[announceStopping] moving on")
         } catch {
           case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
         }

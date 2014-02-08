@@ -4856,30 +4856,6 @@ a.friend-nw-kifi {
   border-radius: 50%;
 }
 
-a.friend-nw-facebook {
-  background-position: -18px;
-}
-
-a.friend-nw-facebook[href] {
-  background-color: #527bbd;
-}
-
-a.friend-nw-linkedin {
-  background-position: -36px;
-}
-
-a.friend-nw-linkedin[href] {
-  background-color: #5083c3;
-}
-
-a.friend-nw-google {
-  background-position: -72px;
-}
-
-a.friend-nw-google[href] {
-  background-color: #e9644b;
-}
-
 .friend-pic {
   position: relative;
 }

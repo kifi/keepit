@@ -16,6 +16,22 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		$q.all([promise, tagService.fetchAll()]).then(function () {
 			keepService.joinTags(keepService.list, tagService.list);
 		});
+
+		$scope.selectKeep = function (keep) {
+			return keepService.select(keep);
+		};
+
+		$scope.unselectKeep = function (keep) {
+			return keepService.unselect(keep);
+		};
+
+		$scope.isSelectedKeep = function (keep) {
+			return keepService.isSelected(keep);
+		};
+
+		$scope.toggleSelectKeep = function (keep) {
+			return keepService.toggleSelect(keep);
+		};
 	}
 ])
 

@@ -515,6 +515,7 @@ var Airbrake = Airbrake || require('./airbrake.min').Airbrake;
 Airbrake.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
 Airbrake.setEnvironmentName(api.isPackaged() && !api.mode.isDev() ? 'production' : 'development');
 Airbrake.addReporter(function airbrake(notice, opts) {
+  notice.params = breakLoops(notice.params);
   notice.context.version = api.version;
   notice.context.userAgent = api.browser.userAgent;
   notice.context.userId = me && me.id;
@@ -522,6 +523,27 @@ Airbrake.addReporter(function airbrake(notice, opts) {
     log('#c00', '[airbrake] report', o.id, o.url)();
   });
 });
+
+function breakLoops(obj) {
+  var n = 0, seen = [];
+  return visit(obj, 0);
+
+  function visit(o, d) {
+    if (typeof o !== 'object') return o;
+    if (seen.indexOf(o) >= 0) return '[circular]';
+    if (d >= 4) return '[too deep]';
+    seen.push(o)
+
+    var o2 = {};
+    for (var k in o) {
+      if (o.hasOwnProperty(k)) {
+        if (++n > 1000) break;
+        o2[k] = visit(o[k], d + 1);
+      }
+    }
+    return o2;
+  }
+}
 
 // ===== Handling messages from content scripts or other extension pages
 
