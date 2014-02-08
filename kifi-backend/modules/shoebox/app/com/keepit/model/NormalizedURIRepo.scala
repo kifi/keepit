@@ -194,16 +194,17 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    *
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
+  val enablePQ:Boolean = sys.props.get("normalization.enable.queue") map(_.toBoolean) getOrElse (false) // todo(ray):removeme
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
         case Left(uri) =>
           session.onTransactionSuccess {
-            normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)
-
-            val task = NormalizationUpdateTask(uri.id.get, false, candidates)
-            taskQ.send(Json.stringify(Json.toJson(task)))
+            if (enablePQ)
+              taskQ.send(Json.stringify(Json.toJson(NormalizationUpdateTask(uri.id.get, false, candidates))))
+            else
+              normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)
           }
           uri
         case Right(prenormalizedUrl) => {
@@ -211,10 +212,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess{
-            normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*)
-
-            val task = NormalizationUpdateTask(newUri.id.get, true, candidates)
-            taskQ.send(Json.stringify(Json.toJson(task)))
+            if (enablePQ)
+              taskQ.send(Json.stringify(Json.toJson(NormalizationUpdateTask(newUri.id.get, true, candidates))))
+            else
+              normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*)
           }
           newUri
         }
