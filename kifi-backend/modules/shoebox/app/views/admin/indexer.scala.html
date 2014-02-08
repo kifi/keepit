@@ -1,4 +1,5 @@
-@(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.ReadableIndexInfo)])
+@(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.ReadableIndexInfo)],
+  totalSizeInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], String)])
 
 @admin("Index Infos") {
   <table class="table table-condensed table-striped">
@@ -23,4 +24,21 @@
       </tr>
     }
   </table>
+  <br><br>
+
+  <table class="table table-condensed table-striped">
+    <thead>
+      <th> ZK Id</th>
+      <th>IPs</th>
+      <th style="text-align:right;">Total Index Size</th>
+    </thead>
+
+   @totalSizeInfos.map{ case (cmi, sz) =>
+      <tr>
+        <td>@{cmi.map(_.zkid).getOrElse("")}</td>
+        <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
+        <td style="text-align:right;">@{sz}</td>
+      </tr>
+   }
+   </table>
 }
