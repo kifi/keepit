@@ -9,18 +9,18 @@ import java.text.Normalizer
 
 object PrefixFilter {
 
-  private[socialtypeahead] def eval[T](filter: PrefixFilter[T], names: Seq[String]): ArrayBuffer[Id[T]] = {
+  private[socialtypeahead] def eval[T](filter: PrefixFilter[T], query: Array[String]): ArrayBuffer[Id[T]] = {
     val in = filter.data
 
     in(0) match {
-      case 1 => evalV1[T](in, names)
+      case 1 => evalV1[T](in, query)
       case version => throw new Exception(s"unknown version: $version")
     }
   }
 
-  private[this] def evalV1[T](in: Array[Long], names: Seq[String]): ArrayBuffer[Id[T]] = {
+  private[this] def evalV1[T](in: Array[Long], query: Array[String]): ArrayBuffer[Id[T]] = {
     val result = new ArrayBuffer[Id[T]]
-    var probes = names.map(genFilter).toArray
+    var probes = query.map(genFilter).toArray
     var idx = 1
     while (idx < in.length) {
       var id = in(idx)
@@ -31,19 +31,19 @@ object PrefixFilter {
     result
   }
 
-  @inline def normalize(str: String) = Normalizer.normalize(str.trim, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+  @inline final def normalize(str: String) = Normalizer.normalize(str.trim, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+  @inline final def tokenize(str: String) = normalize(str).split("\\s+").filter(_.length > 0)
 
   private[this] val numHashFuncs = Array(8, 4, 2, 1) // asymmetric bloom filter
   @inline private[this] def init(k: Long): Long = k & 0x7FFFFFFFFFFFFFFFL
   @inline private[this] def next(v: Long): Long = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
 
-  private[socialtypeahead] def genFilter(inputName: String): Long = {
-    val name = normalize(inputName)
+  private[socialtypeahead] def genFilter(token: String): Long = {
     var filter = 0L
-    val maxPrefixLen = min(numHashFuncs.length, name.length)
+    val maxPrefixLen = min(numHashFuncs.length, token.length)
     var i = 0
     while (i < maxPrefixLen) {
-      val prefix = name.subSequence(0, i + 1)
+      val prefix = token.subSequence(0, i + 1)
       var hash = init(prefix.hashCode.toLong)
       var j = numHashFuncs(i)
       while (j > 0) {
@@ -56,7 +56,7 @@ object PrefixFilter {
 }
 
 class PrefixFilter[T](val data: Array[Long]) extends AnyVal {
-  def filterBy(names: Seq[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, names)
+  def filterBy(query: Array[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, query)
 }
 
 class PrefixFilterBuilder[T] {
@@ -64,8 +64,8 @@ class PrefixFilterBuilder[T] {
 
   out += 1L // version
 
-  def add(id: Id[T], names: Seq[String]) = { // expects two names usually, three names may be ok, four names will significantly compromise filtering precision
-    val filter = names.foldLeft(0L){ (filter, name) => (filter | PrefixFilter.genFilter(name)) }
+  def add(id: Id[T], name: String) = { // expects two tokens (first/last names) usually, three tokens may be ok, four tokens will significantly compromise filtering precision
+    val filter = PrefixFilter.tokenize(name).foldLeft(0L){ (filter, token) => (filter | PrefixFilter.genFilter(token)) }
     out += id.id
     out += filter
   }
