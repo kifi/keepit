@@ -1,26 +1,26 @@
-<div class="detail" ng-show="keep">
-	<div antiscroll="{ autoHide: false }">
-		<div class="detail-inner {{howKept}}">
-			<a class="page-x" href="javascript:"></a>
+<div class="kf-detail-pane" ng-show="keep">
+	<div class="kf-detail-scroll" antiscroll="{ autoHide: false }">
+		<div class="kf-detail-inner {{howKept}}">
+			<a class="kf-detail-x" href="javascript:"></a>
 			<div class="page-meta" data-n="{{getLength()}}">
-				<h2 class="page-title long-text" ng-bind="getTitleText()"></h2>
+				<h2 class="kf-detail-header page-title long-text" ng-bind="getTitleText()"></h2>
 				<div kf-keep-detail ng-show="showSingleKeep()"></div>
 				<a class="page-keep" href="javascript:"></a>
 				<a class="page-priv" href="javascript:"></a>
 			</div>
 			<div ng-show="showSingleKeep()">
-				<div class="page-who">
-					<h2>Who kept this:</h2>
-					<div class="page-who-pics"></div>
-					<div class="page-who-text"></div>
+				<div class="kf-page-who">
+					<h2 class="kf-detail-header">Who kept this:</h2>
+					<div class="kf-page-who-pics"></div>
+					<div class="kf-page-who-text"></div>
 				</div>
-				<div class="page-chatter">
-					<h2>Talking about this Keep:</h2>
-					<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
+				<div class="kf-page-chatter">
+					<h2 class="kf-detail-header">Talking about this Keep:</h2>
+					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
 				</div>
 			</div>
 			<div class="page-colls{% if collections.length %} some{% endif %}">
-				<h2>Tags:</h2>
+				<h2 class="kf-detail-header">Tags:</h2>
 				<ul class="page-coll-list">
 					<li class="page-coll" data-template data-id="{{id}}">
 					<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
