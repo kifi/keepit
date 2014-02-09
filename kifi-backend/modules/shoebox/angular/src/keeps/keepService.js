@@ -9,6 +9,7 @@ angular.module('kifi.keepService', [])
 		var list = [],
 			selected = {},
 			before = null,
+			previewed = null,
 			limit = 30;
 
 		function getKeepId(keep) {
@@ -23,6 +24,26 @@ angular.module('kifi.keepService', [])
 
 		var api = {
 			list: list,
+
+			getPreviewed: function () {
+				return previewed || null;
+			},
+
+			isPreviewed: function (keep) {
+				return !!previewed && previewed === keep;
+			},
+
+			preview: function (keep) {
+				previewed = keep || null;
+				return previewed;
+			},
+
+			togglePreview: function (keep) {
+				if (api.isPreviewed(keep)) {
+					return api.preview(null);
+				}
+				return api.preview(keep);
+			},
 
 			isSelected: function (keep) {
 				var id = getKeepId(keep);
@@ -81,6 +102,28 @@ angular.module('kifi.keepService', [])
 				return list.filter(function (keep) {
 					return keep.id in selected;
 				});
+			},
+
+			selectAll: function () {
+				selected = _.reduce(list, function (map, keep) {
+					map[keep.id] = true;
+					return map;
+				}, {});
+			},
+
+			unselectAll: function () {
+				selected = {};
+			},
+
+			isSelectedAll: function () {
+				return list.length && list.length === api.getSelectedLength();
+			},
+
+			toggleSelectAll: function () {
+				if (api.isSelectedAll()) {
+					return api.unselectAll();
+				}
+				return api.selectAll();
 			},
 
 			resetList: function () {

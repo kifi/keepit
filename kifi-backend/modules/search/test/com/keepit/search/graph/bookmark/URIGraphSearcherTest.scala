@@ -217,9 +217,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
         userGraph.update()
-
-        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
-        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
+        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(users(0).id.get), userGraphsCommander.getUnfriendedFuture(users(0).id.get))
+        val (friendsFuture1, unfriendsFuture1) = (userGraphsCommander.getConnectedUsersFuture(users(1).id.get), userGraphsCommander.getUnfriendedFuture(users(1).id.get))
+        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, friendsFuture, unfriendsFuture)
+        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, friendsFuture1, unfriendsFuture1)
 
         searcher0.search(personaltitle).keySet === Set(2L, 4L, 6L)
         searcher1.search(personaltitle).keySet === Set(1L, 3L, 5L)
@@ -245,8 +246,9 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         addConnections(Map(users(0).id.get -> Set()))
         val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
         userGraph.update()
+        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(users(0).id.get), userGraphsCommander.getUnfriendedFuture(users(0).id.get))
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, friendsFuture, unfriendsFuture)
 
         def mkSiteQuery(site: String) = {
           new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
@@ -287,7 +289,8 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
         userGraph.update()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
+        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(users(0).id.get), userGraphsCommander.getUnfriendedFuture(users(0).id.get))
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, friendsFuture, unfriendsFuture)
 
         def mkQuery(word: String) = new TermQuery(new Term("title", word))
 
@@ -326,7 +329,8 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
         userGraph.update()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander, inject[MonitoredAwait])
+        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(users(0).id.get), userGraphsCommander.getUnfriendedFuture(users(0).id.get))
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, friendsFuture, unfriendsFuture)
 
         uris.take(3).foreach{ uri =>
           val uriId =  uri.id.get

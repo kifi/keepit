@@ -15,7 +15,7 @@ angular.module('kifi.detail', ['kifi.keepService'])
 				};
 
 				scope.showSingleKeep = function () {
-					return keepService.getSelectedLength() === 1;
+					return keepService.getPreviewed() && keepService.getSelectedLength() <= 1;
 				};
 
 				scope.getTitleText = function () {
@@ -25,6 +25,12 @@ angular.module('kifi.detail', ['kifi.keepService'])
 					}
 					return len + ' Keeps selected';
 				};
+
+				scope.$watch(function () {
+					return keepService.getPreviewed();
+				}, function (keep) {
+					scope.keep = keep;
+				});
 			}
 		};
 	}

@@ -14,10 +14,12 @@ import com.keepit.search.IdFilterCompressor
 import com.keepit.search.result.KifiSearchResult
 import com.keepit.search.result.ResultUtil
 import com.keepit.search.SearchCommander
+import com.keepit.search.graph.user.UserGraphsCommander
 
 class MobileSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  searchCommander: SearchCommander
+  searchCommander: SearchCommander,
+  userGraphsCommander: UserGraphsCommander
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   def searchV1(
@@ -34,10 +36,11 @@ class MobileSearchController @Inject() (
   ) = JsonAction.authenticated { request =>
 
     val userId = request.userId
+    val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(userId), userGraphsCommander.getUnfriendedFuture(userId))
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
     val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
+    val decoratedResult = searchCommander.search(userId, friendsFuture, unfriendsFuture, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
