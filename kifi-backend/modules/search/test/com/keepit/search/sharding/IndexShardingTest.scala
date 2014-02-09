@@ -58,7 +58,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         users.foreach{ user =>
           val userId = user.id.get
           activeShards.shards.foreach{ shard =>
-            val mainSearcher = mainSearcherFactory(shard, userId, emptyFuture, emptyFuture, "alldocs", english, 1000, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, 1000, SearchFilter.default(), allHitsConfig)
             val uriGraphSearcher = mainSearcher.uriGraphSearcher
             val collectionSearcher = mainSearcher.collectionSearcher
 
@@ -87,7 +87,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
 
           val keeps = bookmarks.filter( _.userId == userId).map(_.uriId).toSet
           val shardedKeeps = activeShards.shards.map{ shard =>
-            val uriGraphSearcher = mainSearcherFactory.getURIGraphSearcher(shard, userId, emptyFuture, emptyFuture)
+            val uriGraphSearcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
 
             uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet
           }
@@ -139,7 +139,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         collectionGraph.update()
         mainSearcherFactory.clear()
 
-        def getKeepSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getURIGraphSearcher(shard, userId, emptyFuture, emptyFuture).getUserToUriEdgeSet(userId).size
+        def getKeepSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getURIGraphSearcher(shard, userId).getUserToUriEdgeSet(userId).size
         def getCollectionSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getCollectionSearcher(shard, userId).getCollectionToUriEdgeSet(collection.id.get).size
 
         val oldKeepSizes = activeShards.shards.map{ shard => (shard -> getKeepSize(shard)) }.toMap
@@ -157,7 +157,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         val newCollSizes = activeShards.shards.map{ shard => (shard -> getCollectionSize(shard)) }.toMap
 
         activeShards.shards.foreach{ shard =>
-          val mainSearcher = mainSearcherFactory(shard, userId, emptyFuture, emptyFuture, "alldocs", english, 1000, SearchFilter.default(), allHitsConfig)
+          val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, 1000, SearchFilter.default(), allHitsConfig)
           val uriGraphSearcher = mainSearcher.uriGraphSearcher
           val collectionSearcher = mainSearcher.collectionSearcher
 

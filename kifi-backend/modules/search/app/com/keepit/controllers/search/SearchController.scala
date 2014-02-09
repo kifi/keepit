@@ -36,7 +36,6 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.graph.user.UserGraphsCommander
 
 
 class SearchController @Inject()(
@@ -47,7 +46,6 @@ class SearchController @Inject()(
     shoeboxClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     searchCommander: SearchCommander,
-    userGraphsCommander: UserGraphsCommander,
     userExperimentCommander: RemoteUserExperimentCommander
   ) extends SearchServiceController {
 
@@ -73,8 +71,7 @@ class SearchController @Inject()(
     val query = (js \ "query").as[String]
     val maxHits = (js \ "maxHits").as[Int]
     val predefinedConfig = (js \ "config").as[Map[String, String]]
-    val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(userId), userGraphsCommander.getUnfriendedFuture(userId))
-    val res = searchCommander.search(userId, friendsFuture, unfriendsFuture, acceptLangs = Seq(), noSearchExperiments = false, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)), start = None, end = None, tz = None, coll = None)
+    val res = searchCommander.search(userId, acceptLangs = Seq(), noSearchExperiments = false, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)), start = None, end = None, tz = None, coll = None)
     Ok(JsArray(res.hits.map{ x =>
       val id = x.uriId.id
       val title = x.bookmark.title.getOrElse("")
@@ -105,8 +102,7 @@ class SearchController @Inject()(
 
     shards.find(uriId) match {
       case Some(shard) =>
-        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(userId), userGraphsCommander.getUnfriendedFuture(userId))
-        val searcher = searcherFactory(shard, userId, friendsFuture, unfriendsFuture, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config)
+        val searcher = searcherFactory(shard, userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config)
         val explanation = searcher.explain(uriId)
         Ok(html.admin.explainResult(query, userId, uriId, explanation))
       case None =>

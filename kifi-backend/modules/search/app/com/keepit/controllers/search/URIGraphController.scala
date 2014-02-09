@@ -20,7 +20,6 @@ import com.keepit.search.graph.collection.CollectionGraphPlugin
 import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.sharding._
-import com.keepit.search.graph.user.UserGraphsCommander
 
 class URIGraphController @Inject()(
     activeShards: ActiveShards,
@@ -29,8 +28,7 @@ class URIGraphController @Inject()(
     shoeboxClient: ShoeboxServiceClient,
     mainSearcherFactory: MainSearcherFactory,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
-    shardedCollectionIndexer: ShardedCollectionIndexer,
-    userGraphsCommander: UserGraphsCommander) extends SearchServiceController {
+    shardedCollectionIndexer: ShardedCollectionIndexer) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
@@ -50,8 +48,7 @@ class URIGraphController @Inject()(
       ids.map{ id =>
         activeShards.find(id) match {
           case Some(shard) =>
-            val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(userId), userGraphsCommander.getUnfriendedFuture(userId))
-            val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId, friendsFuture, unfriendsFuture)
+            val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
             searcher.getSharingUserInfo(id)
           case None =>
             throw new Exception("shard not found")

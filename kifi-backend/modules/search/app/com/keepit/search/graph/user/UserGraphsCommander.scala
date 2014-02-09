@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 class UserGraphsCommander @Inject()(
   userGraph: UserGraphIndexer,
   searchFriendGraph: SearchFriendIndexer
-){
+) {
   private[this] val consolidatedConnectedUsersReq = new RequestConsolidator[Id[User], Set[Long]](3 seconds)
   private[this] val consolidatedUnfriendedReq = new RequestConsolidator[Id[User], Set[Long]](3 seconds)
 
@@ -26,5 +26,10 @@ class UserGraphsCommander @Inject()(
   def getUnfriended(id: Id[User]): Set[Long] = {
     val searcher = new SearchFriendSearcher(searchFriendGraph.getSearcher)
     searcher.getUnfriended(id)
+  }
+
+  def clear(): Unit = {
+    consolidatedConnectedUsersReq.clear()
+    consolidatedUnfriendedReq.clear()
   }
 }

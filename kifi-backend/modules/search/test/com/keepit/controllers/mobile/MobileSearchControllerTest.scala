@@ -22,7 +22,6 @@ import com.keepit.search.sharding.Shard
 import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
-import scala.concurrent.Future
 
 class MobileSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -166,8 +165,6 @@ class FixedResultSearchCommander extends SearchCommander {
 
   def search(
     userId: Id[User],
-    friendsFuture: Future[Set[Long]],
-    unfriendsFuture: Future[Set[Long]],
     acceptLangs: Seq[String],
     noSearchExperiments: Boolean,
     query: String,
