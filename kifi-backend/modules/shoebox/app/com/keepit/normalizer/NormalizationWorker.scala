@@ -9,7 +9,7 @@ import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import com.keepit.common.actor.ActorInstance
 import akka.util.Timeout
 import scala.concurrent.duration._
-import play.api.Plugin
+import play.api.{Play, Plugin}
 import com.keepit.model.{NormalizedURIRepo}
 import play.api.libs.json._
 import com.keepit.common.db.slick.Database
@@ -33,32 +33,35 @@ class NormalizationWorker @Inject()(
     case m => throw new UnsupportedActorMessage(m)
   }
 
+  val sqsEnable:Boolean = (Play.maybeApplication.isDefined && Play.current.configuration.getBoolean("amazon.sqs.enable").getOrElse(false)) // todo(ray):removeme
   def consume() = {
-    try {
-      val messages = q.receive()
-      log.info(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
-      for (m <- messages) {
-        log.info(s"[consume] received msg $m")
-        val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
-        log.info(s"[consume] task=$taskOpt")
+    if (sqsEnable) {
+      try {
+        val messages = q.receive()
+        log.info(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
+        for (m <- messages) {
+          log.info(s"[consume] received msg $m")
+          val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
+          log.info(s"[consume] task=$taskOpt")
 
-        taskOpt map { task =>
-          val nuri = db.readOnly { implicit ro =>
-            nuriRepo.get(task.uriId)
+          taskOpt map { task =>
+            val nuri = db.readOnly { implicit ro =>
+              nuriRepo.get(task.uriId)
+            }
+            val ref = NormalizationReference(nuri, task.isNew)
+            log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
+            for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
+              log.info(s"[consume] normalizationService.update result: $nuriOpt")
+            }
           }
-          val ref = NormalizationReference(nuri, task.isNew)
-          log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
-          for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-            log.info(s"[consume] normalizationService.update result: $nuriOpt")
-          }
+
+          log.info(s"[consume] done with $m - DELETE")
+          q.delete(m.receiptHandle)
         }
-
-        log.info(s"[consume] done with $m - DELETE")
-        q.delete(m.receiptHandle)
+      } catch {
+        case t:Throwable =>
+          airbrake.notify(s"Caught exception $t while consuming messages from $q",t)
       }
-    } catch {
-      case t:Throwable =>
-        airbrake.notify(s"Caught exception $t while consuming messages from $q",t)
     }
   }
 
