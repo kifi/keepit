@@ -12,12 +12,16 @@ import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
 import com.keepit.scraper.DevScrapeSchedulerModule
+import com.keepit.common.queue.{ProdSimpleQueueModule, DevSimpleQueueModule}
+import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
   mailModule = DevMailModule(),
   reaperModule = DevReaperModule(),
   storeModule = ShoeboxDevStoreModule(),
+  sqsModule = DevSimpleQueueModule(),
+  normalizationQueueModule = DevNormalizationUpdateJobQueueModule(),
 
   // Shoebox Functional Modules
   analyticsModule = DevAnalyticsModule(),
