@@ -1,7 +1,7 @@
 package com.keepit.common.queue
 
 case class SimpleQueueMessage(id:String, receiptHandle:String, md5Body:String, body:String) {
-  override def toString = s"SQSMessage(id=$id,body=${body},receiptHandle=${receiptHandle.take(20)})"
+  override def toString = s"SimpleQueueMessage(id=$id,body=${body},receiptHandle=${receiptHandle.take(20)})"
 }
 
 trait SimpleQueueService {
