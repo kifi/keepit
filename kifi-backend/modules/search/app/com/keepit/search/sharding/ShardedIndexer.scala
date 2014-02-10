@@ -66,6 +66,10 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] with Logging{
     indexShards.valuesIterator.foreach(_.refreshSearcher())
   }
 
+  def warmUpIndexDirectory(): Unit = {
+    indexShards.valuesIterator.foreach(_.warmUpIndexDirectory())
+  }
+
   def backup(): Unit = updateLock.synchronized {
     indexShards.valuesIterator.foreach(_.backup())
   }

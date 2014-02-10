@@ -24,6 +24,7 @@ object IndexerPluginMessages {
   case object UpdateIndex
   case object BackUpIndex
   case object RefreshSearcher
+  case object WarmUpIndexDirectory
 }
 
 trait IndexManager[T <: Indexer[_]] {
@@ -34,6 +35,7 @@ trait IndexManager[T <: Indexer[_]] {
   def commitSequenceNumber: SequenceNumber
   def committedAt: Option[String]
   def refreshSearcher(): Unit
+  def warmUpIndexDirectory(): Unit
   def reindex(): Unit
   def close(): Unit
   def indexInfos(name: String): Seq[IndexInfo]
@@ -43,6 +45,7 @@ trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
   def update()
   def reindex()
   def refreshSearcher()
+  def warmUpIndexDirectory()
   def numDocs(): Int
   def sequenceNumber: SequenceNumber
   def commitSequenceNumber: SequenceNumber
@@ -64,13 +67,19 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
+
   override def onStart() {
     log.info(s"starting $name")
     scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateIndex)
-    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP).foreach { _ =>
-      scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
+
+    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP) match {
+      case Some(_) => // search_backup
+        scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
+      case None => // regular search instance
+        actor.ref ! WarmUpIndexDirectory
     }
   }
+
   override def onStop() {
     log.info(s"stopping $name")
     indexer.close()
@@ -88,6 +97,10 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
 
   override def refreshSearcher(): Unit = {
     actor.ref ! RefreshSearcher
+  }
+
+  override def warmUpIndexDirectory(): Unit = {
+    actor.ref ! WarmUpIndexDirectory
   }
 
   override def numDocs: Int = indexer.numDocs
@@ -117,6 +130,7 @@ class IndexerActor[T <: Indexer[_]](
       }
     case BackUpIndex => indexer.backup()
     case RefreshSearcher => indexer.refreshSearcher()
+    case WarmUpIndexDirectory => indexer.warmUpIndexDirectory()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
