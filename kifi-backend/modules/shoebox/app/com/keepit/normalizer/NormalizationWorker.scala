@@ -40,27 +40,30 @@ class NormalizationWorker @Inject()(
         val messages = q.receive()
         log.info(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
         for (m <- messages) {
-          log.info(s"[consume] received msg $m")
-          val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
-          log.info(s"[consume] task=$taskOpt")
+          try {
+            log.info(s"[consume] received msg $m")
+            val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
+            log.info(s"[consume] task=$taskOpt")
 
-          taskOpt map { task =>
-            val nuri = db.readOnly { implicit ro =>
-              nuriRepo.get(task.uriId)
+            taskOpt map { task =>
+              val nuri = db.readOnly { implicit ro =>
+                nuriRepo.get(task.uriId)
+              }
+              val ref = NormalizationReference(nuri, task.isNew)
+              log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
+              for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
+                log.info(s"[consume] normalizationService.update result: $nuriOpt")
+              }
             }
-            val ref = NormalizationReference(nuri, task.isNew)
-            log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
-            for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-              log.info(s"[consume] normalizationService.update result: $nuriOpt")
-            }
+          } catch {
+            case t:Throwable => airbrake.notify(s"Caught exception $t while consuming message $m - DELETE")
+          } finally {
+            log.info(s"[consume] done with $m - DELETE") // trial phase
+            q.delete(m.receiptHandle) // todo(ray): add err/retry count
           }
-
-          log.info(s"[consume] done with $m - DELETE")
-          q.delete(m.receiptHandle)
         }
       } catch {
-        case t:Throwable =>
-          airbrake.notify(s"Caught exception $t while consuming messages from $q",t)
+        case t:Throwable => airbrake.notify(s"Caught exception $t while consuming messages from $q",t)
       }
     }
   }

@@ -65,19 +65,13 @@ object NormalizationCandidate {
     }.getOrElse(Nil)
   }
 
-  implicit val readsNormalizationCandidate:Reads[NormalizationCandidate] = (
-      (__ \ 'candidateType).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'normalization).read[Normalization] and
-      (__ \ 'isTrusted).read[Boolean]
-    )(NormalizationCandidate.apply(_:String, _:String, _:Normalization, _:Boolean))
+  implicit val format = (
+    (__ \ 'candidateType).format[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'normalization).format[Normalization] and
+    (__ \ 'isTrusted).format[Boolean]
+  )(NormalizationCandidate.apply(_:String, _:String, _:Normalization, _:Boolean), unlift(NormalizationCandidate.unapply))
 
-  implicit val writesNormalizationCandidate:Writes[NormalizationCandidate] = (
-      (__ \ 'candidateType).write[String] and
-      (__ \ 'url).write[String] and
-      (__ \ 'normalization).write[Normalization] and
-      (__ \ 'isTrusted).write[Boolean]
-     )(unlift(NormalizationCandidate.unapply))
 }
 
 case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, correctedNormalization: Option[Normalization] = None, signature: Option[Signature] = None) {

@@ -11,14 +11,13 @@ case class NormalizationUpdateTask(uriId:Id[NormalizedURI], isNew:Boolean, candi
 
 object NormalizationUpdateTask {
   implicit val format = (
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
       (__ \ 'isNew).format[Boolean] and
       (__ \ 'candidates).format[Seq[NormalizationCandidate]]
     )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
 }
 
 trait NormalizationUpdateJobQueue extends SimpleQueue {
-  override val name = "NTest"
   def sendTask(task:NormalizationUpdateTask) = {
     send(Json.stringify(Json.toJson(task)))
   }

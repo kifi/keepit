@@ -8,20 +8,25 @@ import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.logging.Logging
 
-trait NormalizationUpdateJobQueueModule extends ScalaModule
+trait NormalizationUpdateJobQueueModule extends ScalaModule {
+  def queueName:String
+}
 
 @Singleton
 case class ProdNormalizationUpdateJobQueueModule() extends NormalizationUpdateJobQueueModule with Logging {
+
+  val queueName = "prod_normalization" // todo(ray): config
+
   override def configure(): Unit = {
   }
 
   @Singleton
   @Provides
   def normalizationUpdateJobQueue(sqs:SimpleQueueService):NormalizationUpdateJobQueue = {
-    val qUrl = sqs.getUrl("NTest").getOrElse(throw new IllegalStateException("Cannot retrieve NTest qUrl")) // todo(ray):test->prod mode
-    val q = sqs.getByUrl(qUrl).getOrElse(throw new IllegalStateException("Cannot retrieve NTest Q"))
-    val awsQ = new AmazonSQSQueue(qUrl, "NTest", sqs.asInstanceOf[AmazonSQS].client) with NormalizationUpdateJobQueue
-    log.info(s"[normalizationUpdateTaskQ] sqs=$sqs qUrl=$qUrl q=$q awsQ=$awsQ")
+    val queueUrl = sqs.getUrl(queueName).getOrElse(throw new IllegalStateException(s"Cannot retrieve $queueName")) // todo(ray):test->prod mode
+    val q = sqs.getByUrl(queueUrl).getOrElse(throw new IllegalStateException(s"Cannot retrieve $queueName with url: $queueUrl"))
+    val awsQ = new AmazonSQSQueue(queueUrl, queueName, sqs.asInstanceOf[AmazonSQS].client) with NormalizationUpdateJobQueue
+    log.info(s"[normalizationUpdateTaskQueue] sqs=$sqs qUrl=$queueUrl q=$q awsQ=$awsQ")
     awsQ
   }
 
@@ -29,21 +34,25 @@ case class ProdNormalizationUpdateJobQueueModule() extends NormalizationUpdateJo
 
 @Singleton
 case class DevNormalizationUpdateJobQueueModule() extends NormalizationUpdateJobQueueModule with Logging {
+
+  val queueName = "dev_normalization" // todo(ray): config
+
   override def configure(): Unit = {
   }
 
   @Singleton
   @Provides
   def normalizationUpdateJobQueue(sqs:SimpleQueueService):NormalizationUpdateJobQueue = {
-    val nTestUrl = sqs.create("NTest")
-    log.info(s"[normalizationUpdateJobQueue] nTestUrl=$nTestUrl")
-    val sQ = sqs.getByUrl(nTestUrl).getOrElse(throw new IllegalStateException())
-    log.info(s"[normalizationUpdateJobQueue] sQ=$sQ")
+    val queueUrl = sqs.create(queueName)
+    log.info(s"[normalizationUpdateJobQueue] queueUrl=$queueUrl")
+    val q = sqs.getByUrl(queueUrl).getOrElse(throw new IllegalStateException())
+    log.info(s"[normalizationUpdateJobQueue] q=$q")
     new NormalizationUpdateJobQueue {
-      def queueUrl = sQ.queueUrl
-      def receive(): Seq[SimpleQueueMessage] = sQ.receive()
-      def send(s: String): Unit = sQ.send(s)
-      def delete(msgHandle: String): Unit = sQ.delete(msgHandle)
+      def name = queueName
+      def queueUrl = q.queueUrl
+      def receive(): Seq[SimpleQueueMessage] = q.receive()
+      def send(s: String): Unit = q.send(s)
+      def delete(msgHandle: String): Unit = q.delete(msgHandle)
     }
   }
 
