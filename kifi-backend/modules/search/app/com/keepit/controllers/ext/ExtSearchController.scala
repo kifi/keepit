@@ -17,12 +17,10 @@ import com.keepit.search.IdFilterCompressor
 import com.keepit.search.result.KifiSearchResult
 import com.keepit.search.result.ResultUtil
 import com.keepit.search.SearchCommander
-import com.keepit.search.graph.user.UserGraphsCommander
 
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  searchCommander: SearchCommander,
-  userGraphsCommander: UserGraphsCommander
+  searchCommander: SearchCommander
 ) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   def search(
@@ -39,13 +37,12 @@ class ExtSearchController @Inject() (
     debug: Option[String] = None) = JsonAction.authenticated { request =>
 
     val userId = request.userId
-    val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(userId), userGraphsCommander.getUnfriendedFuture(userId))
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
     val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     val debugOpt = debug.flatMap{ v => if (request.experiments.contains(ADMIN)) Some(v) else None } // debug is only for admin
 
-    val decoratedResult = searchCommander.search(userId, friendsFuture, unfriendsFuture, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debug)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debug)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
@@ -91,9 +88,8 @@ class ExtSearchController @Inject() (
   ) = Action { request =>
 
     val uid = Id[User](userId)
-    val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(uid), userGraphsCommander.getUnfriendedFuture(uid))
 
-    val decoratedResult = searchCommander.search(uid, friendsFuture, unfriendsFuture, acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
+    val decoratedResult = searchCommander.search(uid, acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }

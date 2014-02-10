@@ -73,8 +73,6 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
 
         val res = searchCommander.search(
             userId = users(0).id.get,
-            friendsFuture = friendsFuture,
-            unfriendsFuture = unfriendsFuture,
             acceptLangs = Seq("en"),
             noSearchExperiments = false,
             query = "keepit",

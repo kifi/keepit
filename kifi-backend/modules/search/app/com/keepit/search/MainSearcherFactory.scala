@@ -65,8 +65,6 @@ class MainSearcherFactory @Inject() (
   def apply(
     shard: Shard[NormalizedURI],
     userId: Id[User],
-    friendsFuture: Future[Set[Long]],
-    unfriendsFuture: Future[Set[Long]],
     queryString: String,
     lang: Lang,
     numHitsToReturn: Int,
@@ -78,7 +76,7 @@ class MainSearcherFactory @Inject() (
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
-    val socialGraphInfo = getSocialGraphInfo(shard, userId, friendsFuture, unfriendsFuture, filter)
+    val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
 
     new MainSearcher(
         userId,
@@ -111,21 +109,22 @@ class MainSearcherFactory @Inject() (
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
+    userGraphsCommander.clear()
   }
 
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
-  def getSocialGraphInfo(shard: Shard[NormalizedURI], userId: Id[User], friendsFuture: Future[Set[Long]], unfriendsFuture: Future[Set[Long]],filter: SearchFilter): SocialGraphInfo = {
-    new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId, friendsFuture, unfriendsFuture), getCollectionSearcher(shard, userId), filter: SearchFilter, monitoredAwait)
+  def getSocialGraphInfo(shard: Shard[NormalizedURI], userId: Id[User], filter: SearchFilter): SocialGraphInfo = {
+    new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId), getCollectionSearcher(shard, userId), filter: SearchFilter, monitoredAwait)
   }
 
-  private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User], friendsFuture: Future[Set[Long]], unfriendsFuture: Future[Set[Long]]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
+  private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, friendsFuture, unfriendsFuture)).future
+    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)).future
   }
 
-  def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User], friendsFuture: Future[Set[Long]], unfriendsFuture: Future[Set[Long]]): URIGraphSearcherWithUser = {
-    Await.result(getURIGraphSearcherFuture(shard, userId, friendsFuture, unfriendsFuture), 5 seconds)
+  def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {
+    Await.result(getURIGraphSearcherFuture(shard, userId), 5 seconds)
   }
 
   private[this] def getCollectionSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
@@ -153,8 +152,7 @@ class MainSearcherFactory @Inject() (
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(userId), userGraphsCommander.getUnfriendedFuture(userId))
-    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, friendsFuture, unfriendsFuture)
+    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
