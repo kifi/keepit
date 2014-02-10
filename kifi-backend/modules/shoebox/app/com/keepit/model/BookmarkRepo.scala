@@ -90,8 +90,6 @@ class BookmarkRepoImpl @Inject() (
 
   override def save(model: Bookmark)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
-    for (bid <- model.id; cid <- keepToCollectionRepo.getCollectionsForBookmark(bid))
-      collectionRepo.collectionChanged(cid)
     super.save(newModel.clean())
   }
 
