@@ -150,6 +150,7 @@ var mixpanel = {
   augmentAndBatch: function (data) {
     data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
     data.properties.distinct_id = me.id;
+    data.properties.source = 'extension';
     data.properties.browser = api.browser.name;
     data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
@@ -632,9 +633,10 @@ api.port.on({
     prefs.enterToSend = data;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
   },
-  set_max_results: function(n) {
+  set_max_results: function(n, respond) {
     prefs.maxResults = n;
-    ajax('POST', '/ext/pref/maxResults?n=' + n);
+    ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
+    mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
   },
   set_show_find_friends: function(show) {
     prefs.showFindFriends = show;
@@ -825,7 +827,7 @@ api.port.on({
     }
     if (o.new) {
       var fragments = o.new.split("/");
-      mixpanel.track("user_viewed_pane", {'type': fragments.length>1 ? fragments[1] : o.new});
+      mixpanel.track('user_viewed_pane', {type: fragments.length>1 ? fragments[1] : o.new});
       var arr = tabsByLocator[o.new];
       if (arr) {
         arr = arr.filter(idIsNot(tab.id));
@@ -849,6 +851,50 @@ api.port.on({
   },
   prefs: function(_, respond) {
     respond(prefs);
+  },
+  settings: function(_, respond) {
+    respond({
+      sounds: stored('_sounds') !== 'n',
+      popups: stored('_popups') !== 'n',
+      emails: prefs.messagingEmails,
+      keeper: stored('_keeper') !== 'n',
+      sensitive: stored('_sensitive') !== 'n',
+      maxResults: prefs.maxResults
+    });
+  },
+  save_setting: function(o, respond) {
+    if (o.name === 'emails') {
+      ajax('POST', '/ext/pref/email/message/' + !!o.value, respond);
+    } else {
+      store('_' + o.name, o.value ? 'y' : 'n');
+      respond();
+      if (o.name === 'keeper') {
+        var sensitive = stored('_sensitive') !== 'n';
+        api.tabs.each(function (tab) {
+          var d = tab.nUri && pageData[tab.nUri];
+          if (d && !d.neverOnSite && !(d.sensitive && sensitive)) {
+            api.tabs.emit(tab, 'show_keeper', o.value);
+          }
+        });
+      } else if (o.name === 'sensitive') {
+        api.tabs.each(function (tab) {
+          var d = tab.nUri && pageData[tab.nUri];
+          if (d && !d.neverOnSite && d.sensitive) {
+            api.tabs.emit(tab, 'show_keeper', !o.value);
+          }
+        });
+      }
+    }
+    mixpanel.track('user_changed_setting', {
+      category:
+        ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
+        ~['keeper','sensitive'].indexOf(o.name) ? 'keeper' : 'unknown',
+      type: o.name,
+      value: o.value ? 'on' : 'off'
+    });
+  },
+  play_alert: function() {
+    playNotificationSound();
   },
   web_base_uri: function(_, respond) {
     respond(webBaseUri());
@@ -1037,11 +1083,19 @@ function standardizeNotification(n) {
 
 function handleRealTimeNotification(n) {
   if (n.unread && !n.muted && !silence) {
-    api.play('media/notification.mp3');
-    api.tabs.eachSelected(function (tab) {
-      api.tabs.emit(tab, 'show_notification', n, {queue: true});
-    });
+    if (stored('_sounds') !== 'n') {
+      playNotificationSound();
+    }
+    if (stored('_popups') !== 'n') {
+      api.tabs.eachSelected(function (tab) {
+        api.tabs.emit(tab, 'show_notification', n, {queue: true});
+      });
+    }
   }
+}
+
+function playNotificationSound() {
+  api.play('media/notification.mp3');
 }
 
 function insertNewNotification(n) {
@@ -1494,10 +1548,11 @@ function kififyWithPageData(tab, d) {
   setIcon(tab, d.kept);
   if (silence) return;
 
+  var hide = d.neverOnSite || stored('_keeper') === 'n' || d.sensitive && stored('_sensitive') !== 'n';
   api.tabs.emit(tab, 'init', {  // harmless if sent to same page more than once
     kept: d.kept,
     position: d.position,
-    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive,
+    hide: hide,
     tags: d.tags,
     showKeeperIntro: prefs && prefs.showKeeperIntro
   }, {queue: 1});
@@ -1505,7 +1560,7 @@ function kififyWithPageData(tab, d) {
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
     tab.engaged = true;
-    if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {
+    if (!d.kept && !hide) {
       if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted')();
       } else if (ruleSet.rules.shown && d.shown) {

@@ -75,6 +75,9 @@ var tile = tile || function() {  // idempotent for Chrome
         tileCard.classList.remove("kifi-0s");
       });
     },
+    show_keeper: function(show) {
+      tile.style.display = show ? '' : 'none';
+    },
     kept: function(o) {
       if (o.kept) {
         tile.dataset.kept = o.kept;
