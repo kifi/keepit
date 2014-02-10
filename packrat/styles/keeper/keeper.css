@@ -360,7 +360,7 @@ html[kifi-with-pane] .kifi-keep-card {
   padding: 0 196px 0 0;
   margin: 0;
 }
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (min-resolution: 2dppx) {
   .kifi-keepers-box {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAcCAYAAAAnbDzKAAACGklEQVR4AdXTO2hTURzH8V+sBhuwIr5iwWcDDhIHLRTldhMs1NVBEXSQDg6CUEFwUkRQEIx27KqI4iTFQhGVqKAtCBmigw9EISA1KsVXbfv3O4bDvYcQb9Kb4fPbLofv4R6NPy1NwxzzCKAW24ETGMUYnmAtFEWMRRiEWmAJjqAEC5FfrIAU0pDHRhRhHjshCMuxF7lmBnTgHGYwh7tYBzly+AiDTwChH59gMNxGRszfmAPOwhxFqEYnXsMi/MYECliFFajAHJfEfIs54BUsxGYIwnlYhBGsgWoMwEKUYw/w3OxWCF34CgtxAQoRwEJMNiPgDMzxEIJwFBbiHZZ53tVzmON4MwI6cBW/sIAJdEMQbsJCXIQ8NuAOfuA9hiBfwH7oP6SRgRwvYSGGsa3GLmQhH19AAEFIoYApjz5kcQqdEISlOIkeCB9gdXoEIcAx5xfLYqTegGGYxw0Im2CYwWM8wGcY8g0EFCEMwvAFz1DCHKyegD2YhUV4gy4nwBFbgMsfgNXwHfgHvVASA/oxBvM4DSU14B7M4z5SMQYUcNDR23iAXwXroRgDDkOuZgTMYx/UrgGXoXYOuNXeAcBQAwF9SQr4iTzk6IZFCFodcA3mUUYGqrEySQEBrsM8RpMekMYLmMehJAcIW1CFRfiOnuQGAAewAIswifRiBUzBHLPIQTWuoOoxgAwqqDqmsR3CuOd7RdiNtyHK/wBxDTYwcBDc4gAAAABJRU5ErkJggg==);
   }
@@ -584,7 +584,7 @@ html[kifi-with-pane] .kifi-keep-card {
   background-size: auto 22px;
   background-position: 16px 10px;
 }
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (min-resolution: 2dppx) {
 .kifi-dock-messages {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAAsCAQAAACayLMYAAABYUlEQVR4Ae3UsUrDUBSH8dOQuHTyKdoX6CB2VKSddLZCpVTtQ4hPlCcQJQ5CwEFBnDR1kdatWAfpV+E4lEDFJm3k3kAh99vz4w+HSNqjwQDN2IAGkpyQUmYuJnMGh/8Hmwwzc28000ELrRFYXOm6XalLiHKLGCxECXEXg20UJTAK3qAo7UWgS4RyavxKeyjPuH/BDsoLnvEr9YjmN/7e17JypUcoUbxxft8jjpUrdXhCOZ4HPfoo+4ilDuKNMdhFCSlZA0vcoXRicLZvF7HYHkofD4n3XSOWC2YbhQ1eUbasg9uzjcIJyiWbCTlIxpzEb12hdIU+mtKUgPrKWJ2AKZpSJOjSphyuxLX4Rpe1CqhMqC3lakxQU6Byj5vKuTygJkHlLBXsoabBAeVErsy7eVA5TwQvUBvgFzsJv61JdtBmBViABViAH7mCn4KfK+gLVUa5cSOqglDBZ2wdG+NTQX4Afb8ZYDYTlbEAAAAASUVORK5CYII=);
 }
