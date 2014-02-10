@@ -8,14 +8,16 @@
   color: #556179
   transition: transform .2s
 
-.kf-detail-scroll
-  position: absolute
-  top: 0
-  bottom: 0
-  left: 0
-  right: 0
-  overflow-x: hidden
-  overflow-y: scroll
+  .antiscroll-inner
+    position: absolute
+    top: 0
+    bottom: 0
+    left: 0
+    right: 0
+    width: auto !important
+    height: auto !important
+    overflow-x: hidden
+    overflow-y: scroll
 
 .kf-detail-inner
   padding: 20px
@@ -25,6 +27,7 @@
   font-size: 16px
   line-height: 24px
   font-smoothing: antialiased
+  long-text()
 
 .kf-detail-x
   position: absolute
@@ -54,12 +57,16 @@
     top: -1px
 
 .kf-keep-detail-url
+  display: inline-block
   max-width: 100%
   margin-bottom: 12px
   font-size: 12px
   line-height: 20px
-  color: inherit
   font-smoothing: antialiased
+  long-text()
+
+  &.kf-keep-detail-url
+    color: inherit
 
   &:hover
     text-decoration: underline
@@ -97,8 +104,10 @@
   display: inline
   font-size: 13px
   margin-right: 16px
-  color: inherit
   white-space: nowrap
+
+  &.kf-page-chatter-messages
+    color: inherit
 
   &:before
     content: attr(data-n)
