@@ -22,15 +22,15 @@ function mergeArr(o, arr) {
 }
 
 // TODO: load some of these APIs on demand instead of up front
-const self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
+const self = require('sdk/self'), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
 const timers = require("sdk/timers");
-const { Ci, Cc } = require("chrome");
+const {Ci, Cc, Cu} = require('chrome');
 const {deps} = require("./deps");
 const {Airbrake} = require('./airbrake.min');
 const {Listeners} = require("./listeners");
-const icon = require("./icon");
+const icon = require('./icon');
 const windows = require("sdk/windows").browserWindows;
-const tabs = require("sdk/tabs");
+const tabs = require('sdk/tabs');
 const workerNs = require('sdk/core/namespace').ns();
 
 const httpRe = /^https?:/;
@@ -62,9 +62,14 @@ var onIconClick = Airbrake.wrap(function onIconClick(win) {
   dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
 });
 
-exports.isPackaged = function() {
-  return true; // TODO: detect development environment
+var isPackaged = true;
+exports.isPackaged = function () {
+  return isPackaged;
 };
+Cu.import('resource://gre/modules/AddonManager.jsm');
+AddonManager.getAddonByID(self.id, Airbrake.wrap(function (addon) {
+  isPackaged = !!addon.sourceURI;
+}));
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
 
