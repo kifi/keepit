@@ -48,8 +48,10 @@ object PrefixFilter {
       var j = numHashFuncs(i)
       while (j > 0) {
         hash = next(hash)
-        filter = filter | (1 << (hash % 64))
+        filter = filter | (1 << ((hash % 15485863) & 0x3F))
+        j += 1
       }
+      i += 1
     }
     filter
   }
