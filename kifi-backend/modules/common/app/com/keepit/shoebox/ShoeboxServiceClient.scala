@@ -666,7 +666,7 @@ class ShoeboxServiceClientImpl @Inject() (
     )
     val payload = Json.obj(safeJsonParams: _*)
     val stripped = payload.stripJsNulls()
-    call(Shoebox.internal.updateNormalizedURI(uriId), stripped).map { resp =>
+    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout).map { resp =>
       resp.json.asOpt[Boolean].getOrElse(false)
     }
   }
