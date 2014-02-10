@@ -111,7 +111,7 @@ class MailToKeepActor @Inject() (
                     htmlBody =
                         s"<p>Hi ${user.firstName},</p>" +
                         s"<p>Congratulations! We added a $keepType keep for $uri.</p>" +
-                        "<p>Sincerely,<br>The kifi elves</p>"
+                        "<p>Sincerely,<br>The Kifi team</p>"
                   )
                 }
             }
