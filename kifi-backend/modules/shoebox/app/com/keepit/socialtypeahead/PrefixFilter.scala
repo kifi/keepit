@@ -35,8 +35,7 @@ object PrefixFilter {
   @inline final def tokenize(str: String) = normalize(str).split("\\s+").filter(_.length > 0)
 
   private[this] val numHashFuncs = Array(8, 4, 2, 1) // asymmetric bloom filter
-  @inline private[this] def init(k: Long): Long = k & 0x7FFFFFFFFFFFFFFFL
-  @inline private[this] def next(v: Long): Long = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
+  @inline private[this] def next(v: Int): Int = (v * 1103515245 + 12345) // linear congruential generator
 
   private[socialtypeahead] def genFilter(token: String): Long = {
     var filter = 0L
@@ -44,12 +43,12 @@ object PrefixFilter {
     var i = 0
     while (i < maxPrefixLen) {
       val prefix = token.subSequence(0, i + 1)
-      var hash = init(prefix.hashCode.toLong)
+      var hash = prefix.hashCode
       var j = numHashFuncs(i)
       while (j > 0) {
         hash = next(hash)
-        filter = filter | (1 << ((hash % 15485863) & 0x3F))
-        j += 1
+        filter = filter | (1 << ((hash >> 25) & 0x3F))
+        j -= 1
       }
       i += 1
     }
