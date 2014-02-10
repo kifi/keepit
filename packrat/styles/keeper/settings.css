@@ -32,6 +32,8 @@
   -moz-appearance: checkbox;
   display: inline-block;
   vertical-align: middle;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
   height: 13px;
   width: 13px;
   margin-right: 10px;
@@ -82,19 +84,32 @@
   }
 }
 .kifi-setting-sensitive {
-  padding: 14px 0 0 24px;
+  padding-top: 14px;
 }
 
-.kifi-play-alert,
+.kifi-settings-play-alert,
 .kifi-settings-site-link {
   color: #6fa6ef !important;
 }
-.kifi-play-alert:hover,
+.kifi-settings-play-alert:hover,
 .kifi-settings-site-link:hover {
   text-decoration: underline;
 }
-.kifi-play-alert {
+.kifi-settings-play-alert {
   margin-left: 4px;
+}
+.kifi-settings-k-icon {
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+  vertical-align: top;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQElEQVR4AY3TP0vDQBjH8eogTjqJk+/CN+ALcLJDX4GToIN/QBBBcXfRQdDBQbSCSIbWoUMVMhQdRBGkwUGn0sUcpCZp8B5/D+SO8JBTDz5wuRxfyLVXKY7ls89RP0gPKR/1+y/CGsugBVUYgYphJzADnVN/QDIgtGFaBqYgAHIFhGeYLAYaQI6Ay7kJzAG5AqsXITWfYmq9JIx2PWX2apjlwMlvgfZrYp+7vYxWCnthnwNdV+DxY0g6nw9STdvXSn7GAwdiGSgbWOf3Uo8D/b8C8VDT+mVYFgg44LsCaabtvPOWlgWaHNh0BRo4fRV/2+fju0gGlsyfSLl+haPbyB5klGjaurIH2YcJDrBFE1irh7TjKcZzXuPTl2saavIu7AH9g4YNeReMKrwDOfC7eXkbpXGowQF4cJPPF2BM7v8BvlH7+OUoAFIAAAAASUVORK5CYII=);
+  background-size: cover;
+}
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .kifi-settings-k-icon {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACG0lEQVR4Ab2XS6vTUBDHUz/MfXgVv4DfQb0qBvfiSu5CbkW6UVeCK3UhuBbdqNAWqqCoLbQl4AMVBW+lVHwguLBNmtq0zRn/WcwmndSTk8SB3+7A/DKTM+ccSyeI6CDJcRhYWdBcKAtcf+LNdu7+JhCAAXgMLoFDwNJBZ1HpnuOfTxCIkifxBthgXxaBTdC+2nDJQIDpgC0TARv4gDIIMD44nUbgHFCAchBgFNjREbA5eY4CjIpXQur5GFBBAtyO/ZJACbQAFSjAtEEpLrAN6D8IMCfiAk4Wge7ngPxALfHu6yxJ4CULcO/JVOBOxycppnNFV2qjVVU4wAJlU4HL1RFN8KVSYIL+qw0VFqibCNx46tHezzlJ8f6bXPoYDRbomQi8RX+lcP8oqjwc6gj0WWCkIaAdt5tj3Z0wZgHKSwC7QSs5k2sFFiFR5QGXPl0F9vKqQPPTNI1AnwWqeQkocOuZ9oSss8CuicDHH/IuGE5CunhfqxUXWGDdROAm5kD/lzwHXn/RmgNbLBDRMZmE0aiNRq4UGNGrkjvxw+iI6VkQjVwpohGNUZ0kcEy6DzyXFkdfGarln+3aI5d4zatBIEp8+C62ohW/DzBrwAVUIB5YX3UnPA4WBSVXwNa5FZ8BYQHJz6Z5F5wEXo5lP2XyMloDLzImb4GNTG9DcBR0UyZ2wDb/7UYCAhtgF9RAj09R4IIeqIEy2ASWDn8B+0PuRhdFvnIAAAAASUVORK5CYII=);
+  }
 }
 .kifi-settings-site-link {
   display: inline-block;
@@ -106,8 +121,8 @@
   position: absolute;
   top: 8px;
   right: 10px;
-  height: 24px;
-  width: 24px;
+  height: 28px;
+  width: 28px;
   border-radius: 50% !important;
 }
 .kifi-settings-x:before,

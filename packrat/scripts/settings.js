@@ -22,7 +22,7 @@ panes.settings = function () {
       $paneBox
         .on('click', '.kifi-setting-checkbox', onClickCheckbox)
         .on('change', 'select[name=kifi-max-results]', onChangeMaxResults)
-        .on('click', '.kifi-play-alert', onClickPlay)
+        .on('click', '.kifi-settings-play-alert', onClickPlay)
         .on('click', '.kifi-settings-x', onClickX)
         .on('kifi:remove', onRemoved);
       if ($paneBox.data('shown')) {
