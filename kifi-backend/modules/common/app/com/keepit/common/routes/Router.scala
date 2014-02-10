@@ -64,6 +64,7 @@ object Shoebox extends Service {
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
     def getExperimentsByUserIds() = ServiceRoute(POST, "/internal/shoebox/database/getExperimentsByUserIds")
+    def getExperimentGenerators() = ServiceRoute(GET, "/internal/shoebox/database/getExperimentGenerators")
     def getConnectedUsers(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getConnectedUsers", Param("userId", userId))
     def getBrowsingHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/browsingHistory", Param("userId", userId))
     def getClickHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/clickHistory", Param("userId", userId))
@@ -126,6 +127,7 @@ object Shoebox extends Service {
     def triggerRawKeepImport() = ServiceRoute(POST, "/internal/shoebox/database/triggerRawKeepImport")
     def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = ServiceRoute(POST, "/internal/shoebox/database/triggerSocialGraphFetch", Param("id", socialUserInfoId))
     def getUserConnectionsChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserConnectionsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getSearchFriendsChanged(seqNum: Long, fetchSize: Int)  = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -179,6 +181,9 @@ object Search extends Service {
     def visualizeSemanticVector() = ServiceRoute(POST, "/internal/search/semanticVector/visualize")
     def semanticLoss(queryText: String) = ServiceRoute(GET, "/internal/search/semanticVector/semanticLoss", Param("queryText", queryText))
     def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
+    def updateUserGraph()= ServiceRoute(POST, "/internal/search/userGraph/update")
+    def updateSearchFriendGraph() = ServiceRoute(POST, "/internal/search/searchFriendGraph/update")
+    def reindexUserGraphs() = ServiceRoute(POST, "/internal/search/userGraphs/reindex")
   }
 }
 

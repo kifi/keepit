@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
@@ -28,7 +28,7 @@ private[scraper] class ScrapeScheduler @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     serviceDiscovery: ServiceDiscovery,
-    localPostOffice: LocalPostOffice,
+    systemAdminMailSender: SystemAdminMailSender,
     scrapeInfoRepo: ScrapeInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -117,8 +117,8 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!orphaned.isEmpty) {
           val msg = s"[checkAssigned] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
           log.error(msg) // shouldn't happen -- airbrake
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-orphaned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
-            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-orphaned", htmlBody = msg))
             for (info <- orphaned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime))
             }
@@ -129,8 +129,8 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!abandoned.isEmpty) {
           val msg = s"[checkAssigned] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
           log.warn(msg)
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-abandoned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
-            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-abandoned", htmlBody = msg))
             for (info <- abandoned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime)) // todo(ray): ask worker for status
             }
@@ -139,8 +139,8 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!stalled.isEmpty) { // likely due to failed db updates
           val msg = s"[checkAssigned] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
           log.warn(msg)
+          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-stalled", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
-            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = ElectronicMailCategory("scraper"), subject = "scraper-scheduler-stalled", htmlBody = msg))
             for (info <- stalled) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime.plusMinutes(util.Random.nextInt(30)))) // todo(ray): ask worker for status
             }
@@ -155,7 +155,7 @@ private[scraper] class ScrapeScheduler @Inject() (
 class ScrapeSchedulerPluginImpl @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
-    localPostOffice:LocalPostOffice,
+    systemAdminMailSender: SystemAdminMailSender,
     scrapeInfoRepo: ScrapeInfoRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     actor: ActorInstance[ScrapeScheduler],
@@ -189,7 +189,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
           case ScrapeInfoStates.INACTIVE => {
             val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
             log.warn(msg)
-            localPostOffice.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
+            systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
               subject = s"ScrapeScheduler.scheduleScrape($uri)",
               htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
               category = NotificationCategory.System.ADMIN))
@@ -198,7 +198,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
         }
         case None => ScrapeInfo(uriId = uriId, nextScrape = date)
       }
-      val saved = scrapeInfoRepo.save(toSave)
+      scrapeInfoRepo.save(toSave)
       // todo: It may be nice to force trigger a scrape directly
     }
   }

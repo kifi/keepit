@@ -7,11 +7,124 @@ angular.module('kifi.keepService', [])
 	function ($http, env) {
 
 		var list = [],
+			selected = {},
 			before = null,
+			previewed = null,
 			limit = 30;
 
-		return {
+		function getKeepId(keep) {
+			if (keep) {
+				if (typeof keep === 'string') {
+					return keep;
+				}
+				return keep.id || null;
+			}
+			return null;
+		}
+
+		var api = {
 			list: list,
+
+			getPreviewed: function () {
+				return previewed || null;
+			},
+
+			isPreviewed: function (keep) {
+				return !!previewed && previewed === keep;
+			},
+
+			preview: function (keep) {
+				previewed = keep || null;
+				return previewed;
+			},
+
+			togglePreview: function (keep) {
+				if (api.isPreviewed(keep)) {
+					return api.preview(null);
+				}
+				return api.preview(keep);
+			},
+
+			isSelected: function (keep) {
+				var id = getKeepId(keep);
+				if (id) {
+					return selected.hasOwnProperty(id);
+				}
+				return false;
+			},
+
+			select: function (keep) {
+				var id = getKeepId(keep);
+				if (id) {
+					selected[id] = true;
+					return true;
+				}
+				return false;
+			},
+
+			unselect: function (keep) {
+				var id = getKeepId(keep);
+				if (id) {
+					delete selected[id];
+					return true;
+				}
+				return false;
+			},
+
+			toggleSelect: function (keep) {
+				if (api.isSelected(keep)) {
+					return api.unselect(keep);
+				}
+				return api.select(keep);
+			},
+
+			getFirstSelected: function () {
+				var id = _.keys(selected)[0];
+				if (!id) {
+					return null;
+				}
+
+				for (var i = 0, l = list.length, keep; i < l; i++) {
+					keep = list[i];
+					if (keep.id === id) {
+						return keep;
+					}
+				}
+
+				return null;
+			},
+
+			getSelectedLength: function () {
+				return _.keys(selected).length;
+			},
+
+			getSelected: function () {
+				return list.filter(function (keep) {
+					return keep.id in selected;
+				});
+			},
+
+			selectAll: function () {
+				selected = _.reduce(list, function (map, keep) {
+					map[keep.id] = true;
+					return map;
+				}, {});
+			},
+
+			unselectAll: function () {
+				selected = {};
+			},
+
+			isSelectedAll: function () {
+				return list.length && list.length === api.getSelectedLength();
+			},
+
+			toggleSelectAll: function () {
+				if (api.isSelectedAll()) {
+					return api.unselectAll();
+				}
+				return api.selectAll();
+			},
 
 			resetList: function () {
 				before = null;
@@ -52,5 +165,7 @@ angular.module('kifi.keepService', [])
 				});
 			}
 		};
+
+		return api;
 	}
 ]);

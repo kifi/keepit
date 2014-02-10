@@ -39,10 +39,10 @@ object NotificationCategory {
 
   object System {
     val HEALTHCHECK = NotificationCategory("healthcheck")
-    val ASANA_HEALTHCHECK = NotificationCategory("asana_healthcheck")
     val ADMIN = NotificationCategory("admin")
+    val SCRAPER = NotificationCategory("scraper")
     val PLAY = NotificationCategory("play")
-    val all = Set(HEALTHCHECK, ASANA_HEALTHCHECK, ADMIN, PLAY)
+    val all = Set(HEALTHCHECK, ADMIN, PLAY, SCRAPER)
   }
 
   implicit def toElectronicMailCategory(category: NotificationCategory): ElectronicMailCategory = ElectronicMailCategory(category.category)

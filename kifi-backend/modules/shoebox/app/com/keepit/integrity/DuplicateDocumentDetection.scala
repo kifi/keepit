@@ -6,19 +6,19 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import play.api.libs.concurrent.Akka
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice, LocalPostOffice}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import play.api.Play.current
 import com.google.inject.Inject
 import com.keepit.scraper.SignatureBuilder
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.healthcheck.SystemAdminMailSender
 
 class DuplicateDocumentDetection @Inject() (
     db: Database,
     scrapeInfoRepo: ScrapeInfoRepo,
     dupeRepo: DuplicateDocumentRepo,
-    postOffice: LocalPostOffice)
+    systemAdminMailSender: SystemAdminMailSender)
   extends Logging {
 
   // These will be removed when the unscrapeable documents are reprocessed
@@ -112,10 +112,8 @@ class DuplicateDocumentDetection @Inject() (
      val result = "Runtime: %sms, Dupes found: %s. See admin panel for details.".format(elapsedTimeMs, dupeDocumentsCount)
 
      val toAddr = if (play.api.Play.isDev) EmailAddresses.ANDREW else EmailAddresses.ENG
-     db.readWrite { implicit s =>
-       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(toAddr), subject = "Duplication Report",
-        htmlBody = result, category = NotificationCategory.System.ADMIN))
-     }
+     systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(toAddr), subject = "Duplication Report",
+       htmlBody = result, category = NotificationCategory.System.ADMIN))
    }
  }
 

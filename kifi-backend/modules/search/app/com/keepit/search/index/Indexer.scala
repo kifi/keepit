@@ -79,17 +79,16 @@ abstract class Indexer[T](
       indexWriter.updateDocument(idTerm, seedDoc)
       indexWriter.commit()
     }
-    val reader = getReader()
+    val reader = DirectoryReader.open(indexDirectory)
     Searcher(reader)
   }
 
-  private[this] def getReader(): DirectoryReader = {
+  def warmUpIndexDirectory(): Unit = {
     log.info(s"warming up an index directory [${indexDirectory.toString}]...")
     val startTime = System.currentTimeMillis
-
-    val reader = DirectoryReader.open(indexDirectory)
-
+    val reader: DirectoryReader = searcher.indexReader.inner
     val buffer = new Array[Byte](1<<16)
+
     reader.getIndexCommit().getFileNames().foreach{ filename =>
       if (indexDirectory.fileExists(filename)) {
         var remaining = indexDirectory.fileLength(filename)
@@ -103,8 +102,6 @@ abstract class Indexer[T](
     }
     val elapsed = System.currentTimeMillis - startTime
     log.info(s"warmed up an index directory [${indexDirectory.toString}], took ${elapsed}ms")
-
-    reader
   }
 
   def getSearcher = searcher

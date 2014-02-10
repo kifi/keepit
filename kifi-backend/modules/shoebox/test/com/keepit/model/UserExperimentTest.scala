@@ -3,6 +3,8 @@ package com.keepit.model
 import org.specs2.mutable._
 import com.keepit.common.db.slick._
 import com.keepit.test.ShoeboxTestInjector
+import com.keepit.common.db.Id
+import play.api.libs.json.Json
 
 class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
@@ -66,4 +68,61 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  "ProbabilisticExperimentGenerator" should {
+
+    val firstExp = ExperimentType("first")
+    val secondExp = ExperimentType("second")
+    val thirdExp = ExperimentType("third")
+    val conditionExp = ExperimentType("condition")
+    val salt = "pepper"
+
+    val firstDensity = ProbabilityDensity(Seq(
+      firstExp -> 0.2,
+      secondExp -> 0.7,
+      thirdExp -> 0.1
+    ))
+
+    val secondDensity = ProbabilityDensity(Seq(
+      firstExp -> 0.2,
+      secondExp -> 0.3,
+      thirdExp -> 0.3
+    ))
+
+    val firstGen = ProbabilisticExperimentGenerator(name = Name("first test generator"), condition = Some(conditionExp), salt = salt, density = firstDensity)
+    val secondGen = ProbabilisticExperimentGenerator(name = Name("second test generator"), condition = None, salt = salt, density = secondDensity)
+
+    "be serializable" in {
+      Json.toJson(firstGen).as[ProbabilisticExperimentGenerator] === firstGen
+      Json.toJson(secondGen).as[ProbabilisticExperimentGenerator] === secondGen
+    }
+
+    "be persisted and cached" in {
+      withDb() { implicit injector =>
+        import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+        val repo = inject[ProbabilisticExperimentGeneratorRepo]
+        val cache = inject[ProbabilisticExperimentGeneratorAllCache]
+
+        val (savedFirstGen, savedSecondGen) = db.readWrite { implicit session => (repo.save(firstGen), repo.save(secondGen)) }
+
+        val allGen = db.readOnly { implicit session => repo.allActive() }
+        allGen === Seq(savedFirstGen, savedSecondGen)
+        cache.get(ProbabilisticExperimentGeneratorAllKey) === Some(allGen)
+
+       db.readOnly { implicit session => repo.getByName(savedFirstGen.name) } === Some(savedFirstGen)
+      }
+    }
+
+    "generate correct experiments" in {
+      val userId = Id[User](42)
+      val expectedHash = 0.8132363287297162
+
+      firstGen.hash(userId) === expectedHash
+      firstGen(userId, Set.empty) === None
+      firstGen(userId, Set(conditionExp)) === Some(secondExp)
+
+      secondGen.hash(userId) === expectedHash
+      secondGen(userId, Set.empty) === None
+      secondGen(userId, Set(conditionExp)) === None
+    }
+  }
 }

@@ -19,14 +19,15 @@ class RemoteServiceTest extends Specification {
     availabilityZone = "us-west-1b",
     securityGroups = "default",
     amiId = "ami-1bf9de5e",
-    amiLaunchIndex = "0"
+    amiLaunchIndex = "0",
+    loadBalancer = Some("some-elb")
   )
 
   "RemoteService" should {
     "be serialized and deserialized" in {
       val remoteService = RemoteService(instance, ServiceStatus.UP, ServiceType.TEST_MODE)
       val json = Json.toJson(remoteService)
-      json === Json.parse("""{"amazonInstanceInfo":{"instanceId":{"id":"i-f168c1a8"},"name":"some-name","service":"some-service","localHostname":"ip-10-160-95-26.us-west-1.compute.internal","publicHostname":"ec2-50-18-183-73.us-west-1.compute.amazonaws.com","localIp":{"ip":"10.160.95.26"},"publicIp":{"ip":"50.18.183.73"},"instanceType":"c1.medium","availabilityZone":"us-west-1b","securityGroups":"default","amiId":"ami-1bf9de5e","amiLaunchIndex":"0"},"status":"up","serviceType":"TEST_MODE"}""")
+      json === Json.parse("""{"amazonInstanceInfo":{"instanceId":{"id":"i-f168c1a8"},"name":"some-name","service":"some-service","localHostname":"ip-10-160-95-26.us-west-1.compute.internal","publicHostname":"ec2-50-18-183-73.us-west-1.compute.amazonaws.com","localIp":{"ip":"10.160.95.26"},"publicIp":{"ip":"50.18.183.73"},"instanceType":"c1.medium","availabilityZone":"us-west-1b","securityGroups":"default","amiId":"ami-1bf9de5e","amiLaunchIndex":"0","loadBalancer":"some-elb"},"status":"up","serviceType":"TEST_MODE"}""")
       val fromJson = Json.fromJson[RemoteService](json).get
       fromJson === remoteService
     }

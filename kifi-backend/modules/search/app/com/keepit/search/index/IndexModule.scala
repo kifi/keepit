@@ -12,6 +12,7 @@ import com.keepit.search.article._
 import com.keepit.search.graph._
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.bookmark._
+import com.keepit.search.graph.user._
 import com.keepit.search.index._
 import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
@@ -60,6 +61,8 @@ trait IndexModule extends ScalaModule with Logging {
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
     bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
+    bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
+    bind[SearchFriendGraphPlugin].to[SearchFriendGraphPluginImpl].in[AppScoped]
   }
 
   private[this] val noShard = Shard[Any](0, 1)
@@ -133,6 +136,24 @@ trait IndexModule extends ScalaModule with Logging {
     log.info(s"storing user index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new UserIndexer(dir, config, airbrake, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def userGraphIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): UserGraphIndexer = {
+    val dir = getIndexDirectory("index.userGraph.directory", noShard, backup)
+     log.info(s"storing user graph index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new UserGraphIndexer(dir, config, airbrake, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def searchFriendIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): SearchFriendIndexer = {
+    val dir = getIndexDirectory("index.searchFriend.directory", noShard, backup)
+    log.info(s"storing searchFriend index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new SearchFriendIndexer(dir, config, airbrake, shoeboxClient)
   }
 
   @Singleton

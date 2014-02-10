@@ -98,6 +98,7 @@ POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showKeeperIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowKeeperIntro(show: Boolean)
 POST    /ext/pref/showSearchIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowSearchIntro(show: Boolean)
 POST    /ext/pref/showFindFriends   @com.keepit.controllers.ext.ExtPreferenceController.setShowFindFriends(show: Boolean)
+POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks          @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
@@ -459,6 +460,7 @@ GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keep
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])
 POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()
+GET     /internal/shoebox/database/getExperimentGenerators             @com.keepit.controllers.internal.ShoeboxController.getExperimentGenerators()
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.internal.ShoeboxDataPipeController.getNormalizedUriUpdates(lowSeq: Long, highSeq: Long)
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.internal.ShoeboxController.getConnectedUsers(userId: Id[User])
@@ -481,6 +483,7 @@ GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.in
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: Long, fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()

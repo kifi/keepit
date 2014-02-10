@@ -3,7 +3,6 @@ package com.keepit.eliza.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime

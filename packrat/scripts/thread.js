@@ -53,7 +53,9 @@ panes.thread = function () {
 
   function renderThread($paneBox, $tall, $who, threadId, messages, enterToSend) {
     messages.forEach(function (m) {
-      m.isLoggedInUser = m.user.id === me.id;
+      if (m.user) {
+        m.isLoggedInUser = m.user.id === me.id;
+      }
     });
     $(render('html/keeper/messages', {
       formatMessage: getTextFormatter,

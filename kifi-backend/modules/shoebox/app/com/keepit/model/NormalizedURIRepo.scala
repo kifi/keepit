@@ -3,18 +3,24 @@ package com.keepit.model
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.db.{State, Id, SequenceNumber}
+import com.keepit.common.db.{State, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
-import com.keepit.normalizer.{NormalizationReference, SchemeNormalizer, NormalizationService, NormalizationCandidate}
+import com.keepit.normalizer._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
-import com.keepit.scraper.ScraperConfig
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.normalizer.NormalizationReference
+import scala.slick.lifted.Tag
+import com.keepit.common.db.{Model, Id}
+import com.keepit.queue._
+import play.api.libs.json._
+import play.api.Play._
+import play.api.Play
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -41,16 +47,17 @@ class NormalizedURIRepoImpl @Inject() (
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo],
+  taskQ:NormalizationUpdateJobQueue,
   airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
-  import DBSession._
+
+  import db.Driver.simple._
+
 
   private val sequence = db.getSequence("normalized_uri_sequence")
 
-  override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI]{
+  type RepoImpl = NormalizedURITable
+  class NormalizedURITable(tag: Tag) extends RepoTable[NormalizedURI](db, tag, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
@@ -59,16 +66,18 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     def normalization = column[Normalization]("normalization", O.Nullable)
     def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
     def redirectTime = column[DateTime]("redirect_time", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
-        screenshotUpdatedAt.? ~ restriction.? ~ normalization.? ~ redirect.? ~ redirectTime.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
+    def * = (id.?,createdAt,updatedAt,externalId,title.?,url,urlHash,state,seq,screenshotUpdatedAt.?,restriction.?,normalization.?,redirect.?,redirectTime.?) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
   }
+
+  def table(tag:Tag) = new NormalizedURITable(tag)
+  initTable()
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     super.getBySequenceNumber(sequenceNumber, limit)
   }
 
   def getChanged(sequenceNumber: SequenceNumber, states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
-    val q = (for (f <- table if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
+    val q = (for (f <- rows if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
   }
 
@@ -92,12 +101,12 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
     idCache.getOrElse(NormalizedURIKey(id)) {
-      (for(f <- table if f.id is id) yield f).first
+      (for(f <- rows if f.id is id) yield f).first
     }
   }
 
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =
-    (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
+    (for(f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val num = sequence.incrementAndGet()
@@ -134,7 +143,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     val limited = {
-      val q = (for (t <- table if t.state === state) yield t)
+      val q = (for (t <- rows if t.state === state) yield t)
       limit match {
         case some if some > 0 => q.take(some)
         case _ => q
@@ -147,7 +156,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     Statsd.time(key = "normalizedURIRepo.getByNormalizedUrl") {
       val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
-        (for (t <- table if t.urlHash === hash) yield t).firstOption
+        (for (t <- rows if t.urlHash === hash) yield t).firstOption
       }
     }
   }
@@ -187,15 +196,29 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    *
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
+  val sqsEnable:Boolean = (Play.maybeApplication.isDefined && Play.current.configuration.getBoolean("amazon.sqs.enable").getOrElse(false)) // todo(ray):removeme
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
+    log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       getByUriOrPrenormalize(url) match {
-        case Left(uri) => session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)); uri
+        case Left(uri) =>
+          session.onTransactionSuccess {
+            if (sqsEnable)
+              taskQ.sendTask(NormalizationUpdateTask(uri.id.get, false, candidates))
+            else
+              normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)
+          }
+          uri
         case Right(prenormalizedUrl) => {
           val normalization = findNormalization(prenormalizedUrl)
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          session.onTransactionSuccess(normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*))
+          session.onTransactionSuccess{
+            if (sqsEnable)
+              taskQ.sendTask(NormalizationUpdateTask(newUri.id.get, true, candidates))
+            else
+              normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*)
+          }
           newUri
         }
       }
@@ -203,10 +226,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =
-    (for(t <- table if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
+    (for(t <- rows if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
 
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
-    (for(t <- table if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
+    (for(t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
   private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") {

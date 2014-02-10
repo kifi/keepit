@@ -3,10 +3,6 @@ package com.keepit.common.mail
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-
-import com.google.inject.{Inject, Singleton}
-
-
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
 
@@ -23,19 +19,29 @@ trait AmazonSimpleMailProvider {
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-api.html
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-formatted.html
  */
-@Singleton
-class AmazonSimpleMailProviderImpl @Inject() (
-     client: AmazonSimpleEmailServiceClient,
-     airbrake: AirbrakeNotifier)
+class AmazonSimpleMailProviderImpl(
+     client: AmazonSimpleEmailServiceClient)
   extends AmazonSimpleMailProvider with Logging {
 
   private def isSystemEmail(mail: ElectronicMail): Boolean =
     NotificationCategory.System.all.contains(NotificationCategory.fromElectronicMailCategory(mail.category))
 
+  private def isInternalEmailRecipients(mail: ElectronicMail): Unit = mail.to.foreach { to =>
+    val in = EmailAddresses.ALL_EMAILS.contains(to)
+    if (!in) {
+      throw new Exception(s"Recipient [$to] is not part of the internal email group [${EmailAddresses.ALL_EMAILS.mkString(",")}}]: $mail")
+    }
+  }
+
   def sendMail(mail: ElectronicMail): Unit = {
     if (!isSystemEmail(mail)) {
       throw new Exception(s"This mail provider will not send emails unless they have a System category. Not sending: $mail")
     }
+    isInternalEmailRecipients(mail)
+    doSendMail(mail)
+  }
+
+  private def doSendMail(mail: ElectronicMail): Unit = {
     val request = new SendEmailRequest().withSource(mail.from.address)
     val dest = new Destination().withToAddresses(mail.to.map(_.address))
     request.setDestination(dest)

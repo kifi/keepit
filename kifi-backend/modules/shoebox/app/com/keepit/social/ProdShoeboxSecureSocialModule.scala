@@ -10,7 +10,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
 import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.common.time.Clock
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
 
 
 trait ShoeboxSecureSocialModule extends SecureSocialModule {
@@ -42,10 +42,10 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     emailRepo: EmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
     userCommander: UserCommander,
-    userExperimentRepo: UserExperimentRepo,
+    userExperimentCommander: LocalUserExperimentCommander,
     clock: Clock
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentRepo, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentCommander, clock
   )
 }
 

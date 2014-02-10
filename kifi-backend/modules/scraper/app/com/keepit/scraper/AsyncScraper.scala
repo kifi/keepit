@@ -228,7 +228,7 @@ class AsyncScraper @Inject() (
 
     @inline def shouldUpdateScreenshot(uri: NormalizedURI) = {
       uri.screenshotUpdatedAt map { update =>
-        Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
+        Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays() >= 5
       } getOrElse true
     }
 

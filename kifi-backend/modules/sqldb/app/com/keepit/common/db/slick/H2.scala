@@ -4,25 +4,26 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.{DbSequence, SequenceNumber, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
-import scala.slick.lifted.DDL
-import scala.slick.session.{Database => SlickDatabase}
+import scala.slick.driver.JdbcDriver.DDL
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import com.keepit.common.logging.Logging
 
 trait TableInitListener {
-  def init(table: TableWithDDL): Unit
+  def init(tableName: String, ddl: { def createStatements: Iterator[String] }): Unit
   def initSequence(sequence: String): Unit
 }
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
-    extends DataBaseComponent {
+    extends DataBaseComponent with Logging {
   println("initiating H2 driver")
   val Driver = H2Driver
-  val tablesToInit = new TrieMap[String, TableWithDDL]
+  val tablesToInit = new TrieMap[String, { def createStatements: Iterator[String] }]
   val sequencesToInit = new TrieMap[String, String]
   var initListener: Option[TableInitListener] = None
 
   //first initiation of the table if they where loaded staticly by the injector before the db was initiated
-  tablesToInit.values foreach initTableNow
+  tablesToInit foreach { case (tableName, ddl) => initTableNow(tableName, ddl) }
   val dialect = H2DatabaseDialect
 
   def getSequence(name: String): DbSequence = new DbSequence(name) {
@@ -60,16 +61,16 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     listener.initSequence(sequence)
   }
 
-  override def initTable(table: TableWithDDL) {
-    if (!tablesToInit.contains(table.tableName)) {
-      tablesToInit(table.tableName) = table
+  override def initTable(tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
+    if (!tablesToInit.contains(tableName)) {
+      tablesToInit(tableName) = ddl
       //after the db has been initiated we would like to initiate tables as they come through
-      initTableNow(table)
+      initTableNow(tableName, ddl)
     }
   }
 
-  private def initTableNow(table: TableWithDDL) = initListener map {listener =>
-    listener.init(table)
+  private def initTableNow(tableName: String, ddl: { def createStatements: Iterator[String] }) = initListener map {listener =>
+    listener.init(tableName, ddl)
   }
 
 }

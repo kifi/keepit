@@ -11,6 +11,7 @@ import com.keepit.search.Article
 import com.keepit.search.Lang
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.bookmark._
+import com.keepit.search.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
@@ -135,6 +136,14 @@ trait GraphTestHelper extends ApplicationInjector {
     val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier])
     new StandaloneCollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
+
+  def mkUserGraphsCommander() = {
+    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val commander = new UserGraphsCommander(userGraphIndexer, searchFriendIndexer)
+    (userGraphIndexer, searchFriendIndexer, commander)
+  }
+
 
   def addConnections(connections: Map[Id[User], Set[Id[User]]]) {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]

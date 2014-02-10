@@ -3,27 +3,22 @@ package com.keepit.search
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
-import com.keepit.common.service.{ServiceClient, ServiceType, ServiceUri}
+import com.keepit.common.service.{RequestConsolidator, ServiceClient, ServiceType, ServiceUri}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.model.Collection
-import play.api.libs.json.{JsValue, Json}
-import play.api.templates.Html
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
-import scala.concurrent.Promise
-import play.api.libs.json.JsArray
+import com.keepit.model.Collection
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
-import com.keepit.model.KifiVersion
-import com.keepit.social.BasicUser
-import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
-import play.api.libs.json.JsNull
+import play.api.libs.json._
+import play.api.templates.Html
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -36,6 +31,10 @@ trait SearchServiceClient extends ServiceClient {
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
+
+  def updateUserGraph(): Unit
+  def updateSearchFriendGraph(): Unit
+  def reindexUserGraphs(): Unit
 
   def index(): Unit
   def reindex(): Unit
@@ -87,6 +86,9 @@ class SearchServiceClientImpl(
     val airbrakeNotifier: AirbrakeNotifier)
   extends SearchServiceClient() {
 
+  // request consolidation
+  private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
+
   def logResultClicked(resultClicked: ResultClicked): Unit = {
     val json = Json.toJson(resultClicked)
     call(Search.internal.logResultClicked(), json)
@@ -130,7 +132,7 @@ class SearchServiceClientImpl(
     call(Search.internal.uriGraphInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
   }
 
-  def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = {
+  def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>
     call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
       Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
     }
@@ -281,5 +283,15 @@ class SearchServiceClientImpl(
     serviceCluster.allServices.map(new ServiceUri(_, protocol, port, url.url)).map{ case u: ServiceUri =>
       callUrl(url, u, JsNull).map{ r => (u.serviceInstance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }
+  }
+
+  def updateUserGraph(){
+    broadcast(Search.internal.updateUserGraph())
+  }
+  def updateSearchFriendGraph(){
+    broadcast(Search.internal.updateSearchFriendGraph())
+  }
+  def reindexUserGraphs(){
+    broadcast(Search.internal.reindexUserGraphs())
   }
 }

@@ -26,7 +26,6 @@ class ExtAuthController @Inject() (
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
   socialUserRepo: SocialUserInfoRepo,
-  userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient)

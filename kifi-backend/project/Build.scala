@@ -45,7 +45,7 @@ object ApplicationBuild extends Build {
     "commons-codec" % "commons-codec" % "1.6",
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
-    "com.amazonaws" % "aws-java-sdk" % "1.3.20",
+    "com.amazonaws" % "aws-java-sdk" % "1.6.12",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -67,22 +67,22 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
       from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
-    "org.apache.lucene" % "lucene-suggest" % "4.2.1",
-    "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*") // todo(andrew): Remove. Needed because of CloseableIterator. Implement yourself!
+    "org.apache.lucene" % "lucene-suggest" % "4.2.1"
   )
 
   lazy val sqldbDependencies = Seq(
     "mysql" % "mysql-connector-java" % "5.1.25",
-    "com.typesafe.slick" %% "slick" % "1.0.1" exclude("play", "*")
+    "com.typesafe.slick" %% "slick" % "2.0.0" exclude("play", "*")
   )
 
   lazy val shoeboxDependencies = Seq(
     "javax.mail" % "mail" % "1.4.5",
-    "com.typesafe.slick" %% "slick-testkit" % "1.0.1" exclude("play", "*"),
+    "com.typesafe.slick" %% "slick-testkit" % "2.0.0" exclude("play", "*"),
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
-    "org.feijoas" %% "mango" % "0.10"
+    "org.feijoas" %% "mango" % "0.10",
+    "fortytwo.franz" % "franz_2.10" % "0.1.0"
   )
 
   lazy val heimdalDependencies = Seq(
@@ -98,7 +98,7 @@ object ApplicationBuild extends Build {
   lazy val abookDependencies = Seq()
 
   lazy val scraperDependencies = Seq(
-    "org.apache.httpcomponents" % "httpclient" % "4.3.2", // todo(andrew/ray): remove from common when all dependencies removed
+    "org.apache.httpcomponents" % "httpclient" % "4.3.2",
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.tika" % "tika-parsers" % "1.3"
   )

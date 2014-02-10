@@ -13,6 +13,7 @@ import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 import com.keepit.search.spellcheck.SpellIndexerPlugin
 import com.keepit.search.graph.collection.CollectionGraphPlugin
+import com.keepit.search.graph.user._
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
   val module = SearchProdModule()
@@ -38,6 +39,8 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[PhraseIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[SpellIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[UserGraphPlugin] != null)
+    require(injector.instance[SearchFriendGraphPlugin] != null)
     require(NlpParser.enabled)
   }
 }

@@ -212,6 +212,7 @@ class LockQueue(lockNode: Node, zkClient: ZooKeeperClient) {
       registry += (uuid -> (lock, node))
     } catch {
       case ex: KeeperException.ConnectionLossException => registry += (uuid -> (lock, null)) // we may have created the request node successfully.
+      case ex: InterruptedException                    => registry += (uuid -> (lock, null)) // we may have created the request node successfully.
     }
   }
 

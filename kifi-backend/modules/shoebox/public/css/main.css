@@ -1652,10 +1652,6 @@ a.profile-nw {
   background-position: -32px 0;
 }
 
-.profile-nw.nw-twitter::before {
-  background-position: -60px 0;
-}
-
 .profile-nw.nw-email::before {
   background-position: -128px 0;
 }
@@ -1685,12 +1681,6 @@ a.profile-nw {
 
 .profile-nw.nw-linkedin:active {
   background-color: #366AAA;
-}
-
-.profile-nw.nw-twitter {
-  background-color: #dbdee3;
- /*0da2d9*/
-  background-position: -120px 0;
 }
 
 .profile-nw.nw-google {
@@ -2489,10 +2479,6 @@ input.user-filter {
   border-color: #4f83c3;
 }
 
-.invite-filters[data-nw-selected=twitter] {
-  border-color: #55acee;
-}
-
 .invite-filters[data-nw-selected=email] {
   border-color: #e36767;
 }
@@ -2531,11 +2517,6 @@ input.user-filter {
   background-position: -36px top;
 }
 
-.invite-filters>a[data-nw=twitter] {
-  background-color: #55acee;
-  background-position: -72px top;
-}
-
 .invite-filters>a[data-nw=email] {
   background-color: #e36767;
   background-position: -144px top;
@@ -2548,7 +2529,6 @@ input.user-filter {
 .invite-filters[data-nw-selected]>:not([data-nw]):hover,
 .invite-filters:not([data-nw-selected=facebook])>[href][data-nw=facebook]:hover,
 .invite-filters:not([data-nw-selected=linkedin])>[href][data-nw=linkedin]:hover,
-.invite-filters:not([data-nw-selected=twitter])>[href][data-nw=twitter]:hover,
 .invite-filters:not([data-nw-selected=email])>[href][data-nw=email]:hover {
   height: 38px;
 }
@@ -2556,7 +2536,6 @@ input.user-filter {
 .invite-filters:not([data-nw-selected])>:not([data-nw]),
 .invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
 .invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin],
-.invite-filters[data-nw-selected=twitter]>[data-nw=twitter],
 .invite-filters[data-nw-selected=email]>[data-nw=email] {
   height: 41px;
 }
@@ -2687,11 +2666,6 @@ input.user-filter {
 .invite-friend[data-value^=linkedin]::before {
   background-color: #4f83c3;
   background-position: -20px top;
-}
-
-.invite-friend[data-value^=twitter]::before {
-  background-color: #55acee;
-  background-position: -40px top;
 }
 
 .invite-friend[data-value^=email]::before {
@@ -4880,38 +4854,6 @@ a.friend-nw:not([href]):not(.friend-nw-kifi) {
 a.friend-nw-kifi {
   background-color: #74a2d7;
   border-radius: 50%;
-}
-
-a.friend-nw-facebook {
-  background-position: -18px;
-}
-
-a.friend-nw-facebook[href] {
-  background-color: #527bbd;
-}
-
-a.friend-nw-linkedin {
-  background-position: -36px;
-}
-
-a.friend-nw-linkedin[href] {
-  background-color: #5083c3;
-}
-
-a.friend-nw-twitter {
-  background-position: -54px;
-}
-
-a.friend-nw-twitter[href] {
-  background-color: #7acdf0;
-}
-
-a.friend-nw-google {
-  background-position: -72px;
-}
-
-a.friend-nw-google[href] {
-  background-color: #e9644b;
 }
 
 .friend-pic {

@@ -46,6 +46,7 @@ object ExperimentType {
   val DEMO = ExperimentType("demo")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
+  val SELF_MESSAGE = ExperimentType("self_message")
 
   def get(str: String): ExperimentType = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
@@ -60,6 +61,7 @@ object ExperimentType {
     case DEMO.value => DEMO
     case EXTENSION_LOGGING.value => EXTENSION_LOGGING
     case SHOW_HIT_SCORES.value => SHOW_HIT_SCORES
+    case SELF_MESSAGE.value => SELF_MESSAGE
   }
 
   def getUserStatus(experiments: Set[ExperimentType]): String =

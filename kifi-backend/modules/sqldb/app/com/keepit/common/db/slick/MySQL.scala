@@ -3,7 +3,7 @@ package com.keepit.common.db.slick
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.{DbSequence, SequenceNumber, MySqlDatabaseDialect}
 import scala.slick.driver.MySQLDriver
-import scala.slick.session.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])

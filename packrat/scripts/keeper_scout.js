@@ -75,6 +75,9 @@ var tile = tile || function() {  // idempotent for Chrome
         tileCard.classList.remove("kifi-0s");
       });
     },
+    show_keeper: function(show) {
+      tile.style.display = show ? '' : 'none';
+    },
     kept: function(o) {
       if (o.kept) {
         tile.dataset.kept = o.kept;
@@ -202,8 +205,9 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function attachTile() {
-    if (tile && !document.contains(tile)) {
-      var parent = document.querySelector('body') || document.documentElement;
+    if (!tile) return;
+    if (!document.contains(tile) || tile.parentNode !== tileParent) {
+      var parent = document.querySelector('body') || document.documentElement; // page can replace body
       parent.appendChild(tile);
       if (parent !== tileParent) {
         if (tileObserver) tileObserver.disconnect();
@@ -213,6 +217,17 @@ var tile = tile || function() {  // idempotent for Chrome
           tileObserver.observe(node, what);
         }
         tileParent = parent;
+      }
+    } else {  // keep last
+      var child = tileParent.lastElementChild;
+      if (child !== tile && !document.documentElement.hasAttribute('kifi-pane-parent')) {
+        while (child !== tile) {
+          if (!child.classList.contains('kifi-root')) {
+            tileParent.appendChild(tile);
+            break;
+          }
+          child = child.previousElementSibling;
+        }
       }
     }
   }

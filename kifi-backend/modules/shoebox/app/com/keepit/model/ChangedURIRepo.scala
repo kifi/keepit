@@ -23,16 +23,21 @@ class ChangedURIRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[ChangedURI] with ChangedURIRepo with SeqNumberDbFunction[ChangedURI]{
-    import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
+
+  import db.Driver.simple._
 
   private val sequence = db.getSequence("changed_uri_sequence")
 
-  override val table = new RepoTable[ChangedURI](db, "changed_uri") with SeqNumberColumn[ChangedURI] {
+  type RepoImpl = ChangedURITable
+
+  class ChangedURITable(tag: Tag) extends RepoTable[ChangedURI](db, tag, "changed_uri") with SeqNumberColumn[ChangedURI] {
     def oldUriId = column[Id[NormalizedURI]]("old_uri_id", O.NotNull)
     def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ oldUriId ~ newUriId ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
+    def * = (id.?, createdAt, updatedAt, oldUriId, newUriId, state, seq) <> ( (ChangedURI.apply _).tupled, ChangedURI.unapply _)
   }
+
+  def table(tag: Tag) = new ChangedURITable(tag)
+  initTable()
 
   override def invalidateCache(model: ChangedURI)(implicit session: RSession): Unit = {}
   override def deleteCache(model: ChangedURI)(implicit session: RSession): Unit = {}
@@ -55,12 +60,12 @@ class ChangedURIRepoImpl @Inject() (
   }
 
   override def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI] = {
-    val q = for( r <- table if r.state === ChangedURIStates.APPLIED) yield r
+    val q = for( r <- rows if r.state === ChangedURIStates.APPLIED) yield r
     q.sortBy(_.updatedAt desc).drop(pageSize * pageNum).take(pageSize).list
   }
 
   def countState(state: State[ChangedURI])(implicit session: RSession): Int =
-    (for( r <- table if r.state === state) yield r).list.size
+    (for( r <- rows if r.state === state) yield r).list.size
 
   def saveWithoutIncreSeqnum(model: ChangedURI)(implicit session: RWSession): ChangedURI = {
     super.save(model)

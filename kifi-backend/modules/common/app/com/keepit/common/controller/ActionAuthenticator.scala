@@ -14,6 +14,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, JsNumber}
 import play.api.mvc._
@@ -83,15 +84,16 @@ class RemoteActionAuthenticator @Inject() (
   impersonateCookie: ImpersonateCookie,
   kifiInstallationCookie: KifiInstallationCookie,
   shoeboxClient: ShoeboxServiceClient,
+  userExperimentCommander: RemoteUserExperimentCommander,
   monitoredAwait: MonitoredAwait)
     extends ActionAuthenticator with SecureSocial with Logging {
 
   implicit private[this] val executionContext = ExecutionContext.immediate
 
-  private def getExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = shoeboxClient.getUserExperiments(userId)
+  private def getExperiments(userId: Id[User]): Future[Set[ExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
   private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[SimpleResult]): (SecuredRequest[T] => Future[SimpleResult]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
-      val experimentsFuture = getExperiments(userId).map(_.toSet)
+      val experimentsFuture = getExperiments(userId)
       val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user

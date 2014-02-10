@@ -1,11 +1,9 @@
 package com.keepit.controllers.website
 
-import java.text.Normalizer
-
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.performance.timing
@@ -13,10 +11,9 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.model._
-import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.ABookServiceClient
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{Promise => PlayPromise}
@@ -25,34 +22,30 @@ import com.keepit.common.time._
 import play.api.templates.Html
 import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
-
 import java.util.concurrent.atomic.AtomicBoolean
-import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.eliza.ElizaServiceClient
 import play.api.mvc.Request
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
-import securesocial.core.{UserService, Registry}
-import com.keepit.model.SocialConnection
-import scala.util.{Try, Failure, Success}
+import scala.util.{Failure, Success}
 import com.keepit.model.EmailAddress
 import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
 import play.api.libs.json.JsUndefined
-import play.api.libs.json.JsArray
 import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
+import com.keepit.search.SearchServiceClient
 
 class UserController @Inject() (
   db: Database,
   userRepo: UserRepo,
-  userExperimentRepo: UserExperimentRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -72,7 +65,8 @@ class UserController @Inject() (
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
   authCommander: AuthCommander,
-  emailAddressRepo: EmailAddressRepo
+  emailAddressRepo: EmailAddressRepo,
+  searchClient: SearchServiceClient
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // hotspot -- need optimization; gather timing info for analysis
@@ -82,16 +76,13 @@ class UserController @Inject() (
       "friends" -> timing(s"friends($userId) ALL") {
         db.readOnly { implicit s =>
           val searchFriends = timing(s"friends($userId) searchFriends") { searchFriendRepo.getSearchFriends(request.userId) }
-          val socialUsers = timing(s"friends($userId) socialUsers") { socialUserRepo.getByUser(request.userId) }
           val connectionIds = timing(s"friends($userId) connectionIds") { userConnectionRepo.getConnectedUsers(request.userId) }
           val unfriendedIds = timing(s"friends($userId) unfriendedIds") { userConnectionRepo.getUnfriendedUsers(request.userId) }
           timing(s"friends($userId) post-processing++") {
             (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq).map { case (userId, unfriended) =>
               Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
                 "searchFriend" -> searchFriends.contains(userId),
-                "networks" -> networkInfoLoader.load(socialUsers, userId),
                 "unfriended" -> unfriended,
-                "description" -> userValueRepo.getValue(userId, "user_description"),
                 "friendCount" -> userConnectionRepo.getConnectionCount(userId)
               )
             }
@@ -183,6 +174,7 @@ class UserController @Inject() (
       }
       friendIdOpt map { friendId =>
         val changed = searchFriendRepo.excludeFriend(request.userId, friendId)
+        searchClient.updateSearchFriendGraph()
         Ok(Json.obj("changed" -> changed))
       } getOrElse {
         BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
@@ -197,6 +189,7 @@ class UserController @Inject() (
       }
       friendIdOpt map { friendId =>
         val changed = searchFriendRepo.includeFriend(request.userId, friendId)
+        searchClient.updateSearchFriendGraph()
         Ok(Json.obj("changed" -> changed))
       } getOrElse {
         BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
@@ -341,9 +334,8 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val (user, experiments) = db.readOnly { implicit session =>
-      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
-    }
+    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++

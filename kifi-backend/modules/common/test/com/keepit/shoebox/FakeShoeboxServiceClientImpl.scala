@@ -11,6 +11,7 @@ import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
 import com.keepit.model.IndexableUri
 import com.keepit.model.User
+import com.keepit.model.ProbabilisticExperimentGenerator
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
 import com.keepit.social.{SocialNetworkType, BasicUser}
@@ -136,18 +137,20 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    connections.foreach { case (userId, friends) =>
-      allUserConnections(userId) = allUserConnections.getOrElse(userId, Set.empty) ++ friends
-      friends.foreach{ f =>
-        val conn = getConnection(userId, f)
+    // use directed edges to generate undirected edges
+    val edges = connections.map{ case (u, fs) => fs.map{ f => Array((u, f), (f, u))}.flatten }.flatten.toSet
+    edges.groupBy(_._1).map{case (u, fs) => allUserConnections(u) = fs.map{_._2}}
+    edges.foreach{ case (u1, u2) =>
+      if (u1.id < u2.id) {
+        val conn = getConnection(u1, u2)
         if (conn.isEmpty){
           val id = nextUserConnId
           val seq = nextUserConnSeqNum
-          allConnections(id) = UserConnection(id = Some(id), user1 = userId, user2 = f, seq = seq)
+          allConnections(id) = UserConnection(id = Some(id), user1 = u1, user2 = u2, seq = seq)
         } else {
           val c = conn.get
           if (c.state != UserConnectionStates.ACTIVE){
-            allConnections(c.id.get) = c.copy(state = UserConnectionStates.ACTIVE, seq = nextUriSeqNum())
+            allConnections(c.id.get) = c.copy(state = UserConnectionStates.ACTIVE, seq = nextUserConnSeqNum())
           }
         }
       }
@@ -155,15 +158,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getConnection(user1: Id[User], user2: Id[User]): Option[UserConnection] = {
-    allConnections.flatMap{case (id, c) => if (Set(user1, user2) == Set(c.user1, c.user2)) Some(c) else None}.headOption
+    allConnections.map{case (id, c) => if (Set(user1, user2) == Set(c.user1, c.user2)) Some(c) else None}.flatten.headOption
   }
 
   def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    connections.foreach { case (userId, friends) =>
-      allUserConnections(userId) = allUserConnections.getOrElse(userId, Set.empty) -- friends
-    }
+    val edges = connections.map{ case (u, fs) => fs.map{ f => Array((u, f), (f, u))}.flatten }.flatten.toSet
+    edges.groupBy(_._1).map{case (u, fs) => allUserConnections(u) = allUserConnections.getOrElse(u, Set.empty) -- fs.map{_._2}}
 
-    val pairs = connections.map{ case (uid, friends) => friends.map{f => if (uid.id < f.id) (uid, f) else (f, uid)}}.flatten.toSet
+    val pairs = connections.map{ case (uid, friends) => friends.map{f => (uid, f) }}.flatten.toSet
     pairs.map{ case (u1, u2) =>
       getConnection(u1, u2).foreach{ c =>
         allConnections(c.id.get) = c.copy(state = UserConnectionStates.UNFRIENDED, seq = nextUserConnSeqNum)
@@ -172,7 +174,16 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def clearUserConnections(userIds: Id[User]*) {
-    userIds.map(allUserConnections(_) = Set.empty[Id[User]])
+    userIds.map{ id =>
+      if (allUserConnections.get(id).isDefined){
+      allUserConnections(id).foreach{ friend =>
+        getConnection(id, friend).foreach{ conn =>
+          allConnections(conn.id.get) = conn.copy(state = UserConnectionStates.INACTIVE, seq = nextUserConnSeqNum)
+          allUserConnections(friend) = allUserConnections.getOrElse(friend, Set.empty) - id
+        }
+      }}
+      allUserConnections(id) = Set[Id[User]]()
+    }
   }
 
   def excludeFriend(userId: Id[User], friendId: Id[User]){
@@ -471,6 +482,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       id -> exps
     }.toMap
     Future.successful(exps)
+  }
+
+  def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]] = {
+    Future.successful(Seq())
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {

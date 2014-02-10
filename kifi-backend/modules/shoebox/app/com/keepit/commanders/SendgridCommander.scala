@@ -1,16 +1,17 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{LocalPostOffice, EmailAddresses, ElectronicMail, ElectronicMailRepo}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.common.performance.timing
 import com.keepit.model.{NotificationCategory, EmailAddressRepo}
 import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck.SystemAdminMailSender
 
 class SendgridCommander @Inject() (
   db: Database,
-  postOffice: LocalPostOffice,
+  systemAdminMailSender: SystemAdminMailSender,
   heimdalClient: HeimdalServiceClient,
   emailAddressRepo: EmailAddressRepo,
   electronicMailRepo: ElectronicMailRepo,
@@ -40,7 +41,7 @@ class SendgridCommander @Inject() (
           case None => s"Got event:<br/> $event"
         }
         db.readWrite{ implicit s =>
-          postOffice.sendMail(
+          systemAdminMailSender.sendMail(
             ElectronicMail(
               from = EmailAddresses.ENG,
               to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
