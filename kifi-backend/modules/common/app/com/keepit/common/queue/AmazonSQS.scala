@@ -45,6 +45,7 @@ class AmazonSQSQueue(override val queueUrl:String, override val name:String, cli
     }
     val res = messages.map { m =>
       SimpleQueueMessage(
+        System.currentTimeMillis,
         m.getMessageId,
         m.getReceiptHandle,
         m.getMD5OfBody,
