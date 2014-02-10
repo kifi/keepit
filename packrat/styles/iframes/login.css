@@ -248,7 +248,7 @@ input[type=password] {
   text-decoration: underline;
 }
 
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (min-resolution: 2dppx) {
 .facebook > .form-network-icon:empty:before {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAABI0lEQVR4Ae3SP0oDURhF8TNJLBKJxj8ghICdnYVWAbUQQV3AbMDKNNZWgkuw0D2I9ja2bsDGXoiVxWiEaQSfrSTviclM3odwzwp+cG+NEnMVOrRZosHPbiFczVFCVbY4ZI916oyW/AqgaC1O6NFmoooDUi5ZAbAAVLniGMAGkHBNCnaAc1KwA+xwBnaAhAsSS8ABm2AJ6IElYJZ9W8AudVtAl1A3nNIHmtMFbODvlSNyALLpAtbwd08eZ4JV/D1CDMAyM/h7iQNYIFQWB9Ag1CAOoEmoPA4g3Kc1gPIBFebHmGDOe1DH2+SADs/8vQd8vdP6xxMIIIAAAgjQZ5Hhutzhb5snRnNFAF9kDPdBqAGZPjB+AggggAACCCCAAAIIIIAA35DUJ6SaCe4pAAAAAElFTkSuQmCC);
 }
