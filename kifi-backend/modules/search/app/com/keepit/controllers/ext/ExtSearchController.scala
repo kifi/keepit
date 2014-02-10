@@ -87,7 +87,9 @@ class ExtSearchController @Inject() (
     coll: Option[String] = None
   ) = Action { request =>
 
-    val decoratedResult = searchCommander.search(Id[User](userId), acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
+    val uid = Id[User](userId)
+
+    val decoratedResult = searchCommander.search(uid, acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }

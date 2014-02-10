@@ -48,12 +48,13 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, _, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
+        val (graph, _, indexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory) = initIndexes(store)
         graph.update()
         indexer.update() === uris.size
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
         userGraphIndexer.update()
+        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(users(0).id.get), userGraphsCommander.getUnfriendedFuture(users(0).id.get))
 
         def myBookmarkExternalId = getBookmarkByUriAndUser(uris(0).id.get, users(0).id.get).get.externalId
 

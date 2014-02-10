@@ -23,7 +23,6 @@ import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 
-
 class MobileSearchControllerTest extends Specification with SearchApplicationInjector {
 
   def modules = {

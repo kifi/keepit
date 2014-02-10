@@ -109,6 +109,7 @@ class MainSearcherFactory @Inject() (
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
+    userGraphsCommander.clear()
   }
 
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
@@ -119,7 +120,7 @@ class MainSearcherFactory @Inject() (
 
   private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander, monitoredAwait)).future
+    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)).future
   }
 
   def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {
@@ -151,7 +152,7 @@ class MainSearcherFactory @Inject() (
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander, monitoredAwait)
+    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 

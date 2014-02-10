@@ -5,7 +5,7 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.actor.ActorInstance
@@ -144,6 +144,7 @@ class HeimdalServiceClientImpl @Inject() (
   extends HeimdalServiceClient with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(30 seconds)
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   override def onStart(): Unit = {
     scheduleTaskOnAllMachines(actor.system, 1 seconds, EventQueueConsts.BatchFlushTiming seconds, actor.ref, FlushEventQueue)
@@ -196,7 +197,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {
     val payload = JsObject(properties.map { case (key, value) => key -> Json.toJson(value) })
-    call(Heimdal.internal.setUserProperties(userId), payload)
+    call(Heimdal.internal.setUserProperties(userId), payload, callTimeouts = longTimeout)
   }
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
