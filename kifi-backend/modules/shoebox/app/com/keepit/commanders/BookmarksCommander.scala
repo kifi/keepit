@@ -166,12 +166,11 @@ class BookmarksCommander @Inject() (
 
       collectionRepo.collectionChanged(collection.id.get, (created.size + activated.size) > 0)
 
-      searchClient.updateURIGraph()
       val tagged = (activated ++ created).toSet
       val taggingAt = currentDateTime
       tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.bookmarkId), context, taggingAt))
       tagged
-    }
+    } tap { _ => searchClient.updateURIGraph() }
   }
 
   def removeFromCollection(collection: Collection, keeps: Seq[Bookmark])(implicit context: HeimdalContext): Set[KeepToCollection] = {
@@ -181,11 +180,13 @@ class BookmarksCommander @Inject() (
         case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
       }
+
+      collectionRepo.collectionChanged(collection.id.get)
+
       val removedAt = currentDateTime
       removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.bookmarkId), context, removedAt))
-      searchClient.updateURIGraph()
       removed.toSet
-    }
+    } tap { _ => searchClient.updateURIGraph() }
   }
 
   def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
@@ -213,11 +214,38 @@ class BookmarksCommander @Inject() (
         collection <- collectionRepo.getOpt(id)
       } {
         keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
+        collectionRepo.collectionChanged(collection.id.get)
         keptAnalytics.untaggedPage(collection, bookmark, context)
       }
     }
+    searchClient.updateURIGraph()
   }
 
+  def clearTags(url: String, userId: Id[User]): Unit = {
+    db.readWrite { implicit s =>
+      for {
+        uri <- uriRepo.getByUri(url).toSeq
+        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        ktc <- keepToCollectionRepo.getByBookmark(bookmark.id.get)
+      } {
+        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        collectionRepo.collectionChanged(ktc.collectionId)
+      }
+    }
+    searchClient.updateURIGraph()
+  }
+
+  def tagsByUrl(url: String, userId: Id[User]): Seq[Collection] = {
+    db.readOnly { implicit s =>
+      for {
+        uri <- uriRepo.getByUri(url).toSeq
+        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        collectionId <- keepToCollectionRepo.getCollectionsForBookmark(bookmark.id.get)
+      } yield {
+        collectionRepo.get(collectionId)
+      }
+    }
+  }
 
   def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: BookmarkSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
     val (bookmarks, _) = bookmarkInterner.internRawBookmarks(

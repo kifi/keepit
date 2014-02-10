@@ -98,7 +98,6 @@ class KeepToCollectionRepoImpl @Inject() (
     val q = for(r <- rows if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r
     q.list.map { ktc => //there should be only [0, 1], iterating on possibly more for safty
       save(ktc.inactivate())
-      collectionRepo.collectionChanged(ktc.collectionId, false)
     }
   }
 
