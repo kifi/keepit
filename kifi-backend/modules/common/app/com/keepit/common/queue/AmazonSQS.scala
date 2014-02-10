@@ -31,6 +31,12 @@ class AmazonSQS(val client:AmazonSQSClient) extends SimpleQueueService with Logg
   }
 }
 
+object AmazonSQSQueue {
+  val SENT_TS = "SentTimestamp"
+  val APPROX_FIRST_RECEIVE_TS = "ApproximateFirstReceiveTimestamp"
+}
+
+import AmazonSQSQueue._
 class AmazonSQSQueue(override val queueUrl:String, override val name:String, client:AmazonSQSClient) extends SimpleQueue with Logging {
 
   def delete(msgHandle: String): Unit = {
@@ -41,16 +47,21 @@ class AmazonSQSQueue(override val queueUrl:String, override val name:String, cli
 
   def receive(): Seq[SimpleQueueMessage] = {
     val messages = timing(s"SQS.receive($queueUrl)") {
-      client.receiveMessage(new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withVisibilityTimeout(300)).getMessages // todo(ray):from config
+      client.receiveMessage(new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withVisibilityTimeout(300).withAttributeNames(SENT_TS, APPROX_FIRST_RECEIVE_TS)).getMessages // todo(ray):from config
     }
     val res = messages.map { m =>
-      SimpleQueueMessage(
-        System.currentTimeMillis,
+      val body = m.getBody
+      val sentTS = m.getAttributes.get(SENT_TS)
+      val approxFirstRecvTS = m.getAttributes.get(APPROX_FIRST_RECEIVE_TS)
+      val sqm = SimpleQueueMessage(
+        if (sentTS != null) sentTS.toLong else 0,
         m.getMessageId,
         m.getReceiptHandle,
         m.getMD5OfBody,
         m.getBody
       )
+      log.info(s"[SQS.receive($queueUrl)] body=$body sentTS=$sentTS approxFirstRecvTS=$approxFirstRecvTS elapsed milliseconds:${System.currentTimeMillis - sqm.ts}")
+      sqm
     }
     res
   }
