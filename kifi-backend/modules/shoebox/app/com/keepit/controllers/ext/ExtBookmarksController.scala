@@ -21,7 +21,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.Some
 import play.api.libs.json.JsNumber
-import com.keepit.model.KeepToCollection
 
 private case class SendableBookmark(
   id: ExternalId[Bookmark],
@@ -48,8 +47,6 @@ class ExtBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   collectionRepo: CollectionRepo,
-  keepToCollectionRepo: KeepToCollectionRepo,
-  searchClient: SearchServiceClient,
   healthcheck: HealthcheckPlugin,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   bookmarksCommander: BookmarksCommander,
@@ -97,16 +94,7 @@ class ExtBookmarksController @Inject() (
 
   def clearTags() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
-    db.readWrite { implicit s =>
-      for {
-        u <- uriRepo.getByUri(url).toSeq
-        b <- bookmarkRepo.getByUri(u.id.get).toSeq
-        ktc <- keepToCollectionRepo.getByBookmark(b.id.get)
-      } {
-        keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-        collectionRepo.collectionChanged(ktc.collectionId)
-      }
-    }
+    bookmarksCommander.clearTags(url, request.userId)
     Ok(Json.obj())
   }
 
@@ -119,15 +107,7 @@ class ExtBookmarksController @Inject() (
 
   def tagsByUrl() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
-    val tags = db.readOnly { implicit s =>
-      for {
-        uri <- uriRepo.getByUri(url).toSeq
-        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).toSeq
-        collectionId <- keepToCollectionRepo.getCollectionsForBookmark(bookmark.id.get)
-      } yield {
-        collectionRepo.get(collectionId)
-      }
-    }
+    val tags = bookmarksCommander.tagsByUrl(url, request.userId)
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 

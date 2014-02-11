@@ -292,7 +292,7 @@ GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlControl
 GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
 GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration
 GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlController.batchURLMigration
-GET     /admin/data/redirect       @com.keepit.controllers.admin.UrlController.redirect(oldUrl: String ?= "", newUrl: String ?= "", canonical: Boolean ?= false)
+POST    /admin/data/normalization/submit       @com.keepit.controllers.admin.UrlController.submitNormalization
 GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
@@ -405,6 +405,10 @@ POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
+POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
+POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
+POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
+
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
@@ -422,6 +426,8 @@ GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
+
+GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
 
 ##########################################
 # Common Healthcheck / service routes

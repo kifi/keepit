@@ -25,4 +25,6 @@ object SchemeNormalizer {
     uri <- URI.safelyParse(url).toSeq
     normalization <- Normalization.schemes
   } yield (normalization, SchemeNormalizer(normalization)(uri).toString())
+
+  def findSchemeNormalization(url: String): Option[Normalization] = generateVariations(url).collectFirst { case (normalization, variation) if variation == url => normalization }
 }

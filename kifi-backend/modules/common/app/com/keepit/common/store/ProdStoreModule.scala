@@ -44,6 +44,13 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
+  def kifiInstallationStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifInstallationStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
+    new S3KifInstallationStoreImpl(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Singleton
+  @Provides
   def wordTopicStore(amazonS3Client: AmazonS3, accessLog: AccessLog): WordTopicStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
     new S3WordTopicStoreImpl(bucketName, amazonS3Client, accessLog)
@@ -102,6 +109,13 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
     whenConfigured("amazon.s3.article.bucket")(
       prodStoreModule.articleStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryArticleStoreImpl())
+
+  @Singleton
+  @Provides
+  def kifInstallationStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): KifInstallationStore =
+    whenConfigured("amazon.s3.install.bucket")(
+      prodStoreModule.kifiInstallationStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryKifInstallationStoreImpl())
 
   @Singleton
   @Provides

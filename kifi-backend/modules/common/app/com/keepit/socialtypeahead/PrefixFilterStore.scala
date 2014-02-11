@@ -6,8 +6,6 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.S3BlobStore
 import com.keepit.common.store.InMemoryObjectStore
-import com.keepit.serializer.Serializer
-import com.keepit.serializer.BinaryFormat
 import com.amazonaws.services.s3.AmazonS3
 import java.nio.ByteBuffer
 
