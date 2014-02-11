@@ -8,6 +8,8 @@ import java.util.concurrent.{Callable, TimeUnit}
 import com.google.common.cache.{CacheLoader, CacheBuilder}
 import play.api.libs.json.JsSuccess
 import com.google.common.util.concurrent.{ListenableFutureTask, ListenableFuture}
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.PimpMyFuture._
 
 case class KifiInstallationDetails(gold: KifiVersion, killed: Seq[KifiVersion])
 
@@ -23,30 +25,32 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
   private val s3Get = (id: String) => super.get(id)
   private val kifiInstallationKey = "browser_extension"
 
-  private val cachedValue = CacheBuilder.newBuilder().concurrencyLevel(1).maximumSize(4).refreshAfterWrite(5, TimeUnit.MINUTES).expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader[String, KifiInstallationDetails] {
+  private val cachedValue = CacheBuilder.newBuilder().concurrencyLevel(1).maximumSize(1).refreshAfterWrite(5, TimeUnit.MINUTES).expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader[String, KifiInstallationDetails] {
     override def load(key: String): KifiInstallationDetails = {
-      s3Get(key).getOrElse(defaultValue)
+      log.info("Loading KifiInstallationStore.")
+      defaultValue
     }
     override def reload(key: String, prev: KifiInstallationDetails): ListenableFuture[KifiInstallationDetails] = {
-      ListenableFutureTask.create(new Callable[KifiInstallationDetails] {
-        def call(): KifiInstallationDetails = {
-          s3Get(key).getOrElse(defaultValue)
-        }
-      })
+      log.info("Reloading KifiInstallationStore.")
+      SafeFuture(s3Get(key).getOrElse(defaultValue)).asListenableFuture
     }
   })
 
   override def get(id: String): Option[KifiInstallationDetails] = {
     Some(cachedValue(id))
   }
-  def get(): KifiInstallationDetails = cachedValue(kifiInstallationKey)
+  def get(): KifiInstallationDetails = cachedValue.get(kifiInstallationKey)
   def getRaw(): KifiInstallationDetails = s3Get(kifiInstallationKey).getOrElse(defaultValue)
   def set(newDetails: KifiInstallationDetails) = {
     super.+=(kifiInstallationKey, newDetails)
     cachedValue.put(kifiInstallationKey, newDetails)
   }
 
-  get() // load the cache
+  cachedValue.put(kifiInstallationKey, defaultValue)
+  SafeFuture {
+    log.info("First time load of KifiInstallationStore.")
+    cachedValue.put(kifiInstallationKey, s3Get(kifiInstallationKey).getOrElse(defaultValue))
+  }
 }
 
 object S3KifInstallationStoreImpl {
