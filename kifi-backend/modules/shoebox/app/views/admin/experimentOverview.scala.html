@@ -1,0 +1,68 @@
+@(experiments: Seq[com.keepit.controllers.admin.AdminExperimentInfo])
+
+
+@for(aei <- experiments) {
+  <div id="@{aei.name + "Action1"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="myModalLabel">Do Things</h3>
+    </div>
+    <div class="modal-body">
+        Action 1
+    </div>
+  </div>
+
+  <div id="@{aei.name + "Action2"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="myModalLabel">Do Things</h3>
+    </div>
+    <div class="modal-body">
+        Action 2
+    </div>
+  </div>
+
+  <div id="@{aei.name + "Action3"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="myModalLabel">You shouldn't have done that.</h3>
+    </div>
+    <div class="modal-body">
+        Thank you! All keeps ever have been deleted. SUCH a burden lifted off my shoulders. Please come again!
+        <img src="http://i.imgur.com/j1WC8LF.gif" />
+    </div>
+  </div>
+}
+
+@admin("Experiments"){
+  <table class="table table-condensed table-striped">
+    <thead>
+      <th>Experiment Name</th> <th># Users</th> <th>% Users</th> <th></th>
+    </thead>
+    <tbody>
+      @for(aei <- experiments) {
+          <tr>
+            <td>@aei.name</td>
+            <td>@aei.numUsers</td>
+            <td>@aei.percentage</td>
+            <td style="width: 50px;">
+              <div class="btn-group">
+                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+                  Action
+                  <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "Action1"}">Action 1</a>
+                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "Action2"}">Action 2</a>
+                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "Action3"}">Don't click this</a>
+                  </li>
+                </ul>
+              </div>
+              <!-- <button type="button" data-toggle="modal" data-target="#@aei.name" style="width: 100%;">Show</button> -->
+            </td>
+          </tr>
+      }
+    </tbody>
+  </table>
+}
