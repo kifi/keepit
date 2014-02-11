@@ -20,9 +20,8 @@ class AdminExperimentController @Inject() (actionAuthenticator: ActionAuthentica
       experimentRepo.getDistinctExperimentsWithCounts().toMap)
     }
 
-    //ZZZ reverse ++ ?
     val experimentInfos = (ExperimentType._ALL.zip(ExperimentType._ALL.map(_ => 0)).toMap ++ experimentsWithCount).map{ case (experimentType, userCount) =>
-      AdminExperimentInfo(experimentType.value, userCount, (100*userCount.toFloat/totalUserCount).toInt)
+      AdminExperimentInfo(experimentType.value, userCount, (100*userCount.toFloat/totalUserCount))
     }.toSeq.sortBy(_.name)
 
     Ok(views.html.admin.experimentOverview(experimentInfos))
