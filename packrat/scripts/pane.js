@@ -4,6 +4,7 @@
 // @require scripts/listen.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_top_menu.js
+// @require scripts/html/keeper/pane_settings.js
 // @require scripts/html/keeper/pane_notices.js
 // @require scripts/html/keeper/pane_thread.js
 
@@ -40,10 +41,15 @@ var pane = pane || function () {  // idempotent for Chrome
   });
 
   function toPaneName(locator) {
-    return /^\/messages\//.test(locator) ? 'thread' : 'notices';
+    switch (locator.substr(1, 9)) {
+      case 'settings': return 'settings';
+      case 'messages': return 'notices';
+      case 'messages:': return 'notices';
+      case 'messages/': return 'thread';
+    }
   }
 
-  var paneIdxs = ['notices', 'thread'];
+  var paneIdxs = ['notices', 'thread', 'settings'];
   function toPaneIdx(name) {
     return paneIdxs.indexOf(name);
   }
@@ -144,9 +150,7 @@ var pane = pane || function () {  // idempotent for Chrome
       .on('transitionend', function onPaneShown(e) {
         if (e.target !== this) return;
         $pane.off('transitionend', onPaneShown);
-        if (bringSlider) {
-          tile.style.display = 'block'; // in case sensitive
-        } else {
+        if (!bringSlider) {
           keeper.appendTo($pane);
           $pane.before(tile);
         }
@@ -245,12 +249,18 @@ var pane = pane || function () {  // idempotent for Chrome
           }
         }, 150);
       })
+      .on('mouseup', '.kifi-open-settings', function (e) {
+        if (e.originalEvent.isTrusted === false) return;
+        e.preventDefault();
+        $(this).closest('.kifi-pane-top-menu').triggerHandler('kifi:hide');
+        api.require('styles/keeper/settings.css', showPane.bind(null, '/settings'));
+      })
       .on("mouseup", ".kifi-sign-out", function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         api.port.emit("deauthenticate");
         setTimeout(function () {
-          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/k_gray.png') + '"/> button above.</kifi>')
+          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/k_gray.png') + '"/> icon above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, function () { $(this).remove(); });
         }, 150);
       })

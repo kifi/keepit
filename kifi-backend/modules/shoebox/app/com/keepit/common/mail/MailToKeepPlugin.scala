@@ -111,7 +111,7 @@ class MailToKeepActor @Inject() (
                     htmlBody =
                         s"<p>Hi ${user.firstName},</p>" +
                         s"<p>Congratulations! We added a $keepType keep for $uri.</p>" +
-                        "<p>Sincerely,<br>The kifi elves</p>"
+                        "<p>Sincerely,<br>The Kifi team</p>"
                   )
                 }
             }
@@ -130,7 +130,7 @@ class MailToKeepActor @Inject() (
       val newMessage = message.reply(false)
       postOffice.sendMail(ElectronicMail(
         from = EmailAddresses.NOTIFICATIONS,
-        fromName = Some("Kifi Elves"),
+        fromName = Some("Kifi Team"),
         to = List(new EmailAddressHolder {
           val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
         }),

@@ -98,7 +98,7 @@ object ApplicationBuild extends Build {
   lazy val abookDependencies = Seq()
 
   lazy val scraperDependencies = Seq(
-    "org.apache.httpcomponents" % "httpclient" % "4.3.2", // todo(andrew/ray): remove from common when all dependencies removed
+    "org.apache.httpcomponents" % "httpclient" % "4.3.2",
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.tika" % "tika-parsers" % "1.3"
   )

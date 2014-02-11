@@ -1,0 +1,41 @@
+<div class="kf-detail-pane" ng-show="keep">
+	<div class="kf-detail-scroll" antiscroll="{ autoHide: false }">
+		<div class="kf-detail-inner {{howKept}}">
+			<a class="kf-detail-x" href="javascript:"></a>
+			<div class="kf-page-meta" data-n="{{getLength()}}">
+				<h2 class="kf-detail-header page-title" ng-bind="getTitleText()"></h2>
+				<div kf-keep-detail ng-show="showSingleKeep()"></div>
+				<a class="kf-page-keep" href="javascript:"></a>
+				<a class="kf-page-priv" href="javascript:"></a>
+			</div>
+			<div ng-show="showSingleKeep()">
+				<div class="kf-page-who">
+					<h2 class="kf-detail-header">Who kept this:</h2>
+					<div class="kf-page-who-pics"></div>
+					<div class="kf-page-who-text"></div>
+				</div>
+				<div class="kf-page-chatter">
+					<h2 class="kf-detail-header">Talking about this Keep:</h2>
+					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
+				</div>
+			</div>
+			<div class="page-colls" ng-class="{ some: collections.length }">
+				<h2 class="kf-detail-header">Tags:</h2>
+				<ul class="page-coll-list">
+					<li class="page-coll" data-template data-id="{{id}}">
+						<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a>
+						<a class="page-coll-x" href="javascript:"></a>
+					</li>
+					<li class="page-coll-new" data-after-template>
+						<a class="page-coll-add" href="javascript:"></a>
+						<span class="page-coll-sizer" style="display:none"></span>
+						<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
+						<ul class="page-coll-opts" style="display:none">
+							<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</div>

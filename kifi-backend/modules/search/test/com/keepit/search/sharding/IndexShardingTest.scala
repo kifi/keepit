@@ -17,10 +17,14 @@ import com.keepit.test._
 import scala.math._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import scala.concurrent._
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class IndexShardingTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   implicit private val activeShards =  (new ActiveShardsSpecParser).parse(Some("0,1/2"))
+  val emptyFuture = Future.successful(Set[Long]())
 
   "ShardedArticleIndexer" should {
     "create index shards" in {
@@ -41,7 +45,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
@@ -117,7 +121,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
@@ -189,7 +193,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           (fakeShoeboxClient.saveURIs(uris:_*), fakeShoeboxClient)
         }
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, _, mainSearcherFactory) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update() === 5                // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE))   // a4
@@ -217,7 +221,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           normalizedUrl = "http://www.keepit.com/article" + n, state = state)}.toList
         val savedUris = shoebox.saveURIs(uris :_*)
         val store = mkStore(savedUris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, _, mainSearcherFactory) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update === 5
         indexer.catchUpSeqNumber.value === 10

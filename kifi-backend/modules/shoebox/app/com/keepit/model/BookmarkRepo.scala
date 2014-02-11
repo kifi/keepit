@@ -90,8 +90,6 @@ class BookmarkRepoImpl @Inject() (
 
   override def save(model: Bookmark)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
-    for (bid <- model.id; cid <- keepToCollectionRepo.getCollectionsForBookmark(bid))
-      collectionRepo.collectionChanged(cid)
     super.save(newModel.clean())
   }
 
@@ -182,7 +180,7 @@ class BookmarkRepoImpl @Inject() (
       case (None, Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
-                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
+                and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
                 order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
@@ -193,7 +191,7 @@ class BookmarkRepoImpl @Inject() (
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
                 where kc.collection_id = ${collectionId.id} and bm.user_id = ${userId.id} and bm.state = '#${BookmarkStates.ACTIVE.value}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE.value}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get.id}))
-                and (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
+                and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get.id}))
                 order by bm.created_at desc, bm.id desc limit $count;"""
     }
     interpolated.as[Bookmark].list

@@ -67,11 +67,11 @@ class SearchController @Inject()(
 
   def searchWithConfig() = Action(parse.json){ request =>
     val js = request.body
-    val userId = (js \ "userId").as[Long]
+    val userId = Id[User]((js \ "userId").as[Long])
     val query = (js \ "query").as[String]
     val maxHits = (js \ "maxHits").as[Int]
     val predefinedConfig = (js \ "config").as[Map[String, String]]
-    val res = searchCommander.search(Id[User](userId), acceptLangs = Seq(), noSearchExperiments = false, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)), start = None, end = None, tz = None, coll = None)
+    val res = searchCommander.search(userId, acceptLangs = Seq(), noSearchExperiments = false, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)), start = None, end = None, tz = None, coll = None)
     Ok(JsArray(res.hits.map{ x =>
       val id = x.uriId.id
       val title = x.bookmark.title.getOrElse("")

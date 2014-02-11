@@ -22,7 +22,8 @@ class ServiceClusterTest extends Specification {
     availabilityZone = "us-west-1b",
     securityGroups = "default",
     amiId = "ami-1bf9de5e",
-    amiLaunchIndex = "0"
+    amiLaunchIndex = "0",
+    loadBalancer = Some("some-elb")
   )
 
   val remoteService1 = RemoteService(instance1, ServiceStatus.UP, ServiceType.TEST_MODE)
@@ -39,7 +40,8 @@ class ServiceClusterTest extends Specification {
     availabilityZone = "us-west-1a",
     securityGroups = "default",
     amiId = "ami-1bf9de5f",
-    amiLaunchIndex = "1"
+    amiLaunchIndex = "1",
+    loadBalancer = Some("some-elb")
   )
 
   val remoteService2 = RemoteService(instance2, ServiceStatus.UP, ServiceType.TEST_MODE)
@@ -56,7 +58,8 @@ class ServiceClusterTest extends Specification {
     availabilityZone = "us-west-1a",
     securityGroups = "default",
     amiId = "ami-1bf9de5f",
-    amiLaunchIndex = "1"
+    amiLaunchIndex = "1",
+    loadBalancer = Some("some-elb")
   )
 
   val remoteService3 = RemoteService(instance3, ServiceStatus.UP, ServiceType.TEST_MODE)
