@@ -187,7 +187,7 @@
 .kifi-res-menu {
   z-index: 999;
   right: 4px;
-  top: 25px;
+  top: -1px;
   white-space: nowrap;
   font-size: 13px;
   line-height: 40px;
@@ -199,9 +199,10 @@
   display: none;
   position: absolute;
   border-style: solid;
-  border-color: inherit;
+  border-color: #e5e7e8;
   border-width: 1px 1px 0;
-  background-color: inherit;
+  background-color: #fafafa;
+  color: #929496;
 }
 .kifi-res-submenu {
   left: 100%;
