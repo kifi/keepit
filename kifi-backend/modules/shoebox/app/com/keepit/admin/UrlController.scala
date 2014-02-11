@@ -14,7 +14,7 @@ import com.keepit.integrity.OrphanCleaner
 import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.UriIntegrityPlugin
-import com.keepit.normalizer.{NormalizationReference, NormalizationService, VerifiedCandidate}
+import com.keepit.normalizer._
 import com.keepit.model.DuplicateDocument
 import com.keepit.common.healthcheck.{SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier}
 import com.keepit.integrity.HandleDuplicatesAction
@@ -235,20 +235,34 @@ class UrlController @Inject() (
     Ok(html.admin.renormalizationView(info, page, totalCount, pageCount, PAGE_SIZE))
   }
 
-  def redirect(oldUrl: String, newUrl: String, canonical: Boolean = false) = AdminHtmlAction.authenticated { request =>
-    db.readOnly { implicit session =>
-      (uriRepo.getByUri(oldUrl), uriRepo.getByUri(newUrl)) match {
-        case (None, _) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUrl} could not be found.")
-        case (_, None) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUrl} could not be found.")
-        case (_, Some(newUri)) if newUri.normalization.isEmpty && !canonical =>
-          Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${newUri.id.get}: ${newUri.url} isn't normalized.")
-        case (Some(oldUri), Some(newUri)) => {
-          val normalization = if (canonical) Normalization.CANONICAL else newUri.normalization.get
-          val result = monitoredAwait.result(normalizationService.update(NormalizationReference(oldUri), VerifiedCandidate(newUri.url, normalization)), 1 minute, "Manual normalization update failed.")
-          if (result.isDefined)
-            Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUri.id.get}: ${newUri.url}")
-          else
-            Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} cannot be redirected to ${newUri.id.get}: ${newUri.url}")
+  def submitNormalization = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    val candidateUrl = body("candidateUrl")
+    val candidateOpt = body.get("candidateNormalization").collect {
+      case normalizationStr: String if normalizationStr.nonEmpty => (Normalization(normalizationStr))
+    } orElse SchemeNormalizer.findSchemeNormalization(candidateUrl) map {
+      case normalization => ScrapedCandidate(candidateUrl, normalization)
+    }
+
+    candidateOpt match {
+      case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"A normalization candidate could not be constructed for $candidateUrl."))
+      case Some(candidate) => {
+        val referenceUrl = body("referenceUrl")
+        db.readOnly { implicit session => uriRepo.getByUri(referenceUrl) } match {
+          case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${referenceUrl} could not be found."))
+          case Some(oldUri) => {
+            val correctedNormalization = body.get("correctNormalization").flatMap {
+              case "reset" => SchemeNormalizer.findSchemeNormalization(referenceUrl)
+              case normalization if normalization.nonEmpty => Some(Normalization(normalization))
+              case _ => None
+            }
+
+            val reference = NormalizationReference(oldUri, isNew = false, correctedNormalization = correctedNormalization)
+            normalizationService.update(reference, candidate).map {
+              case Some(newUriId) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUriId}")
+              case None => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} could not be redirected to $candidateUrl")
+            }
+          }
         }
       }
     }

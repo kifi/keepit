@@ -15,6 +15,7 @@ trait UserExperimentRepo extends Repo[UserExperiment] with RepoWithDelete[UserEx
          (implicit session: RSession): Option[UserExperiment]
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment]
   def hasExperiment(userId: Id[User], experimentType: ExperimentType)(implicit session: RSession): Boolean
+  def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(ExperimentType, Int)]
 }
 
 @Singleton
@@ -78,6 +79,14 @@ class UserExperimentRepoImpl @Inject()(
       f <- rows if f.experimentType === experiment && f.state === UserExperimentStates.ACTIVE
     } yield f
     q.list
+  }
+
+  def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(ExperimentType, Int)] = {
+    import scala.slick.jdbc.StaticQuery.interpolation
+    val query = sql"SELECT experiment_type, COUNT(*) FROM user_experiment WHERE state='active' GROUP BY experiment_type;"
+    query.as[(String, Int)].list.map{ case (name, count) =>
+      (ExperimentType(name), count)
+    }
   }
 
 }

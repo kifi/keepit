@@ -48,6 +48,8 @@ object ExperimentType {
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
   val SELF_MESSAGE = ExperimentType("self_message")
 
+  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE :: CAN_INVITE :: GMAIL_INVITE :: CAN_CONNECT :: CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SELF_MESSAGE :: Nil
+
   def get(str: String): ExperimentType = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
     case AUTO_GEN.value => AUTO_GEN
