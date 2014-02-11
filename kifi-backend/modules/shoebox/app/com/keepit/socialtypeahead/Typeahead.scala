@@ -24,18 +24,29 @@ trait Typeahead[E, I] {
 
   protected def extractName(info: I): String
 
-  def search(userId: Id[User], query: String): Option[Seq[I]] = {
+  implicit val hitOrdering = TypeaheadHit.defaultOrdering[I]
+
+  def search(userId: Id[User], query: String)(implicit ord: TypeaheadHit[I]): Option[Seq[I]] = {
     if (query.trim.length > 0) {
-      getPrefixFilter(userId).map{ filter =>
+      getPrefixFilter(userId).flatMap{ filter =>
         val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-        var ordinal = 0
-        getInfos(filter.filterBy(queryTerms)).map{ info =>
-          ordinal += 1
-          (info, PrefixMatching.distance(extractName(info), queryTerms).toDouble + 1.0d - (1.0d/ordinal))
-        }.collect{ case (info, score) if score < 1000000.0d => (info, score) }.toSeq
-        .sortBy(_._2)
-        .map(_._1)
+        search(getInfos(filter.filterBy(queryTerms)), queryTerms)
       }
+    } else {
+      None
+    }
+  }
+
+  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: TypeaheadHit[I]): Option[Seq[I]] = {
+    if (queryTerms.length > 0) {
+      var ordinal = 0
+      val hits = infos.map{ info =>
+        ordinal += 1
+        val name = PrefixFilter.normalize(extractName(info))
+        TypeaheadHit(PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
+      }.collect{ case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem }.sorted.map(_.info)
+
+      Some(hits)
     } else {
       None
     }
@@ -53,4 +64,21 @@ trait Typeahead[E, I] {
     }
   }
 }
+
+object TypeaheadHit {
+  def defaultOrdering[I] = new Ordering[TypeaheadHit[I]] {
+    def compare(x: TypeaheadHit[I], y: TypeaheadHit[I]): Int = {
+      var cmp = (x.score compare y.score)
+      if (cmp == 0) {
+        cmp = x.name compare y.name
+        if (cmp == 0) {
+          cmp = x.ordinal compare y.ordinal
+        }
+      }
+      cmp
+    }
+  }
+}
+
+case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
 
