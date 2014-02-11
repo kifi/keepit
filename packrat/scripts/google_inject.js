@@ -564,9 +564,10 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   function collapseResults() {
-    $res.find('.kifi-res-box').slideUp(200);
-    $bar.addClass('kifi-collapsed').removeClass('kifi-preview');
-    $status.attr('href', 'javascript:').removeAttr('data-n');
+    $res.find('.kifi-res-box').slideUp(200, function () {
+      $bar.addClass('kifi-collapsed').removeClass('kifi-preview');
+      $status.attr('href', 'javascript:').removeAttr('data-n');
+    });
   }
 
   function attachResults() {
