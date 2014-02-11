@@ -21,9 +21,9 @@ import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.search.SearchServiceClient
-import com.keepit.socialtypeahead.PrefixFilter
-import com.keepit.socialtypeahead.PrefixMatching
-import com.keepit.socialtypeahead.TypeaheadHit
+import com.keepit.typeahead.PrefixFilter
+import com.keepit.typeahead.PrefixMatching
+import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
 import play.api.Play
 import play.api.Play.current
