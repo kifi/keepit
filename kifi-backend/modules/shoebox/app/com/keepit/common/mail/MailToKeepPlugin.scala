@@ -89,7 +89,12 @@ class MailToKeepActor @Inject() (
               case (None, _) =>
                 sendReply(
                   message = message,
-                  htmlBody = s"<p>Kifi could not find a user for $senderAddr.</p>"
+                  htmlBody = s"""|Hi There, <br><br>
+                    |We couldn't keep this page for you because the email address you sent this email form ($senderAddr) is not associated with any kifi account. <br><br>
+                    |How to resolve this? <br>
+                    |Go to <a href="http://www.kifi.com/profile">http://www.kifi.com/profile</a> open the "Manage your email addresses" section and add this email to be recoginzed with your Kifi account. <br><br>
+                    |Thanks! <br>
+                    |The Kifi Team""".stripMargin
                 )
               case (Some(user), Seq()) =>
                 sendReply(
