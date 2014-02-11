@@ -28,7 +28,7 @@ var pane = pane || function () {  // idempotent for Chrome
   var $pane, paneHistory, paneObserver;
 
   $(document).data('esc').add(function () {
-    if ($pane) {
+    if ($pane && $pane.data('state') === 'open') {
       hidePane();
       return false;
     }
@@ -102,6 +102,7 @@ var pane = pane || function () {  // idempotent for Chrome
   function showPaneContinued(locator, back, name, params) {  // only called by showPane
     log("[showPaneContinued]", locator, name)();
     if ($pane) {
+      // TODO: abort if state !== 'open'
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
       keeper.onPaneChange(locator);
       var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden").layout();
@@ -303,11 +304,10 @@ var pane = pane || function () {  // idempotent for Chrome
     .off('transitionend') // onPaneShown
     .on('transitionend', function (e) {
       if (e.target === this) {
-        cleanUpDom(this);
+        cleanUpDom();
       }
     });
     api.port.emit('pane', {old: $pane[0].dataset.locator});
-    $pane = paneHistory = null;
     $('html').removeAttr('kifi-with-pane');
   }
 
@@ -355,23 +355,27 @@ var pane = pane || function () {  // idempotent for Chrome
           }
         }
       }
-    } else if ($pane) {
-      cleanUpDom($pane[0]);
-    } else if (document.documentElement.hasAttribute('kifi-pane-parent')) {
+    } else {
       cleanUpDom();
     }
   }
 
-  function cleanUpDom(pane) {
-    if (pane) {
-      $(pane).find('.kifi-pane-box').triggerHandler('kifi:remove');
-      api.port.emit('pane', {old: pane.dataset.locator});
+  function cleanUpDom() {
+    if (paneObserver) {
+      paneObserver.disconnect();
+      paneObserver = null;
     }
-    if (paneObserver) paneObserver.disconnect();
-    $pane = paneHistory = paneObserver = null;
-    $(pane).remove();
-    $('html').removeAttr('kifi-pane-parent kifi-with-pane');
-    notifyPageOfResize();
+    if ($pane) {
+      $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
+      api.port.emit('pane', {old: $pane[0].dataset.locator});
+      $pane.remove();
+      $pane = null;
+    }
+    paneHistory = null;
+    if (document.documentElement.hasAttribute('kifi-pane-parent')) {
+      $('html').removeAttr('kifi-pane-parent kifi-with-pane');
+      notifyPageOfResize();
+    }
   }
 
   function populatePane($box, name, locator) {
@@ -411,7 +415,9 @@ var pane = pane || function () {  // idempotent for Chrome
     toggle: function (trigger, locator) {
       locator = locator || '/messages:all';
       if ($pane) {
-        if (window.toaster && toaster.showing()) {
+        if ($pane.data('state') === 'closing') {
+          log('[pane.toggle] ignoring, hiding')();
+        } else if (window.toaster && toaster.showing()) {
           toaster.hide();
           showPane(locator);
         } else if (locator === paneHistory[0]) {
@@ -419,17 +425,17 @@ var pane = pane || function () {  // idempotent for Chrome
         } else {
           showPane(locator);
         }
-      } else if ($('html').attr('kifi-pane-parent') == null) { // ensure it's finished hiding
-        showPane(locator);
       } else {
-        log('[pane.toggle] ignoring, hiding')();
+        showPane(locator);
       }
     },
     compose: function(trigger, recipient) {
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
         if ($pane) {
-          withPane();
+          if ($pane.data('state') !== 'closing') {
+            withPane();
+          }
         } else {
           showPane('/messages:all').then(withPane);
         }
@@ -455,13 +461,6 @@ var pane = pane || function () {  // idempotent for Chrome
       if ($pane) {
         $pane.removeClass('kifi-shaded');
       }
-    },
-    getLocator: function () {
-      return $pane && $pane[0].dataset.locator || null;
-    },
-    getThreadId: function () {
-      var locator = this.getLocator();
-      return locator && locator.split('/')[2];
     },
     pushState: function(loc) {
       if (paneHistory[0] !== loc) {
