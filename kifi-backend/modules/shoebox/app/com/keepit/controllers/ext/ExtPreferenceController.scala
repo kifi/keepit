@@ -75,7 +75,7 @@ class ExtPreferenceController @Inject() (
   }
 
   def setMaxResults(n: Int) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(1, n), 3).toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(0, n), 3).toString))
     Ok(JsNumber(0))
   }
 
