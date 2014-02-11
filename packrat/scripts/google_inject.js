@@ -464,12 +464,13 @@ if (searchUrlRe.test(document.URL)) !function() {
           ($status.is('[href]:visible') ? $status : $arrow).triggerHandler('click');
         }
       }
-    }).on('mousedown', '.kifi-res-bar-menu-a', function (e) {
+    });
+    $res.on('mousedown', '.kifi-res-menu-a', function (e) {
       if (e.which > 1) return;
       e.preventDefault();
       var $a = $(this).addClass('kifi-active');
-      var $menu = $a.next('.kifi-res-bar-menu').fadeIn(50);
-      var $items = $menu.find('.kifi-res-bar-menu-item')
+      var $menu = $a.next('.kifi-res-menu').fadeIn(50);
+      var $items = $menu.find('.kifi-res-menu-item')
         .on('mouseenter', enterItem)
         .on('mouseleave', leaveItem);
       var $leaves = $items.filter('a').on('mouseup', hide);
@@ -519,8 +520,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');
       var n = +$this.text();
       api.port.emit('set_max_results', n);
-    });
-    $res.on('click', '.kifi-filter[href]', function (e, alreadySearched) {
+    }).on('click', '.kifi-filter[href]', function (e, alreadySearched) {
       if (e.which > 1) return;
       var $v = $(this).removeAttr('href');
       $v.siblings(':not([href])').attr('href', 'javascript:').filter('.kifi-filter-all').removeAttr('data-n');
