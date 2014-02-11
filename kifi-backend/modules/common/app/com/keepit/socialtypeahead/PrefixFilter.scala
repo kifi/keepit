@@ -1,10 +1,8 @@
 package com.keepit.socialtypeahead
 
 import com.keepit.common.db.Id
-import com.keepit.common.strings._
 import scala.collection.mutable.ArrayBuffer
 import scala.math.min
-import java.io._
 import java.text.Normalizer
 
 object PrefixFilter {
