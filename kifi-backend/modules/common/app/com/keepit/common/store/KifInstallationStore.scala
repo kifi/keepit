@@ -29,12 +29,15 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
 
   private val cachedValue = CacheBuilder.newBuilder().concurrencyLevel(1).maximumSize(1).refreshAfterWrite(5, TimeUnit.MINUTES).expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader[String, KifiInstallationDetails] {
     override def load(key: String): KifiInstallationDetails = {
-      log.info("Loading KifiInstallationStore.")
+      log.info("Loading KifiInstallationStore. Giving default value :(")
       defaultValue
     }
     override def reload(key: String, prev: KifiInstallationDetails): ListenableFuture[KifiInstallationDetails] = {
-      log.info("Reloading KifiInstallationStore.")
-      SafeFuture(s3Get(key).getOrElse(defaultValue)).asListenableFuture
+      log.info(s"Reloading KifiInstallationStore. Current gold: ${prev.gold.toString}")
+      SafeFuture(s3Get(key).getOrElse(defaultValue)).map { v =>
+        log.info(s"Reloading KifiInstallationStore complete. New gold: ${v.gold.toString}")
+        v
+      }.asListenableFuture
     }
   })
 
@@ -51,7 +54,9 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
   cachedValue.put(kifiInstallationKey, defaultValue)
   SafeFuture {
     log.info("First time load of KifiInstallationStore.")
-    cachedValue.put(kifiInstallationKey, s3Get(kifiInstallationKey).getOrElse(defaultValue))
+    val loaded = s3Get(kifiInstallationKey).getOrElse(defaultValue)
+    cachedValue.put(kifiInstallationKey, loaded)
+    log.info(s"First time load of KifiInstallationStore complete. New gold version: ${loaded.gold.toString}")
   }
 }
 
