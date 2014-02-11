@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model.{User, SocialUserInfo, ExperimentType}
+import com.keepit.model.{KifiVersion, User, SocialUserInfo, ExperimentType}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -13,6 +13,8 @@ import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.commanders.RemoteUserExperimentCommander
+import scala.util.Try
+import com.keepit.common.KestrelCombinator
 
 import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -35,6 +37,8 @@ import securesocial.core.{Authenticator, UserService, SecureSocial}
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
+import com.keepit.common.net.UserAgent
+import com.keepit.common.store.KifInstallationStore
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
@@ -60,6 +64,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val heimdal: HeimdalServiceClient
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   protected val userExperimentCommander: RemoteUserExperimentCommander
+  val kifInstallationStore: KifInstallationStore
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -75,7 +80,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        Future {
+        SafeFuture {
           try {
             f(e)
           } catch {
@@ -170,6 +175,34 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
         val handlers = websocketHandlers(socketInfo)
 
+        val needsToUpdate = {
+          // We only support force updates to Chrome. Other platforms (mobile) can hook in here as well.
+          if (UserAgent.fromString(streamSession.userAgent).name == "Chrome") {
+            versionOpt.flatMap(v => Try(KifiVersion(v)).toOption) match {
+              case Some(ver) =>
+                val details = kifInstallationStore.get()
+                val lessThanGold = ver < details.gold
+                val runningKilledVersion = details.killed.contains(ver)
+                if (lessThanGold) {
+                  log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
+                }
+                if (runningKilledVersion) {
+                  log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
+                }
+                lessThanGold || runningKilledVersion
+              case None => false
+            }
+          } else {
+            false
+          }
+        }
+
+        var startMessages = Seq[JsArray](Json.arr("hi"))
+
+        if (needsToUpdate) {
+          val details = kifInstallationStore.get()
+          startMessages = startMessages :+ Json.arr("version", details.gold.toString)
+        }
 
         onConnect(socketInfo)
 
@@ -202,7 +235,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         }.map(_ => endSession("Session ended"))
 
 
-        (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
+        (iteratee, Enumerator(startMessages: _*) >>> enumerator)
       }
       case None => Future {
         Statsd.increment(s"websocket.anonymous")
