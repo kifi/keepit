@@ -5,11 +5,14 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time.Clock
-import scala.Some
 import com.keepit.common.net.UserAgent
+import scala.slick.jdbc.{PositionedResult, GetResult}
+import org.joda.time.DateTime
+import com.keepit.common.time.zones
 
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
+  def getLatestActive(count: Int)(implicit session: RSession): Seq[(KifiVersion, DateTime, Int)]
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
 }
@@ -30,6 +33,19 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
 
   def table(tag: Tag) = new KifiInstallationTable(tag)
   initTable()
+
+  implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] {
+    def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC)
+  }
+
+  def getLatestActive(count: Int)(implicit session: RSession): Seq[(KifiVersion, DateTime, Int)] = {
+    import scala.slick.jdbc.StaticQuery.interpolation
+    // select version,min(updated_at) as min, count(*) as count from kifi_installation group by version having count > 3 order by min desc limit 20;
+    val interpolated = sql"""select version, min(updated_at) as min, count(*) as c from kifi_installation group by version order by min desc limit $count"""
+    interpolated.as[(String, DateTime, Int)].list().map { case (versionStr, max, count) =>
+      (KifiVersion(versionStr), max, count)
+    }.sortWith((a,b) => a._1 > b._1)
+  }
 
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation] =
     (for(k <- rows if k.userId === userId && k.state =!= excludeState.orNull) yield k).list

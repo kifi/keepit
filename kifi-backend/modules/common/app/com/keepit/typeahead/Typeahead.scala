@@ -1,4 +1,4 @@
-package com.keepit.socialtypeahead
+package com.keepit.typeahead
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id

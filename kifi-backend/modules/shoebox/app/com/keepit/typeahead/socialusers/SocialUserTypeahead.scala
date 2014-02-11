@@ -1,4 +1,4 @@
-package com.keepit.socialtypeahead.socialusers
+package com.keepit.typeahead.socialusers
 
 import com.keepit.common.cache.BinaryCacheImpl
 import com.keepit.common.cache.CacheStatistics
@@ -15,10 +15,10 @@ import com.keepit.model.SocialUserBasicInfoCache
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.serializer.ArrayBinaryFormat
-import com.keepit.socialtypeahead.PrefixFilter
-import com.keepit.socialtypeahead.PrefixFilterStore
-import com.keepit.socialtypeahead.Typeahead
-import com.keepit.socialtypeahead.S3PrefixFilterStoreImpl
+import com.keepit.typeahead.PrefixFilter
+import com.keepit.typeahead.PrefixFilterStore
+import com.keepit.typeahead.Typeahead
+import com.keepit.typeahead.S3PrefixFilterStoreImpl
 import scala.concurrent.duration.Duration
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3

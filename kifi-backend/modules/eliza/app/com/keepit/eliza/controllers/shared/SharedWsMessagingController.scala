@@ -23,6 +23,7 @@ import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import scala.concurrent.Future
+import com.keepit.common.store.KifInstallationStore
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -37,7 +38,8 @@ class SharedWsMessagingController @Inject() (
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    protected val userExperimentCommander: RemoteUserExperimentCommander
+    protected val userExperimentCommander: RemoteUserExperimentCommander,
+    val kifInstallationStore: KifInstallationStore
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -54,9 +56,7 @@ class SharedWsMessagingController @Inject() (
 
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
-      log.info(s"Received ping from user ${socket.userId} on socket ${socket.id}")
       socket.channel.push(Json.arr("pong"))
-      log.info(s"Sent pong to user ${socket.userId} on socket ${socket.id}")
     },
     "stats" -> { _ =>
       val stats = Json.obj(
@@ -69,7 +69,6 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
-        log.info(s"[get_thread] got messages: $msgs")
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
           messagingCommander.modifyMessageWithAuxData(m)

@@ -1,4 +1,4 @@
-package com.keepit.socialtypeahead
+package com.keepit.typeahead
 
 import com.keepit.common.db.Id
 import com.keepit.common.store.ObjectStore
@@ -6,8 +6,6 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.S3BlobStore
 import com.keepit.common.store.InMemoryObjectStore
-import com.keepit.serializer.Serializer
-import com.keepit.serializer.BinaryFormat
 import com.amazonaws.services.s3.AmazonS3
 import java.nio.ByteBuffer
 

@@ -323,7 +323,8 @@ var api = function() {
     }
   }
 
-  var doLogging = false;
+  var isPackaged = !!chrome.runtime.getManifest().update_url;
+  var doLogging = !isPackaged;
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
@@ -446,9 +447,9 @@ var api = function() {
       selectedTabIds: selectedTabIds
     },
     isPackaged: function() {
-      return !!chrome.runtime.getManifest().update_url;
+      return isPackaged;
     },
-    loadReason: "enable",  // assuming "enable" by elimination
+    loadReason: 'enable',  // by elimination
     mode: {
       isDev: function () {
         return localStorage[':mode'] === 'dev';

@@ -1,15 +1,13 @@
-package com.keepit.socialtypeahead
+package com.keepit.typeahead
 
 import com.keepit.common.db.Id
-import com.keepit.common.strings._
 import scala.collection.mutable.ArrayBuffer
 import scala.math.min
-import java.io._
 import java.text.Normalizer
 
 object PrefixFilter {
 
-  private[socialtypeahead] def eval[T](filter: PrefixFilter[T], query: Array[String]): ArrayBuffer[Id[T]] = {
+  private[typeahead] def eval[T](filter: PrefixFilter[T], query: Array[String]): ArrayBuffer[Id[T]] = {
     val in = filter.data
 
     in(0) match {
@@ -40,7 +38,7 @@ object PrefixFilter {
   private[this] val numHashFuncs = Array(8, 4, 2, 1) // asymmetric bloom filter
   @inline private[this] def next(v: Int): Int = (v * 1103515245 + 12345) // linear congruential generator
 
-  private[socialtypeahead] def genFilter(token: String): Long = {
+  private[typeahead] def genFilter(token: String): Long = {
     var filter = 0L
     val maxPrefixLen = min(numHashFuncs.length, token.length)
     var i = 0
