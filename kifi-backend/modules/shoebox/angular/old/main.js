@@ -361,43 +361,6 @@ $(function () {
 	function collIdAndName(id) {
 		return {id: id, name: collections[id].name};
 	}
-
-	function showKeepDetails() {
-		var $r = $detail.off('transitionend'),
-			d;
-		if ($r.css('display') === 'block') {
-			d = $r[0].getBoundingClientRect().left - $main[0].getBoundingClientRect().right;
-		} else {
-			$r.css({
-				display: 'block',
-				visibility: 'hidden',
-				transform: ''
-			});
-			d = $(window).width() - $r[0].getBoundingClientRect().left;
-		}
-		$r.css({
-			visibility: '',
-			transform: 'translate(' + d + 'px,0)',
-			transition: 'none'
-		});
-		$r.layout();
-		$r.css({
-			transform: '',
-			transition: '',
-			'transition-timing-function': 'ease-out'
-		});
-	}
-	function hideKeepDetails() {
-		var d = $(window).width() - $main[0].getBoundingClientRect().right;
-		$detail.on('transitionend', function end(e) {
-			if (e.target === this) {
-				$(this).off('transitionend').css({
-					display: '',
-					transform: ''
-				});
-			}
-		}).css({transform: 'translate(' + d + 'px,0)', 'transition-timing-function': 'ease-in'});
-	}
 	function updateKeepDetails() {
 		hideUndo();
 		var $detailed = $main.find('.keep.detailed');
@@ -456,9 +419,9 @@ $(function () {
 				detailTmpl.render(o);
 			}
 			inCollTmpl.into($detail.find('.page-coll-list')[0]).render(o.collections);
-			showKeepDetails();
+			//showKeepDetails();
 		} else {
-			hideKeepDetails();
+			//hideKeepDetails();
 		}
 	}
 
@@ -2831,7 +2794,7 @@ $(function () {
 				}
 				else {
 					keepsTmpl.into($results[0]).render(data.hits);
-					hideKeepDetails();
+					//hideKeepDetails();
 				}
 
 				$checkAll.removeClass('checked');
@@ -3056,7 +3019,7 @@ $(function () {
 		if ($myKeeps.data('collId') !== collId || !('collId' in $myKeeps.data())) {
 			$myKeeps.data('collId', collId).empty();
 			lastKeep = null;
-			hideKeepDetails();
+			//hideKeepDetails();
 			loadKeeps(collId);
 		} else {
 			var numShown = $myKeeps.find('.keep').length;
@@ -3455,7 +3418,7 @@ $(function () {
 		default:
 			return;
 		}
-		hideKeepDetails();
+		//hideKeepDetails();
 		kifiTracker.view('/' + hash);
 	});
 
@@ -3796,7 +3759,7 @@ $(function () {
 		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', $keeps.map(getDataId).get(), function (data) {
 			if ($collList.find('.collection.active').data('id') === collId) {
 				var $titles = obliviate($keeps);
-				hideKeepDetails();
+				//hideKeepDetails();
 				showUndo(
 					($keeps.length > 1 ? $keeps.length + ' Keeps' : 'Keep') + ' removed from this tag.',
 					undoRemoveFromCollection.bind(null, collId, $keeps, $titles),
@@ -3845,7 +3808,7 @@ $(function () {
 	});
 	$detail.on('click', '.page-x', function () {
 		$main.find('.keep.detailed').removeClass('detailed');
-		hideKeepDetails();
+		//hideKeepDetails();
 	})
 	.on('click', '.page-keep,.page-priv', function (e) {
 		var $keeps = $main.find('.keep.detailed');
@@ -3882,7 +3845,7 @@ $(function () {
 				});
 				var $keepsGoing = $keeps.not($keepsStaying);
 				var $titles = obliviate($keepsGoing);
-				hideKeepDetails();
+				//hideKeepDetails();
 				showUndo(
 					$keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.',
 					undoUnkeep.bind(null, $keeps, $titles),
