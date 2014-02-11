@@ -59,7 +59,7 @@ object S3KifInstallationStoreImpl {
 
 class InMemoryKifInstallationStoreImpl extends InMemoryObjectStore[String, KifiInstallationDetails] with KifInstallationStore {
   private val kifiInstallationKey = "browser_extension"
-  def get(): KifiInstallationDetails = get(kifiInstallationKey).get
+  def get(): KifiInstallationDetails = get(kifiInstallationKey).getOrElse(defaultValue)
   def getRaw(): KifiInstallationDetails = get()
   def set(newDetails: KifiInstallationDetails) = {
     super.+=(kifiInstallationKey, newDetails)
