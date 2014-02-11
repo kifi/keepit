@@ -71,7 +71,6 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
-        log.info(s"[get_thread] got messages: $msgs")
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
           messagingCommander.modifyMessageWithAuxData(m)
