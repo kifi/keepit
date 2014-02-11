@@ -159,7 +159,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.show && resp.hits.length && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
+      var showAny = Boolean(resp.show && resp.hits.length && resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit, resp);
