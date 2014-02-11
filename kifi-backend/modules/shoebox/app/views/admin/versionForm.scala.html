@@ -65,17 +65,24 @@
 
 .nuked {
   display: inline-block;
-  cursor: pointer;
+  cursor: default;
   color: #220000;
   font-family: arial;
   font-size: 30px;
   font-weight: bold;
   padding: 0px 20px 0px 20px;
 }
+.unnuke {
+  font-size: 10px;
+}
 
 .version {
   font-size: 18px;
   font-weight:bold;
+}
+
+td.old-version {
+  color: #999999;
 }
 </style>
 
@@ -100,11 +107,11 @@
       </tr>
       } else {
       <tr>
-        <td class="version">@version._1</td>
+        <td class="version@if(version._1 < details.gold){ old-version}">@version._1</td>
         <td>@adminHelper.dateTimeDisplay(version._2)</td>
         <td>@version._3</td>
         <td>@if(details.killed.contains(version._1)) {
-          <span class="nuked">☠</span>
+          <span class="nuked">☠</span> <a class="unnuke" href="javascript:">(un-kill it?)</span>
         } else {
           <a href="#" class="gold">make it gold!</a> <a href="#" class="nuke">毙 kill it</a>
         }</td>
@@ -131,10 +138,7 @@ $(function() {
     var version = $self.parents('tr').find('.version').text();
     $.post(killAction.replace('X', version))
     .done(function () {
-      console.log("OKKKKK!", $self, this)
-      $self.after($("<i class=icon-ok-sign style=margin-left:10px>").delay(1000).fadeOut(function() {
-        $(this).remove();
-      }));
+      location.reload();
     });
   });
 
@@ -144,10 +148,17 @@ $(function() {
     var version = $(this).parents('tr').find('.version').text();
     $.post(goldAction.replace('X', version))
     .done(function () {
-      console.log("YOU DID IT NOW!", $self, this)
-      $self.after($("<i class=icon-ok-sign style=margin-left:10px>").delay(1000).fadeOut(function() {
-        $(this).remove();
-      }));
+      location.reload();
+    });
+  });
+
+  var unkillAction = '@com.keepit.controllers.admin.routes.SliderAdminController.unkillVersion("X")';
+  $('.kifi-versions').on('click', '.unnuke', function() {
+    var $self = $(this);
+    var version = $self.parents('tr').find('.version').text();
+    $.post(unkillAction.replace('X', version))
+    .done(function () {
+      location.reload();
     });
   });
 

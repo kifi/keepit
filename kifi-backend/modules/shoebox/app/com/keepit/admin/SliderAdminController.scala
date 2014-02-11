@@ -228,6 +228,14 @@ class SliderAdminController @Inject() (
     Ok("0")
   }
 
+  def unkillVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+    val details = kifInstallationStore.getRaw()
+    val version = KifiVersion(ver)
+    val newDetails = details.copy(killed = details.killed.filterNot(_.compare(version) == 0))
+    kifInstallationStore.set(newDetails)
+    Ok("0")
+  }
+
   def goldenVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
     val newDetails = details.copy(gold = KifiVersion(ver))
