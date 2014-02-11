@@ -56,9 +56,7 @@ class SharedWsMessagingController @Inject() (
 
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
-      log.info(s"Received ping from user ${socket.userId} on socket ${socket.id}")
       socket.channel.push(Json.arr("pong"))
-      log.info(s"Sent pong to user ${socket.userId} on socket ${socket.id}")
     },
     "stats" -> { _ =>
       val stats = Json.obj(
