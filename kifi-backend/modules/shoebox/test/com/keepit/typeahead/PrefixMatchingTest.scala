@@ -16,7 +16,7 @@ class PrefixMatchingTest extends Specification {
       "Allen Weiner"
   )
 
-  def prefixMatch(query: String): Seq[String] = {
+  def prefixMatch(names: Seq[String], query: String): Seq[String] = {
     var ordinal = 0
     names.map{ name =>
       ordinal += 1
@@ -31,24 +31,33 @@ class PrefixMatchingTest extends Specification {
   "PrefixMatching" should {
     "filter candidates" in {
 
-      prefixMatch("a") === Seq("Alan Turing", "Alan Kay", "Allen Weiner", "Woody Allen")
-      prefixMatch("al") === Seq("Alan Turing", "Alan Kay", "Allen Weiner", "Woody Allen")
-      prefixMatch("all") === Seq("Allen Weiner", "Woody Allen")
+      prefixMatch(names, "a") === Seq("Alan Turing", "Alan Kay", "Allen Weiner", "Woody Allen")
+      prefixMatch(names, "al") === Seq("Alan Turing", "Alan Kay", "Allen Weiner", "Woody Allen")
+      prefixMatch(names, "all") === Seq("Allen Weiner", "Woody Allen")
 
-      prefixMatch("j") === Seq("John McCarthy", "John Lennon")
+      prefixMatch(names, "j") === Seq("John McCarthy", "John Lennon")
 
-      prefixMatch("m") === Seq("John McCarthy", "Paul McCartney")
-      prefixMatch("mccart") === Seq("John McCarthy", "Paul McCartney")
-      prefixMatch("mccarth") === Seq("John McCarthy")
-      prefixMatch("mccartn") === Seq("Paul McCartney")
+      prefixMatch(names, "m") === Seq("John McCarthy", "Paul McCartney")
+      prefixMatch(names, "mccart") === Seq("John McCarthy", "Paul McCartney")
+      prefixMatch(names, "mccarth") === Seq("John McCarthy")
+      prefixMatch(names, "mccartn") === Seq("Paul McCartney")
 
-      prefixMatch("a w") === Seq("Allen Weiner", "Woody Allen")
-      prefixMatch("w a") === Seq("Woody Allen", "Allen Weiner")
+      prefixMatch(names, "a w") === Seq("Allen Weiner", "Woody Allen")
+      prefixMatch(names, "w a") === Seq("Woody Allen", "Allen Weiner")
 
-      prefixMatch("a k") === Seq("Alan Kay")
-      prefixMatch("k a") === Seq("Alan Kay")
-      prefixMatch("a x") === Seq()
-      prefixMatch("x a") === Seq()
+      prefixMatch(names, "a k") === Seq("Alan Kay")
+      prefixMatch(names, "k a") === Seq("Alan Kay")
+      prefixMatch(names, "a x") === Seq()
+      prefixMatch(names, "x a") === Seq()
+    }
+
+    "sort by matching position" in {
+      val names = Seq(
+        "Eishay Smith",
+        "Sam Sasaki",
+        "Satoshi Ueno"
+      )
+      prefixMatch(names, "s") === Seq("Sam Sasaki", "Satoshi Ueno", "Eishay Smith")
     }
   }
 }
