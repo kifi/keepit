@@ -56,20 +56,82 @@
     position: relative
     top: -1px
 
-.kf-keep-detail-url
-  display: inline-block
-  max-width: 100%
-  margin-bottom: 12px
-  font-size: 12px
-  line-height: 20px
-  font-smoothing: antialiased
-  long-text()
+.kf-page-meta
+  // needed for width: 50% for keep and private buttons
+  font-size: 0
 
-  &.kf-keep-detail-url
-    color: inherit
+.kf-page-keep.kf-page-keep
+.kf-page-priv.kf-page-priv
+  display: inline-block
+  margin-top: 5px
+  color: white
+  background-color: #b8c5d2
+  font-size: 13px
+  line-height: 30px
+  width: 50%
+  box-sizing: border-box
+  text-align: center
+  font-smoothing: antialiased
 
   &:hover
-    text-decoration: underline
+    background-color: #a0b1c2
+
+  &:active
+    background-color: #8699ab
+
+.kf-page-keep
+  border-right: 1px solid #eff2f7
+
+.kf-page-priv
+  border-left: 1px solid #eff2f7
+
+[data-kept^=p] .kf-page-keep:before
+.kf-page-priv:before
+  content: " "
+  display: inline-block
+  height: 13px
+  width: 11px
+  background: url(../img/keep-icons.png) 0 0/auto 16px content-box
+  vertical-align: -1px
+  margin-right: 8px
+
+:not([data-kept=pri]) .kf-page-priv:before
+  width: 10px
+  background-position: -11px 0
+
+[data-kept=pri] .kf-page-priv:before
+  width: 13px
+  background-position: -21px 0
+
+.kf-page-keep:after
+  content: "Keep"
+
+  [data-kept^=p] &
+    content: "Unkeep"
+
+  :not([data-n="1"]) &
+    content: "Keep all"
+
+  [data-kept^=p] :not([data-n="1"]) &
+    content: "Unkeep all"
+
+.kf-page-priv:after
+  content: "Keep privately"
+
+  [data-kept=pub] &
+    content: "Make private"
+
+  [data-kept=pri] &
+    content: "Make public"
+
+  :not([data-n="1"]) &
+    content: "Keep all privately"
+
+  [data-kept=pub] not([data-n="1"]) &
+    content: "Make all private"
+
+  [data-kept=pri] :not([data-n="1"]) &
+    content: "Make all public"
 
 .kf-page-who
 .kf-page-chatter
