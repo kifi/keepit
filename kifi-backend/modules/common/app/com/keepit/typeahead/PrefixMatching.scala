@@ -1,4 +1,4 @@
-package com.keepit.socialtypeahead
+package com.keepit.typeahead
 
 import scala.math.min
 
