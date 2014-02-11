@@ -10,6 +10,8 @@ import play.api.libs.json.JsSuccess
 import com.google.common.util.concurrent.{ListenableFutureTask, ListenableFuture}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.PimpMyFuture._
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 case class KifiInstallationDetails(gold: KifiVersion, killed: Seq[KifiVersion])
 
