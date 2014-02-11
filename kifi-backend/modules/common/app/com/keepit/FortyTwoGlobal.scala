@@ -13,6 +13,7 @@ import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
+import com.keepit.common.time.{currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime}
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
@@ -61,18 +62,18 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
       try {
         elbClient.registerInstancesWithLoadBalancer(request)
-        println(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
+        println(s"[${currentDateTime.toStandardTimeString}] Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
         case t:Throwable => {
           //todo(martin): find a solution
           //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
-          println(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          println(s"[${currentDateTime.toStandardTimeString}] Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           Play.stop()
           Thread.sleep(10000)
           System.exit(1)
         }
       }
-    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+    } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   private def deregisterFromLoadBalancer() {
@@ -83,15 +84,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
       try {
         elbClient.deregisterInstancesFromLoadBalancer(request)
-        println(s"Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
+        println(s"[${currentDateTime.toStandardTimeString}] Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
       } catch {
         case t:AmazonClientException => {
           //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
-          println(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
+          println(s"[${currentDateTime.toStandardTimeString}] Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
           Thread.sleep(18000)
         }
       }
-    } getOrElse println(s"No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+    } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
@@ -101,7 +102,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val services = injector.instance[FortyTwoServices]
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
-    log.info(startMessage)
+    log.info(s"[${currentDateTime.toStandardTimeString}] " + startMessage)
 
     val disableRegistration = sys.props.getOrElse("service.register.disable", "false").toBoolean // directly use sys.props to be consistent; uptake injected config later
     val serviceDiscoveryOpt:Option[ServiceDiscovery] = if (disableRegistration) None else {
@@ -212,13 +213,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         try {
           val serviceDiscovery = injector.instance[ServiceDiscovery]
           serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-          println("[announceStopping] let clients and ELB know we're stopping")
+          println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
           deregisterFromLoadBalancer()
           Thread.sleep(5000)
           injector.instance[HealthcheckPlugin].reportStop()
-          println("[announceStopping] moving on")
+          println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
         } catch {
-          case t: Throwable => println(s"error announcing service stop via explicit shutdown hook: $t")
+          case t: Throwable => println(s"[${currentDateTime.toStandardTimeString}] error announcing service stop via explicit shutdown hook: $t")
         }
       }
       try {
@@ -232,9 +233,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           log.error(errorMessage, e)
       } finally {
         if (mode == Mode.Prod) {
-          println("<<<<<< about to pause and let the system shut down")
+          println(s"[${currentDateTime.toStandardTimeString}] <<<<<< about to pause and let the system shut down")
           Thread.sleep(3000)
-          println("<<<<<< done sleeping, continue with termination")
+          println(s"[${currentDateTime.toStandardTimeString}] <<<<<< done sleeping, continue with termination")
         }
       }
       announcedStopping = true
@@ -244,7 +245,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     announceStopping(app)
-    val stopMessage = "<<<<<<<<<< Stopping " + this
+    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
     serviceDiscovery.unRegister()
