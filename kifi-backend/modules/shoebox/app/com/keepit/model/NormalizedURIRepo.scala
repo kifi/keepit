@@ -210,7 +210,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           }
           uri
         case Right(prenormalizedUrl) => {
-          val normalization = findNormalization(prenormalizedUrl)
+          val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess{
@@ -235,7 +235,4 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") {
     normalizationServiceProvider.get.prenormalize(uriString)
   }
-
-  private def findNormalization(normalizedUrl: String): Option[Normalization] =
-    SchemeNormalizer.generateVariations(normalizedUrl).find { case (_, url) => (url == normalizedUrl) }.map { case (normalization, _) => normalization }
 }
