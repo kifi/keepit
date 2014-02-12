@@ -1,10 +1,15 @@
+@import com.keepit.common.service.ServiceType
+
 @admin("Cache Performance", scripts = List("graphite")) {
 
 <div style="float: right" class="form-horizontal">
   <select class="input-medium params" id="timerange"></select>
   <button class="btn btn-primary" type="button" id="update">Update Now</button>
 </div>
-<select class="input-medium params" id="service"></select>
+<select class="input-medium params" id="service">
+    <option value="{@ServiceType.inProduction.map(_.name.toLowerCase).mkString(",")}" selected>All Services
+    @for(service <- ServiceType.inProduction) { <option value="@service.name.toLowerCase">@service.name.toLowerCase.capitalize }
+</select>
 <select class="input-medium params" id="plugin"></select>
 <select class="input-medium params" id="namespace"></select>
 
@@ -19,12 +24,6 @@
 </p>
 
 <script>
-
-  var services = {
-  "All Services": "{shoebox,search}",
-  "Shoebox": "shoebox",
-  "Search": "search",
-  };
 
   var plugins = {
   "All Plugins": "Cache",
@@ -90,10 +89,6 @@
   "Log10 Scale": 10
   };
 
-  $.each(services, function (name, service) {
-  $("#service").append($("<option>").val(service).text(name));
-  });
-
   $.each(plugins, function (name, plugin) {
   $("#plugin").append($("<option>").val(plugin).text(name));
   });
@@ -154,8 +149,8 @@
     var prefix = ["stats", chart, service, plugin, namespace].join(".");
     var metrics = ["hits", "sets"];
     var percentileValue = $("#percentile").val()
-    var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
-    var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
+    var percentileSuffix = (percentileValue == "0.99") ? "_99" : ""
+    var percentileTitle = (percentileValue == "0.99") ? "99% " : ""
     var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum" + percentileSuffix + ":sum") + ",scale(" + sumSeries(prefix, metric, "count:sum") + "," + percentileValue + "))"});
     options.title = "Hits - Sets (" + percentileTitle + "Mean Time in Milliseconds)"
     options.target = baseTargets.concat(meanTargets)
@@ -163,7 +158,7 @@
     options.yMax = 20;
   }
 
-  
+
   if (chart == "ratios") {
     var prefix = ["stats.counters", service, plugin, namespace].join(".");
     var ratioTarget = ["asPercent(" + sumSeries(prefix, "hits", "count:sum") + "," + "sumSeries(" + sumSeries(prefix,"hits", "count:sum") + "," + sumSeries(prefix, "misses","count:sum") + "))"];
