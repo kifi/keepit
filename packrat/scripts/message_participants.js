@@ -152,6 +152,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 					hintText: '',
 					searchingText: '',
 					resultsLimit: 4,
+					tipHtml: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
 					preventDuplicates: true,
 					allowTabOut: true,
 					tokenValue: 'id',
@@ -166,6 +167,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						dropdown: 'kifi-root kifi-ti-dropdown',
 						dropdownItem: 'kifi-ti-dropdown-item',
 						dropdownItem2: 'kifi-ti-dropdown-item',
+						dropdownTip: 'kifi-ti-dropdown-tip',
 						selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
 						inputToken: 'kifi-ti-token-input',
 						focused: 'kifi-ti-focused',
@@ -183,7 +185,10 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						if (!$input.tokenInput('get').length) {
 							this.getAddDialog().removeClass('kifi-non-empty');
 						}
-					}.bind(this)
+					}.bind(this),
+					onTip: function () {
+						api.port.emit('invite_friends', 'threadPane');
+					}
 				});
 
 				api.port.emit('get_friends', function (friends) {
