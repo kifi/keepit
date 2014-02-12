@@ -57,7 +57,6 @@ module.exports = function (grunt) {
 					'lib/angular-ui-router/release/angular-ui-router.js',
 					'lib/angular-animate/angular-animate.js',
 					'lib/angular-bootstrap/ui-bootstrap-tpls.js',
-
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',

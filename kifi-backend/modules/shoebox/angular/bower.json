@@ -24,14 +24,15 @@
     "angular-cookies": "1.2.x",
     "angular-resource": "1.2.x",
     "angular-route": "1.2.x",
-    "ngInfiniteScroll": "1.x.x",
     "angular-ui-router": "~0.2.8",
     "angular-bootstrap": "~0.10.0",
     "bootstrap": "~3.0.3",
     "angular-moment": "~0.6.1",
     "angular-sanitize": "~1.2.11",
     "lodash": "~2.4.1",
-    "angular-animate": "~1.2.12"
+    "angular-animate": "~1.2.12",
+    "jquery-mousewheel": "~3.1.9",
+    "ngInfiniteScroll": "https://github.com/joonho1101/ngInfiniteScroll.git#fe8342ae9fc21a41d9ff56d81cc63ef5e1d1075d"
   },
   "devDependencies": {
     "angular-mocks": "1.2.x"
