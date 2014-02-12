@@ -21,7 +21,7 @@ import com.keepit.common.actor.FakeScheduler
 
 
 class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler())
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), ()=>{})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   var eventsRecorded : Int = 0

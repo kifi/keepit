@@ -72,7 +72,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy:RoutingStrategy = roundRobin): Future[ClientResponse] = {
-    val respFuture = RetryFuture(attempts, { case t : ConnectException => true }) {
+    val respFuture = RetryFuture(attempts, { case t : ConnectException => serviceCluster.refresh(); true }) {
       callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, callTimeouts = callTimeouts)
     }
     respFuture.onSuccess {
