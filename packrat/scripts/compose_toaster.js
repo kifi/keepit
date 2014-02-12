@@ -18,7 +18,7 @@ var toaster = (function () {
     page_thread_count: function (o) {
       if ($toaster) {
         if (o.count > 0) {
-          $toaster.find('.kifi-toast-find-friends').remove();
+          $toaster.find('.kifi-toast-intro').remove();
         }
         $toaster.find('.kifi-toast-other-n')
           .attr('data-n', o.count || null)
@@ -74,7 +74,7 @@ var toaster = (function () {
       hide();
     })
     .on('click', '.kifi-toast-other', onOthersClick)
-    .on('click', '.kifi-toast-find-friends-x', onFindFriendsXClick)
+    .on('click', '.kifi-toast-intro-x', onFindFriendsXClick)
     .appendTo($parent);
 
     $toaster.data('compose', initCompose($toaster, prefs.enterToSend, {onSubmit: send}));
@@ -94,8 +94,8 @@ var toaster = (function () {
       log('[toaster:onShown]')();
       var $t = $(this).off('transitionend', onShown);
       deferred.resolve($t.data('compose'));
-      if (prefs.showFindFriends) {
-        $toaster.find('.kifi-toast-find-friends').addClass('kifi-showing');
+      if (prefs.showFindFriends || true) {
+        $toaster.find('.kifi-toast-intro').addClass('kifi-showing');
       }
     }
   }
@@ -148,7 +148,7 @@ var toaster = (function () {
   }
 
   function hideFindFriends() {
-    $toaster.find('.kifi-toast-find-friends').on('transitionend', function () {
+    $toaster.find('.kifi-toast-intro').on('transitionend', function () {
       $(this).remove();
     }).removeClass('kifi-showing');
   }

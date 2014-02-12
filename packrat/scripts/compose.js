@@ -80,6 +80,7 @@ function initCompose($c, enterToSend, opts) {
       hintText: '',
       searchingText: '',
       resultsLimit: 4,
+      tipHtml: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
       preventDuplicates: true,
       allowTabOut: true,
       tokenValue: 'id',
@@ -94,6 +95,7 @@ function initCompose($c, enterToSend, opts) {
         dropdown: 'kifi-root kifi-ti-dropdown',
         dropdownItem: 'kifi-ti-dropdown-item',
         dropdownItem2: 'kifi-ti-dropdown-item',
+        dropdownTip: 'kifi-ti-dropdown-tip',
         selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
         inputToken: 'kifi-ti-token-input',
         focused: 'kifi-ti-focused',
@@ -115,7 +117,11 @@ function initCompose($c, enterToSend, opts) {
           $d.empty();
           $f.addClass('kifi-empty');
         }
-      }});
+      },
+      onTip: function () {
+        window.open('https://www.kifi.com/friends/invite');
+      }
+    });
     api.port.emit('get_friends', function (friends) {
       friends.forEach(function (f) {
         f.name = f.firstName + ' ' + f.lastName;
