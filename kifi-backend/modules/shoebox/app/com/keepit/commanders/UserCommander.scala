@@ -349,19 +349,6 @@ class UserCommander @Inject() (
 
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
 
-  private[this] val consolidateSocialConnectionReq = new RequestConsolidator[Id[User], Map[SocialNetworkType, Seq[SocialUserBasicInfo]]](3 seconds)
-
-  private def getSocialConnectionInfo(userId: Id[User])(implicit s: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]] = {
-    val future = consolidateSocialConnectionReq(userId){ suid =>
-      Future.successful(
-        socialUserInfoRepo.getByUser(userId)
-          .filter{ sui => sui.networkType != SocialNetworks.FORTYTWO }
-          .map{ sui => (sui.networkType -> socialConnectionRepo.getSocialConnectionInfo(sui.id.get)) }.toMap
-      )
-    }
-    Await.result(future, Duration.Inf)
-  }
-
   // todo(eishay): legacy api -- to be replaced after removing dependencies
   def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
@@ -404,8 +391,8 @@ class UserCommander @Inject() (
     }
 
     val connections = db.readOnly { implicit s =>
-      val socialConnectionInfos = getSocialConnectionInfo(userId).filterKeys(networkType => network.forall(_ == networkType.name))
-      val filteredConnections = socialConnectionInfos.values.map(getFilteredConnections).flatten.toSeq.sorted.map(_.info)
+      val infos = socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
+      val filteredConnections = infos.values.map(getFilteredConnections).flatten.toSeq.sorted.map(_.info)
 
       (after match {
         case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
