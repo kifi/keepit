@@ -66,6 +66,11 @@ class SharedWsMessagingController @Inject() (
       )
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
+    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
+      log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
+      val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
+      socket.channel.push(Json.arr(requestId.toLong, info))
+    },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
@@ -123,11 +128,6 @@ class SharedWsMessagingController @Inject() (
       messagingCommander.getThreadInfos(socket.userId, url).map { case (nUriStr, threadInfos) =>
         socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
       }
-    },
-    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
-      log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
-      val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
-      socket.channel.push(Json.arr(requestId.toLong, info))
     },
 
     // inbox notification/thread handlers
