@@ -66,7 +66,7 @@ class ServiceClusterTest extends Specification {
 
   "ServiceCluster" should {
     "find node" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler(), ()=>{})
       val zk = new FakeZooKeeperClient()
       val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
@@ -93,7 +93,7 @@ class ServiceClusterTest extends Specification {
     }
 
     "dedup nodes" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler(), ()=>{})
       val zk = new FakeZooKeeperClient()
       val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>
@@ -122,7 +122,7 @@ class ServiceClusterTest extends Specification {
     }
 
     "RR router" in {
-      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler())
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler(), ()=>{})
       val zk = new FakeZooKeeperClient()
       val basePath = Node("/fortytwo/services/TEST_MODE")
       zk.session{ zk =>

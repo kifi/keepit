@@ -21,7 +21,7 @@ import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
 
-class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler) extends Logging {
+class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler, forceUpdateTopology: () => Unit) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
   private var routingList: Vector[ServiceInstance] = Vector()
@@ -51,6 +51,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       upList
     }
     if (list.isEmpty) {
+      forceUpdateTopology()
       None
     } else {
       Some(list(nextRoutingInstance.getAndIncrement % list.size))
@@ -165,4 +166,6 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
 
   private def resetRoutingList() =
     routingList = Vector(instances.values.toSeq: _*)
+
+  def refresh() = forceUpdateTopology()
 }
