@@ -12,7 +12,8 @@ angular.module('antiscroll', [])
 		return {
 			restrict: 'A',
 			transclude: true,
-			link: function (scope, element, attrs) {
+			link: function (scope, element, attrs /*, ctrl, transclude*/ ) {
+				console.log('antiscroll.link', scope, element, attrs);
 				var options;
 				if (attrs.antiscroll) {
 					options = scope.$eval(attrs.antiscroll);
@@ -30,6 +31,7 @@ angular.module('antiscroll', [])
 				scope.refreshScroll();
 			},
 			template: function (element, attrs) {
+				console.log('antiscroll.template', this, element, attrs);
 				var tmp = '<div class="antiscroll-inner"';
 				if ('antiInfiniteScroll' in attrs) {
 					angular.forEach(['antiInfiniteScroll', 'antiInfiniteScrollDistance', 'antiInfiniteScrollDisabled', 'antiInfiniteScrollImmediateCheck'], function (name) {

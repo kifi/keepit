@@ -38,7 +38,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 		};
 
 		$scope.fetchNext = function () {
-			console.log('hi');
+			console.log('TagCtrl.fetchNext()');
 		};
 	}
 ])

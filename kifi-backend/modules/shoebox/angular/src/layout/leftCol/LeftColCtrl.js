@@ -5,7 +5,7 @@ angular.module('kifi.layout.leftCol', [])
 .controller('LeftColCtrl', [
 	'$scope',
 	function ($scope) {
-		console.log('left');
+		console.log('LeftColCtrl');
 	}
 ]);
 

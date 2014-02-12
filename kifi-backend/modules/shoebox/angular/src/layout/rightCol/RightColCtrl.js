@@ -5,7 +5,7 @@ angular.module('kifi.layout.rightCol', [])
 .controller('RightColCtrl', [
 	'$scope',
 	function ($scope) {
-		console.log('right');
+		console.log('RightColCtrl');
 	}
 ]);
 

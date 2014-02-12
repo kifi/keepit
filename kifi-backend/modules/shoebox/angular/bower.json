@@ -32,7 +32,8 @@
     "lodash": "~2.4.1",
     "angular-animate": "~1.2.12",
     "jquery-mousewheel": "~3.1.9",
-    "ngInfiniteScroll": "https://github.com/joonho1101/ngInfiniteScroll.git#fe8342ae9fc21a41d9ff56d81cc63ef5e1d1075d"
+    "ngInfiniteScroll": "https://github.com/joonho1101/ngInfiniteScroll.git#fe8342ae9fc21a41d9ff56d81cc63ef5e1d1075d",
+    "antiscroll": "*"
   },
   "devDependencies": {
     "angular-mocks": "1.2.x"
