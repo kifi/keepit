@@ -214,8 +214,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           val serviceDiscovery = injector.instance[ServiceDiscovery]
           serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
           println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
-          deregisterFromLoadBalancer()
-          Thread.sleep(5000)
+          Thread.sleep(18000)
           injector.instance[HealthcheckPlugin].reportStop()
           println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
         } catch {
