@@ -187,7 +187,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						}
 					}.bind(this),
 					onTip: function () {
-						window.open('https://www.kifi.com/friends/invite');
+						api.port.emit('invite_friends', 'threadPane');
 					}
 				});
 
