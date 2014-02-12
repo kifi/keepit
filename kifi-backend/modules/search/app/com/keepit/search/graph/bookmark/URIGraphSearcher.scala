@@ -97,7 +97,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
 
   lazy val friendEdgeSet = {
-    val friendIds = Statsd.time(key = "friendIdsFutureWait"){
+    val friendIds = Statsd.time(key = "mainSearch.friendIdsFutureWait"){
       Await.result(friendIdsFuture, 5 seconds)
     }
     UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
@@ -110,7 +110,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
 
   lazy val searchFriendEdgeSet = {
-    val List(unfriended, friendIds) = Statsd.time(key = "searchFriendsFutureWait"){
+    val List(unfriended, friendIds) = Statsd.time(key = "mainSearch.searchFriendsFutureWait"){
       Await.result(Future.sequence(List(unfriendedFuture, friendIdsFuture)), 5 seconds)
     }
     UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
