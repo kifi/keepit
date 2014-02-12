@@ -197,6 +197,7 @@ if __name__=="__main__":
         log("Manual Abort.")
         remoteProc.send_signal(2)
         sys.exit(1)
+      time.sleep(15)
     log("Deployment Complete")
 
 
