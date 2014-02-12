@@ -77,6 +77,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
     respFuture.onSuccess {
       case res: ClientResponse => if(!res.isUp) {
+        serviceCluster.refresh()
         res.request.httpUri.serviceInstanceOpt.map(_.reportServiceUnavailable())
       }
     }
