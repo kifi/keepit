@@ -5,6 +5,7 @@
 panes.settings = function () {
   'use strict';
   var handlers = {settings: update};
+  var subordinates = {keeper: 'sensitive', search: 'max-results'};
   var box;
   return {
     render: function ($paneBox) {
@@ -39,8 +40,11 @@ panes.settings = function () {
       box.querySelector('input[name=kifi-emails]').checked = o.emails;
       box.querySelector('input[name=kifi-keeper]').checked = o.keeper;
       box.querySelector('input[name=kifi-sensitive]').checked = o.sensitive;
+      box.querySelector('input[name=kifi-search]').checked = o.search;
       box.querySelector('select[name=kifi-max-results]').value = o.maxResults;
-      box.querySelector('.kifi-setting-sensitive').style.cssText = o.keeper ? 'display:block;height:auto' : 'display:none';
+      for (var key in subordinates) {
+        box.querySelector('.kifi-setting-' + subordinates[key]).style.cssText = o[key] ? 'display:block;height:auto' : 'display:none';
+      }
     }
   }
 
@@ -96,8 +100,9 @@ panes.settings = function () {
   function succeed($status, name, value) {
     setTimeout(function () {
       $status.css('background-image', '').delay(800).animate({opacity: 0}, 200);
-      if (name === 'keeper') {
-        $(box).find('.kifi-setting-sensitive').stop(true)[value ? 'slideDown' : 'slideUp'](240, function () {
+      var sub = subordinates[name];
+      if (sub) {
+        $(box).find('.kifi-setting-' + sub).stop(true)[value ? 'slideDown' : 'slideUp'](240, function () {
           var scroller = $(box).data('antiscroll');
           if (scroller) scroller.refresh();
         });

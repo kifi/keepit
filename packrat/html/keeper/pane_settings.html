@@ -44,16 +44,25 @@
 
     <div class="kifi-settings-h">Search Settings</div>
     <label class="kifi-setting-label">
-      <select class="kifi-setting-select" name="kifi-max-results">
-        <option value="0">0</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-      </select>
-      <span class="kifi-setting-name">Maximum keeps initially shown</span>
+      <input class="kifi-setting-checkbox" type="checkbox" name="kifi-search"/>{{!
+    }}<span class="kifi-setting-name">Search Kifi too when I search Google</span>
     </label>
     <div class="kifi-setting-desc">
-      Limit the number of relevant keeps that will appear above your Google search results
+      See relevant keeps above your Google search results
+    </div>
+    <div class="kifi-setting-max-results">
+      <label class="kifi-setting-label">
+        <select class="kifi-setting-select" name="kifi-max-results">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
+        <span class="kifi-setting-name">Maximum keeps initially shown</span>
+      </label>
+      <div class="kifi-setting-desc">
+        Limit the number of relevant keeps that will appear above your Google search results
+      </div>
     </div>
 
     <a class="kifi-settings-site-link" href="https://www.kifi.com/profile" target="_blank">View your account settings</a>
