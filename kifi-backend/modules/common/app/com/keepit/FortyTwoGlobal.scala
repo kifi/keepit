@@ -62,6 +62,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       try {
         elbClient.registerInstancesWithLoadBalancer(request)
         println(s"Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
+        Thread.sleep(15000)
       } catch {
         case t:Throwable => {
           //todo(martin): find a solution
