@@ -1,14 +1,16 @@
 package com.keepit.model
 
-import scala.concurrent.duration.Duration
-
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time.Clock
+import com.keepit.social.{SocialNetworks, SocialNetworkType}
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SocialConnectionRepoImpl])
 trait SocialConnectionRepo extends Repo[SocialConnection] {
@@ -17,6 +19,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo]
+  def getSocialConnectionInfosByUser(id: Id[User])(implicit session: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int
 }
@@ -139,6 +142,20 @@ class SocialConnectionRepoImpl @Inject() (
       getSocialUserConnections(id) map SocialUserBasicInfo.fromSocialUser
     }
   }
+
+  private[this] val consolidateSocialConnectionReq = new RequestConsolidator[Id[User], Map[SocialNetworkType, Seq[SocialUserBasicInfo]]](10 seconds)
+
+  def getSocialConnectionInfosByUser(userId: Id[User])(implicit s: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]] = {
+    val future = consolidateSocialConnectionReq(userId){ userId =>
+      Future.successful(
+        socialRepo.getByUser(userId)
+          .filter{ sui => sui.networkType != SocialNetworks.FORTYTWO }
+          .map{ sui => (sui.networkType -> getSocialConnectionInfo(sui.id.get)) }.toMap
+      )
+    }
+    Await.result(future, Duration.Inf)
+  }
+
 
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
     val connections = (for {

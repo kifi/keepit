@@ -1,4 +1,4 @@
-package com.keepit.socialtypeahead
+package com.keepit.typeahead
 
 import scala.math.min
 
@@ -20,8 +20,15 @@ object PrefixMatching {
   }
 
   def distance(nameString: String, queryTerms: Array[String]): Int = {
+    distance(PrefixFilter.tokenize(nameString), queryTerms)
+  }
+
+  def distanceWithNormalizedName(nameString: String, queryTerms: Array[String]): Int = {
+    distance(PrefixFilter.tokenizeNormalizedName(nameString), queryTerms)
+  }
+
+  def distance(names: Array[String], queryTerms: Array[String]): Int = {
     // this code is performance critical, intentionally written in non-functional style
-    val names = PrefixFilter.tokenize(nameString)
     val dists = initDistance(queryTerms.length)
     var sc = 0;
     var matchFlags = 1

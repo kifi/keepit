@@ -126,8 +126,8 @@ class UserControllerTest extends Specification with ApplicationInjector {
           getNames(res) must_== Seq("Léo Grimaldi")
         }
         {
-          val path = com.keepit.controllers.website.routes.UserController.getAllConnections(Some("莹"), None, None, 10).toString
-          path === "/site/user/socialConnections?search=%E8%8E%B9&limit=10"
+          val path = com.keepit.controllers.website.routes.UserController.getAllConnections(Some("杨"), None, None, 10).toString
+          path === "/site/user/socialConnections?search=%E6%9D%A8&limit=10"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("杨莹")
         }

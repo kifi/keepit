@@ -408,7 +408,7 @@ class MessagingCommander @Inject() (
 
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
-    log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
+    log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
       messageRepo.save(Message(
         id = None,
@@ -531,7 +531,7 @@ class MessagingCommander @Inject() (
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
-      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
+      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
       (thread, messages.map { message =>
         val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
         MessageWithBasicUser(

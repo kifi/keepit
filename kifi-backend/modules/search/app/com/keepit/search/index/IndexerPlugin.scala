@@ -77,6 +77,7 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
         scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
       case None => // regular search instance
         actor.ref ! WarmUpIndexDirectory
+        scheduleTaskOnAllMachines(actor.system, 6 hours, 6 hours, actor.ref, WarmUpIndexDirectory)
     }
   }
 

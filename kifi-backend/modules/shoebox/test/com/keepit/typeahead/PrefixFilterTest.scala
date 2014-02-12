@@ -1,4 +1,4 @@
-package com.keepit.socialtypeahead
+package com.keepit.typeahead
 
 import org.specs2.mutable._
 import play.api.test._
