@@ -531,5 +531,10 @@ POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controll
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 
 
+# New site, temporary
+GET     /ng/*file                  com.keepit.controllers.website.AngularAssets.at(path="/angular", file)
+GET     /dist/*file               com.keepit.controllers.website.AngularAssets.at(path="/angular/dist", file)
+GET     /img/*file               com.keepit.controllers.website.AngularAssets.at(path="/angular/img", file)
+
 
 ->  / common.Routes
