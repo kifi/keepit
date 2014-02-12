@@ -185,7 +185,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
   // watch management
   sealed trait RegisteredWatch
   case class RegisteredNodeWatch(node: Node, onDataChanged : Option[Array[Byte]] => Unit) extends RegisteredWatch
-  case class RegisteredChildWatch(node: Node, updateChildren: Seq[Node] => Unit) extends RegisteredWatch
+  case class RegisteredChildWatch(node: Node, updateChildren: Seq[Node] => Unit, watchData: Boolean) extends RegisteredWatch
   private[this] val watchList = new ArrayBuffer[RegisteredWatch]
   private def registerWatch(watch: RegisteredWatch): Unit = watchList.synchronized { watchList += watch }
 
@@ -203,11 +203,12 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     pending.foreach(execOnConnectHandler)
 
     // register watches again
+    log.info("recovering watches")
     watchList.synchronized {
       watchList.foreach{ registeredWatch =>
         registeredWatch match {
           case RegisteredNodeWatch(node, onDataChanged) => watchNode(node, onDataChanged)
-          case RegisteredChildWatch(node, updateChildren) => watchChildren(node, updateChildren)
+          case RegisteredChildWatch(node, updateChildren, watchData) => watchChildren(node, updateChildren, watchData)
         }
       }
     }
@@ -400,7 +401,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     }
 
     //check immediately
-    registerWatch(RegisteredChildWatch(node, updateChildren))
+    registerWatch(RegisteredChildWatch(node, updateChildren, watchData))
     val children = try{
       getChildren(node, new ParentWatcher())
     } catch {
