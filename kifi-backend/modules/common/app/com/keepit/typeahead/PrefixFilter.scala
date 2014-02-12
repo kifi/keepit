@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import scala.collection.mutable.ArrayBuffer
 import scala.math.min
 import java.text.Normalizer
+import com.keepit.common.logging.Logging
 
 object PrefixFilter {
 
