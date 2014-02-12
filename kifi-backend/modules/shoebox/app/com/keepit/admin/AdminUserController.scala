@@ -32,6 +32,9 @@ import play.api.libs.json._
 import play.api.mvc.{AnyContent, SimpleResult}
 
 import views.html
+import com.keepit.typeahead.PrefixFilter
+import scala.collection.mutable
+import com.keepit.typeahead.socialusers.SocialUserTypeahead
 
 case class UserStatistics(
     user: User,
@@ -89,6 +92,7 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCommander: UserCommander,
+    socialUserTypeAhead: SocialUserTypeahead,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
@@ -639,4 +643,21 @@ class AdminUserController @Inject() (
       Ok("bump up seqNum for userConnRepo and searchFriendRepo")
     }
   }
+
+  // ad hoc testing only during dev phase
+  def prefixSearch(userId:Id[User], p:String) = AdminHtmlAction.authenticatedAsync { request =>
+    socialUserTypeAhead.build(userId) map { filter =>
+      val ids = filter.filterBy(PrefixFilter.tokenize(p))
+      val builder = mutable.ArrayBuilder.make[SocialUserInfo]
+      db.readOnly { implicit ro =>
+        for (id <- ids) {
+          builder += socialUserInfoRepo.get(id)
+        }
+      }
+      val res = builder.result()
+      log.info(s"[prefixSearch($userId,$p)]=${res.mkString(",")}")
+      Ok(res.map(info => s"<p>$info</p>").mkString("<br>")) // ugly
+    }
+  }
+
 }
