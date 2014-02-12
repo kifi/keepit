@@ -233,6 +233,7 @@ if __name__=="__main__":
         remoteProc.send_signal(2)
         lock.unlock()
         sys.exit(1)
+      time.sleep(15)
     lock.unlock()
     log("Deployment Complete")
 

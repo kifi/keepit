@@ -126,21 +126,19 @@ class QueuedScrapeProcessor @Inject() (
   val PULL_THRESHOLD = sys.props.get("scraper.pull.threshold") map (_.toInt) getOrElse (NUM_CORES / 2)
 
   override def pull():Unit = {
-    if (config.pull) {
-      log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${PULL_THRESHOLD}")
-      if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
-        serviceDiscovery.thisInstance map { inst =>
-          if (inst.isHealthy) {
-            asyncHelper.assignTasks(inst.id.id, PULL_MAX) onComplete { trRequests =>
-              trRequests match {
-                case Failure(t) =>
-                  log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
-                case Success(requests) =>
-                  log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
-                  for (sr <- requests) {
-                    asyncScrape(sr.uri, sr.info, sr.proxyOpt)
-                  }
-              }
+    log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${PULL_THRESHOLD}")
+    if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
+      serviceDiscovery.thisInstance map { inst =>
+        if (inst.isHealthy) {
+          asyncHelper.assignTasks(inst.id.id, PULL_MAX) onComplete { trRequests =>
+            trRequests match {
+              case Failure(t) =>
+                log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
+              case Success(requests) =>
+                log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
+                for (sr <- requests) {
+                  asyncScrape(sr.uri, sr.info, sr.proxyOpt)
+                }
             }
           }
         }

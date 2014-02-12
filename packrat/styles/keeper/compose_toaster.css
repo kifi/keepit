@@ -62,12 +62,12 @@
   content: 's';
 }
 
-.kifi-toast-find-friends {
+.kifi-toast-intro {
   position: absolute;
   left: 12px;
   right: 12px;
-  top: -320px;
-  height: 290px;
+  top: -180px;
+  height: 150px;
   border: 1px solid #b8c5d2;
   border-radius: 5px !important;
   background: #fff;
@@ -76,47 +76,26 @@
   transition: opacity .2s linear, -webkit-transform .2s ease-out;
   transition: opacity .2s linear, transform .2s ease-out;
 }
-.kifi-toast-find-friends:not(.kifi-showing) {
+.kifi-toast-intro:not(.kifi-showing) {
   opacity: 0;
   -webkit-transform: scale(.7,.7);
   transform: scale(.7,.7);
   transition-timing-function: linear, ease-out;
 }
-.kifi-toast-find-friends-h {
+.kifi-toast-intro-h {
   margin-top: 20px;
   font-size: 16px;
   color: #6fa6ef;
   -webkit-font-smoothing: antialiased;
 }
-.kifi-toast-find-friends-p {
+.kifi-toast-intro-p {
   margin: 20px 20px 20px 24px;
   text-align: left;
   font-size: 13px;
   line-height: 21px;
   color: #444;
 }
-.kifi-toast-find-friends-a {
-  display: inline-block;
-  line-height: 48px;
-  font-size: 18px;
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  padding: 0 24px;
-  margin: 12px auto 0;
-  background-color: #6fa6ef;
-  border-radius: 4px !important;
-  color: #fff !important;
-}
-.kifi-toast-find-friends-a:hover {
-  background-color: #7faeef;
-}
-.kifi-toast-find-friends-a:active {
-  background-color: #5f9cef;
-}
-.kifi-toast-find-friends-a:focus {
-  outline: 1px dotted #ccc;
-}
-.kifi-toast-find-friends-x {
+.kifi-toast-intro-x {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -124,8 +103,8 @@
   width: 22px;
   border-radius: 50% !important;
 }
-.kifi-toast-find-friends-x:before,
-.kifi-toast-find-friends-x:after {
+.kifi-toast-intro-x:before,
+.kifi-toast-intro-x:after {
   content: ' ';
   position: absolute;
   top: 4px;
@@ -135,26 +114,26 @@
   background: #b1b8c1;
   font-size: 0;
 }
-.kifi-toast-find-friends-x:before {
+.kifi-toast-intro-x:before {
   -webkit-transform: translate(-.5px) rotate(45deg);
   transform: translate(-.5px) rotate(45deg);
 }
-.kifi-toast-find-friends-x:after {
+.kifi-toast-intro-x:after {
   -webkit-transform: translate(-.5px) rotate(-45deg);
   transform: translate(-.5px) rotate(-45deg);
 }
-.kifi-toast-find-friends-x:hover:before,
-.kifi-toast-find-friends-x:hover:after {
+.kifi-toast-intro-x:hover:before,
+.kifi-toast-intro-x:hover:after {
   background: #8e939a;
 }
-.kifi-toast-find-friends-x:active:before,
-.kifi-toast-find-friends-x:active:after {
+.kifi-toast-intro-x:active:before,
+.kifi-toast-intro-x:active:after {
   background: #fff;
 }
-.kifi-toast-find-friends-x:active {
+.kifi-toast-intro-x:active {
   background: #d0d4da;
 }
-.kifi-toast-find-friends-x:focus {
+.kifi-toast-intro-x:focus {
   outline-color: #ccc;
 }
 

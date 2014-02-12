@@ -67,11 +67,11 @@ class ServiceDiscoveryImpl(
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
-    val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler)
+    val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler, ()=>{forceUpdate()})
     clustersToInit(services.currentService) = myCluster
     if (servicesToListenOn.contains(services.currentService)) throw new IllegalArgumentException(s"current service is included in servicesToListenOn: $servicesToListenOn")
     servicesToListenOn foreach {service =>
-      val cluster = new ServiceCluster(service, airbrake, scheduler)
+      val cluster = new ServiceCluster(service, airbrake, scheduler, ()=>{forceUpdate()})
       clustersToInit(service) = cluster
     }
     log.info(s"registered clusters: $clustersToInit")
@@ -112,9 +112,9 @@ class ServiceDiscoveryImpl(
     myCluster.instanceForNode(instance.node).isDefined
   }
 
-  private def watchServices(): Unit = clusters.values foreach watchService
+  private def watchServices(zk: ZooKeeperSession): Unit = clusters.values.foreach{ cluster => watchService(zk, cluster) }
 
-  private def watchService(cluster: ServiceCluster): Unit = zkClient.session{ zk =>
+  private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
@@ -122,10 +122,17 @@ class ServiceDiscoveryImpl(
     })
   }
 
-  def forceUpdate() : Unit = zkClient.session{ zk =>
-    for (cluster <- clusters.values) {
-      val children = zk.getChildren(cluster.servicePath)
-      cluster.update(zk, children)
+  @volatile private var forceUpdateInProgress = false
+  def forceUpdate() : Unit = if (!forceUpdateInProgress) synchronized {
+    if (!forceUpdateInProgress) {
+      forceUpdateInProgress = true
+      zkClient.session{ zk =>
+        for (cluster <- clusters.values) {
+          val children = zk.getChildren(cluster.servicePath)
+          cluster.update(zk, children)
+        }
+      }
+      forceUpdateInProgress = false
     }
   }
 
@@ -159,7 +166,7 @@ class ServiceDiscoveryImpl(
       myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
-      watchServices()
+      watchServices(zk)
     }
   }
 

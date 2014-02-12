@@ -150,7 +150,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Provides
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler): ServiceCluster =
-    new ServiceCluster(serviceType, airbrake, scheduler) tap { cluster =>
+    new ServiceCluster(serviceType, airbrake, scheduler, ()=>{}) tap { cluster =>
       cluster.register(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType)))
     }
 

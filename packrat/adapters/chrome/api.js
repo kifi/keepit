@@ -627,6 +627,14 @@ var api = function() {
           callback && callback(tab.id);
         }));
       },
+      selectOrOpen: function(url) {
+        var tab = api.tabs.anyAt(url);
+        if (tab) {
+          api.tabs.select(tab.id);
+        } else {
+          api.tabs.open(url);
+        }
+      },
       each: function(callback) {
         for (var id in pages) {
           var page = pages[id];

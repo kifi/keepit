@@ -55,12 +55,12 @@ module.exports = function (grunt) {
 					'lib/angular-sanitize/angular-sanitize.js',
 					'lib/angular-route/angular-route.js',
 					'lib/angular-ui-router/release/angular-ui-router.js',
+					'lib/angular-animate/angular-animate.js',
 					'lib/angular-bootstrap/ui-bootstrap-tpls.js',
-
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',
-					'lib/ngInfiniteScroll/ng-infinite-scroll.js',
+					'lib/ngInfiniteScroll/build/ng-infinite-scroll.js',
 					'lib/moment/moment.js',
 					'lib/angular-moment/angular-moment.js'
 				],
@@ -73,11 +73,12 @@ module.exports = function (grunt) {
 					'lib/angular-sanitize/angular-sanitize.min.js',
 					'lib/angular-route/angular-route.min.js',
 					'lib/angular-ui-router/release/angular-ui-router.min.js',
+					'lib/angular-animate/angular-animate.min.js',
 					'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',
-					'lib/ngInfiniteScroll/ng-infinite-scroll.js',
+					'lib/ngInfiniteScroll/build/ng-infinite-scroll.js',
 					'lib/moment/min/moment.min.js',
 					'lib/angular-moment/angular-moment.min.js'
 				],

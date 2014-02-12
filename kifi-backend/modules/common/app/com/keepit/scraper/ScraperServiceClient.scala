@@ -2,6 +2,7 @@ package com.keepit.scraper
 
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import java.io.IOException
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -186,7 +187,7 @@ class ScraperServiceClientImpl @Inject() (
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
 
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, ()=>{})
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 

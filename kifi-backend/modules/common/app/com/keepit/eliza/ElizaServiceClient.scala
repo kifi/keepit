@@ -109,7 +109,7 @@ class ElizaServiceClientImpl @Inject() (
 }
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler)
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, ()=>{})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}

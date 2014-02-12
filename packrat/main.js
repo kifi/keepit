@@ -659,6 +659,10 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
+  invite_friends: function (where) {
+    api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
+    mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
+  },
   send_message: function(data, respond, tab) {
     data.extVersion = api.version;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
@@ -854,11 +858,12 @@ api.port.on({
   },
   settings: function(_, respond) {
     respond({
-      sounds: stored('_sounds') !== 'n',
-      popups: stored('_popups') !== 'n',
+      sounds: enabled('sounds'),
+      popups: enabled('popups'),
       emails: prefs.messagingEmails,
-      keeper: stored('_keeper') !== 'n',
-      sensitive: stored('_sensitive') !== 'n',
+      keeper: enabled('keeper'),
+      sensitive: enabled('sensitive'),
+      search: enabled('search'),
       maxResults: prefs.maxResults
     });
   },
@@ -869,7 +874,7 @@ api.port.on({
       store('_' + o.name, o.value ? 'y' : 'n');
       respond();
       if (o.name === 'keeper') {
-        var sensitive = stored('_sensitive') !== 'n';
+        var sensitive = enabled('sensitive');
         api.tabs.each(function (tab) {
           var d = tab.nUri && pageData[tab.nUri];
           if (d && !d.neverOnSite && !(d.sensitive && sensitive)) {
@@ -888,8 +893,9 @@ api.port.on({
     mixpanel.track('user_changed_setting', {
       category:
         ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
-        ~['keeper','sensitive'].indexOf(o.name) ? 'keeper' : 'unknown',
-      type: o.name,
+        ~['keeper','sensitive'].indexOf(o.name) ? 'keeper' :
+        'search' === o.name ? 'search' : 'unknown',
+      type: 'search' === o.name ? 'inGoogle' : o.name,
       value: o.value ? 'on' : 'off'
     });
   },
@@ -1083,10 +1089,10 @@ function standardizeNotification(n) {
 
 function handleRealTimeNotification(n) {
   if (n.unread && !n.muted && !silence) {
-    if (stored('_sounds') !== 'n') {
+    if (enabled('sounds')) {
       playNotificationSound();
     }
-    if (stored('_popups') !== 'n') {
+    if (enabled('popups')) {
       api.tabs.eachSelected(function (tab) {
         api.tabs.emit(tab, 'show_notification', n, {queue: true});
       });
@@ -1412,8 +1418,8 @@ function tellVisibleTabsNoticeCountIfChanged() {
 function searchOnServer(request, respond) {
   if (request.first && getPrefetched(request, respond)) return;
 
-  if (!me) {
-    log("[searchOnServer] no session")();
+  if (!me || !enabled('search')) {
+    log('[searchOnServer] noop, me:', me)();
     respond({});
     return;
   }
@@ -1548,7 +1554,7 @@ function kififyWithPageData(tab, d) {
   setIcon(tab, d.kept);
   if (silence) return;
 
-  var hide = d.neverOnSite || stored('_keeper') === 'n' || d.sensitive && stored('_sensitive') !== 'n';
+  var hide = d.neverOnSite || !enabled('keeper') || d.sensitive && enabled('sensitive');
   api.tabs.emit(tab, 'init', {  // harmless if sent to same page more than once
     kept: d.kept,
     position: d.position,
@@ -1836,13 +1842,15 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 });
 
 api.on.beforeSearch.add(throttle(function () {
-  ajax('search', 'GET', '/search/warmUp');
+  if (enabled('search')) {
+    ajax('search', 'GET', '/search/warmUp');
+  }
 }, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query) {
-  if (!me) return;
+  if (!me || !enabled('search')) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
@@ -1919,6 +1927,10 @@ function qualify(key) {
 }({kifi_installation_id: 'installation_id', prompt_to_import_bookmarks: null, logout: null}));
 
 // ===== Helper functions
+
+function enabled(setting) {
+  return stored('_' + setting) !== 'n';
+}
 
 function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
@@ -2113,12 +2125,7 @@ function startSession(callback, retryMs) {
     } else if (stored('installation_id')) {
       openLogin(callback, retryMs);
     } else {
-      var tab = api.tabs.anyAt(webBaseUri() + "/");
-      if (tab) {
-        api.tabs.select(tab.id);
-      } else {
-        api.tabs.open(webBaseUri());
-      }
+      api.tabs.selectOrOpen(webBaseUri() + '/');
       api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
         if (tab.url.replace(/\/(?:#.*)?$/, '') === webBaseUri()) {

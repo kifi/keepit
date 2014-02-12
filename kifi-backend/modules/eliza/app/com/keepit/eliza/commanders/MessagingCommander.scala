@@ -408,7 +408,7 @@ class MessagingCommander @Inject() (
 
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
-    log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
+    log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
       messageRepo.save(Message(
         id = None,
@@ -531,7 +531,7 @@ class MessagingCommander @Inject() (
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
-      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: $messages")
+      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
       (thread, messages.map { message =>
         val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
         MessageWithBasicUser(
@@ -660,8 +660,6 @@ class MessagingCommander @Inject() (
 
         shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
-          val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
-
           val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
           val theTitle: String = thread.pageTitle.getOrElse("New conversation")
           val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
@@ -703,7 +701,6 @@ class MessagingCommander @Inject() (
                 Json.arr("notification", notificationJson, permanentNotification)
               )
             }
-
 
             val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
             modifyMessageWithAuxData(mwbu).map { augmentedMessage =>

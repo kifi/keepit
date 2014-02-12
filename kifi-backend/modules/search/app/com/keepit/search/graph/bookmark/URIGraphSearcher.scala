@@ -29,6 +29,8 @@ import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 import com.keepit.search.graph.LongSetEdgeSet
 import com.keepit.search.graph.user.UserGraphsCommander
+import play.modules.statsd.api.Statsd
+
 
 
 object URIGraphSearcher {
@@ -95,7 +97,9 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
 
   lazy val friendEdgeSet = {
-    val friendIds = Await.result(friendIdsFuture, 5 seconds)
+    val friendIds = Statsd.time(key = "mainSearch.friendIdsFutureWait"){
+      Await.result(friendIdsFuture, 5 seconds)
+    }
     UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
   }
 
@@ -106,8 +110,11 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
 
   lazy val searchFriendEdgeSet = {
-    val List(unfriended, friendIds) = Await.result(Future.sequence(List(unfriendedFuture, friendIdsFuture)), 5 seconds)
-    UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
+    val (unfriended, friendIds) = Statsd.time(key = "mainSearch.searchFriendsFutureWait"){
+      (Await.result(unfriendedFuture, 5 seconds), Await.result(friendIdsFuture, 5 seconds))
+    }
+    if (unfriended.isEmpty) UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
+    else UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
   }
 
   lazy val searchFriendsUriEdgeSets = {

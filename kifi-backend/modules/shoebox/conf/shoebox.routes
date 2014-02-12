@@ -364,7 +364,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
-GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: Option[String] ?= None, prefix: Option[String] ?= None)
+GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
 GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
@@ -405,6 +405,10 @@ POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
+POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
+POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
+POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
+
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
@@ -422,6 +426,8 @@ GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
+
+GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
 
 ##########################################
 # Common Healthcheck / service routes
@@ -524,6 +530,11 @@ POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controll
 
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 
+
+# New site, temporary
+GET     /ng/*file                  com.keepit.controllers.website.AngularAssets.at(path="/angular", file)
+GET     /dist/*file               com.keepit.controllers.website.AngularAssets.at(path="/angular/dist", file)
+GET     /img/*file               com.keepit.controllers.website.AngularAssets.at(path="/angular/img", file)
 
 
 ->  / common.Routes
