@@ -94,7 +94,7 @@ var toaster = (function () {
       log('[toaster:onShown]')();
       var $t = $(this).off('transitionend', onShown);
       deferred.resolve($t.data('compose'));
-      if (prefs.showFindFriends || true) {
+      if (prefs.showFindFriends) {
         $toaster.find('.kifi-toast-intro').addClass('kifi-showing');
       }
     }

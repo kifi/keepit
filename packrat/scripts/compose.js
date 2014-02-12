@@ -119,7 +119,7 @@ function initCompose($c, enterToSend, opts) {
         }
       },
       onTip: function () {
-        window.open('https://www.kifi.com/friends/invite');
+        api.port.emit('invite_friends', 'composePane');
       }
     });
     api.port.emit('get_friends', function (friends) {
