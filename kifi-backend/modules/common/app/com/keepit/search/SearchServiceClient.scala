@@ -61,12 +61,6 @@ trait SearchServiceClient extends ServiceClient {
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
 
-  def search(
-    userId: Id[User],
-    experiments: Set[ExperimentType],
-    acceptLangs: Seq[String],
-    rawQuery: String): Future[String]
-
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]]
 
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
@@ -226,14 +220,6 @@ class SearchServiceClientImpl(
       val param = Json.fromJson[Map[String, String]](r.json).get
       new SearchConfig(param)
     }
-  }
-
-  def search(
-    userId: Id[User],
-    experiments: Set[ExperimentType],
-    acceptLangs: Seq[String],
-    rawQuery: String): Future[String] = {
-      tee(Search.internal.search(userId,experiments,acceptLangs,rawQuery)).map(_.body)
   }
 
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]] = {

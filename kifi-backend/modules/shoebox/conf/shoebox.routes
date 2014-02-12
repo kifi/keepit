@@ -240,13 +240,6 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
 
-
-##########################################
-# Search Proxying
-##########################################
-GET    /tsearch                     @com.keepit.controllers.SearchProxyController.search()
-
-
 ##########################################
 # External Services API
 ##########################################

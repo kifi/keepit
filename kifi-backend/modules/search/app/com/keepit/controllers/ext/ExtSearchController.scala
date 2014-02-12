@@ -69,29 +69,5 @@ class ExtSearchController @Inject() (
       Nil,
       decoratedResult.experts).json
   }
-
-  def internalSearch(
-    userId: Long,
-    exp: String,
-    acceptLangs: String,
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None
-  ) = Action { request =>
-
-    val uid = Id[User](userId)
-
-    val experiments = exp.split(",").map(ExperimentType(_)).toSet
-    val decoratedResult = searchCommander.search(uid, acceptLangs.split(","), experiments , query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
-
-    Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
-  }
 }
 
