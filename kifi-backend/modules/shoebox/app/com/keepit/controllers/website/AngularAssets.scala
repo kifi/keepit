@@ -19,6 +19,7 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
   override def at(path: String, file: String): Action[AnyContent] = {
     log.info(s"Angular dist resource requested: $path, $file")
     val rName = rNameAt(path, file)
+    
     log.info("Resource: " + rName)
     log.info("Play resource: " + rName.map(Play.resource))
     super.at(path, file)

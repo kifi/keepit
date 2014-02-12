@@ -30,6 +30,33 @@ object ApplicationBuild extends Build {
   writeToFile("conf/app_compilation_date.txt", now)
   writeToFile("modules/common/conf/app_compilation_date.txt", now)
 
+  lazy val emojiLogs = logManager ~= { lm =>
+      new LogManager {
+        def apply(data: sbt.Settings[Scope], state: State, task: Def.ScopedKey[_], writer: java.io.PrintWriter) = {
+          val l = lm.apply(data, state, task, writer)
+          val FailuresErrors = "(?s).*(\\d+) failures?, (\\d+) errors?.*".r
+          new Logger {
+            def filter(s: String) = {
+              val filtered = s.replace("\033[32m+\033[0m", "\u2705 ")
+                .replace("\033[33mx\033[0m", "\u274C ")
+                .replace("\033[31m!\033[0m", "\uD83D\uDCA5 ")
+              filtered match {
+                case FailuresErrors("0", "0") => filtered + " \uD83D\uDE04"
+                case FailuresErrors(_, _) => filtered + " \uD83D\uDE22"
+                case _ => filtered
+              }
+            }
+            def log(level: Level.Value, message: => String) = l.log(level, filter(message))
+            def success(message: => String) = l.success(message)
+            def trace(t: => Throwable) = l.trace(t)
+
+            override def ansiCodesSupported = l.ansiCodesSupported
+          }
+        }
+      }
+    }
+
+
   val commonDependencies = Seq(
     jdbc, // todo(andrew): move to sqldb when we discover a way to get Play to support multiple play.plugins files.
     cache,
@@ -160,7 +187,8 @@ object ApplicationBuild extends Build {
     Keys.fork := false,
     /*skip in update := true,
      *skip in update in (Compile, test) := true*/
-    aggregate in update := false
+    aggregate in update := false,
+    emojiLogs
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
