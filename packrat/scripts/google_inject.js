@@ -28,7 +28,6 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
-  var $none = $bar.find('.kifi-res-bar-none');
   var $status = $bar.find('.kifi-res-bar-status');
   var $arrow = $res.find('.kifi-res-arrow');
   attachKifiRes();
@@ -127,7 +126,6 @@ if (searchUrlRe.test(document.URL)) !function() {
       }
       $bar.addClass('kifi-loading');
     }
-    $none.removeClass('kifi-showing');
     $status.removeAttr('href data-n');
     $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
@@ -173,8 +171,9 @@ if (searchUrlRe.test(document.URL)) !function() {
             .attr('data-n', numTop)
             .attr('href', 'javascript:');
           if (!numTop) {
-            $status.attr('data-of', allTotal);
-            $none.addClass('kifi-showing');
+            $status.attr('data-of', resp.mayHaveMore ?
+              insertCommas(Math.max(resp.hits.length, resp.myTotal + resp.friendsTotal) - 1) + '+' :
+              (resp.hits.length || 'No'));
           }
         }
         $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length}).attr('data-of', allTotal);
@@ -564,7 +563,6 @@ if (searchUrlRe.test(document.URL)) !function() {
     var $box = $res.find('.kifi-res-box').css({visibility: 'hidden', height: 0});
 
     $bar.removeClass('kifi-collapsed');
-    $none.removeClass('kifi-showing');
     $status.removeAttr('data-n');
 
     $box.find('.kifi-res-sub:not(.kifi-fitted)').each(makeDescAndTagsFit);
@@ -592,7 +590,7 @@ if (searchUrlRe.test(document.URL)) !function() {
           results: response.hits,
           self: response.me,
           images: api.url('images'),
-          filter: response.filter,
+          filter: response.filter && response.filter.who !== 'a',
           mayHaveMore: response.mayHaveMore
         }, {
           google_hit: 'google_hit'
@@ -610,7 +608,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         "context": response.context
       }, function onPrefetchResponse(resp) {
         if (response === origResp) {
-          log("[onPrefetchResponse]", resp)();
+          log('[onPrefetchResponse]')();
           resp.hits.forEach(processHit, resp);
 
           response.nextHits = resp.hits;
