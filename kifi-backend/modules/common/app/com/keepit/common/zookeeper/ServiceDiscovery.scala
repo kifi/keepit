@@ -112,9 +112,9 @@ class ServiceDiscoveryImpl(
     myCluster.instanceForNode(instance.node).isDefined
   }
 
-  private def watchServices(): Unit = clusters.values foreach watchService
+  private def watchServices(zk: ZooKeeperSession): Unit = clusters.values.foreach{ cluster => watchService(zk, cluster) }
 
-  private def watchService(cluster: ServiceCluster): Unit = zkClient.session{ zk =>
+  private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
@@ -166,7 +166,7 @@ class ServiceDiscoveryImpl(
       myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
-      watchServices()
+      watchServices(zk)
     }
   }
 
