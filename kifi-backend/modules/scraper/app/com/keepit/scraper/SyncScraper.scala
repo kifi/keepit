@@ -68,7 +68,6 @@ class SyncScraper @Inject() (
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
           helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _)) // todo(Léo): remove when all existing uris have been processed once
           log.info(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
