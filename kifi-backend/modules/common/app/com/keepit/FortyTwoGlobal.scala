@@ -62,6 +62,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
       try {
         elbClient.registerInstancesWithLoadBalancer(request)
+        Thread.sleep(15000)
         println(s"[${currentDateTime.toStandardTimeString}] Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
         case t:Throwable => {
