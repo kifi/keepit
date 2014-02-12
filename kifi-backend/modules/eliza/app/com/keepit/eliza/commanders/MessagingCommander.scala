@@ -660,8 +660,6 @@ class MessagingCommander @Inject() (
 
         shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
 
-          val adderName = basicUsers.get(adderUserId).map(n => n.firstName + " " + n.lastName).get
-
           val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
           val theTitle: String = thread.pageTitle.getOrElse("New conversation")
           val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
@@ -703,7 +701,6 @@ class MessagingCommander @Inject() (
                 Json.arr("notification", notificationJson, permanentNotification)
               )
             }
-
 
             val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
             modifyMessageWithAuxData(mwbu).map { augmentedMessage =>

@@ -179,6 +179,9 @@ object ApplicationBuild extends Build {
 
   lazy val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
+  ).settings(
+    //unmanagedResourceDirectories in Compile <+= baseDirectory( _ / "angular" )
+    playAssetsDirectories <+= baseDirectory / "angular"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
