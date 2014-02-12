@@ -114,7 +114,7 @@ class MessagingCommander @Inject() (
       val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
         val nUri = nUriOrPrenorm.left.get
         val threads = db.readOnly { implicit session =>
-          val threadIds = userThreadRepo.getThreads(userId, nUri.id)
+          val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
 
@@ -515,18 +515,18 @@ class MessagingCommander @Inject() (
     }
 
 
-  def getThreadMessages(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
+  private def getThreadMessages(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadExtId)
     }
     getThreadMessages(thread, pageOpt)
   }
 
-  def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
+  private def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
     getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)), pageOpt)
   }
 
-  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
@@ -562,7 +562,7 @@ class MessagingCommander @Inject() (
 
   def getThreads(user: Id[User], url: Option[String]=None): Seq[MessageThread] = {
     db.readOnly { implicit session =>
-      val threadIds = userThreadRepo.getThreads(user)
+      val threadIds = userThreadRepo.getThreadIds(user)
       threadIds.map(threadRepo.get(_))
     }
   }
@@ -990,7 +990,7 @@ class MessagingCommander @Inject() (
     }.map { res =>
       val urlMsgCount = db.readOnly { implicit session =>
         res.filter(_._2.isDefined).map { case (url, nuri) =>
-          url -> userThreadRepo.getThreads(userId, Some(nuri.get.id.get))
+          url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
         }
       }
       Map(urlMsgCount: _*)
