@@ -32,24 +32,8 @@
   position: relative;
   bottom: 1px;
 }
-.kifi-res-bar-none:not(.kifi-showing),
-.kifi-res-bar-status-pre,
-.kifi-res-bar-status-post,
-.kifi-res-bar:not(:hover)>.kifi-res-bar-none.kifi-showing~.kifi-res-bar-status {
-  display: none;
-}
-.kifi-res-bar:hover>.kifi-res-bar-none.kifi-showing+.kifi-res-bar-status-pre,
-.kifi-res-bar:hover>.kifi-res-bar-none.kifi-showing~.kifi-res-bar-status-post {
-  display: inline;
-}
-.kifi-res-bar-none,
-.kifi-res-bar-status-pre,
-.kifi-res-bar-status-post,
 .kifi-res-bar-status {
   vertical-align: 1px;
-}
-.kifi-res-bar-status[data-n] {
-  border-radius: 50%;
 }
 .kifi-res-bar-status[href],
 .kifi-filter[href] {
@@ -74,7 +58,7 @@
   text-align: center;
 }
 .kifi-collapsed>.kifi-res-bar-status::after {
-  content: 'Expand again';
+  content: 'Expand';
 }
 .kifi-loading>.kifi-res-bar-status::after {
   content: 'Loading relevant keeps...';
@@ -89,23 +73,20 @@
 .kifi-res-bar-status[href][data-n='0'][data-of]::after {
   content: attr(data-of) ' matching keeps';
   margin-left: 0;
+  color: #929496;
 }
 .kifi-res-bar-status[href][data-n='0'][data-of='1']::after {
   content: attr(data-of) ' matching keep';
 }
-.kifi-res-bar-status[href]:hover::after,
+.kifi-res-bar:hover>.kifi-res-bar-status[href]::after {
+  color: inherit;
+}
+.kifi-res-bar:hover>.kifi-res-bar-status[href]::after,
 .kifi-filter[href]:hover {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAEElEQVQIW2NgAIL8Ze//AwAGlAMEWWp0lgAAAABJRU5ErkJggg==);
   background-size: auto 1px;
   background-position: right bottom;
   background-repeat: repeat-x;
-}
-.kifi-res-bar-status-pre,
-.kifi-res-bar-status-post {
-  display: none;
-}
-.kifi-res-bar:hover>.kifi-res-bar-status[data-n='0'][data-of] {
-  display: inline;
 }
 .kifi-res-buttons {
   float: right;
@@ -329,12 +310,12 @@ div.kifi-res-menu-item {
   color: #666;
 }
 #kifi-res-list.kifi-res-none::before {
-  content: " ";
+  content: ' ';
   display: block;
   height: 20px;
 }
 #kifi-res-list.kifi-res-none::after {
-  content: " ";
+  content: ' ';
   display: block;
   height: 12px;
 }
