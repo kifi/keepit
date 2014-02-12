@@ -142,6 +142,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         return;
       } else if (!resp.me) {
         log("[results] no user info")();
+        $res.hide();
         return;
       }
 
