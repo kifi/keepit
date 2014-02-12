@@ -1,17 +1,34 @@
+@import com.keepit.common.service.ServiceClient
+
 @import com.keepit.common.service.ServiceType
 
-@admin("Cache Performance", scripts = List("graphite")) {
+@admin("Cache Overview", scripts = List("graphite")) {
 
-<div style="float: right" class="form-horizontal">
-  <select class="input-medium params" id="timerange"></select>
-  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+<h3>Invalidation</h3>
+<div>
+  <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.AdminCacheController.clearLocalCaches()" method="GET">
+    <select class="input-medium params" name="service">
+    <option value="all" selected>All Services
+    @for(service <- ServiceClient.register.map(_.serviceCluster.serviceType)) {
+      <option value="@service.name">@service.name.toLowerCase.capitalize
+    }
+    </select>
+    <input type="text" name="prefix" placeholder="optional key prefix">
+    <button class="btn btn-primary" type="submit">Clear In-Memory Cache</button>
+  </form>
 </div>
+
+<h3>Performance</h3>
 <select class="input-medium params" id="service">
     <option value="{@ServiceType.inProduction.map(_.name.toLowerCase).mkString(",")}" selected>All Services
     @for(service <- ServiceType.inProduction) { <option value="@service.name.toLowerCase">@service.name.toLowerCase.capitalize }
 </select>
 <select class="input-medium params" id="plugin"></select>
 <select class="input-medium params" id="namespace"></select>
+<div style="float: right" class="form-horizontal">
+  <select class="input-medium params" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
 
 <p><img id="ratios" class="img-polaroid"></p>
 <p>
