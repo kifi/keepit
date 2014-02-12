@@ -116,7 +116,7 @@ class ServiceDiscoveryImpl(
 
   private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
-    zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
+    zk.watchChildrenWithData[String](cluster.servicePath, { children: Seq[(Node, String)] =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
       cluster.update(zk, children)
     })
@@ -128,7 +128,7 @@ class ServiceDiscoveryImpl(
       forceUpdateInProgress = true
       zkClient.session{ zk =>
         for (cluster <- clusters.values) {
-          val children = zk.getChildren(cluster.servicePath)
+          val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
           cluster.update(zk, children)
         }
       }

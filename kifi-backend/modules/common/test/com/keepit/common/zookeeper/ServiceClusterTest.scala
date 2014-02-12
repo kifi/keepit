@@ -82,7 +82,9 @@ class ServiceClusterTest extends Specification {
       zk.nodes.exists(n => n == Node(basePath, "node_00000003")) === false
 
       zk.session{ zk =>
-        cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Nil)
+        val children = zk.getChildren(basePath).map(child => (child, zk.getData[String](child).get))
+        children.size === 2
+        cluster.update(zk, children)
       }
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
@@ -111,7 +113,8 @@ class ServiceClusterTest extends Specification {
       zk.nodes.exists(n => n == Node(basePath, "node_00000004")) === false
 
       zk.session{ zk =>
-        cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Node(basePath, "node_00000003") :: Nil)
+        val children = zk.getChildren(basePath).map(child => (child, zk.getData[String](child).get))
+        cluster.update(zk, children)
       }
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
@@ -129,7 +132,8 @@ class ServiceClusterTest extends Specification {
         zk.createChild(basePath, "node_00000001", RemoteService.toJson(remoteService1))
         zk.createChild(basePath, "node_00000002", RemoteService.toJson(remoteService2))
         zk.createChild(basePath, "node_00000003", RemoteService.toJson(remoteService3))
-        cluster.update(zk, Node(basePath, "node_00000001") :: Node(basePath, "node_00000002") :: Node(basePath, "node_00000003") :: Nil)
+        val children = zk.getChildren(basePath).map(child => (child, zk.getData[String](child).get))
+        cluster.update(zk, children)
       }
       val service1 = cluster.nextService.get
       val service2 = cluster.nextService.get
