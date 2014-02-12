@@ -222,15 +222,17 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onDisconnect(socketInfo)
         }
 
+        log.info(s"New WS connection from user ${streamSession.userId}.")
+
         val iteratee = asyncIteratee(streamSession, versionOpt) { jsArr =>
           Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-            log.info("WS request for: " + jsArr)
+            log.info(s"WS request from user ${streamSession.userId} for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
             Statsd.time(s"websocket.handler.${jsArr.value(0)}") {
               handler(jsArr.value.tail)
             }
           } getOrElse {
-            log.warn("WS no handler for: " + jsArr)
+            log.warn(s"WS no handler from user ${streamSession.userId} for: " + jsArr)
           }
         }.map(_ => endSession("Session ended"))
 

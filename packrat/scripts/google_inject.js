@@ -28,9 +28,9 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
-  var $none = $res.find('.kifi-res-bar-none');
+  var $none = $bar.find('.kifi-res-bar-none');
   var $status = $bar.find('.kifi-res-bar-status');
-  var $arrow = $bar.find('.kifi-res-bar-arrow');
+  var $arrow = $res.find('.kifi-res-arrow');
   attachKifiRes();
 
   var filter;             // current search filter (null or {who: 'a'|'m'|'f'})
@@ -159,7 +159,7 @@ if (searchUrlRe.test(document.URL)) !function() {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.show && resp.hits.length && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
+      var showAny = Boolean(resp.show && resp.hits.length && resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit, resp);
@@ -434,33 +434,43 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   var bindResHandlers = function() {
-    $res.on("mouseover", ".kifi-res-more-a", function() {
-      $(this).closest(".kifi-res-more").addClass("kifi-over");
-    }).on("mouseout", ".kifi-res-more-a", function() {
-      $(this).closest(".kifi-res-more").removeClass("kifi-over");
-    }).on("click", ".kifi-res-more-a", function(e) {
-      if (e.which > 1) return;
-      showMore();
-    }).on('click', '.kifi-res-bar-status[href]', function (e) {
-      if (e.which > 1) return;
+    $status.click(function (e) {
+      if (e.which > 1 || !this.href) return;
+      e.preventDefault();
       if ($bar.hasClass('kifi-preview')) {
-        showMore();
+        if (response.nextUUID === response.uuid) {
+          showMore();
+        } else {
+          exitPreview();
+        }
       } else {
         expandResults();
       }
-    }).on('click', '.kifi-res-bar-arrow[href]', function (e) {
-      if (e.which > 1) return;
+    });
+    $arrow.click(function (e) {
+      if (e.which > 1 || !this.href) return;
+      e.preventDefault();
       if ($bar.hasClass('kifi-collapsed')) {
         expandResults();
       } else {
         collapseResults();
       }
-    }).on('mousedown', '.kifi-res-bar-menu-a', function (e) {
+    });
+    $bar.click(function (e) {
+      if (e.which === 1 && !e.isDefaultPrevented()) {
+        if (e.shiftKey && ~(response.experiments || []).indexOf('admin')) {
+          location.href = response.admBaseUri + '/admin/search/results/' + response.uuid;
+        } else {
+          ($status.is('[href]:visible') ? $status : $arrow).triggerHandler('click');
+        }
+      }
+    });
+    $res.on('mousedown', '.kifi-res-menu-a', function (e) {
       if (e.which > 1) return;
       e.preventDefault();
       var $a = $(this).addClass('kifi-active');
-      var $menu = $a.next('.kifi-res-bar-menu').fadeIn(50);
-      var $items = $menu.find('.kifi-res-bar-menu-item')
+      var $menu = $a.next('.kifi-res-menu').fadeIn(50);
+      var $items = $menu.find('.kifi-res-menu-item')
         .on('mouseenter', enterItem)
         .on('mouseleave', leaveItem);
       var $leaves = $items.filter('a').on('mouseup', hide);
@@ -510,10 +520,6 @@ if (searchUrlRe.test(document.URL)) !function() {
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');
       var n = +$this.text();
       api.port.emit('set_max_results', n);
-    }).on('click', '.kifi-res-bar', function (e) {
-      if (e.shiftKey && ~(response.experiments || []).indexOf('admin')) {
-        location.href = response.admBaseUri + '/admin/search/results/' + response.uuid;
-      }
     }).on('click', '.kifi-filter[href]', function (e, alreadySearched) {
       if (e.which > 1) return;
       var $v = $(this).removeAttr('href');
@@ -522,7 +528,7 @@ if (searchUrlRe.test(document.URL)) !function() {
         var val = $v.data('val');
         search(null, {who: val});
       }
-    }).hoverfu(".kifi-face.kifi-friend", function(configureHover) {
+    }).hoverfu('.kifi-face.kifi-friend', function (configureHover) {
       var $a = $(this);
       var i = $a.closest("li.g").prevAll("li.g").length;
       var j = $a.prevAll(".kifi-friend").length;
@@ -536,13 +542,20 @@ if (searchUrlRe.test(document.URL)) !function() {
           hideAfter: 4000,
           click: "toggle"});
       });
-    }).hoverfu(".kifi-res-friends", function(configureHover) {
+    }).hoverfu('.kifi-res-friends', function (configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
       render("html/search/friends", {friends: response.hits[i].users}, function(html) {
         configureHover(html, {
           position: {my: "center bottom-8", at: "center top", of: $a, collision: "none"},
           click: "toggle"});
       });
+    }).on('mouseover', '.kifi-res-more-a', function () {
+      $(this).closest('.kifi-res-more').addClass('kifi-over');
+    }).on('mouseout', '.kifi-res-more-a', function () {
+      $(this).closest('.kifi-res-more').removeClass('kifi-over');
+    }).on('click', '.kifi-res-more-a', function (e) {
+      if (e.which > 1) return;
+      showMore();
     });
   }
 
@@ -564,9 +577,10 @@ if (searchUrlRe.test(document.URL)) !function() {
   }
 
   function collapseResults() {
-    $res.find('.kifi-res-box').slideUp(200);
-    $bar.addClass('kifi-collapsed').removeClass('kifi-preview');
-    $status.attr('href', 'javascript:').removeAttr('data-n');
+    $res.find('.kifi-res-box').slideUp(200, function () {
+      $bar.addClass('kifi-collapsed').removeClass('kifi-preview');
+      $status.attr('href', 'javascript:').removeAttr('data-n');
+    });
   }
 
   function attachResults() {
@@ -612,10 +626,14 @@ if (searchUrlRe.test(document.URL)) !function() {
     }
   }
 
-  function showMore() {
-    log('[showMore] already showing:', response.hits.length, 'avail:', response.nextHits)();
+  function exitPreview() {
     $bar.removeClass('kifi-preview');
     $status.removeAttr('data-n');
+  }
+
+  function showMore() {
+    log('[showMore] already showing:', response.hits.length, 'avail:', response.nextHits)();
+    exitPreview();
     if (response.nextHits) {
       renderMore();
       prefetchMore();

@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses, EmailAddressHolder}
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.{UserIdentity, SocialNetworks}
 import com.keepit.common.usersegment.UserSegment
@@ -20,14 +21,17 @@ import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
 import com.keepit.search.SearchServiceClient
+import com.keepit.typeahead.PrefixFilter
+import com.keepit.typeahead.PrefixMatching
+import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-import java.text.Normalizer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 
@@ -322,8 +326,6 @@ class UserCommander @Inject() (
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }
   }
 
-  @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
-
   def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email:String) = s"email/$email"
     @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
@@ -345,27 +347,14 @@ class UserCommander @Inject() (
     }
   }
 
+  implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
+
   // todo(eishay): legacy api -- to be replaced after removing dependencies
   def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
-    val searchTerms = search.toSeq.map(_.split("\\s+")).flatten.filterNot(_.isEmpty).map(normalize)
-    @inline def searchScore(sci: SocialUserBasicInfo): Int = {
-      if (network.exists(sci.networkType.name !=)) 0
-      else if (searchTerms.isEmpty) 1
-      else {
-        val name = normalize(sci.fullName)
-        if (searchTerms.exists(!name.contains(_))) 0
-        else {
-          val names = name.split("\\s+").filterNot(_.isEmpty)
-          names.count(n => searchTerms.exists(n.startsWith))*2 +
-            names.count(n => searchTerms.exists(n.contains)) +
-            (if (searchTerms.exists(name.startsWith)) 1 else 0)
-        }
-      }
-    }
 
     def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
       sci -> sci.userId.map(_ => "joined").getOrElse {
@@ -382,14 +371,28 @@ class UserCommander @Inject() (
       }
     }
 
-    def getFilteredConnections(sui: SocialUserInfo)(implicit s: RSession): Seq[SocialUserBasicInfo] =
-      if (sui.networkType == SocialNetworks.FORTYTWO) Nil
-      else socialConnectionRepo.getSocialConnectionInfo(sui.id.get) filter (searchScore(_) > 0)
+    def getFilteredConnections(infos: Seq[SocialUserBasicInfo])(implicit s: RSession): Seq[TypeaheadHit[SocialUserBasicInfo]] = {
+      search match {
+        case Some(query) =>
+          var ordinal = 0
+          val queryTerms = PrefixFilter.tokenize(query)
+          infos.map{ info =>
+            ordinal += 1
+            val name = PrefixFilter.normalize(info.fullName)
+            TypeaheadHit[SocialUserBasicInfo](PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
+          }.collect{ case hit if hit.score < 1000000.0d => hit }
+        case None =>
+          var ordinal = 0
+          infos.map{ info =>
+            ordinal += 1
+            TypeaheadHit[SocialUserBasicInfo](0, PrefixFilter.normalize(info.fullName), ordinal, info)
+          }
+      }
+    }
 
     val connections = db.readOnly { implicit s =>
-      val filteredConnections = socialUserInfoRepo.getByUser(userId)
-        .flatMap(getFilteredConnections)
-        .sortBy { case sui => (-searchScore(sui), normalize(sui.fullName)) }
+      val infos = socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
+      val filteredConnections = infos.values.map(getFilteredConnections).flatten.toSeq.sorted.map(_.info)
 
       (after match {
         case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
