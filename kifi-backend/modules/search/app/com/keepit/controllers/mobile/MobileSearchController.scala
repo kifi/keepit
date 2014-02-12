@@ -35,9 +35,8 @@ class MobileSearchController @Inject() (
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
-    val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }

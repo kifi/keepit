@@ -74,7 +74,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
         contentLang = Some(Lang("en")))
     }
 
-    val searchConfig = SearchConfig.defaultConfig.apply("siteBoost" -> "1.0")
+    val searchConfig = SearchConfig.defaultConfig.overrideWith("siteBoost" -> "1.0")
 
     class Searchable(indexer: ArticleIndexer) {
       def search(queryString: String, percentMatch: Float = 0.0f): Seq[SearcherHit] = {

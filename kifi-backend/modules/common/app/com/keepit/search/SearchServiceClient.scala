@@ -8,9 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
-import com.keepit.model.Collection
-import com.keepit.model.NormalizedURI
-import com.keepit.model.User
+import com.keepit.model.{ExperimentType, Collection, NormalizedURI, User}
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
@@ -65,7 +63,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def search(
     userId: Id[User],
-    noSearchExperiments: Boolean,
+    experiments: Set[ExperimentType],
     acceptLangs: Seq[String],
     rawQuery: String): Future[String]
 
@@ -232,10 +230,10 @@ class SearchServiceClientImpl(
 
   def search(
     userId: Id[User],
-    noSearchExperiments: Boolean,
+    experiments: Set[ExperimentType],
     acceptLangs: Seq[String],
     rawQuery: String): Future[String] = {
-      tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,rawQuery)).map(_.body)
+      tee(Search.internal.search(userId,experiments,acceptLangs,rawQuery)).map(_.body)
   }
 
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]] = {

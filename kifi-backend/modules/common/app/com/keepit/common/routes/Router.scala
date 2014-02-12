@@ -163,11 +163,11 @@ object Search extends Service {
     def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
     def search(
         userId: Id[User],
-        noSearchExperiments: Boolean,
+        experiments: Set[ExperimentType],
         acceptLangs: Seq[String],
         rawQuery: String) = {
         val params = "userId=" + userId.id.toString +
-                     "&nse=" + noSearchExperiments +
+                     "&exp=" + experiments.mkString(",") +
                      "&al=" + acceptLangs.mkString(",") +
                      "&" + rawQuery
         ServiceRoute(GET, "/internal/search?" + params)

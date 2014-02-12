@@ -13,7 +13,7 @@ import scala.util.hashing.MurmurHash3
 
 //Note: The order of the argument Seq here is very important. It, along with the salt, uniquely determines which users go in which bin.
 case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
-  require(density.forall(_._2 >= 0), "Probabilities must ne non-negative")
+  require(density.forall(_._2 >= 0), "Probabilities must be non-negative")
   require(density.map(_._2).sum <= 1, "Probabilities sum up to more than 1")
   val cumulative: Seq[(A, Double)] = { // The order of the density sequence is implied to compute the CDF
     var cdf = 0.0
@@ -33,6 +33,10 @@ object ProbabilityDensity {
   )
 }
 
+trait UserExperimentGenerator {
+  def apply(userId: Id[User], existingExperiments: Set[ExperimentType]): Option[ExperimentType]
+}
+
 case class ProbabilisticExperimentGenerator(
   id: Option[Id[ProbabilisticExperimentGenerator]] = None,
   createdAt: DateTime = currentDateTime,
@@ -42,7 +46,7 @@ case class ProbabilisticExperimentGenerator(
   condition: Option[ExperimentType],
   salt: String,
   density: ProbabilityDensity[ExperimentType]
-) extends ModelWithState[ProbabilisticExperimentGenerator] {
+) extends ModelWithState[ProbabilisticExperimentGenerator] with UserExperimentGenerator {
 
   def withId(id: Id[ProbabilisticExperimentGenerator]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)

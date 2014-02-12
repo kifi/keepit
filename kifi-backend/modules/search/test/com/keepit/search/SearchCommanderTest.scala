@@ -59,7 +59,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         def myBookmarkExternalId = getBookmarkByUriAndUser(uris(0).id.get, users(0).id.get).get.externalId
 
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
-        searchConfigManager.setUserConfig(users(0).id.get, noBoostConfig("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1"))
+        searchConfigManager.setUserConfig(users(0).id.get, noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1"))
 
         val searchCommander = new SearchCommanderImpl(
           activeShards,
@@ -74,7 +74,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         val res = searchCommander.search(
             userId = users(0).id.get,
             acceptLangs = Seq("en"),
-            noSearchExperiments = false,
+            experiments = Set.empty,
             query = "keepit",
             filter = None,
             maxHits = 3,

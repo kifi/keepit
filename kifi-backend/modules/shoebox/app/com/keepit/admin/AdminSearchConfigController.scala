@@ -93,7 +93,7 @@ class AdminSearchConfigController @Inject() (
     }.toMap
     id.map { id =>
       val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
-      val toSave = exp.copy(description = desc, weight = weight, config = exp.config(params)).withState(state.getOrElse(exp.state))
+      val toSave = exp.copy(description = desc, weight = weight, config = exp.config.overrideWith(params)).withState(state.getOrElse(exp.state))
       if (exp != toSave) saveSearchConfigExperiment(toSave, exp.weight != toSave.weight)
     }
     Ok(JsObject(Seq()))
@@ -105,9 +105,8 @@ class AdminSearchConfigController @Inject() (
       searchConfigExperimentRepo.getActive()
     }
     if (updateDensity) {
-      val norm = allActive.map(_.weight).sum
-      val density = ProbabilityDensity(allActive.sortBy(_.id.get.id).map { se => se.experiment -> se.weight / norm })
-      userExperimentCommander.internProbabilisticExperimentGenerator(SearchConfigExperiment.generator, density)
+      val density = SearchConfigExperiment.getDensity(allActive)
+      userExperimentCommander.internProbabilisticExperimentGenerator(SearchConfigExperiment.probabilisticGenerator, density)
     }
   }
 

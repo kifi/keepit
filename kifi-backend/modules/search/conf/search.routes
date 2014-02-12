@@ -21,7 +21,7 @@ GET     /m/1/search/users/search        @com.keepit.controllers.mobile.MobileUse
 ##########################################
 # INTERNAL ROUTES/Search
 ##########################################
-GET     /internal/search            @com.keepit.controllers.ext.ExtSearchController.internalSearch(userId: Long, nse: Boolean, al: String, q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+GET     /internal/search            @com.keepit.controllers.ext.ExtSearchController.internalSearch(userId: Long, exp: String, al: String, q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 
 GET     /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
