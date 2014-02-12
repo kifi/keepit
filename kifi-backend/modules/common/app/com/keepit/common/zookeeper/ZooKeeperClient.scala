@@ -305,7 +305,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
         onDataChanged(Some(zk.getData(node, dataGetter, null)))
       } catch {
         case e:KeeperException => {
-          log.warn(s"Failed to read node ${node}", e)
+          log.warn(s"Failed to read node ${node.path}", e)
           deletedData
         }
       }
@@ -329,7 +329,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case EventType.NodeDataChanged | EventType.NodeCreated => updateData
           case EventType.NodeDeleted => deletedData
           case EventType.NodeChildrenChanged => reregister
-          case _ => // session event, we intentionally lose this watch
+          case _ => log.info(s"session event, losing a watch on ${node.path}") // session event, we intentionally lose this watch
         }
       }
     }
@@ -358,7 +358,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             val children = getChildren(node)
             doWatchChildren(children)
           case EventType.NodeDeleted => // deletion handled via parent watch
-          case _ => // session event, we intentionally lose this watch
+          case _ => log.info(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
         }
       }
     }
@@ -379,7 +379,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             val children = if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
             updateChildren(children)
             doWatchChildren(children)
-          case _ => // session event, we intentionally lose this watch
+          case _ => log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
         }
       }
     }
@@ -392,8 +392,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
               zk.getData(child.path, new ChildWatcher(child), new Stat())
               watchedChildren += child
             } catch {
-              case e: KeeperException =>
-                log.warn("Failed to place watch on a child node!")
+              case e: KeeperException => log.warn(s"Failed to place watch on a child node!: ${child.path}", e)
             }
           }
         }
