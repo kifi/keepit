@@ -78,59 +78,59 @@ class ZooKeeperClientTest extends Specification {
         val updateCount = new AtomicInteger(0)
 
 
-        @volatile var childSet = Set.empty[Node]
+        @volatile var childMap = Map.empty[Node, String]
         val parent = zk.createChild(node, "parent")
         mkLatch
         zk.watchChildrenWithData[String](parent, { (children : Seq[(Node, String)]) =>
-          childSet = children.map(_._1).toSet
+          childMap = children.toMap
           updateCount.incrementAndGet()
           println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
           latch.map(l => l.countDown())
         })
         awaitLatch
-        childSet === Set()
+        childMap === Map()
         updateCount.get === 1
 
         mkLatch
         val child1 = zk.createChild(parent, "child1")
         awaitLatch
-        childSet === Set(Node(parent, "child1"))
+        childMap === Map(Node(parent, "child1") -> "")
         updateCount.get === 2
 
         mkLatch
         val child2 = zk.createChild(parent, "child2")
         awaitLatch
-        childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
+        childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "")
         updateCount.get === 3
 
         mkLatch
         zk.setData[String](child2, "test")
         awaitLatch
-        childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
+        childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "test")
         updateCount.get === 4
 
         mkLatch
         zk.deleteData(child2)
         awaitLatch
-        childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
+        childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "")
         updateCount.get === 5
 
         mkLatch
         zk.delete(child1)
         awaitLatch
-        childSet === Set(Node(parent, "child2"))
+        childMap === Map(Node(parent, "child2") -> "")
         updateCount.get === 6
 
         mkLatch
-        val child3 = zk.createChild(parent, "child3")
+        val child3 = zk.createChild(parent, "child3", "new node")
         awaitLatch
-        childSet === Set(Node(parent, "child2"), Node(parent, "child3"))
+        childMap === Map(Node(parent, "child2") -> "", Node(parent, "child3") -> "new node")
         updateCount.get === 7
 
         mkLatch
         zk.deleteRecursive(parent)
         awaitLatch
-        childSet === Set()
+        childMap === Map()
         updateCount.get === 10
       }
     }
