@@ -29,17 +29,19 @@ class UserSearcher(searcher: Searcher) {
     }
   }
 
-  private def nameMatchDist(user: BasicUser, queryTerms: Array[String]): Int = {
-    val normalizedName = PrefixFilter.normalize(user.firstName + " " + user.lastName)
-    PrefixMatching.distance(normalizedName, queryTerms)
+  class ScoredUserHitPQ(maxHit: Int) extends PriorityQueue[ScoredUserHit](maxHit) {
+    override def lessThan(a: ScoredUserHit, b: ScoredUserHit): Boolean = a < b
   }
 
-  def search(query: Query, maxHit: Int = 10, searchFilter: UserSearchFilter, queryTerms: Array[String] = Array()): UserSearchResult = {
-    val idFilter = searchFilter.idFilter
+  private def nameMatchScoring(queryTerms: Array[String])(hit: UserHit): Float = {
+    val user = hit.basicUser
+    val normalizedName = PrefixFilter.normalize(user.firstName + " " + user.lastName)
+    -1f * PrefixMatching.distance(normalizedName, queryTerms)
+  }
 
-    val pq = new PriorityQueue[ScoredUserHit](maxHit) {
-      override def lessThan(a: ScoredUserHit, b: ScoredUserHit): Boolean = a < b
-    }
+  private def genHitsPriorityQueue(query: Query, searchFilter: UserSearchFilter, queueSize: Int)(scoreFunc: UserHit => Float): ScoredUserHitPQ = {
+    val idFilter = searchFilter.idFilter
+    val pq = new ScoredUserHitPQ(queueSize)
 
     searcher.doSearch(query) { (scorer, reader) =>
       val bv = reader.getBinaryDocValues(UserIndexer.BASIC_USER_FIELD)
@@ -53,48 +55,44 @@ class UserSearcher(searcher: Searcher) {
           val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
           val userId = Id[User](id)
           val isFriend = searchFilter.getKifiFriends.contains(id)
-          val scoredHit = ScoredUserHit(UserHit(userId, user, isFriend), -1f * nameMatchDist(user, queryTerms))
+          val hit = UserHit(userId, user, isFriend)
+          val scoredHit = ScoredUserHit(hit, scoreFunc(hit))
           pq.insertWithOverflow(scoredHit)
         }
         doc = scorer.nextDoc()
       }
     }
+    pq
+  }
 
-    val N = pq.size
+  // k least items, returned in desc order
+  private def getKLeastSorted(pq: ScoredUserHitPQ, K: Int): Array[UserHit] = {
+    val N = pq.size min K
     var n = N - 1
     val hits = new Array[UserHit](N)
     while (n >= 0) {
       hits(n) = pq.pop.hit
       n -= 1
     }
+    hits
+  }
+
+  def search(query: Query, maxHit: Int = 10, searchFilter: UserSearchFilter, queryTerms: Array[String] = Array()): UserSearchResult = {
+    val idFilter = searchFilter.idFilter
+    val scoreFunc = nameMatchScoring(queryTerms)(_)
+    val pq = genHitsPriorityQueue(query, searchFilter, maxHit)(scoreFunc)
+    val hits = getKLeastSorted(pq, maxHit)
 
     val ids = hits.foldLeft(idFilter) { (ids, h) => ids + h.id.id }
     val context = IdFilterCompressor.fromSetToBase64(ids)
     UserSearchResult(hits, context)
   }
 
+  // pageNum starts from 0
   def searchPaging(query: Query, searchFilter: UserSearchFilter, pageNum: Int, pageSize: Int, queryTerms: Array[String] = Array()): UserSearchResult = {
-    var hits = Vector.empty[ScoredUserHit]
-    searcher.doSearch(query) { (scorer, reader) =>
-      val bv = reader.getBinaryDocValues(UserIndexer.BASIC_USER_FIELD)
-      val mapper = reader.getIdMapper
-      var doc = scorer.nextDoc()
-      while (doc != NO_MORE_DOCS) {
-        val id = mapper.getId(doc)
-        if (id >= 0 && searchFilter.accept(id)) {
-          var ref = new BytesRef()
-          bv.get(doc, ref)
-          val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
-          val userId = Id[User](id)
-          val isFriend = searchFilter.getKifiFriends.contains(id)
-          val score = -1f * nameMatchDist(user, queryTerms)
-          hits = hits :+ ScoredUserHit(UserHit(userId, user, isFriend), score)
-        }
-        doc = scorer.nextDoc()
-      }
-    }
-    val pageHits = hits.sortWith((a, b) => a > b).drop(pageNum * pageSize).take(pageSize).map{_.hit}.toArray
+    val scoreFunc = nameMatchScoring(queryTerms)(_)
+    val pq = genHitsPriorityQueue(query, searchFilter, (pageNum + 1)*pageSize)(scoreFunc)
+    val pageHits = getKLeastSorted(pq, pageSize)
     UserSearchResult(pageHits, "")
   }
-
 }
