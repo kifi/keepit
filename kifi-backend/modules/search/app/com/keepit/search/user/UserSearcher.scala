@@ -39,7 +39,16 @@ class UserSearcher(searcher: Searcher) {
     -1f * PrefixMatching.distance(normalizedName, queryTerms)
   }
 
-  private def genHitsPriorityQueue(query: Query, searchFilter: UserSearchFilter, queueSize: Int)(scoreFunc: UserHit => Float): ScoredUserHitPQ = {
+  private def genMatchingFilter(queryTerms: Array[String]): Function1[UserHit, Boolean] = {
+    if (queryTerms.forall(_.length() <= UserIndexer.PREFIX_MAX_LEN)) (u: UserHit) => true     // prefix index guarantees correctness
+    else if (queryTerms.forall(_.length > UserIndexer.PREFIX_MAX_LEN)) {
+      (hit: UserHit) => queryTerms.forall(query => query.contains("@") || hit.basicUser.firstName.startsWith(query) || hit.basicUser.lastName.startsWith(query))  // don't match email address with names. need test pass
+    } else {
+      genMatchingFilter(queryTerms.filter(_.length() > UserIndexer.PREFIX_MAX_LEN))
+    }
+  }
+
+  private def genHitsPriorityQueue(query: Query, searchFilter: UserSearchFilter, queueSize: Int)(scoreFunc: UserHit => Float)(additionalCheck: UserHit => Boolean): ScoredUserHitPQ = {
     val idFilter = searchFilter.idFilter
     val pq = new ScoredUserHitPQ(queueSize)
 
@@ -56,8 +65,10 @@ class UserSearcher(searcher: Searcher) {
           val userId = Id[User](id)
           val isFriend = searchFilter.getKifiFriends.contains(id)
           val hit = UserHit(userId, user, isFriend)
-          val scoredHit = ScoredUserHit(hit, scoreFunc(hit))
-          pq.insertWithOverflow(scoredHit)
+          if (additionalCheck(hit)){
+            val scoredHit = ScoredUserHit(hit, scoreFunc(hit))
+            pq.insertWithOverflow(scoredHit)
+          }
         }
         doc = scorer.nextDoc()
       }
@@ -80,7 +91,8 @@ class UserSearcher(searcher: Searcher) {
   def search(query: Query, maxHit: Int = 10, searchFilter: UserSearchFilter, queryTerms: Array[String] = Array()): UserSearchResult = {
     val idFilter = searchFilter.idFilter
     val scoreFunc = nameMatchScoring(queryTerms)(_)
-    val pq = genHitsPriorityQueue(query, searchFilter, maxHit)(scoreFunc)
+    val check = genMatchingFilter(queryTerms)
+    val pq = genHitsPriorityQueue(query, searchFilter, maxHit)(scoreFunc)(check)
     val hits = getKLeastSorted(pq, maxHit)
 
     val ids = hits.foldLeft(idFilter) { (ids, h) => ids + h.id.id }
@@ -91,7 +103,8 @@ class UserSearcher(searcher: Searcher) {
   // pageNum starts from 0
   def searchPaging(query: Query, searchFilter: UserSearchFilter, pageNum: Int, pageSize: Int, queryTerms: Array[String] = Array()): UserSearchResult = {
     val scoreFunc = nameMatchScoring(queryTerms)(_)
-    val pq = genHitsPriorityQueue(query, searchFilter, (pageNum + 1)*pageSize)(scoreFunc)
+    val check = genMatchingFilter(queryTerms)
+    val pq = genHitsPriorityQueue(query, searchFilter, (pageNum + 1)*pageSize)(scoreFunc)(check)
     val pageHits = getKLeastSorted(pq, pageSize)
     UserSearchResult(pageHits, "")
   }
