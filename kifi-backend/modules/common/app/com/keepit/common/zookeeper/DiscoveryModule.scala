@@ -158,18 +158,18 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Provides
   def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
     new ServiceDiscovery {
+      var state: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def timeSinceLastStatusChange: Long = 0L
       def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
       def thisService: ServiceType = cluster.serviceType
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get
       def isLeader() = true
-      def changeStatus(newStatus: ServiceStatus): Unit = {}
+      def changeStatus(newStatus: ServiceStatus): Unit = {state = Some(newStatus)}
       def startSelfCheck(): Future[Boolean] = Promise[Boolean].success(true).future
       def forceUpdate(): Unit = {}
-      def myStatus: Option[ServiceStatus] = Some(ServiceStatus.UP)
+      def myStatus: Option[ServiceStatus] = state
       def myVersion: ServiceVersion = services.currentVersion
-      def amIUp: Boolean = true
       def isCanary = false
     }
 

@@ -31,17 +31,19 @@ class ServiceController @Inject() (
 
     def upForDeployment = Action { implicit request =>
       if(serviceDiscovery.amIUp) Ok("")
-      else InternalServerError(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
+      else ServiceUnavailable(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
     }
+
+    def deprecatedUp = upForDeployment
 
     def upForElb = Action { implicit request =>
       if(serviceDiscovery.myStatus.exists(ServiceStatus.UpForElasticLoadBalancer.contains)) Ok("")
-      else InternalServerError(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
+      else ServiceUnavailable(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
     }
 
     def upForPingdom = Action { implicit request =>
       if(serviceDiscovery.myStatus.exists(ServiceStatus.UpForPingdom.contains)) Ok("")
-      else InternalServerError(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
+      else ServiceUnavailable(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
     }
 
     def threadDetails(name: String = "", state: String = "", stack: String = "", sort: String = "") = Action { request =>

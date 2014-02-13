@@ -15,7 +15,7 @@ GET     /up/pingdom                           @com.keepit.common.admin.ServiceCo
 GET     /up/deployment                        @com.keepit.common.admin.ServiceController.upForDeployment
 
 #deprecated, remove when all elbs are updated
-GET     /up                                   @com.keepit.common.admin.ServiceController.upForElb
+GET     /up                                   @com.keepit.common.admin.ServiceController.deprecatedUp
 
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
