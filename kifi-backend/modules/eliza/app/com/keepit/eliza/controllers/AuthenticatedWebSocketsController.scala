@@ -14,23 +14,18 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.commanders.RemoteUserExperimentCommander
 import scala.util.Try
-import com.keepit.common.KestrelCombinator
 
-import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
-import scala.concurrent.duration._
 import scala.util.Random
 
-import play.api.libs.concurrent.Akka
 import play.api.mvc.{WebSocket,RequestHeader}
 import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
 import play.api.mvc.WebSocket.FrameFormatter
 import play.api.libs.json.{Json, JsValue}
-import play.api.Play.current
 import play.modules.statsd.api.Statsd
 
-import akka.actor.{Cancellable, ActorSystem}
+import akka.actor.ActorSystem
 
 import securesocial.core.{Authenticator, UserService, SecureSocial}
 
@@ -39,20 +34,23 @@ import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.logging.{AccessLogTimer, AccessLog}
+import com.keepit.common.logging.Access.WS_IN
+import org.apache.commons.lang3.RandomStringUtils
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
 case class SocketInfo(
-  id: Long,
   channel: Concurrent.Channel[JsArray],
   connectedAt: DateTime,
   userId: Id[User],
   experiments: Set[ExperimentType],
   extVersion: Option[String],
   userAgent: String,
-  var ip: Option[String]
+  var ip: Option[String],
+  id: Long = Random.nextLong(),
+  trackingId: String = RandomStringUtils.randomAlphanumeric(5)
 )
-
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
@@ -65,6 +63,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   protected val userExperimentCommander: RemoteUserExperimentCommander
   val kifInstallationStore: KifInstallationStore
+  val accessLog: AccessLog
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -89,14 +88,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 exception = ex,
                 method = Some("ws"),
                 url = e.value.headOption.map(_.toString),
-                message = Some(s"[WS] user ${streamSession.userId.id} using version ${extVersion} on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString}")
+                message = Some(s"[WS] user ${streamSession.userId.id} using version $extVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString}")
               )
             )
           }
         }
         Cont[JsArray, Unit](i => step(i))
     }
-    (Cont[JsArray, Unit](i => step(i)))
+    Cont[JsArray, Unit](i => step(i))
   }
 
 
@@ -167,77 +166,26 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
+        val connectTimer = accessLog.timer(WS_IN)
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
         val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
           crypt.decrypt(ipkey, eip).toOption
         }
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
-        val handlers = websocketHandlers(socketInfo)
-
-        val needsToUpdate = {
-          // We only support force updates to Chrome. Other platforms (mobile) can hook in here as well.
-          if (UserAgent.fromString(streamSession.userAgent).name == "Chrome") {
-            versionOpt.flatMap(v => Try(KifiVersion(v)).toOption) match {
-              case Some(ver) =>
-                val details = kifInstallationStore.get()
-                val lessThanGold = ver < details.gold
-                val runningKilledVersion = details.killed.contains(ver)
-                if (lessThanGold) {
-                  log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
-                }
-                if (runningKilledVersion) {
-                  log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
-                }
-                lessThanGold || runningKilledVersion
-              case None => false
-            }
-          } else {
-            false
-          }
-        }
+        val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
 
         var startMessages = Seq[JsArray](Json.arr("hi"))
 
-        if (needsToUpdate) {
+        if (needsToUpdate(streamSession, versionOpt)) {
           val details = kifInstallationStore.get()
           startMessages = startMessages :+ Json.arr("version", details.gold.toString)
         }
 
         onConnect(socketInfo)
 
-        val tStart = currentDateTime
-        //Analytics
-        SafeFuture {
-          val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
-          heimdal.trackEvent(UserEvent(socketInfo.userId, context, UserEventTypes.CONNECTED, tStart))
-          heimdal.setUserProperties(socketInfo.userId, "lastConnected" -> ContextDate(tStart))
-        }
+        reportConnect(streamSession, socketInfo, request, connectTimer)
 
-        def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
-          val tStart = currentDateTime
-          log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
-          channel.push(Json.arr("goodbye", reason))
-          channel.eofAndEnd()
-          onDisconnect(socketInfo)
-        }
-
-        log.info(s"New WS connection from user ${streamSession.userId}.")
-
-        val iteratee = asyncIteratee(streamSession, versionOpt) { jsArr =>
-          Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-            log.info(s"WS request from user ${streamSession.userId} for: " + jsArr)
-            Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
-            Statsd.time(s"websocket.handler.${jsArr.value(0)}") {
-              handler(jsArr.value.tail)
-            }
-          } getOrElse {
-            log.warn(s"WS no handler from user ${streamSession.userId} for: " + jsArr)
-          }
-        }.map(_ => endSession("Session ended"))
-
-
-        (iteratee, Enumerator(startMessages: _*) >>> enumerator)
+        (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
       }
       case None => Future {
         Statsd.increment(s"websocket.anonymous")
@@ -245,6 +193,69 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
     }
+  }
+
+  private def reportConnect(streamSession: StreamSession, socketInfo: SocketInfo, request: RequestHeader, connectTimer: AccessLogTimer): Unit = {
+    log.info(s"New WS connection from user $streamSession")
+    val tStart = currentDateTime
+    //Analytics
+    SafeFuture {
+      val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
+      heimdal.trackEvent(UserEvent(socketInfo.userId, context, UserEventTypes.CONNECTED, tStart))
+      heimdal.setUserProperties(socketInfo.userId, "lastConnected" -> ContextDate(tStart))
+    }
+    accessLog.add(connectTimer.done(trackingId = socketInfo.trackingId, method = "CONNECT"))
+  }
+
+  private def iteratee(streamSession: StreamSession, versionOpt: Option[String], socketInfo: SocketInfo, channel: Concurrent.Channel[JsArray]) = {
+    val handlers = websocketHandlers(socketInfo)
+    asyncIteratee(streamSession, versionOpt) { jsArr =>
+      Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
+        val action = jsArr.value(0).as[String]
+        Statsd.increment(s"websocket.handler.$action")
+        Statsd.time(s"websocket.handler.$action") {
+          val timer = accessLog.timer(WS_IN)
+          try {
+            handler(jsArr.value.tail)
+          } finally {
+            accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE"))
+          }
+        }
+      } getOrElse {
+        log.warn(s"WS no handler from user ${streamSession.userId} for: " + jsArr)
+      }
+    }.map(_ => endSession("Session ended", streamSession, socketInfo, channel))
+  }
+
+  private def needsToUpdate(streamSession: StreamSession, versionOpt: Option[String]) = {
+    // We only support force updates to Chrome. Other platforms (mobile) can hook in here as well.
+    if (UserAgent.fromString(streamSession.userAgent).name == "Chrome") {
+      versionOpt.flatMap(v => Try(KifiVersion(v)).toOption) match {
+        case Some(ver) =>
+          val details = kifInstallationStore.get()
+          val lessThanGold = ver < details.gold
+          val runningKilledVersion = details.killed.contains(ver)
+          if (lessThanGold) {
+            log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
+          }
+          if (runningKilledVersion) {
+            log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
+          }
+          lessThanGold || runningKilledVersion
+        case None => false
+      }
+    } else {
+      false
+    }
+  }
+
+  private def endSession(reason: String, streamSession: StreamSession, socketInfo: SocketInfo, channel: Concurrent.Channel[JsArray]) = {
+    log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
+    val timer = accessLog.timer(WS_IN)
+    channel.push(Json.arr("goodbye", reason))
+    channel.eofAndEnd()
+    onDisconnect(socketInfo)
+    accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT"))
   }
 
   protected def authenticatedWebSocketsContextBuilder(socketInfo: SocketInfo, request: Option[RequestHeader] = None) = {
