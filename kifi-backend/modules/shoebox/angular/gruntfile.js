@@ -93,15 +93,15 @@ module.exports = function (grunt) {
 				jshintrc: '.jshintrc'
 			},
 			dist: {
-				dir: 'out',
-				css: 'out/<%= pkg.name %>.css',
-				minCss: 'out/<%= pkg.name %>.min.css',
-				libMinCss: 'out/lib.min.css',
-				js: 'out/<%= pkg.name %>.js',
-				minJs: 'out/<%= pkg.name %>.min.js',
-				libJs: 'out/lib.js',
-				libMinJs: 'out/lib.min.js',
-				tpl: 'out/<%= pkg.name %>-tpl.js'
+				dir: 'dist',
+				css: 'dist/<%= pkg.name %>.css',
+				minCss: 'dist/<%= pkg.name %>.min.css',
+				libMinCss: 'dist/lib.min.css',
+				js: 'dist/<%= pkg.name %>.js',
+				minJs: 'dist/<%= pkg.name %>.min.js',
+				libJs: 'dist/lib.js',
+				libMinJs: 'dist/lib.min.js',
+				tpl: 'dist/<%= pkg.name %>-tpl.js'
 				//tplMin: 'dist/<%= pkg.name %>-tpl.min.js'
 			},
 			test: {
