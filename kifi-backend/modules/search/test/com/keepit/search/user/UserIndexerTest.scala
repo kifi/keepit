@@ -115,7 +115,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val parser = new UserQueryParser(analyzer)
         val query = parser.parse("woody.allen@gmail.com")
         val filter = filterFactory.default(None)
-        val hits = searcher.search(query.get, maxHit = 5, filter).hits
+        val hits = searcher.search(query.get, maxHit = 5, searchFilter = filter).hits
         hits.size === 1
         hits(0).basicUser.firstName === "Woody"
 
@@ -143,14 +143,14 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         var context = ""
         var idfilter = IdFilterCompressor.fromBase64ToSet(context)
         var filter = filterFactory.default(None, Some(context), excludeSelf = false)
-        var res = searcher.search(query.get, maxHit = 2, filter)
+        var res = searcher.search(query.get, maxHit = 2, searchFilter = filter)
         res.hits.size === 2
         res.hits.map(_.id.id).seq === (1 to 2)
 
         context = res.context
         idfilter = IdFilterCompressor.fromBase64ToSet(context)
         filter = filterFactory.default(None, Some(context), excludeSelf = false)
-        res = searcher.search(query.get, maxHit = 10, filter)
+        res = searcher.search(query.get, maxHit = 10, searchFilter = filter)
         res.hits.size === 2
         res.hits.map(_.id.id).seq === (3 to 4)
       }
@@ -172,7 +172,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val parser = new UserQueryParser(analyzer)
         val query = parser.parse("firstNa")
         val filter = filterFactory.default(None)
-        val hits = searcher.search(query.get, maxHit = 10, filter).hits
+        val hits = searcher.search(query.get, maxHit = 10, searchFilter = filter).hits
         hits.size === 3
       }
     }
