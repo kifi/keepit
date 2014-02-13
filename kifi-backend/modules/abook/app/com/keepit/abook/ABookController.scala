@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
+import com.keepit.common.db.Id._
 import play.api.mvc.Action
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
@@ -114,6 +115,14 @@ class ABookController @Inject() (
     }
   }
 
+  def getEContactsByIds() = Action(parse.json) { request =>
+    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
+    val contactIds = jsArray.value map { _.as[JsNumber] } map { n => Id[EContact](n.value.toLong) }
+    val contacts = db.readOnly { implicit ro =>
+      econtactRepo.getByIds(contactIds)
+    }
+    Ok(Json.toJson[Seq[EContact]](contacts))
+  }
 
   def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
     // todo: parse email
