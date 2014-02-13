@@ -422,6 +422,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 
 GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
+GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 
 ##########################################
 # Common Healthcheck / service routes
