@@ -13,7 +13,7 @@ object RemoteService {
   def toJson(remote: RemoteService): String = Json.toJson[RemoteService](remote).toString
 }
 
-case class RemoteService(amazonInstanceInfo: AmazonInstanceInfo, var status: ServiceStatus, serviceType: ServiceType) {
+case class RemoteService(amazonInstanceInfo: AmazonInstanceInfo, status: ServiceStatus, serviceType: ServiceType) {
   def healthyStatus: ServiceStatus = serviceType.healthyStatus(amazonInstanceInfo)
 }
 
