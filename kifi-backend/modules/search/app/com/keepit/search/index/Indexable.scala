@@ -52,9 +52,9 @@ object Indexable {
   val MAX_BINARY_FIELD_LENGTH_MINUS1 = 32765
   val END_OF_BINARY_FIELD = 0.toByte
 
-  def numberSuffix(n: Int): String = {
+  def addNumberSuffix(fieldName: String, n: Int): String = {
     if (n < 0) throw new IllegalArgumentException(s"suffix number must be non-negative, input = ${n}")
-    if (n == 0) "" else s"_${n}"
+    if (n == 0) fieldName else s"${fieldName}_${n}"
   }
 
   class IteratorTokenStream[A](iterator: Iterator[A], toToken: (A=>String)) extends TokenStream {
@@ -159,7 +159,7 @@ trait Indexable[T] extends Logging{
     if (rounds > 1) log.warn(s"\n==\nbuilding extra long binary docValues field: num of rounds: ${rounds}")
 
     batches.zipWithIndex.map{ case (subBytes, idx) =>
-      val currentFieldName = fieldName + numberSuffix(idx)
+      val currentFieldName = addNumberSuffix(fieldName, idx)
       if (idx == rounds - 1) new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes))        // nothing left
       else new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes :+ END_OF_BINARY_FIELD))   // the extra byte indicates we have more
     }
