@@ -8,7 +8,6 @@ import scala.math._
 import com.keepit.common.logging.Logging
 
 object ScrapeInfoStates extends States[ScrapeInfo] {
-  val PENDING  = State[ScrapeInfo]("pending") // scheduled
   val ASSIGNED = State[ScrapeInfo]("assigned") // pull
 }
 
@@ -39,7 +38,6 @@ case class ScrapeInfo(
     val res = state match { // TODO: revisit
       case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
       case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
-      case ScrapeInfoStates.PENDING => copy(state = state, nextScrape = currentDateTime) // TODO: add & use updatedAt
       case ScrapeInfoStates.ASSIGNED => copy(state = state, nextScrape = currentDateTime)
     }
     log.debug(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")

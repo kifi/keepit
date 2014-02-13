@@ -130,7 +130,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
       val toSave = info match {
         case Some(s) => s.state match {
           case ScrapeInfoStates.ACTIVE   => s.withNextScrape(date)
-          case ScrapeInfoStates.PENDING | ScrapeInfoStates.ASSIGNED => s // no change
+          case ScrapeInfoStates.ASSIGNED => s // no change
           case ScrapeInfoStates.INACTIVE => {
             val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
             log.warn(msg)
