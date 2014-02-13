@@ -218,7 +218,7 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
   ).settings(
     playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular"),
-    angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
+    angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
     },
