@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 import scala.collection.JavaConversions._
-import com.keepit.common.service.{ServiceClient, ServiceType, FortyTwoServices}
+import com.keepit.common.service.{ServiceStatus, ServiceClient, ServiceType, FortyTwoServices}
 import com.keepit.common.cache.InMemoryCachePlugin
 
 class ServiceController @Inject() (
@@ -29,11 +29,22 @@ class ServiceController @Inject() (
         Ok(serviceDiscovery.toString)
     }
 
-    def up = Action { implicit request =>
+    def upForDeployment = Action { implicit request =>
       if(serviceDiscovery.amIUp) Ok("")
-      else InternalServerError("")
+      else ServiceUnavailable(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
     }
 
+    def deprecatedUp = upForDeployment
+
+    def upForElb = Action { implicit request =>
+      if(serviceDiscovery.myStatus.exists(ServiceStatus.UpForElasticLoadBalancer.contains)) Ok("")
+      else ServiceUnavailable(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
+    }
+
+    def upForPingdom = Action { implicit request =>
+      if(serviceDiscovery.myStatus.exists(ServiceStatus.UpForPingdom.contains)) Ok("")
+      else ServiceUnavailable(serviceDiscovery.myStatus.map(_.name).getOrElse("NA"))
+    }
 
     def threadDetails(name: String = "", state: String = "", stack: String = "", sort: String = "") = Action { request =>
       if (request.queryString.get("help").nonEmpty) {
