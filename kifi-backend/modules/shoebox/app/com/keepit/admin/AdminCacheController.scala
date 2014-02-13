@@ -21,20 +21,21 @@ class AdminCacheController  @Inject() (
   serviceDiscovery: ServiceDiscovery
 ) extends AdminController(actionAuthenticator) {
   def serviceView = AdminHtmlAction.authenticated { implicit request =>
-    Ok(html.admin.cachePerformance())
+    Ok(html.admin.cacheOverview())
   }
 
-  def clearLocalCaches(service: Option[String], prefix: Option[String]) = AdminJsonAction.authenticatedAsync { implicit request =>
-    def shouldBeCleared(serviceType: ServiceType) = service.map(ServiceType.fromString).map(_ == serviceType).getOrElse(true)
+  def clearLocalCaches(service: String, prefix: String) = AdminJsonAction.authenticatedAsync { implicit request =>
+    def shouldBeCleared(serviceType: ServiceType) = service == "all" || ServiceType.fromString(service.toUpperCase) == serviceType
+    val prefixOpt = Some(prefix).filter(_.nonEmpty)
     val futureResponsesByService = ServiceClient.register.toSeq.collect { case serviceClient if shouldBeCleared(serviceClient.serviceCluster.serviceType) =>
       val serviceType = serviceClient.serviceCluster.serviceType
 
       val clearedLocalInstance = if (serviceType == serviceDiscovery.thisService) {
-        localCache.removeAll(prefix)
+        localCache.removeAll(prefixOpt)
         Some(serviceDiscovery.thisInstance.get.instanceInfo.instanceId.id -> true)
       } else None
 
-      serviceClient.removeAllFromLocalCaches(prefix).map { responses =>
+      serviceClient.removeAllFromLocalCaches(prefixOpt).map { responses =>
         serviceClient.serviceCluster.serviceType -> {
           val clearedRemoteInstances = responses.map { response =>
             response.request.instance.get.instanceInfo.instanceId.id -> (response.status == HttpStatus.SC_OK)

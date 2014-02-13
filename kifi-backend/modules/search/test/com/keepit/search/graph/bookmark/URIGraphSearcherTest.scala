@@ -118,7 +118,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule){
         val (users, uris) = superBigData
         val expectedUriToUserEdges = uris.dropRight(1).map{ uri => (uri, Seq(users(0)))}.toList ::: List((uris.last, Seq(users(1))))
-        expectedUriToUserEdges.size == bigDataSize
+        expectedUriToUserEdges.size === bigDataSize
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges, mixPrivate = false)
         val indexer = mkURIGraphIndexer()
         indexer.update()

@@ -63,7 +63,7 @@ class MessagingCommander @Inject() (
   urbanAirship: UrbanAirship,
   shoebox: ShoeboxServiceClient) extends Logging {
 
-  def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
+  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
     val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.allUsers).getOrElse(Set())}
     //get all basic users
@@ -110,11 +110,11 @@ class MessagingCommander @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
-    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
       val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
         val nUri = nUriOrPrenorm.left.get
         val threads = db.readOnly { implicit session =>
-          val threadIds = userThreadRepo.getThreads(userId, nUri.id)
+          val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
 
@@ -126,7 +126,7 @@ class MessagingCommander @Inject() (
         a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
       }
       (nUrlStr, infos)
-    }
+    })
   }
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
@@ -237,14 +237,14 @@ class MessagingCommander @Inject() (
     )
   }
 
-  def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
+  private def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
     val outBuf = ByteBuffer.wrap(new Array[Byte](len))
     val inBuf = CharBuffer.wrap(str.toCharArray())
     charset.newEncoder().encode(inBuf, outBuf, true)
     new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
-  def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
+  private def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
     val notification = PushNotification(extId, pendingNotificationCount, msg)
     urbanAirship.notifyUser(userId, notification)
     messagingAnalytics.sentPushNotificationForThread(userId, notification)
@@ -323,8 +323,8 @@ class MessagingCommander @Inject() (
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb" // two-meals
   )
 
-  def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val loadedUser = userExtIds.filter(_!=ExternalId[User]("00000000-0000-0000-0000-000000000000"))map {
+  private def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    val loadedUser = userExtIds.filter(_.id != "00000000-0000-0000-0000-000000000000") map {
       case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
         engineers.map(ExternalId[User])
       case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
@@ -336,7 +336,7 @@ class MessagingCommander @Inject() (
     shoebox.getUserIdsByExternalIds(loadedUser.flatten)
   }
 
-  def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
+  private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
     val pimpedParticipants = nonUsers.map {
       case email: NonUserEmailParticipant =>
         abookServiceClient.getEContactByEmail(userId, email.address.address).map {
@@ -404,9 +404,7 @@ class MessagingCommander @Inject() (
     sendMessage(from, thread, messageText, urlOpt)
   }
 
-
-
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
+  private def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
@@ -515,21 +513,21 @@ class MessagingCommander @Inject() (
     }
 
 
-  def getThreadMessages(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
+  private def getThreadMessages(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadExtId)
     }
     getThreadMessages(thread, pageOpt)
   }
 
-  def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
+  private def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
     getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)), pageOpt)
   }
 
-  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
-    shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
+    new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
       (thread, messages.map { message =>
@@ -545,8 +543,7 @@ class MessagingCommander @Inject() (
           participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
         )
       })
-    }
-
+    })
   }
 
   def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
@@ -555,14 +552,14 @@ class MessagingCommander @Inject() (
   }
 
   def getThread(threadExtId: ExternalId[MessageThread]) : MessageThread = {
-    db.readOnly{ implicit session =>
+    db.readOnly { implicit session =>
       threadRepo.get(threadExtId)
     }
   }
 
-  def getThreads(user: Id[User], url: Option[String]=None): Seq[MessageThread] = {
+  def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
     db.readOnly { implicit session =>
-      val threadIds = userThreadRepo.getThreads(user)
+      val threadIds = userThreadRepo.getThreadIds(user)
       threadIds.map(threadRepo.get(_))
     }
   }
@@ -572,7 +569,7 @@ class MessagingCommander @Inject() (
     val message = db.readOnly { implicit session => messageRepo.getLatest(thread.id.get) }
 
     val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
-    new SafeFuture(shoebox.getBasicUsers(participantSet.toSeq).map{ id2BasicUser =>
+    new SafeFuture(shoebox.getBasicUsers(participantSet.toSeq).map { id2BasicUser =>
 
       val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
         val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
@@ -598,7 +595,6 @@ class MessagingCommander @Inject() (
         threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers
       )
 
-
       val notifJson = buildMessageNotificationJson(
         message = message,
         thread = thread,
@@ -622,12 +618,11 @@ class MessagingCommander @Inject() (
 
       notifJson
     })
-
   }
 
   // todo: Add adding non-users by kind/identifier
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Future[Boolean] = {
-    shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
+    new SafeFuture(shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
 
       val messageThreadOpt = db.readWrite { implicit session =>
         val oldThread = threadRepo.get(threadExtId)
@@ -658,8 +653,7 @@ class MessagingCommander @Inject() (
           }
         }
 
-        shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
-
+        new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
           val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
           val theTitle: String = thread.pageTitle.getOrElse("New conversation")
           val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
@@ -691,17 +685,16 @@ class MessagingCommander @Inject() (
               ))
             }
           }
+
           Future.sequence(newParticipants.map { userId =>
             recreateNotificationForAddedParticipant(userId, thread)
           }) map { permanentNotifications =>
-
             newParticipants.zip(permanentNotifications) map { case (userId, permanentNotification) =>
               notificationRouter.sendToUser(
                 userId,
                 Json.arr("notification", notificationJson, permanentNotification)
               )
             }
-
             val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
             modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
               thread.participants.map(_.allUsers.par.foreach { userId =>
@@ -715,14 +708,13 @@ class MessagingCommander @Inject() (
                 )
               })
             }
-
           }
+        })
 
-        }
         messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
         true
       }
-    }
+    })
   }
 
   def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
@@ -733,7 +725,7 @@ class MessagingCommander @Inject() (
             case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ =>
               val addedUsers = jsAddedUsers.map(id => Id[User](id.as[Long]))
               val adderUserId = Id[User](jsAdderUserId.toLong)
-              shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
+              new SafeFuture(shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
                 val adderUser = basicUsers(adderUserId)
                 val addedBasicUsers = addedUsers.map(u => basicUsers(u))
                 val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
@@ -744,7 +736,7 @@ class MessagingCommander @Inject() (
 
                 val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
                 (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
-              }
+              })
             case s =>
               Promise.successful(("", Json.arr())).future
           }
@@ -990,7 +982,7 @@ class MessagingCommander @Inject() (
     }.map { res =>
       val urlMsgCount = db.readOnly { implicit session =>
         res.filter(_._2.isDefined).map { case (url, nuri) =>
-          url -> userThreadRepo.getThreads(userId, Some(nuri.get.id.get))
+          url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
         }
       }
       Map(urlMsgCount: _*)

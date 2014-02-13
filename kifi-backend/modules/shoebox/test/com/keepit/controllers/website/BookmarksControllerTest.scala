@@ -121,7 +121,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
 
         val path = com.keepit.controllers.website.routes.BookmarksController.allKeeps(before = None, after = None, collection = None).toString
         path === "/site/keeps/all"
-        inject[FakeSearchServiceClient] == inject[FakeSearchServiceClient]
+        inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
         val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 

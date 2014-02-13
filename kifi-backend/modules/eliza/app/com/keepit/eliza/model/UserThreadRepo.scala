@@ -25,7 +25,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean=false)(implicit session: RWSession) : UserThread
 
-  def getThreads(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
+  def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
   def markAllRead(user: Id[User])(implicit session: RWSession) : Unit
 
@@ -200,7 +200,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
 
-  def getThreads(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]] = {
+  def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]] = {
     uriIdOpt.map{ uriId =>
       (for (row <- rows if row.user===userId && row.uriId===uriId) yield row.thread).list
     } getOrElse {

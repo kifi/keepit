@@ -87,7 +87,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
         sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s =>
-            collectionRepo.getByUser(user1.id.get).map(_.name).toSet == Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           }
         }
       }

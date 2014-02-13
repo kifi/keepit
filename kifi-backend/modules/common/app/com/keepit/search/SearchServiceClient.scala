@@ -8,9 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
-import com.keepit.model.Collection
-import com.keepit.model.NormalizedURI
-import com.keepit.model.User
+import com.keepit.model.{ExperimentType, Collection, NormalizedURI, User}
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
@@ -62,12 +60,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
-
-  def search(
-    userId: Id[User],
-    noSearchExperiments: Boolean,
-    acceptLangs: Seq[String],
-    rawQuery: String): Future[String]
 
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]]
 
@@ -228,14 +220,6 @@ class SearchServiceClientImpl(
       val param = Json.fromJson[Map[String, String]](r.json).get
       new SearchConfig(param)
     }
-  }
-
-  def search(
-    userId: Id[User],
-    noSearchExperiments: Boolean,
-    acceptLangs: Seq[String],
-    rawQuery: String): Future[String] = {
-      tee(Search.internal.search(userId,noSearchExperiments,acceptLangs,rawQuery)).map(_.body)
   }
 
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]] = {

@@ -10,7 +10,12 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 #check if a service is up (for loadbalancer and deploy)
-GET     /up                                   @com.keepit.common.admin.ServiceController.up
+GET     /up/elb                               @com.keepit.common.admin.ServiceController.upForElb
+GET     /up/pingdom                           @com.keepit.common.admin.ServiceController.upForPingdom
+GET     /up/deployment                        @com.keepit.common.admin.ServiceController.upForDeployment
+
+#deprecated, remove when all elbs are updated
+GET     /up                                   @com.keepit.common.admin.ServiceController.deprecatedUp
 
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()

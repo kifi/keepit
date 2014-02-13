@@ -6,7 +6,6 @@ sealed abstract class ServiceStatus(val name: String)
 
 object ServiceStatus {
   case object UP extends ServiceStatus("up")
-  case object DOWN extends ServiceStatus("down")
   case object STARTING extends ServiceStatus("starting")
   case object STOPPING extends ServiceStatus("stopping")
   case object SICK extends ServiceStatus("sick")
@@ -15,13 +14,15 @@ object ServiceStatus {
 
   def fromString(str: String) = str match {
     case UP.name => UP
-    case DOWN.name => DOWN
     case STARTING.name => STARTING
     case STOPPING.name => STOPPING
     case SICK.name => SICK
     case SELFCHECK_FAIL.name => SELFCHECK_FAIL
     case BACKING_UP.name => BACKING_UP
   }
+
+  val UpForPingdom = Seq(UP, STOPPING, SICK, SELFCHECK_FAIL)
+  val UpForElasticLoadBalancer = Seq(UP, SICK, SELFCHECK_FAIL)
 
   implicit def format[T]: Format[ServiceStatus] = Format(
     __.read[String].map(fromString),

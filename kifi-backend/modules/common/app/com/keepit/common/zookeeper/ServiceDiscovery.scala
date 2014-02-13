@@ -35,7 +35,10 @@ trait ServiceDiscovery {
   def thisInstance: Option[ServiceInstance]
   def thisService: ServiceType
   def timeSinceLastStatusChange: Long
-  def amIUp: Boolean
+  def myHealthyStatus: Option[ServiceStatus] = thisInstance.map(_.remoteService.healthyStatus)
+  def amIUp: Boolean = myStatus.exists { status =>
+    myHealthyStatus.exists(_ == status)
+  }
   def isCanary: Boolean
 }
 
@@ -190,7 +193,6 @@ class ServiceDiscoveryImpl(
   }
 
   def myStatus : Option[ServiceStatus] = myInstance.map(_.remoteService.status)
-  private def myHealthyStatus: Option[ServiceStatus] = myInstance.map(_.remoteService.healthyStatus)
 
   def myVersion: ServiceVersion = services.currentVersion
 
@@ -218,12 +220,6 @@ class ServiceDiscoveryImpl(
       selfCheckFutureOpt = Some(selfCheckPromise.future)
     }
     selfCheckFutureOpt.get //this option must be defined when we are in this case
-  }
-
-  def amIUp: Boolean = {
-    myStatus.map { status =>
-      myHealthyStatus.map(_ == status).getOrElse(false)
-    } getOrElse(false)
   }
 
   def timeSinceLastStatusChange: Long = System.currentTimeMillis - lastStatusChangeTime

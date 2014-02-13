@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.User
+import com.keepit.model.{ExperimentType, ProbabilisticExperimentGenerator, UserExperimentGenerator, User}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import com.keepit.search.query.StringHash64
@@ -14,6 +14,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.usersegment.UserSegment
+import com.keepit.commanders.RemoteUserExperimentCommander
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -87,10 +88,18 @@ object SearchConfig {
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches"
     )
 
+  val empty = new SearchConfig(Map.empty)
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
 
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))
   def getDescription(name: String) = descriptions.get(name)
+
+  def byUserSegment(seg: UserSegment): SearchConfig = {
+    seg.value match {
+      case 3 => new SearchConfig(Map("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
+      case _ => empty
+    }
+  }
 }
 
 class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging {
@@ -98,59 +107,47 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Unit](ttl = 30 seconds)
-  @volatile private[this] var _activeExperiments: Seq[SearchConfigExperiment] = Seq()
+  @volatile private[this] var _activeExperiments: Map[ExperimentType, SearchConfig] = Map()
   @volatile private[this] var _activeExperimentsExpiration: Long = 0L
 
   val defaultConfig = SearchConfig.defaultConfig
 
-  def activeExperiments: Seq[SearchConfigExperiment] = {
+  def activeExperiments: Map[ExperimentType, SearchConfig] = {
     if (_activeExperimentsExpiration < System.currentTimeMillis) {
       consolidateGetExperimentsReq("active"){ k => SafeFuture { syncActiveExperiments } }
     }
     _activeExperiments
   }
 
-  def userSegmentExperiments = activeExperiments.filter(_.description.contains("user segment experiment"))
-
   def syncActiveExperiments: Unit = {
     try {
-      _activeExperiments = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 seconds, "getting experiments")
+      _activeExperiments = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 seconds, "getting experiments").map(exp => exp.experiment -> exp.config).toMap
       _activeExperimentsExpiration = System.currentTimeMillis + (1000 * 60 * 5) // ttl 5 minutes
     } catch {
       case t: Throwable => _activeExperimentsExpiration = System.currentTimeMillis + (1000 * 30) // backoff 30 seconds
     }
   }
 
-  private var userConfig = Map.empty[Long, SearchConfig]
-  def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
-  def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId.id -> config) }
-  def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId.id }
+  private var userConfig = Map.empty[Id[User], SearchConfig]
+  def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId, defaultConfig)
+  def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId -> config) }
+  def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId }
 
-  // hash a user and a query to a number between 0 and 1
-  private def hash(userId: Id[User], queryText: String): Double = {
-    val hash = QueryHash(userId, queryText, analyzer)
-    val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
-    (hash - min) / (max - min)
-  }
-
-
-  def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+  def getConfig(userId: Id[User], userExperiments: Set[ExperimentType]): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
     val segFuture = shoeboxClient.getUserSegment(userId)
-    userConfig.get(userId.id) match {
+    userConfig.get(userId) match {
       case Some(config) => (config, None)
       case None =>
-        val experiment = if (excludeFromExperiments) None else {
-          val hashFrac = hash(userId, queryText)
-          var frac = 0.0
-          activeExperiments.find { e =>
-            frac += e.weight
-            frac >= hashFrac
-          }
-        }
+        val (experimentConfig, experimentId) =
+          if (userExperiments.contains(ExperimentType.NO_SEARCH_EXPERIMENTS)) (SearchConfig.empty, None)
+          else userExperiments.collectFirst {
+            case experiment @ ExperimentType(SearchConfigExperiment.experimentTypePattern(id)) if activeExperiments.contains(experiment) =>
+            (activeExperiments(experiment), Some(Id[SearchConfigExperiment](id.toLong)))
+          } getOrElse (SearchConfig.empty, None)
 
         val seg = monitoredAwait.result(segFuture, 1 seconds, "getting user segment")
-        val configWithoutExperiment = SearchConfigOverrider.byUserSegment(seg, defaultConfig)
-        (configWithoutExperiment(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
+        val segmentConfig = SearchConfig.byUserSegment(seg)
+        (defaultConfig.overrideWith(segmentConfig).overrideWith(experimentConfig), experimentId)
       }
   }
 }
@@ -163,20 +160,9 @@ case class SearchConfig(params: Map[String, String]) {
   def asBoolean(name: String) = params(name).toBoolean
   def asString(name: String) = params(name)
 
-  def apply(newParams: Map[String, String]): SearchConfig = new SearchConfig(params ++ newParams)
-  def apply(newParams: (String, String)*): SearchConfig = apply(Map(newParams:_*))
+  def overrideWith(newParams: Map[String, String]): SearchConfig = new SearchConfig(params ++ newParams)
+  def overrideWith(newParams: (String, String)*): SearchConfig = overrideWith(Map(newParams:_*))
+  def overrideWith(config: SearchConfig): SearchConfig = overrideWith(config.params)
 
   def iterator: Iterator[(String, String)] = params.iterator
-}
-
-/**
- * lightweight config overwriters. These configs are not recorded in DB. They are in action unless overwritten by search experiments.
- */
-object SearchConfigOverrider extends Logging{
-  def byUserSegment(seg: UserSegment, config: SearchConfig): SearchConfig = {
-    seg.value match {
-      case 3 => new SearchConfig(config.params ++ Map("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
-      case _ => config
-    }
-  }
 }
