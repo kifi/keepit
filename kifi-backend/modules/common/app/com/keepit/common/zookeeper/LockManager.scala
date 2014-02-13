@@ -195,7 +195,7 @@ class LockQueue(lockNode: Node, zkClient: ZooKeeperClient) {
       zkClient.session{ zk =>
         // make sure we have a lock node in zk. we should not do this as a part of instance creation to avoid duplicate watches
         zk.get(lockNode).getOrElse{ zk.create(lockNode) }
-        zk.watchChildren(lockNode, queueWatcher, watchData = false)
+        zk.watchChildren(lockNode, queueWatcher)
       }
       initialized = true
     }

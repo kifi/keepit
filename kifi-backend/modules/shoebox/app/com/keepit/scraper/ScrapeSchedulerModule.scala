@@ -26,6 +26,6 @@ case class DevScrapeSchedulerModule() extends ScrapeSchedulerModule {
 
   @Singleton
   @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig().copy(scrapePendingFrequency = 5, pendingOverdueThreshold = 10, pendingSkipThreshold = 1000)
+  def scraperConfig: ScraperConfig = ScraperConfig().copy(scrapePendingFrequency = 5, pendingOverdueThreshold = 10)
 }
 
