@@ -21,7 +21,8 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.db.slick.Database.Slave
 import org.joda.time.DateTime
 
-case object ScheduleScrape
+case object CheckOverdues
+case object CheckOverdueCount
 
 private[scraper] class ScrapeScheduler @Inject() (
     scraperConfig: ScraperConfig,
@@ -36,20 +37,21 @@ private[scraper] class ScrapeScheduler @Inject() (
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case ScheduleScrape => schedule()
+    case CheckOverdues => checkOverdues()
+    case CheckOverdueCount => checkOverdueCount()
     case m => throw new UnsupportedActorMessage(m)
   }
 
   implicit val config = scraperConfig
 
-  def schedule(): Unit = {
+  def checkOverdues(): Unit = {
     // todo(ray): check overdue count
     val (assignedCount, assignedOverdues) = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
       val assignedCount = scrapeInfoRepo.getAssignedCount()
       val assignedOverdues = scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
       (assignedCount, assignedOverdues)
     }
-    log.info(s"[checkAssigned]: assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
+    log.info(s"[checkOverdues]: assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
 
     if (!assignedOverdues.isEmpty) {
       val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers
@@ -57,10 +59,10 @@ private[scraper] class ScrapeScheduler @Inject() (
         airbrake.panic("[ScrapeScheduler] Scraper cluster is EMPTY!")
       } else {
         val workerIds = workers.map(_.id.id).toSet
-        log.warn(s"[checkAssigned] #assigned-overdues=${assignedOverdues.length}; active workerIds=${workerIds}; assigned-overdues=${assignedOverdues.mkString(",")}")
+        log.warn(s"[checkOverdues] #assigned-overdues=${assignedOverdues.length}; active workerIds=${workerIds}; assigned-overdues=${assignedOverdues.mkString(",")}")
         val (assigned, orphaned) = assignedOverdues partition { info => info.workerId.isDefined }
         if (!orphaned.isEmpty) {
-          val msg = s"[checkAssigned] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
+          val msg = s"[checkOverdues] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
           log.error(msg) // shouldn't happen -- airbrake
           systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-orphaned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
@@ -72,7 +74,7 @@ private[scraper] class ScrapeScheduler @Inject() (
 
         val (stalled, abandoned) = assigned partition { info => workerIds.contains(info.workerId.get.id) }
         if (!abandoned.isEmpty) {
-          val msg = s"[checkAssigned] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
+          val msg = s"[checkOverdues] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
           log.warn(msg)
           systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-abandoned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
@@ -82,7 +84,7 @@ private[scraper] class ScrapeScheduler @Inject() (
           }
         }
         if (!stalled.isEmpty) { // likely due to failed db updates
-          val msg = s"[checkAssigned] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
+          val msg = s"[checkOverdues] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
           log.warn(msg)
           systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-stalled", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
@@ -95,6 +97,16 @@ private[scraper] class ScrapeScheduler @Inject() (
     }
   }
 
+  def checkOverdueCount(): Unit = {
+    val overdueCount = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s => scrapeInfoRepo.getOverdueCount() }
+    val msg = s"[checkOverdueCount]: overdue-count=${overdueCount}"
+    if (overdueCount > config.overdueCountThreshold) {
+      log.warn(msg)
+      systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY, EmailAddresses.MARTIN), category = NotificationCategory.System.SCRAPER, subject = "scraper-many-overdues", htmlBody = msg))
+    } else {
+      log.info(msg)
+    }
+  }
 }
 
 class ScrapeSchedulerPluginImpl @Inject() (
@@ -115,7 +127,8 @@ class ScrapeSchedulerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
-    scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, ScheduleScrape)
+    scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
+    scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
   }
   override def onStop() {
     log.info(s"[onStop] ScrapeScheduler stopped")
