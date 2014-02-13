@@ -643,9 +643,12 @@ api.port.on({
     prefs.showFindFriends = show;
     ajax('POST', '/ext/pref/showFindFriends?show=' + show);
   },
-  set_show_keeper_intro: function(show) {
-    prefs.showKeeperIntro = show;
-    ajax('POST', '/ext/pref/showKeeperIntro?show=' + show);
+  stop_showing_keeper_intro: function() {
+    prefs.showKeeperIntro = false;
+    ajax('POST', '/ext/pref/showKeeperIntro?show=false');
+    api.tabs.each(function (tab) {
+      api.tabs.emit(tab, 'hide_keeper_intro');
+    });
   },
   set_show_search_intro: function(show) {
     prefs.showSearchIntro = show;
