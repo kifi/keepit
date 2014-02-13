@@ -7,7 +7,7 @@ class TopicNameMapperTest extends Specification {
     "correctly construct idMapper" in {
       val names = Array("math", "cs", "cs", "na", "NA", "math", "web")
       val (newNames, mapper) = NameMapperConstructer.getMapper(names)
-      newNames.toSet == Set("math", "cs", "web")
+      newNames.toSet === Set("math", "cs", "web")
       mapper === Map(0 -> 0, 1 -> 1, 2 -> 1, 5 -> 0, 6 -> 2)
     }
 

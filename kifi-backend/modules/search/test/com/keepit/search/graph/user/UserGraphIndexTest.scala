@@ -49,7 +49,7 @@ class UserGraphIndexTest extends Specification with ApplicationInjector{
         client.deleteConnections(del2)
 
         indexer.update()
-        indexer.numDocs == 7
+        indexer.numDocs === 7
 
         searcher = new UserGraphSearcher(indexer.getSearcher)
         searcher.getFriends(uids(0)).toSet === Set(5, 7)
