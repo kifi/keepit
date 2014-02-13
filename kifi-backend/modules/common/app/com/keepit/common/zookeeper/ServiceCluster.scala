@@ -71,8 +71,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
 
   def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
 
-  private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperSession) = try {
-    val nodeData = zk.getData[String](childNode).get
+  private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, nodeData: String) = try {
     log.info(s"data for node $childNode is $nodeData")
     val remoteService = RemoteService.fromJson(nodeData)
     if (newInstances.isDefinedAt(childNode)){
@@ -87,10 +86,9 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       log.error(s"could not fetch data node for instance of $childNode: ${t.toString}", t)
   }
 
-  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperSession) =
-    childNodes foreach { childNode =>
-      addNewNode(newInstances, childNode, zk)
-    }
+  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], children: Seq[(Node, String)]) = {
+    children foreach { case (childNode, nodeData) => addNewNode(newInstances, childNode, nodeData) }
+  }
 
   private def removeOldNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node]) = newInstances.keys foreach { node =>
     if(!childNodes.contains(node)) {
@@ -136,10 +134,10 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     instances
   }
 
-  def update(zk: ZooKeeperSession, children: Seq[Node]): Unit = synchronized {
+  def update(zk: ZooKeeperSession, children: Seq[(Node, String)]): Unit = synchronized {
     val newInstances = instances.clone()
-    addNewNodes(newInstances, children, zk)
-    removeOldNodes(newInstances, children)
+    addNewNodes(newInstances, children)
+    removeOldNodes(newInstances, children.map(_._1))
     deDuplicate(zk, newInstances)
     leader = findLeader(newInstances)
     instances = newInstances

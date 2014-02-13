@@ -36,10 +36,9 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
 class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) extends ZooKeeperSession {
 
   def getState() = ZooKeeper.States.CONNECTED
-  def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
-  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit, watchData: Boolean = false) {}
-  def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
-  def watchChildrenWithData[T](node: Node, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
+  def watchNode[T](node: Node, onDataChanged : Option[T] => Unit)(implicit deserializer: Array[Byte] => T) {}
+  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit) {}
+  def watchChildrenWithData[T](node: Node, updateChildren : Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T) {}
 
   def create(node: Node): Node = db.synchronized {
     db(node) = None
@@ -59,7 +58,9 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
     child
   }
 
-  def getChildren(node: Node): Seq[Node] = Nil
+  def getChildren(node: Node): Seq[Node] = {
+    db.keys.filter(entry => entry.parent.get == node).toSeq
+  }
 
   def get(node: Node): Option[Node] = {
     if (db.contains(node)) Some(node) else None
