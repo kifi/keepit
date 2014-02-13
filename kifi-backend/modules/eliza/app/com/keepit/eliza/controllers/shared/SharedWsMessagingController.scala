@@ -66,8 +66,20 @@ class SharedWsMessagingController @Inject() (
       )
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
+    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
+      log.info(s"[get_thread_info] user ${socket.userId} thread $threadId")
+      try {
+        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
+        socket.channel.push(Json.arr(requestId.toLong, info))
+      } catch {
+        case t: Throwable => {
+          socket.channel.push(Json.arr("server_error", requestId.toLong))
+          throw t
+        }
+      }
+    },
     "get_thread" -> { case JsString(threadId) +: _ =>
-      log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
+      log.info(s"[get_thread] user ${socket.userId} thread $threadId")
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
@@ -130,18 +142,6 @@ class SharedWsMessagingController @Inject() (
       }
       fut.onFailure {
         case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
-    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
-      log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
-      try {
-        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
-        socket.channel.push(Json.arr(requestId.toLong, info))
-      } catch {
-        case t:Throwable => {
-          socket.channel.push(Json.arr("server_error", requestId.toLong))
-          throw t
-        }
       }
     },
 
