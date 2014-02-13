@@ -215,10 +215,11 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         Statsd.increment(s"websocket.handler.$action")
         Statsd.time(s"websocket.handler.$action") {
           val timer = accessLog.timer(WS_IN)
+          val payload = jsArr.value.tail
           try {
-            handler(jsArr.value.tail)
+            handler(payload)
           } finally {
-            accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE"))
+            accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
           }
         }
       } getOrElse {
