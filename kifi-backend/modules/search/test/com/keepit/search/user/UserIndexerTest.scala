@@ -13,6 +13,7 @@ import org.apache.lucene.util.Version
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.IdFilterCompressor
+import com.keepit.typeahead.PrefixFilter
 
 
 class UserIndexerTest extends Specification with ApplicationInjector {
@@ -202,6 +203,51 @@ class UserIndexerTest extends Specification with ApplicationInjector {
       }
     }
 
-  }
+    "search using prefix field" in {
+      running(new TestApplication(FakeShoeboxServiceModule())){
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        client.saveUsers(
+          User(firstName = s"abc", lastName = s"def"),
+          User(firstName = s"def", lastName = s"abc"),
+          User(firstName = s"uvw", lastName = s"xyzzzzzzzz"),
+          User(firstName = s"xyzzzzzzzzzzzzz", lastName = s"uvw")
+        )
 
+        val indexer = mkUserIndexer()
+        indexer.update()
+
+        val searcher = new UserSearcher(indexer.getSearcher)
+        val analyzer = DefaultAnalyzer.defaultAnalyzer
+        val parser = new UserQueryParser(analyzer)
+        val filter = filterFactory.default(None)
+        var query = parser.parseWithUserExperimentConstrains("ab de", Seq(), useLucenePrefixQuery = false)
+        var queryTerms = PrefixFilter.tokenize("ab de")
+
+        var hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 2
+        hits.hits(0).basicUser.firstName === "abc"
+        hits.hits(1).basicUser.firstName === "def"
+
+        query = parser.parseWithUserExperimentConstrains("de    ab", Seq(), useLucenePrefixQuery = false)
+        queryTerms = PrefixFilter.tokenize("de    ab")
+        hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 2
+        hits.hits(0).basicUser.firstName === "def"
+        hits.hits(1).basicUser.firstName === "abc"
+
+        query = parser.parseWithUserExperimentConstrains("xyzzzzzzz u", Seq(), useLucenePrefixQuery = false)
+        queryTerms = PrefixFilter.tokenize("xyzzzzzzz u")
+        hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 2
+        hits.hits(0).basicUser.firstName === "xyzzzzzzzzzzzzz"
+        hits.hits(1).basicUser.firstName === "uvw"
+
+        query = parser.parseWithUserExperimentConstrains("xyzzzzzzzzzzz", Seq(), useLucenePrefixQuery = false)
+        queryTerms = PrefixFilter.tokenize("xyzzzzzzzzzzz")               // longer than UserIndexer.PREFIX_MAX_LEN, should do additional filtering
+        hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 1
+        hits.hits(0).basicUser.firstName === "xyzzzzzzzzzzzzz"
+      }
+    }
+  }
 }
