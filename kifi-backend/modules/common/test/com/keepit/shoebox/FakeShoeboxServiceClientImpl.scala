@@ -99,6 +99,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allConnections = MutableMap[Id[UserConnection], UserConnection]()
   val allSearchFriends = MutableMap[Id[SearchFriend], SearchFriend]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
+  val allProbabilisticExperimentGenerators = MutableMap[Name[ProbabilisticExperimentGenerator], ProbabilisticExperimentGenerator]()
   val allUserBookmarks = MutableMap[Id[User], Set[Id[Bookmark]]]()
   val allBookmarks = MutableMap[Id[Bookmark], Bookmark]()
   val allNormalizedURIs = MutableMap[Id[NormalizedURI], NormalizedURI]()
@@ -467,7 +468,16 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment] = {
     val id = experiment.id.getOrElse(nextSearchExperimentId)
     val experimentWithId = experiment.withId(id)
-    allSearchExperiments(experimentWithId.id.get) =  experimentWithId
+    allSearchExperiments(experimentWithId.id.get) = experimentWithId
+
+    val allActive = allSearchExperiments.values.filter(_.isActive).toSeq
+    val generator = ProbabilisticExperimentGenerator(
+      name = SearchConfigExperiment.probabilisticGenerator,
+      condition = None,
+      salt = SearchConfigExperiment.probabilisticGenerator.name,
+      density = SearchConfigExperiment.getDensity(allActive)
+    )
+    allProbabilisticExperimentGenerators(generator.name) = generator
     Future.successful(experimentWithId)
   }
 
@@ -485,7 +495,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]] = {
-    Future.successful(Seq())
+    Future.successful(allProbabilisticExperimentGenerators.values.filter(_.isActive).toSeq)
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {

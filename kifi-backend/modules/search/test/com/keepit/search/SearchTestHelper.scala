@@ -175,7 +175,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
 
   val source = BookmarkSource("test")
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
-  val noBoostConfig = defaultConfig(
+  val noBoostConfig = defaultConfig.overrideWith(
     "myBookmarkBoost" -> "1",
     "sharingBoostInNetwork" -> "0",
     "sharingBoostOutOfNetwork" -> "0",
@@ -186,7 +186,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     "percentMatch" -> "0",
     "tailCutting" -> "0",
     "dampingByRank" -> "false")
-  val allHitsConfig = defaultConfig("tailCutting" -> "0")
+  val allHitsConfig = defaultConfig.overrideWith("tailCutting" -> "0")
 
   def application = {
     implicit val system = ActorSystem("test")

@@ -38,11 +38,10 @@ class ExtSearchController @Inject() (
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
-    val noSearchExperiments : Boolean = request.experiments.contains(NO_SEARCH_EXPERIMENTS)
 
     val debugOpt = debug.flatMap{ v => if (request.experiments.contains(ADMIN)) Some(v) else None } // debug is only for admin
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debug)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debug)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
@@ -69,29 +68,6 @@ class ExtSearchController @Inject() (
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
       Nil,
       decoratedResult.experts).json
-  }
-
-  def internalSearch(
-    userId: Long,
-    noSearchExperiments: Boolean,
-    acceptLangs: String,
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None
-  ) = Action { request =>
-
-    val uid = Id[User](userId)
-
-    val decoratedResult = searchCommander.search(uid, acceptLangs.split(","), noSearchExperiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
-
-    Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 }
 

@@ -231,7 +231,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
         userGraphIndexer.update()
         mainSearcherFactory.clear()
-        val mainSearcher = mainSearcherFactory(singleShard, userId, "personal title3 content3 xyz", english, numHitsToReturn, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"))
+        val mainSearcher = mainSearcherFactory(singleShard, userId, "personal title3 content3 xyz", english, numHitsToReturn, SearchFilter.default(), noBoostConfig.overrideWith("myBookMarkBoost" -> "1.5"))
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris.toList diff List(uris(3))).reverse)).map(_.id.get).toList
@@ -304,7 +304,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         userGraphIndexer.update()
 
         mainSearcherFactory.clear()
-        val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"))
+        val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig.overrideWith("recencyBoost" -> "1.0"))
         val res = mainSearcher.search()
 
         var lastTime = Long.MaxValue
@@ -348,7 +348,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val medianScore = res.hits(sz/2).score
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
-        val tailCuttingConfig = noBoostConfig("tailCutting" -> medianScore.toString)
+        val tailCuttingConfig = noBoostConfig.overrideWith("tailCutting" -> medianScore.toString)
         mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, uris.size, SearchFilter.default(), tailCuttingConfig)
         res = mainSearcher.search()
         //println("Scores: " + res.hits.map(_.score))

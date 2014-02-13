@@ -28,7 +28,7 @@ class SearchConfigController @Inject() (configManager: SearchConfigManager) exte
     }
 
     val config = configManager.getUserConfig(userId)
-    configManager.setUserConfig(userId, config(params.get))
+    configManager.setUserConfig(userId, config.overrideWith(params.get))
     Ok("config updated")
   }
 
