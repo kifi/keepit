@@ -16,38 +16,38 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
   def getURIList(field: String, docid: Int): URIList = {
     if (docid < 0) return URIList.empty
-    val allBytes = getAllBytes(field, docid)
-    URIList(allBytes.toArray, 0, allBytes.length)
+    val ref = getAllBytes(field, docid)
+    URIList(ref.bytes, ref.offset, ref.length)
   }
 
   def getLongArray(field: String, docid: Int): Array[Long] = {
     if (docid < 0) return Array.empty[Long]
-    val allBytes = getAllBytes(field, docid)
-    Util.unpackLongArray(allBytes, 0, allBytes.length)
+    val ref = getAllBytes(field, docid)
+    Util.unpackLongArray(ref.bytes, ref.offset, ref.length)
   }
 
-  private def getAllBytesRefs(field: String, docid: Int): ArrayBuffer[(BytesRef, Int)] = {
+  private def getAllBytes(field: String, docid: Int): BytesRef = {
     import com.keepit.search.index.Indexable._
 
-    val bytesRefs = new ArrayBuffer[(BytesRef, Int)]()
+    val bytesRefs = new ArrayBuffer[BytesRef]()
     var done = false
     var iter = 0
 
     while (!done){
-      val fieldName = field + numberSuffix(iter)
+      val fieldName = addNumberSuffix(field, iter)
       val docValues = reader.getBinaryDocValues(fieldName)
       if (docValues != null){
         var ref = new BytesRef()
         docValues.get(docid, ref)
         if (ref.length > 0){
           if (ref.length == MAX_BINARY_FIELD_LENGTH){
-            bytesRefs.append((ref, ref.length - 1))        //last byte is EOF symbol and is dropped. We still have something left
+            bytesRefs.append(new BytesRef(ref.bytes, ref.offset, ref.length - 1)) //last byte is EOF symbol and is dropped. We still have something left
           } else{
-            bytesRefs.append((ref, ref.length))            // all bytes are good
-            done = true                                    // nothing left
+            bytesRefs.append(ref)                                                 // all bytes are good
+            done = true                                                           // nothing left
           }
         } else {
-          log.error(s"missing uri list data: ${field + numberSuffix(iter)}")
+          log.error(s"missing uri list data: $fieldName")
         }
         iter += 1
       } else {
@@ -55,21 +55,20 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
       }
     }
 
-    bytesRefs
-  }
+    bytesRefs.length match {
+      case 0 => new BytesRef()
+      case 1 => bytesRefs(0) // a single ref. do not copy bytes.
+      case _ =>
+        val counts = bytesRefs.foldLeft(0)((len, ref) => len + ref.length)
+        val allBytes = new Array[Byte](counts)
 
-  private def getAllBytes(field: String, docid: Int): Array[Byte] = {
-    val bytesRefs = getAllBytesRefs(field, docid)
-    val counts = bytesRefs.map{_._2}.foldLeft(0)(_+_)
-    val allBytes = new Array[Byte](counts)
-
-    var i = 0
-    bytesRefs.map{ case (ref, count) =>
-      val offset = ref.offset
-      (0 until count).foreach{ j => allBytes(i) = ref.bytes(offset + j); i += 1 }
+        var offset = 0
+        bytesRefs.foreach{ ref =>
+          System.arraycopy(ref.bytes, ref.offset, allBytes, offset, ref.length)
+          offset += ref.length
+        }
+        new BytesRef(allBytes)
     }
-
-    allBytes
   }
 
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
