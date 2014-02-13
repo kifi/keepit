@@ -82,8 +82,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
 
         val request = FakeRequest("GET", path)
         val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val expected = Json.parse(s"""
             {
@@ -109,8 +109,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         inject[FakeActionAuthenticator].setUser(user1965)
         val mobileController = inject[MobileUserController]
         val result = mobileController.getFriends()(FakeRequest())
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
         val expected = Json.parse("""[
             {"id":"aa345838-70fe-45f2-914c-f27c865bdb91","firstName":"Tamila, Kifi Help","lastName":"","pictureName":"tmilz.jpg"},
             {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg"},
@@ -135,8 +135,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         }
         val mobileController = inject[MobileUserController]
         val result = mobileController.socialNetworkInfo()(FakeRequest())
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
         val expected = Json.parse("""[
             {"network":"facebook","profileUrl":"http://facebook.com/FRF","pictureUrl":"https://graph.facebook.com/FRF/picture?width=50&height=50"},
             {"network":"linkedin","profileUrl":"http://www.linkedin.com/in/rf","pictureUrl":"http://my.pic.com/pic.jpg"}
