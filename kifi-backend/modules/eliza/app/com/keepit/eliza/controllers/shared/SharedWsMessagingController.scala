@@ -24,6 +24,8 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import scala.concurrent.Future
 import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.Access.{WS_IN, CACHE}
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -39,7 +41,8 @@ class SharedWsMessagingController @Inject() (
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
     protected val userExperimentCommander: RemoteUserExperimentCommander,
-    val kifInstallationStore: KifInstallationStore
+    val kifInstallationStore: KifInstallationStore,
+    val accessLog: AccessLog
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 

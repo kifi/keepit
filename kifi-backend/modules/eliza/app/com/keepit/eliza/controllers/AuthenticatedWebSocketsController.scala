@@ -14,23 +14,18 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.commanders.RemoteUserExperimentCommander
 import scala.util.Try
-import com.keepit.common.KestrelCombinator
 
-import scala.concurrent.stm.{Ref, atomic}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
-import scala.concurrent.duration._
 import scala.util.Random
 
-import play.api.libs.concurrent.Akka
 import play.api.mvc.{WebSocket,RequestHeader}
 import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
 import play.api.mvc.WebSocket.FrameFormatter
 import play.api.libs.json.{Json, JsValue}
-import play.api.Play.current
 import play.modules.statsd.api.Statsd
 
-import akka.actor.{Cancellable, ActorSystem}
+import akka.actor.ActorSystem
 
 import securesocial.core.{Authenticator, UserService, SecureSocial}
 
@@ -39,6 +34,8 @@ import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.Access.WS_IN
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
@@ -65,6 +62,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   protected val userExperimentCommander: RemoteUserExperimentCommander
   val kifInstallationStore: KifInstallationStore
+  val accessLog: AccessLog
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -226,10 +224,15 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
         val iteratee = asyncIteratee(streamSession, versionOpt) { jsArr =>
           Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-            log.info(s"WS request from user ${streamSession.userId} for: " + jsArr)
-            Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
-            Statsd.time(s"websocket.handler.${jsArr.value(0)}") {
-              handler(jsArr.value.tail)
+            val action = jsArr.value(0).as[String]
+            Statsd.increment(s"websocket.handler.$action")
+            Statsd.time(s"websocket.handler.$action") {
+              val timer = accessLog.timer(WS_IN)
+              try {
+                handler(jsArr.value.tail)
+              } finally {
+                accessLog.add(timer.done(url = action, userId = streamSession.userId.toString))
+              }
             }
           } getOrElse {
             log.warn(s"WS no handler from user ${streamSession.userId} for: " + jsArr)

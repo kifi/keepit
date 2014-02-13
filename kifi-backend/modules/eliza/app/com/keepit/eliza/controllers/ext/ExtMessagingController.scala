@@ -23,6 +23,7 @@ import play.modules.statsd.api.Statsd
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
+import com.keepit.common.logging.AccessLog
 
 class ExtMessagingController @Inject() (
     postOffice: RemotePostOffice,
@@ -38,11 +39,11 @@ class ExtMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val heimdalContextBuilder: HeimdalContextBuilderFactory
+    protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
+    val accessLog: AccessLog
   ) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
-    val tStart = currentDateTime
     val o = request.body
     val extVersion = (o \ "extVersion").asOpt[String]
     val (title, text) = (
