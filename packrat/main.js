@@ -274,9 +274,10 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   invokeThreadListCallbacks('all', threadLists.all);
   ['sent', 'unread'].forEach(function (kind) {
     var tl = threadLists[kind];
-    if (tl.ids.length || tl.includesOldest) {
+    if (tl.includesOldest || tl.ids.length) {
       invokeThreadListCallbacks(kind, tl);
-    } else {
+    }
+    if (!tl.includesOldest && tl.ids.length <= (kind === 'unread' ? 1 : 0)) {  // precaution to avoid ever having 0 of N unread threads loaded
       socket.send(['get_' + kind + '_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, kind, tl));
     }
   });
@@ -760,15 +761,23 @@ api.port.on({
     // Note: This would be a good place to potentially ask the server if there are any new threads
     // if we ever notice that we sometimes don't have them all.
     function reply(tl) {
-      if (kind === 'unread' && tl.ids.map(idToThread).filter(isUnread).length < tl.ids.length) {
-        getLatestThreads();
-        threadListCallbacks.unread.push(reply);
-        Airbrake.push({error: Error('Read threads found in threadLists.unread'), params: {
-          threads: tl.ids.map(idToThread).map(function (th) {
-            return {thread: th.thread, id: th.id, time: th.time, unread: th.unread, readAt: threadReadAt[th.thread]};
-          })
-        }});
-        return;
+      if (kind === 'unread') {
+        if (tl.ids.map(idToThread).filter(isUnread).length < tl.ids.length) {
+          getLatestThreads();
+          threadListCallbacks.unread.push(reply);
+          Airbrake.push({error: Error('Read threads found in threadLists.unread'), params: {
+            threads: tl.ids.map(idToThread).map(function (th) {
+              return {thread: th.thread, id: th.id, time: th.time, unread: th.unread, readAt: threadReadAt[th.thread]};
+            })
+          }});
+          return;
+        } else if (tl.ids.length === 0 && tl.numTotal > 0) {
+          socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
+          threadListCallbacks.unread = threadListCallbacks.unread || [];
+          threadListCallbacks.unread.push(reply);
+          Airbrake.push({error: Error('No unread threads available to show'), params: {threadList: tl}});
+          return;
+        }
       }
       respond({
         threads: tl.ids.slice(0, THREAD_BATCH_SIZE).map(idToThread),
@@ -813,6 +822,7 @@ api.port.on({
           list.insertOlder(arr.map(getThreadId));
           list.includesOldest = includesOldest;
         }
+        // TODO: may also want to append/update sent & unread if this is the all kind
         respond({threads: arr, includesOldest: includesOldest});
       });
     }
@@ -1187,10 +1197,15 @@ function markRead(threadId, messageId, time) {
     (function removeFromUnread(tl) {
       if (!tl) return;
       var numRemoved = tl.remove(th.thread);
-      if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
-        tl.numTotal--;
-        if (tl.ids.length === tl.numTotal) {
+      if (!tl.includesOldest) {
+        if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
+          tl.numTotal--;
+        }
+        if (tl.numTotal === tl.ids.length) {
           tl.includesOldest = true;
+        } else if (tl.ids.length <= 1) {
+          socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
+          threadListCallbacks.unread = threadListCallbacks.unread || [];
         }
       }
     }(threadLists.unread));
