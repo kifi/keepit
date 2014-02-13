@@ -32,7 +32,7 @@ import play.api.libs.json._
 import play.api.mvc.{AnyContent, SimpleResult}
 
 import views.html
-import com.keepit.typeahead.PrefixFilter
+import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 
@@ -645,9 +645,9 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  def prefixSearch(userId:Id[User], p:String) = AdminHtmlAction.authenticatedAsync { request =>
+  def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     socialUserTypeAhead.build(userId) map { filter =>
-      val ids = filter.filterBy(PrefixFilter.tokenize(p))
+      val ids = filter.filterBy(PrefixFilter.tokenize(query))
       val builder = mutable.ArrayBuilder.make[SocialUserInfo]
       db.readOnly { implicit ro =>
         for (id <- ids) {
@@ -655,7 +655,7 @@ class AdminUserController @Inject() (
         }
       }
       val res = builder.result()
-      log.info(s"[prefixSearch($userId,$p)]=${res.mkString(",")}")
+      log.info(s"[prefixSearch($userId,$query)]=${res.mkString(",")}")
       Ok(res.map(info => s"<p>$info</p>").mkString("<br>")) // ugly
     }
   }

@@ -24,9 +24,7 @@ trait Typeahead[E, I] {
 
   protected def extractName(info: I): String
 
-  implicit val hitOrdering = TypeaheadHit.defaultOrdering[I]
-
-  def search(userId: Id[User], query: String)(implicit ord: TypeaheadHit[I]): Option[Seq[I]] = {
+  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = {
     if (query.trim.length > 0) {
       getPrefixFilter(userId).flatMap{ filter =>
         val queryTerms = PrefixFilter.normalize(query).split("\\s+")
@@ -37,7 +35,7 @@ trait Typeahead[E, I] {
     }
   }
 
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: TypeaheadHit[I]): Option[Seq[I]] = {
+  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = {
     if (queryTerms.length > 0) {
       var ordinal = 0
       val hits = infos.map{ info =>
