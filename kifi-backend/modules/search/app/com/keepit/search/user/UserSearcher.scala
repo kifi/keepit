@@ -41,10 +41,9 @@ class UserSearcher(searcher: Searcher) {
 
   private def genMatchingFilter(queryTerms: Array[String]): Function1[UserHit, Boolean] = {
     if (queryTerms.forall(_.length() <= UserIndexer.PREFIX_MAX_LEN)) (u: UserHit) => true     // prefix index guarantees correctness
-    else if (queryTerms.forall(_.length > UserIndexer.PREFIX_MAX_LEN)) {
-      (hit: UserHit) => queryTerms.forall(query => query.contains("@") || hit.basicUser.firstName.startsWith(query) || hit.basicUser.lastName.startsWith(query))  // don't match email address with names. need test pass
-    } else {
-      genMatchingFilter(queryTerms.filter(_.length() > UserIndexer.PREFIX_MAX_LEN))
+    else {
+      val longQueries = queryTerms.filter(_.length() > UserIndexer.PREFIX_MAX_LEN)
+      (hit: UserHit) => longQueries.forall(query => query.contains("@") || hit.basicUser.firstName.startsWith(query) || hit.basicUser.lastName.startsWith(query))  // don't match email address with names. need test pass
     }
   }
 
