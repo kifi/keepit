@@ -24,8 +24,8 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
           mails map {mail => electronicMailRepo.save(mail) }
         }
         db.readOnly { implicit s =>
-          electronicMailRepo.page(0, 10).size == 3
-          electronicMailRepo.page(0, 2).size == 3
+          electronicMailRepo.page(0, 10).size === 3
+          electronicMailRepo.page(0, 2).size === 3
           mails foreach { mail =>
             electronicMailRepo.get(mail.id.get) === mail
           }

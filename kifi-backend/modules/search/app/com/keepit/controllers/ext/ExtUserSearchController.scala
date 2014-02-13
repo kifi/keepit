@@ -14,6 +14,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.model.FriendRequestStates
 import play.api.libs.json.JsArray
+import com.keepit.typeahead.PrefixFilter
 
 class ExtUserSearchController @Inject()(
   searcherFactory: MainSearcherFactory,
@@ -41,9 +42,10 @@ class ExtUserSearchController @Inject()(
     val searchFilter = createFilter(Some(userId), filter, None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
+    val queryTerms = PrefixFilter.normalize(queryText).split("\\s+")
     val res = parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
       case None => UserSearchResult(Array.empty[UserHit], context = "")
-      case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize)
+      case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize, queryTerms)
     }
 
     val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map{_.recipientId}.toSet
@@ -66,10 +68,10 @@ class ExtUserSearchController @Inject()(
     val searchFilter = createFilter(Some(userId), filter, context)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-
+    val queryTerms = PrefixFilter.normalize(queryText).split("\\s+")
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context.getOrElse(""))
-      case Some(q) => searcher.search(q, maxHits, searchFilter)
+      case Some(q) => searcher.search(q, maxHits, searchFilter, queryTerms)
     }
 
     Ok(Json.toJson(res))
