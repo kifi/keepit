@@ -5,15 +5,29 @@ import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.test.TestInjector
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
-import com.keepit.model.User
-import com.keepit.model.UserExperiment
+import com.keepit.model.{ProbabilisticExperimentGeneratorAllCache, ExperimentType, User, UserExperiment}
 import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.google.inject.Injector
 import com.keepit.common.usersegment.UserSegment
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.cache.{HashMapMemoryCache, CacheStatistics}
+import com.keepit.common.logging.{AccessLog, Logging}
 
 class SearchConfigTest extends Specification with TestInjector {
+
+  private def getUserExperiments(userId: Id[User])(implicit injector: Injector) = {
+    val commander = new RemoteUserExperimentCommander(
+      shoebox = inject[ShoeboxServiceClient],
+      generatorCache = new ProbabilisticExperimentGeneratorAllCache(inject[CacheStatistics], inject[AccessLog], (new HashMapMemoryCache(), Duration.Inf)),
+      monitoredAwait = inject[MonitoredAwait],
+      airbrake = inject[AirbrakeNotifier])
+    Await.result(commander.getExperimentsByUser(userId), Duration(1, "minutes")).toSet
+  }
+
   "The search configuration" should {
     "load defaults correctly" in {
       withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
@@ -22,8 +36,8 @@ class SearchConfigTest extends Specification with TestInjector {
           new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
         val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"), User(firstName = "Greg", lastName = "Metvin"))
 
-        val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "fortytwo")
-        val (c2, _) = searchConfigManager.getConfig(greg.id.get, "fortytwo")
+        val (c1, _) = searchConfigManager.getConfig(andrew.id.get, getUserExperiments(andrew.id.get))
+        val (c2, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
         c1 === c2
         c1 === SearchConfig(SearchConfig.defaultParams)
       }
@@ -31,6 +45,7 @@ class SearchConfigTest extends Specification with TestInjector {
     "load overrides for experiments" in {
       withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
         val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner"))
@@ -51,17 +66,10 @@ class SearchConfigTest extends Specification with TestInjector {
         )),Duration(1, "minutes"))
 
         searchConfigManager.syncActiveExperiments
-        val (c1, e1) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
-        val (c2, e2) = searchConfigManager.getConfig(andrew.id.get, "Andrew  Conner")
-        c1 === c2
+        val (c1, e1) = searchConfigManager.getConfig(andrew.id.get, Set(v1.experiment))
         Seq(70, 90) must contain(c1.asInt("percentMatch"))
         Seq(2.0, 1.0) must contain(c1.asDouble("recencyBoost"))
         Seq(0.30, 0.10) must contain(c1.asDouble("tailCutting"))
-
-        c1.asInt("percentMatch") match {
-          case 70 => e1.get === v1.id.get
-          case 90 => e2.get === v2.id.get
-        }
       }
     }
     "load correct override based on weights" in {
@@ -87,9 +95,11 @@ class SearchConfigTest extends Specification with TestInjector {
         ))
 
         searchConfigManager.syncActiveExperiments
-        val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
-        val (c2, _) = searchConfigManager.getConfig(andrew.id.get, "software engineer")
-        val (c3, _) = searchConfigManager.getConfig(andrew.id.get, "fortytwo inc")
+
+        val userExperiments = getUserExperiments(andrew.id.get)
+        val (c1, _) = searchConfigManager.getConfig(andrew.id.get, userExperiments)
+        val (c2, _) = searchConfigManager.getConfig(andrew.id.get, userExperiments)
+        val (c3, _) = searchConfigManager.getConfig(andrew.id.get, userExperiments)
         c1 === c2
         c1 === c3
         c1.asDouble("recencyBoost") === 1.0
@@ -111,14 +121,14 @@ class SearchConfigTest extends Specification with TestInjector {
         )),Duration(1, "minutes"))
 
         searchConfigManager.syncActiveExperiments
-        val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
+        val (c1, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
         c1.asInt("percentMatch") === 700
         c1.asDouble("phraseBoost") === 500.0
 
         fakeShoeboxServiceClient.saveExperiment(ex.withState(SearchConfigExperimentStates.INACTIVE))
 
         searchConfigManager.syncActiveExperiments
-        val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
+        val (c2, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
         c2.asInt("percentMatch") !== 700
         c2.asDouble("phraseBoost") !== 500.0
       }
@@ -137,10 +147,12 @@ class SearchConfigTest extends Specification with TestInjector {
         ))
 
         searchConfigManager.syncActiveExperiments
-        val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
+        val (c1, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
         c1.asInt("percentMatch") === 9000
         c1.asDouble("phraseBoost") === 10000.0
-        val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles", true)
+
+        fakeShoeboxServiceClient.saveUserExperiment(UserExperiment(userId = greg.id.get, experimentType = ExperimentType.NO_SEARCH_EXPERIMENTS))
+        val (c2, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
         c2.asInt("percentMatch") !== 9000
         c2.asDouble("phraseBoost") !== 10000.0
       }
@@ -152,7 +164,7 @@ class SearchConfigTest extends Specification with TestInjector {
     }
 
     "config overriders should work" in {
-      val conf = SearchConfigOverrider.byUserSegment(new UserSegment(3), SearchConfig.defaultConfig)
+      val conf = SearchConfig.byUserSegment(new UserSegment(3))
       conf.asFloat("dampingHalfDecayFriends") === 2.5f
       conf.asInt("percentMatch") === 85
     }

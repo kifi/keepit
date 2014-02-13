@@ -659,6 +659,10 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
+  invite_friends: function (where) {
+    api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
+    mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
+  },
   send_message: function(data, respond, tab) {
     data.extVersion = api.version;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
@@ -2121,12 +2125,7 @@ function startSession(callback, retryMs) {
     } else if (stored('installation_id')) {
       openLogin(callback, retryMs);
     } else {
-      var tab = api.tabs.anyAt(webBaseUri() + "/");
-      if (tab) {
-        api.tabs.select(tab.id);
-      } else {
-        api.tabs.open(webBaseUri());
-      }
+      api.tabs.selectOrOpen(webBaseUri() + '/');
       api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
         if (tab.url.replace(/\/(?:#.*)?$/, '') === webBaseUri()) {

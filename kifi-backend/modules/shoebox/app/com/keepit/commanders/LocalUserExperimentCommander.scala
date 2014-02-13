@@ -5,7 +5,8 @@ import com.keepit.model.{
   ExperimentType,
   User,
   UserExperimentRepo,
-  UserExperiment,
+  Name,
+  ProbabilityDensity,
   ProbabilisticExperimentGeneratorRepo,
   ProbabilisticExperimentGenerator,
   ProbabilisticExperimentGeneratorAllCache
@@ -21,6 +22,8 @@ import com.google.inject.{Inject, Singleton}
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.model.UserExperiment
+import com.keepit.common.db.slick.DBSession.RWSession
 
 @Singleton //The Singleton is very importatnt here. There is a cache on the object.
 class LocalUserExperimentCommander @Inject() (
@@ -50,4 +53,10 @@ class LocalUserExperimentCommander @Inject() (
     getExperimentsByUser(userId).contains(experiment)
   }
 
+  def internProbabilisticExperimentGenerator(
+    name: Name[ProbabilisticExperimentGenerator],
+    density: ProbabilityDensity[ExperimentType],
+    salt: Option[String] = None,
+    condition: Option[ExperimentType] = None
+  ): ProbabilisticExperimentGenerator = db.readWrite { implicit session => generatorRepo.internByName(name, density, salt, condition) }
 }

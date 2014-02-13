@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.Clock
 import com.keepit.common.db.State
 
@@ -10,6 +10,7 @@ import com.keepit.common.db.State
 trait ProbabilisticExperimentGeneratorRepo extends Repo[ProbabilisticExperimentGenerator] {
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator]
   def getByName(name: Name[ProbabilisticExperimentGenerator], exclude: Option[State[ProbabilisticExperimentGenerator]] = Some(ProbabilisticExperimentGeneratorStates.INACTIVE))(implicit session: RSession): Option[ProbabilisticExperimentGenerator]
+  def internByName(name: Name[ProbabilisticExperimentGenerator], density: ProbabilityDensity[ExperimentType], salt: Option[String] = None, condition: Option[ExperimentType] = None)(implicit session: RWSession): ProbabilisticExperimentGenerator
 }
 
 @Singleton
@@ -48,6 +49,16 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
   def getByName(name: Name[ProbabilisticExperimentGenerator], exclude: Option[State[ProbabilisticExperimentGenerator]])(implicit session: RSession): Option[ProbabilisticExperimentGenerator] = {
     val q = (for(f <- rows if f.name === name && f.state =!= exclude.orNull) yield f)
     q.firstOption
+  }
+
+  def internByName(name: Name[ProbabilisticExperimentGenerator], density: ProbabilityDensity[ExperimentType], salt: Option[String], condition: Option[ExperimentType])(implicit session: RWSession): ProbabilisticExperimentGenerator = {
+    val defaultSalt = name.name + "Salt"
+    getByName(name, None) match {
+      case Some(generator) if generator.state != ProbabilisticExperimentGeneratorStates.INACTIVE =>
+        save(generator.copy(density = density, condition = condition orElse generator.condition, salt = salt getOrElse generator.salt))
+      case Some(inactiveGenerator) => save(inactiveGenerator.copy(density = density, condition = condition, salt = salt getOrElse defaultSalt, state = ProbabilisticExperimentGeneratorStates.ACTIVE))
+      case None => save(ProbabilisticExperimentGenerator(name = name, condition = condition, density = density, salt = salt getOrElse defaultSalt))
+    }
   }
 }
 

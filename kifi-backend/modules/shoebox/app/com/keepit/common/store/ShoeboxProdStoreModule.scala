@@ -9,7 +9,7 @@ import com.keepit.common.time.Clock
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 import play.api.Play._
-import com.keepit.common.aws.AwsModule
+import com.keepit.typeahead.socialusers.{S3SocialUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore}
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -26,9 +26,9 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def socialUserRawInfoStore(amazonS3Client: AmazonS3, acessLog: AccessLog): SocialUserRawInfoStore = {
+  def socialUserRawInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserRawInfoStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.social.bucket").get)
-    new S3SocialUserRawInfoStoreImpl(bucketName, amazonS3Client, acessLog)
+    new S3SocialUserRawInfoStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
   @Singleton
@@ -36,6 +36,13 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
     new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
+  }
+
+  @Singleton
+  @Provides
+  def socialUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserTypeaheadStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.social.bucket").get)
+    new S3SocialUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
   }
 
 }
@@ -62,5 +69,13 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
     new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
+  }
+
+  @Singleton
+  @Provides
+  def socialUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserTypeaheadStore = {
+    whenConfigured("amazon.s3.typeahead.social.bucket")(
+      prodStoreModule.socialUserTypeaheadStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemorySocialUserTypeaheadStoreImpl())
   }
 }

@@ -372,6 +372,14 @@ exports.tabs = {
     }
     tabs.open(params);
   },
+  selectOrOpen: function(url) {
+    var tab = exports.tabs.anyAt(url);
+    if (tab) {
+      exports.tabs.select(tab.id);
+    } else {
+      exports.tabs.open(url);
+    }
+  },
   each: function(callback) {
     for each (let page in pages) {
       if (httpRe.test(page.url)) callback(page);

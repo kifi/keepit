@@ -11,6 +11,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
 import com.keepit.common.cache.TransactionalCaching
+import com.keepit.model.{ProbabilityDensity, ProbabilisticExperimentGenerator, Name, ExperimentType}
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
@@ -33,9 +34,18 @@ case class SearchConfigExperiment(
   def isStartable = Seq(SearchConfigExperimentStates.PAUSED, SearchConfigExperimentStates.CREATED) contains state
   def isRunning = state == SearchConfigExperimentStates.ACTIVE
   def isEditable = state == SearchConfigExperimentStates.CREATED
+  def experiment: ExperimentType = SearchConfigExperiment.experimentType(id.get)
+  require(weight >= 0, "Search experiment weight must be non-negative")
 }
 
 object SearchConfigExperiment {
+  val probabilisticGenerator = Name[ProbabilisticExperimentGenerator]("searchConfigExperiment")
+  def getDensity(searchExperiments: Seq[SearchConfigExperiment]): ProbabilityDensity[ExperimentType] = {
+    val norm = searchExperiments.map(_.weight).sum
+    if (norm == 0) ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => se.experiment -> 0.0 }) // All non-negative weights must be 0
+    else ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => se.experiment -> se.weight / norm })
+  }
+
   private implicit val idFormat = Id.format[SearchConfigExperiment]
   private implicit val stateFormat = State.format[SearchConfigExperiment]
   private implicit val searchConfigFormat = new Format[SearchConfig] {
@@ -55,6 +65,9 @@ object SearchConfigExperiment {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat)
   )(SearchConfigExperiment.apply, unlift(SearchConfigExperiment.unapply))
+
+  def experimentType(id: Id[SearchConfigExperiment]): ExperimentType = ExperimentType("SE-" + id.toString)
+  val experimentTypePattern = """SE-(\d+)""".r
 }
 
 sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
