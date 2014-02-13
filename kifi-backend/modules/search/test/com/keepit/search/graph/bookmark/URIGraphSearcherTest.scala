@@ -124,8 +124,13 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update()
 
         val searcher = URIGraphSearcher(indexer)
-        searcher.getUserToUriEdgeSet(users(0).id.get, publicOnly = false).destIdSet.size === bigDataSize - 1
-        searcher.getUserToUriEdgeSet(users(1).id.get, publicOnly = false).destIdSet.size === 1
+        val edgeSet0 = searcher.getUserToUriEdgeSet(users(0).id.get, publicOnly = false)
+        edgeSet0.destIdSet.size === bigDataSize - 1
+        edgeSet0.destIdSet === uris.dropRight(1).map(_.id.get).toSet
+
+        val edgeSet1 = searcher.getUserToUriEdgeSet(users(1).id.get, publicOnly = false)
+        edgeSet1.destIdSet.size === 1
+        edgeSet1.destIdSet === Set(uris.last.id.get)
       }
 
     }
