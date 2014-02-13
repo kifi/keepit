@@ -22,7 +22,7 @@ class BabysitterTest extends Specification with DeprecatedTestInjector {
           // So fast!
         }
 
-        inject[HealthcheckPlugin].errorCount == 0
+        inject[HealthcheckPlugin].errorCount === 0
 
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         // Babysitter gets time twice. At the beginning, and at the end for warnTimeout

@@ -226,6 +226,8 @@ class ServiceDiscoveryImpl(
     } getOrElse(false)
   }
 
+
+
   def timeSinceLastStatusChange: Long = System.currentTimeMillis - lastStatusChangeTime
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]

@@ -23,11 +23,11 @@ class MultiHashFilterTest extends Specification {
       val keys = (0 until 10000).map(i => rand.nextLong).toList
 
       keys.foreach(k => hf.put(k))
-      keys.take(100).forall(k => !hf.mayContain(k)) == true
-      keys.drop(keys.size - 100).forall(k => hf.mayContain(k)) == true
+      keys.take(100).exists(k => !hf.mayContain(k)) === true
+      keys.drop(keys.size - 100).forall(k => hf.mayContain(k)) === true
 
       keys.take(100).foreach(k => hf.put(k))
-      keys.take(100).forall(k => hf.mayContain(k)) == true
+      keys.take(100).forall(k => hf.mayContain(k)) === true
     }
   }
 }
