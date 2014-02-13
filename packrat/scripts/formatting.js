@@ -28,7 +28,7 @@ var getTextFormatter = (function () {
   }
 
   function processEmailAddressesEtc(text) {
-    if (text.indexOf('@') > 1) {
+    if (~text.indexOf('@', 1)) {
       var parts = text.split(emailAddrRe);
       for (var i = 1; i < parts.length; i += 2) {
         var escapedAddr = Mustache.escape(parts[i]);
