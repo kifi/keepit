@@ -34,23 +34,23 @@ import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.KifInstallationStore
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String, id: String = RandomStringUtils.randomAlphanumeric(5))
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
 case class SocketInfo(
-  id: Long,
   channel: Concurrent.Channel[JsArray],
   connectedAt: DateTime,
   userId: Id[User],
   experiments: Set[ExperimentType],
   extVersion: Option[String],
   userAgent: String,
-  var ip: Option[String]
+  var ip: Option[String],
+  id: Long = Random.nextLong(),
+  trackingId: String = RandomStringUtils.randomAlphanumeric(5)
 )
-
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
@@ -88,14 +88,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 exception = ex,
                 method = Some("ws"),
                 url = e.value.headOption.map(_.toString),
-                message = Some(s"[WS] user ${streamSession.userId.id} using version ${extVersion} on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString}")
+                message = Some(s"[WS] user ${streamSession.userId.id} using version $extVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString}")
               )
             )
           }
         }
         Cont[JsArray, Unit](i => step(i))
     }
-    (Cont[JsArray, Unit](i => step(i)))
+    Cont[JsArray, Unit](i => step(i))
   }
 
 
@@ -172,7 +172,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
           crypt.decrypt(ipkey, eip).toOption
         }
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
+        val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
 
         var startMessages = Seq[JsArray](Json.arr("hi"))
 
@@ -183,17 +183,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
         onConnect(socketInfo)
 
-        val tStart = currentDateTime
-        //Analytics
-        SafeFuture {
-          val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
-          heimdal.trackEvent(UserEvent(socketInfo.userId, context, UserEventTypes.CONNECTED, tStart))
-          heimdal.setUserProperties(socketInfo.userId, "lastConnected" -> ContextDate(tStart))
-        }
-
-        log.info(s"New WS connection from user $streamSession")
-
-        accessLog.add(connectTimer.done(trackingId = streamSession.id, method = "CONNECT"))
+        reportConnect(streamSession, socketInfo, request, connectTimer)
 
         (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
       }
@@ -203,6 +193,18 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
     }
+  }
+
+  private def reportConnect(streamSession: StreamSession, socketInfo: SocketInfo, request: RequestHeader, connectTimer: AccessLogTimer): Unit = {
+    log.info(s"New WS connection from user $streamSession")
+    val tStart = currentDateTime
+    //Analytics
+    SafeFuture {
+      val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
+      heimdal.trackEvent(UserEvent(socketInfo.userId, context, UserEventTypes.CONNECTED, tStart))
+      heimdal.setUserProperties(socketInfo.userId, "lastConnected" -> ContextDate(tStart))
+    }
+    accessLog.add(connectTimer.done(trackingId = socketInfo.trackingId, method = "CONNECT"))
   }
 
   private def iteratee(streamSession: StreamSession, versionOpt: Option[String], socketInfo: SocketInfo, channel: Concurrent.Channel[JsArray]) = {
@@ -216,7 +218,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           try {
             handler(jsArr.value.tail)
           } finally {
-            accessLog.add(timer.done(url = action, trackingId = streamSession.id, method = "MESSAGE"))
+            accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE"))
           }
         }
       } getOrElse {
@@ -253,7 +255,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     channel.push(Json.arr("goodbye", reason))
     channel.eofAndEnd()
     onDisconnect(socketInfo)
-    accessLog.add(timer.done(trackingId = streamSession.id, method = "DISCONNECT"))
+    accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT"))
   }
 
   protected def authenticatedWebSocketsContextBuilder(socketInfo: SocketInfo, request: Option[RequestHeader] = None) = {
