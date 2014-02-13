@@ -32,6 +32,7 @@ var DEFAULT_SETTINGS = {
     hintText: "Type in a search term",
     searchingText: "Searching...",
     noResultsHtml: null,
+    tipHtml: null,
     deleteText: "×",
     placeholder: null,
     theme: null,
@@ -86,6 +87,7 @@ var DEFAULT_CLASSES = {
     dropdown: "token-input-dropdown",
     dropdownItem: "token-input-dropdown-item",
     dropdownItem2: "token-input-dropdown-item2",
+    dropdownTip: "token-input-dropdown-tip",
     selectedDropdownItem: "token-input-selected-dropdown-item",
     inputToken: "token-input-input-token",
     focused: "token-input-focused",
@@ -316,21 +318,20 @@ $.TokenList = function (input, url_or_data, settings) {
                     break;
 
                 case KEY.BACKSPACE:
-                    previous_token = input_token.prev();
-
-                    if(!$(this).val().length) {
+                    if(!this.value.length) {
                         if(selected_token) {
                             delete_token($(selected_token));
                             hidden_input.change();
-                        } else if(previous_token.length) {
-                            select_token($(previous_token.get(0)));
+                        } else {
+                            previous_token = input_token.prev();
+                            if (previous_token.length) {
+                                select_token(previous_token);
+                            }
                         }
                         return false;
-                    } else if($(this).val().length === 1) {
-                        hide_dropdown();
                     } else {
                         // set a timeout just long enough to let this function finish.
-                        setTimeout(function(){do_search();}, 5);
+                        setTimeout(do_search, 0);
                     }
                     break;
 
@@ -644,14 +645,21 @@ $.TokenList = function (input, url_or_data, settings) {
 
     // Add a token to the token list based on user input
     function add_token (item) {
-        var callback = $(input).data("settings").onAdd;
+        var settings = $(input).data('settings');
+
+        if (item.id === 'tip') {
+            if ($.isFunction(settings.onTip)) {
+                settings.onTip();
+            }
+            return;
+        }
 
         // See if the token already exists and select it if we don't want duplicates
-        if(token_count > 0 && $(input).data("settings").preventDuplicates) {
+        if(token_count > 0 && settings.preventDuplicates) {
             var found_existing_token = null;
             token_list.children().each(function () {
                 var existing_token = $(this);
-                var existing_data = $.data(existing_token.get(0), "tokeninput");
+                var existing_data = $.data(existing_token.get(0), 'tokeninput');
                 if(existing_data && existing_data[settings.tokenValue] === item[settings.tokenValue]) {
                     found_existing_token = existing_token;
                     return false;
@@ -670,7 +678,7 @@ $.TokenList = function (input, url_or_data, settings) {
         input_box.width(1);
 
         // Insert the new tokens
-        if($(input).data("settings").tokenLimit == null || token_count < $(input).data("settings").tokenLimit) {
+        if(settings.tokenLimit == null || token_count < settings.tokenLimit) {
             insert_token(item);
             // Remove the placeholder so it's not seen after you've added a token
             input_box.attr("placeholder", null)
@@ -684,8 +692,8 @@ $.TokenList = function (input, url_or_data, settings) {
         hide_dropdown();
 
         // Execute the onAdd callback if defined
-        if($.isFunction(callback)) {
-            callback.call(hidden_input,item);
+        if($.isFunction(settings.onAdd)) {
+            settings.onAdd.call(hidden_input, item);
         }
     }
 
@@ -844,17 +852,27 @@ $.TokenList = function (input, url_or_data, settings) {
     function populate_dropdown(query, results) {
         var settings = $(input).data('settings');
         dropdown.empty();
-        if (results.length) {
-            if (results.length > settings.resultsLimit) {
-                results = results.slice(0, settings.resultsLimit);
-            }
-            var items = results.map(function (result, i) {
-                var html = settings.resultsFormatter(result);
-                html = find_value_and_highlight_term(html, result[settings.propertyToSearch], query);
-                return $(html)
-                    .addClass(settings.classes[i % 2 ? 'dropdownItem' : 'dropdownItem2'])
-                    .data('tokeninput', result)[0];
-            });
+
+        if (results.length > settings.resultsLimit) {
+            results = results.slice(0, settings.resultsLimit);
+        }
+        var items = results.map(function (result, i) {
+            var html = settings.resultsFormatter(result);
+            html = find_value_and_highlight_term(html, result[settings.propertyToSearch], query);
+            return $(html)
+                .addClass(settings.classes[i % 2 ? 'dropdownItem' : 'dropdownItem2'])
+                .data('tokeninput', result)[0];
+        });
+
+        if (settings.tipHtml) {
+            var $tip = $('<li>' + settings.tipHtml + '</li>')
+                .addClass(settings.classes[items.length % 2 ? 'dropdownItem' : 'dropdownItem2'])
+                .addClass(settings.classes.dropdownTip)
+                .data('tokeninput', {id: 'tip'});
+            items.push($tip[0]);
+        }
+
+        if (items.length) {
             select_dropdown_item(items[0]);
 
             $('<ul/>')
@@ -890,23 +908,20 @@ $.TokenList = function (input, url_or_data, settings) {
     // Do a search and show the "searching" dropdown if the input is longer
     // than $(input).data("settings").minChars
     function do_search() {
+        if(selected_token) {
+            deselect_token($(selected_token), POSITION.AFTER);
+        }
+
         var query = input_box.val();
+        if(query.length >= $(input).data("settings").minChars) {
+            show_dropdown_searching();
+            clearTimeout(timeout);
 
-        if(query && query.length) {
-            if(selected_token) {
-                deselect_token($(selected_token), POSITION.AFTER);
-            }
-
-            if(query.length >= $(input).data("settings").minChars) {
-                show_dropdown_searching();
-                clearTimeout(timeout);
-
-                timeout = setTimeout(function(){
-                    run_search(query);
-                }, $(input).data("settings").searchDelay);
-            } else {
-                hide_dropdown();
-            }
+            timeout = setTimeout(function(){
+                run_search(query);
+            }, $(input).data("settings").searchDelay);
+        } else {
+            hide_dropdown();
         }
     }
 

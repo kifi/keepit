@@ -161,17 +161,6 @@ object Search extends Service {
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
     def getSearchDefaultConfig = ServiceRoute(GET, "/internal/search/defaultSearchConfig/defaultSearchConfig")
     def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
-    def search(
-        userId: Id[User],
-        noSearchExperiments: Boolean,
-        acceptLangs: Seq[String],
-        rawQuery: String) = {
-        val params = "userId=" + userId.id.toString +
-                     "&nse=" + noSearchExperiments +
-                     "&al=" + acceptLangs.mkString(",") +
-                     "&" + rawQuery
-        ServiceRoute(GET, "/internal/search?" + params)
-    }
 
     def searchWithConfig() = ServiceRoute(POST, "/internal/searchWithConfig")
 

@@ -240,13 +240,6 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
 
-
-##########################################
-# Search Proxying
-##########################################
-GET    /tsearch                     @com.keepit.controllers.SearchProxyController.search()
-
-
 ##########################################
 # External Services API
 ##########################################
@@ -333,6 +326,7 @@ POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
+GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
 POST    /admin/user/:user1/connect  @com.keepit.controllers.admin.AdminUserController.connectUsers(user1: Id[User])
 POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/bookmarks/:id/collections @com.keepit.controllers.admin.AdminUserController.updateCollectionsForBookmark(id: Id[Bookmark])
@@ -364,7 +358,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
-GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: Option[String] ?= None, prefix: Option[String] ?= None)
+GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
 GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
@@ -428,6 +422,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 
 GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
+GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 
 ##########################################
 # Common Healthcheck / service routes
@@ -530,6 +525,11 @@ POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controll
 
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 
+
+# New site, temporary
+GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home
+GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
+GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/angular/img", file)
 
 
 ->  / common.Routes

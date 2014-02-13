@@ -7,6 +7,7 @@
         case AllUsersViewType => {Total Users}
         case RealUsersViewType => {Real Users}
         case FakeUsersViewType => {Fake Users}
+        case ByExperimentUsersViewType(exp) => {@exp.value}
     }
 }
 
@@ -15,6 +16,7 @@
         case AllUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.usersView(page)}
         case RealUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.realUsersView(page)}
         case FakeUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.fakeUsersView(page)}
+        case ByExperimentUsersViewType(exp) => {@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(page, exp.value)}
     }
 }
 

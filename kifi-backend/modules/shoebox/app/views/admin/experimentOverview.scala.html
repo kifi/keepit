@@ -43,7 +43,7 @@
       @for(aei <- experiments) {
           <tr>
             <td>@aei.name</td>
-            <td>@aei.numUsers</td>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(0, aei.name)">@aei.numUsers</a></td>
             <td>@{aei.percentage.toString.take(4)}</td>
             <td style="width: 50px;">
               <div class="btn-group">

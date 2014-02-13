@@ -1,12 +1,34 @@
-@admin("Cache Performance", scripts = List("graphite")) {
+@import com.keepit.common.service.ServiceClient
 
+@import com.keepit.common.service.ServiceType
+
+@admin("Cache Overview", scripts = List("graphite")) {
+
+<h3>Invalidation</h3>
+<div>
+  <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.AdminCacheController.clearLocalCaches()" method="GET">
+    <select class="input-medium params" name="service">
+    <option value="all" selected>All Services
+    @for(service <- ServiceClient.register.map(_.serviceCluster.serviceType)) {
+      <option value="@service.name">@service.name.toLowerCase.capitalize
+    }
+    </select>
+    <input type="text" name="prefix" placeholder="optional key prefix">
+    <button class="btn btn-primary" type="submit">Clear In-Memory Cache</button>
+  </form>
+</div>
+
+<h3>Performance</h3>
+<select class="input-medium params" id="service">
+    <option value="{@ServiceType.inProduction.map(_.name.toLowerCase).mkString(",")}" selected>All Services
+    @for(service <- ServiceType.inProduction) { <option value="@service.name.toLowerCase">@service.name.toLowerCase.capitalize }
+</select>
+<select class="input-medium params" id="plugin"></select>
+<select class="input-medium params" id="namespace"></select>
 <div style="float: right" class="form-horizontal">
   <select class="input-medium params" id="timerange"></select>
   <button class="btn btn-primary" type="button" id="update">Update Now</button>
 </div>
-<select class="input-medium params" id="service"></select>
-<select class="input-medium params" id="plugin"></select>
-<select class="input-medium params" id="namespace"></select>
 
 <p><img id="ratios" class="img-polaroid"></p>
 <p>
@@ -19,12 +41,6 @@
 </p>
 
 <script>
-
-  var services = {
-  "All Services": "{shoebox,search}",
-  "Shoebox": "shoebox",
-  "Search": "search",
-  };
 
   var plugins = {
   "All Plugins": "Cache",
@@ -90,10 +106,6 @@
   "Log10 Scale": 10
   };
 
-  $.each(services, function (name, service) {
-  $("#service").append($("<option>").val(service).text(name));
-  });
-
   $.each(plugins, function (name, plugin) {
   $("#plugin").append($("<option>").val(plugin).text(name));
   });
@@ -154,8 +166,8 @@
     var prefix = ["stats", chart, service, plugin, namespace].join(".");
     var metrics = ["hits", "sets"];
     var percentileValue = $("#percentile").val()
-    var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
-    var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
+    var percentileSuffix = (percentileValue == "0.99") ? "_99" : ""
+    var percentileTitle = (percentileValue == "0.99") ? "99% " : ""
     var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum" + percentileSuffix + ":sum") + ",scale(" + sumSeries(prefix, metric, "count:sum") + "," + percentileValue + "))"});
     options.title = "Hits - Sets (" + percentileTitle + "Mean Time in Milliseconds)"
     options.target = baseTargets.concat(meanTargets)
@@ -163,7 +175,7 @@
     options.yMax = 20;
   }
 
-  
+
   if (chart == "ratios") {
     var prefix = ["stats.counters", service, plugin, namespace].join(".");
     var ratioTarget = ["asPercent(" + sumSeries(prefix, "hits", "count:sum") + "," + "sumSeries(" + sumSeries(prefix,"hits", "count:sum") + "," + sumSeries(prefix, "misses","count:sum") + "))"];

@@ -322,7 +322,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
 
       val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = None, after = None, collection = None).toString
       path === "/m/1/keeps/all"
-      inject[FakeSearchServiceClient] == inject[FakeSearchServiceClient]
+      inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
       val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
       inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 

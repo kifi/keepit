@@ -231,7 +231,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
         userGraphIndexer.update()
         mainSearcherFactory.clear()
-        val mainSearcher = mainSearcherFactory(singleShard, userId, "personal title3 content3 xyz", english, numHitsToReturn, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"))
+        val mainSearcher = mainSearcherFactory(singleShard, userId, "personal title3 content3 xyz", english, numHitsToReturn, SearchFilter.default(), noBoostConfig.overrideWith("myBookMarkBoost" -> "1.5"))
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris.toList diff List(uris(3))).reverse)).map(_.id.get).toList
@@ -304,7 +304,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         userGraphIndexer.update()
 
         mainSearcherFactory.clear()
-        val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"))
+        val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig.overrideWith("recencyBoost" -> "1.0"))
         val res = mainSearcher.search()
 
         var lastTime = Long.MaxValue
@@ -348,7 +348,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val medianScore = res.hits(sz/2).score
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
-        val tailCuttingConfig = noBoostConfig("tailCutting" -> medianScore.toString)
+        val tailCuttingConfig = noBoostConfig.overrideWith("tailCutting" -> medianScore.toString)
         mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, uris.size, SearchFilter.default(), tailCuttingConfig)
         res = mainSearcher.search()
         //println("Scores: " + res.hits.map(_.score))
@@ -514,7 +514,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory) = initIndexes(store)
 
         uriGraph.update()
-        collectionGraph.update() == 2
+        collectionGraph.update() === 2
         indexer.update() === uris.size
         mainSearcherFactory.clear()
 
@@ -523,20 +523,20 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val res1 = mainSearcher1.search()
         val expected1 = coll1set.toSet
 
-        res1.hits.size == expected1.size
+        res1.hits.size === expected1.size
         res1.hits.map(_.uriId.id).toSet === expected1.map(_.uriId.id).toSet
 
         val mainSearcher2 = mainSearcherFactory(singleShard, user1.id.get, "different mycoll", english, uris.size, searchFilter, noBoostConfig)
         val res2 = mainSearcher2.search()
         val expected2 = (coll1set ++ coll2set).toSet
 
-        res2.hits.size == expected2.size
+        res2.hits.size === expected2.size
         res2.hits.map(_.uriId.id).toSet === expected2.map(_.uriId.id).toSet
 
         val mainSearcher3 = mainSearcherFactory(singleShard, user1.id.get, "different", english, uris.size, searchFilter, noBoostConfig)
         val res3 = mainSearcher3.search()
 
-        res3.hits.size == 0
+        res3.hits.size === 0
       }
     }
   }

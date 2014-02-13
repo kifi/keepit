@@ -165,7 +165,7 @@ class FixedResultSearchCommander extends SearchCommander {
   def search(
     userId: Id[User],
     acceptLangs: Seq[String],
-    noSearchExperiments: Boolean,
+    experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
     maxHits: Int,

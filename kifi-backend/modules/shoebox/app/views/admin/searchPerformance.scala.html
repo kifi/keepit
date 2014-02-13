@@ -62,6 +62,8 @@
   //make offsets so log will always work
   var metrics = {
     "mainSearch total" : "offset(stats.timers.search.mainSearch.total.mean_99,0.1)",
+    "friendIds": "offset(stats.timers.search.mainSearch.friendIdsFutureWait.mean_99,0.1)",
+    "searchFriends": "offset(stats.timers.search.mainSearch.searchFriendsFutureWait.mean_99,0.1)",
     "social graph info" : "offset(stats.timers.search.mainSearch.socialGraphInfo.mean_99,0.1)",
     "get clickboost" : "offset(stats.timers.search.mainSearch.getClickboost.mean_99,0.1)",
     "query parsing" : "offset(stats.timers.search.mainSearch.queryParsing.mean_99,0.1)",
@@ -148,7 +150,10 @@
 
     if (chart == "otherIndex") {
       options.title = "Other Indices"
-      options.target = baseTargetsForLogScale.concat(["stats.gauges.search.index.user.size", "stats.gauges.search.index.message.size"])
+      options.target = baseTargetsForLogScale.concat(
+        ["stats.gauges.search.index.user.size", "stats.gauges.search.index.message.size",
+        "stats.gauges.search.index.userGraph.size", "stats.gauges.search.index.searchFriend.size"]
+      )
       options.logBase = 2
     }
 

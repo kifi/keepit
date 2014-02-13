@@ -6,7 +6,15 @@
   bottom: 0
   background: #eff2f7
   color: #556179
-  transition: transform .2s
+  transition: transform 0.4s ease, opacity 0.4s ease
+
+  &.ng-hide
+    transform: translate(100%, 0)
+    opacity: 0
+
+  &.ng-hide-add
+  &.ng-hide-remove
+    display: block !important
 
   .antiscroll-inner
     position: absolute

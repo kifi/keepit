@@ -4,6 +4,5 @@ project/target
 target
 tmp
 .history
-dist
 modules/eliza/.classpath
 *~
