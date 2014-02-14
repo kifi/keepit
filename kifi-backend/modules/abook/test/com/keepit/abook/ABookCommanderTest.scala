@@ -35,7 +35,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
 //  implicit val system = ActorSystem("test")
   val modules = Seq(
-    FakeABookRawInfoStoreModule(),
+    FakeABookStoreModule(),
     TestContactsUpdaterPluginModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
