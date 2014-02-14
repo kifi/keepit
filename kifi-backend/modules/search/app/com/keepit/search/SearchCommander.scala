@@ -168,7 +168,9 @@ class SearchCommanderImpl @Inject() (
 
   //external (from the extension/website)
   def warmUp(userId: Id[User]) {
-    mainSearcherFactory.warmUp(userId)
+    SafeFuture {
+      mainSearcherFactory.warmUp(userId)
+    }
   }
 
   private def getSearchFilter(
@@ -218,7 +220,7 @@ class SearchCommanderImpl @Inject() (
   private class Prefetcher(userId: Id[User]) {
     var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
     SafeFuture{
-      futures = mainSearcherFactory.warmUp(userId)
+      futures = mainSearcherFactory.warmUp(userId, logging = false)
     }
   }
 

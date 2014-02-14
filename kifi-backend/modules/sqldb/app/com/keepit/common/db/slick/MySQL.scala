@@ -30,5 +30,6 @@ class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
 
 object MySQL {
   val driverName = "com.mysql.jdbc.Driver"
+  val MAX_ROW_LIMIT = 50000000
 }
 

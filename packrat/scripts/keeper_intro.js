@@ -7,16 +7,24 @@
 
 api.port.emit('prefs', function (prefs) {
   if (prefs.showKeeperIntro && document.hasFocus() && !window.keeper) {
+    var handlers = {
+      hide_keeper_intro: hide.bind(null, null)
+    };
     var $intro = $(render('html/keeper/keeper_intro'))
       .insertAfter(tile)
-      .on('click', '.kifi-keeper-intro-x', hide)
+      .on('click', '.kifi-keeper-intro-x', onClickX)
       .each(function () {this.offsetHeight})  // force layout
       .addClass('kifi-showing');
-    api.port.emit('set_show_keeper_intro', false);
     document.addEventListener('keydown', onKeyDown, true);
     tile.addEventListener('mouseover', hide, true);
+    api.port.on(handlers);
     api.onEnd.push(hide);
     window.hideKeeperCallout = hide;
+  }
+
+  function onClickX(e) {
+    api.port.emit('stop_showing_keeper_intro');
+    hide(e);
   }
 
   function onKeyDown(e) {
@@ -27,7 +35,8 @@ api.port.emit('prefs', function (prefs) {
 
   function hide(e) {
     document.removeEventListener('keydown', onKeyDown, true);
-    tile.removeEventListener('mouseover', hide, true);
+    if (tile) tile.removeEventListener('mouseover', hide, true);
+    api.port.off(handlers);
     window.hideKeeperCallout = null;
     if ($intro) {
       $intro.on('transitionend', $.fn.remove.bind($intro, null)).removeClass('kifi-showing');
