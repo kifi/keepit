@@ -29,6 +29,7 @@ import com.amazonaws.services.elasticloadbalancing.model._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.AmazonClientException
 import com.amazonaws.services.ec2.AmazonEC2Client
+import com.keepit.common.shutdown.ShutdownCommander
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
@@ -44,6 +45,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
+
   override def beforeStart(app: Application): Unit = {
     val conf = app.configuration
     val appName = conf.getString("application.name").get
@@ -51,7 +53,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       case Some(dbs) => println(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
       case None => println(s"starting app $appName without db")
     }
-
   }
 
   private def registerToLoadBalancer() {
@@ -71,25 +72,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           Play.stop()
           Thread.sleep(10000)
           System.exit(1)
-        }
-      }
-    } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
-  }
-
-  private def deregisterFromLoadBalancer() {
-    val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
-    amazonInstanceInfo.loadBalancer map { loadBalancer =>
-      val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
-      val instance = new Instance(amazonInstanceInfo.instanceId.id)
-      val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
-      try {
-        elbClient.deregisterInstancesFromLoadBalancer(request)
-        println(s"[${currentDateTime.toStandardTimeString}] Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
-      } catch {
-        case t:AmazonClientException => {
-          //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
-          println(s"[${currentDateTime.toStandardTimeString}] Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
-          Thread.sleep(18000)
         }
       }
     } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
@@ -209,6 +191,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   def announceStopping(app: Application): Unit = if(!announcedStopping) synchronized {
     if(!announcedStopping) {//double check on entering sync block
+      injector.instance[ShutdownCommander].shutdown()
       if (mode == Mode.Prod) {
         try {
           val serviceDiscovery = injector.instance[ServiceDiscovery]

@@ -14,11 +14,15 @@ trait Typeahead[E, I] {
 
   protected val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
 
-  protected def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]]
+  def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]]
 
   protected def getInfos(ids: Seq[Id[E]]): Seq[I]
 
   protected def getAllInfosForUser(id: Id[User]): Seq[I]
+
+  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]] = SafeFuture { getInfos(ids) }
+
+  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]] = SafeFuture { getAllInfosForUser(id) }
 
   protected def extractId(info: I): Id[E]
 
@@ -32,6 +36,21 @@ trait Typeahead[E, I] {
       }
     } else {
       None
+    }
+  }
+
+  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
+    if (query.trim.length > 0) {
+      getPrefixFilter(userId) match {
+        case None => Future.successful(None)
+        case Some(filter) =>
+          val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+          asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
+            search(infos, queryTerms)
+          }
+      }
+    } else {
+      Future.successful(None)
     }
   }
 

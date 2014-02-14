@@ -35,6 +35,7 @@ import views.html
 import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.abook.EContactTypeahead
 
 case class UserStatistics(
     user: User,
@@ -62,6 +63,7 @@ object UserViewTypes {
   case object AllUsersViewType extends UserViewType
   case object RealUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
+  case class ByExperimentUsersViewType(exp: ExperimentType) extends UserViewType
 }
 import UserViewTypes._
 
@@ -92,7 +94,8 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCommander: UserCommander,
-    socialUserTypeAhead: SocialUserTypeahead,
+    econtactTypeahead: EContactTypeahead,
+    socialUserTypeahead: SocialUserTypeahead,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
@@ -289,6 +292,7 @@ class AdminUserController @Inject() (
         case AllUsersViewType => userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
         case RealUsersViewType => userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
         case FakeUsersViewType => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
+        case ByExperimentUsersViewType(exp) => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(exp)(page, PAGE_SIZE) map userStatistics
       }
     }
     val userThreadStats = (users.par.map { u =>
@@ -301,6 +305,7 @@ class AdminUserController @Inject() (
         case AllUsersViewType => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)
         case RealUsersViewType => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
         case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
+        case ByExperimentUsersViewType(exp) => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(exp)
       }
     }
     UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE)
@@ -316,6 +321,10 @@ class AdminUserController @Inject() (
 
   def fakeUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, FakeUsersViewType), None))
+  }
+
+  def byExperimentUsersView(page: Int, exp: String) = AdminHtmlAction.authenticated { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, ByExperimentUsersViewType(ExperimentType(exp))), None))
   }
 
   def searchUsers() = AdminHtmlAction.authenticated { implicit request =>
@@ -646,17 +655,23 @@ class AdminUserController @Inject() (
 
   // ad hoc testing only during dev phase
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    socialUserTypeAhead.build(userId) map { filter =>
-      val ids = filter.filterBy(PrefixFilter.tokenize(query))
-      val builder = mutable.ArrayBuilder.make[SocialUserInfo]
-      db.readOnly { implicit ro =>
-        for (id <- ids) {
-          builder += socialUserInfoRepo.get(id)
-        }
-      }
-      val res = builder.result()
-      log.info(s"[prefixSearch($userId,$query)]=${res.mkString(",")}")
-      Ok(res.map(info => s"<p>$info</p>").mkString("<br>")) // ugly
+    val abookF = abookClient.prefixSearch(userId, query)
+    val socialFilterF = socialUserTypeahead.getPrefixFilter(userId) match {
+      case Some(filter) => Future.successful(filter)
+      case None => socialUserTypeahead.build(userId)
+    }
+    val socialResF = socialFilterF map { filter =>
+      implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
+      val resOpt = socialUserTypeahead.search(userId, query)
+      log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
+      resOpt getOrElse Seq.empty[SocialUserBasicInfo]
+    }
+
+    for {
+      socialRes <- socialResF
+      econtactRes <- abookF
+    } yield {
+      Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
     }
   }
 

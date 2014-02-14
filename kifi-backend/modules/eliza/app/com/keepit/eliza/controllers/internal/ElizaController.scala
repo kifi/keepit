@@ -1,6 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
-import com.keepit.eliza.controllers.NotificationRouter
+import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
@@ -20,11 +20,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.commanders.RemoteUserExperimentCommander
 
 class ElizaController @Inject() (
-  notificationRouter: NotificationRouter,
   userThreadRepo: UserThreadRepo,
   messageThreadRepo: MessageThreadRepo,
   db: Database,
   experimentCommander: RemoteUserExperimentCommander,
+  notificationRouter: WebSocketRouter,
   elizaStatsCommander: ElizaStatsCommander)
     extends ElizaServiceController with Logging {
 

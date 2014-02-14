@@ -60,10 +60,14 @@ class ServiceDiscoveryImpl(
   @volatile private[this] var registered = false
   @volatile private[this] var unregistered = false
 
-  private lazy val thisRemoteService = RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.STARTING, services.currentService) // keeping track of the status
+  private lazy val myAmazonInstanceInfo = amazonInstanceInfoProvider.get
   private var myInstance: Option[ServiceInstance] = None
+  private var myServiceStatus: ServiceStatus = ServiceStatus.STARTING // keeping track of the status
+
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
+
+  private def getThisRemoteService = RemoteService(myAmazonInstanceInfo, myServiceStatus, services.currentService)
 
   def thisInstance: Option[ServiceInstance] = myInstance
   def thisService: ServiceType = services.currentService
@@ -119,7 +123,7 @@ class ServiceDiscoveryImpl(
 
   private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
-    zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
+    zk.watchChildrenWithData[String](cluster.servicePath, { children: Seq[(Node, String)] =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
       cluster.update(zk, children)
     })
@@ -131,7 +135,7 @@ class ServiceDiscoveryImpl(
       forceUpdateInProgress = true
       zkClient.session{ zk =>
         for (cluster <- clusters.values) {
-          val children = zk.getChildren(cluster.servicePath)
+          val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
           cluster.update(zk, children)
         }
       }
@@ -149,6 +153,7 @@ class ServiceDiscoveryImpl(
 
 
   private def doRegister(zk: ZooKeeperSession): Unit = {
+    val thisRemoteService = getThisRemoteService
     if (registered) {
       log.info(s"registered clusters: $clusters, my service is ${thisRemoteService.serviceType}, my instance is $myInstance")
 
@@ -184,10 +189,10 @@ class ServiceDiscoveryImpl(
     if (stillRegistered()) synchronized {
       myInstance foreach { instance =>
         log.info(s"Changing instance status to $newStatus")
-        thisRemoteService.status = newStatus
-        instance.setRemoteService(thisRemoteService)
+        myServiceStatus = newStatus
+        instance.setRemoteService(getThisRemoteService)
         lastStatusChangeTime = System.currentTimeMillis
-        zk.setData(instance.node, instance.remoteService)(RemoteService.toJson)
+        zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
       }
     }
   }

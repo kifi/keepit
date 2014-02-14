@@ -1,35 +1,101 @@
 @(experiments: Seq[com.keepit.controllers.admin.AdminExperimentInfo])
 
+<script type="text/javascript">
+
+function addVariationFormElement(experimentName) {
+  var randId = Math.random().toString(16).slice(2);
+  var emptyRow = '<tr id="' + randId + '"><td><input type="text" class="input-large" style="height: 100%;"/></td> <td><input type="number" class="input-large" style="height: 100%;" min="0" max="100" value="0" step="1"/> </td> <td> <button type="button" class="close" onClick="' +  "$('#" + randId + "').remove()"  + '" >×</button> </td></tr>'
+  var parentElement = $("#" + experimentName + "variationstable");
+  parentElement.append(emptyRow);
+}
+
+function extractDataFromForm(experimentName) {
+  var parentElement = $("#" + experimentName + "variationstable");
+  var dataRows = parentElement.children();
+  var obj = {};
+  var totalPercentage = 0;
+  for (var i=0; i<dataRows.length; i++) {
+    var name = $($(dataRows[i]).children()[0]).children()[0].value; //oh my
+    var number = parseFloat($($(dataRows[i]).children()[1]).children()[0].value);
+    if (name.length==0) {
+      alert("Variation name cannot be empty.");
+      return;
+    }
+    if (number<0 || number>100 || number!=number) {
+      alert("Percentages must be between 0 and 100 doufus.");
+      return;
+    }
+    totalPercentage += number;
+    obj[name] = number;
+  }
+
+  if (totalPercentage>100) {
+    alert("Percentages must not add up to more than 100!");
+    return;
+  }
+
+
+  var postUrl = "@com.keepit.controllers.admin.routes.AdminExperimentController.saveGenerator"
+  var json = JSON.stringify({
+    density: obj,
+    condition: experimentName
+  });
+  $.ajax({
+    contentType: "application/json",
+    data: json,
+    dataType: "text",
+    error: function(jqXHR, status, errorThrown) { alert("Error! Failed to Save. (" + status + ":" + errorThrown + ")"); },
+    success: function(data, status, jqXHR) { alert("Changes saved successfully. " + data); },
+    url: postUrl,
+    type: "POST"
+  })
+
+}
+
+</script>
 
 @for(aei <- experiments) {
-  <div id="@{aei.name + "Action1"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div id="@{aei.name + "variations"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="blahblah" aria-hidden="true">
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h3 id="myModalLabel">Do Things</h3>
+        <h3 id="blahblah">Edit Variations for @aei.name</h3>
     </div>
     <div class="modal-body">
-        Action 1
+        <table class="table table-condensed table-striped">
+          <thead>
+            <th>Variation Name (Globally Unique)</th><th>Percentage</th><th></th>
+          </thead>
+          <tbody id="@{aei.name + "variationstable"}">
+            @for(v <- aei.variations) {
+              <tr id="@{aei.name + v._1 + "varformfield"}">
+                <td>
+                  <input type="text" class="input-large" style="height: 100%;" value="@v._1"/>
+                </td>
+                <td>
+                  <input type="number" class="input-large" style="height: 100%;" min="0" max="100" value="@v._2" step="1"/>
+                </td>
+                <td>
+                  <button type="button" class="close" onClick="$('#@{aei.name + v._1 + "varformfield"}').remove()">×</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onClick="addVariationFormElement('@aei.name')">Add Variation</button>
+      <button class="btn btn-primary" type="button" onClick="extractDataFromForm('@aei.name')">Save Changes</button>
     </div>
   </div>
 
-  <div id="@{aei.name + "Action2"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h3 id="myModalLabel">Do Things</h3>
-    </div>
-    <div class="modal-body">
-        Action 2
-    </div>
-  </div>
-
-  <div id="@{aei.name + "Action3"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div id="@{aei.name + "NOOOOO"}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
         <h3 id="myModalLabel">You shouldn't have done that.</h3>
     </div>
     <div class="modal-body">
         Thank you! All keeps ever have been deleted. SUCH a burden lifted off my shoulders. Please come again!
-        <img src="http://i.imgur.com/j1WC8LF.gif" />
+        <img src="http://24.media.tumblr.com/4e2487cc3dd17f549276a1b1ecd6a9ae/tumblr_msv7x2svSI1shxe70o2_500.gif" />
     </div>
   </div>
 }
@@ -43,7 +109,7 @@
       @for(aei <- experiments) {
           <tr>
             <td>@aei.name</td>
-            <td>@aei.numUsers</td>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(0, aei.name)">@aei.numUsers</a></td>
             <td>@{aei.percentage.toString.take(4)}</td>
             <td style="width: 50px;">
               <div class="btn-group">
@@ -53,13 +119,11 @@
                 </a>
                 <ul class="dropdown-menu">
                   <li>
-                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "Action1"}">Action 1</a>
-                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "Action2"}">Action 2</a>
-                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "Action3"}">Don't click this</a>
+                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "variations"}">Edit Variations</a>
+                    <a href="#" data-toggle="modal" data-target="#@{aei.name + "NOOOOO"}">Don't click this</a>
                   </li>
                 </ul>
               </div>
-              <!-- <button type="button" data-toggle="modal" data-target="#@aei.name" style="width: 100%;">Show</button> -->
             </td>
           </tr>
       }

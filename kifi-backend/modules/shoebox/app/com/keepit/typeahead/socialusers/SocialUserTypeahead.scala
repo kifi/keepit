@@ -29,7 +29,7 @@ class SocialUserTypeahead @Inject() (
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
-  override protected def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
+  override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
     cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
   }
 

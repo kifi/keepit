@@ -19,6 +19,7 @@ import scala.util.{Success, Try, Failure}
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
   def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
+  def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
@@ -54,12 +55,19 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
     (for(f <- rows if f.id === econtactId) yield f).firstOption
   }
+
+  def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact] = {
+    (for(f <- rows if f.id.inSet(econtactIds)) yield f).list
+  }
+
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {
     (for(f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
   }
 
-  def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[EContact] =
-    (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(maxRows)
+  def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[EContact] = {
+    val limit = math.min(MySQL.MAX_ROW_LIMIT, maxRows)
+    (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(limit)
+  }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] =
     (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list

@@ -1,6 +1,6 @@
 package com.keepit.eliza.commanders
 
-import com.keepit.eliza.controllers.NotificationRouter
+import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.model._
@@ -59,7 +59,7 @@ class MessagingCommander @Inject() (
   clock: Clock,
   abookServiceClient: ABookServiceClient,
   messagingAnalytics: MessagingAnalytics,
-  notificationRouter: NotificationRouter,
+  notificationRouter: WebSocketRouter,
   urbanAirship: UrbanAirship,
   shoebox: ShoeboxServiceClient) extends Logging {
 

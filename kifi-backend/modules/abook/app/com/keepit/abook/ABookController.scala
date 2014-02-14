@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
+import com.keepit.common.performance.timing
 import play.api.mvc.Action
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
@@ -16,6 +17,9 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
+import com.keepit.typeahead.abook.EContactTypeahead
+import com.keepit.typeahead.TypeaheadHit
+import scala.concurrent.Future
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -51,6 +55,7 @@ class ABookController @Inject() (
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   oauth2TokenRepo:OAuth2TokenRepo,
+  typeahead:EContactTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -114,6 +119,14 @@ class ABookController @Inject() (
     }
   }
 
+  def getEContactsByIds() = Action(parse.json) { request =>
+    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
+    val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
+    val contacts = db.readOnly { implicit ro =>
+      econtactRepo.getByIds(contactIds)
+    }
+    Ok(Json.toJson[Seq[EContact]](contacts))
+  }
 
   def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
     // todo: parse email
@@ -283,6 +296,18 @@ class ABookController @Inject() (
     val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
     log.info(s"[queryEContacts] userId=$userId search=$search after=$after limit=$limit res(len=${eContacts.length}):${eContacts.mkString}")
     Ok(Json.toJson(eContacts))
+  }
+
+  implicit val ord = TypeaheadHit.defaultOrdering[EContact]
+  def prefixSearch(userId:Id[User], query:String) = Action.async { request =>
+    val filterF = typeahead.getPrefixFilter(userId) match {
+      case Some(filter) => Future.successful(filter)
+      case None => typeahead.build(userId)
+    }
+    filterF map { _ =>
+      val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
+      Ok(Json.toJson(res))
+    }
   }
 
 }

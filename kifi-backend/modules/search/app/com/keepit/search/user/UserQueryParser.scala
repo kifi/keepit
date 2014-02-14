@@ -13,6 +13,7 @@ import org.apache.lucene.search.{PrefixQuery, WildcardQuery}
 import com.keepit.search.query.parser.QuerySpec
 import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import com.keepit.typeahead.PrefixFilter
 
 class UserQueryParser(
   analyzer: Analyzer
@@ -20,11 +21,14 @@ class UserQueryParser(
 
   override val fields: Set[String] = Set.empty[String]
 
-  def parseWithUserExperimentConstrains(queryText: CharSequence, exps: Seq[String]): Option[Query] = {
+  def parseWithUserExperimentConstrains(queryText: CharSequence, exps: Seq[String], useLucenePrefixQuery: Boolean = false): Option[Query] = {
 
     if (queryText == null) None
     else {
-      val bq = if (maybeEmailAddress(queryText)) genEmailQuery(queryText) else genNameQuery(queryText)
+      val bq = if (maybeEmailAddress(queryText)) genEmailQuery(queryText)
+      else if (useLucenePrefixQuery) genNameQuery(queryText)
+      else genPrefixNameQuery(queryText)
+
       bq.foreach( q => addUserExperimentConstrains(q, exps))
       bq
     }
@@ -65,6 +69,15 @@ class UserQueryParser(
       bq.add(tq, Occur.MUST)
     }
 
+    if (bq.clauses.size > 0) Some(bq) else None
+  }
+
+  private def genPrefixNameQuery(queryText: CharSequence): Option[BooleanQuery] = {
+    val bq = new BooleanQuery
+    PrefixFilter.tokenize(queryText.toString).foreach{ q =>
+      val tq = new TermQuery(new Term(UserIndexer.PREFIX_FIELD, q.take(UserIndexer.PREFIX_MAX_LEN)))
+      bq.add(tq, Occur.MUST)
+    }
     if (bq.clauses.size > 0) Some(bq) else None
   }
 
