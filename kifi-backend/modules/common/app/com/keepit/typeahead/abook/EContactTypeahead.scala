@@ -37,7 +37,7 @@ class EContactTypeahead @Inject() (
 
   override protected def extractId(info: EContact):Id[EContact] = info.id.get
 
-  override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, Int.MaxValue)
+  override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, 50000000) // MySQL limit
 
   override protected def getAllInfosForUser(id: Id[User]):Seq[EContact] = {
     Await.result(asyncGetAllInfosForUser(id), 1 minute) // todo(ray):revisit
