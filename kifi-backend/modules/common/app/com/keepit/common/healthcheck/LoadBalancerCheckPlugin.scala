@@ -6,34 +6,25 @@ import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
-import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.amazonaws.services.elasticloadbalancing.model.{DescribeInstanceHealthRequest, Instance}
-import scala.collection.JavaConversions._
+import com.keepit.common.aws.FortyTwoElasticLoadBalancingClient
 
 case object CheckLoadBalancer
 
 class LoadBalancerCheckActor @Inject() (
   airbrake: AirbrakeNotifier,
-  loadBalancingClient: AmazonElasticLoadBalancingClient,
+  loadBalancingClient: FortyTwoElasticLoadBalancingClient,
   serviceDiscovery: ServiceDiscovery)
   extends FortyTwoActor(airbrake) {
 
   def checkLoadBalancer(): Unit = {
-    for {
-      instance <- serviceDiscovery.thisInstance
-      loadBalancer <- instance.instanceInfo.loadBalancer
-    } yield {
+    serviceDiscovery.thisInstance map { instance =>
       if (instance.isAvailable) {
-        val instanceId = instance.instanceInfo.instanceId
-        val request = new DescribeInstanceHealthRequest(loadBalancer).withInstances(Seq(new Instance(instanceId.id)))
-        try {
-          val state = loadBalancingClient.describeInstanceHealth(request).getInstanceStates.head // throw an exception if empty result
-          if (state.getState != "InService") {
-            airbrake.notify(s"Instance ${instanceId} is considered ${state.getState} by load balancer $loadBalancer (reason: ${state.getReasonCode})")
-          }
-        } catch {
-          case t:Throwable => airbrake.notify(s"Failed to check status of instance ${instanceId} with load balancer $loadBalancer")
+        val info = instance.instanceInfo
+        val stateOpt = loadBalancingClient.getInstanceState(info)
+        stateOpt.filter(_.getState != "InService") map { state =>
+          airbrake.notify(s"Instance ${info.instanceId} is considered ${state.getState} by load balancer ${info.loadBalancer} (reason: ${state.getReasonCode})")
+          loadBalancingClient.registerInstance(info)
         }
       }
     }
