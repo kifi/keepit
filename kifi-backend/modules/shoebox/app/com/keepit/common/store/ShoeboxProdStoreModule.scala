@@ -10,6 +10,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 import play.api.Play._
 import com.keepit.typeahead.socialusers.{S3SocialUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore}
+import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -45,6 +46,13 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
     new S3SocialUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
   }
 
+  @Singleton
+  @Provides
+  def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.contact.bucket").get)
+    new S3EContactTypeaheadStore(bucketName, amazonS3Client, accessLog)
+  }
+
 }
 
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) {
@@ -78,4 +86,13 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
       prodStoreModule.socialUserTypeaheadStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemorySocialUserTypeaheadStoreImpl())
   }
+
+  @Singleton
+  @Provides
+  def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
+    whenConfigured("amazon.s3.typeahead.contact.bucket")(
+      prodStoreModule.econtactTypeaheadStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryEContactTypeaheadStore())
+  }
+
 }

@@ -35,6 +35,7 @@ import views.html
 import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.abook.EContactTypeahead
 
 case class UserStatistics(
     user: User,
@@ -93,7 +94,8 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCommander: UserCommander,
-    socialUserTypeAhead: SocialUserTypeahead,
+    econtactTypeahead: EContactTypeahead,
+    socialUserTypeahead: SocialUserTypeahead,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
@@ -653,17 +655,36 @@ class AdminUserController @Inject() (
 
   // ad hoc testing only during dev phase
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    socialUserTypeAhead.build(userId) map { filter =>
-      val ids = filter.filterBy(PrefixFilter.tokenize(query))
-      val builder = mutable.ArrayBuilder.make[SocialUserInfo]
-      db.readOnly { implicit ro =>
-        for (id <- ids) {
-          builder += socialUserInfoRepo.get(id)
+    val socialF =
+      socialUserTypeahead.build(userId) map { filter =>
+        val terms = PrefixFilter.tokenize(query)
+        val ids = filter.filterBy(terms)
+        val infos = db.readOnly { implicit ro =>
+          socialUserInfoRepo.getSocialUserBasicInfos(ids).valuesIterator.toSeq
+        }
+        implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
+        val resOpt = socialUserTypeahead.search(infos, terms)
+        log.info(s"[prefixSearch($userId,$query)]: sInfos=${infos.mkString(",")} res=$resOpt")
+        resOpt getOrElse Seq.empty[SocialUserBasicInfo]
+      }
+
+    val econtactF =
+      econtactTypeahead.build(userId) flatMap { filter =>
+        val terms = PrefixFilter.tokenize(query)
+        val ids = filter.filterBy(terms)
+        abookClient.getEContactsByIds(ids) map { infos =>
+          implicit val ord = TypeaheadHit.defaultOrdering[EContact]
+          val resOpt = econtactTypeahead.search(infos, terms)
+          log.info(s"[prefixSearch($userId,$query)] eInfos=${infos.mkString(",")} res=$resOpt")
+          resOpt getOrElse Seq.empty[EContact]
         }
       }
-      val res = builder.result()
-      log.info(s"[prefixSearch($userId,$query)]=${res.mkString(",")}")
-      Ok(res.map(info => s"<p>$info</p>").mkString("<br>")) // ugly
+
+    for {
+      socialRes <- socialF
+      econtactRes <- econtactF
+    } yield {
+      Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
     }
   }
 
