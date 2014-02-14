@@ -17,6 +17,7 @@ import com.keepit.common.db.State
 import com.keepit.model.UserStates._
 import com.keepit.model.ExperimentType
 import com.keepit.search.IndexInfo
+import com.keepit.typeahead.PrefixFilter
 
 
 object UserIndexer {
@@ -26,6 +27,8 @@ object UserIndexer {
   val EMAILS_FIELD = "u_emails"
   val BASIC_USER_FIELD = "u_basic_user"
   val USER_EXPERIMENTS = "u_experiments"
+  val PREFIX_FIELD = "u_prefix"
+  val PREFIX_MAX_LEN = 8    // do not change this number unless you do reindexing immediately
 
   val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
 }
@@ -115,6 +118,12 @@ class UserIndexer(
     val emails: Seq[String],
     val experiments: Seq[ExperimentType]) extends Indexable[User] {
 
+    private def genPrefix(user: User): Set[String] = {
+      val fn = PrefixFilter.normalize(user.firstName).take(PREFIX_MAX_LEN)
+      val ln = PrefixFilter.normalize(user.lastName).take(PREFIX_MAX_LEN)
+      ((0 to fn.length).map{ i => fn.slice(0, i + 1) } ++ (0 to ln.length).map{ i => ln.slice(0, i + 1)}).toSet
+    }
+
     override def buildDocument = {
       val doc = super.buildDocument
 
@@ -129,6 +138,9 @@ class UserIndexer(
 
       val basicUserField = buildBinaryDocValuesField(BASIC_USER_FIELD, BasicUser.toByteArray(basicUser))
       doc.add(basicUserField)
+
+      val prefixField = buildIteratorField[String](PREFIX_FIELD, genPrefix(user).toIterator)(x => x)
+      doc.add(prefixField)
 
       doc
     }

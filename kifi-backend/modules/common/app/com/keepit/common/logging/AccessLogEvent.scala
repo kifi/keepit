@@ -2,11 +2,8 @@ package com.keepit.common.logging
 
 import play.api.Logger
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.healthcheck._
 import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time.Clock
-import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstanceId}
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

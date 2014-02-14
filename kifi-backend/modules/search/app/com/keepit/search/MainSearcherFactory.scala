@@ -97,11 +97,15 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
-    log.info(s"warming up $userId")
-    Statsd.increment(s"warmup.$userId")
+  def warmUp(userId: Id[User], logging: Boolean = true): Seq[Future[Any]] = {
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
+
+    // logging after firing futures
+    if (logging) {
+      log.info(s"warming up $userId")
+      Statsd.increment(s"warmup.$userId")
+    }
 
     Seq(browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
   }

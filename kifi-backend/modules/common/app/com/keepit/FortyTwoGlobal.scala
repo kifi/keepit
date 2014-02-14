@@ -76,25 +76,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
-  private def deregisterFromLoadBalancer() {
-    val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
-    amazonInstanceInfo.loadBalancer map { loadBalancer =>
-      val elbClient = injector.instance[AmazonElasticLoadBalancingClient]
-      val instance = new Instance(amazonInstanceInfo.instanceId.id)
-      val request = new DeregisterInstancesFromLoadBalancerRequest(loadBalancer, Seq(instance))
-      try {
-        elbClient.deregisterInstancesFromLoadBalancer(request)
-        println(s"[${currentDateTime.toStandardTimeString}] Deregistered instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer")
-      } catch {
-        case t:AmazonClientException => {
-          //injector.instance[AirbrakeNotifier].notify(s"Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
-          println(s"[${currentDateTime.toStandardTimeString}] Error deregistering instance ${amazonInstanceInfo.instanceId} from load balancer $loadBalancer: $t - Delaying shutdown for a few seconds...")
-          Thread.sleep(18000)
-        }
-      }
-    } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
-  }
-
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))

@@ -97,9 +97,12 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
 
   lazy val friendEdgeSet = {
-    val friendIds = Statsd.time(key = "mainSearch.friendIdsFutureWait"){
-      Await.result(friendIdsFuture, 5 seconds)
-    }
+    val startTime = System.currentTimeMillis
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
+    val waitTime = System.currentTimeMillis - startTime
+
+    Future{ Statsd.timing("mainSearch.friendIdsFutureWait", waitTime) }
+
     UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
   }
 
@@ -110,9 +113,13 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
 
   lazy val searchFriendEdgeSet = {
-    val (unfriended, friendIds) = Statsd.time(key = "mainSearch.searchFriendsFutureWait"){
-      (Await.result(unfriendedFuture, 5 seconds), Await.result(friendIdsFuture, 5 seconds))
-    }
+    val startTime = System.currentTimeMillis
+    val unfriended = Await.result(unfriendedFuture, 5 seconds)
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
+    val waitTime = System.currentTimeMillis - startTime
+
+    Future{ Statsd.timing("mainSearch.searchFriendsFutureWait", waitTime) }
+
     if (unfriended.isEmpty) UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
     else UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
   }

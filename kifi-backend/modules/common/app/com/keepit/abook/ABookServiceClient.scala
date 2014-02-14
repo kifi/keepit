@@ -16,13 +16,18 @@ import akka.actor.Scheduler
 
 import scala.concurrent.{Future, Promise}
 
-import play.api.libs.json.{JsValue, JsArray, Json, JsObject}
+import play.api.libs.json._
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{Success, Failure, Try}
 import play.api.http.Status
+import play.api.libs.json.JsArray
+import scala.util.Failure
+import scala.Some
+import com.keepit.common.net.HttpClientImpl
+import scala.util.Success
 
 trait ABookServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ABOOK
@@ -39,6 +44,7 @@ trait ABookServiceClient extends ServiceClient {
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
+  def getEContactsByIds(contactIds:Seq[Id[EContact]]):Future[Seq[EContact]]
   def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
@@ -127,6 +133,12 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
+  override def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = {
+    call(ABook.internal.getEContactsByIds(), JsArray(contactIds.map(c => JsNumber(c.id)))).map { r =>
+      Json.fromJson[Seq[EContact]](r.json).get
+    }
+  }
+
   def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
     call(ABook.internal.getEContactByEmail(userId, email), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Option[EContact]](r.json).get
@@ -198,6 +210,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getEContactCount(userId: Id[User]): Future[Int] = ???
 
   def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = ???
+
+  def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = ???
 
   def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = ???
 
