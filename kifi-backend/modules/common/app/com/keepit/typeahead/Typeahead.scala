@@ -14,7 +14,7 @@ trait Typeahead[E, I] {
 
   protected val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
 
-  protected def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]]
+  def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]]
 
   protected def getInfos(ids: Seq[Id[E]]): Seq[I]
 
