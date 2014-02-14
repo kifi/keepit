@@ -655,34 +655,21 @@ class AdminUserController @Inject() (
 
   // ad hoc testing only during dev phase
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    val socialF =
-      socialUserTypeahead.build(userId) map { filter =>
-        val terms = PrefixFilter.tokenize(query)
-        val ids = filter.filterBy(terms)
-        val infos = db.readOnly { implicit ro =>
-          socialUserInfoRepo.getSocialUserBasicInfos(ids).valuesIterator.toSeq
-        }
-        implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-        val resOpt = socialUserTypeahead.search(infos, terms)
-        log.info(s"[prefixSearch($userId,$query)]: sInfos=${infos.mkString(",")} res=$resOpt")
-        resOpt getOrElse Seq.empty[SocialUserBasicInfo]
-      }
-
-    val econtactF =
-      econtactTypeahead.build(userId) flatMap { filter =>
-        val terms = PrefixFilter.tokenize(query)
-        val ids = filter.filterBy(terms)
-        abookClient.getEContactsByIds(ids) map { infos =>
-          implicit val ord = TypeaheadHit.defaultOrdering[EContact]
-          val resOpt = econtactTypeahead.search(infos, terms)
-          log.info(s"[prefixSearch($userId,$query)] eInfos=${infos.mkString(",")} res=$resOpt")
-          resOpt getOrElse Seq.empty[EContact]
-        }
-      }
+    val abookF = abookClient.prefixSearch(userId, query)
+    val socialFilterF = socialUserTypeahead.getPrefixFilter(userId) match {
+      case Some(filter) => Future.successful(filter)
+      case None => socialUserTypeahead.build(userId)
+    }
+    val socialResF = socialFilterF map { filter =>
+      implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
+      val resOpt = socialUserTypeahead.search(userId, query)
+      log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
+      resOpt getOrElse Seq.empty[SocialUserBasicInfo]
+    }
 
     for {
-      socialRes <- socialF
-      econtactRes <- econtactF
+      socialRes <- socialResF
+      econtactRes <- abookF
     } yield {
       Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
     }

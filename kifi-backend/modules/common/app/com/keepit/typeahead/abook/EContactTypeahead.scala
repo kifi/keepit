@@ -49,7 +49,7 @@ class EContactTypeahead @Inject() (
     Await.result(asyncGetInfos(ids), 1 minute) // todo(ray):revisit
   }
 
-  override protected def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {
+  def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {
     val res = cache.getOrElseOpt(EContactTypeaheadKey(userId)) { store.get(userId) } map { new PrefixFilter[EContact](_) }
     log.info(s"[getPrefixFilter($userId)] res=$res")
     res
