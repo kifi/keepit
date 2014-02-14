@@ -16,6 +16,7 @@ case class ProdHealthCheckModule() extends HealthCheckModule {
 
   def configure() {
     install(new ProdAmazonMailModule())
+    bind[LoadBalancerCheckPlugin].to[LoadBalancerCheckPluginImpl].in[AppScoped]
   }
 
   @Provides

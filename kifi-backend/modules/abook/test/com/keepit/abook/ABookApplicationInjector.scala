@@ -22,7 +22,7 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
     FakeDiscoveryModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     FakeActionAuthenticatorModule(),
-    FakeABookRawInfoStoreModule(),
+    FakeABookStoreModule(),
     TestContactsUpdaterPluginModule()
   ), overridingModules
 )) {

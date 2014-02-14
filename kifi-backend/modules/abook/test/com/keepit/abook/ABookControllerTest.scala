@@ -9,7 +9,7 @@ import com.keepit.common.db.{ExternalId, TestDbInfo, Id}
 import play.api.libs.json._
 import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
 import play.api.libs.json.JsArray
-import com.keepit.common.cache.ABookCacheModule
+import com.keepit.common.cache.{HashMapMemoryCacheModule, ABookCacheModule}
 import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import akka.actor.ActorSystem
@@ -22,7 +22,9 @@ import scala.concurrent.Await
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 
-  val modules = Seq()
+  val modules = Seq(
+    ABookCacheModule(HashMapMemoryCacheModule())
+  )
 
   "abook controller" should {
     "support mobile (ios) upload + query" in {

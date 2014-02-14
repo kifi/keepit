@@ -29,6 +29,7 @@ import com.amazonaws.services.elasticloadbalancing.model._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.AmazonClientException
 import com.amazonaws.services.ec2.AmazonEC2Client
+import com.keepit.common.shutdown.ShutdownCommander
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
@@ -44,6 +45,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[AirbrakeNotifier].notify(e)
       throw e
   }
+
   override def beforeStart(app: Application): Unit = {
     val conf = app.configuration
     val appName = conf.getString("application.name").get
@@ -51,7 +53,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       case Some(dbs) => println(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
       case None => println(s"starting app $appName without db")
     }
-
   }
 
   private def registerToLoadBalancer() {
@@ -190,6 +191,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   def announceStopping(app: Application): Unit = if(!announcedStopping) synchronized {
     if(!announcedStopping) {//double check on entering sync block
+      injector.instance[ShutdownCommander].shutdown()
       if (mode == Mode.Prod) {
         try {
           val serviceDiscovery = injector.instance[ServiceDiscovery]
