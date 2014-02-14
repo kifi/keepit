@@ -24,15 +24,17 @@ class LoadBalancerCheckActor @Inject() (
       instance <- serviceDiscovery.thisInstance
       loadBalancer <- instance.instanceInfo.loadBalancer
     } yield {
-      val instanceId = instance.instanceInfo.instanceId
-      val request = new DescribeInstanceHealthRequest(loadBalancer).withInstances(Seq(new Instance(instanceId.id)))
-      try {
-        val state = loadBalancingClient.describeInstanceHealth(request).getInstanceStates.head // throw an exception if empty result
-        if (state.getState != "InService") {
-          airbrake.notify(s"Instance ${instanceId} is considered ${state.getState} by load balancer $loadBalancer (reason: ${state.getReasonCode})")
+      if (instance.isAvailable) {
+        val instanceId = instance.instanceInfo.instanceId
+        val request = new DescribeInstanceHealthRequest(loadBalancer).withInstances(Seq(new Instance(instanceId.id)))
+        try {
+          val state = loadBalancingClient.describeInstanceHealth(request).getInstanceStates.head // throw an exception if empty result
+          if (state.getState != "InService") {
+            airbrake.notify(s"Instance ${instanceId} is considered ${state.getState} by load balancer $loadBalancer (reason: ${state.getReasonCode})")
+          }
+        } catch {
+          case t:Throwable => airbrake.notify(s"Failed to check status of instance ${instanceId} with load balancer $loadBalancer")
         }
-      } catch {
-        case t:Throwable => airbrake.notify(s"Failed to check status of instance ${instanceId} with load balancer $loadBalancer")
       }
     }
   }
