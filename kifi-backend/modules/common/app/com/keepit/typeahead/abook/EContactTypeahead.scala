@@ -37,13 +37,16 @@ class EContactTypeahead @Inject() (
 
   override protected def extractId(info: EContact):Id[EContact] = info.id.get
 
+  override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, Int.MaxValue)
+
   override protected def getAllInfosForUser(id: Id[User]):Seq[EContact] = {
-    Await.result(abookClient.getEContacts(id, Int.MaxValue), 1 minute) // todo(ray):removeme
+    Await.result(asyncGetAllInfosForUser(id), 1 minute) // todo(ray):revisit
   }
 
+  override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = abookClient.getEContactsByIds(ids)
+
   override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] ={
-    val contacts = abookClient.getEContactsByIds(ids)
-    Await.result(contacts, 1 minute) // todo(ray):removeme
+    Await.result(asyncGetInfos(ids), 1 minute) // todo(ray):revisit
   }
 
   override protected def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {

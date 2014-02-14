@@ -117,7 +117,7 @@ class ABookController @Inject() (
 
   def getEContactsByIds() = Action(parse.json) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
-    val contactIds = jsArray.value map { _.as[JsNumber] } map { n => Id[EContact](n.value.toLong) }
+    val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
     val contacts = db.readOnly { implicit ro =>
       econtactRepo.getByIds(contactIds)
     }
