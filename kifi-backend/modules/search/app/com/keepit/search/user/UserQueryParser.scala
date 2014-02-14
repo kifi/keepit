@@ -21,7 +21,7 @@ class UserQueryParser(
 
   override val fields: Set[String] = Set.empty[String]
 
-  def parseWithUserExperimentConstrains(queryText: CharSequence, exps: Seq[String], useLucenePrefixQuery: Boolean = true): Option[Query] = {
+  def parseWithUserExperimentConstrains(queryText: CharSequence, exps: Seq[String], useLucenePrefixQuery: Boolean = false): Option[Query] = {
 
     if (queryText == null) None
     else {
