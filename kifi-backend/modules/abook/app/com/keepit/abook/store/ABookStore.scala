@@ -6,6 +6,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.abook.store.{InMemoryABookRawInfoStoreImpl, S3ABookRawInfoStoreImpl, ABookRawInfoStore}
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.aws.AwsModule
+import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
 
 case class ABookProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -18,6 +19,12 @@ case class ABookProdStoreModule() extends ProdStoreModule {
     new S3ABookRawInfoStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
+  @Singleton
+  @Provides
+  def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.contact.bucket").get)
+    new S3EContactTypeaheadStore(bucketName, amazonS3Client, accessLog)
+  }
 }
 
 case class ABookDevStoreModule() extends DevStoreModule(ABookProdStoreModule()) {
@@ -27,4 +34,14 @@ case class ABookDevStoreModule() extends DevStoreModule(ABookProdStoreModule()) 
   @Provides
   def addressBookRawInfoStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): ABookRawInfoStore =
     whenConfigured("amazon.s3.abook.bucket")(prodStoreModule.addressBookRawInfoStore(amazonS3ClientProvider.get, accessLog)).getOrElse(new InMemoryABookRawInfoStoreImpl())
+
+  @Singleton
+  @Provides
+  def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
+    whenConfigured("amazon.s3.typeahead.contact.bucket")(
+      prodStoreModule.econtactTypeaheadStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryEContactTypeaheadStore())
+  }
+
 }
+

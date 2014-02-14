@@ -6,7 +6,7 @@ import com.keepit.inject.CommonDevModule
 
 case class ABookTestModule() extends ABookModule (
   cacheModule = ABookCacheModule(HashMapMemoryCacheModule()),
-  storeModule = FakeABookRawInfoStoreModule(),
+  storeModule = FakeABookStoreModule(),
   contactsUpdaterPluginModule = TestContactsUpdaterPluginModule()
 ) with CommonDevModule {
 
