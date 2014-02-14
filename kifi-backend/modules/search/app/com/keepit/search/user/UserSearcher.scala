@@ -43,7 +43,7 @@ class UserSearcher(searcher: Searcher) {
     if (queryTerms.forall(_.length() <= UserIndexer.PREFIX_MAX_LEN)) (u: UserHit) => true     // prefix index guarantees correctness
     else {
       val longQueries = queryTerms.filter(_.length() > UserIndexer.PREFIX_MAX_LEN)
-      (hit: UserHit) => longQueries.forall(query => query.contains("@") || hit.basicUser.firstName.startsWith(query) || hit.basicUser.lastName.startsWith(query))  // don't match email address with names. need test pass
+      (hit: UserHit) => longQueries.forall(query => query.contains("@") || hit.basicUser.firstName.toLowerCase.startsWith(query) || hit.basicUser.lastName.toLowerCase.startsWith(query))  // don't match email address with names. need test pass
     }
   }
 
