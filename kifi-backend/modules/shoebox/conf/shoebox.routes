@@ -423,6 +423,7 @@ GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClust
 
 GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
+POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
 
 ##########################################
 # Common Healthcheck / service routes
