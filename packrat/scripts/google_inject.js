@@ -172,7 +172,7 @@ if (searchUrlRe.test(document.URL)) !function() {
             .attr('href', 'javascript:');
           if (!numTop) {
             $status.attr('data-of', resp.mayHaveMore ?
-              insertCommas(Math.max(resp.hits.length, resp.myTotal + resp.friendsTotal) - 1) + '+' :
+              insertCommas(Math.max(resp.hits.length, resp.myTotal + resp.friendsTotal)) + '+' :
               (resp.hits.length || 'No'));
           }
         }
