@@ -15,18 +15,28 @@ class WebsocketsShutdownListener(websocketRouter: WebSocketRouter, accessLog: Ac
   val ShutdownWindowInMilli = 18000
 
   def shutdown(): Unit = {
-    new Timer(getClass.getCanonicalName, true).scheduleAtFixedRate(task, 0, ShutdownWindowInMilli / websocketRouter.connectedSockets)
+    val count = websocketRouter.connectedSockets
+    val rate = ShutdownWindowInMilli / count
+    println(s"closing $count sockets at rate of one every ${rate}ms")//on shutdown the logger may be terminated, double logging
+    log.info(s"closing $count sockets at rate of one every ${rate}ms")
+    new Timer(getClass.getCanonicalName, true).scheduleAtFixedRate(task, 0, rate)
   }
 
   private def task = new TimerTask {
-    def run(): Unit = {
-      websocketRouter.getArbitrarySocketInfo map {socketInfo =>
-        log.info(s"Closing socket $socketInfo because of server shutdown")
-        val timer = accessLog.timer(WS_IN)
-        socketInfo.channel.push(Json.arr("goodbye", "server shutdown"))
-        socketInfo.channel.eofAndEnd()
-        websocketRouter.unregisterUserSocket(socketInfo)
-        accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "disconnect on server shutdown"))
+    def run(): Unit = WebsocketsShutdownListener.this.synchronized {
+      websocketRouter.getArbitrarySocketInfo match {
+        case Some(socketInfo) =>
+          websocketRouter.unregisterUserSocket(socketInfo)
+          val count = websocketRouter.connectedSockets
+          log.info(s"Closing socket $socketInfo because of server shutdown, $count to go")
+          println(s"Closing socket $socketInfo because of server shutdown, $count to go")
+          val timer = accessLog.timer(WS_IN)
+          socketInfo.channel.push(Json.arr("goodbye", "server shutdown"))
+          socketInfo.channel.eofAndEnd()
+          accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "disconnect on server shutdown"))
+        case None =>
+          log.info("no more sockets to shutdown")
+          println("no more sockets to shutdown")
       }
     }
   }
