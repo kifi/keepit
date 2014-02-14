@@ -101,6 +101,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
 
+  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
 }
 
 /**
@@ -134,6 +135,11 @@ class UserThreadRepoImpl @Inject() (
     def lastActive = column[DateTime]("last_active", O.Nullable)
     def started = column[Boolean]("started", O.NotNull)
     def * = (id.?, createdAt, updatedAt, user, thread, uriId.?, lastSeen.?, unread, muted, lastMsgFromOther.?, lastNotification, notificationUpdatedAt, notificationLastSeen.?, notificationEmailed, replyable, lastActive.?, started) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+
+
+    def gg = (id.?, createdAt, updatedAt, user, thread)
+
+    val p = gg._1.n
 
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
@@ -512,6 +518,10 @@ class UserThreadRepoImpl @Inject() (
         active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
         started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
     }
+  }
+
+  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Option[Id[User]] = {
+    (for (row <- rows if row.thread===threadId && row.started === true) yield row.user).firstOption
   }
 
 }

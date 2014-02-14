@@ -19,6 +19,7 @@ import com.keepit.common.social.BasicUserRepo
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.KestrelCombinator
+import com.keepit.eliza.ElizaServiceClient
 
 case class KeepInfo(id: Option[ExternalId[Bookmark]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -73,7 +74,8 @@ class BookmarksCommander @Inject() (
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
     keptAnalytics: KeepingAnalytics,
-    rawBookmarkFactory: RawBookmarkFactory
+    rawBookmarkFactory: RawBookmarkFactory,
+    elizaServiceClient: ElizaServiceClient
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -279,5 +281,12 @@ class BookmarksCommander @Inject() (
         bookmarkRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
       }
     }
+  }
+
+  def intentionalKeepFeedback(userId: Id[User], keeps: Seq[Bookmark]): Unit = {
+
+    // Send uriIds to eliza for any conversations. Good candidate for SQS?
+    val uriIds = keeps.map(_.uriId)
+    elizaServiceClient.alertAboutRekeeps(keeperUserId = userId, uriIds = uriIds)
   }
 }

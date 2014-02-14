@@ -15,17 +15,17 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
-  def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit
+  def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
 
   def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
 
-  def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession)  : Seq[Message]
+  def get(thread: Id[MessageThread])(implicit session: RSession): Seq[Message]
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message]
 
   def getFromIdToId(fromId: Id[Message], toId: Id[Message])(implicit session: RSession): Seq[Message]
 
-  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession) : Unit
+  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
 
   def getMaxId()(implicit session: RSession): Id[Message]
 
@@ -84,18 +84,15 @@ class MessageRepoImpl @Inject() (
     }
   }
 
-  def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = { //Note: Cache does not honor pagination!! -Stephen
+  def get(threadId: Id[MessageThread])(implicit session: RSession) : Seq[Message] = { //Note: Cache does not honor pagination!! -Stephen
     val key = MessagesForThreadIdKey(threadId)
     messagesForThreadIdCache.get(key) match {
       case Some(v) => {
         v.messages
       }
       case None => {
-        val query = (for (row <- rows if row.thread === threadId) yield row).drop(from)
-        val got = to match {
-          case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
-          case None => query.sortBy(row => row.createdAt desc).list
-        }
+        val query = (for (row <- rows if row.thread === threadId) yield row)
+        val got = query.sortBy(row => row.createdAt desc).list
         log.info(s"[get_thread] got thread messages for thread_id $threadId.")
         val mft = new MessagesForThread(threadId, got)
         try {

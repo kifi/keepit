@@ -151,7 +151,7 @@ class InviteController @Inject() (db: Database,
                 val inviter = inviterUserOpt.get.firstName
                 val pageUrl = baseUrl + request.uri
                 val titleText = s"$inviter sent you an invite to kifi"
-                val titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
+                val titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friends' keeps on top of search results."
 
                 Ok(views.html.marketing.landing(
                     useCustomMetaData = true, pageUrl = pageUrl, titleText = titleText, titleDesc = titleDesc

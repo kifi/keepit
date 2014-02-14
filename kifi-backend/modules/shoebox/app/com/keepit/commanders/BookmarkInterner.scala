@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{Provider, Inject, Singleton}
 import com.keepit.normalizer.NormalizationCandidate
 import scala.util.Try
 import java.util.UUID
@@ -19,6 +19,7 @@ import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
 import scala.util.Random
 import org.joda.time.DateTime
+import com.keepit.eliza.ElizaServiceClient
 
 case class InternedUriAndBookmark(bookmark: Bookmark, uri: NormalizedURI, isNewKeep: Boolean)
 
@@ -36,6 +37,7 @@ class BookmarkInterner @Inject() (
   rawBookmarkFactory: RawBookmarkFactory,
   userValueRepo: UserValueRepo,
   rawKeepRepo: RawKeepRepo,
+  bookmarksCommanderProvider: Provider[BookmarksCommander],
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
@@ -103,6 +105,10 @@ class BookmarkInterner @Inject() (
     }
 
     keptAnalytics.keptPages(userId, newKeeps, context)
+
+    // These are user-initiated, intentional keeps.
+    val intentionalKeeps = newKeeps.filter(p => Set(BookmarkSource.keeper,BookmarkSource.site, BookmarkSource.email, BookmarkSource.mobile).contains(p.source))
+    bookmarksCommanderProvider.get.intentionalKeepFeedback(userId, intentionalKeeps)
 
     (persistedBookmarksWithUris.map(_.bookmark), failures)
   }
