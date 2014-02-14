@@ -55,7 +55,7 @@ class ABookController @Inject() (
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   oauth2TokenRepo:OAuth2TokenRepo,
-  typeahead:EContactTypeahead,
+//  typeahead:EContactTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -300,14 +300,15 @@ class ABookController @Inject() (
 
   implicit val ord = TypeaheadHit.defaultOrdering[EContact]
   def prefixSearch(userId:Id[User], query:String) = Action.async { request =>
-    val filterF = typeahead.getPrefixFilter(userId) match {
-      case Some(filter) => Future.successful(filter)
-      case None => typeahead.build(userId)
-    }
-    filterF map { _ =>
-      val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
-      Ok(Json.toJson(res))
-    }
+//    val filterF = typeahead.getPrefixFilter(userId) match {
+//      case Some(filter) => Future.successful(filter)
+//      case None => typeahead.build(userId)
+//    }
+//    filterF map { _ =>
+//      val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
+//      Ok(Json.toJson(res))
+//    }
+    Future.successful(Ok(Json.toJson(Seq.empty[EContact])))
   }
 
 }
