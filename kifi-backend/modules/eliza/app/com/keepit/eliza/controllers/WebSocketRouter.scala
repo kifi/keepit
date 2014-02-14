@@ -20,8 +20,8 @@ import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 
-@ImplementedBy(classOf[NotificationRouterImpl])
-trait NotificationRouter { //TODO Stephen: This needs a better name
+@ImplementedBy(classOf[WebSocketRouterImpl])
+trait WebSocketRouter {
 
   def sendNotification(userOpt: Option[Id[User]], notification: Notification) : Unit
 
@@ -30,6 +30,8 @@ trait NotificationRouter { //TODO Stephen: This needs a better name
   def registerUserSocket(socket: SocketInfo): Unit
 
   def unregisterUserSocket(socket: SocketInfo) : Unit
+
+  def getRandomSocketInfo: Option[SocketInfo]
 
   def sendToUser(userId: Id[User], data: JsArray) : Unit
 
@@ -41,16 +43,17 @@ trait NotificationRouter { //TODO Stephen: This needs a better name
 }
 
 @Singleton
-class NotificationRouterImpl @Inject() (
+class WebSocketRouterImpl @Inject() (
   elizaServiceClient: ElizaServiceClient,
   system: ActorSystem
-  ) extends NotificationRouter with Logging {
+  ) extends WebSocketRouter with Logging {
 
   system.scheduler.schedule(30 seconds, 1 minutes)(updateStatsD _)
 
   private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]()
 
+  def getRandomSocketInfo: Option[SocketInfo] = userSockets.values.map(_.values).flatten.headOption
 
   private def logTiming(tag: String, msg: JsArray) = {
     try {
@@ -58,12 +61,12 @@ class NotificationRouterImpl @Inject() (
         val createdAt = Json.fromJson[DateTime](msg(2) \ "createdAt")(DateTimeJsonFormat).get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
-        Statsd.timing(s"websocket.delivery.$tag.message", now.getMillis - createdAt.getMillis)
+        Statsd.timing(s"websocket.delivery.$tag.message", diff)
       } else if(msg(0).as[String] == "notification") {
         val createdAt = Json.fromJson[DateTime](msg(1) \ "time").get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
-        Statsd.timing(s"websocket.delivery.$tag.notice", now.getMillis - createdAt.getMillis)
+        Statsd.timing(s"websocket.delivery.$tag.notice", diff)
       }
     } catch {
       case ex: Throwable => log.warn(s"Error with statsd tacking: $ex")
@@ -123,7 +126,5 @@ class NotificationRouterImpl @Inject() (
     }
   }
 
-
   def connectedSockets : Int = userSockets.values.map{_.keys.toSeq.length}.sum
-
 }

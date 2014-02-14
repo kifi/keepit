@@ -1,6 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
-import com.keepit.eliza.controllers.NotificationRouter
+import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
@@ -18,7 +18,7 @@ import com.keepit.eliza.commanders.ElizaStatsCommander
 import com.keepit.eliza.model.UserThreadStats
 
 class ElizaController @Inject() (
-  notificationRouter: NotificationRouter,
+  notificationRouter: WebSocketRouter,
   elizaStatsCommander: ElizaStatsCommander)
     extends ElizaServiceController with Logging {
 

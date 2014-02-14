@@ -12,7 +12,6 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.mail.RemotePostOffice
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,7 +28,7 @@ class ExtMessagingController @Inject() (
     postOffice: RemotePostOffice,
     messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
-    notificationRouter: NotificationRouter,
+    notificationRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     protected val shoebox: ShoeboxServiceClient,
