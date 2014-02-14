@@ -31,7 +31,7 @@ trait WebSocketRouter {
 
   def unregisterUserSocket(socket: SocketInfo) : Unit
 
-  def getRandomSocketInfo: Option[SocketInfo]
+  def getArbitrarySocketInfo: Option[SocketInfo]
 
   def sendToUser(userId: Id[User], data: JsArray) : Unit
 
@@ -53,7 +53,7 @@ class WebSocketRouterImpl @Inject() (
   private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]()
 
-  def getRandomSocketInfo: Option[SocketInfo] = userSockets.values.map(_.values).flatten.headOption
+  def getArbitrarySocketInfo: Option[SocketInfo] = userSockets.values.map(_.values).flatten.headOption
 
   private def logTiming(tag: String, msg: JsArray) = {
     try {

@@ -20,7 +20,7 @@ class WebsocketsShutdownListener(websocketRouter: WebSocketRouter, accessLog: Ac
 
   private def task = new TimerTask {
     def run(): Unit = {
-      websocketRouter.getRandomSocketInfo map {socketInfo =>
+      websocketRouter.getArbitrarySocketInfo map {socketInfo =>
         log.info(s"Closing socket $socketInfo because of server shutdown")
         val timer = accessLog.timer(WS_IN)
         socketInfo.channel.push(Json.arr("goodbye", "server shutdown"))
