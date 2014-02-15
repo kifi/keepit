@@ -5,6 +5,9 @@ import com.keepit.common.db._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
+import com.keepit.common.logging.AccessLog
+import scala.concurrent.duration.Duration
 
 object EContactStates extends States[EContact] {
   val PARSE_FAILURE = State[EContact]("parse_failure")
@@ -39,4 +42,13 @@ object EContact {
       (__ \ 'lastName).formatNullable[String] and
       (__ \ 'state).format(State.format[EContact])
     )(EContact.apply, unlift(EContact.unapply))
+}
+
+class EContactCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[EContactKey, EContact](stats, accessLog, inner, outer: _*)
+
+case class EContactKey(id: Id[EContact]) extends Key[EContact] {
+  val namespace = "econtact"
+  override val version = 1
+  def toKey(): String = id.id.toString
 }

@@ -308,7 +308,6 @@ class ABookController @Inject() (
       val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
       Ok(Json.toJson(res))
     }
-//    Future.successful(Ok(Json.toJson(Seq.empty[EContact])))
   }
 
 }

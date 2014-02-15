@@ -130,4 +130,10 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def econtactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new EContactTypeaheadCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+
+  @Singleton
+  @Provides
+  def econtactCache(stats:CacheStatistics, accessLog:AccessLog, innerRepo:InMemoryCachePlugin, outerRepo:FortyTwoCachePlugin) =
+    new EContactCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+
 }
