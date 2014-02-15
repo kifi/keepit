@@ -22,7 +22,7 @@ class LoadBalancerCheckActor @Inject() (
       if (instance.isAvailable) {
         val info = instance.instanceInfo
         val stateOpt = loadBalancingClient.getInstanceState(info)
-        stateOpt.filter(_.getState != "InService") map { state =>
+        stateOpt.filter(state => state.getState != "InService" && state.getReasonCode != "ELB") map { state =>
           airbrake.notify(s"Instance ${info.instanceId} is considered ${state.getState} by load balancer ${info.loadBalancer} (reason: ${state.getReasonCode})")
           loadBalancingClient.registerInstance(info)
         }
