@@ -17,9 +17,9 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
-import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.typeahead.TypeaheadHit
 import scala.concurrent.Future
+import com.keepit.abook.typeahead.EContactABookTypeahead
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -55,7 +55,7 @@ class ABookController @Inject() (
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   oauth2TokenRepo:OAuth2TokenRepo,
-  typeahead:EContactTypeahead,
+  typeahead:EContactABookTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -308,6 +308,7 @@ class ABookController @Inject() (
       val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
       Ok(Json.toJson(res))
     }
+//    Future.successful(Ok(Json.toJson(Seq.empty[EContact])))
   }
 
 }
