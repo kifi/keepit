@@ -20,6 +20,7 @@ import scala.util.{Success, Try, Failure}
 trait EContactRepo extends Repo[EContact] {
   def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
   def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
+  def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact]
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
@@ -32,10 +33,14 @@ trait EContactRepo extends Repo[EContact] {
 }
 
 @Singleton
-class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EContact] with EContactRepo with Logging {
-    import DBSession._
-  import db.Driver.simple._
+class EContactRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val econtactCache: EContactCache
+) extends DbRepo[EContact] with EContactRepo with Logging {
 
+  import DBSession._
+  import db.Driver.simple._
 
   type RepoImpl = EContactTable
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
@@ -49,15 +54,32 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
 
   def table(tag: Tag) = new EContactTable(tag)
 
-  override def deleteCache(model: EContact)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: EContact)(implicit session: RSession): Unit = {}
+  override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
+    econtactCache.remove(EContactKey(e.id.get))
+  }
+  override def invalidateCache(e: EContact)(implicit session: RSession): Unit = deleteCache(e)
+
+  // todo(ray): wire-up cache
 
   def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
     (for(f <- rows if f.id === econtactId) yield f).firstOption
   }
 
-  def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact] = {
-    (for(f <- rows if f.id.inSet(econtactIds)) yield f).list
+  def getByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact] = {
+    (for(f <- rows if f.id.inSet(ids)) yield f).list
+  }
+
+  def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact] = {
+    val valueMap = econtactCache.bulkGetOrElse(ids.map(EContactKey(_)).toSet) { keys =>
+      val missing = keys.map(_.id)
+      val contacts = (for(f <- rows if f.id.inSet(missing)) yield f).iterator
+      val res = contacts.collect { case (c) if c.state == EContactStates.ACTIVE =>
+        (EContactKey(c.id.get) -> c)
+      }.toMap
+      log.info(s"[bulkGetByIds(${ids.mkString(",")})] missingIds:(len=${ids.size})${ids.mkString(",")} res=${res}")
+      res
+    }
+    valueMap.map { case(k,v) => (k.id -> v) }
   }
 
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {
@@ -69,8 +91,9 @@ class EContactRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(limit)
   }
 
-  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] =
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] = {
     (for(f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
+  }
 
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first

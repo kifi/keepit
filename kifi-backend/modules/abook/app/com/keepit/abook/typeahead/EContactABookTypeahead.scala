@@ -48,7 +48,7 @@ class EContactABookTypeahead @Inject() (
 
   override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = { // todo(ray):add cache + bulkGet
     db.readOnly(attempts = 2) { implicit ro =>
-      econtactRepo.getByIds(ids)
+      econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
     }
   }
 
