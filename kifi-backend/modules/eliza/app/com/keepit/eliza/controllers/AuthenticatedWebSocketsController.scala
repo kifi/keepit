@@ -171,19 +171,21 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     val connectTimer = accessLog.timer(WS_IN)
-    authenticate(request) match {
-      case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
-        implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
+    if (shutdownCommander.shuttingDown) {
+      Future.successful {
+        accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
+        (Iteratee.ignore, Enumerator(Json.arr("goodbye", "server unavailable")) >>> Enumerator.eof)
+      }
+    } else {
+      authenticate(request) match {
+        case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
+          implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-        val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
-          crypt.decrypt(ipkey, eip).toOption
-        }
-        val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
-        reportConnect(streamSession, socketInfo, request, connectTimer)
-        if (shutdownCommander.shuttingDown) {
-          accessLog.add(connectTimer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "refuse connect"))
-          (Iteratee.ignore, Enumerator(Json.arr("goodbye", "server unavailable")) >>> Enumerator.eof)
-        } else {
+          val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
+            crypt.decrypt(ipkey, eip).toOption
+          }
+          val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
+          reportConnect(streamSession, socketInfo, request, connectTimer)
           var startMessages = Seq[JsArray](Json.arr("hi"))
           if (needsToUpdate(streamSession, versionOpt)) {
             val details = kifInstallationStore.get()
@@ -192,11 +194,11 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           onConnect(socketInfo)
           (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
         }
-      }
-      case None => Future {
-        Statsd.increment(s"websocket.anonymous")
-        accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
-        (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
+        case None => Future.successful {
+          Statsd.increment(s"websocket.anonymous")
+          accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
+          (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
+        }
       }
     }
   }
