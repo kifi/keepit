@@ -36,10 +36,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 				return tagService.remove(tag.id);
 			}
 		};
-
-		$scope.fetchNext = function () {
-			console.log('TagCtrl.fetchNext()');
-		};
 	}
 ])
 

@@ -33,13 +33,15 @@ angular.module('antiscroll', [])
 			template: function (element, attrs) {
 				console.log('antiscroll.template', this, element, attrs);
 				var tmp = '<div class="antiscroll-inner"';
+				/*
 				if ('antiInfiniteScroll' in attrs) {
-					angular.forEach(['antiInfiniteScroll', 'antiInfiniteScrollDistance', 'antiInfiniteScrollDisabled', 'antiInfiniteScrollImmediateCheck'], function (name) {
+					angular.forEach(['antiSmartScroll', 'antiInfiniteScrollDistance', 'antiInfiniteScrollDisabled', 'antiInfiniteScrollImmediateCheck'], function (name) {
 						if (name in attrs) {
 							tmp += ' ' + toDash(name).substring(5) + '="' + attrs[name] + '"';
 						}
 					});
 				}
+				*/
 				tmp += ' ng-transclude></div>';
 				return tmp;
 			}

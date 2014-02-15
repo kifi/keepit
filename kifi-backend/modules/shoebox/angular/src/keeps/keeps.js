@@ -181,6 +181,12 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 						scope.togglePreviewKeep(keep);
 					}
 				};
+
+				scope.onScrollNext = function () {
+					console.log('onScrollNext');
+				};
+				scope.scrollDistance = 0.5;
+				scope.scrollDisabled = false;
 			}
 		};
 	}
