@@ -185,7 +185,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 				scope.onScrollNext = function () {
 					console.log('onScrollNext');
 				};
-				scope.scrollDistance = 0.5;
+
+				scope.scrollDistance = '50%';
 				scope.scrollDisabled = false;
 			}
 		};
