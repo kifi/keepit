@@ -123,7 +123,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   override def onLoadConfig(config: Configuration, path: File, classloader: ClassLoader, mode: Mode.Mode) = {
     val localConfig = Configuration(ConfigFactory.parseFile(getUserFile("local.conf")))
-    super.onLoadConfig(config ++ localConfig, path, classloader, mode)
+    val overrideConfig = Configuration(ConfigFactory.parseFile(new File(path, "override.conf"))) // Configuration override (erased with the next deploy)
+    super.onLoadConfig(config ++ localConfig ++ overrideConfig, path, classloader, mode)
   }
   override def onBadRequest(request: RequestHeader, error: String): Future[SimpleResult] = {
     val errorId = ExternalId[Exception]()
