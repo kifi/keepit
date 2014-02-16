@@ -131,7 +131,8 @@ class HealthcheckPluginImpl @Inject() (
     host: HealthcheckHost,
     val scheduling: SchedulingProperties,
     isCanary: Boolean,
-    amazonSimpleMailProvider: AmazonSimpleMailProvider
+    amazonSimpleMailProvider: AmazonSimpleMailProvider,
+    healthCheckConf: HealthCheckConf
 ) extends HealthcheckPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
@@ -181,7 +182,7 @@ class HealthcheckPluginImpl @Inject() (
     email
   }
 
-  val sleep = sys.props.getOrElse("healthcheck.startup.sleep", "45").toInt // seconds
+  val sleep = healthCheckConf.startupSleep
 
   override def warmUp(benchmarkRunner: BenchmarkRunner) : Unit = {
     log.info(s"going to sleep for $sleep seconds to make sure all plugins are ready to go")

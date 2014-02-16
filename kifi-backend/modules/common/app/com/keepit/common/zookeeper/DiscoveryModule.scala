@@ -26,14 +26,14 @@ import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
 import com.amazonaws.auth.BasicAWSCredentials
-import com.keepit.common.aws.AwsModule
+import com.keepit.common.config.GlobalConfig.safeConfig
 
 trait DiscoveryModule extends ScalaModule
 
 object DiscoveryModule {
 
-  val isCanary = sys.props.getOrElse("service.canary", "false").toBoolean // for "canary/sandbox" instance
-  val isLocal  = sys.props.getOrElse("service.local",  "false").toBoolean // for "local-prod" testing -- can be removed when things settle down
+  val isCanary = safeConfig.getBoolean("service.canary").getOrElse(false) // for "canary/sandbox" instance
+  val isLocal  = safeConfig.getBoolean("service.local").getOrElse(false) // for "local-prod" testing -- can be removed when things settle down
 
   val LOCAL_AMZN_INFO = AmazonInstanceInfo(AmazonInstanceId("i-f168c1a8"),
     localHostname = "localhost",
@@ -60,7 +60,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def amazonEC2Client(basicAWSCredentials: BasicAWSCredentials): AmazonEC2 = {
-    val conf = current.configuration.getConfig("amazon").get
+    val conf = safeConfig.getConfig("amazon").get
     val ec2Client = new AmazonEC2Client(basicAWSCredentials)
     conf.getString("ec2.endpoint") map { ec2Client.setEndpoint(_) }
     ec2Client
@@ -116,15 +116,15 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def zooKeeperClient(): ZooKeeperClient = {
-    val servers = current.configuration.getString("zookeeper.servers").get
+    val servers = safeConfig.getString("zookeeper.servers").get
     new ZooKeeperClientImpl(servers, 2000, Some({zk1 => println(s"in callback, got $zk1")}))
   }
 
   @Singleton
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
-                       amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
-    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler, airbrake, isCanary = DiscoveryModule.isCanary, servicesToListenOn = servicesToListenOn)
+                       amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
+    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = DiscoveryModule.isCanary, servicesToListenOn = servicesToListenOn)
   }
 
   def servicesToListenOn: Seq[ServiceType]
@@ -156,11 +156,11 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
+  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfo: AmazonInstanceInfo, cluster: ServiceCluster): ServiceDiscovery =
     new ServiceDiscovery {
       var state: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def timeSinceLastStatusChange: Long = 0L
-      def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfoProvider.get, ServiceStatus.UP, cluster.serviceType)))
+      def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfo, ServiceStatus.UP, cluster.serviceType)))
       def thisService: ServiceType = cluster.serviceType
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get
