@@ -5,7 +5,6 @@ import securesocial.core.UserService
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
 import com.google.inject.{Provides, Singleton}
-import com.keepit.social.SecureSocialClientIds
 
 case class FakeShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
   override def configure(): Unit = {

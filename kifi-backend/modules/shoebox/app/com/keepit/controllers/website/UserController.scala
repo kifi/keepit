@@ -41,7 +41,6 @@ import play.api.libs.json.JsNumber
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
-import play.api.Play
 import com.keepit.inject.FortyTwoConfig
 
 class UserController @Inject() (

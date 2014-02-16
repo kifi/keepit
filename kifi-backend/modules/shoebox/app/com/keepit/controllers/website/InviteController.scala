@@ -30,12 +30,6 @@ import com.keepit.model.Invitation
 import scala.util.{Failure, Try, Success}
 import com.keepit.commanders.{FullSocialId, InviteInfo, InviteCommander}
 import com.keepit.inject.FortyTwoConfig
-import scala.util.Failure
-import scala.Some
-import com.keepit.inject.FortyTwoConfig
-import play.api.mvc.SimpleResult
-import scala.util.Success
-import play.api.mvc.Cookie
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
