@@ -26,14 +26,13 @@ import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
 import com.amazonaws.auth.BasicAWSCredentials
-import com.keepit.common.config.GlobalConfig.safeConfig
 
 trait DiscoveryModule extends ScalaModule
 
 object DiscoveryModule {
 
-  val isCanary = safeConfig.getBoolean("service.canary").getOrElse(false) // for "canary/sandbox" instance
-  val isLocal  = safeConfig.getBoolean("service.local").getOrElse(false) // for "local-prod" testing -- can be removed when things settle down
+  lazy val isCanary = current.configuration.getBoolean("service.canary").getOrElse(false) // for "canary/sandbox" instance
+  lazy val isLocal  = current.configuration.getBoolean("service.local").getOrElse(false) // for "local-prod" testing -- can be removed when things settle down
 
   val LOCAL_AMZN_INFO = AmazonInstanceInfo(AmazonInstanceId("i-f168c1a8"),
     localHostname = "localhost",
@@ -60,7 +59,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def amazonEC2Client(basicAWSCredentials: BasicAWSCredentials): AmazonEC2 = {
-    val conf = safeConfig.getConfig("amazon").get
+    val conf = current.configuration.getConfig("amazon").get
     val ec2Client = new AmazonEC2Client(basicAWSCredentials)
     conf.getString("ec2.endpoint") map { ec2Client.setEndpoint(_) }
     ec2Client
@@ -116,7 +115,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def zooKeeperClient(): ZooKeeperClient = {
-    val servers = safeConfig.getString("zookeeper.servers").get
+    val servers = current.configuration.getString("zookeeper.servers").get
     new ZooKeeperClientImpl(servers, 2000, Some({zk1 => println(s"in callback, got $zk1")}))
   }
 
