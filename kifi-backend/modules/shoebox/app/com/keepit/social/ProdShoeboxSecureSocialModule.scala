@@ -12,8 +12,7 @@ import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.common.time.Clock
 import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
 import play.api.Play.current
-
-case class OAuthConfig(approvalPrompt: String)
+import com.keepit.controllers.core.OAuth2CommonConfig
 
 trait ShoeboxSecureSocialModule extends SecureSocialModule {
 
@@ -52,7 +51,7 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
 
   @Singleton
   @Provides
-  def oauthConfig: OAuthConfig = OAuthConfig(current.configuration.getString("oauth2.approval.prompt").getOrElse("force"))
+  def oauthConfig: OAuth2CommonConfig = OAuth2CommonConfig(current.configuration.getString("oauth2.approval.prompt").getOrElse("force"))
 }
 
 case class ProdShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {

@@ -20,9 +20,10 @@ import com.keepit.common.db.Id
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{Failure, Success}
-import com.keepit.social.OAuthConfig
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
+
+case class OAuth2CommonConfig(approvalPrompt: String)
 
 object OAuth2 {
   val STATE_TOKEN_KEY="stateToken"
@@ -112,7 +113,7 @@ class OAuth2Controller @Inject() (
   airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
   abookServiceClient:ABookServiceClient,
-  oauthConfig: OAuthConfig
+  oauth2CommonConfig: OAuth2CommonConfig
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   import OAuth2Providers._
@@ -135,7 +136,7 @@ class OAuth2Controller @Inject() (
           "state" -> stateToken,
           "access_type" -> "offline",
           "login_hint" -> "email address",
-          "approval_prompt" -> approvalPromptOpt.getOrElse(oauthConfig.approvalPrompt)
+          "approval_prompt" -> approvalPromptOpt.getOrElse(oauth2CommonConfig.approvalPrompt)
         )
         val url = authUrl + params.foldLeft("?"){(a,c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&"}
         log.infoP(s"REDIRECT to: $url with params: $params")
