@@ -48,6 +48,10 @@ case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
 }
 
+case class HealthCheckConf(
+  startupSleep: Int // seconds
+) extends AnyVal
+
 class MailSender @Inject() (
     sender: SystemAdminMailSender,
     playMode: Mode) extends Logging {

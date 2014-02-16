@@ -13,10 +13,6 @@ import play.api.Play
 
 trait HealthCheckModule extends ScalaModule
 
-case class HealthCheckConf(
-  startupSleep: Int // seconds
-)
-
 case class ProdHealthCheckModule() extends HealthCheckModule {
 
   def configure() {
