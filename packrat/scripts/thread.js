@@ -126,7 +126,7 @@ panes.thread = function () {
         }
       }
     } else {
-      $holder.append(messages.map(renderMessage)).scrollToBottom();
+      $holder.append(messages.map(renderMessage))[0].scrollTop = 9999;
     }
     emitRendered(threadId, messages[messages.length - 1]);
   }
