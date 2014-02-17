@@ -54,31 +54,15 @@ var pane = pane || function () {  // idempotent for Chrome
     return paneIdxs.indexOf(name);
   }
 
-  var createPaneParams = {
-    thread: function (cb, locator, participants) {
-      if (participants) {
-        respond(participants);
-      } else {
-        var id = locator.substr(10);
-        log("[createPaneParams.thread] need participants", id)();
-        api.port.emit("participants", id, respond);
-      }
-      function respond(p) {
-        cb({participants: p, numParticipants: p.length > 1 ? p.length : null});
-      }
-    }};
-
-  function showPane(locator, back, paramsArg, redirected) {
+  function showPane(locator, back, redirected) {
     log('[showPane]', locator, back ? 'back' : '')();
-    var deferred = Q.defer();
     var locatorCurr = paneHistory && paneHistory[0];
     var nameCurr = locatorCurr && toPaneName(locatorCurr);
     var name = toPaneName(locator);
     if (locator === locatorCurr) {
-      deferred.resolve();
+      // do nothing
     } else if (name === nameCurr && panes[name].switchTo) {
       panes[name].switchTo(locator);
-      deferred.resolve();
     } else {
       if (!paneHistory) {
         paneHistory = [locator];
@@ -88,19 +72,12 @@ var pane = pane || function () {  // idempotent for Chrome
       } else {
         paneHistory.unshift(locator);
       }
-      (createPaneParams[name] || function (cb) {cb({})})(function (params) {
-        if (paneHistory[0] === locator) {
-          params.redirected = redirected;
-          showPaneContinued(locator, back, name, params);
-          deferred.resolve();
-        }
-      }, locator, paramsArg);
+      showPaneContinued(locator, back, name, {redirected: redirected});
     }
-    return deferred.promise;
   }
 
   function showPaneContinued(locator, back, name, params) {  // only called by showPane
-    log("[showPaneContinued]", locator, name)();
+    log('[showPaneContinued]', locator, name)();
     if ($pane) {
       // TODO: abort if state !== 'open'
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
@@ -120,7 +97,7 @@ var pane = pane || function () {  // idempotent for Chrome
           .off("transitionend", end);
         $cubby.css("overflow", "");
       });
-      api.port.emit("pane", {old: $pane[0].dataset.locator, new: locator});
+      api.port.emit('pane', {old: $pane[0].dataset.locator, new: locator});
       $pane[0].dataset.locator = locator;
       populatePane($new, name, locator);
     } else {
@@ -271,9 +248,6 @@ var pane = pane || function () {  // idempotent for Chrome
         window.open(this.dataset.href);
         $(this).closest(".kifi-pane-top-menu").triggerHandler("kifi:hide");
       })
-      .on("kifi:show-pane", function (e, loc, paramsArg) {
-        showPane(loc, false, paramsArg);
-      })
       .on("mousedown click keydown keypress keyup", function (e) {
         e.stopPropagation();
       });
@@ -404,11 +378,11 @@ var pane = pane || function () {  // idempotent for Chrome
       return !!$pane;
     },
     show: function (o) {
-      log('[pane.show]', o.locator, o.trigger || '', o.paramsArg || '', o.redirected || '', o.composeTo || '')();
+      log('[pane.show]', o.locator, o.trigger || '', o.redirected || '', o.composeTo || '')();
       if (o.composeTo) {
         pane.compose(o.trigger, o.composeTo);
       } else {
-        showPane(o.locator, false, o.paramsArg, o.redirected);
+        showPane(o.locator, false, o.redirected);
       }
     },
     hide: hidePane,
@@ -432,14 +406,10 @@ var pane = pane || function () {  // idempotent for Chrome
     compose: function(trigger, recipient) {
       log('[pane:compose]', trigger)();
       api.require('scripts/compose_toaster.js', function () {
-        if ($pane) {
-          if ($pane.data('state') !== 'closing') {
-            withPane();
-          }
-        } else {
-          showPane('/messages:all').then(withPane);
+        if (!$pane) {
+          showPane('/messages:all');
         }
-        function withPane() {
+        if ($pane.data('state') !== 'closing') {
           if (recipient && toaster.showing()) return;  // don't clobber form
           toaster.toggle($pane).done(function (compose) {
             if (compose) {

@@ -11,7 +11,6 @@ panes.settings = function () {
     render: function ($paneBox) {
       log('[panes.settings.render]')();
       api.port.on(handlers);
-      api.port.emit('settings', update);
 
       box = $paneBox[0];
       $paneBox.find('.kifi-scroll-inner').scroll(onScroll).preventAncestorScroll();
