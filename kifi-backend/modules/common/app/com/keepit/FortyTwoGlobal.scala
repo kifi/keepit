@@ -86,7 +86,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(s"[${currentDateTime.toStandardTimeString}] " + startMessage)
 
-    val disableRegistration = Play.current.configuration.getBoolean("service.register.disable").getOrElse(false)
+    val disableRegistration = sys.props.getOrElse("service.register.disable", "false").toBoolean
     val serviceDiscoveryOpt:Option[ServiceDiscovery] = if (disableRegistration) None else {
       val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
       log.info(s"Amazon up! $amazonInstanceInfo")
