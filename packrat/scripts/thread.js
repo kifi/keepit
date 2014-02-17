@@ -17,27 +17,35 @@
 panes.thread = function () {
   'use strict';
   var handlers = {
-    message: function (o) {
-      update(o.threadId, o.message, o.userId);
+    thread_info: function (o) {
+      if ($holder && $holder.data('threadId') === o.thread) {
+        messageHeader.init($who.find('.kifi-message-header'), o.thread, o.participants);
+      }
     },
     thread: function (o) {
-      updateAll(o.id, o.messages, o.userId);
-    }};
+      if ($holder && $holder.data('threadId') === o.id) {
+        updateAll(o.id, o.messages);
+      }
+    },
+    message: function (o) {
+      if ($holder && $holder.data('threadId') === o.threadId) {
+        update(o.threadId, o.message);
+      }
+    }
+  };
 
-  var $holder = $();
+  var $who, $holder;
   return {
     render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId)();
-      var $who = $paneBox.find('.kifi-thread-who');  // uncomment code below once header is pre-rendered again
+
+      $who = $paneBox.find('.kifi-thread-who');  // uncomment code below once header is pre-rendered again
       var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
-      api.port.on(handlers);  // important to subscribe to 'message' before requesting thread
-      api.port.emit('thread', threadId, function (th) {
-        renderThread($paneBox, $tall, $who, th.id, th.messages, th.enterToSend);
-        var lastMsg = th.messages[th.messages.length - 1];
-        messageHeader.init($who.find('.kifi-message-header'), th.id, lastMsg.participants);
-        emitRendered(threadId, lastMsg);
-      });
+
+      $holder = renderBlank($paneBox, $tall, $who, threadId);
+
+      api.port.on(handlers);
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
         pane.back($redirected.length ? '/messages:all' : '/messages');
@@ -49,35 +57,24 @@ panes.thread = function () {
       if ($redirected.length) {
         setTimeout($.fn.triggerHandler.bind($redirected, 'click'), 5000);
       }
-    }};
+    }
+  };
 
-  function renderThread($paneBox, $tall, $who, threadId, messages, enterToSend) {
-    messages.forEach(function (m) {
-      if (m.user) {
-        m.isLoggedInUser = m.user.id === me.id;
-      }
-    });
+  function renderBlank($paneBox, $tall, $who, threadId) {
     $(render('html/keeper/messages', {
-      formatMessage: getTextFormatter,
-      formatAuxData: auxDataFormatter,
-      formatLocalDate: getLocalDateFormatter,
-      messages: messages,
       draftPlaceholder: 'Type a message…',
-      sendKeyTip: (enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
       snapshotUri: api.url('images/snapshot.png')
     }, {
-      message: 'message',
       compose: 'compose'
     }))
-    .prependTo($tall)
-    .find('time').timeago();
+    .prependTo($tall);
 
-    $holder = $tall.find('.kifi-scroll-inner')
+    var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks()
       .data('threadId', threadId);
     var $scroll = $tall.find('.kifi-scroll-wrap');
-    var compose = initCompose($tall, enterToSend, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
+    var compose = initCompose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
     $scroll.antiscroll({x: false});
@@ -99,44 +96,82 @@ panes.thread = function () {
     } else {
       $paneBox.on('kifi:shown', compose.focus);
     }
+
+    return $holder;
   }
 
-  function update(threadId, message, userId) {
-    if ($holder.length && $holder.data('threadId') === threadId) {
-      if (!$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
-          (message.user.id !== userId ||
-           !$holder.find('.kifi-message-sent[data-id=]').get().some(function (el) {
-            log('[update] comparing message text')();
-            return $(el).data('text') === message.text;
-          }))) {
-        var $m = renderMessage(message, userId);
-        var atBottom = $holder[0].scrollTop + $holder[0].clientHeight === $holder[0].scrollHeight;
-        $holder.append($m);  // should we compare timestamps and insert in order?
-        if (atBottom) {
-          $holder.scrollToBottom();
-        }
+  function update(threadId, message) {
+    if (!$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
+        !$holder.find('.kifi-message-sent[data-id=]').get().some(textMatches.bind(null, message.text))) {  // transmitReply updates these
+      var atBottom = scrolledToBottom($holder[0]);
+      insertChronologically(renderMessage(message), message.time);
+      if (atBottom) {
+        $holder.scrollToBottom();
       }
       emitRendered(threadId, message);
     }
   }
 
-  function updateAll(threadId, messages, userId) {
-    if ($holder.length && $holder.data('threadId') === threadId) {
-      var els = messages.map(function (m) {
-        return renderMessage(m, userId)[0];
-      });
-      $holder.find('.kifi-message-sent').remove().end().append(els).scrollToBottom();
-      emitRendered(threadId, messages[messages.length - 1]);
+  function updateAll(threadId, messages) {
+    var $msgs = $holder.find('.kifi-message-sent');
+    if ($msgs.length) {
+      var newMessages = justNewMessages($msgs, messages);
+      if (newMessages.length) {
+        var atBottom = scrolledToBottom($holder[0]);
+        newMessages.forEach(function (m) {
+          insertChronologically(renderMessage(m), m.time);
+        });
+        if (atBottom) {
+          $holder.scrollToBottom();
+        }
+      }
+    } else {
+      $holder.append(messages.map(renderMessage)).scrollToBottom();
     }
+    emitRendered(threadId, messages[messages.length - 1]);
+  }
+
+  function justNewMessages($msgs, messages) {
+    var ids = $msgs.get().reduce(function (o, el) {
+      var id = el.dataset.id;
+      if (id) o[id] = true;
+      return o;
+    }, {});
+    var msgsSending = $msgs.filter('[data-id=]').get();
+    return messages.filter(function (m) {
+      return !ids[m.id] && !msgsSending.some(textMatches.bind(null, m.text))
+    });
+  }
+
+  function textMatches(el) {
+    var matches = $(el).data('text') === message.text;
+    log('[textMatches]', matches)();
+    return matches;
+  }
+
+  function insertChronologically(mEl, time) {
+    var timeEls = $holder.find('time').get();
+    for (var i = timeEls.length; i--;) {
+      var timeEl = timeEls[i];
+      if (timeEl.getAttribute('datetime') <= time) {
+        $(timeEl).closest('.kifi-message-sent').after(mEl);
+        return;
+      }
+    }
+    $holder.prepend(mEl);
+  }
+
+  function scrolledToBottom(el) {
+    return el.scrollTop + el.clientHeight === el.scrollHeight;
   }
 
   function sendReply(threadId, text) {
-    var $m = renderMessage({
+    var $m = $(renderMessage({
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
       user: me
-    }, me.id)
+    }))
     .data('text', text);
     $holder.append($m).scrollToBottom();
 
@@ -150,13 +185,13 @@ panes.thread = function () {
     }, 1000);
   }
 
-  function renderMessage(m, userId) {
+  function renderMessage(m) {
     m.formatMessage = getTextFormatter;
     m.formatAuxData = auxDataFormatter;
     m.formatLocalDate = getLocalDateFormatter;
-    m.isLoggedInUser = m.user.id === userId;
+    m.isLoggedInUser = m.user && m.user.id === me.id;
     return $(render('html/keeper/message', m))
-      .find('time').timeago().end();
+      .find('time').timeago().end()[0];
   }
 
   function handleReplyError($reply, status, originalText, threadId) {
@@ -181,7 +216,7 @@ panes.thread = function () {
   }
 
   function transmitReply($m, originalText, threadId) {
-    api.port.emit('send_reply', {text: originalText, threadId: threadId}, function(o) {
+    api.port.emit('send_reply', {text: originalText, threadId: threadId}, function (o) {
       log('[transmitReply] resp:', o)();
       if (o.id) { // success, got a response
         $m.attr('data-id', o.id);
@@ -196,7 +231,6 @@ panes.thread = function () {
       }
     });
   }
-
 
   function emitRendered(threadId, m) {
     api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});

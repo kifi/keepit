@@ -3,12 +3,28 @@
 // @request scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
 
-function initCompose($c, enterToSend, opts) {
+var initCompose = (function() {
+
+  var $composes = $();
+  var prefix = CO_KEY + '-';
+  var enterToSend;
+  var handlers = {
+    prefs: function (o) {
+      enterToSend = o.enterToSend;
+      updateKeyTip($composes);
+    }
+  };
+  api.port.on(handlers);
+  api.port.emit('prefs');
+
+  return function ($c, opts) {
   'use strict';
   var $f = $c.find('.kifi-compose');
   var $t = $f.find('.kifi-compose-to');
   var $d = $f.find('.kifi-compose-draft');
   var defaultText = $d.data('default');  // real text, not placeholder
+  $composes = $composes.add($f);
+  updateKeyTip($f);
 
   $d.focus(function () {
     var r, sel = window.getSelection();
@@ -232,17 +248,15 @@ function initCompose($c, enterToSend, opts) {
   .on('mousedown', '.kifi-compose-tip', function (e) {
     if (e.originalEvent.isTrusted === false) return;
     e.preventDefault();
-    var prefix = CO_KEY + '-';
-    var $tip = $(this), tipTextNode = this.firstChild;
-    var $alt = $('<span class=kifi-compose-tip-alt>')
-      .text((enterToSend ? prefix : '') + tipTextNode.nodeValue.replace(prefix, ''))
+    var $tip = $(this);
+    var $alt = $('<span class="kifi-compose-tip-alt" data-prefix="' + (enterToSend ? prefix : '') + '">' + $tip[0].firstChild.textContent + '</span>')
       .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
       .hover(function () {
         this.classList.add('kifi-hover');
       }, function () {
         this.classList.remove('kifi-hover');
       });
-    var $menu = $('<span class=kifi-compose-tip-menu>').append($alt).insertAfter($tip);
+    var $menu = $('<span class="kifi-compose-tip-menu"/>').append($alt).insertAfter($tip);
     $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
     $alt.css('visibility', '').mouseup(hide.bind(null, true));
     document.addEventListener('mousedown', docMouseDown, true);
@@ -260,7 +274,7 @@ function initCompose($c, enterToSend, opts) {
       if (toggle) {
         enterToSend = !enterToSend;
         log('[enterToSend]', enterToSend)();
-        tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, '') : prefix + tipTextNode.nodeValue;
+        updateKeyTip($composes);
         api.port.emit('set_enter_to_send', enterToSend);
       }
     }
@@ -306,8 +320,15 @@ function initCompose($c, enterToSend, opts) {
       return $f.hasClass('kifi-empty') && !($t.length && $t.tokenInput('get').length);
     },
     destroy: function() {
+      $composes = $composes.not($c);
       if ($t.length) {
         $t.tokenInput('destroy');
       }
     }};
-}
+  };
+
+  function updateKeyTip ($f) {
+    $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
+    $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
+  }
+}());

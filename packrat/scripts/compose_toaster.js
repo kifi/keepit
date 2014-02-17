@@ -64,7 +64,6 @@ var toaster = (function () {
       showTo: true,
       draftPlaceholder: 'Type a message…',
       draftDefault: 'Check this out.',
-      sendKeyTip: (prefs.enterToSend ? '' : CO_KEY + '-') + 'Enter to send',
       snapshotUri: api.url('images/snapshot.png')
     }, {
       compose: 'compose'
@@ -77,7 +76,7 @@ var toaster = (function () {
     .on('click', '.kifi-toast-intro-x', onFindFriendsXClick)
     .appendTo($parent);
 
-    $toaster.data('compose', initCompose($toaster, prefs.enterToSend, {onSubmit: send}));
+    $toaster.data('compose', initCompose($toaster, {onSubmit: send}));
     $(document).data('esc').add(hide);
     pane.onHide.add(hide);
 
@@ -127,9 +126,7 @@ var toaster = (function () {
       withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf)}),
       function (resp) {
         log('[sendMessage] resp:', resp)();
-        pane.show({
-          locator: '/messages/' + resp.threadId,
-          paramsArg: recipients});
+        pane.show({locator: '/messages/' + resp.threadId});
       });
   }
 
