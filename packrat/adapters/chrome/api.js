@@ -555,12 +555,12 @@ var api = function() {
         var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
         var rws = new ReconnectingWebSocket({
           url: url,
-          onConnect: function() {
+          onConnect: Airbrake.wrap(function() {
             socket.seq++;
             onConnect();
-          },
-          onDisconnect: onDisconnect,
-          onMessage: function(e) {
+          }),
+          onDisconnect: Airbrake.wrap(onDisconnect),
+          onMessage: Airbrake.wrap(function (e) {
             var msg = JSON.parse(e.data);
             if (Array.isArray(msg)) {
               var id = msg.shift();
@@ -585,7 +585,7 @@ var api = function() {
             } else {
               log("#0ac", "[socket.receive] ignoring", msg)();
             }
-          }});
+          })});
         var socket = {
           seq: 0,
           send: function(arr, callback) {
