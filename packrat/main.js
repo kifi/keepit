@@ -873,11 +873,11 @@ api.port.on({
     respond({
       sounds: enabled('sounds'),
       popups: enabled('popups'),
-      emails: prefs.messagingEmails,
+      emails: prefs ? prefs.messagingEmails : true,
       keeper: enabled('keeper'),
       sensitive: enabled('sensitive'),
       search: enabled('search'),
-      maxResults: prefs.maxResults
+      maxResults: prefs ? prefs.maxResults : 1
     });
   },
   save_setting: function(o, respond) {
