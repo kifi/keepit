@@ -847,7 +847,7 @@ api.port.on({
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {
-        api.tabs.open(link.nUri, function(tabId) {
+        api.tabs.open(link.nUri, function (tabId) {
           awaitDeepLink(link, tabId);
         });
       }
@@ -1293,20 +1293,27 @@ function sendPageThreadCount(tab, tl) {
 }
 
 function awaitDeepLink(link, tabId, retrySec) {
-  if (link.locator) {
+  var loc = link.locator;
+  if (loc) {
     api.timers.clearTimeout(deepLinkTimers[tabId]);
     delete deepLinkTimers[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log('[awaitDeepLink]', tabId, link)();
-      api.tabs.emit(tab, "open_to", {
+      api.tabs.emit(tab, 'open_to', {
         trigger: 'deepLink',
-        locator: link.locator,
+        locator: loc,
         redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
       }, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
-      log("[awaitDeepLink]", tabId, "retrying in", retrySec, "sec")();
+      log('[awaitDeepLink]', tabId, 'retrying in', retrySec, 'sec')();
       deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+    }
+    if (loc.lastIndexOf('/messages/', 0) === 0) {
+      var threadId = loc.substr(10);
+      if (!messageData[threadId]) {
+        socket.send(['get_thread', threadId]);  // a head start
+      }
     }
   } else {
     log('[awaitDeepLink] no locator', tabId, link)();
