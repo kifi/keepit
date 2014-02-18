@@ -85,6 +85,7 @@ panes.notices = function () {
         .find('.kifi-notices-list');
 
       api.port.on(handlers);
+      api.port.emit('thread_list', {kind: kind, first: true});
 
       $paneBox
       .on('click', '.kifi-notices-filter[href]', onSubTabClick)
@@ -145,6 +146,7 @@ panes.notices = function () {
     var $aOld = $aNew.siblings('.kifi-notices-filter:not([href])').attr('href', 'javascript:');
     var back = $aNew.index() < $aOld.index();
     var kindNew = $aNew.data('kind');
+    api.port.emit('thread_list', {kind: kindNew});
 
     var $cart = $list.closest('.kifi-notices-cart');
     var $cubby = $cart.parent().css('overflow', 'hidden').layout();

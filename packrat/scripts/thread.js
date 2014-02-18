@@ -46,6 +46,7 @@ panes.thread = function () {
       $holder = renderBlank($paneBox, $tall, $who, threadId);
 
       api.port.on(handlers);
+      api.port.emit('thread', threadId);
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
         pane.back($redirected.length ? '/messages:all' : '/messages');
