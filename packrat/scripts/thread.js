@@ -104,7 +104,7 @@ panes.thread = function () {
     if (!$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
         !$holder.find('.kifi-message-sent[data-id=]').get().some(textMatches.bind(null, message.text))) {  // transmitReply updates these
       var atBottom = scrolledToBottom($holder[0]);
-      insertChronologically(renderMessage(message), message.time);
+      insertChronologically(renderMessage(message), message.createdAt);
       if (atBottom) {
         $holder.scrollToBottom();
       }
@@ -119,7 +119,7 @@ panes.thread = function () {
       if (newMessages.length) {
         var atBottom = scrolledToBottom($holder[0]);
         newMessages.forEach(function (m) {
-          insertChronologically(renderMessage(m), m.time);
+          insertChronologically(renderMessage(m), m.createdAt);
         });
         if (atBottom) {
           $holder.scrollToBottom();
