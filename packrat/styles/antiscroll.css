@@ -27,6 +27,14 @@
   left: -8px;
   width: 8px;
 }
-.kifi-scroll-inner {overflow: scroll}
-.kifi-scroll-inner::-webkit-scrollbar {width: 0; height: 0}
-.kifi-scroll-inner::scrollbar {width: 0; height: 0}
+.kifi-scroll-inner {
+  overflow: scroll;
+}
+.kifi-scroll-inner::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.kifi-scroll-inner::scrollbar {
+  width: 0;
+  height: 0;
+}
