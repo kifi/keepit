@@ -8,12 +8,19 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		$scope.me = profileService.me;
 		$scope.keeps = keepService.list;
 
-		$scope.$watch('keeps', function () {
+		$scope.$watch('keeps.length', function () {
 			$scope.refreshScroll();
 		});
 
-		var promise = keepService.getList();
+		$scope.loadingKeeps = true;
+		var promise = keepService.getList().then(function (list) {
+			$scope.loadingKeeps = false;
+			return list;
+		});
+
 		$q.all([promise, tagService.fetchAll()]).then(function () {
+			$scope.loadingKeeps = false;
+			$scope.refreshScroll();
 			keepService.joinTags(keepService.list, tagService.list);
 		});
 
@@ -24,6 +31,20 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		}, function (val) {
 			$scope.previewing = val;
 		});
+
+		$scope.getNextKeeps = function () {
+			if ($scope.loadingKeeps) {
+				return $q.when([]);
+			}
+
+			$scope.loadingKeeps = true;
+
+			return keepService.getList().then(function (list) {
+				$scope.loadingKeeps = false;
+				$scope.refreshScroll();
+				return list;
+			});
+		};
 
 		$scope.selectKeep = function (keep) {
 			return keepService.select(keep);
@@ -181,6 +202,16 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 						scope.togglePreviewKeep(keep);
 					}
 				};
+
+				scope.onScrollNext = function () {
+					scope.getNextKeeps();
+				};
+
+				scope.isScrollDisabled = function () {
+					return scope.loadingKeeps;
+				};
+
+				scope.scrollDistance = '100%';
 			}
 		};
 	}
