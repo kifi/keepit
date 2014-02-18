@@ -70,25 +70,31 @@ private[integration] class AutogenReaper @Inject() (
       for (threshold <- Play.maybeApplication map { app => // todo: inject
         if (Play.isDev) currentDateTime.minusSeconds(15) else currentDateTime.minusMinutes(15)
       }) {
-        db.readWrite { implicit rw =>
+        val dues = db.readOnly { implicit rw =>
           // a variant of this could live in UserCommander
           val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
           val dues = generated filter (e => e.updatedAt.isBefore(threshold))
           log.info(s"[reap] total=(${generated.length}):[${generated.mkString(",")}]; due=(${dues.length}):[${dues.map(_.id.get).mkString(",")}]")
-          implicit val userOrd = new Ordering[Id[User]] {
-            def compare(x: Id[User], y: Id[User]): Int = x.id compare y.id
-          }
-          for (exp <- dues) {
+          dues
+        }
+        for (exp <- dues) {
+          db.readWrite { implicit s =>
             userSessionRepo.invalidateByUser(exp.userId)
+          }
+          db.readWrite { implicit s =>
             userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
               exp.experimentType match {
                 case ExperimentType.AUTO_GEN => userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
                 case _ => userExperimentRepo.delete(exp)
               }
             }
+          }
+          db.readWrite { implicit s =>
             for (emailAddr <- emailAddressRepo.getAllByUser(exp.userId)) {
               emailAddressRepo.delete(emailAddr)
             }
+          }
+          db.readWrite { implicit s =>
             for (sui <- socialUserInfoRepo.getByUser(exp.userId)) {
               for (invite <- invitationRepo.getByRecipientSocialUserId(sui.id.get)) {
                 invitationRepo.delete(invite)
@@ -101,15 +107,25 @@ private[integration] class AutogenReaper @Inject() (
                 socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE))
               }
             }
+          }
+          db.readWrite { implicit s =>
             for (cred <- userCredRepo.findByUserIdOpt(exp.userId)) {
               userCredRepo.delete(cred)
             }
-            val user = userRepo.get(exp.userId)
-            log.info(s"[reap] processing $user")
-            // bookmarks, collections & k2c
+          }
+        }
+        for (exp <- dues) {
+          val user = db.readOnly{ implicit s => userRepo.get(exp.userId) }
+          log.info(s"[reap] processing $user")
+
+          db.readWrite { implicit s =>
+            // bookmarks
             for (bookmark <- bookmarkRepo.getByUser(exp.userId)) {
               bookmarkRepo.save(bookmark.withActive(false))
             }
+          }
+          db.readWrite { implicit s =>
+            // collections & k2c
             for (collection <- collectionRepo.getByUser(exp.userId)) {
               for (k2c <- k2cRepo.getByCollection(collection.id.get)) {
                 k2cRepo.save(k2c.inactivate)
@@ -117,8 +133,12 @@ private[integration] class AutogenReaper @Inject() (
               collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
               collectionRepo.collectionChanged(collection.id.get)
             }
+          }
+          db.readWrite { implicit s =>
             userRepo.save(user.withState(UserStates.INACTIVE))
           }
+        }
+        db.readWrite { implicit s =>
           dues foreach { exp =>
             userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
               userExperimentRepo.delete(exp)

@@ -22,14 +22,14 @@ function mergeArr(o, arr) {
 }
 
 // TODO: load some of these APIs on demand instead of up front
-const self = require('sdk/self'), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
+const self = require('sdk/self');
 const timers = require("sdk/timers");
 const {Ci, Cc, Cu} = require('chrome');
-const {deps} = require("./deps");
+const {deps} = require('./deps');
 const {Airbrake} = require('./airbrake.min');
-const {Listeners} = require("./listeners");
+const {Listeners} = require('./listeners');
 const icon = require('./icon');
-const windows = require("sdk/windows").browserWindows;
+const windows = require('sdk/windows').browserWindows;
 const tabs = require('sdk/tabs');
 const workerNs = require('sdk/core/namespace').ns();
 
@@ -54,7 +54,7 @@ exports.icon = {
       log("[api.icon.set]", page.id, path);
       var tab = tabsById[page.id], win = tab.window;
       if (tab === win.tabs.activeTab) {
-        icon.show(win, url(path));
+        icon.show(win, self.data.url(path));
       }
     }
   }};
@@ -111,10 +111,9 @@ exports.log = function() {
 function log() {
   exports.log.apply(null, arguments)();
 }
-exports.log.error = function(exception, context) {
-  console.error((context ? "[" + context + "] " : "") + exception);
-  console.error(exception.stack);
-};
+function bindLogCall() {
+  return exports.log.bind(null, arguments)()
+}
 
 // TODO: actually toggle content script logging
 exports.toggleLogging = exports.noop = function () {};
@@ -128,7 +127,7 @@ var nsISound, nsIIO;
 exports.play = function(path) {
   nsISound = nsISound || Cc["@mozilla.org/sound;1"].createInstance(Ci.nsISound);
   nsIIO = nsIIO || Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-  nsISound.play(nsIIO.newURI(url(path), null, null));
+  nsISound.play(nsIIO.newURI(self.data.url(path), null, null));
 };
 
 exports.popup = {
@@ -243,115 +242,82 @@ exports.browser = {
 
 exports.requestUpdateCheck = exports.log.bind(null, '[requestUpdateCheck] unsupported');
 
-var socketPage, sockets = [,];
-var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
+const {SocketCommander} = require('./socket_commander');
+var socketPage, socketCommanders = {}, nextSocketId = 1;
 exports.socket = {
   open: function(url, handlers, onConnect, onDisconnect) {
-    var socketId = sockets.length, socket = {
-      seq: 0,
-      send: function(arr, callback) {
-        if (callback) {
-          var id = nextSocketCallbackId++;
-          socketCallbacks[id] = callback;
-          arr.splice(1, 0, id);
-        }
+    var socketId = nextSocketId++;
+    log('[api.socket.open]', socketId, url);
+    var sc = socketCommanders[socketId] = new SocketCommander({
+      send: function (arr) {
         socketPage.port.emit('socket_send', socketId, arr);
       },
       close: function() {
-        log('[api.socket.close]', socketId);
-        delete sockets[socketId];
         socketPage.port.emit('close_socket', socketId);
-        if (!sockets.some(function(h) {return h})) {
+        delete socketCommanders[socketId];
+        if (isEmptyObj(socketCommanders)) {
           socketPage.destroy();
           socketPage = null;
         }
-        this.send = this.close = exports.noop;
-      }};
-    log('[api.socket.open]', socketId, url);
-    sockets.push({socket: socket, handlers: handlers, onConnect: onConnect, onDisconnect: onDisconnect});
+      }
+    }, handlers, onConnect, onDisconnect, bindLogCall);
     if (socketPage) {
       socketPage.port.emit('open_socket', socketId, url);
     } else {
       socketPage = require('sdk/page-worker').Page({
         contentScriptFile: [
-          data.url('scripts/lib/rwsocket.js'),
-          data.url("scripts/workers/socket.js")],
+          self.data.url('scripts/lib/rwsocket.js'),
+          self.data.url('scripts/workers/socket_worker.js')],
         contentScriptWhen: 'start',
         contentScriptOptions: {socketId: socketId, url: url},
-        contentURL: data.url('html/workers/socket.html')
+        contentURL: self.data.url('html/workers/socket_worker.html')
       });
       socketPage.port.on('socket_connect', onSocketConnect);
       socketPage.port.on('socket_disconnect', onSocketDisconnect);
       socketPage.port.on('socket_message', onSocketMessage);
     }
-    return socket;
+    return sc;
   }
 }
 var onSocketConnect = Airbrake.wrap(function onSocketConnect(socketId) {
-  var socket = sockets[socketId];
-  if (socket) {
-    socket.socket.seq++;
-    try {
-      socket.onConnect();
-    } catch (e) {
-      exports.log.error(e, "onSocketConnect:" + socketId);
-    }
+  var sc = socketCommanders[socketId];
+  if (sc) {
+    sc.onConnect();
   } else {
-    log("[onSocketConnect] Ignoring, no socket", socketId);
+    log('[onSocketConnect] no SocketCommander', socketId);
   }
 });
 var onSocketDisconnect = Airbrake.wrap(function onSocketDisconnect(socketId, why) {
-  var socket = sockets[socketId];
-  if (socket) {
-    try {
-      socket.onDisconnect(why);
-    } catch (e) {
-      exports.log.error(e, "onSocketDisconnect:" + socketId + ": " + why);
-    }
+  var sc = socketCommanders[socketId];
+  if (sc) {
+    sc.onDisconnect(why);
   } else {
-    log("[onSocketDisconnect] Ignoring, no socket", socketId);
+    log('[onSocketDisconnect] no SocketCommander', socketId, why);
   }
 });
 var onSocketMessage = Airbrake.wrap(function onSocketMessage(socketId, data) {
-  try {
-    var msg = JSON.parse(data);
-    if (Array.isArray(msg)) {
-      var id = msg.shift();
-      if (id > 0) {
-        var callback = socketCallbacks[id];
-        if (callback) {
-          delete socketCallbacks[id];
-          callback.apply(null, msg);
-        } else {
-          log("[api.socket.receive] Ignoring, no callback", id, msg);
-        }
-      } else {
-        var socket = sockets[socketId];
-        if (socket) {
-          var handler = socket.handlers[id];
-          if (handler) {
-            handler.apply(null, msg);
-          } else {
-            log("[api.socket.receive] Ignoring, no handler", id, msg);
-          }
-        } else {
-          log("[api.socket.receive] Ignoring, no socket", socketId, id, msg);
-        }
-      }
-    } else {
-      log("[api.socket.receive] Ignoring, not array", msg);
-    }
-  } catch (e) {
-    exports.log.error(e, "api.socket.receive:" + socketId + ":" + data);
+  var sc = socketCommanders[socketId];
+  if (sc) {
+    sc.onMessage(data);
+  } else {
+    log('[onSocketMessage] no SocketCommander', socketId, data);
   }
 });
+function isEmptyObj(o) {
+  for (var p in o) {
+    if (o.hasOwnProperty(p)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 exports.storage = require('sdk/simple-storage').storage;
 
 exports.tabs = {
   anyAt: function(url) {
     for each (let page in pages) {
-      if (page.url == url) {
+      if (page.url === url) {
         return page;
       }
     }
@@ -488,7 +454,7 @@ tabs
     if (!/^about:/.test(tab.url)) {
       if (page) {
         if (page.icon) {
-          icon.show(tab.window, url(page.icon));
+          icon.show(tab.window, self.data.url(page.icon));
         } else {
           icon.hide(tab.window);
         }
@@ -621,10 +587,10 @@ function onPageHide(tabId) {
     log('defining PageMod:', path, 'deps:', o);
     PageMod({
       include: urlRe,
-      contentStyleFile: o.styles.map(url),
-      contentScriptFile: o.scripts.map(url),
+      contentStyleFile: o.styles.map(self.data.url),
+      contentScriptFile: o.scripts.map(self.data.url),
       contentScriptWhen: arr[2] ? 'start' : 'ready',
-      contentScriptOptions: {dataUriPrefix: url(''), dev: exports.mode.isDev(), version: self.version},
+      contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
       attachTo: ['existing', 'top'],
       onAttach: Airbrake.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
         const tab = worker.tab;
@@ -678,7 +644,7 @@ var workerOnApiRequire = Airbrake.wrap(function workerOnApiRequire(page, worker,
   log('[api:require] tab:', page.id, o);
   mergeArr(page.injectedCss, o.styles);
   mergeArr(injectedJs, o.scripts);
-  worker.port.emit('api:inject', o.styles.map(load), o.scripts.map(load), callbackId);
+  worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
 });
 
 function emitQueuedMessages(page, worker) {

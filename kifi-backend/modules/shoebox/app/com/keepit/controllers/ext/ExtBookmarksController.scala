@@ -55,6 +55,7 @@ class ExtBookmarksController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo,
   rawBookmarkFactory: RawBookmarkFactory,
   rawKeepFactory: RawKeepFactory,
+  searchClient: SearchServiceClient,
   clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController{
 
@@ -178,6 +179,7 @@ class ExtBookmarksController @Inject() (
 
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
           bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)
+          searchClient.updateURIGraph()
         }
         Status(ACCEPTED)(JsNumber(0))
     }

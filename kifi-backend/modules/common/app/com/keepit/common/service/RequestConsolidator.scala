@@ -90,5 +90,10 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
     f
   }
 
+  def set(key: K, future: Future[T]): Unit = {
+    val now = System.currentTimeMillis
+    futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
+  }
+
   def clear() { futureRefMap.clear() }
 }
