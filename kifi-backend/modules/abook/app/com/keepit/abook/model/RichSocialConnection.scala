@@ -3,6 +3,7 @@ package com.keepit.abook.model
 
 import com.keepit.common.db.{ModelWithState, Id, State, States}
 import com.keepit.model.{User, SocialUserInfo, Invitation}
+import com.keepit.social.SocialNetworkType
 
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -17,13 +18,14 @@ case class RichSocialConnection(
 
   userId: Id[User],
   userSocialId: Option[Id[SocialUserInfo]],
-  connectionType: String, //needs typing
+  connectionType: SocialNetworkType,
   friendSocialId: Option[Id[SocialUserInfo]],
   friendEmailAddress: Option[String],
   friendUserId: Option[Id[User]],
-  localFriendCount: Int,
-  globalFriendCount: Int,
+  commonKifiFriendsCount: Int,
+  kifiFriendsCount: Int,
   invitation: Option[Id[Invitation]],
+  invitationCount: Int,
   blocked: Boolean
 ) extends ModelWithState[RichSocialConnection] {
 
