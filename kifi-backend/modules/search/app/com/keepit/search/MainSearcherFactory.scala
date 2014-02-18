@@ -148,9 +148,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
-    future {
-      resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, useS3FlowerFilter)
-    }
+    resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost, useS3FlowerFilter)
   }
 
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
