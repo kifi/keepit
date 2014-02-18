@@ -317,7 +317,8 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 					$timeout(scope.refreshHighlight);
 					scope.refreshScroll();
 				});
-				scope.$watch('tags', function () {
+
+				scope.$watch('tags.length', function () {
 					scope.refreshScroll();
 				});
 

@@ -3,12 +3,13 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env',
-	function ($http, env) {
+	'$http', 'env', '$q',
+	function ($http, env, $q) {
 
 		var list = [],
 			selected = {},
 			before = null,
+			end = false,
 			previewed = null,
 			limit = 30;
 
@@ -141,14 +142,24 @@ angular.module('kifi.keepService', [])
 					params: params
 				};
 
+				if (end) {
+					return $q.when([]);
+				}
+
 				return $http.get(url, config).then(function (res) {
 					var data = res.data,
 						keeps = data.keeps;
+					if (!(keeps && keeps.length)) {
+						end = true;
+					}
+
 					if (!data.before) {
 						list.length = 0;
 					}
+
 					list.push.apply(list, keeps);
 					before = list.length ? list[list.length - 1].id : null;
+
 					return list;
 				});
 			},

@@ -8,7 +8,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		$scope.me = profileService.me;
 		$scope.keeps = keepService.list;
 
-		$scope.$watch('keeps', function () {
+		$scope.$watch('keeps.length', function () {
 			$scope.refreshScroll();
 		});
 
@@ -20,6 +20,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 
 		$q.all([promise, tagService.fetchAll()]).then(function () {
 			$scope.loadingKeeps = false;
+			$scope.refreshScroll();
 			keepService.joinTags(keepService.list, tagService.list);
 		});
 
@@ -35,10 +36,11 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 			if ($scope.loadingKeeps) {
 				return null;
 			}
-
 			$scope.loadingKeeps = true;
+
 			return keepService.getList().then(function (list) {
 				$scope.loadingKeeps = false;
+				$scope.refreshScroll();
 				return list;
 			});
 		};
