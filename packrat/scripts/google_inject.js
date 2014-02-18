@@ -679,7 +679,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function processHit(hit) { // this is response in which hit arrived
     hit.uuid = this.uuid;
-    var matches = hit.bookmark.matches || {};
+    var matches = hit.bookmark.matches || (hit.bookmark.matches = {});
 
     hit.titleHtml = hit.bookmark.title ?
       boldSearchTerms(hit.bookmark.title, matches.title) :
