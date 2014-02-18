@@ -111,10 +111,9 @@ exports.log = function() {
 function log() {
   exports.log.apply(null, arguments)();
 }
-exports.log.error = function(exception, context) {
-  console.error((context ? "[" + context + "] " : "") + exception);
-  console.error(exception.stack);
-};
+function bindLogCall() {
+  return exports.log.bind(null, arguments)()
+}
 
 // TODO: actually toggle content script logging
 exports.toggleLogging = exports.noop = function () {};
@@ -243,32 +242,25 @@ exports.browser = {
 
 exports.requestUpdateCheck = exports.log.bind(null, '[requestUpdateCheck] unsupported');
 
-var socketPage, sockets = [,];
-var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
+const {SocketCommander} = require('./socket_commander');
+var socketPage, socketCommanders = {}, nextSocketId = 1;
 exports.socket = {
   open: function(url, handlers, onConnect, onDisconnect) {
-    var socketId = sockets.length, socket = {
-      seq: 0,
-      send: function(arr, callback) {
-        if (callback) {
-          var id = nextSocketCallbackId++;
-          socketCallbacks[id] = callback;
-          arr.splice(1, 0, id);
-        }
+    var socketId = nextSocketId++;
+    log('[api.socket.open]', socketId, url);
+    var sc = socketCommanders[socketId] = new SocketCommander({
+      send: function (arr) {
         socketPage.port.emit('socket_send', socketId, arr);
       },
       close: function() {
-        log('[api.socket.close]', socketId);
-        delete sockets[socketId];
         socketPage.port.emit('close_socket', socketId);
-        if (!sockets.some(function(h) {return h})) {
+        delete socketCommanders[socketId];
+        if (isEmptyObj(socketCommanders)) {
           socketPage.destroy();
           socketPage = null;
         }
-        this.send = this.close = exports.noop;
-      }};
-    log('[api.socket.open]', socketId, url);
-    sockets.push({socket: socket, handlers: handlers, onConnect: onConnect, onDisconnect: onDisconnect});
+      }
+    }, handlers, onConnect, onDisconnect, bindLogCall);
     if (socketPage) {
       socketPage.port.emit('open_socket', socketId, url);
     } else {
@@ -284,67 +276,41 @@ exports.socket = {
       socketPage.port.on('socket_disconnect', onSocketDisconnect);
       socketPage.port.on('socket_message', onSocketMessage);
     }
-    return socket;
+    return sc;
   }
 }
 var onSocketConnect = Airbrake.wrap(function onSocketConnect(socketId) {
-  var socket = sockets[socketId];
-  if (socket) {
-    socket.socket.seq++;
-    try {
-      socket.onConnect();
-    } catch (e) {
-      exports.log.error(e, "onSocketConnect:" + socketId);
-    }
+  var sc = socketCommanders[socketId];
+  if (sc) {
+    sc.onConnect();
   } else {
-    log("[onSocketConnect] Ignoring, no socket", socketId);
+    log('[onSocketConnect] no SocketCommander', socketId);
   }
 });
 var onSocketDisconnect = Airbrake.wrap(function onSocketDisconnect(socketId, why) {
-  var socket = sockets[socketId];
-  if (socket) {
-    try {
-      socket.onDisconnect(why);
-    } catch (e) {
-      exports.log.error(e, "onSocketDisconnect:" + socketId + ": " + why);
-    }
+  var sc = socketCommanders[socketId];
+  if (sc) {
+    sc.onDisconnect(why);
   } else {
-    log("[onSocketDisconnect] Ignoring, no socket", socketId);
+    log('[onSocketDisconnect] no SocketCommander', socketId, why);
   }
 });
 var onSocketMessage = Airbrake.wrap(function onSocketMessage(socketId, data) {
-  try {
-    var msg = JSON.parse(data);
-    if (Array.isArray(msg)) {
-      var id = msg.shift();
-      if (id > 0) {
-        var callback = socketCallbacks[id];
-        if (callback) {
-          delete socketCallbacks[id];
-          callback.apply(null, msg);
-        } else {
-          log("[api.socket.receive] Ignoring, no callback", id, msg);
-        }
-      } else {
-        var socket = sockets[socketId];
-        if (socket) {
-          var handler = socket.handlers[id];
-          if (handler) {
-            handler.apply(null, msg);
-          } else {
-            log("[api.socket.receive] Ignoring, no handler", id, msg);
-          }
-        } else {
-          log("[api.socket.receive] Ignoring, no socket", socketId, id, msg);
-        }
-      }
-    } else {
-      log("[api.socket.receive] Ignoring, not array", msg);
-    }
-  } catch (e) {
-    exports.log.error(e, "api.socket.receive:" + socketId + ":" + data);
+  var sc = socketCommanders[socketId];
+  if (sc) {
+    sc.onMessage(data);
+  } else {
+    log('[onSocketMessage] no SocketCommander', socketId, data);
   }
 });
+function isEmptyObj(o) {
+  for (var p in o) {
+    if (o.hasOwnProperty(p)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 exports.storage = require('sdk/simple-storage').storage;
 
