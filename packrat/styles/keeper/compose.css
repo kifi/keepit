@@ -91,6 +91,10 @@ a.kifi-compose-snapshot:active {
   color: #999;
   cursor: pointer;
 }
+.kifi-compose-tip::before,
+.kifi-compose-tip-alt::before {
+  content: attr(data-prefix);
+}
 .kifi-compose-tip.kifi-active {
   border-color: #d2d2d2;
   cursor: default;

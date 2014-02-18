@@ -3,7 +3,6 @@ package com.keepit.search
 
 import com.keepit.search.semantic._
 import com.keepit.search.semantic.SemanticVector.Sketch
-
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
@@ -28,6 +27,7 @@ import scala.collection.JavaConversions._
 import scala.math._
 import org.apache.lucene.search.Filter
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.Weight
 
 
 object Searcher {
@@ -59,17 +59,22 @@ class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[Inde
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
 
-  def doSearch(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
+  def createWeight(query: Query): Weight = {
     val rewrittenQuery = rewrite(query)
-    if (rewrittenQuery != null) {
-      val weight = createNormalizedWeight(rewrittenQuery)
-      if(weight != null) {
-        indexReader.getContext.leaves.foreach{ subReaderContext =>
-          val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
-          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
-          if (scorer != null) {
-            f(scorer, subReader)
-          }
+    if (rewrittenQuery != null) createNormalizedWeight(rewrittenQuery) else null
+  }
+
+  def doSearch(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
+    doSearch(createWeight(query: Query))(f)
+  }
+
+  def doSearch(weight: Weight)(f: (Scorer, WrappedSubReader) => Unit) {
+    if(weight != null) {
+      indexReader.getContext.leaves.foreach{ subReaderContext =>
+        val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+        val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
+        if (scorer != null) {
+          f(scorer, subReader)
         }
       }
     }

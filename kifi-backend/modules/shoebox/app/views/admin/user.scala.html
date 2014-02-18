@@ -133,12 +133,29 @@
 	    </li>
 	  </ul>
 	</div>
-  <h2>Search Social Contacts</h2>
+  <h2>Prefix Search</h2>
   <br/>
-    <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.AdminUserController.prefixSearch(user.id.get)">
-        <input type="text" name="query">
-        <input type="submit" value="Search">
-    </form>
+    <table>
+        <tr>
+            <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.AdminUserController.prefixSocialSearch(user.id.get)">
+                <input type="text" name="query">
+                <input type="submit" value="Search Social Connections">
+            </form>
+        </tr>
+        <tr>
+            <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.AdminUserController.prefixContactSearch(user.id.get)">
+                <input type="text" name="query">
+                <input type="submit" value="Search Contacts">
+            </form>
+        </tr>
+        <tr>
+            <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.AdminUserController.prefixSearch(user.id.get)">
+                <input type="text" name="query">
+                <input type="submit" value="Search All">
+            </form>
+        </tr>
+    </table>
+  <br/>
   <h2>User has uploaded @abookInfos.size Address Book(s)</h2>
   @if(abookInfos.size > 0) {
     <br/>

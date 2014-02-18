@@ -327,6 +327,8 @@ GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
 GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
+GET     /admin/user/:id/prefixSocialSearch  @com.keepit.controllers.admin.AdminUserController.prefixSocialSearch(id:Id[User], query:String ?= "")
+GET     /admin/user/:id/prefixContactSearch @com.keepit.controllers.admin.AdminUserController.prefixContactSearch(id:Id[User], query:String ?= "")
 POST    /admin/user/:user1/connect  @com.keepit.controllers.admin.AdminUserController.connectUsers(user1: Id[User])
 POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/bookmarks/:id/collections @com.keepit.controllers.admin.AdminUserController.updateCollectionsForBookmark(id: Id[Bookmark])

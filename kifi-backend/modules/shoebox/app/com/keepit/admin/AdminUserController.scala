@@ -654,24 +654,50 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    val abookF = abookClient.prefixSearch(userId, query)
+  private def prefixSocialSearchDirect(userId:Id[User], query:String):Future[Seq[SocialUserBasicInfo]] = {
     val socialFilterF = socialUserTypeahead.getPrefixFilter(userId) match {
       case Some(filter) => Future.successful(filter)
       case None => socialUserTypeahead.build(userId)
     }
-    val socialResF = socialFilterF map { filter =>
+    socialFilterF map { filter =>
       implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
       val resOpt = socialUserTypeahead.search(userId, query)
       log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
       resOpt getOrElse Seq.empty[SocialUserBasicInfo]
     }
+  }
+  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request => 
+    prefixSocialSearchDirect(userId, query) map { res =>
+      if (res.isEmpty)
+        Ok(s"No social match found for $query")
+      else
+        Ok(res.mkString("<br/>"))
+    }
+  }
 
+  private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
+    abookClient.prefixSearch(userId, query)
+  }
+  def prefixContactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+    prefixContactSearchDirect(userId, query) map { res =>
+      if (res.isEmpty)
+        Ok(s"No contact match found for $query")
+      else
+        Ok(res.mkString("<br/>"))
+    }
+  }
+
+  def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+    val contactResF = prefixContactSearchDirect(userId, query)
+    val socialResF = prefixSocialSearchDirect(userId, query)
     for {
       socialRes <- socialResF
-      econtactRes <- abookF
+      econtactRes <- contactResF
     } yield {
-      Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
+      if (socialRes.isEmpty && econtactRes.isEmpty)
+        Ok(s"No match found for $query")
+      else
+        Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
     }
   }
 
