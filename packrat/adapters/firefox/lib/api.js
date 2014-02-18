@@ -22,14 +22,14 @@ function mergeArr(o, arr) {
 }
 
 // TODO: load some of these APIs on demand instead of up front
-const self = require('sdk/self'), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
+const self = require('sdk/self');
 const timers = require("sdk/timers");
 const {Ci, Cc, Cu} = require('chrome');
-const {deps} = require("./deps");
+const {deps} = require('./deps');
 const {Airbrake} = require('./airbrake.min');
-const {Listeners} = require("./listeners");
+const {Listeners} = require('./listeners');
 const icon = require('./icon');
-const windows = require("sdk/windows").browserWindows;
+const windows = require('sdk/windows').browserWindows;
 const tabs = require('sdk/tabs');
 const workerNs = require('sdk/core/namespace').ns();
 
@@ -54,7 +54,7 @@ exports.icon = {
       log("[api.icon.set]", page.id, path);
       var tab = tabsById[page.id], win = tab.window;
       if (tab === win.tabs.activeTab) {
-        icon.show(win, url(path));
+        icon.show(win, self.data.url(path));
       }
     }
   }};
@@ -128,7 +128,7 @@ var nsISound, nsIIO;
 exports.play = function(path) {
   nsISound = nsISound || Cc["@mozilla.org/sound;1"].createInstance(Ci.nsISound);
   nsIIO = nsIIO || Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-  nsISound.play(nsIIO.newURI(url(path), null, null));
+  nsISound.play(nsIIO.newURI(self.data.url(path), null, null));
 };
 
 exports.popup = {
@@ -274,11 +274,11 @@ exports.socket = {
     } else {
       socketPage = require('sdk/page-worker').Page({
         contentScriptFile: [
-          data.url('scripts/lib/rwsocket.js'),
-          data.url("scripts/workers/socket.js")],
+          self.data.url('scripts/lib/rwsocket.js'),
+          self.data.url('scripts/workers/socket_worker.js')],
         contentScriptWhen: 'start',
         contentScriptOptions: {socketId: socketId, url: url},
-        contentURL: data.url('html/workers/socket.html')
+        contentURL: self.data.url('html/workers/socket_worker.html')
       });
       socketPage.port.on('socket_connect', onSocketConnect);
       socketPage.port.on('socket_disconnect', onSocketDisconnect);
@@ -351,7 +351,7 @@ exports.storage = require('sdk/simple-storage').storage;
 exports.tabs = {
   anyAt: function(url) {
     for each (let page in pages) {
-      if (page.url == url) {
+      if (page.url === url) {
         return page;
       }
     }
@@ -488,7 +488,7 @@ tabs
     if (!/^about:/.test(tab.url)) {
       if (page) {
         if (page.icon) {
-          icon.show(tab.window, url(page.icon));
+          icon.show(tab.window, self.data.url(page.icon));
         } else {
           icon.hide(tab.window);
         }
@@ -621,10 +621,10 @@ function onPageHide(tabId) {
     log('defining PageMod:', path, 'deps:', o);
     PageMod({
       include: urlRe,
-      contentStyleFile: o.styles.map(url),
-      contentScriptFile: o.scripts.map(url),
+      contentStyleFile: o.styles.map(self.data.url),
+      contentScriptFile: o.scripts.map(self.data.url),
       contentScriptWhen: arr[2] ? 'start' : 'ready',
-      contentScriptOptions: {dataUriPrefix: url(''), dev: exports.mode.isDev(), version: self.version},
+      contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
       attachTo: ['existing', 'top'],
       onAttach: Airbrake.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
         const tab = worker.tab;
@@ -678,7 +678,7 @@ var workerOnApiRequire = Airbrake.wrap(function workerOnApiRequire(page, worker,
   log('[api:require] tab:', page.id, o);
   mergeArr(page.injectedCss, o.styles);
   mergeArr(injectedJs, o.scripts);
-  worker.port.emit('api:inject', o.styles.map(load), o.scripts.map(load), callbackId);
+  worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
 });
 
 function emitQueuedMessages(page, worker) {
