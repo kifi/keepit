@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.model.{NotificationCategory, User}
+import com.keepit.model.{NormalizedURI, NotificationCategory, User}
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
@@ -27,6 +27,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
+  def alertAboutRekeeps(keeperUserId: Id[User], uriIds: Seq[Id[NormalizedURI]])
 
   def connectedClientCount: Future[Seq[Int]]
 
@@ -63,6 +64,14 @@ class ElizaServiceClientImpl @Inject() (
 
   def sendToAllUsers(data: JsArray): Unit = {
     broadcast(Eliza.internal.sendToAllUsers, data)
+  }
+
+  def alertAboutRekeeps(keeperUserId: Id[User], uriIds: Seq[Id[NormalizedURI]]) = {
+    implicit val userFormatter = Id.format[User]
+    implicit val uriFormatter = Id.format[NormalizedURI]
+
+    val payload = Json.obj("userId" -> keeperUserId, "uriIds" -> uriIds)
+    call(Eliza.internal.alertAboutRekeeps, payload)
   }
 
   def connectedClientCount: Future[Seq[Int]] = {
@@ -122,6 +131,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     val p = Promise.successful(Seq[Int](1))
     p.future
   }
+
+  def alertAboutRekeeps(keeperUserId: Id[User], uriIds: Seq[Id[NormalizedURI]]) = {}
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit = {}
 

@@ -36,7 +36,7 @@ class MessagingIndexCommander @Inject() (
     val participantBasicUsersFuture = shoebox.getBasicUsers(participants)
 
     val messages : Seq[Message] = db.readOnly{ implicit session =>
-      messageRepo.get(threadId, 0, None)
+      messageRepo.get(threadId)
     } sortWith { case (m1, m2) =>
       m1.createdAt.isAfter(m2.createdAt)
     } filter { message =>

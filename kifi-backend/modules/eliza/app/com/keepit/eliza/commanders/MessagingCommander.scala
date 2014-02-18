@@ -70,7 +70,7 @@ class MessagingCommander @Inject() (
     val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
     //get all messages
     val messagesByThread : Map[Id[MessageThread], Seq[Message]] = threads.map{ thread =>
-      (thread.id.get, getThreadMessages(thread, None))
+      (thread.id.get, getThreadMessages(thread))
     }.toMap
     //get user_threads
     val userThreads : Map[Id[MessageThread], UserThread] = db.readOnly{ implicit session => threads.map{ thread =>
@@ -498,37 +498,29 @@ class MessagingCommander @Inject() (
     (thread, message)
   }
 
-  def getThreadMessages(thread: MessageThread, pageOpt: Option[Int]) : Seq[Message] =
+  def getThreadMessages(thread: MessageThread) : Seq[Message] =
     db.readOnly { implicit session =>
-      log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}. pageOpt is $pageOpt")
-      pageOpt.map { page =>
-        val lower = MessagingCommander.THREAD_PAGE_SIZE * page
-        val upper = MessagingCommander.THREAD_PAGE_SIZE * (page + 1) - 1
-        log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. lu: $lower, $upper")
-        messageRepo.get(thread.id.get,lower,Some(upper))
-      } getOrElse {
-        log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. no l/u")
-        messageRepo.get(thread.id.get, 0, None)
-      }
+      log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. no l/u")
+      messageRepo.get(thread.id.get)
     }
 
 
-  private def getThreadMessages(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
+  private def getThreadMessages(threadExtId: ExternalId[MessageThread]) : Seq[Message] = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadExtId)
     }
-    getThreadMessages(thread, pageOpt)
+    getThreadMessages(thread)
   }
 
-  private def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
-    getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)), pageOpt)
+  private def getThreadMessages(threadId: Id[MessageThread]): Seq[Message] = {
+    getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)))
   }
 
-  private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  private def getThreadMessagesWithBasicUser(thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
-      val messages = getThreadMessages(thread, pageOpt)
+      val messages = getThreadMessages(thread)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
       (thread, messages.map { message =>
         val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
@@ -546,9 +538,9 @@ class MessagingCommander @Inject() (
     })
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val thread = db.readOnly(threadRepo.get(threadExtId)(_))
-    getThreadMessagesWithBasicUser(thread, pageOpt)
+    getThreadMessagesWithBasicUser(thread)
   }
 
   def getThread(threadExtId: ExternalId[MessageThread]) : MessageThread = {
@@ -1005,7 +997,7 @@ class MessagingCommander @Inject() (
       nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
     } yield {
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
-      val messageThreadFut = getThreadMessagesWithBasicUser(thread, None)
+      val messageThreadFut = getThreadMessagesWithBasicUser(thread)
 
       val threadInfoOpt = url.map { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
