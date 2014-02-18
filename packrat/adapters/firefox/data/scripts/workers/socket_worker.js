@@ -51,7 +51,7 @@ function socketSend(socketId, data) {
   var socket = sockets[socketId];
   if (socket) {
     log("[worker:socketSend]", socketId, data)();
-    socket.send(JSON.stringify(data));
+    socket.send(data);
   } else {
     console.error("[worker:socketSend] no socket", socketId, data);
   }
