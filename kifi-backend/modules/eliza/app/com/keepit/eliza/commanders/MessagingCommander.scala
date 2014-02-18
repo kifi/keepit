@@ -302,14 +302,15 @@ class MessagingCommander @Inject() (
     "ae5d159c-5935-4ad5-b979-ea280cb6c7ba", // eishay
     "dc6cb121-2a69-47c7-898b-bc2b9356054c", // andrew
     "772a9c0f-d083-44cb-87ce-de564cbbfa22", // yasu
-    "d3cdb758-27df-4683-a589-e3f3d99fa47b", // jared
+    "d3cdb758-27df-4683-a589-e3f3d99fa47b", // jared (of the jacobs variety)
     "6d8e337d-4199-49e1-a95c-e4aab582eeca", // yinjgie
     "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
     "9c211915-2413-4030-8efa-d7a9cfc77359", // joon
-    "1714ac86-4ce5-4083-b4c7-bb1e8292c373"  // martin
+    "1714ac86-4ce5-4083-b4c7-bb1e8292c373",  // martin
+    "fd187ca1-2921-4c60-a8c0-955065d454ab" // jared (of the petker variety)
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
