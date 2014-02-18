@@ -141,7 +141,7 @@ object ApplicationBuild extends Build {
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
-    "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
+    "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140", "-Xfuture")
 
   lazy val _routesImport = Seq(
     "com.keepit.common.db.{ExternalId, Id, State}",

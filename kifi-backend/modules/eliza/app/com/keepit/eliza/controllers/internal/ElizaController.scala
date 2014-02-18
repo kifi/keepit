@@ -62,6 +62,7 @@ class ElizaController @Inject() (
 
   def alertAboutRekeeps() = Action.async(parse.tolerantJson) { request =>
     future{
+      implicit val idFormat = Id.format[User]
       val req = request.body.asInstanceOf[JsObject]
       val keeperUserId = (req \ "userId").as[Id[User]]
       val uriIds = (req \ "uriIds").as[Seq[Id[NormalizedURI]]]

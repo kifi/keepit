@@ -136,11 +136,6 @@ class UserThreadRepoImpl @Inject() (
     def started = column[Boolean]("started", O.NotNull)
     def * = (id.?, createdAt, updatedAt, user, thread, uriId.?, lastSeen.?, unread, muted, lastMsgFromOther.?, lastNotification, notificationUpdatedAt, notificationLastSeen.?, notificationEmailed, replyable, lastActive.?, started) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
-
-    def gg = (id.?, createdAt, updatedAt, user, thread)
-
-    val p = gg._1.n
-
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
 
@@ -520,8 +515,8 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Option[Id[User]] = {
-    (for (row <- rows if row.thread===threadId && row.started === true) yield row.user).firstOption
+  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User] = {
+    (for (row <- rows if row.thread===threadId && row.started === true) yield row.user).first 
   }
 
 }
