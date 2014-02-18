@@ -25,7 +25,6 @@ class SocialUserTypeahead @Inject() (
   override val store: SocialUserTypeaheadStore,
   cache: SocialUserTypeaheadCache,
   socialConnRepo:SocialConnectionRepo,
-  socialUserBasicInfoCache: SocialUserBasicInfoCache,
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
