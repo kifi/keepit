@@ -8,14 +8,10 @@ var initCompose = (function() {
   var $composes = $();
   var prefix = CO_KEY + '-';
   var enterToSend;
-  var handlers = {
-    prefs: function (o) {
-      enterToSend = o.enterToSend;
-      updateKeyTip($composes);
-    }
-  };
-  api.port.on(handlers);
-  api.port.emit('prefs');
+  api.port.emit('prefs', function (o) {
+    enterToSend = o.enterToSend;
+    updateKeyTip($composes);
+  });
 
   return function ($c, opts) {
   'use strict';
@@ -328,7 +324,9 @@ var initCompose = (function() {
   };
 
   function updateKeyTip ($f) {
-    $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
-    $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
+    if (enterToSend != null) {
+      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
+      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
+    }
   }
 }());
