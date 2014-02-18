@@ -7,9 +7,9 @@
 		$date = $countdown.find('.kifi-date');
 
 	var year = 2014,
-		month = 2,
-		day = 15,
-		hour = 11;
+		month = 3,
+		day = 11,
+		hour = 12;
 
 	var relTime = new Date(Date.UTC(year, month - 1, day, hour + 8, 0, 0, 0));
 	if (relTime > new Date()) {

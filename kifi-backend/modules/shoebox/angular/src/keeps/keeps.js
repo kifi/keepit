@@ -24,14 +24,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 			keepService.joinTags(keepService.list, tagService.list);
 		});
 
-		$scope.previewing = null;
-
-		$scope.$watch(function () {
-			return keepService.previewing;
-		}, function (val) {
-			$scope.previewing = val;
-		});
-
 		$scope.getNextKeeps = function () {
 			if ($scope.loadingKeeps) {
 				return $q.when([]);
@@ -46,37 +38,16 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 			});
 		};
 
-		$scope.selectKeep = function (keep) {
-			return keepService.select(keep);
-		};
+		$scope.selectKeep = keepService.select;
+		$scope.unselectKeep = keepService.unselect;
+		$scope.isSelectedKeep = keepService.isSelected;
+		$scope.toggleSelectKeep = keepService.toggleSelect;
 
-		$scope.unselectKeep = function (keep) {
-			return keepService.unselect(keep);
-		};
+		$scope.toggleSelectAll = keepService.toggleSelectAll;
+		$scope.isSelectedAll = keepService.isSelectedAll;
 
-		$scope.isSelectedKeep = function (keep) {
-			return keepService.isSelected(keep);
-		};
-
-		$scope.toggleSelectKeep = function (keep) {
-			return keepService.toggleSelect(keep);
-		};
-
-		$scope.toggleSelectAll = function () {
-			return keepService.toggleSelectAll();
-		};
-
-		$scope.isSelectedAll = function () {
-			return keepService.isSelectedAll();
-		};
-
-		$scope.isPreviewedKeep = function (keep) {
-			return keepService.isPreviewed(keep);
-		};
-
-		$scope.togglePreviewKeep = function (keep) {
-			return keepService.togglePreview(keep);
-		};
+		$scope.isPreviewedKeep = keepService.isPreviewed;
+		$scope.togglePreviewKeep = keepService.togglePreview;
 	}
 ])
 
