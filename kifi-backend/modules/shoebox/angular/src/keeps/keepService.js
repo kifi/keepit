@@ -148,6 +148,7 @@ angular.module('kifi.keepService', [])
 						list.length = 0;
 					}
 					list.push.apply(list, keeps);
+					before = list.length ? list[list.length - 1].id : null;
 					return list;
 				});
 			},

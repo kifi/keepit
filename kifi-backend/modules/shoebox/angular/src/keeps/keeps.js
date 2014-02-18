@@ -12,8 +12,14 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 			$scope.refreshScroll();
 		});
 
-		var promise = keepService.getList();
+		$scope.loadingKeeps = true;
+		var promise = keepService.getList().then(function (list) {
+			$scope.loadingKeeps = false;
+			return list;
+		});
+
 		$q.all([promise, tagService.fetchAll()]).then(function () {
+			$scope.loadingKeeps = false;
 			keepService.joinTags(keepService.list, tagService.list);
 		});
 
@@ -24,6 +30,18 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		}, function (val) {
 			$scope.previewing = val;
 		});
+
+		$scope.getNextKeeps = function () {
+			if ($scope.loadingKeeps) {
+				return null;
+			}
+
+			$scope.loadingKeeps = true;
+			return keepService.getList().then(function (list) {
+				$scope.loadingKeeps = false;
+				return list;
+			});
+		};
 
 		$scope.selectKeep = function (keep) {
 			return keepService.select(keep);
@@ -183,7 +201,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 				};
 
 				scope.onScrollNext = function () {
-					console.log('onScrollNext');
+					scope.getNextKeeps();
 				};
 
 				scope.scrollDistance = '50%';
