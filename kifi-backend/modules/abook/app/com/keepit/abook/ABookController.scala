@@ -293,6 +293,35 @@ class ABookController @Inject() (
     }
   }
 
+  // todo(ray): move to commander
+  def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Future[Seq[EContact]] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
+    @inline def mkId(email:String) = s"email/$email"
+    val contacts = db.readOnly(attempts = 2) { implicit s =>
+      econtactRepo.getByUserId(userId)
+    }
+    val filteredF = search match {
+      case Some(query) if query.trim.length > 0 => prefixSearchDirect(userId, query)
+      case _ => Future.successful(contacts)
+    }
+    filteredF map { filtered =>
+      val paged = after match {
+        case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case _ => filtered
+      }
+      val eContacts = paged.take(limit)
+      log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
+      eContacts
+    }
+  }
+  def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = Action.async { request =>
+    prefixQueryDirect(userId, limit, search, after) map { eContacts =>
+      Ok(Json.toJson(eContacts))
+    }
+  }
+
   // todo: removeme (inefficient)
   def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]) = Action { request =>
     val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
