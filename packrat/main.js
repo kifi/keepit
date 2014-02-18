@@ -433,7 +433,7 @@ function emitThreadsToTabsViewing(kind, tl) {
 }
 
 function emitSettings(tab) {
-  api.tab.emit(tab, 'settings', {
+  api.tabs.emit(tab, 'settings', {
     sounds: enabled('sounds'),
     popups: enabled('popups'),
     emails: prefs ? prefs.messagingEmails : true,
