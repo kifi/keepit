@@ -17,9 +17,11 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
+import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.typeahead.TypeaheadHit
 import scala.concurrent.Future
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.common.akka.SafeFuture
+import java.text.Normalizer
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -299,13 +301,28 @@ class ABookController @Inject() (
   }
 
   implicit val ord = TypeaheadHit.defaultOrdering[EContact]
-  def prefixSearch(userId:Id[User], query:String) = Action.async { request =>
-    val filterF = typeahead.getPrefixFilter(userId) match {
-      case Some(filter) => Future.successful(filter)
-      case None => typeahead.build(userId)
+  def prefixSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = { // todo(ray): move to commander
+    if (query.trim.length > 0) {
+      val filterF = typeahead.getPrefixFilter(userId) match {
+        case Some(filter) => Future.successful(filter)
+        case None => typeahead.build(userId)
+      }
+      filterF map { filter =>
+        val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
+        log.info(s"[prefixSearch($userId,$query)] res=${res.mkString(",")}")
+        res
+      }
+    } else {
+      SafeFuture {
+        db.readOnly(attempts = 2) { implicit ro =>
+          econtactRepo.getByUserId(userId)
+        }
+      }
     }
-    filterF map { _ =>
-      val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
+  }
+
+  def prefixSearch(userId:Id[User], query:String) = Action.async { request =>
+    prefixSearchDirect(userId, query) map { res =>
       Ok(Json.toJson(res))
     }
   }

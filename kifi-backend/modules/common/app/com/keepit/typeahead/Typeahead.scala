@@ -3,12 +3,14 @@ package com.keepit.typeahead
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.performance._
 import com.keepit.model.User
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.duration._
+import com.keepit.common.logging.Logging
 
-trait Typeahead[E, I] {
+trait Typeahead[E, I] extends Logging {
 
   val store: PrefixFilterStore[User]
 
@@ -28,21 +30,28 @@ trait Typeahead[E, I] {
 
   protected def extractName(info: I): String
 
-  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = {
+  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search($userId,$query)") {
     if (query.trim.length > 0) {
-      getPrefixFilter(userId).flatMap{ filter =>
-        val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-        search(getInfos(filter.filterBy(queryTerms)), queryTerms)
+      getPrefixFilter(userId) match {
+        case None =>
+          log.warn(s"[search($userId,$query)] NO FILTER found")
+          None
+        case Some(filter) =>
+          val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+          search(getInfos(filter.filterBy(queryTerms)), queryTerms)
       }
     } else {
       None
     }
   }
 
+  // todo(ray): consolidator
   def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {
-        case None => Future.successful(None)
+        case None =>
+          log.warn(s"[asyncSearch($userId,$query)] NO FILTER found")
+          Future.successful(None)
         case Some(filter) =>
           val queryTerms = PrefixFilter.normalize(query).split("\\s+")
           asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
@@ -54,7 +63,7 @@ trait Typeahead[E, I] {
     }
   }
 
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = {
+  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search(${queryTerms.mkString(",")},#infos=${infos.length})") {
     if (queryTerms.length > 0) {
       var ordinal = 0
       val hits = infos.map{ info =>
@@ -72,11 +81,13 @@ trait Typeahead[E, I] {
   def build(id: Id[User]): Future[PrefixFilter[E]] = {
     consolidateBuildReq(id){ id =>
       SafeFuture {
-        val builder = new PrefixFilterBuilder[E]
-        getAllInfosForUser(id).foreach(info => builder.add(extractId(info), extractName(info)))
-        val filter = builder.build
-        store += (id -> filter.data)
-        filter
+        timing(s"build($id)") {
+          val builder = new PrefixFilterBuilder[E]
+          getAllInfosForUser(id).foreach(info => builder.add(extractId(info), extractName(info)))
+          val filter = builder.build
+          store += (id -> filter.data)
+          filter
+        }
       }
     }
   }
