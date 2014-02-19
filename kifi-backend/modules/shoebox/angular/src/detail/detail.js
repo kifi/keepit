@@ -18,9 +18,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.closeDetail = keepService.togglePreview.bind(null, null);
 				scope.conversationCount = null;
 
-				scope.$watch(function () {
-					return scope.getPreviewed();
-				}, function (keep) {
+				scope.$watch(scope.getPreviewed, function (keep) {
 					scope.keep = keep;
 				});
 
