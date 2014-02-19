@@ -16,8 +16,6 @@ angular.module('kifi.keep', [])
 			controller: 'KeepCtrl',
 			templateUrl: 'keep/keep.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				console.log(scope.keep);
-
 				scope.isMine = function () {
 					return scope.keep.isMyBookmark || false;
 				};
