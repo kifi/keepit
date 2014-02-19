@@ -80,4 +80,10 @@ class PageCommander @Inject() (
       nUriStr, bookmark.map { b => if (b.isPrivate) "private" else "public" }, tags.map(SendableTag.from),
       position, neverOnSite, sensitive, shown, keepers, keeps)
   }
+
+  def isSensitiveURI(uri: String): Boolean = {
+     val host: Option[String] = URI.parse(uri).get.host.map(_.name)
+     val domain: Option[Domain] = db.readOnly {implicit s => host.flatMap(domainRepo.get(_))}
+     domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
+  }
 }
