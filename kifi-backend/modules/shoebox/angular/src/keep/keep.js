@@ -148,6 +148,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 					return (user.firstName || '') + ' ' + (user.lastName || '');
 				};
 
+				scope.hasKeepers = function () {
+					var keep = scope.keep;
+					return !!(keep.keepers && keep.keepers.length);
+				};
+
 				scope.showOthers = function () {
 					return !scope.hasKeepers() && !! scope.keep.others;
 				};
