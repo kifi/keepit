@@ -10,28 +10,13 @@ angular.module('kifi.detail', ['kifi.keepService'])
 			restrict: 'A',
 			templateUrl: 'detail/detail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				scope.getLength = function () {
-					return keepService.getSelectedLength();
-				};
-
-				scope.showSingleKeep = function () {
-					return keepService.getPreviewed() && keepService.getSelectedLength() <= 1;
-				};
+				scope.showSingleKeep = keepService.isSingleKeep;
+				scope.getLength = keepService.getSelectedLength;
+				scope.getPreviewed = keepService.getPreviewed;
+				scope.getSelected = keepService.getSelected;
 
 				scope.getTitleText = function () {
-					var len = keepService.getSelectedLength();
-					if (len === 1) {
-						return keepService.getFirstSelected().title;
-					}
-					return len + ' Keeps selected';
-				};
-
-				scope.getPreviewed = function () {
-					return keepService.getPreviewed();
-				};
-
-				scope.getSelected = function () {
-					return keepService.getSelected();
+					return keepService.getSelectedLength() + ' Keeps selected';
 				};
 			}
 		};
