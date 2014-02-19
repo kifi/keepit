@@ -199,14 +199,19 @@ object UserToUserEdgeSet{
   }
 }
 
-abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI]
+abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI] {
+  def getPublicList: Option[URIList]
+  def getPrivateList: Option[URIList]
+}
 
 object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
-
     new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
       override val longArraySet = set
+
+      override def getPublicList = if (isPublicEdgeSet) Some(uriList) else None
+      override def getPrivateList = if (isPublicEdgeSet) None else Some(uriList)
 
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
         override def createdAtByIndex(idx:Int): Long = {
@@ -231,6 +236,9 @@ object UserToUriEdgeSet {
 
       new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
         override val longArraySet = set
+        override def getPublicList = Some(publicList)
+        override def getPrivateList = Some(privateList)
+
         override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
 
           override def createdAtByIndex(idx:Int): Long = {
@@ -254,6 +262,9 @@ object UserToUriEdgeSet {
     val pubListSize = publicList.size
     new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
       override protected val longArraySet = set
+      override def getPublicList = Some(publicList)
+      override def getPrivateList = Some(privateList)
+
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
         override protected def createdAtByIndex(idx:Int): Long = {
           val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)

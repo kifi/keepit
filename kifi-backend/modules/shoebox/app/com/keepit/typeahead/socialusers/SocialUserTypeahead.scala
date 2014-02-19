@@ -34,12 +34,12 @@ class SocialUserTypeahead @Inject() (
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
     db.readOnly { implicit session =>
-      socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toSeq
+      socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
     }
   }
 
   override protected def getAllInfosForUser(id: Id[User]): Seq[SocialUserBasicInfo] = {
-    val builder = mutable.ArrayBuilder.make[SocialUserBasicInfo]
+    val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnly { implicit session =>
       val infos = socialUserRepo.getSocialUserBasicInfosByUser(id)
       log.info(s"[getAllInfosForUser($id)] res=${infos.mkString(",")}")
@@ -51,7 +51,7 @@ class SocialUserTypeahead @Inject() (
     }
     val res = builder.result
     log.info(s"[getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
-    res.toSeq
+    res
   }
 
   override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id

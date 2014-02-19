@@ -307,16 +307,20 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    var onlyContainsOthersHits = false
+    val noFriendlyHits = (hits.size == 0)
 
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
         (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
-      val othersThreshold = othersHighScore * tailCutting
-      val othersNorm = max(highScore, othersHighScore)
       val queue = createQueue(numHitsToReturn - hits.size)
-      if (hits.size == 0) onlyContainsOthersHits = true
+      var othersThreshold = Float.NaN
+      var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
       othersHits.toSortedList.forall{ hit =>
+        if (rank == 0) {
+          // this may be the first hit from others. (re)compute the threshold and the norm.
+          othersThreshold = hit.score * tailCutting
+          othersNorm = max(highScore, othersHighScore)
+        }
         val h = hit.hit
         val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         if (score > othersThreshold) {
@@ -355,7 +359,7 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) =  if (filter.isDefault && isInitialSearch && (forbidEmptyFriendlyHits && onlyContainsOthersHits)) (false, -1f) else classify(hitList, personalizedSearcher)
+    val (show, svVar) =  if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, personalizedSearcher)
 
     val shardHits = toDetailedSearchHits(hitList)
     val collections = parser.collectionIds.map(getCollectionExternalId)
