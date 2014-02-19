@@ -218,9 +218,7 @@ angular.module('kifi.keepService', [])
 
 					return keeps;
 				}).then(function (list) {
-					if (list.length) {
-						api.fetchScreenshotUrls(list).then(api.prefetchImages);
-					}
+					api.fetchScreenshotUrls(list).then(api.prefetchImages);
 					return list;
 				});
 			},
@@ -239,12 +237,15 @@ angular.module('kifi.keepService', [])
 			},
 
 			fetchScreenshotUrls: function (keeps) {
-				var url = env.xhrBase + '/keeps/screenshot';
-				return $http.post(url, {
-					urls: _.pluck(keeps, 'url')
-				}).then(function (res) {
-					return res.data.urls;
-				});
+				if (keeps && keeps.length) {
+					var url = env.xhrBase + '/keeps/screenshot';
+					return $http.post(url, {
+						urls: _.pluck(keeps, 'url')
+					}).then(function (res) {
+						return res.data.urls;
+					});
+				}
+				return $q.when([]);
 			},
 
 			prefetchImages: function (urls) {
