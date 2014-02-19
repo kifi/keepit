@@ -23,8 +23,8 @@ class MonitoredExecutionContext(base: ExecutionContext) extends ExecutionContext
       def run() = {
         waiting.decrementAndGet()
         running.incrementAndGet()
-        runnable.run()
-        running.decrementAndGet()
+        try runnable.run()
+        finally running.decrementAndGet()
       }
     }
     base.execute(wrapped)
@@ -52,10 +52,12 @@ class ThrottledExecutionContext(base: ExecutionContext, maxTasks: Int) extends M
     def run() = {
       waiting.decrementAndGet()
       running.incrementAndGet()
-      runnable.run()
-      running.decrementAndGet()
-      submitted.decrementAndGet()
-      submitOne()
+      try runnable.run()
+      finally {
+        running.decrementAndGet()
+        submitted.decrementAndGet()
+        submitOne()
+      }
     }
   }
 
