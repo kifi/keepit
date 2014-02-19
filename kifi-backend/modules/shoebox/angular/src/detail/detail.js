@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText'])
 
 .directive('kfDetail', [
 	'keepService',
@@ -10,8 +10,9 @@ angular.module('kifi.detail', ['kifi.keepService'])
 			restrict: 'A',
 			templateUrl: 'detail/detail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				scope.showSingleKeep = keepService.isSingleKeep;
+				scope.isSingleKeep = keepService.isSingleKeep;
 				scope.getLength = keepService.getSelectedLength;
+				scope.isDetailOpen = keepService.isDetailOpen;
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
 
@@ -30,7 +31,8 @@ angular.module('kifi.detail', ['kifi.keepService'])
 			replace: true,
 			restrict: 'A',
 			templateUrl: 'detail/keepDetail.tpl.html',
-			link: function (scope /*, element, attrs*/ ) {}
+			link: function (scope /*, element, attrs*/ ) {
+			}
 		};
 	}
 ]);

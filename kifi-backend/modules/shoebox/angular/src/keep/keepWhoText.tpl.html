@@ -1,0 +1,10 @@
+<span class="kf-keep-who-text">
+	<span class="kf-keep-you">
+		You
+		<span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-if="hasKeepers()">Private</span>
+	</span>
+	<span class="kf-keep-friends" ng-if="hasKeepers()">{{getFriendText()}}</span>
+	<span class="kf-keep-others" ng-if="hasOthers()">{{getOthersText()}}</span>
+	<span class="kf-keep-kept-this">kept this</span>
+	<span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-if="isOnlyMine()">Private</span>
+</span>

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keep', [])
+angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 
 .controller('KeepCtrl', [
 	'$scope',
@@ -18,10 +18,6 @@ angular.module('kifi.keep', [])
 			link: function (scope /*, element, attrs*/ ) {
 				scope.isMine = function () {
 					return scope.keep.isMyBookmark || false;
-				};
-
-				scope.isPrivate = function () {
-					return scope.keep.isPrivate || false;
 				};
 
 				function hasExampleTag(tags) {
@@ -148,42 +144,12 @@ angular.module('kifi.keep', [])
 					return keep.title || keep.url;
 				};
 
-				scope.getPicUrl = function (user) {
-					return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
-				};
-
 				scope.getName = function (user) {
 					return (user.firstName || '') + ' ' + (user.lastName || '');
 				};
 
-				scope.hasKeepers = function () {
-					var keep = scope.keep;
-					return !!(keep.keepers && keep.keepers.length);
-				};
-
 				scope.showOthers = function () {
 					return !scope.hasKeepers() && !! scope.keep.others;
-				};
-
-				scope.getFriendText = function () {
-					var keepers = scope.keep.keepers,
-						len = keepers && keepers.length || 0;
-					if (keepers.length === 1) {
-						return '1 friend';
-					}
-					return len + ' friends';
-				};
-
-				scope.getOthersText = function () {
-					var others = scope.keep.others || 0;
-					if (others === 1) {
-						return '1 other';
-					}
-					return others + ' others';
-				};
-
-				scope.isOnlyMine = function () {
-					return !scope.hasKeepers() && !scope.keep.others;
 				};
 
 				scope.isSelected = function () {
