@@ -1,6 +1,8 @@
-@(userId: Id[User], limit: Int, feeds: Seq[com.keepit.search.feed.Feed])
+@(userId: Id[User], limit: Int, feeds: Seq[com.keepit.search.feed.Feed], elapsedSeconds: Float)
 
 @admin("Feeds"){
+	<div>Time elapsed: @elapsedSeconds seconds</div>
+	<br>
 
 	<table class = "table table-bordered">
 	<tr>
