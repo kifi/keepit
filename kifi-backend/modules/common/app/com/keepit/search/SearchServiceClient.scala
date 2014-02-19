@@ -17,6 +17,7 @@ import play.api.templates.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
+import com.keepit.search.feed.Feed
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -69,6 +70,8 @@ trait SearchServiceClient extends ServiceClient {
   def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
   def semanticLoss(query: String): Future[Map[String, Float]]
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
+
+  def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]]
 }
 
 class SearchServiceClientImpl(
@@ -277,5 +280,11 @@ class SearchServiceClientImpl(
   }
   def reindexUserGraphs(){
     broadcast(Search.internal.reindexUserGraphs())
+  }
+
+  def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]] = {
+    call(Search.internal.getFeeds(userId, limit)).map{ r =>
+      Json.fromJson[Seq[Feed]](r.json).get
+    }
   }
 }
