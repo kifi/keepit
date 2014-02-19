@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText'])
 
 .directive('kfDetail', [
 	'keepService',
