@@ -41,6 +41,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tileCount.className = "kifi-count";
 
   document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener(('mozHidden' in document ? 'moz' : 'webkit') + 'fullscreenchange', onFullScreenChange);
 
   api.port.emit('me', onMeChange);
   api.port.on({
@@ -114,6 +115,7 @@ var tile = tile || function() {  // idempotent for Chrome
       showUnsilenced();
     })
   });
+
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
       switch (e.keyCode) {
@@ -151,6 +153,14 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       }
+    }
+  }
+
+  function onFullScreenChange(e) {
+    if (document[e.type[0] === 'm' ? 'mozFullScreenElement' : 'webkitFullscreenElement']) {
+      tile.setAttribute('kifi-fullscreen', '');
+    } else {
+      tile.removeAttribute('kifi-fullscreen');
     }
   }
 
