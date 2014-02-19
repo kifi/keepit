@@ -56,7 +56,12 @@ angular.module('kifi.keepService', [])
 			},
 
 			togglePreview: function (keep) {
-				if (api.isPreviewed(keep)) {
+				if (api.isPreviewed(keep) && _.size(selected) > 1) {
+					previewed = null;
+					isDetailOpen = true;
+					singleKeepBeingPreviewed = false;
+					return null;
+				} else if (api.isPreviewed(keep)) {
 					return api.preview(null);
 				}
 				return api.preview(keep);
@@ -222,6 +227,22 @@ angular.module('kifi.keepService', [])
 					keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
 						return idMap[tagId] || null;
 					});
+				});
+			},
+
+			getChatter: function (keep) {
+				var url = env.xhrBaseEliza + '/chatter';
+
+				var config = {
+					params: {
+						url: keep.url
+					}
+				};
+
+				return $http.get(url, config).then(function (res) {
+					var data = res.data,
+					console.log(res, data);
+					return null;
 				});
 			}
 		};
