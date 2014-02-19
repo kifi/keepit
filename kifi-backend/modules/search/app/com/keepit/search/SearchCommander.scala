@@ -82,8 +82,6 @@ class SearchCommanderImpl @Inject() (
     // fetch user data in background
     val prefetcher = fetchUserDataInBackground(userId)
 
-    log.info(s"""User ${userId} searched ${query.length} characters""")
-
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val (config, searchExperimentId) = predefinedConfig match {
       case None => searchConfigManager.getConfig(userId, experiments)
