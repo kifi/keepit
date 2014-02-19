@@ -3,8 +3,8 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env', '$q',
-	function ($http, env, $q) {
+	'$http', 'env', '$q', '$document',
+	function ($http, env, $q, $document) {
 
 		var list = [],
 			selected = {},
@@ -13,7 +13,8 @@ angular.module('kifi.keepService', [])
 			previewed = null,
 			limit = 30,
 			isDetailOpen = false,
-			singleKeepBeingPreviewed = false;
+			singleKeepBeingPreviewed = false,
+			previewUrls = {};
 
 		function getKeepId(keep) {
 			if (keep) {
@@ -32,7 +33,7 @@ angular.module('kifi.keepService', [])
 				return isDetailOpen;
 			},
 
-			isSingleKeep: function() {
+			isSingleKeep: function () {
 				return singleKeepBeingPreviewed;
 			},
 
@@ -45,14 +46,16 @@ angular.module('kifi.keepService', [])
 			},
 
 			preview: function (keep) {
-				if (keep === null) {
+				if (keep == null) {
 					singleKeepBeingPreviewed = false;
 					isDetailOpen = false;
-				} else {
+				}
+				else {
 					singleKeepBeingPreviewed = true;
 					isDetailOpen = true;
 				}
-				return previewed = keep;
+				previewed = keep;
+				return keep;
 			},
 
 			togglePreview: function (keep) {
@@ -82,7 +85,8 @@ angular.module('kifi.keepService', [])
 					selected[id] = true;
 					if (_.size(selected) === 1) {
 						api.preview(keep);
-					} else {
+					}
+					else {
 						previewed = null;
 						singleKeepBeingPreviewed = false;
 					}
@@ -98,9 +102,11 @@ angular.module('kifi.keepService', [])
 					var countSelected = _.size(selected);
 					if (countSelected === 0 && isDetailOpen === true) {
 						api.preview(keep);
-					} else if (countSelected === 1 && isDetailOpen === true) {
+					}
+					else if (countSelected === 1 && isDetailOpen === true) {
 						api.preview(_.keys(selected)[0]);
-					} else {
+					}
+					else {
 						previewed = null;
 						singleKeepBeingPreviewed = false;
 					}
@@ -149,9 +155,11 @@ angular.module('kifi.keepService', [])
 				}, {});
 				if (list.length === 0) {
 					api.clearState();
-				} else if (list.length === 1) {
+				}
+				else if (list.length === 1) {
 					api.preview(list[0]);
-				} else {
+				}
+				else {
 					previewed = null;
 					isDetailOpen = true;
 					singleKeepBeingPreviewed = false;
@@ -201,8 +209,8 @@ angular.module('kifi.keepService', [])
 
 				return $http.get(url, config).then(function (res) {
 					var data = res.data,
-						keeps = data.keeps;
-					if (!(keeps && keeps.length)) {
+						keeps = data.keeps || [];
+					if (!keeps.length) {
 						end = true;
 					}
 
@@ -213,6 +221,9 @@ angular.module('kifi.keepService', [])
 					list.push.apply(list, keeps);
 					before = list.length ? list[list.length - 1].id : null;
 
+					return keeps;
+				}).then(function (list) {
+					api.fetchScreenshotUrls(list).then(api.prefetchImages);
 					return list;
 				});
 			},
@@ -244,6 +255,28 @@ angular.module('kifi.keepService', [])
 					console.log(res, data);
 					return null;
 				});
+			},
+
+			fetchScreenshotUrls: function (keeps) {
+				if (keeps && keeps.length) {
+					var url = env.xhrBase + '/keeps/screenshot';
+					return $http.post(url, {
+						urls: _.pluck(keeps, 'url')
+					}).then(function (res) {
+						return res.data.urls;
+					});
+				}
+				return $q.when([]);
+			},
+
+			prefetchImages: function (urls) {
+				for (var i = 0, l = urls.length, url; i < l; i++) {
+					url = urls[i];
+					if (previewUrls[url] !== true) {
+						previewUrls[url] = true;
+						$document.createElement('img').src = urls[i];
+					}
+				}
 			}
 		};
 

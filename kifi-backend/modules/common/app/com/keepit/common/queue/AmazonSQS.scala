@@ -6,6 +6,7 @@ import scala.collection.JavaConversions._
 import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
 
+//@deprecated("In favor of FormattedSQSQueue, see SimpleQueueModule.scala", "Feb 19 2014")
 class AmazonSQS(val client:AmazonSQSClient) extends SimpleQueueService with Logging {
   def create(name: String) = {
     client.createQueue(new CreateQueueRequest(name)).getQueueUrl
@@ -31,12 +32,14 @@ class AmazonSQS(val client:AmazonSQSClient) extends SimpleQueueService with Logg
   }
 }
 
+
 object AmazonSQSQueue {
   val SENT_TS = "SentTimestamp"
   val APPROX_FIRST_RECEIVE_TS = "ApproximateFirstReceiveTimestamp"
 }
 
 import AmazonSQSQueue._
+//@deprecated("In favor of FormattedSQSQueue, see SimpleQueueModule.scala", "Feb 19 2014")
 class AmazonSQSQueue(override val queueUrl:String, override val name:String, client:AmazonSQSClient) extends SimpleQueue with Logging {
 
   def delete(msgHandle: String): Unit = {
