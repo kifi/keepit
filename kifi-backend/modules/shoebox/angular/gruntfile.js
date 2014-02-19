@@ -48,7 +48,7 @@ module.exports = function (grunt) {
 				],
 				libJs: [
 					'lib/lodash/dist/lodash.js',
-					'lib/jquery/jquery.js',
+					'lib/jquery/dist/jquery.js',
 					'lib/angular/angular.js',
 					'lib/angular-cookies/angular-cookies.js',
 					'lib/angular-resource/angular-resource.js',
@@ -66,7 +66,7 @@ module.exports = function (grunt) {
 				],
 				libMinJs: [
 					'lib/lodash/dist/lodash.min.js',
-					'lib/jquery/jquery.min.js',
+					'lib/jquery/dist/jquery.min.js',
 					'lib/angular/angular.min.js',
 					'lib/angular-cookies/angular-cookies.min.js',
 					'lib/angular-resource/angular-resource.min.js',

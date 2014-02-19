@@ -168,7 +168,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 
 				scope.setLoading();
 
-				scope.preview = function (keep, $event) {
+				scope.togglePreview = function (keep, $event) {
 					if ($event.target.tagName !== 'A') {
 						scope.togglePreviewKeep(keep);
 					}
