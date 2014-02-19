@@ -5,8 +5,11 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
+import scala.concurrent._
+import scala.concurrent.duration._
 import scala.math._
 import scala.util.Random
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 abstract class ResultClickBoosts {
@@ -52,12 +55,17 @@ class ResultClickTracker(lru: ProbablisticLRU) {
   }
 
   def getBoosts(userId: Id[User], query: String, maxBoost: Float, useSlaveAsPrimary: Boolean = false): ResultClickBoosts = {
+    Await.result(getBoostsFuture(userId, query, maxBoost, useSlaveAsPrimary), 10 seconds)
+  }
+
+  def getBoostsFuture(userId: Id[User], query: String, maxBoost: Float, useSlaveAsPrimary: Boolean = false): Future[ResultClickBoosts] = {
     val hash = QueryHash(userId, query, analyzer)
-    val probe = lru.get(hash, useSlaveAsPrimary)
-    new ResultClickBoosts {
-      def apply(value: Long) = {
-        val count = probe.count(value)
-        if (count > 1) { 1.0f + maxBoost * boostFactor(count) } else { 1.0f }
+    lru.getFuture(hash, useSlaveAsPrimary).map{ probe =>
+      new ResultClickBoosts {
+        def apply(value: Long) = {
+          val count = probe.count(value)
+          if (count > 1) { 1.0f + maxBoost * boostFactor(count) } else { 1.0f }
+        }
       }
     }
   }

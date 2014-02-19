@@ -56,8 +56,8 @@ class ExtSearchEventController @Inject() (
           val kifiHitContext = (json \ "hit").as[KifiHitContext]
           shoeboxClient.getNormalizedURIByURL(searchResultUrl).onSuccess { case Some(uri) =>
             val uriId = uri.id.get
-            clickHistoryTracker.add(userId, ClickedURI(uriId))
             resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
+            clickHistoryTracker.add(userId, ClickedURI(uriId))
             if (kifiHitContext.isOwnKeep) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, kifiHitContext.keepers: _*)
           }
           searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), contextBuilder)
@@ -69,8 +69,8 @@ class ExtSearchEventController @Inject() (
             shoeboxClient.getNormalizedURIByURL(url).onSuccess {
               case Some(uri) =>
                 val uriId = uri.id.get
-                clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
                 resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
+                clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
               case None =>
                 resultClickedTracker.moderate(userId, query)
             }

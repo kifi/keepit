@@ -338,7 +338,7 @@ class UserCommander @Inject() (
       } getOrElse ""
     }
 
-    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
+    abookServiceClient.prefixQuery(userId, limit, search, after) map { paged =>
       val objs = paged.take(limit).map { e =>
         Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
@@ -349,7 +349,7 @@ class UserCommander @Inject() (
 
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
 
-  // todo(eishay): legacy api -- to be replaced after removing dependencies
+  // todo(ray):removeme
   def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)

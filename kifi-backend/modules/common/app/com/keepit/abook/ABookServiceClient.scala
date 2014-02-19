@@ -51,6 +51,7 @@ trait ABookServiceClient extends ServiceClient {
   def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
+  def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
 }
 
 
@@ -188,6 +189,12 @@ class ABookServiceClientImpl @Inject() (
       Json.fromJson[Seq[EContact]](r.json).get
     }
   }
+
+  def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
+    call(ABook.internal.prefixQuery(userId, limit, search, after)).map { r =>
+      Json.fromJson[Seq[EContact]](r.json).get
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -233,4 +240,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 
   def prefixSearch(userId: Id[User], query: String): Future[Seq[EContact]] = ???
+
+  def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 }

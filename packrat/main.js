@@ -10,7 +10,6 @@ var THREAD_BATCH_SIZE = 8;
 //                          | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
 var domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
 var hostRe = /^https?:\/\/([^\/]+)/;
-var locatorTypeRe = /[a-z]+\/?/;
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
@@ -308,8 +307,8 @@ var socketHandlers = {
     clearSession();
   },
   version: function(v) {
-    log("[socket:version]", v)();
-    if (api.version != v) {
+    log('[socket:version]', v)();
+    if (api.version !== v) {
       api.requestUpdateCheck();
     }
   },
@@ -713,6 +712,60 @@ api.port.on({
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab);
   },
+  thread: function(id, _, tab) {
+    var th = threadsById[id];
+    if (th) {
+      emitThreadInfoToTab(th, tab);
+    } else {
+      // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
+      socket.send(['get_thread_info', id]);
+    }
+    var msgs = messageData[id];
+    if (msgs) {
+      emitThreadToTab(id, msgs, tab);
+    } else {
+      // TODO: remember that this tab needs this thread until it gets it or its pane changes?
+      socket.send(['get_thread', id]);
+    }
+  },
+  thread_list: function(o, _, tab) {
+    var uri = tab.nUri || tab.url;
+    var tl = threadLists[o.kind === 'page' ? uri : o.kind];
+    if (tl) {
+      if (o.kind === 'unread') { // detect, report, recover from unread threadlist constistency issues
+        if (tl.ids.map(idToThread).filter(isUnread).length < tl.ids.length) {
+          getLatestThreads();
+          Airbrake.push({error: Error('Read threads found in threadLists.unread'), params: {
+            threads: tl.ids.map(idToThread).map(function (th) {
+              return {thread: th.thread, id: th.id, time: th.time, unread: th.unread, readAt: threadReadAt[th.thread]};
+            })
+          }});
+          return;
+        } else if (tl.ids.length === 0 && tl.numTotal > 0) {
+          socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
+          Airbrake.push({error: Error('No unread threads available to show'), params: {threadList: tl}});
+          return;
+        }
+      }
+      emitThreadsToTab(o.kind, tl, tab);
+      if (o.kind === 'page') {  // prefetch
+        tl.ids.forEach(function (id) {
+          if (!messageData[id]) {
+            socket.send(['get_thread', id]);
+          }
+        });
+      }
+    } else {
+      // TODO: remember that this tab needs the kind threadlist until it gets it or its pane changes?
+    }
+    if (o.first) {
+      if (!threadLists[uri]) {
+        socket.send(['get_page_threads', tab.url, THREAD_BATCH_SIZE], gotPageThreads.bind(null, uri));
+      }
+      sendUnreadThreadCount(tab);
+      sendPageThreadCount(tab);
+    }
+  },
   get_older_threads: function(o, respond, tab) {
     var list = threadLists[o.kind === 'page' ? tab.nUri : o.kind];
     var n = list ? list.ids.length : 0;
@@ -767,10 +820,7 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[loc] = arr || [tab];
-
-      var type = locatorTypeRe.exec(loc)[0];
-      (pushPaneData[type] || api.noop)(tab, loc);
-      mixpanel.track('user_viewed_pane', {type: type === 'messages/' ? 'chat' : loc.substr(1)});
+      mixpanel.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
     }
   },
   set_all_threads_read: function (msgId) {
@@ -788,6 +838,9 @@ api.port.on({
   },
   prefs: function(_, respond) {
     respond(prefs);
+  },
+  settings: function(_, __, tab) {
+    emitSettings(tab);
   },
   save_setting: function(o, respond, tab) {
     if (o.name === 'emails') {
@@ -971,65 +1024,6 @@ api.port.on({
     }
   }
 });
-
-var pushPaneData = {
-  messages: function (tab, loc) {
-    var uri = tab.nUri || tab.url;
-    var kind = loc[9] === ':' ? loc.substr(10) : 'page';
-    var listKey = kind === 'page' ? uri : kind;
-    var tl = threadLists[listKey];
-    if (tl) {
-      if (kind === 'unread') { // detect, report, recover from unread threadlist constistency issues
-        if (tl.ids.map(idToThread).filter(isUnread).length < tl.ids.length) {
-          getLatestThreads();
-          Airbrake.push({error: Error('Read threads found in threadLists.unread'), params: {
-            threads: tl.ids.map(idToThread).map(function (th) {
-              return {thread: th.thread, id: th.id, time: th.time, unread: th.unread, readAt: threadReadAt[th.thread]};
-            })
-          }});
-          return;
-        } else if (tl.ids.length === 0 && tl.numTotal > 0) {
-          socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
-          Airbrake.push({error: Error('No unread threads available to show'), params: {threadList: tl}});
-          return;
-        }
-      }
-      emitThreadsToTab(kind, tl, tab);
-      if (kind === 'page') {  // prefetch
-        tl.ids.forEach(function (id) {
-          if (!messageData[id]) {
-            socket.send(['get_thread', id]);
-          }
-        });
-      }
-    } else {
-      // TODO: remember that this tab needs the kind threadlist until it gets it or its pane changes?
-    }
-    if (!threadLists[uri]) {
-      socket.send(['get_page_threads', tab.url, THREAD_BATCH_SIZE], gotPageThreads.bind(null, uri));
-    }
-    sendUnreadThreadCount(tab);
-    sendPageThreadCount(tab);
-  },
-  'messages/': function (tab, loc) {
-    var id = loc.substr(10);
-    var th = threadsById[id];
-    if (th) {
-      emitThreadInfoToTab(th, tab);
-    } else {
-      // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id]);
-    }
-    var msgs = messageData[id];
-    if (msgs) {
-      emitThreadToTab(id, msgs, tab);
-    } else {
-      // TODO: remember that this tab needs this thread until it gets it or its pane changes?
-      socket.send(['get_thread', id]);
-    }
-  },
-  settings: emitSettings
-};
 
 function unsilence(tab) {
   if (silence) {
@@ -1626,6 +1620,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
     pt = new ThreadList(threadsById, threads.map(getThreadId), numTotal, null);
   }
   pt.includesOldest = threads.length < THREAD_BATCH_SIZE;
+  threadLists[nUri] = pt;
 
   // sending new page threads and count to any tabs on this page with pane open to page threads
   forEachTabAtUriAndLocator(uri, nUri, '/messages', emitThreadsToTab.bind(null, 'page', pt));

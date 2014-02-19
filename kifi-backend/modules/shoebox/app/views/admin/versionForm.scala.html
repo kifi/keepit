@@ -2,7 +2,7 @@
 
 @import com.keepit.common.store._
 
-@admin("Latest KiFi Extension Version", stylesheets = List("admin_slider")) {
+@admin("Latest Kifi Extension Version", stylesheets = List("admin_slider")) {
   <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
 
 <style>
@@ -70,7 +70,7 @@
   font-family: arial;
   font-size: 30px;
   font-weight: bold;
-  padding: 0px 20px 0px 20px;
+  padding: 0 6px 0 8px;
 }
 .unnuke {
   font-size: 10px;
@@ -111,7 +111,7 @@ td.old-version {
         <td>@adminHelper.dateTimeDisplay(version._2)</td>
         <td>@version._3</td>
         <td>@if(details.killed.contains(version._1)) {
-          <span class="nuked">☠</span> <a class="unnuke" href="javascript:">(un-kill it?)</span>
+          <span class="nuked">☠</span> <a class="unnuke" href="javascript:">resurrect</span>
         } else {
           <a href="#" class="gold">make it gold!</a> <a href="#" class="nuke">毙 kill it</a>
         }</td>
