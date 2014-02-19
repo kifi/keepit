@@ -30,7 +30,8 @@ angular.module('kifi.detail', ['kifi.keepService'])
 			replace: true,
 			restrict: 'A',
 			templateUrl: 'detail/keepDetail.tpl.html',
-			link: function (scope /*, element, attrs*/ ) {}
+			link: function (scope /*, element, attrs*/ ) {
+			}
 		};
 	}
 ]);

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keep', [])
+angular.module('kifi.keep', ['kifi.keepWhoPics'])
 
 .controller('KeepCtrl', [
 	'$scope',
@@ -146,10 +146,6 @@ angular.module('kifi.keep', [])
 				scope.getTitle = function () {
 					var keep = scope.keep;
 					return keep.title || keep.url;
-				};
-
-				scope.getPicUrl = function (user) {
-					return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
 				};
 
 				scope.getName = function (user) {
