@@ -490,10 +490,8 @@
 								<div class="invites-left">Invites Left <span class="num-invites"></span></div>
 							</div>
 
-							<div class="dialog invite-message-dialog" style="display:none">
-								<form method="POST" action="/invite" class="dialog-content" data-template>
-									<div class="dialog-header">Your Kifi invite to {{label}}</div>
-									<a href="javascript:" class="invite-cancel">×</a>
+							<div class="invite-message-form" style="display:none">
+								<form method="POST" action="/invite" data-template>
 									<input type="hidden" name="fullSocialId" value="{{fullSocialId}}">
 									<input class="invite-subject" type="text" name="subject" value="Join me on kifi">
 									<textarea class="invite-message" name="message">Hi{% if label %} {{label | replace ' .*', '' }}{% endif %},
@@ -506,8 +504,6 @@ Kifi (short for keep it find it) allows you to easily keep and tag anything you 
 Kifi also lets you message your friends about what you keep and find alongside any webpage, to get their opinion or gain from their expertise.
 {% endif %}
 </textarea>
-									<p>An invitation link will be attached to this message.</p>
-									<button class="invite-send" type="submit">Invite {{label | replace ' .*', '' }}</button>
 								</form>
 							</div>
 
