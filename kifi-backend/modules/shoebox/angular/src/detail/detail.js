@@ -31,6 +31,9 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 		return {
 			replace: true,
 			restrict: 'A',
+			scope: {
+				keep: '='
+			},
 			templateUrl: 'detail/keepDetail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
 			}
