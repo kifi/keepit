@@ -17,8 +17,10 @@ class AdminFeedController @Inject()(
   searchClient: SearchServiceClient
 ) extends AdminController(actionAuthenticator) {
 
-  def getFeeds(userId: Id[User], limit: Int = 20) = AdminHtmlAction.authenticated { implicit request =>
+  def getFeeds(userId: Id[User], limit: Int) = AdminHtmlAction.authenticated { implicit request =>
+    val start = System.currentTimeMillis()
     val feeds = Await.result(searchClient.getFeeds(userId, limit), 5 seconds)
-    Ok(html.admin.feeds(userId, limit, feeds))
+    val elapsedSeconds = (System.currentTimeMillis() - start)/1000f
+    Ok(html.admin.feeds(userId, limit, feeds, elapsedSeconds))
   }
 }
