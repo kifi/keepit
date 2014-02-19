@@ -10,8 +10,9 @@ angular.module('kifi.detail', ['kifi.keepService'])
 			restrict: 'A',
 			templateUrl: 'detail/detail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				scope.showSingleKeep = keepService.isSingleKeep;
+				scope.isSingleKeep = keepService.isSingleKeep;
 				scope.getLength = keepService.getSelectedLength;
+				scope.isDetailOpen = keepService.isDetailOpen;
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
 
