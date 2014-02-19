@@ -14,15 +14,28 @@ import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.user.UserGraphsCommander
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
+import com.keepit.search.graph.bookmark.URIGraphCommanderFactory
 
-@ImplementedBy(classOf[FeedCommanderImpl])
+
+class FeedCommanderFactory @Inject()(
+  uriGraphCommanderFactory: URIGraphCommanderFactory,
+  userGraphsCommander: UserGraphsCommander,
+  shoeboxClient: ShoeboxServiceClient,
+  feedMetaInfoProvider: FeedMetaInfoProvider
+){
+  def apply(userId: Id[User]): FeedCommander = {
+    val ugCmdr = uriGraphCommanderFactory(userId)
+    new FeedCommanderImpl(userGraphsCommander, ugCmdr, shoeboxClient, feedMetaInfoProvider)
+  }
+}
+
+
 trait FeedCommander {
   def getFeeds(userId: Id[User], limit: Int): Seq[Feed]
   def getFeeds(userId: Id[User], pageNum: Int, pageSize: Int): Seq[Feed]
 }
 
-@Singleton
-class FeedCommanderImpl @Inject()(
+class FeedCommanderImpl(
   userGraphsCommander: UserGraphsCommander,
   uriGraphCommander: URIGraphCommander,
   shoeboxClient: ShoeboxServiceClient,
