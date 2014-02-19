@@ -428,6 +428,8 @@ GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperim
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
 
+GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int = 10)
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
