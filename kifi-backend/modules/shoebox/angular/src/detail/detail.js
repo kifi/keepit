@@ -16,6 +16,13 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
 				scope.closeDetail = keepService.togglePreview.bind(null, null);
+				scope.conversationCount = null;
+
+				scope.$watch(function () {
+					return scope.getPreviewed();
+				}, function (keep) {
+					scope.keep = keep;
+				});
 
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';

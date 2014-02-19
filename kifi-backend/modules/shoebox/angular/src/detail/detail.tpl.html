@@ -3,7 +3,7 @@
 		<div class="kf-detail-inner {{howKept}}">
 			<a class="kf-detail-x" href="javascript:" ng-click="closeDetail()"></a>
 			<div class="kf-page-meta" data-n="{{getLength()}}">
-				<div kf-keep-detail keep="getPreviewed()" ng-if="isSingleKeep()"></div>
+				<div kf-keep-detail keep="keep" ng-if="isSingleKeep()"></div>
 				<h2 class="kf-detail-header page-title" ng-hide="isSingleKeep()" ng-bind="getTitleText()"></h2>
 				<a class="kf-page-keep" href="javascript:"></a>
 				<a class="kf-page-priv" href="javascript:"></a>
@@ -12,13 +12,13 @@
 				<div class="kf-page-who">
 					<h2 class="kf-detail-header">Who kept this:</h2>
 					<div class="kf-page-who-pics">
-						<span kf-keep-who-pics me="me" keepers="getPreviewed().keepers"></span>
+						<span kf-keep-who-pics me="me" keepers="keep.keepers"></span>
 					</div>
-					<div class="kf-page-who-text" keep="getPreviewed()"></div>
+					<div class="kf-page-who-text" keep="keep"></div>
 				</div>
 				<div class="kf-page-chatter">
 					<h2 class="kf-detail-header">Talking about this Keep:</h2>
-					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
+					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-locator="/messages"><span class="chatter-count">{{keep.conversationCount || 0}}</span>Private Conversation</a>
 				</div>
 			</div>
 			<div class="page-colls" ng-class="{ some: collections.length }">

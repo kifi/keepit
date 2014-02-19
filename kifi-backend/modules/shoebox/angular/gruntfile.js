@@ -268,6 +268,9 @@ module.exports = function (grunt) {
 			}
 		},
 		watch: {
+			options: {
+				debounceDelay: 1000
+			},
 			// https://github.com/gruntjs/grunt-contrib-watch#settings
 			stylusDev: {
 				files: ['<%= path.client.css %>'],
@@ -291,7 +294,6 @@ module.exports = function (grunt) {
 			},
 			jshintClient: {
 				options: {
-					debounceDelay: 1000,
 					event: ['added', 'changed']
 				},
 				files: ['<%= jshint.client.src %>'],
@@ -299,7 +301,6 @@ module.exports = function (grunt) {
 			},
 			jshintTest: {
 				options: {
-					debounceDelay: 1000,
 					event: ['added', 'changed']
 				},
 				files: ['<%= jshint.test.src %>'],

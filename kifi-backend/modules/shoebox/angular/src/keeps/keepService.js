@@ -142,10 +142,26 @@ angular.module('kifi.keepService', [])
 					map[keep.id] = true;
 					return map;
 				}, {});
+				if (list.length === 0) {
+					api.clearState();
+				} else if (list.length === 1) {
+					api.preview(list[0]);
+				} else {
+					previewed = null;
+					isDetailOpen = true;
+					singleKeepBeingPreviewed = false;
+				}
 			},
 
 			unselectAll: function () {
 				selected = {};
+				api.clearState();
+			},
+
+			clearState: function () {
+				previewed = null;
+				isDetailOpen = false;
+				singleKeepBeingPreviewed = false;
 			},
 
 			isSelectedAll: function () {
