@@ -15,6 +15,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.isDetailOpen = keepService.isDetailOpen;
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
+				scope.closeDetail = keepService.togglePreview.bind(null, null);
 
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';
