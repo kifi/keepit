@@ -121,31 +121,31 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
         {
           val path = com.keepit.controllers.website.routes.UserController.getAllConnections(Some("leo"), None, None, 10).toString
-          path === "/site/user/socialConnections?search=leo&limit=10"
+          path === "/site/user/allConnections?search=leo&limit=10"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("Léo Grimaldi")
         }
         {
           val path = com.keepit.controllers.website.routes.UserController.getAllConnections(Some("杨"), None, None, 10).toString
-          path === "/site/user/socialConnections?search=%E6%9D%A8&limit=10"
+          path === "/site/user/allConnections?search=%E6%9D%A8&limit=10"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("杨莹")
         }
         {
           val path = com.keepit.controllers.website.routes.UserController.getAllConnections(None, None, None, 10).toString
-          path === "/site/user/socialConnections?limit=10"
+          path === "/site/user/allConnections?limit=10"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("Andrew Conner", "Léo Grimaldi", "杨莹")
         }
         {
           val path = com.keepit.controllers.website.routes.UserController.getAllConnections(Some("leo"), Some("facebook"), None, 2).toString
-          path === "/site/user/socialConnections?search=leo&network=facebook&limit=2"
+          path === "/site/user/allConnections?search=leo&network=facebook&limit=2"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("Léo Grimaldi")
         }
         {
           val path = com.keepit.controllers.website.routes.UserController.getAllConnections(None, None, Some("facebook/arst"), 2).toString
-          path === "/site/user/socialConnections?after=facebook%2Farst&limit=2"
+          path === "/site/user/allConnections?after=facebook%2Farst&limit=2"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("杨莹")
         }
