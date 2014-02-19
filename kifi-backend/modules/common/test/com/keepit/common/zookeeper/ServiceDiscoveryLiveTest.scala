@@ -52,8 +52,8 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
         val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zkClient, services, Providers.of(amazonInstanceInfo(1)), inject[Scheduler], Providers.of(new FakeAirbrakeNotifier()), false, Nil)
         zkClient.session{ zk => try {
           discovery.myClusterSize === 0
-          zk.watchChildren(Node("/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
-            println("Service Instances ----------- : %s".format(children.mkString(", ")))
+          zk.watchChildrenWithData[String](Node("/fortytwo/services/SHOEBOX"), { (children : Seq[(Node, String)]) =>
+            println("Service Instances ----------- : %s".format(children.map(_._1).mkString(", ")))
           })
           val path = zk.create(Node("/fortytwo/services/SHOEBOX"))
           val firstNode = zk.createChild(path, "SHOEBOX_", remoteServiceJson(1), EPHEMERAL_SEQUENTIAL)

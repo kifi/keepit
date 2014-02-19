@@ -4,7 +4,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
@@ -48,9 +47,7 @@ class ExtSearchController @Inject() (
 
   //external (from the extension/website)
   def warmUp() = JsonAction.authenticated { request =>
-    SafeFuture {
-      searchCommander.warmUp(request.userId)
-    }
+    searchCommander.warmUp(request.userId)
     Ok
   }
 

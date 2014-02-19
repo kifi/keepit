@@ -6,9 +6,12 @@ import com.amazonaws.auth.BasicAWSCredentials
 import play.api.Play._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.regions._
+import com.keepit.inject.AppScoped
 
 class AwsModule extends ScalaModule {
-  def configure: Unit = { }
+  def configure: Unit = {
+    bind[FortyTwoElasticLoadBalancingClient].to[FortyTwoElasticLoadBalancingClientImpl].in[AppScoped]
+  }
 
   @Singleton
   @Provides

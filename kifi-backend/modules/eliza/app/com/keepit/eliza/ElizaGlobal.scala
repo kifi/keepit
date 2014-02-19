@@ -24,5 +24,6 @@ trait ElizaServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ElizaEmailNotifierPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
   }
 }

@@ -175,13 +175,15 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
+      val weight = personalizedSearcher.createWeight(articleQuery)
+
       val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
       val tLucene = currentDateTime.getMillis()
       hotDocs.set(browsingFilter, clickBoosts)
-      personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+      personalizedSearcher.doSearch(weight){ (scorer, reader) =>
         val visibility = new ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()

@@ -25,11 +25,10 @@ class SocialUserTypeahead @Inject() (
   override val store: SocialUserTypeaheadStore,
   cache: SocialUserTypeaheadCache,
   socialConnRepo:SocialConnectionRepo,
-  socialUserBasicInfoCache: SocialUserBasicInfoCache,
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
-  override protected def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
+  override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
     cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
   }
 
@@ -66,8 +65,8 @@ class S3SocialUserTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: Am
 
 class InMemorySocialUserTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User] with SocialUserTypeaheadStore
 
-class SocialUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration))
-  extends BinaryCacheImpl[SocialUserTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings)(ArrayBinaryFormat.longArrayFormat)
+class SocialUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[SocialUserTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ArrayBinaryFormat.longArrayFormat)
 
 case class SocialUserTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {
   val namespace = "social_user_typeahead"

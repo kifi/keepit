@@ -56,6 +56,15 @@ object ApplicationBuild extends Build {
       }
     }
 
+  val angularDirectory = SettingKey[File]("angular-directory")
+
+  private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
+    Command.args(name, "<" + name + "-command>") { (state, args) =>
+      Process(command :: (namedArgs ++ args.toList), base) !;
+      state
+    }
+  }
+
 
   val commonDependencies = Seq(
     jdbc, // todo(andrew): move to sqldb when we discover a way to get Play to support multiple play.plugins files.
@@ -73,6 +82,7 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
+    "fortytwo.franz" % "franz_2.10" % "0.1.1",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -108,8 +118,7 @@ object ApplicationBuild extends Build {
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
-    "org.feijoas" %% "mango" % "0.10",
-    "fortytwo.franz" % "franz_2.10" % "0.1.1"
+    "org.feijoas" %% "mango" % "0.10"
   )
 
   lazy val heimdalDependencies = Seq(
@@ -208,8 +217,12 @@ object ApplicationBuild extends Build {
   lazy val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
   ).settings(
-    //unmanagedResourceDirectories in Compile <+= baseDirectory( _ / "angular" )
-    playAssetsDirectories <+= baseDirectory / "angular"
+    playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular"),
+    angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
+    commands <++= angularDirectory { base =>
+      Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
+    },
+    commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
@@ -234,7 +247,12 @@ object ApplicationBuild extends Build {
 
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
     .settings(
-      aggregate in update := false
+      aggregate in update := false,
+      angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
+      commands <++= angularDirectory { base =>
+        Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
+      },
+      commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
     )
     .dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile")
     .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)

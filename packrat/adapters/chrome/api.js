@@ -552,57 +552,20 @@ var api = function() {
     },
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
-        var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
-        var rws = new ReconnectingWebSocket({
+        log('[api.socket.open]', url)();
+        var sc, rws = new ReconnectingWebSocket({
           url: url,
-          onConnect: function() {
-            socket.seq++;
-            onConnect();
-          },
-          onDisconnect: onDisconnect,
-          onMessage: function(e) {
-            var msg = JSON.parse(e.data);
-            if (Array.isArray(msg)) {
-              var id = msg.shift();
-              if (id > 0) {
-                var cb = callbacks[id];
-                if (cb) {
-                  log("#0ac", "[socket.receive] response", id, "(" + (new Date - cb[1]) +  "ms)")();
-                  delete callbacks[id];
-                  cb[0].apply(null, msg);
-                } else {
-                  log("#0ac", "[socket.receive] ignoring", [id].concat(msg))();
-                }
-              } else {
-                var handler = handlers[id];
-                if (handler) {
-                  log("#0ac", "[socket.receive]", id)();
-                  handler.apply(null, msg);
-                } else {
-                  log("#0ac", "[socket.receive] ignoring", [id].concat(msg))();
-                }
-              }
-            } else {
-              log("#0ac", "[socket.receive] ignoring", msg)();
-            }
-          }});
-        var socket = {
-          seq: 0,
-          send: function(arr, callback) {
-            if (callback) {
-              var id = nextCallbackId++;
-              callbacks[id] = [callback, Date.now()];
-              arr.splice(1, 0, id);
-            }
-            log("#0ac", "[socket.send]", arr)();
-            rws.send(JSON.stringify(arr));
-          },
-          close: function() {
-            rws.close();
-            this.send = this.close = api.noop;
-          }
-        };
-        return socket;
+          onConnect: Airbrake.wrap(function () {
+            sc.onConnect();
+          }),
+          onDisconnect: Airbrake.wrap(function () {
+            sc.onDisconnect();
+          }),
+          onMessage: Airbrake.wrap(function (e) {
+            sc.onMessage(e.data);
+          })
+        });
+        return (sc = new SocketCommander(rws, handlers, onConnect, onDisconnect, log));
       }
     },
     storage: localStorage,

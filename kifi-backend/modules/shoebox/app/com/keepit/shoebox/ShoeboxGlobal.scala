@@ -42,5 +42,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[ImageDataIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
   }
 }

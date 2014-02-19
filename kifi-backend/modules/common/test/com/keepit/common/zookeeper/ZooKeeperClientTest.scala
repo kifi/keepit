@@ -78,59 +78,59 @@ class ZooKeeperClientTest extends Specification {
         val updateCount = new AtomicInteger(0)
 
 
-        @volatile var childSet = Set.empty[Node]
+        @volatile var childMap = Map.empty[Node, String]
         val parent = zk.createChild(node, "parent")
         mkLatch
-        zk.watchChildren(parent, { (children : Seq[Node]) =>
-          childSet = children.toSet
+        zk.watchChildrenWithData[String](parent, { (children : Seq[(Node, String)]) =>
+          childMap = children.toMap
           updateCount.incrementAndGet()
           println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
           latch.map(l => l.countDown())
         })
         awaitLatch
-        childSet === Set()
+        childMap === Map()
         updateCount.get === 1
 
         mkLatch
         val child1 = zk.createChild(parent, "child1")
         awaitLatch
-        childSet === Set(Node(parent, "child1"))
+        childMap === Map(Node(parent, "child1") -> "")
         updateCount.get === 2
 
         mkLatch
         val child2 = zk.createChild(parent, "child2")
         awaitLatch
-        childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
+        childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "")
         updateCount.get === 3
 
         mkLatch
         zk.setData[String](child2, "test")
         awaitLatch
-        childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
+        childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "test")
         updateCount.get === 4
 
         mkLatch
         zk.deleteData(child2)
         awaitLatch
-        childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
+        childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "")
         updateCount.get === 5
 
         mkLatch
         zk.delete(child1)
         awaitLatch
-        childSet === Set(Node(parent, "child2"))
+        childMap === Map(Node(parent, "child2") -> "")
         updateCount.get === 6
 
         mkLatch
-        val child3 = zk.createChild(parent, "child3")
+        val child3 = zk.createChild(parent, "child3", "new node")
         awaitLatch
-        childSet === Set(Node(parent, "child2"), Node(parent, "child3"))
+        childMap === Map(Node(parent, "child2") -> "", Node(parent, "child3") -> "new node")
         updateCount.get === 7
 
         mkLatch
         zk.deleteRecursive(parent)
         awaitLatch
-        childSet === Set()
+        childMap === Map()
         updateCount.get === 10
       }
     }
@@ -153,7 +153,7 @@ class ZooKeeperClientTest extends Specification {
           updateCount.incrementAndGet()
           println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
           latch.map(l => l.countDown())
-        }, watchData = false)
+        })
         awaitLatch
         childSet === Set()
         updateCount.get === 1
@@ -197,7 +197,7 @@ class ZooKeeperClientTest extends Specification {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         val parent = zk.createChild(node, "parent")
-        zk.watchChildren(parent, { (children : Seq[Node]) =>
+        zk.watchChildrenWithData[String](parent, { (children : Seq[(Node, String)]) =>
           println("Service Instances: %s".format(children.mkString(", ")))
         })
         println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL))
@@ -213,50 +213,6 @@ class ZooKeeperClientTest extends Specification {
         zk.getChildren(Node(s"${node.path}/other")).size === 1
         zk.getChildren(Node(s"${node.path}/parent")).size === 0
       }(node, true)
-    }
-
-    "For a given node, automatically maintain a map from the node's children to the each child's data" in {
-      implicit val node = Node("/test" + Random.nextLong.abs)
-      withZKSession { zk =>
-        val parent = zk.createChild(node, "parent")
-        val childMap = collection.mutable.Map[Node, String]()
-        @volatile var latch: Option[CountDownLatch] = None
-        def mkLatch = { latch = Some(new CountDownLatch(1)) }
-        def awaitLatch = { latch.map(_.await) }
-        val updateCount = new AtomicInteger(0)
-
-        zk.watchChildrenWithData(parent, childMap, { data => new String(data) }, { _ => updateCount.incrementAndGet(); latch.map(l => l.countDown()) })
-
-        mkLatch
-        val child1 = zk.createChild(parent, "a", "foo".getBytes)
-        awaitLatch
-        childMap === Map(Node(parent, "a") -> "foo")
-        updateCount.get === 1
-
-        mkLatch
-        val child2 = zk.createChild(parent, "b", "bar".getBytes)
-        awaitLatch
-        childMap === Map(Node(parent, "a") -> "foo", Node(parent, "b") -> "bar")
-        updateCount.get === 2
-
-        mkLatch
-        zk.delete(child1)
-        awaitLatch
-        childMap === Map(Node(parent, "b") -> "bar")
-        updateCount.get === 3
-
-        mkLatch
-        zk.setData(child2, "bar2")
-        awaitLatch
-        childMap === Map(Node(parent, "b") -> "bar2")
-        updateCount.get === 4
-
-        mkLatch
-        zk.createChild(parent, "c", "baz".getBytes)
-        awaitLatch
-        childMap === Map(Node(parent, "b") -> "bar2", Node(parent, "c") -> "baz")
-        updateCount.get === 5
-      }
     }
   }
 }

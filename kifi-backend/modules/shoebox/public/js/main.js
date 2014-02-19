@@ -2454,7 +2454,7 @@ $(function () {
 				// '' is necessary as third parameter
 				.click(function (e) {
 					var email = $(e.target).closest('.invite-email').data('email');
-					openInviteDialog('email/' + email, '');
+					submitInvite('email/' + email, '');
 				});
 		}
 	}
@@ -2475,24 +2475,27 @@ $(function () {
 		});
 	}
 
-	var $inviteMessageDialog = $('.invite-message-dialog').detach().show()
+	function setInvited(item) {
+		item.removeClass('joined');
+		item.addClass('invited');
+		item.find('.invite-status').text('Invited');
+	}
+
+	var $inviteMessageForm = $('.invite-message-form')
 	.on('submit', 'form', function (e) {
 		e.preventDefault();
+		var fullSocialId = $(this).find('input[name="fullSocialId"]').val();
 		$.post(this.action, $(this).serialize()).always(function (xhr) {
 			if (xhr.status >= 400) {
 				log('error sending invite:', xhr);
 			} else {
 				log('sent invite');
-				$inviteMessageDialog.dialog('hide');
+				setInvited($('.invite-friend[data-value="' + fullSocialId + '"]'));
 			}
-			prepInviteTab();
 		});
-	}).on('click', '.invite-cancel', function (e) {
-		e.preventDefault();
-		$inviteMessageDialog.dialog('hide');
 	});
 
-	var inviteMessageDialogTmpl = Tempo.prepare($inviteMessageDialog);
+	var inviteMessageFormTmpl = Tempo.prepare($inviteMessageForm);
 	$('.invite-filter').on('input', filterFriends);
 	$('.invite-friends').on('click', '.invite-button', function () {
 		var $friend = $(this).closest('.invite-friend'), fullSocialId = $friend.data('value');
@@ -2510,13 +2513,15 @@ $(function () {
 					name = match[1];
 				}
 			}
-			openInviteDialog(fullSocialId, name, /^linkedin/.test(fullSocialId) );
+			submitInvite(fullSocialId, name, /^linkedin/.test(fullSocialId) );
 		}
 	});
 
-	function openInviteDialog(fullSocialId, name, longForm) {
-		inviteMessageDialogTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm || false});
-		$inviteMessageDialog.dialog('show');
+	function submitInvite(fullSocialId, name, longForm) {
+		inviteMessageFormTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm || false});
+		setTimeout(function () {
+			$inviteMessageForm.find('form').submit();
+		});
 	}
 
 	var $unfriendDialog = $('.unfriend-dialog')

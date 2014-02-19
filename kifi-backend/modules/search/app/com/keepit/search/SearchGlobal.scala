@@ -41,6 +41,7 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[SpellIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UserGraphPlugin] != null)
     require(injector.instance[SearchFriendGraphPlugin] != null)
+    require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
     require(NlpParser.enabled)
   }
 }

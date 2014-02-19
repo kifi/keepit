@@ -12,7 +12,6 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.mail.RemotePostOffice
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -23,12 +22,13 @@ import play.modules.statsd.api.Statsd
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
+import com.keepit.common.logging.AccessLog
 
 class ExtMessagingController @Inject() (
     postOffice: RemotePostOffice,
     messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
-    notificationRouter: NotificationRouter,
+    notificationRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     protected val shoebox: ShoeboxServiceClient,
@@ -38,11 +38,11 @@ class ExtMessagingController @Inject() (
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
-    protected val heimdalContextBuilder: HeimdalContextBuilderFactory
+    protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
+    val accessLog: AccessLog
   ) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
-    val tStart = currentDateTime
     val o = request.body
     val extVersion = (o \ "extVersion").asOpt[String]
     val (title, text) = (

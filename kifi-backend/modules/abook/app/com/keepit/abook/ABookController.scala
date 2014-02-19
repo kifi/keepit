@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
+import com.keepit.common.performance.timing
 import play.api.mvc.Action
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
@@ -16,6 +17,11 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
+import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.typeahead.TypeaheadHit
+import scala.concurrent.Future
+import com.keepit.common.akka.SafeFuture
+import java.text.Normalizer
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -51,6 +57,7 @@ class ABookController @Inject() (
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   oauth2TokenRepo:OAuth2TokenRepo,
+  typeahead:EContactABookTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
@@ -114,6 +121,14 @@ class ABookController @Inject() (
     }
   }
 
+  def getEContactsByIds() = Action(parse.json) { request =>
+    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
+    val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
+    val contacts = db.readOnly { implicit ro =>
+      econtactRepo.getByIds(contactIds)
+    }
+    Ok(Json.toJson[Seq[EContact]](contacts))
+  }
 
   def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
     // todo: parse email
@@ -278,11 +293,67 @@ class ABookController @Inject() (
     }
   }
 
+  // todo(ray): move to commander
+  def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Future[Seq[EContact]] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
+    @inline def mkId(email:String) = s"email/$email"
+    val contacts = db.readOnly(attempts = 2) { implicit s =>
+      econtactRepo.getByUserId(userId)
+    }
+    val filteredF = search match {
+      case Some(query) if query.trim.length > 0 => prefixSearchDirect(userId, query)
+      case _ => Future.successful(contacts)
+    }
+    filteredF map { filtered =>
+      val paged = after match {
+        case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
+          case hd +: tl => tl
+          case tl => tl
+        }
+        case _ => filtered
+      }
+      val eContacts = paged.take(limit)
+      log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
+      eContacts
+    }
+  }
+  def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = Action.async { request =>
+    prefixQueryDirect(userId, limit, search, after) map { eContacts =>
+      Ok(Json.toJson(eContacts))
+    }
+  }
+
   // todo: removeme (inefficient)
   def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]) = Action { request =>
     val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
     log.info(s"[queryEContacts] userId=$userId search=$search after=$after limit=$limit res(len=${eContacts.length}):${eContacts.mkString}")
     Ok(Json.toJson(eContacts))
+  }
+
+  implicit val ord = TypeaheadHit.defaultOrdering[EContact]
+  def prefixSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = { // todo(ray): move to commander
+    if (query.trim.length > 0) {
+      val filterF = typeahead.getPrefixFilter(userId) match {
+        case Some(filter) => Future.successful(filter)
+        case None => typeahead.build(userId)
+      }
+      filterF map { filter =>
+        val res = typeahead.search(userId, query) getOrElse Seq.empty[EContact]
+        log.info(s"[prefixSearch($userId,$query)] res=${res.mkString(",")}")
+        res
+      }
+    } else {
+      SafeFuture {
+        db.readOnly(attempts = 2) { implicit ro =>
+          econtactRepo.getByUserId(userId)
+        }
+      }
+    }
+  }
+
+  def prefixSearch(userId:Id[User], query:String) = Action.async { request =>
+    prefixSearchDirect(userId, query) map { res =>
+      Ok(Json.toJson(res))
+    }
   }
 
 }

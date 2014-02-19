@@ -97,11 +97,15 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
-    log.info(s"warming up $userId")
-    Statsd.increment(s"warmup.$userId")
+  def warmUp(userId: Id[User], logging: Boolean = true): Seq[Future[Any]] = {
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
+
+    // logging after firing futures
+    if (logging) {
+      log.info(s"warming up $userId")
+      Statsd.increment(s"warmup.$userId")
+    }
 
     Seq(browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
   }
@@ -144,9 +148,7 @@ class MainSearcherFactory @Inject() (
   }
 
   private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
-    future {
-      resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, useS3FlowerFilter)
-    }
+    resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost, useS3FlowerFilter)
   }
 
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {

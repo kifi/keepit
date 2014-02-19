@@ -3,7 +3,6 @@ package com.keepit.controllers.mobile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -42,9 +41,7 @@ class MobileSearchController @Inject() (
   }
 
   def warmUp() = JsonAction.authenticated { request =>
-    SafeFuture {
-      searchCommander.warmUp(request.userId)
-    }
+    searchCommander.warmUp(request.userId)
     Ok
   }
 

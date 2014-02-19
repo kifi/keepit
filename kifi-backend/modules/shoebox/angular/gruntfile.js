@@ -60,7 +60,7 @@ module.exports = function (grunt) {
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',
-					'lib/ngInfiniteScroll/build/ng-infinite-scroll.js',
+					'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
 					'lib/moment/moment.js',
 					'lib/angular-moment/angular-moment.js'
 				],
@@ -78,7 +78,7 @@ module.exports = function (grunt) {
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',
-					'lib/ngInfiniteScroll/build/ng-infinite-scroll.js',
+					'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
 					'lib/moment/min/moment.min.js',
 					'lib/angular-moment/angular-moment.min.js'
 				],

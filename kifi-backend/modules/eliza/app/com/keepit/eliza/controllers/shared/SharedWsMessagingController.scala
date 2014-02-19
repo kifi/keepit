@@ -24,11 +24,14 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import scala.concurrent.Future
 import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.Access.{WS_IN, CACHE}
+import com.keepit.common.shutdown.ShutdownCommander
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     actionAuthenticator: ActionAuthenticator,
-    notificationRouter: NotificationRouter,
+    protected val websocketRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
     protected val shoebox: ShoeboxServiceClient,
@@ -39,16 +42,18 @@ class SharedWsMessagingController @Inject() (
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
     protected val userExperimentCommander: RemoteUserExperimentCommander,
-    val kifInstallationStore: KifInstallationStore
+    val kifInstallationStore: KifInstallationStore,
+    val accessLog: AccessLog,
+    val shutdownCommander: ShutdownCommander
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
   protected def onConnect(socket: SocketInfo) : Unit = {
-    notificationRouter.registerUserSocket(socket)
+    websocketRouter.registerUserSocket(socket)
   }
 
   protected def onDisconnect(socket: SocketInfo) : Unit = {
-    notificationRouter.unregisterUserSocket(socket)
+    websocketRouter.unregisterUserSocket(socket)
   }
 
   //TEMPORARY STOP GAP
@@ -61,13 +66,25 @@ class SharedWsMessagingController @Inject() (
     "stats" -> { _ =>
       val stats = Json.obj(
         "connected_for_seconds" -> clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0,
-        "connected_sockets" -> notificationRouter.connectedSockets,
+        "connected_sockets" -> websocketRouter.connectedSockets,
         "server_ip" -> amazonInstanceInfo.publicIp.toString
       )
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
+    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
+      log.info(s"[get_thread_info] user ${socket.userId} thread $threadId")
+      try {
+        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
+        socket.channel.push(Json.arr(requestId.toLong, info))
+      } catch {
+        case t: Throwable => {
+          socket.channel.push(Json.arr("server_error", requestId.toLong))
+          throw t
+        }
+      }
+    },
     "get_thread" -> { case JsString(threadId) +: _ =>
-      log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
+      log.info(s"[get_thread] user ${socket.userId} thread $threadId")
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
@@ -130,18 +147,6 @@ class SharedWsMessagingController @Inject() (
       }
       fut.onFailure {
         case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
-    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
-      log.info(s"[get_thread_info] user ${socket.userId} requesting thread extId $threadId")
-      try {
-        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
-        socket.channel.push(Json.arr(requestId.toLong, info))
-      } catch {
-        case t:Throwable => {
-          socket.channel.push(Json.arr("server_error", requestId.toLong))
-          throw t
-        }
       }
     },
 

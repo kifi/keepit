@@ -10,7 +10,7 @@ angular.module('kifi', [
 	'util',
 	'dom',
 	'antiscroll',
-	'infinite-scroll',
+	'jun.smartScroll',
 	'angularMoment',
 	'focusWhen',
 	'kifi.templates',
