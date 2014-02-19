@@ -307,8 +307,8 @@ var socketHandlers = {
     clearSession();
   },
   version: function(v) {
-    log("[socket:version]", v)();
-    if (api.version != v) {
+    log('[socket:version]', v)();
+    if (api.version !== v) {
       api.requestUpdateCheck();
     }
   },

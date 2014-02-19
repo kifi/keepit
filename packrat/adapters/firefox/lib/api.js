@@ -62,14 +62,14 @@ var onIconClick = Airbrake.wrap(function onIconClick(win) {
   dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
 });
 
-var isPackaged = true;
-exports.isPackaged = function () {
-  return isPackaged;
-};
+var addon;
 Cu.import('resource://gre/modules/AddonManager.jsm');
-AddonManager.getAddonByID(self.id, Airbrake.wrap(function (addon) {
-  isPackaged = !!addon.sourceURI;
-}));
+AddonManager.getAddonByID(self.id, function (a) {
+  addon = a;
+});
+exports.isPackaged = function () {
+  return !addon || !!addon.sourceURI;
+};
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
 
@@ -240,7 +240,27 @@ exports.browser = {
   userAgent: Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).userAgent
 };
 
-exports.requestUpdateCheck = exports.log.bind(null, '[requestUpdateCheck] unsupported');
+exports.requestUpdateCheck = function () {
+  log('[requestUpdateCheck]');
+  if (addon) {
+    var appVer = Cc['@mozilla.org/xre/app-info;1'].getService(Ci.nsIXULAppInfo).version;
+    addon.findUpdates({
+        onCompatibilityUpdateAvailable: exports.noop,
+        onNoCompatibilityUpdateAvailable: exports.noop,
+        onUpdateAvailable: function (addon, install) {
+          log('[onUpdateAvailable] installing', install.version);
+          install.install();
+        },
+        onNoUpdateAvailable: function (addon) {
+          log('[onNoUpdateAvailable]');
+        },
+        onUpdateFinished: function (addon, error) {
+          log('[onUpdateFinished]', error);
+        }
+      },
+      AddonManager.UPDATE_WHEN_NEW_APP_DETECTED, appVer, appVer);
+  }
+};
 
 const {SocketCommander} = require('./socket_commander');
 var socketPage, socketCommanders = {}, nextSocketId = 1;
