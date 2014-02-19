@@ -3,8 +3,8 @@
 		<div class="kf-detail-inner {{howKept}}">
 			<a class="kf-detail-x" href="javascript:"></a>
 			<div class="kf-page-meta" data-n="{{getLength()}}">
-				<h2 class="kf-detail-header page-title" ng-bind="getTitleText()"></h2>
 				<div kf-keep-detail ng-show="showSingleKeep()"></div>
+				<h2 class="kf-detail-header page-title" ng-hide="showSingleKeep()" ng-bind="getTitleText()"></h2>
 				<a class="kf-page-keep" href="javascript:"></a>
 				<a class="kf-page-priv" href="javascript:"></a>
 			</div>

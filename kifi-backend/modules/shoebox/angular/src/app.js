@@ -13,6 +13,7 @@ angular.module('kifi', [
 	'jun.smartScroll',
 	'angularMoment',
 	'focusWhen',
+	'kifi.youtube',
 	'kifi.templates',
 	'kifi.profileCard',
 	'kifi.profileService',
