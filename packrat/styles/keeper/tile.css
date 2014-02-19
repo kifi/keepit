@@ -17,6 +17,9 @@
   -webkit-perspective: 200px;
   perspective: 200px;
 }
+.kifi-tile[kifi-fullscreen] {
+  display: none;
+}
 .kifi-tile-card {
   position: absolute;
   top: 0;

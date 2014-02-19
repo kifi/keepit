@@ -245,7 +245,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       });
     }).on('click', '.kifi-keeper-x', function (e) {
       if (e.originalEvent.isTrusted !== false) {
-        pane.hide(tile.style.display !== 'none');
+        pane.hide(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));
       }
     }).hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
