@@ -91,8 +91,8 @@ class QueuedScrapeProcessor @Inject() (
   schedulingProperties: SchedulingProperties,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else sys.props.get("scraper.terminate.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // adjust as needed
-  val Q_SIZE_THRESHOLD = sys.props.get("scraper.queue.size.threshold") map (_.toInt) getOrElse (100)
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else config.queueConfig.terminateThreshold
+  val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
   val pSize = Runtime.getRuntime.availableProcessors * 64
   val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
@@ -123,7 +123,7 @@ class QueuedScrapeProcessor @Inject() (
 
   val NUM_CORES = Runtime.getRuntime.availableProcessors
   val PULL_MAX = NUM_CORES * config.pullMultiplier
-  val PULL_THRESHOLD = sys.props.get("scraper.pull.threshold") map (_.toInt) getOrElse (NUM_CORES / 2)
+  val PULL_THRESHOLD = config.queueConfig.pullThreshold.getOrElse(NUM_CORES / 2)
 
   override def pull():Unit = {
     log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${PULL_THRESHOLD}")
@@ -200,7 +200,7 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   val scheduler = Executors.newSingleThreadScheduledExecutor
-  val TERMINATOR_FREQ: Int = sys.props.get("scraper.terminator.freq") map (_.toInt) getOrElse (5)
+  val TERMINATOR_FREQ: Int = config.queueConfig.terminatorFreq
   if (schedulingProperties.enabled){
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }

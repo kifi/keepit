@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import org.specs2.mutable.Specification
 
-import com.keepit.common.controller.AuthHelperModule
+import com.keepit.common.social.FakeShoeboxSecureSocialModule
 import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.social.{SocialId, SocialNetworks}
 import SocialNetworks.FACEBOOK
@@ -29,12 +29,12 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
-    AuthHelperModule(),
     FakeAirbrakeModule(),
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule())
+    TestHeimdalServiceClientModule(),
+    FakeShoeboxSecureSocialModule())
 
   "AdminAuthController" should {
     "impersonate" in {

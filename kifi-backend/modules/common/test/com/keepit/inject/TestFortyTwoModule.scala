@@ -12,4 +12,8 @@ case class TestFortyTwoModule() extends FortyTwoModule {
     install(FakeServiceModule())
     super.configure()
   }
+
+  @Provides
+  @Singleton
+  def fortytwoConfig: FortyTwoConfig = FortyTwoConfig("http://dev.ezkeep.com:9000", "TEST_MODE")
 }

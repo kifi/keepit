@@ -39,6 +39,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
 import scala.concurrent.Future
 import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.inject.FortyTwoConfig
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -61,7 +62,9 @@ class AuthHelper @Inject() (
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander,
   userCommander: UserCommander,
-  heimdalContextBuilder: HeimdalContextBuilderFactory
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  secureSocialClientIds: SecureSocialClientIds,
+  fortytwoConfig: FortyTwoConfig
 ) extends HeaderNames with Results with Status with Logging {
 
   def authHandler(request:Request[_], res: SimpleResult)(f : => (Seq[Cookie], Session) => SimpleResult) = {
@@ -157,7 +160,7 @@ class AuthHelper @Inject() (
     }
   )
 
-  private val url = current.configuration.getString("application.baseUrl").get
+  private val url = fortytwoConfig.applicationBaseUrl
 
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
@@ -374,10 +377,10 @@ class AuthHelper @Inject() (
           case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id =>
             Redirect(s"/?m=3&email=${address.address}")
           case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
+            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName, secureSocialClientIds))
         }
       }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
+        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
       }
     }
   }

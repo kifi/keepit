@@ -8,6 +8,10 @@ import com.keepit.common.time._
 import play.api.Play
 import play.api.Play.current
 
+case class FortyTwoConfig(
+  applicationName: String,
+  applicationBaseUrl: String)
+
 trait FortyTwoModule extends ScalaModule {
 
   def configure(): Unit = {
@@ -23,10 +27,18 @@ trait FortyTwoModule extends ScalaModule {
 case class ProdFortyTwoModule() extends FortyTwoModule {
 
   @Provides @Singleton
-  def fortyTwoServices(clock: Clock): FortyTwoServices =
+  def fortyTwoServices(clock: Clock, fortytwoConfig: FortyTwoConfig): FortyTwoServices =
     new FortyTwoServices(
       clock,
       current.mode,
       Play.resource("app_compilation_date.txt"),
-      Play.resource("app_version.txt"))
+      Play.resource("app_version.txt"),
+      fortytwoConfig)
+
+  @Provides
+  @Singleton
+  def fortytwoConfig: FortyTwoConfig = FortyTwoConfig(
+    current.configuration.getString("application.name").get,
+    current.configuration.getString("application.baseUrl").get
+  )
 }
