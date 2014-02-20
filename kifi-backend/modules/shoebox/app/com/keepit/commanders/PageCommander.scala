@@ -53,7 +53,6 @@ class PageCommander @Inject() (
           collectionRepo.get(collId)
         }
       }.getOrElse(Seq())
-      log.info(s"loading info for url $url of user $userId, found nuri $nUri ($nUriStr) bookmark $bookmark with tags: $tags")
 
       val host: Option[String] = URI.parse(nUriStr).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
