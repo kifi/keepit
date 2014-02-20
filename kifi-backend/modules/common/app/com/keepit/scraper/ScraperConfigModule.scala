@@ -12,10 +12,10 @@ trait ScraperConfigModule extends ScalaModule {
   @Provides
   def scraperIntervalConfig: ScraperIntervalConfig = {
     ScraperIntervalConfig(
-      minInterval = 24.0d, //hours
-      maxInterval = 1024.0d, //hours
-      intervalIncrement = 6.0d, //hours
-      intervalDecrement = 2.0d //hours
+      minInterval = conf.getDouble("scraper.interval.min").get, //hours
+      maxInterval = conf.getDouble("scraper.interval.max").get, //hours
+      intervalIncrement = conf.getDouble("scraper.interval.increment").get, //hours
+      intervalDecrement = conf.getDouble("scraper.interval.decrement").get //hours
     )
   }
 
@@ -23,10 +23,10 @@ trait ScraperConfigModule extends ScalaModule {
   @Provides
   def scraperQueueConfig: ScraperQueueConfig = {
     ScraperQueueConfig(
-      terminateThreshold = conf.getInt("scraper.terminate.threshold").getOrElse(2 * 1000 * 60),
-      queueSizeThreshold = conf.getInt("scraper.queue.size.threshold").getOrElse(100),
-      pullThreshold = conf.getInt("scraper.pull.threshold"),
-      terminatorFreq = conf.getInt("scraper.terminator.freq").getOrElse(5)
+      terminateThreshold = conf.getInt("scraper.queue.terminateThreshold").get,
+      queueSizeThreshold = conf.getInt("scraper.queue.sizeThreshold").get,
+      pullThreshold = conf.getInt("scraper.queue.pullThreshold"),
+      terminatorFreq = conf.getInt("scraper.queue.terminatorFreq").get
     )
   }
 
@@ -34,32 +34,34 @@ trait ScraperConfigModule extends ScalaModule {
   @Provides
   def scraperHttpConfig: ScraperHttpConfig = {
     ScraperHttpConfig(
-      httpFetcherEnforcerFreq = conf.getInt("scraper.fetcher.enforcer.freq").getOrElse(5),
-      httpFetcherQSizeThreshold = conf.getInt("fetcher.queue.size.threshold").getOrElse(100)
+      httpFetcherEnforcerFreq = conf.getInt("scraper.http.fetcherEnforcerFreq").get,
+      httpFetcherQSizeThreshold = conf.getInt("scraper.http.fetcherQSizeThreshold").get
     )
 
   }
 
-  protected def defaultScraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
+  @Singleton
+  @Provides
+  def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
     ScraperConfig(
       intervalConfig = intervalConfig,
-      initialBackoff = 3.0d, //hours
-      maxBackoff = 1024.0d, //hours
-      maxRandomDelay = 600, // seconds
-      changeThreshold = 0.5,
-      pullMultiplier = conf.getInt("scraper.pull.multiplier").getOrElse(8),
-      pullFrequency = conf.getInt("scraper.pull.freq").getOrElse(5), // seconds
-      scrapePendingFrequency = conf.getInt("scraper.pending.freq").getOrElse(30), // seconds
-      queued = conf.getBoolean("scraper.plugin.queued").getOrElse(true),
-      async = conf.getBoolean("scraper.plugin.async").getOrElse(false),
-      actorTimeout = conf.getInt("scraper.actor.timeout").getOrElse(20000),
-      syncAwaitTimeout = conf.getInt("scraper.plugin.sync.await.timeout").getOrElse(20000),
-      serviceCallTimeout = conf.getInt("scraper.service.call.timeout").getOrElse(20000),
-      batchSize = conf.getInt("scraper.service.batch.size").getOrElse(10),
-      batchMax = conf.getInt("scraper.service.batch.max").getOrElse(50),
-      pendingOverdueThreshold = conf.getInt("scraper.service.pending.overdue.threshold").getOrElse(20), // minutes
-      checkOverdueCountFrequency = conf.getInt("scraper.overdue.check.freq").getOrElse(20), // minutes
-      overdueCountThreshold = conf.getInt("scraper.overdue.count.threshold").getOrElse(1000),
+      initialBackoff = conf.getDouble("scraper.initialBackoff").get, //hours
+      maxBackoff = conf.getDouble("scraper.maxBackoff").get, //hours
+      maxRandomDelay = conf.getInt("scraper.maxRandomDelay").get, // seconds
+      changeThreshold = conf.getInt("scraper.changeThreshold").get,
+      pullMultiplier = conf.getInt("scraper.pullMultiplier").get,
+      pullFrequency = conf.getInt("scraper.pullFrequency").get, // seconds
+      scrapePendingFrequency = conf.getInt("scraper.scrapePendingFrequency").get, // seconds
+      queued = conf.getBoolean("scraper.queued").get,
+      async = conf.getBoolean("scraper.async").get,
+      actorTimeout = conf.getInt("scraper.actorTimeout").get,
+      syncAwaitTimeout = conf.getInt("scraper.syncAwaitTimeout").get,
+      serviceCallTimeout = conf.getInt("scraper.serviceCallTimeout").get,
+      batchSize = conf.getInt("scraper.batchSize").get,
+      batchMax = conf.getInt("scraper.batchMax").get,
+      pendingOverdueThreshold = conf.getInt("scraper.pendingOverdueThreshold").get, // minutes
+      checkOverdueCountFrequency = conf.getInt("scraper.checkOverdueCountFrequency").get, // minutes
+      overdueCountThreshold = conf.getInt("scraper.overdueCountThreshold").get,
       httpConfig = httpConfig,
       queueConfig = queueConfig
     )
@@ -71,33 +73,15 @@ case class ProdScraperConfigModule() extends ScraperConfigModule {
   def configure() {}
 
   override protected def conf: Configuration = Play.current.configuration
-
-  @Singleton
-  @Provides
-  def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig =
-    defaultScraperConfig(queueConfig, httpConfig, intervalConfig)
-}
-
-case class DevScraperConfigModule() extends ScraperConfigModule {
-
-  def configure() {}
-
-  override protected def conf: Configuration = Play.current.configuration
-
-  @Singleton
-  @Provides
-  def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig =
-    defaultScraperConfig(queueConfig, httpConfig, intervalConfig).copy(scrapePendingFrequency = 5, pendingOverdueThreshold = 10)
 }
 
 case class TestScraperConfigModule() extends ScraperConfigModule {
 
   def configure() {}
 
-  override protected def conf: Configuration = Configuration.empty
-
-  @Singleton
-  @Provides
-  def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig =
-    defaultScraperConfig(queueConfig, httpConfig, intervalConfig).copy(scrapePendingFrequency = 5, pendingOverdueThreshold = 10)
+  override protected def conf: Configuration = new Configuration(Configuration.empty.underlying) {
+    override def getInt(key: String): Option[Int] = Some(0)
+    override def getDouble(key: String): Option[Double] = Some(0)
+    override def getBoolean(key: String): Option[Boolean] = Some(true)
+  }
 }

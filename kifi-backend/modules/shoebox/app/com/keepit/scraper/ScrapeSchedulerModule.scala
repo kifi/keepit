@@ -19,7 +19,7 @@ case class DevScrapeSchedulerModule() extends ScrapeSchedulerModule {
 
   def configure {
     bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
-    install(DevScraperConfigModule())
+    install(ProdScraperConfigModule())
   }
 }
 

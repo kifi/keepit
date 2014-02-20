@@ -15,7 +15,7 @@ case class DevScraperProcessorModule() extends ScrapeProcessorModule {
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[AsyncScrapeProcessor].to[SimpleAsyncScrapeProcessor].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
-    install(DevScraperConfigModule())
+    install(ProdScraperConfigModule())
   }
 
   @Singleton
