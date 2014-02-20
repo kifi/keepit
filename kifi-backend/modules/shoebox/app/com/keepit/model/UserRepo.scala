@@ -64,9 +64,6 @@ class UserRepoImpl @Inject() (
   initTable()
 
   def allActiveTimes()(implicit session: RSession): Seq[DateTime] = {
-    implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] {
-      def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC)
-    }
     StaticQuery.queryNA[(DateTime)](s"""select created_at from user u where state = 'active' and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type = 'fake');""").list
   }
 

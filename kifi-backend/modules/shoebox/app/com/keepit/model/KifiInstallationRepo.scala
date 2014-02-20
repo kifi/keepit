@@ -34,10 +34,6 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   def table(tag: Tag) = new KifiInstallationTable(tag)
   initTable()
 
-  implicit val GetDateTime: GetResult[DateTime] = new GetResult[DateTime] {
-    def apply(r: PositionedResult) = new DateTime(r.nextTimestamp getTime, zones.UTC)
-  }
-
   def getLatestActive(count: Int)(implicit session: RSession): Seq[(KifiVersion, DateTime, Int)] = {
     import scala.slick.jdbc.StaticQuery.interpolation
     // select version,min(updated_at) as min, count(*) as count from kifi_installation group by version having count > 3 order by min desc limit 20;
