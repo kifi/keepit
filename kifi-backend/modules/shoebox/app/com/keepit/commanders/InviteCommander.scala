@@ -24,6 +24,10 @@ import com.keepit.model.SocialConnection
 import scala.Some
 import com.keepit.model.Invitation
 import com.keepit.common.store.S3ImageStore
+import play.api.http.Status
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 case class FullSocialId(network:String, id:String)
 object FullSocialId {
@@ -44,6 +48,7 @@ object InviteInfo {
 
 class InviteCommander @Inject() (
   db: Database,
+  airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
@@ -213,9 +218,16 @@ class InviteCommander @Inject() (
       val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
       val path = routes.InviteController.acceptInvite(invite.externalId).url
       val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
-      linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl)
-      val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-      Some(saved)
+      val resp = Await.result(linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl), Duration.Inf) // todo(ray): refactor; map future resp
+      log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText}")
+      if (resp.status != Status.CREATED) { // per LinkedIn doc
+        airbrake.notify(s"Failed to send LinkedIn invite for $userId; invite=$invite; socialUser=$socialUserInfo")
+        None
+      } else {
+        val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] savedInvite=${saved}")
+        Some(saved)
+      }
     }
     savedOpt match {
       case Some(saved) =>
