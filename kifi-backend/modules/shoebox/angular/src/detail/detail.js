@@ -3,8 +3,8 @@
 angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube'])
 
 .directive('kfDetail', [
-	'keepService',
-	function (keepService) {
+	'keepService', 'tagService',
+	function (keepService, tagService) {
 		return {
 			replace: true,
 			restrict: 'A',
@@ -28,6 +28,11 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';
 				};
+
+				scope.removeTag = function (keep, tag) {
+					console.log(keep, tag, tag.id);
+					tagService.removeKeepsFromTag(tag.id, [keep.id]);
+				}
 			}
 		};
 	}

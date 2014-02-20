@@ -3,8 +3,8 @@
 angular.module('kifi.tagService', [])
 
 .factory('tagService', [
-	'$http', 'env', '$q',
-	function ($http, env, $q) {
+	'$http', 'env', '$q', '$rootScope',
+	function ($http, env, $q, $rootScope) {
 		var list = [],
 			fetchAllPromise = null;
 
@@ -45,17 +45,6 @@ angular.module('kifi.tagService', [])
 
 			create: function (name) {
 				var url = env.xhrBase + '/collections/create';
-				if (env.dev) {
-					var deferred = $q.defer();
-					var tag = {
-						id: name + Date.now() + Math.floor(1000000 * Math.random()),
-						name: name,
-						keeps: 0
-					};
-					deferred.resolve(tag);
-					list.unshift(tag);
-					return deferred.promise;
-				}
 
 				return $http.post(url, {
 					name: name
@@ -75,16 +64,10 @@ angular.module('kifi.tagService', [])
 					}
 				}
 
-				if (env.dev) {
-					var deferred = $q.defer();
-					removeTag(tagId);
-					deferred.resolve(tagId);
-					return deferred.promise;
-				}
-
 				var url = env.xhrBase + '/collections/' + tagId + '/delete';
 				return $http.post(url).then(function () {
 					removeTag(tagId);
+					$rootScope.$emit('tags.remove', tagId);
 					return tagId;
 				});
 			},
@@ -100,18 +83,23 @@ angular.module('kifi.tagService', [])
 					return null;
 				}
 
-				if (env.dev) {
-					var deferred = $q.defer();
-					deferred.resolve(renameTag(tagId, name));
-					return deferred.promise;
-				}
-
 				var url = env.xhrBase + '/collections/' + tagId + '/update';
 				return $http.post(url, {
 					name: name
 				}).then(function (res) {
 					var tag = res.data;
 					return renameTag(tag.id, tag.name);
+				});
+			},
+
+			removeKeepsFromTag: function (tagId, keepIds) {
+				var url = env.xhrBase + '/collections/' + tagId + '/removeKeeps';
+				$http.post(url, keepIds).then(function (res) {
+					// handle stuff
+					keepIds.forEach(function (keepId) {
+						$rootScope.$emit('tags.removeFromKeep', {tagId: tagId, keepId: keepId});
+					});
+					return res;
 				});
 			}
 		};
