@@ -18,7 +18,7 @@
 				</div>
 				<div class="kf-page-chatter">
 					<h2 class="kf-detail-header">Talking about this Keep:</h2>
-					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-locator="/messages"><span class="chatter-count">{{keep.conversationCount || 0}}</span>Private Conversation</a>
+					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-locator="/messages"><span class="chatter-count">{{keep.conversationCount || 0}}</span>{{getPrivateConversationText()}}</a>
 				</div>
 			</div>
 			<div class="page-colls" ng-class="{ some: collections.length }">

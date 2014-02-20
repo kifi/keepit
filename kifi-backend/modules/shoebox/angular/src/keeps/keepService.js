@@ -56,11 +56,18 @@ angular.module('kifi.keepService', [])
 					isDetailOpen = true;
 				}
 				previewed = keep;
+				api.getChatter(previewed);
+
 				return keep;
 			},
 
 			togglePreview: function (keep) {
-				if (api.isPreviewed(keep)) {
+				if (api.isPreviewed(keep) && _.size(selected) > 1) {
+					previewed = null;
+					isDetailOpen = true;
+					singleKeepBeingPreviewed = false;
+					return null;
+				} else if (api.isPreviewed(keep)) {
 					return api.preview(null);
 				}
 				return api.preview(keep);
@@ -246,6 +253,21 @@ angular.module('kifi.keepService', [])
 						return idMap[tagId] || null;
 					});
 				});
+			},
+
+			getChatter: function (keep) {
+				if (keep != null) {
+					var url = env.xhrBaseEliza + '/chatter';
+
+					var data = { url: keep.url };
+
+					return $http.post(url, data).then(function (res) {
+						var data = res.data;
+						keep.conversationCount = data.threads;
+						return data;
+					});
+				}
+				return $q.when([]);
 			},
 
 			fetchScreenshotUrls: function (keeps) {
