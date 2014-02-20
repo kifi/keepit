@@ -217,6 +217,10 @@ angular.module('kifi.keepService', [])
 					list.push.apply(list, keeps);
 					before = list.length ? list[list.length - 1].id : null;
 
+					_.forEach(keeps, function (keep) {
+						keep.isMine = true;
+					});
+
 					return keeps;
 				}).then(function (list) {
 					api.fetchScreenshotUrls(list).then(function (urls) {
