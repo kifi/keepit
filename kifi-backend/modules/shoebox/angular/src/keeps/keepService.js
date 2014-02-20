@@ -3,8 +3,8 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env', '$q', '$timeout', '$document',
-	function ($http, env, $q, $timeout, $document) {
+	'$http', 'env', '$q', '$timeout', '$document', '$rootScope',
+	function ($http, env, $q, $timeout, $document, $rootScope) {
 
 		var list = [],
 			selected = {},
@@ -26,6 +26,31 @@ angular.module('kifi.keepService', [])
 			}
 			return null;
 		}
+
+		$rootScope.$on('tags.remove', function (tagId) {
+			_.forEach(list, function (keep) {
+				if (keep.tagList) {
+					keep.tagList = keep.tagList.filter(function (tag) {
+						return tag.id != tagId;
+					});
+				}
+			});
+		});
+
+		$rootScope.$on('tags.removeFromKeep', function (e, data) {
+			var tagId = data.tagId,
+			    keepId = data.keepId;
+			console.log("[removeFromKeep] ", e, data, tagId, keepId);
+			_.forEach(list, function (keep) {
+				if (keep.id === keepId && keep.tagList) {
+					console.log("pre:", keep.tagList);
+					keep.tagList = keep.tagList.filter(function (tag) {
+						return tag.id != tagId;
+					});
+					console.log("post:", keep.tagList);
+				}
+			});
+		});
 
 		var api = {
 			list: list,
