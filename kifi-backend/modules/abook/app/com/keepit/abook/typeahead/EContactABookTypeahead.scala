@@ -11,11 +11,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.abook.{EmailParser, EContactRepo}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class EContactABookTypeahead @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
-  override val store:EContactTypeaheadStore,
+  store:EContactTypeaheadStore,
   econtactRepo: EContactRepo,
   cache: EContactTypeaheadCache
 ) extends Typeahead[EContact, EContact] with Logging {
@@ -34,10 +36,25 @@ class EContactABookTypeahead @Inject() (
 
   override protected def extractId(info: EContact): Id[EContact] = info.id.get
 
-  override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[EContact]] = {
-    val res = cache.getOrElseOpt(EContactTypeaheadKey(userId)) { store.get(userId) } map { new PrefixFilter[EContact](_) }
-    log.info(s"[getPrefixFilter($userId)] res=$res")
-    res
+  override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[EContact]] = { // todo(ray):factor out common code
+    val (filter, msg) = cache.get(EContactTypeaheadKey(userId)) match {
+      case Some(filter) =>
+        (Some(new PrefixFilter[EContact](filter)), "Cache.get")
+      case None =>
+        val (filter, msg) = store.get(userId) match {
+          case Some(filter) =>
+            (new PrefixFilter[EContact](filter), "Store.get")
+          case None =>
+            val pFilter = Await.result(build(userId), Duration.Inf)
+            store += (userId -> pFilter.data)
+            (pFilter, "Built")
+        }
+        cache.set(EContactTypeaheadKey(userId), filter.data)
+        (Some(filter), msg)
+    }
+    log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
+    filter
+
   }
 
   override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {

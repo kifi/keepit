@@ -1,6 +1,8 @@
 @(userId: Id[User], limit: Int, feeds: Seq[com.keepit.search.feed.Feed], elapsedSeconds: Float)
 
 @admin("Feeds"){
+	<div>user: @userId </div>
+	<div>num of feeds: @feeds.size</div>
 	<div>Time elapsed: @elapsedSeconds seconds</div>
 	<br>
 
