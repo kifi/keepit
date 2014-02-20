@@ -37,7 +37,7 @@ class ExtSearchEventController @Inject() (
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
 
-  def clickedSearchResult = JsonAction.authenticatedParseJsonAsync { request =>
+  def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -78,8 +78,8 @@ class ExtSearchEventController @Inject() (
           searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, theOtherGuys, resultPosition, None, contextBuilder)
         }
       }
-      Ok
     }
+    Ok
   }
 
   def endedSearch = JsonAction.authenticatedParseJson { request =>
@@ -87,7 +87,7 @@ class ExtSearchEventController @Inject() (
     Ok
   }
 
-  def searched = JsonAction.authenticatedParseJsonAsync { request =>
+  def searched = JsonAction.authenticatedParseJson { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -96,8 +96,8 @@ class ExtSearchEventController @Inject() (
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
-      Ok
     }
+    Ok
   }
 
   def updateBrowsingHistory() = JsonAction.authenticatedParseJson { request =>

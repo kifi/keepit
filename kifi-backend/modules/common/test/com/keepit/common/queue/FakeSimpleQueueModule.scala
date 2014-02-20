@@ -1,6 +1,7 @@
 package com.keepit.common.queue
 
 import com.google.inject.{Provides, Singleton}
+import com.kifi.franz.{FormattedSQSQueue, FakeSQSQueue, SimpleFormattedSQSQueue}
 
 @Singleton
 case class FakeSimpleQueueModule() extends SimpleQueueModule {
@@ -16,6 +17,12 @@ case class FakeSimpleQueueModule() extends SimpleQueueModule {
     override def list(): Seq[String] = Seq.empty[String]
     override def delete(url: String): Unit = {}
     override def getByUrl(url: String): Option[SimpleQueue] = None
+  }
+
+  @Singleton
+  @Provides
+  def richConnectionUpdateQueue(): FormattedSQSQueue[RichConnectionUpdateMessage] = {
+    new SimpleFormattedSQSQueue[RichConnectionUpdateMessage](new FakeSQSQueue())
   }
 
 }

@@ -15,6 +15,16 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.isDetailOpen = keepService.isDetailOpen;
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
+				scope.closeDetail = keepService.togglePreview.bind(null, null);
+
+				scope.$watch(scope.getPreviewed, function (keep) {
+					scope.keep = keep;
+				});
+
+
+				scope.getPrivateConversationText = function() {
+					return scope.keep.conversationCount === 1 ? "Private Conversation" : "Private Conversations";
+				};
 
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';
@@ -30,6 +40,9 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 		return {
 			replace: true,
 			restrict: 'A',
+			scope: {
+				keep: '='
+			},
 			templateUrl: 'detail/keepDetail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
 			}

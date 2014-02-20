@@ -144,8 +144,8 @@ panes.thread = function () {
     });
   }
 
-  function textMatches(el) {
-    var matches = $(el).data('text') === message.text;
+  function textMatches(messageText, el) {
+    var matches = $(el).data('text') === messageText;
     log('[textMatches]', matches)();
     return matches;
   }

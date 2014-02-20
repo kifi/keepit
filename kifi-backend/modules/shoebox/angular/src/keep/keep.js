@@ -17,7 +17,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 			templateUrl: 'keep/keep.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
 				scope.isMine = function () {
-					return scope.keep.isMyBookmark || false;
+					return scope.keep.isMine || false;
 				};
 
 				function hasExampleTag(tags) {
@@ -146,6 +146,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 
 				scope.getName = function (user) {
 					return (user.firstName || '') + ' ' + (user.lastName || '');
+				};
+
+				scope.hasKeepers = function () {
+					var keep = scope.keep;
+					return !!(keep.keepers && keep.keepers.length);
 				};
 
 				scope.showOthers = function () {

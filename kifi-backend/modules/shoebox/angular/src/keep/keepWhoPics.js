@@ -15,7 +15,10 @@ angular.module('kifi.keepWhoPics', [])
 			},
 			link: function (scope) {
 				scope.getPicUrl = function (user) {
-					return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
+					if (user) {
+						return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
+					}
+					return '';
 				};
 			}
 		};
