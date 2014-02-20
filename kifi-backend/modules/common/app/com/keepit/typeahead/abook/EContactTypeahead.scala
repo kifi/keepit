@@ -18,7 +18,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class EContactTypeahead @Inject() (
   airbrake:AirbrakeNotifier,
-  override val store: EContactTypeaheadStore,
+  store: EContactTypeaheadStore,
   cache: EContactTypeaheadCache,
   abookClient:ABookServiceClient
 )extends Typeahead[EContact, EContact] with Logging {
@@ -50,9 +50,24 @@ class EContactTypeahead @Inject() (
   }
 
   def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {
-    val res = cache.getOrElseOpt(EContactTypeaheadKey(userId)) { store.get(userId) } map { new PrefixFilter[EContact](_) }
-    log.info(s"[getPrefixFilter($userId)] res=$res")
-    res
+    // cache.getOrElseOpt(EContactTypeaheadKey(userId)) { store.get(userId) } map { new PrefixFilter[EContact](_) }
+    val (filter, msg) = cache.get(EContactTypeaheadKey(userId)) match {
+      case Some(filter) =>
+        (Some(new PrefixFilter[EContact](filter)), "Cache.get")
+      case None =>
+        val (filter, msg) = store.get(userId) match {
+          case Some(filter) =>
+            (new PrefixFilter[EContact](filter), "Store.get")
+          case None =>
+            val pFilter = Await.result(build(userId), Duration.Inf)
+            store += (userId -> pFilter.data)
+            (pFilter, "Built")
+        }
+        cache.set(EContactTypeaheadKey(userId), filter.data)
+        (Some(filter), msg)
+    }
+    log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
+    filter
   }
 }
 

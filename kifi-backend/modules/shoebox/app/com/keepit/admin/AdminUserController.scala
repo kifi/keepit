@@ -694,8 +694,8 @@ class AdminUserController @Inject() (
           else
             Ok(econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
         case Some(socialRes) =>
-          Ok(socialResOpt.get.map{ info => s"id=${info.id} name=${info.fullName}" }.mkString("<br/>") +
-            econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+          Ok(socialResOpt.get.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} <br/>" }.mkString("") +
+            econtactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
       }
     }
   }

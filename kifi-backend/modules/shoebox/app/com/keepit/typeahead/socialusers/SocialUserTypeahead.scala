@@ -23,7 +23,7 @@ import com.keepit.typeahead
 
 class SocialUserTypeahead @Inject() (
   db: Database,
-  override val store: SocialUserTypeaheadStore,
+  store: SocialUserTypeaheadStore,
   cache: SocialUserTypeaheadCache,
   socialConnRepo:SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo
@@ -39,7 +39,7 @@ class SocialUserTypeahead @Inject() (
             (new PrefixFilter[SocialUserInfo](filter), "Store.get")
           case None =>
             val pFilter = Await.result(build(userId), Duration.Inf)
-            // store += (userId -> pFilter.data) // todo(ray): revisit
+            store += (userId -> pFilter.data)
             (pFilter, "Built")
         }
         cache.set(SocialUserTypeaheadKey(userId), filter.data)
@@ -47,7 +47,6 @@ class SocialUserTypeahead @Inject() (
     }
     log.info(s"[social.getPrefixFilter($userId)] ($msg) ${filter}")
     filter
-//    cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
   }
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
