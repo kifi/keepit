@@ -8,13 +8,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.Id
 import com.keepit.model._
-import scala.concurrent.Future
-import com.keepit.typeahead.TypeaheadHit
+import scala.concurrent.{Await, Future}
+import com.keepit.typeahead.{PrefixFilter, TypeaheadHit}
 import com.keepit.common.db.slick.DBSession.RSession
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration.Duration
 
 case class InviteStatus(label:String, image:Option[String], value:String, status:String)
 
@@ -85,15 +86,21 @@ class TypeaheadController @Inject() (
         case Some(query) if query.trim.length > 0 => {
           val prefixFilter = socialUserTypeahead.getPrefixFilter(userId) match {
             case Some(filter) => filter
-            case None => socialUserTypeahead.build(userId)
+            case None =>
+              log.warn(s"[querySocialConnections($userId,$search,$network,$after,$limit)] NO FILTER. Build")
+              Await.result(socialUserTypeahead.build(userId), Duration.Inf)
           }
-          socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
+          // socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo] // todo(ray): revisit
+          val ids = prefixFilter.filterBy(PrefixFilter.tokenizeNormalizedName(PrefixFilter.normalize(query)))
+          val res = db.readOnly { implicit ro => socialUserInfoRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector }
+          log.info(s"[querySocialConnections($userId,$search,$network,$after,$limit)] res=${res.mkString(",")}")
+          res
         }
         case None => {
           val infos = db.readOnly { implicit s =>
             socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
           }
-          infos.values.flatten.toSeq
+          infos.values.flatten.toVector
         }
       }
       log.info(s"[queryConnections($userId,$search,$network,$after,$limit)] filteredConns=${filteredConnections.mkString(",")}")
