@@ -30,26 +30,23 @@ class SocialUserTypeahead @Inject() (
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
   override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
-    cache.get(SocialUserTypeaheadKey(userId)) match { // todo(ray): log.debug
+    val (filter, msg) = cache.get(SocialUserTypeaheadKey(userId)) match {
       case Some(filter) =>
-        log.info(s"[getPrefixFilter($userId)] CACHE.filter(len=${filter.length})")
-        Some(new PrefixFilter[SocialUserInfo](filter))
+        (Some(new PrefixFilter[SocialUserInfo](filter)), "Cache.get")
       case None =>
-        log.info(s"[getPrefixFilter($userId)] NO FILTER in cache; check store")
-        val filter = store.get(userId) match {
+        val (filter, msg) = store.get(userId) match {
           case Some(filter) =>
-            log.info(s"[getPrefixFilter($userId)] STORE.filter(len=${filter.length})")
-            new PrefixFilter[SocialUserInfo](filter)
+            (new PrefixFilter[SocialUserInfo](filter), "Store.get")
           case None =>
-            log.info(s"[getPrefixFilter($userId)] NO FILTER in store; BUILD")
             val pFilter = Await.result(build(userId), Duration.Inf)
-            log.info(s"[getPrefixFilter($userId)] BUILT filter.len=${pFilter.data.length}")
-            store += (userId -> pFilter.data)
-            pFilter
+            // store += (userId -> pFilter.data) // todo(ray): revisit
+            (pFilter, "Built")
         }
         cache.set(SocialUserTypeaheadKey(userId), filter.data)
-        Some(filter)
+        (Some(filter), msg)
     }
+    log.info(s"[social.getPrefixFilter($userId)] ($msg) ${filter}")
+    filter
 //    cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
   }
 
@@ -62,16 +59,16 @@ class SocialUserTypeahead @Inject() (
   override protected def getAllInfosForUser(id: Id[User]): Seq[SocialUserBasicInfo] = {
     val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnly { implicit session =>
-      val infos = socialUserRepo.getSocialUserBasicInfosByUser(id)
-      log.info(s"[getAllInfosForUser($id)] res=${infos.mkString(",")}")
+      val infos = socialUserRepo.getSocialUserBasicInfosByUser(id) // todo: filter out fortytwo?
+      log.info(s"[social.getAllInfosForUser($id)] res(len=${infos.length}):${infos.mkString(",")}")
       for (info <- infos) {
         val connInfos = socialConnRepo.getSocialUserConnections(info.id)
-        log.info(s"[getConns($id)] (${info.id},${info.networkType}).conns=(${connInfos.mkString(",")})")
+        log.info(s"[social.getConns($id)] (${info.id},${info.networkType}).conns(len=${connInfos.length}):${connInfos.mkString(",")}")
         builder ++= connInfos.map { SocialUserBasicInfo.fromSocialUser(_) } // conversion overhead
       }
     }
     val res = builder.result
-    log.info(s"[getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
+    log.info(s"[social.getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
     res
   }
 
