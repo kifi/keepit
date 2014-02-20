@@ -85,16 +85,6 @@ class TypeaheadController @Inject() (
       val filteredConnections = search match {
         case Some(query) if query.trim.length > 0 => {
           val infos = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
-//          val prefixFilter = socialUserTypeahead.getPrefixFilter(userId) match {
-//            case Some(filter) => filter
-//            case None =>
-//              log.warn(s"[querySocialConnections($userId,$search,$network,$after,$limit)] NO FILTER. Build")
-//              Await.result(socialUserTypeahead.build(userId), Duration.Inf)
-//          }
-//          val ids = prefixFilter.filterBy(PrefixFilter.tokenizeNormalizedName(PrefixFilter.normalize(query)))
-//          val infos = db.readOnly { implicit ro =>
-//            socialUserInfoRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector
-//          }
           val res = network match {
             case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
             case None => infos
