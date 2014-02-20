@@ -13,7 +13,7 @@ class ProbablisticLRUTest extends Specification {
 
   def create(tableSize: Int, numHashFuncs: Int, syncEvery: Int = 1000) = {
     val buf = new InMemoryResultClickTrackerBuffer(tableSize) //TODO: Use the Multiplexed thingamagic here
-    val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)(None)
+    val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)
     lru.setSeed(123456789L)
     lru
   }
