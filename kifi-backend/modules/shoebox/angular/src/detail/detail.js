@@ -21,6 +21,11 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					scope.keep = keep;
 				});
 
+
+				scope.getPrivateConversationText = function() {
+					return scope.keep.conversationCount === 1 ? "Private Conversation" : "Private Conversations";
+				};
+
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';
 				};
