@@ -78,7 +78,10 @@ class MessagingCommander @Inject() (
     }}.toMap
 
     threads.map{ thread =>
-      val lastMessage = messagesByThread(thread.id.get).collectFirst { case m if m.from.isDefined => m }.get
+
+      val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.isDefined => m }
+      if (lastMessageOpt.isEmpty) log.error(s"EMPTY THREAD! thread_id: ${thread.id.get} request_url: $requestUrl user: $userId")
+      val lastMessage = lastMessageOpt.get
 
       val messageTimes = messagesByThread(thread.id.get).take(10).map{ message =>
         (message.externalId, message.createdAt)
