@@ -170,7 +170,7 @@ class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCac
 
 
 
-class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
+class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEvery : Int) {
 
   class Probe(key: Long, positions: Array[Int], values: Array[Int]) {
     def count(value: Long) = {
@@ -204,16 +204,16 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
     if ((ins % syncEvery) == 0) sync
   }
 
-  def get(key: Long, useSlaveAsPrimary: Boolean): Probe = {
-    Await.result(getFuture(key, useSlaveAsPrimary), 10 seconds)
+  def get(key: Long): Probe = {
+    Await.result(getFuture(key), 10 seconds)
   }
 
-  def getFuture(key: Long, useSlaveAsPrimary: Boolean): Future[Probe] = {
-    getValueHashesFuture(key, useSlaveAsPrimary).map{ case (p, h) => new Probe(key, p, h) }
+  def getFuture(key: Long): Future[Probe] = {
+    getValueHashesFuture(key).map{ case (p, h) => new Probe(key, p, h) }
   }
 
-  def get(key: Long, values: Seq[Long], useSlaveAsPrimary: Boolean = false): Map[Long, Int] = {
-    val probe = get(key, useSlaveAsPrimary)
+  def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
+    val probe = get(key)
     values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
       val c = probe.count(value)
       if (c > 0)  m + (value -> c) else m
@@ -232,8 +232,8 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
   def numSyncs = syncs
 
   protected def putValueHash(key: Long, value: Long, updateStrength: Double) {
-    def putValueHashOnce(bufferChunk: IntBufferWrapper, useSlaveAsPrimary: Boolean): Boolean = {
-      val (positions, values) = Await.result(getValueHashesFuture(key, useSlaveAsPrimary), 10 seconds)
+    def putValueHashOnce(bufferChunk: IntBufferWrapper): Boolean = {
+      val (positions, values) = Await.result(getValueHashesFuture(key), 10 seconds)
 
       // count open positions
       var openCount = 0
@@ -259,21 +259,15 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
       (i > 0)
     }
 
-    val bufferChunkMaster = masterBuffer.getChunk(key)
-    if (putValueHashOnce(bufferChunkMaster, false)) dirtyChunks = dirtyChunks + bufferChunkMaster
-
-    slaveBuffer.foreach{ mcBuffer =>
-      val bufferChunkSlave = mcBuffer.getChunk(key)
-      if (putValueHashOnce(bufferChunkSlave, true)) dirtyChunks = dirtyChunks + bufferChunkSlave
-    }
+    val bufferChunk = buffer.getChunk(key)
+    if (putValueHashOnce(bufferChunk)) dirtyChunks = dirtyChunks + bufferChunk
   }
 
-  protected def getValueHashes(key: Long, useSlaveAsPrimary: Boolean = false): (Array[Int], Array[Int]) = {
-    Await.result(getValueHashesFuture(key, useSlaveAsPrimary), 10 seconds)
+  protected def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
+    Await.result(getValueHashesFuture(key), 10 seconds)
   }
 
-  protected def getValueHashesFuture(key: Long, useSlaveAsPrimary: Boolean = false): Future[(Array[Int], Array[Int])] = {
-    val buffer = if (useSlaveAsPrimary) slaveBuffer.getOrElse(masterBuffer) else masterBuffer
+  protected def getValueHashesFuture(key: Long): Future[(Array[Int], Array[Int])] = {
     buffer.getChunkFuture(key).map{ bufferChunk =>
       val tableSize = buffer.chunkSize
       val p = new Array[Int](numHashFuncs)
@@ -296,8 +290,6 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, val numHashFuncs : Int, sy
   @inline private[this] def init(k: Long) = k & 0x7FFFFFFFFFFFFFFFL
   @inline private[this] def next(v: Long) = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
 }
-
-// class MultiplexingProbablisticLRU(buffers: MultiplexingBuffer, numHashFuncs : Int, syncEvery : Int)
 
 
 class ProbablisticLRUException(msg: String) extends Exception(msg)

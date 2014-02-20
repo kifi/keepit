@@ -41,7 +41,7 @@ import com.keepit.search.graph.user._
 trait SearchTestHelper { self: SearchApplicationInjector =>
 
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
-  val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
+  val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue))
 
   implicit val english = Lang("en")
 
