@@ -55,6 +55,8 @@ angular.module('kifi.keepService', [])
 					isDetailOpen = true;
 				}
 				previewed = keep;
+				api.getChatter(previewed);
+
 				return keep;
 			},
 
@@ -242,19 +244,18 @@ angular.module('kifi.keepService', [])
 			},
 
 			getChatter: function (keep) {
-				var url = env.xhrBaseEliza + '/chatter';
+				if (keep != null) {
+					var url = env.xhrBaseEliza + '/chatter';
 
-				var config = {
-					params: {
-						url: keep.url
-					}
-				};
+					var data = { url: keep.url };
 
-				return $http.get(url, config).then(function (res) {
-					var data = res.data,
-					console.log(res, data);
-					return null;
-				});
+					return $http.post(url, data).then(function (res) {
+						var data = res.data;
+						keep.conversationCount = data.threads;
+						return data;
+					});
+				}
+				return $q.when([]);
 			},
 
 			fetchScreenshotUrls: function (keeps) {
