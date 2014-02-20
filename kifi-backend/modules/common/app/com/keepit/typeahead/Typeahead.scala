@@ -12,8 +12,6 @@ import com.keepit.common.logging.Logging
 
 trait Typeahead[E, I] extends Logging {
 
-  val store: PrefixFilterStore[User]
-
   protected val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
 
   def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]]
@@ -34,7 +32,7 @@ trait Typeahead[E, I] extends Logging {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {
         case None =>
-          log.warn(s"[search($userId,$query)] NO FILTER found")
+          log.warn(s"[search($userId,$query)] NO FILTER found. res=NONE")
           None
         case Some(filter) =>
           val queryTerms = PrefixFilter.normalize(query).split("\\s+")
@@ -83,9 +81,10 @@ trait Typeahead[E, I] extends Logging {
       SafeFuture {
         timing(s"build($id)") {
           val builder = new PrefixFilterBuilder[E]
-          getAllInfosForUser(id).foreach(info => builder.add(extractId(info), extractName(info)))
+          val allInfos = getAllInfosForUser(id)
+          allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
           val filter = builder.build
-          store += (id -> filter.data)
+          log.info(s"[build($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
           filter
         }
       }

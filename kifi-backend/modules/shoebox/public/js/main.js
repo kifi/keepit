@@ -2273,6 +2273,9 @@ $(function () {
 		$refreshNetworks.removeClass('email gmail facebook linkedin');
 	}
 
+	function needsRefresh(network) {
+		return network && me.notAuthed && me.notAuthed.indexOf(network) !== -1;
+	}
 
 	function prepInviteTab(moreToShow) {
 		log('[prepInviteTab]', moreToShow);
@@ -2513,12 +2516,20 @@ $(function () {
 					name = match[1];
 				}
 			}
-			submitInvite(fullSocialId, name, /^linkedin/.test(fullSocialId) );
+			submitInvite(fullSocialId, name);
 		}
 	});
 
-	function submitInvite(fullSocialId, name, longForm) {
-		inviteMessageFormTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm || false});
+	function submitInvite(fullSocialId, name) {
+		var longForm = false;
+		if (/^linkedin/.test(fullSocialId)) {
+			if (needsRefresh('linkedin')) {
+				connectSocial('linkedin');
+				return;
+			}
+			longForm = true;
+		}
+		inviteMessageFormTmpl.render({fullSocialId: fullSocialId, label: name, longForm: longForm});
 		setTimeout(function () {
 			$inviteMessageForm.find('form').submit();
 		});

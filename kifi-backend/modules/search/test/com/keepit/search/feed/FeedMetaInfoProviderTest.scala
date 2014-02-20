@@ -23,9 +23,9 @@ class FeedMetaInfoProviderTest extends Specification with ApplicationInjector{
         )
 
         val provider = new FeedMetaInfoProvider(client)
-        provider.getFeedMetaInfo(uris(0).id.get) === FeedMetaInfo(uris(0), isSensitive = false, isUnscrapable = true)
-        provider.getFeedMetaInfo(uris(1).id.get) === FeedMetaInfo(uris(1), isSensitive = false, isUnscrapable = false)
-        provider.getFeedMetaInfo(uris(2).id.get) === FeedMetaInfo(uris(2), isSensitive = true, isUnscrapable = false)
+        provider.getFeedMetaInfo(uris(0).id.get) === FeedMetaInfo(uris(0), isSensitive = false)
+        provider.getFeedMetaInfo(uris(1).id.get) === FeedMetaInfo(uris(1), isSensitive = false)
+        provider.getFeedMetaInfo(uris(2).id.get) === FeedMetaInfo(uris(2), isSensitive = true)
       }
     }
   }

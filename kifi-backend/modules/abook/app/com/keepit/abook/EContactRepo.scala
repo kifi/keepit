@@ -76,10 +76,12 @@ class EContactRepoImpl @Inject() (
       val res = contacts.collect { case (c) if c.state == EContactStates.ACTIVE =>
         (EContactKey(c.id.get) -> c)
       }.toMap
-      log.info(s"[bulkGetByIds(${ids.mkString(",")})] missingIds:(len=${ids.size})${ids.mkString(",")} res=${res}")
+      log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")})] MISS: ids:(len=${ids.size})${ids.mkString(",")} res=${res.values.toSeq.take(20)}")
       res
     }
-    valueMap.map { case(k,v) => (k.id -> v) }
+    val res = valueMap.map { case(k,v) => (k.id -> v) }
+    log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")}): ALL: res(sz=${res.size})${res.values.toSeq.take(20)}")
+    res
   }
 
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {

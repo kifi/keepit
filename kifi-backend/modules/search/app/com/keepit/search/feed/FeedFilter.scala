@@ -10,8 +10,7 @@ import com.keepit.model.NormalizedURIStates
 
 case class FeedMetaInfo(
   uri: NormalizedURI,
-  isSensitive: Boolean,
-  isUnscrapable: Boolean
+  isSensitive: Boolean
 )
 
 class FeedMetaInfoProvider @Inject()(
@@ -20,7 +19,7 @@ class FeedMetaInfoProvider @Inject()(
   def getFeedMetaInfo(uriId: Id[NormalizedURI]): FeedMetaInfo = {
     val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 5 seconds)
     val sensitive =  Await.result(shoeboxClient.isSensitiveURI(uri.url), 5 seconds)
-    FeedMetaInfo(uri, sensitive, uri.state == NormalizedURIStates.UNSCRAPABLE)
+    FeedMetaInfo(uri, sensitive)
   }
 }
 
@@ -29,8 +28,10 @@ trait FeedFilter {
 }
 
 class BasicFeedFilter extends FeedFilter {
+  import com.keepit.model.NormalizedURIStates._
+  val badScrapeStates = Set(SCRAPE_FAILED, UNSCRAPABLE)
   def accept(meta: FeedMetaInfo): Boolean = {
-    meta.uri.redirect.isEmpty && !meta.isSensitive && !meta.isUnscrapable
+    meta.uri.redirect.isEmpty && !badScrapeStates.contains(meta.uri.state) && !meta.isSensitive
   }
 }
 

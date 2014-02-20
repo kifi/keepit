@@ -229,8 +229,8 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
-GET     /site/user/socialConnections   @com.keepit.controllers.website.TypeaheadController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
-GET     /site/user/allConnections     @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /site/user/allConnections   @com.keepit.controllers.website.TypeaheadController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
+GET     /site/user/socialConnections     @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
@@ -428,7 +428,9 @@ GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperim
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
 
-GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int = 10)
+GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedController.index
+POST    /adimin/feed/query             @com.keepit.controllers.admin.AdminFeedController.queryFeeds
+GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int)
 
 ##########################################
 # Common Healthcheck / service routes

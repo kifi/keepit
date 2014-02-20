@@ -80,11 +80,10 @@ class LinkedInSocialGraph @Inject() (
       case jsv if (jsv \ "id").asOpt[String].exists(_ != "private") => createSocialUserInfo(jsv)
     }
 
-  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String) {
+  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String) =
     WS.url(sendMessageUrl(getAccessToken(from)))
       .withHeaders("x-li-format" -> "json", "Content-Type" -> "application/json")
       .post(sendMessageBody(to.socialId, subject, message))
-  }
 
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // LinkedIn has no way of doing this through the API
