@@ -667,7 +667,7 @@ class AdminUserController @Inject() (
       case None =>
         Ok(s"No social match found for $query")
       case Some(res) =>
-        Ok(res.mkString("<br/>"))
+        Ok(res.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
     }
   }
 
@@ -679,7 +679,7 @@ class AdminUserController @Inject() (
       if (res.isEmpty)
         Ok(s"No contact match found for $query")
       else
-        Ok(res.mkString("<br/>"))
+        Ok(res.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
     }
   }
 
@@ -694,7 +694,7 @@ class AdminUserController @Inject() (
           else
             Ok(econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
         case Some(socialRes) =>
-          Ok(socialResOpt.get.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} <br/>" }.mkString("") +
+          Ok(socialResOpt.get.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
             econtactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
       }
     }
