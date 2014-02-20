@@ -15,10 +15,11 @@ import scala.concurrent.duration.Duration
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.{InMemoryObjectStore, S3Bucket}
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
+import com.keepit.typeahead
 
 class SocialUserTypeahead @Inject() (
   db: Database,
@@ -29,7 +30,27 @@ class SocialUserTypeahead @Inject() (
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
   override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
-    cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
+    cache.get(SocialUserTypeaheadKey(userId)) match { // todo(ray): log.debug
+      case Some(filter) =>
+        log.info(s"[getPrefixFilter($userId)] CACHE.filter(len=${filter.length})")
+        Some(new PrefixFilter[SocialUserInfo](filter))
+      case None =>
+        log.info(s"[getPrefixFilter($userId)] NO FILTER in cache; check store")
+        val filter = store.get(userId) match {
+          case Some(filter) =>
+            log.info(s"[getPrefixFilter($userId)] STORE.filter(len=${filter.length})")
+            new PrefixFilter[SocialUserInfo](filter)
+          case None =>
+            log.info(s"[getPrefixFilter($userId)] NO FILTER in store; BUILD")
+            val pFilter = Await.result(build(userId), Duration.Inf)
+            log.info(s"[getPrefixFilter($userId)] BUILT filter.len=${pFilter.data.length}")
+            store += (userId -> pFilter.data)
+            pFilter
+        }
+        cache.set(SocialUserTypeaheadKey(userId), filter.data)
+        Some(filter)
+    }
+//    cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
   }
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {

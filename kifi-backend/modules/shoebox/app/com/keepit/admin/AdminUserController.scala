@@ -654,23 +654,19 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  private def prefixSocialSearchDirect(userId:Id[User], query:String):Future[Seq[SocialUserBasicInfo]] = {
-    val socialFilterF = socialUserTypeahead.getPrefixFilter(userId) match {
-      case Some(filter) => Future.successful(filter)
-      case None => socialUserTypeahead.build(userId)
-    }
-    socialFilterF map { filter =>
-      implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-      val resOpt = socialUserTypeahead.search(userId, query)
-      log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
-      resOpt getOrElse Seq.empty[SocialUserBasicInfo]
-    }
+  private def prefixSocialSearchDirect(userId:Id[User], query:String):Option[Seq[SocialUserBasicInfo]] = {
+    implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
+    val resOpt = socialUserTypeahead.search(userId, query)
+    log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
+    resOpt
   }
-  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request => 
-    prefixSocialSearchDirect(userId, query) map { res =>
-      if (res.isEmpty)
+
+  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
+    val resOpt = prefixSocialSearchDirect(userId, query)
+    resOpt match {
+      case None =>
         Ok(s"No social match found for $query")
-      else
+      case Some(res) =>
         Ok(res.mkString("<br/>"))
     }
   }
@@ -689,15 +685,18 @@ class AdminUserController @Inject() (
 
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     val contactResF = prefixContactSearchDirect(userId, query)
-    val socialResF = prefixSocialSearchDirect(userId, query)
-    for {
-      socialRes <- socialResF
-      econtactRes <- contactResF
-    } yield {
-      if (socialRes.isEmpty && econtactRes.isEmpty)
-        Ok(s"No match found for $query")
-      else
-        Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
+    val socialResOpt = prefixSocialSearchDirect(userId, query)
+    contactResF map { econtactRes =>
+      socialResOpt match {
+        case None =>
+          if (econtactRes.isEmpty)
+            Ok(s"No match found for $query")
+          else
+            Ok(econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+        case Some(socialRes) =>
+          Ok(socialResOpt.get.map{ info => s"id=${info.id} name=${info.fullName}" }.mkString("<br/>") +
+            econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+      }
     }
   }
 
