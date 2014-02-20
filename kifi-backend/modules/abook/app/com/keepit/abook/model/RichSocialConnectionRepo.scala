@@ -13,11 +13,12 @@ import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])
 trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
-  def createRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection
+  def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection
   def recordKifiConnection(firstUserId: Id[User], secondUserId: Id[User])(implicit session: RWSession): Unit
   def recordInvitation(userId: Id[User], invitation: Id[Invitation], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
   def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit
   def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
+  def getByUserAndFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection]
 }
 
 
@@ -52,30 +53,41 @@ class RichSocialConnectionRepoImpl @Inject() (
   def deleteCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
   def invalidateCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
 
-  def createRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection = {
+  def getByUserAndFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection] = friendId match {
+    case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row).firstOption()
+    case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row).firstOption()
+  }
+
+  def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection = {
     val (connectionType, friendName, friendUserId, friendId) = friend match {
       case Left(socialUserInfo) => (socialUserInfo.networkType, Some(socialUserInfo.fullName), socialUserInfo.userId, Left(socialUserInfo.id.get))
       case Right(eContact) => (SocialNetworks.EMAIL, eContact.name, eContact.contactUserId, Right(eContact.email))
     }
 
-    val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
-    val commonKifiFriendsCount = incrementCommonKifiFriendsCounts(userId, friendId)
-    val invitationCount = getInvitationCount(friendId)
+    getByUserAndFriend(userId, friendId) match {
+      case Some(incompleteRichConnection) if incompleteRichConnection.userSocialId.isEmpty && userSocialId.isDefined => save(incompleteRichConnection.copy(userSocialId = userSocialId))
+      case Some(richConnection) => richConnection
+      case None => {
+        val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
+        val commonKifiFriendsCount = incrementCommonKifiFriendsCounts(userId, friendId)
+        val invitationCount = getInvitationCount(friendId)
 
-    save(RichSocialConnection(
-      userId = userId,
-      userSocialId = userSocialId,
-      connectionType = connectionType,
-      friendSocialId = friendId.left.toOption,
-      friendEmailAddress = friendId.right.toOption,
-      friendName = friendName,
-      friendUserId = friendUserId,
-      commonKifiFriendsCount = commonKifiFriendsCount,
-      kifiFriendsCount = kifiFriendsCount + 1,
-      invitation = None,
-      invitationCount = invitationCount,
-      blocked = false
-    ))
+        save(RichSocialConnection(
+          userId = userId,
+          userSocialId = userSocialId,
+          connectionType = connectionType,
+          friendSocialId = friendId.left.toOption,
+          friendEmailAddress = friendId.right.toOption,
+          friendName = friendName,
+          friendUserId = friendUserId,
+          commonKifiFriendsCount = commonKifiFriendsCount,
+          kifiFriendsCount = kifiFriendsCount + 1,
+          invitation = None,
+          invitationCount = invitationCount,
+          blocked = false
+        ))
+      }
+    }
   }
 
   private def getInvitationCount(friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = friendId match {
