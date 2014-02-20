@@ -53,7 +53,6 @@ class PageCommander @Inject() (
           collectionRepo.get(collId)
         }
       }.getOrElse(Seq())
-      log.info(s"loading info for url $url of user $userId, found nuri $nUri ($nUriStr) bookmark $bookmark with tags: $tags")
 
       val host: Option[String] = URI.parse(nUriStr).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
@@ -79,5 +78,11 @@ class PageCommander @Inject() (
     KeeperInfo(
       nUriStr, bookmark.map { b => if (b.isPrivate) "private" else "public" }, tags.map(SendableTag.from),
       position, neverOnSite, sensitive, shown, keepers, keeps)
+  }
+
+  def isSensitiveURI(uri: String): Boolean = {
+     val host: Option[String] = URI.parse(uri).get.host.map(_.name)
+     val domain: Option[Domain] = db.readOnly {implicit s => host.flatMap(domainRepo.get(_))}
+     domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
   }
 }

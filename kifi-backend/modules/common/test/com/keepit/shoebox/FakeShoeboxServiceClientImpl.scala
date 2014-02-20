@@ -585,4 +585,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val changed = allSearchFriends.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
+  
+  def isSensitiveURI(uri: String): Future[Boolean] = {
+    Future.successful(uri.contains("isSensitive"))
+  }
 }

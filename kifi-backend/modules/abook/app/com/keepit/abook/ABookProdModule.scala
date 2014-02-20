@@ -5,11 +5,13 @@ import com.keepit.inject.CommonProdModule
 import com.keepit.common.store.ABookProdStoreModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 import com.keepit.common.service.ServiceType
+import com.keepit.common.queue.ProdSimpleQueueModule
 
 case class ABookProdModule() extends ABookModule(
   cacheModule = ABookCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   storeModule = ABookProdStoreModule(),
-  contactsUpdaterPluginModule = ProdContactsUpdaterPluginModule()
+  contactsUpdaterPluginModule = ProdContactsUpdaterPluginModule(),
+  sqsModule = ProdSimpleQueueModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
     def servicesToListenOn = ServiceType.SHOEBOX :: Nil

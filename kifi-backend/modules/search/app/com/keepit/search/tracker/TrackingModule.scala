@@ -36,17 +36,7 @@ case class ProdTrackingModule() extends TrackingModule {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
-    val dirPath = conf.getString("dir").get
-    val dir = new File(dirPath).getCanonicalFile()
-    if (!dir.exists()) {
-      if (!dir.mkdirs()) {
-        throw new Exception(s"could not create dir $dir")
-      }
-    }
-    val file = new File(dir, "resultclicks.plru")
-    // table size = 16M (physical size = 64MB + 4bytes)
-    val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
-    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
+    new ResultClickTracker(new ProbablisticLRU(s3buffer, numHashFuncs, syncEvery))
   }
 }
 
@@ -56,14 +46,10 @@ case class DevTrackingModule() extends TrackingModule {
 
   @Provides
   @Singleton
-  def resultClickTracker(s3buffer: S3BackedResultClickTrackerBuffer): ResultClickTracker = {
+  def resultClickTracker(): ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
-    conf.getString("dir") match {
-      case None =>
-        val buffer = new InMemoryResultClickTrackerBuffer(1000)
-        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, 1)(Some(s3buffer)))
-      case Some(_) => ProdTrackingModule().resultClickTracker(s3buffer)
-    }
+    val buffer = new InMemoryResultClickTrackerBuffer(1000)
+    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, 1))
   }
 }

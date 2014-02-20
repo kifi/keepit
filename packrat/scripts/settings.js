@@ -11,18 +11,18 @@ panes.settings = function () {
     render: function ($paneBox) {
       log('[panes.settings.render]')();
       api.port.on(handlers);
-      api.port.emit('settings', update);
+      api.port.emit('settings');
 
       box = $paneBox[0];
-      $paneBox.find('.kifi-scroll-inner').preventAncestorScroll();
+      $paneBox.find('.kifi-scroll-inner').scroll(onScroll).preventAncestorScroll();
 
-      $paneBox.antiscroll({x: false});
-      var scroller = $paneBox.data('antiscroll');
+      var $scroll = $paneBox.find('.kifi-settings-scroll').antiscroll({x: false});
+      var scroller = $scroll.data('antiscroll');
       $(window).on('resize.settings', scroller.refresh.bind(scroller));
 
       $paneBox
         .on('click', '.kifi-setting-checkbox', onClickCheckbox)
-        .on('change', 'select[name=kifi-max-results]', onChangeMaxResults)
+        .on('change keyup', 'select[name=kifi-max-results]', onChangeMaxResults)
         .on('click', '.kifi-settings-play-alert', onClickPlay)
         .on('click', '.kifi-settings-x', onClickX)
         .on('kifi:remove', onRemoved);
@@ -35,17 +35,22 @@ panes.settings = function () {
 
   function update(o) {
     if (box) {
-      box.querySelector('input[name=kifi-sounds]').checked = o.sounds;
-      box.querySelector('input[name=kifi-popups]').checked = o.popups;
-      box.querySelector('input[name=kifi-emails]').checked = o.emails;
-      box.querySelector('input[name=kifi-keeper]').checked = o.keeper;
-      box.querySelector('input[name=kifi-sensitive]').checked = o.sensitive;
-      box.querySelector('input[name=kifi-search]').checked = o.search;
-      box.querySelector('select[name=kifi-max-results]').value = o.maxResults;
+      updateCheckbox('kifi-sounds', o.sounds);
+      updateCheckbox('kifi-popups', o.popups);
+      updateCheckbox('kifi-emails', o.emails);
+      updateCheckbox('kifi-keeper', o.keeper);
+      updateCheckbox('kifi-sensitive', o.sensitive);
+      updateCheckbox('kifi-search', o.search);
+      var sel = box.querySelector('select[name=kifi-max-results]');
+      sel.dataset.val = sel.value = o.maxResults;
       for (var key in subordinates) {
         box.querySelector('.kifi-setting-' + subordinates[key]).style.cssText = o[key] ? 'display:block;height:auto' : 'display:none';
       }
     }
+  }
+
+  function updateCheckbox(name, on) {
+    box.querySelector('input[name=' + name + ']').checked = on;
   }
 
   function takeFocus() {
@@ -63,17 +68,17 @@ panes.settings = function () {
   function onClickCheckbox() {
     var $status = showSpinner(this);
     var name = this.name.substr(5); // 'kifi-'
-    var value = this.checked;
-    api.port.emit('save_setting', {name: name, value: value}, function () {
-      succeed($status, name, value);
-    });
+    var val = this.checked;
+    api.port.emit('save_setting', {name: name, value: val}, succeed.bind(null, $status, name, val));
   }
 
-  function onChangeMaxResults() {
-    var $status = showSpinner(this);
-    api.port.emit('set_max_results', Math.max(1, Math.min(3, Math.round(this.value) || 1)), function () {
-      succeed($status);
-    });
+  function onChangeMaxResults(e) {
+    var val = this.value;
+    if (this.dataset.val !== val) { // bugzil.la/126379
+      this.dataset.val = val;
+      var $status = showSpinner(this);
+      api.port.emit('set_max_results', val, succeed.bind(null, $status));
+    }
   }
 
   function onClickPlay() {
@@ -82,6 +87,10 @@ panes.settings = function () {
 
   function onClickX() {
     pane.back('/messages:all');
+  }
+
+  function onScroll() {
+    this.parentNode.classList.toggle('kifi-scrolled', this.scrollTop > 0);
   }
 
   function showSpinner(el) {

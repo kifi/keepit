@@ -37,7 +37,7 @@ class ExtSearchEventController @Inject() (
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
 
-  def clickedSearchResult = JsonAction.authenticatedParseJsonAsync { request =>
+  def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -56,8 +56,8 @@ class ExtSearchEventController @Inject() (
           val kifiHitContext = (json \ "hit").as[KifiHitContext]
           shoeboxClient.getNormalizedURIByURL(searchResultUrl).onSuccess { case Some(uri) =>
             val uriId = uri.id.get
-            clickHistoryTracker.add(userId, ClickedURI(uriId))
             resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
+            clickHistoryTracker.add(userId, ClickedURI(uriId))
             if (kifiHitContext.isOwnKeep) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, kifiHitContext.keepers: _*)
           }
           searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), contextBuilder)
@@ -69,8 +69,8 @@ class ExtSearchEventController @Inject() (
             shoeboxClient.getNormalizedURIByURL(url).onSuccess {
               case Some(uri) =>
                 val uriId = uri.id.get
-                clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
                 resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
+                clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
               case None =>
                 resultClickedTracker.moderate(userId, query)
             }
@@ -78,8 +78,8 @@ class ExtSearchEventController @Inject() (
           searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, theOtherGuys, resultPosition, None, contextBuilder)
         }
       }
-      Ok
     }
+    Ok
   }
 
   def endedSearch = JsonAction.authenticatedParseJson { request =>
@@ -87,7 +87,7 @@ class ExtSearchEventController @Inject() (
     Ok
   }
 
-  def searched = JsonAction.authenticatedParseJsonAsync { request =>
+  def searched = JsonAction.authenticatedParseJson { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -96,8 +96,8 @@ class ExtSearchEventController @Inject() (
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
-      Ok
     }
+    Ok
   }
 
   def updateBrowsingHistory() = JsonAction.authenticatedParseJson { request =>

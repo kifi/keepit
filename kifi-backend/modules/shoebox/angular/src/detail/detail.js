@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText'])
 
 .directive('kfDetail', [
 	'keepService',
@@ -10,28 +10,24 @@ angular.module('kifi.detail', ['kifi.keepService'])
 			restrict: 'A',
 			templateUrl: 'detail/detail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				scope.getLength = function () {
-					return keepService.getSelectedLength();
-				};
+				scope.isSingleKeep = keepService.isSingleKeep;
+				scope.getLength = keepService.getSelectedLength;
+				scope.isDetailOpen = keepService.isDetailOpen;
+				scope.getPreviewed = keepService.getPreviewed;
+				scope.getSelected = keepService.getSelected;
+				scope.closeDetail = keepService.togglePreview.bind(null, null);
 
-				scope.showSingleKeep = function () {
-					return keepService.getPreviewed() && keepService.getSelectedLength() <= 1;
+				scope.$watch(scope.getPreviewed, function (keep) {
+					scope.keep = keep;
+				});
+
+
+				scope.getPrivateConversationText = function() {
+					return scope.keep.conversationCount === 1 ? "Private Conversation" : "Private Conversations";
 				};
 
 				scope.getTitleText = function () {
-					var len = keepService.getSelectedLength();
-					if (len === 1) {
-						return keepService.getFirstSelected().title;
-					}
-					return len + ' Keeps selected';
-				};
-
-				scope.getPreviewed = function () {
-					return keepService.getPreviewed();
-				};
-
-				scope.getSelected = function () {
-					return keepService.getSelected();
+					return keepService.getSelectedLength() + ' Keeps selected';
 				};
 			}
 		};
@@ -44,8 +40,12 @@ angular.module('kifi.detail', ['kifi.keepService'])
 		return {
 			replace: true,
 			restrict: 'A',
+			scope: {
+				keep: '='
+			},
 			templateUrl: 'detail/keepDetail.tpl.html',
-			link: function (scope /*, element, attrs*/ ) {}
+			link: function (scope /*, element, attrs*/ ) {
+			}
 		};
 	}
 ]);

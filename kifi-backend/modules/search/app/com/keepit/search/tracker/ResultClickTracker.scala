@@ -5,8 +5,11 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
+import scala.concurrent._
+import scala.concurrent.duration._
 import scala.math._
 import scala.util.Random
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 abstract class ResultClickBoosts {
@@ -32,14 +35,13 @@ class ResultClickTracker(lru: ProbablisticLRU) {
 
   def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean, isDemo: Boolean = false): Unit = {
     val hash = QueryHash(userId, query, analyzer)
-    val probe = lru.get(hash, true)
-    val norm = lru.numHashFuncs.toDouble
+    val probe = lru.get(hash)
     val count = probe.count(uriId.id)
 
     if (count == 0 && !isDemo) {
       lru.put(hash, uriId.id, 0.01d)
     } else if (isUserKeep) {
-      val updateStrength = min(min(0.1d * (rank.toDouble + 3.0d), (count * 2).toDouble/norm.toDouble), 0.7)
+      val updateStrength = min(0.1d * (rank.toDouble + 1.0d), 0.3)
       lru.put(hash, uriId.id, updateStrength)
     } else {
       lru.put(hash, uriId.id, 0.2d)
@@ -51,13 +53,18 @@ class ResultClickTracker(lru: ProbablisticLRU) {
     lru.put(hash, rnd.nextLong(), 0.01d) // slowly making lru to forget by adding a random id
   }
 
-  def getBoosts(userId: Id[User], query: String, maxBoost: Float, useSlaveAsPrimary: Boolean = false): ResultClickBoosts = {
+  def getBoosts(userId: Id[User], query: String, maxBoost: Float): ResultClickBoosts = {
+    Await.result(getBoostsFuture(userId, query, maxBoost), 10 seconds)
+  }
+
+  def getBoostsFuture(userId: Id[User], query: String, maxBoost: Float): Future[ResultClickBoosts] = {
     val hash = QueryHash(userId, query, analyzer)
-    val probe = lru.get(hash, useSlaveAsPrimary)
-    new ResultClickBoosts {
-      def apply(value: Long) = {
-        val count = probe.count(value)
-        if (count > 1) { 1.0f + maxBoost * boostFactor(count) } else { 1.0f }
+    lru.getFuture(hash).map{ probe =>
+      new ResultClickBoosts {
+        def apply(value: Long) = {
+          val count = probe.count(value)
+          if (count > 1) { 1.0f + maxBoost * boostFactor(count) } else { 1.0f }
+        }
       }
     }
   }

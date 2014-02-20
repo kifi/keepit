@@ -48,7 +48,7 @@ module.exports = function (grunt) {
 				],
 				libJs: [
 					'lib/lodash/dist/lodash.js',
-					'lib/jquery/jquery.js',
+					'lib/jquery/dist/jquery.js',
 					'lib/angular/angular.js',
 					'lib/angular-cookies/angular-cookies.js',
 					'lib/angular-resource/angular-resource.js',
@@ -60,13 +60,13 @@ module.exports = function (grunt) {
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',
-					'lib/ngInfiniteScroll/build/ng-infinite-scroll.js',
+					'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
 					'lib/moment/moment.js',
 					'lib/angular-moment/angular-moment.js'
 				],
 				libMinJs: [
 					'lib/lodash/dist/lodash.min.js',
-					'lib/jquery/jquery.min.js',
+					'lib/jquery/dist/jquery.min.js',
 					'lib/angular/angular.min.js',
 					'lib/angular-cookies/angular-cookies.min.js',
 					'lib/angular-resource/angular-resource.min.js',
@@ -78,7 +78,7 @@ module.exports = function (grunt) {
 					'lib/jquery.mousewheel/jquery.mousewheel.js',
 					'lib/antiscroll/antiscroll.js',
 					//'lib/angular-antiscroll/angular-antiscroll.js',
-					'lib/ngInfiniteScroll/build/ng-infinite-scroll.js',
+					'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
 					'lib/moment/min/moment.min.js',
 					'lib/angular-moment/angular-moment.min.js'
 				],
@@ -268,6 +268,9 @@ module.exports = function (grunt) {
 			}
 		},
 		watch: {
+			options: {
+				debounceDelay: 1000
+			},
 			// https://github.com/gruntjs/grunt-contrib-watch#settings
 			stylusDev: {
 				files: ['<%= path.client.css %>'],
@@ -291,7 +294,6 @@ module.exports = function (grunt) {
 			},
 			jshintClient: {
 				options: {
-					debounceDelay: 1000,
 					event: ['added', 'changed']
 				},
 				files: ['<%= jshint.client.src %>'],
@@ -299,7 +301,6 @@ module.exports = function (grunt) {
 			},
 			jshintTest: {
 				options: {
-					debounceDelay: 1000,
 					event: ['added', 'changed']
 				},
 				files: ['<%= jshint.test.src %>'],

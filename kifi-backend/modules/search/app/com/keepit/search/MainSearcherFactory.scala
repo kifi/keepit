@@ -71,7 +71,7 @@ class MainSearcherFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig
   ) = {
-    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
@@ -100,12 +100,6 @@ class MainSearcherFactory @Inject() (
   def warmUp(userId: Id[User], logging: Boolean = true): Seq[Future[Any]] = {
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
-
-    // logging after firing futures
-    if (logging) {
-      log.info(s"warming up $userId")
-      Statsd.increment(s"warmup.$userId")
-    }
 
     Seq(browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
   }
@@ -147,10 +141,8 @@ class MainSearcherFactory @Inject() (
     SafeFuture(clickHistoryTracker.getMultiHashFilter(userId))
   }
 
-  private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
-    future {
-      resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, useS3FlowerFilter)
-    }
+  private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
+    resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
 
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {

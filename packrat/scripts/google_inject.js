@@ -162,9 +162,10 @@ if (searchUrlRe.test(document.URL)) !function() {
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
       resp.hits.forEach(processHit, resp);
+      if (!resp.hits.length) resp.mayHaveMore = false;
 
       if (!newFilter || newFilter.who === 'a') {
-        var numTop = resp.numTop = resp.show && resp.hits.length || 0;
+        var numTop = resp.numTop = resp.show ? resp.hits.length : 0;
         var allTotal = insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal);
         if (!newFilter) {
           $status
@@ -679,7 +680,7 @@ if (searchUrlRe.test(document.URL)) !function() {
 
   function processHit(hit) { // this is response in which hit arrived
     hit.uuid = this.uuid;
-    var matches = hit.bookmark.matches || {};
+    var matches = hit.bookmark.matches || (hit.bookmark.matches = {});
 
     hit.titleHtml = hit.bookmark.title ?
       boldSearchTerms(hit.bookmark.title, matches.title) :

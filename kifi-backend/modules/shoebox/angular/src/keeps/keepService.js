@@ -3,14 +3,19 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env',
-	function ($http, env) {
+	'$http', 'env', '$q', '$timeout', '$document',
+	function ($http, env, $q, $timeout, $document) {
 
 		var list = [],
 			selected = {},
 			before = null,
+			end = false,
 			previewed = null,
-			limit = 30;
+			limit = 30,
+			isDetailOpen = false,
+			singleKeepBeingPreviewed = false,
+			previewUrls = {},
+			doc = $document[0];
 
 		function getKeepId(keep) {
 			if (keep) {
@@ -25,6 +30,14 @@ angular.module('kifi.keepService', [])
 		var api = {
 			list: list,
 
+			isDetailOpen: function () {
+				return isDetailOpen;
+			},
+
+			isSingleKeep: function () {
+				return singleKeepBeingPreviewed;
+			},
+
 			getPreviewed: function () {
 				return previewed || null;
 			},
@@ -34,12 +47,27 @@ angular.module('kifi.keepService', [])
 			},
 
 			preview: function (keep) {
-				previewed = keep || null;
-				return previewed;
+				if (keep == null) {
+					singleKeepBeingPreviewed = false;
+					isDetailOpen = false;
+				}
+				else {
+					singleKeepBeingPreviewed = true;
+					isDetailOpen = true;
+				}
+				previewed = keep;
+				api.getChatter(previewed);
+
+				return keep;
 			},
 
 			togglePreview: function (keep) {
-				if (api.isPreviewed(keep)) {
+				if (api.isPreviewed(keep) && _.size(selected) > 1) {
+					previewed = null;
+					isDetailOpen = true;
+					singleKeepBeingPreviewed = false;
+					return null;
+				} else if (api.isPreviewed(keep)) {
 					return api.preview(null);
 				}
 				return api.preview(keep);
@@ -56,7 +84,15 @@ angular.module('kifi.keepService', [])
 			select: function (keep) {
 				var id = getKeepId(keep);
 				if (id) {
+					isDetailOpen = true;
 					selected[id] = true;
+					if (_.size(selected) === 1) {
+						api.preview(keep);
+					}
+					else {
+						previewed = null;
+						singleKeepBeingPreviewed = false;
+					}
 					return true;
 				}
 				return false;
@@ -66,6 +102,17 @@ angular.module('kifi.keepService', [])
 				var id = getKeepId(keep);
 				if (id) {
 					delete selected[id];
+					var countSelected = _.size(selected);
+					if (countSelected === 0 && isDetailOpen === true) {
+						api.preview(keep);
+					}
+					else if (countSelected === 1 && isDetailOpen === true) {
+						api.preview(_.keys(selected)[0]);
+					}
+					else {
+						previewed = null;
+						singleKeepBeingPreviewed = false;
+					}
 					return true;
 				}
 				return false;
@@ -109,10 +156,28 @@ angular.module('kifi.keepService', [])
 					map[keep.id] = true;
 					return map;
 				}, {});
+				if (list.length === 0) {
+					api.clearState();
+				}
+				else if (list.length === 1) {
+					api.preview(list[0]);
+				}
+				else {
+					previewed = null;
+					isDetailOpen = true;
+					singleKeepBeingPreviewed = false;
+				}
 			},
 
 			unselectAll: function () {
 				selected = {};
+				api.clearState();
+			},
+
+			clearState: function () {
+				previewed = null;
+				isDetailOpen = false;
+				singleKeepBeingPreviewed = false;
 			},
 
 			isSelectedAll: function () {
@@ -141,13 +206,38 @@ angular.module('kifi.keepService', [])
 					params: params
 				};
 
+				if (end) {
+					return $q.when([]);
+				}
+
 				return $http.get(url, config).then(function (res) {
 					var data = res.data,
-						keeps = data.keeps;
+						keeps = data.keeps || [];
+					if (!keeps.length) {
+						end = true;
+					}
+
 					if (!data.before) {
 						list.length = 0;
 					}
+
 					list.push.apply(list, keeps);
+					before = list.length ? list[list.length - 1].id : null;
+
+					_.forEach(keeps, function (keep) {
+						keep.isMine = true;
+					});
+
+					return keeps;
+				}).then(function (list) {
+					api.fetchScreenshotUrls(list).then(function (urls) {
+						$timeout(function () {
+							api.prefetchImages(urls);
+						});
+						_.forEach(list, function (keep) {
+							keep.screenshot = urls[keep.url];
+						});
+					});
 					return list;
 				});
 			},
@@ -162,6 +252,42 @@ angular.module('kifi.keepService', [])
 					keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
 						return idMap[tagId] || null;
 					});
+				});
+			},
+
+			getChatter: function (keep) {
+				if (keep != null) {
+					var url = env.xhrBaseEliza + '/chatter';
+
+					var data = { url: keep.url };
+
+					return $http.post(url, data).then(function (res) {
+						var data = res.data;
+						keep.conversationCount = data.threads;
+						return data;
+					});
+				}
+				return $q.when([]);
+			},
+
+			fetchScreenshotUrls: function (keeps) {
+				if (keeps && keeps.length) {
+					var url = env.xhrBase + '/keeps/screenshot';
+					return $http.post(url, {
+						urls: _.pluck(keeps, 'url')
+					}).then(function (res) {
+						return res.data.urls;
+					});
+				}
+				return $q.when([]);
+			},
+
+			prefetchImages: function (urls) {
+				_.forEach(urls, function (imgUrl, key) {
+					if (!(key in previewUrls)) {
+						previewUrls[key] = imgUrl;
+						doc.createElement('img').src = imgUrl;
+					}
 				});
 			}
 		};

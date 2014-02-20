@@ -8,54 +8,46 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 		$scope.me = profileService.me;
 		$scope.keeps = keepService.list;
 
-		$scope.$watch('keeps', function () {
+		$scope.$watch('keeps.length', function () {
 			$scope.refreshScroll();
 		});
 
-		var promise = keepService.getList();
+		$scope.loadingKeeps = true;
+		var promise = keepService.getList().then(function (list) {
+			$scope.loadingKeeps = false;
+			return list;
+		});
+
 		$q.all([promise, tagService.fetchAll()]).then(function () {
+			$scope.loadingKeeps = false;
+			$scope.refreshScroll();
 			keepService.joinTags(keepService.list, tagService.list);
 		});
 
-		$scope.previewing = null;
+		$scope.getNextKeeps = function () {
+			if ($scope.loadingKeeps) {
+				return $q.when([]);
+			}
 
-		$scope.$watch(function () {
-			return keepService.previewing;
-		}, function (val) {
-			$scope.previewing = val;
-		});
+			$scope.loadingKeeps = true;
 
-		$scope.selectKeep = function (keep) {
-			return keepService.select(keep);
+			return keepService.getList().then(function (list) {
+				$scope.loadingKeeps = false;
+				$scope.refreshScroll();
+				return list;
+			});
 		};
 
-		$scope.unselectKeep = function (keep) {
-			return keepService.unselect(keep);
-		};
+		$scope.selectKeep = keepService.select;
+		$scope.unselectKeep = keepService.unselect;
+		$scope.isSelectedKeep = keepService.isSelected;
+		$scope.toggleSelectKeep = keepService.toggleSelect;
 
-		$scope.isSelectedKeep = function (keep) {
-			return keepService.isSelected(keep);
-		};
+		$scope.toggleSelectAll = keepService.toggleSelectAll;
+		$scope.isSelectedAll = keepService.isSelectedAll;
 
-		$scope.toggleSelectKeep = function (keep) {
-			return keepService.toggleSelect(keep);
-		};
-
-		$scope.toggleSelectAll = function () {
-			return keepService.toggleSelectAll();
-		};
-
-		$scope.isSelectedAll = function () {
-			return keepService.isSelectedAll();
-		};
-
-		$scope.isPreviewedKeep = function (keep) {
-			return keepService.isPreviewed(keep);
-		};
-
-		$scope.togglePreviewKeep = function (keep) {
-			return keepService.togglePreview(keep);
-		};
+		$scope.isPreviewedKeep = keepService.isPreviewed;
+		$scope.togglePreviewKeep = keepService.togglePreview;
 	}
 ])
 
@@ -176,11 +168,21 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 
 				scope.setLoading();
 
-				scope.preview = function (keep, $event) {
+				scope.togglePreview = function (keep, $event) {
 					if ($event.target.tagName !== 'A') {
 						scope.togglePreviewKeep(keep);
 					}
 				};
+
+				scope.onScrollNext = function () {
+					scope.getNextKeeps();
+				};
+
+				scope.isScrollDisabled = function () {
+					return scope.loadingKeeps;
+				};
+
+				scope.scrollDistance = '100%';
 			}
 		};
 	}
