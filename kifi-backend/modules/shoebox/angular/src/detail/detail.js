@@ -17,6 +17,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.getSelected = keepService.getSelected;
 				scope.closeDetail = keepService.togglePreview.bind(null, null);
 
+				tagService.fetchAll().then(function (res) {
+					scope.allTags = res;
+				});
+
 				scope.$watch(scope.getPreviewed, function (keep) {
 					scope.keep = keep;
 				});
