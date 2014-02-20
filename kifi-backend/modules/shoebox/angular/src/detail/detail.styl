@@ -258,7 +258,7 @@
 .page-coll-new
   position: relative
 
-.page-coll-add
+.page-coll-add-circle
   display: inline-block
   white-space: nowrap
   font-size: 0
@@ -278,6 +278,35 @@
   &:hover
     background: url("data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7") center/8px no-repeat, #a0b1c2
 
+.page-coll-add
+  position: relative
+  overflow: hidden
+  white-space: nowrap
+  background-color: #b8c5d2
+  margin: 0 3px 3px 0
+  font-size: 13px
+  line-height: 24px
+  -webkit-font-smoothing: antialiased
+  display: inline-block
+  padding-right: 12px
+  color: #fff
+  font-size: 13px
+
+  &:hover
+    background-color: #a0b1c2
+    display: inline-block
+
+  &:active
+    background-color: #8699ab
+
+  .page-coll-add-circle
+    width: 16px
+    height: 16px
+    bottom: 4px
+    margin-left: 8px
+    margin-right: 4px
+    background-color: #f7fafe
+    background-image: url("data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7")
 
 
 
