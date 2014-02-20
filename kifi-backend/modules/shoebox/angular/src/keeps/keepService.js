@@ -3,8 +3,8 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env', '$q', '$document',
-	function ($http, env, $q, $document) {
+	'$http', 'env', '$q', '$timeout', '$document',
+	function ($http, env, $q, $timeout, $document) {
 
 		var list = [],
 			selected = {},
@@ -14,7 +14,8 @@ angular.module('kifi.keepService', [])
 			limit = 30,
 			isDetailOpen = false,
 			singleKeepBeingPreviewed = false,
-			previewUrls = {};
+			previewUrls = {},
+			doc = $document[0];
 
 		function getKeepId(keep) {
 			if (keep) {
@@ -218,7 +219,14 @@ angular.module('kifi.keepService', [])
 
 					return keeps;
 				}).then(function (list) {
-					api.fetchScreenshotUrls(list).then(api.prefetchImages);
+					api.fetchScreenshotUrls(list).then(function (urls) {
+						$timeout(function () {
+							api.prefetchImages(urls);
+						});
+						_.forEach(list, function (keep) {
+							keep.screenshot = urls[keep.url];
+						});
+					});
 					return list;
 				});
 			},
@@ -249,13 +257,12 @@ angular.module('kifi.keepService', [])
 			},
 
 			prefetchImages: function (urls) {
-				for (var i = 0, l = urls.length, url; i < l; i++) {
-					url = urls[i];
-					if (previewUrls[url] !== true) {
-						previewUrls[url] = true;
-						$document.createElement('img').src = urls[i];
+				_.forEach(urls, function (imgUrl, key) {
+					if (!(key in previewUrls)) {
+						previewUrls[key] = imgUrl;
+						doc.createElement('img').src = imgUrl;
 					}
-				}
+				});
 			}
 		};
 
