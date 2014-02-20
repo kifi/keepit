@@ -407,6 +407,9 @@ POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminC
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
 
+GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
+GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], search:String ?= "")
+
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
