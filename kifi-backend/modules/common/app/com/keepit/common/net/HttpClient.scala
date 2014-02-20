@@ -16,7 +16,7 @@ import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
-import com.keepit.common.concurrent.ExecutionContext.immediate
+import com.keepit.common.concurrent.ExecutionContext.{immediate, singleThread}
 import com.keepit.common.controller.{MidFlightRequests, CommonHeaders}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
@@ -174,10 +174,14 @@ case class HttpClientImpl(
   private def await[A](future: Future[A]): A = Await.result(future, Duration(callTimeouts.responseTimeout.get, TimeUnit.MILLISECONDS))
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withRequestTimeout(callTimeouts.responseTimeout.get), url, headers, accessLog, serviceDiscovery)
 
-  private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
+  private def res(request: Request, response: Response, requestBody: Option[Any] = None): Future[ClientResponse] = {
     val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, callTimeouts.maxJsonParseTime.get)
     val status = response.status
-    if (status / 100 != validResponseClass) {
+
+    if (status / 100 == validResponseClass) {
+      Future.successful(clientResponse) // everything is fine. return the completed future.
+    } else Future {
+      // there is some problem. offload the work to another thread and return a future.
       if (status == Status.SERVICE_UNAVAILABLE) {
         request.httpUri match {
           case d: DirectUrl =>
@@ -197,15 +201,15 @@ case class HttpClientImpl(
             } else {
               None
             }
-        }
+          }
       } else {
         Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
-      } map {exception =>
+      } map { exception =>
         if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
         else throw exception
       }
+      clientResponse
     }
-    clientResponse
   }
 
   def withTimeout(callTimeouts: CallTimeouts): HttpClient = {
@@ -214,12 +218,12 @@ case class HttpClientImpl(
 
   private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
     val (request, responseFuture) = reqRes
-    responseFuture.map(r => res(request, r))(immediate) tap { f =>
-      f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
+    responseFuture.flatMap(r => res(request, r))(immediate) tap { f =>
+      f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (singleThread)
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
         case unknown => airbrake.get.notify(s"Unknown object in http client onSuccess: $unknown on $request")
-      } (immediate)
+      } (singleThread)
     }
   }
 
