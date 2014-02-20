@@ -218,7 +218,7 @@ angular.module('kifi.keepService', [])
 					before = list.length ? list[list.length - 1].id : null;
 
 					_.forEach(keeps, function (keep) {
-						keep.isMyBookmark = true;
+						keep.isMine = true;
 					});
 
 					return keeps;
