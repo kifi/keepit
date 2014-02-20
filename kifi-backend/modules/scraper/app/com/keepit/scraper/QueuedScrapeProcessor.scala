@@ -2,7 +2,6 @@ package com.keepit.scraper
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicReference, AtomicLong}
 import com.keepit.model._
-import java.util.concurrent._
 import com.keepit.search.{ArticleStore, Article}
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
@@ -16,7 +15,6 @@ import scala.ref.WeakReference
 import com.keepit.common.performance.timing
 import org.apache.http.HttpStatus
 import play.api.Play.current
-import scala.concurrent._
 import play.api.libs.json.Json
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
@@ -24,7 +22,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.net.HttpClient
 import com.keepit.common.plugin.SchedulingProperties
-import scala.Some
+import java.util.concurrent.{Callable, TimeUnit, Executors, ConcurrentLinkedQueue, ExecutorCompletionService, Executor, ExecutorService}
+import scala.concurrent.forkjoin.{ForkJoinTask, ForkJoinPool}
+import scala.concurrent.{ExecutionContext}
 
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 

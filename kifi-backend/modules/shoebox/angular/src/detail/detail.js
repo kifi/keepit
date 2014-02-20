@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube'])
 
 .directive('kfDetail', [
-	'keepService',
-	function (keepService) {
+	'keepService', 'tagService',
+	function (keepService, tagService) {
 		return {
 			replace: true,
 			restrict: 'A',
@@ -21,14 +21,18 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					scope.keep = keep;
 				});
 
-
-				scope.getPrivateConversationText = function() {
-					return scope.keep.conversationCount === 1 ? "Private Conversation" : "Private Conversations";
+				scope.getPrivateConversationText = function () {
+					return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
 				};
 
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';
 				};
+
+				scope.removeTag = function (keep, tag) {
+					console.log(keep, tag, tag.id);
+					tagService.removeKeepsFromTag(tag.id, [keep.id]);
+				}
 			}
 		};
 	}
@@ -37,6 +41,20 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 .directive('kfKeepDetail', [
 
 	function () {
+		var YOUTUBE_REGEX = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
+
+		function isYoutubeVideo(url) {
+			return url.indexOf('://www.youtube.com/') > -1 || url.indexOf('youtu.be/') > -1;
+		}
+
+		function getYoutubeVideoId(url) {
+			var match = url.match(YOUTUBE_REGEX);
+			if (match && match.length === 2) {
+				return match[1];
+			}
+			return null;
+		}
+
 		return {
 			replace: true,
 			restrict: 'A',
@@ -45,6 +63,25 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 			},
 			templateUrl: 'detail/keepDetail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
+
+				function testEmbed(keep) {
+					if (keep) {
+						var url = keep.url;
+						if (isYoutubeVideo(url)) {
+							var vid = getYoutubeVideoId(url);
+							if (vid) {
+								keep.videoId = vid;
+								keep.isEmbed = true;
+								return;
+							}
+						}
+						keep.isEmbed = false;
+					}
+				}
+
+				testEmbed(scope.keep);
+
+				scope.$watch('keep', testEmbed);
 			}
 		};
 	}
