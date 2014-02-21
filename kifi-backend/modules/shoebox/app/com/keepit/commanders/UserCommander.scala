@@ -34,6 +34,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
+import com.keepit.inject.FortyTwoConfig
 
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -100,7 +101,8 @@ class UserCommander @Inject() (
   elizaServiceClient: ElizaServiceClient,
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
-  emailOptOutCommander: EmailOptOutCommander) extends Logging {
+  emailOptOutCommander: EmailOptOutCommander,
+  fortytwoConfig: FortyTwoConfig) extends Logging {
 
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -253,7 +255,7 @@ class UserCommander @Inject() (
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
       if (withVerification) {
-        val url = current.configuration.getString("application.baseUrl").get
+        val url = fortytwoConfig.applicationBaseUrl
         db.readWrite { implicit session =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"

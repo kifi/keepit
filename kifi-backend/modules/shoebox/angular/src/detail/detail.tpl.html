@@ -1,9 +1,9 @@
 <div class="kf-detail-pane" ng-show="isDetailOpen()">
 	<div class="kf-detail-scroll" antiscroll="{ autoHide: false }">
-		<div class="kf-detail-inner {{howKept}}">
+		<div class="kf-detail-inner" ng-class="{ single: isSingleKeep(), multiple: !isSingleKeep(), private: isPrivate(), public: isPublic() }">
 			<a class="kf-detail-x" href="javascript:" ng-click="closeDetail()"></a>
 			<div class="kf-page-meta" data-n="{{getLength()}}">
-				<div kf-keep-detail keep="keep" ng-if="isSingleKeep()"></div>
+				<div kf-keep-detail ng-if="isSingleKeep()"></div>
 				<h2 class="kf-detail-header page-title" ng-hide="isSingleKeep()" ng-bind="getTitleText()"></h2>
 				<a class="kf-page-keep" href="javascript:"></a>
 				<a class="kf-page-priv" href="javascript:"></a>

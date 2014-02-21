@@ -11,7 +11,8 @@ import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthentic
 import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilderFactory}
 import com.keepit.common.time.Clock
 import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
-
+import play.api.Play.current
+import com.keepit.controllers.core.OAuth2CommonConfig
 
 trait ShoeboxSecureSocialModule extends SecureSocialModule {
 
@@ -47,11 +48,24 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
     db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentCommander, clock
   )
+
+  @Singleton
+  @Provides
+  def oauthConfig: OAuth2CommonConfig = OAuth2CommonConfig(current.configuration.getString("oauth2.approval.prompt").getOrElse("force"))
 }
 
 case class ProdShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
 
   def configure {
     bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
+  }
+
+  @Singleton
+  @Provides
+  def secureSocialClientIds: SecureSocialClientIds = {
+    val conf = current.configuration.getConfig("securesocial").get
+    SecureSocialClientIds(
+      conf.getString("linkedin.clientId").get,
+      conf.getString("facebook.clientId").get)
   }
 }

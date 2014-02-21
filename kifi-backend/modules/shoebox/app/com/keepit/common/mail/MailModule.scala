@@ -10,7 +10,14 @@ import com.keepit.common.actor.ActorInstance
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClient
 import com.amazonaws.auth.BasicAWSCredentials
 
-trait MailModule extends ScalaModule
+case class OptoutSecret(val value: String)
+
+trait MailModule extends ScalaModule {
+  @Singleton
+  @Provides
+  def optoutSecret: OptoutSecret =
+    OptoutSecret(current.configuration.getString("optout.secret").get)
+}
 
 case class ProdMailModule() extends MailModule {
   def configure() {

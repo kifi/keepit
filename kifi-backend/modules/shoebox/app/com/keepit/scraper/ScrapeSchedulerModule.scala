@@ -11,21 +11,15 @@ case class ProdScrapeSchedulerModule() extends ScrapeSchedulerModule {
 
   def configure {
     bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
+    install(ProdScraperConfigModule())
   }
-
-  @Singleton
-  @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig()
 }
 
 case class DevScrapeSchedulerModule() extends ScrapeSchedulerModule {
 
   def configure {
     bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
+    install(ProdScraperConfigModule())
   }
-
-  @Singleton
-  @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig().copy(scrapePendingFrequency = 5, pendingOverdueThreshold = 10)
 }
 

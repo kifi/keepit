@@ -47,7 +47,7 @@ class UnknownServiceException(message: String) extends Exception(message)
 class ServiceDiscoveryImpl(
     zkClient: ZooKeeperClient,
     services: FortyTwoServices,
-    amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
+    amazonInstanceInfo: AmazonInstanceInfo,
     scheduler: Scheduler,
     airbrake: Provider[AirbrakeNotifier],
     val isCanary: Boolean = false,
@@ -60,7 +60,7 @@ class ServiceDiscoveryImpl(
   @volatile private[this] var registered = false
   @volatile private[this] var unregistered = false
 
-  private lazy val myAmazonInstanceInfo = amazonInstanceInfoProvider.get
+  private lazy val myAmazonInstanceInfo = amazonInstanceInfo
   private var myInstance: Option[ServiceInstance] = None
   private var myServiceStatus: ServiceStatus = ServiceStatus.STARTING // keeping track of the status
 
