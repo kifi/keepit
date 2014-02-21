@@ -350,7 +350,11 @@ angular.module('kifi.keepService', [])
 				}
 
 				var url = env.xhrBase + '/keeps/remove';
-				return $http.post(url, _.pluck(keeps, 'url')).then(function () {
+				return $http.post(url, _.map(keeps, function (keep) {
+					return {
+						url: keep.url
+					};
+				})).then(function () {
 					var map = _.reduce(keeps, function (map, keep) {
 						map[keep.id] = true;
 						return map;
@@ -364,11 +368,18 @@ angular.module('kifi.keepService', [])
 				});
 			},
 
+			toggleKeep: function (keeps, isPrivate) {
+				var isKept = _.every(keeps, 'isMyBookmark');
+				isPrivate = isPrivate == null ? _.some(keeps, 'isPrivate') : !! isPrivate;
+
+				if (isKept) {
+					return api.unkeep(keeps);
+				}
+				return api.keep(keeps, isPrivate);
+			},
+
 			togglePrivate: function (keeps) {
-				var isPrivate = _.every(keeps, function (keep) {
-					return keep.isPrivate;
-				});
-				return api.keep(keeps, !isPrivate);
+				return api.keep(keeps, !_.every(keeps, 'isPrivate'));
 			}
 		};
 

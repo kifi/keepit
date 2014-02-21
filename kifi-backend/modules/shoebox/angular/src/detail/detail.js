@@ -65,9 +65,25 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				};
 
 				scope.toggleKeep = function () {
+					var keeps;
+					if (scope.isSingleKeep()) {
+						keeps = [scope.getPreviewed()];
+					}
+					else {
+						keeps = scope.getSelected();
+					}
+					return keepService.toggleKeep(keeps);
 				};
 
 				scope.togglePrivate = function () {
+					var keeps;
+					if (scope.isSingleKeep()) {
+						keeps = [scope.getPreviewed()];
+					}
+					else {
+						keeps = scope.getSelected();
+					}
+					return keepService.togglePrivate(keeps);
 				};
 			}
 		};
