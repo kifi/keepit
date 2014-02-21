@@ -47,10 +47,6 @@ class EContactTypeahead @Inject() (
   }
 
   override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = {
-    val abookF = abookClient.getEContactsByIds(ids) map { res =>
-      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
-      res
-    }
     val s3F = econtactCache.bulkGetOrElseFuture(ids.map(EContactKey(_)).toSet) { keys =>
       val missing = keys.map(_.id)
       log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] missing(len=${missing.size}):${missing.take(10).mkString(",")}")
@@ -64,7 +60,11 @@ class EContactTypeahead @Inject() (
       log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] res=$v")
       v
     }
-    Future.firstCompletedOf(Seq(abookF, localF))
+    val abookF = abookClient.getEContactsByIds(ids) map { res =>
+      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    Future.firstCompletedOf(Seq(localF, abookF))
   }
 
   override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] ={
