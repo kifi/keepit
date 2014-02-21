@@ -1,7 +1,7 @@
 package com.keepit.typeahead.abook
 
 import com.keepit.typeahead._
-import com.keepit.model.{User, EContact}
+import com.keepit.model.{EContactKey, EContactCache, User, EContact}
 import com.google.inject.Inject
 import com.keepit.common.logging.{Logging, AccessLog}
 import com.amazonaws.services.s3.AmazonS3
@@ -19,9 +19,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 class EContactTypeahead @Inject() (
   airbrake:AirbrakeNotifier,
   store: EContactTypeaheadStore,
-  cache: EContactTypeaheadCache,
+  typeaheadCache: EContactTypeaheadCache,
+  econtactCache: EContactCache,
   abookClient:ABookServiceClient
 )extends Typeahead[EContact, EContact] with Logging {
+
+  val MYSQL_MAX_ROWS = 50000000
 
   override protected def extractName(info: EContact):String = { // todo(ray): revisit
     val name = info.name.getOrElse("").trim
@@ -37,13 +40,32 @@ class EContactTypeahead @Inject() (
 
   override protected def extractId(info: EContact):Id[EContact] = info.id.get
 
-  override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, 50000000) // MySQL limit
+  override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, MYSQL_MAX_ROWS) // MySQL limit
 
   override protected def getAllInfosForUser(id: Id[User]):Seq[EContact] = {
     Await.result(asyncGetAllInfosForUser(id), 1 minute) // todo(ray):revisit
   }
 
-  override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = abookClient.getEContactsByIds(ids)
+  override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = {
+    val abookF = abookClient.getEContactsByIds(ids) map { res =>
+      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val s3F = econtactCache.bulkGetOrElseFuture(ids.map(EContactKey(_)).toSet) { keys =>
+      val missing = keys.map(_.id)
+      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] missing(len=${missing.size}):${missing.take(10).mkString(",")}")
+      val res = abookClient.getEContactsByIds(missing.toSeq).map { res =>
+        res.map(e => EContactKey(e.id.get) -> e).toMap
+      }
+      res
+     }
+    val localF = s3F map { res =>
+      val v = res.valuesIterator.toVector
+      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] res=$v")
+      v
+    }
+    Future.firstCompletedOf(Seq(abookF, localF))
+  }
 
   override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] ={
     Await.result(asyncGetInfos(ids), 1 minute) // todo(ray):revisit
@@ -51,7 +73,7 @@ class EContactTypeahead @Inject() (
 
   def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {
     // cache.getOrElseOpt(EContactTypeaheadKey(userId)) { store.get(userId) } map { new PrefixFilter[EContact](_) }
-    val (filter, msg) = cache.get(EContactTypeaheadKey(userId)) match {
+    val (filter, msg) = typeaheadCache.get(EContactTypeaheadKey(userId)) match {
       case Some(filter) =>
         (Some(new PrefixFilter[EContact](filter)), "Cache.get")
       case None =>
@@ -63,7 +85,7 @@ class EContactTypeahead @Inject() (
             store += (userId -> pFilter.data)
             (pFilter, "Built")
         }
-        cache.set(EContactTypeaheadKey(userId), filter.data)
+        typeaheadCache.set(EContactTypeaheadKey(userId), filter.data)
         (Some(filter), msg)
     }
     log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
