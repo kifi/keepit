@@ -672,8 +672,20 @@ class AdminUserController @Inject() (
   }
 
   private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
-    abookClient.prefixSearch(userId, query)
+    implicit val ord = TypeaheadHit.defaultOrdering[EContact]
+    val localF = econtactTypeahead.asyncSearch(userId, query) map { resOpt =>
+      val res = resOpt getOrElse Seq.empty[EContact]
+      log.info(s"[prefixContactSearchDirect($userId)-LOCAL] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val abookF = abookClient.prefixSearch(userId, query) map { res =>
+      log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val resF = Future.firstCompletedOf(Seq(localF, abookF))
+    resF
   }
+
   def prefixContactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     prefixContactSearchDirect(userId, query) map { res =>
       if (res.isEmpty)
