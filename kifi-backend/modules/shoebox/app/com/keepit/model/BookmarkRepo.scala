@@ -42,7 +42,6 @@ class BookmarkRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val countCache: BookmarkCountCache,
-  val keepToCollectionRepo: KeepToCollectionRepoImpl,
   collectionRepo: CollectionRepo,
   bookmarkUriUserCache: BookmarkUriUserCache,
   latestBookmarkUriCache: LatestBookmarkUriCache
@@ -140,7 +139,6 @@ class BookmarkRepoImpl @Inject() (
     (for(b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]], count: Int)(implicit session: RSession): Seq[Bookmark] = {
-    import keepToCollectionRepo.{stateTypeMapper => ktcStateMapper}
     import StaticQuery.interpolation
     import scala.collection.JavaConversions._
 
