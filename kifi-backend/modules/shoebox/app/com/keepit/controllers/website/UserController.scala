@@ -12,7 +12,7 @@ import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.model._
 import play.api.libs.json.Json.toJson
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{ABookUploadConf, ABookServiceClient}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -41,6 +41,7 @@ import play.api.libs.json.JsNumber
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
+import com.keepit.inject.FortyTwoConfig
 
 class UserController @Inject() (
   db: Database,
@@ -65,7 +66,9 @@ class UserController @Inject() (
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
   authCommander: AuthCommander,
-  searchClient: SearchServiceClient
+  searchClient: SearchServiceClient,
+  abookUploadConf: ABookUploadConf,
+  fortytwoConfig: FortyTwoConfig
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // hotspot -- need optimization; gather timing info for analysis
@@ -234,6 +237,7 @@ class UserController @Inject() (
     }
   }
 
+
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
@@ -389,7 +393,7 @@ class UserController @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  private val url = current.configuration.getString("application.baseUrl").get
+  private val url = fortytwoConfig.applicationBaseUrl
   def resendVerificationEmail(email: String) = HtmlAction.authenticated { implicit request =>
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
@@ -463,7 +467,6 @@ class UserController @Inject() (
   }
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt * 1000
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = HtmlAction.authenticated { request =>
     import ABookInfoStates._
     val ts = System.currentTimeMillis
@@ -484,7 +487,7 @@ class UserController @Inject() (
               case PENDING => resp
             }
         }
-        if ((System.currentTimeMillis - ts) > abookUploadTimeoutThreshold) {
+        if ((System.currentTimeMillis - ts) > abookUploadConf.timeoutThreshold * 1000) {
           done.set(true)
           Some(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>")
         } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")

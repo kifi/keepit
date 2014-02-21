@@ -8,7 +8,9 @@ import akka.actor.ActorSystem
 trait ContactsUpdaterPluginModule extends ScalaModule
 
 case class ProdContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
-  def configure(): Unit = {}
+  def configure(): Unit = {
+    install(ProdABookServiceClientModule())
+  }
 
   @Provides
   def contactsUpdaterPlugin(actorInstance:ActorInstance[ContactsUpdaterActor], sysProvider:Provider[ActorSystem], updaterActorProvider:Provider[ContactsUpdaterActor]):ContactsUpdaterPlugin = {
@@ -17,7 +19,9 @@ case class ProdContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule
 }
 
 case class DevContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
-  def configure(): Unit = {}
+  def configure(): Unit = {
+    install(ProdABookServiceClientModule())
+  }
 
   @Provides
   def contactsUpdaterPlugin(actorInstance:ActorInstance[ContactsUpdaterActor], sysProvider:Provider[ActorSystem], updaterActorProvider:Provider[ContactsUpdaterActor]):ContactsUpdaterPlugin = {

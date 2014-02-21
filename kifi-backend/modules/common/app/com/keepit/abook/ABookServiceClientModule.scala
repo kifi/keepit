@@ -7,6 +7,11 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import play.api.Play._
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
+import play.api.Configuration._
+
+case class ABookUploadConf(
+  timeoutThreshold: Int, // minutes
+  batchSize: Int)
 
 trait ABookServiceClientModule extends ScalaModule
 
@@ -25,4 +30,12 @@ case class ProdABookServiceClientModule() extends ABookServiceClientModule {
     )
   }
 
+  @Singleton
+  @Provides
+  def abookUploadConf: ABookUploadConf = {
+    val conf = current.configuration.getConfig("abook.upload").getOrElse(empty)
+    ABookUploadConf(
+      conf.getInt("timeout.threshold").getOrElse(30),
+      conf.getInt("batch.size").getOrElse(200))
+  }
 }

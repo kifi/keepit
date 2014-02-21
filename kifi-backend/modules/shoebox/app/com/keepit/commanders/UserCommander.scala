@@ -25,8 +25,6 @@ import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
-import play.api.Play
-import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
@@ -34,6 +32,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
+import com.keepit.inject.FortyTwoConfig
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -100,7 +99,8 @@ class UserCommander @Inject() (
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander,
-  heimdalClient: HeimdalServiceClient) extends Logging {
+  heimdalClient: HeimdalServiceClient,
+  fortytwoConfig: FortyTwoConfig) extends Logging {
 
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -253,7 +253,7 @@ class UserCommander @Inject() (
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
       if (withVerification) {
-        val url = current.configuration.getString("application.baseUrl").get
+        val url = fortytwoConfig.applicationBaseUrl
         db.readWrite { implicit session =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
@@ -626,7 +626,7 @@ class UserCommander @Inject() (
       for (address <- uniqueEmailStrings -- existing.map(_.address)) {
         if (emailRepo.getByAddressOpt(address).isEmpty) {
           val emailAddr = emailRepo.save(EmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
-          val siteUrl = current.configuration.getString("application.baseUrl").get
+          val siteUrl = fortytwoConfig.applicationBaseUrl
           val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
           postOffice.sendMail(ElectronicMail(
