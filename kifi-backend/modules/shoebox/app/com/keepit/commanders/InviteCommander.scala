@@ -217,8 +217,26 @@ class InviteCommander @Inject() (
     val savedOpt:Option[Invitation] = db.readWrite(attempts = 2) { implicit s =>
       val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
       val path = routes.InviteController.acceptInvite(invite.externalId).url
-      val messageWithUrl = s"${inviteInfo.message getOrElse ""}\n$url$path"
-      val resp = Await.result(linkedIn.sendMessage(me, socialUserInfo, inviteInfo.subject.getOrElse(""), messageWithUrl), Duration.Inf) // todo(ray): refactor; map future resp
+      val subject = inviteInfo.subject.getOrElse(s"Kifi -- ${me.fullName.split(' ')(0)} invites you to Kifi") // todo: same for email
+      val message = inviteInfo.message.getOrElse(
+        """
+          |Please accept my invitation to kifi.
+          |
+          |What is kifi and why should I join?
+          |
+          |Kifi (short for keep it find it) allows you to easily keep and tag
+          |anything you find online - an article, video, picture, email, anything -
+          |then quickly find it on top of your favorite search engine results,
+          |together with relevant pages that your friends kept, too.
+          |
+          |Kifi also lets you message your friends about what you keep and
+          |find alongside any web page, to get their opinion or gain from their
+          |expertise.
+          | """
+      )
+      val messageWithUrl = s"$message\n$url$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
+      log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
+      val resp = Await.result(linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl), Duration.Inf) // todo(ray): refactor; map future resp
       log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText}")
       if (resp.status != Status.CREATED) { // per LinkedIn doc
         airbrake.notify(s"Failed to send LinkedIn invite for $userId; invite=$invite; socialUser=$socialUserInfo")
