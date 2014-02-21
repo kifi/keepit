@@ -307,7 +307,7 @@ angular.module('kifi.keepService', [])
 						return res.data.urls;
 					});
 				}
-				return $q.when([]);
+				return $q.when(keeps || []);
 			},
 
 			prefetchImages: function (urls) {
@@ -321,7 +321,7 @@ angular.module('kifi.keepService', [])
 
 			keep: function (keeps, isPrivate) {
 				if (!(keeps && keeps.length)) {
-					return $q.when([]);
+					return $q.when(keeps || []);
 				}
 
 				isPrivate = !! isPrivate;
@@ -346,13 +346,29 @@ angular.module('kifi.keepService', [])
 
 			unkeep: function (keeps) {
 				if (!(keeps && keeps.length)) {
-					return $q.when([]);
+					return $q.when(keeps || []);
 				}
 
 				var url = env.xhrBase + '/keeps/remove';
 				return $http.post(url, _.pluck(keeps, 'url')).then(function () {
+					var map = _.reduce(keeps, function (map, keep) {
+						map[keep.id] = true;
+						return map;
+					}, {});
+
+					_.remove(list, function (keep) {
+						return map[keep.id];
+					});
+
 					return keeps;
 				});
+			},
+
+			togglePrivate: function (keeps) {
+				var isPrivate = _.every(keeps, function (keep) {
+					return keep.isPrivate;
+				});
+				return api.keep(keeps, !isPrivate);
 			}
 		};
 
