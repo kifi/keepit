@@ -87,7 +87,6 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
@@ -111,7 +110,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit s =>
       val fromUser = userRepo.get(fromUserId)
       val toUser = userRepo.get(toUserId)
-      for (email <- emailAddressRepo.getAllByUser(fromUserId)) {
+      for (email <- emailRepo.getAllByUser(fromUserId)) {
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
@@ -605,6 +604,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
+        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address) }
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
