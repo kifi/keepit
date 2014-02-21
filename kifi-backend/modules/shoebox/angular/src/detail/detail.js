@@ -28,6 +28,33 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.getTitleText = function () {
 					return keepService.getSelectedLength() + ' Keeps selected';
 				};
+
+				scope.howKept = null;
+
+				scope.$watch(function () {
+					if (scope.isSingleKeep()) {
+						if (scope.keep) {
+							return scope.keep.isPrivate ? 'private' : 'public';
+						}
+						return null;
+					}
+
+					var selected = scope.getSelected();
+					if (_.every(selected, 'isMine')) {
+						return _.every(selected, 'isPrivate') ? 'private' : 'public';
+					}
+					return null;
+				}, function (howKept) {
+					scope.howKept = howKept;
+				});
+
+				scope.isPrivate = function () {
+					return scope.howKept === 'private';
+				};
+
+				scope.isPublic = function () {
+					return scope.howKept === 'public';
+				};
 			}
 		};
 	}
@@ -53,9 +80,6 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 		return {
 			replace: true,
 			restrict: 'A',
-			scope: {
-				keep: '='
-			},
 			templateUrl: 'detail/keepDetail.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
 

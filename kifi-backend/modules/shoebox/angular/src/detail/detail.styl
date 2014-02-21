@@ -93,7 +93,8 @@
 .kf-page-priv
   border-left: 1px solid #eff2f7
 
-[data-kept^=p] .kf-page-keep:before
+.public .kf-page-keep:before
+.private .kf-page-keep:before
 .kf-page-priv:before
   content: " "
   display: inline-block
@@ -103,42 +104,44 @@
   vertical-align: -1px
   margin-right: 8px
 
-:not([data-kept=pri]) .kf-page-priv:before
+.kf-page-priv:before
   width: 10px
   background-position: -11px 0
 
-[data-kept=pri] .kf-page-priv:before
-  width: 13px
-  background-position: -21px 0
+  .private &
+    width: 13px
+    background-position: -21px 0
 
 .kf-page-keep:after
   content: "Keep"
 
-  [data-kept^=p] &
+  .public &
+  .private &
     content: "Unkeep"
 
-  :not([data-n="1"]) &
+  .multiple &
     content: "Keep all"
 
-  [data-kept^=p] :not([data-n="1"]) &
+  .multiple.public &
+  .multiple.private &
     content: "Unkeep all"
 
 .kf-page-priv:after
   content: "Keep privately"
 
-  [data-kept=pub] &
+  .public &
     content: "Make private"
 
-  [data-kept=pri] &
+  .private &
     content: "Make public"
 
-  :not([data-n="1"]) &
+  .multiple &
     content: "Keep all privately"
 
-  [data-kept=pub] not([data-n="1"]) &
+  .multiple.public &
     content: "Make all private"
 
-  [data-kept=pri] :not([data-n="1"]) &
+  .multiple.private &
     content: "Make all public"
 
 .kf-page-who
