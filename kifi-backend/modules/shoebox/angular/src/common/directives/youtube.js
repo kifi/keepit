@@ -3,6 +3,7 @@
 angular.module('kifi.youtube', [])
 
 .directive('kfYoutube', [
+
 	function () {
 
 		function videoIdToSrc(videoId) {
@@ -11,7 +12,8 @@ angular.module('kifi.youtube', [])
 		}
 
 		function videoEmbed(src) {
-			return '<embed src="' + src + '" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed>';
+			return '<embed src="' + src +
+				'" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed>';
 		}
 
 		return {
@@ -24,6 +26,7 @@ angular.module('kifi.youtube', [])
 			link: function (scope, element) {
 
 				var lastId = null;
+
 				function updateSrc(videoId) {
 					if (lastId === videoId) {
 						return;

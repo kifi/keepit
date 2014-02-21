@@ -104,7 +104,8 @@
   max-width: 0
   transition: width .18s, max-width .18s
 
-  [data-kept^=p] &
+  .public &
+  .private &
     width: 48px
     max-width: 48px
 
@@ -128,20 +129,21 @@
   transform-origin: right
   transition: transform .18s, top .18s
 
-  [data-kept^=p] &
+  .public &
+  .private &
     transform: none
 
 .kf-page-how-pub
   background-color: #accc98
 
-  .pri &
+  .private &
     top: 100%
     z-index: 0
 
 .kf-page-how-pri
   background-color: #e78881
 
-  .pub &
+  .public &
     top: -100%
     z-index: 0
 
