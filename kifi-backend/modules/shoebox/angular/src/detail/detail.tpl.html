@@ -30,13 +30,17 @@
 						<a class="page-coll-x" href="javascript:" ng-click="removeTag(keep, tag)">×</a>
 					</li>
 					<li class="page-coll-new">
-						<a class="page-coll-add-circle" href="javascript:" ng-if="keep.tagList.length > 0">+</a>
-						<a class="page-coll-add" href="javascript:" ng-if="keep.tagList.length == 0"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
-						<span class="page-coll-sizer" style="display:none"></span>
-						<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
-						<ul class="page-coll-opts" style="display:none">
-							<li class="page-coll-opt long-text" ng-repeat="tag in allTags" data-id="{{tag.id}}">{{tag.name}}</li>
-						</ul>
+					  <span ng-show="!isAddingTag()">
+							<a class="page-coll-add-circle" href="javascript:" ng-show="hasTags()" ng-click="addTag()">+</a>
+							<a class="page-coll-add" href="javascript:" ng-show="!hasTags()" ng-click="addTag()"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
+					  </span>
+					  <span ng-show="isAddingTag()">
+							<span class="page-coll-sizer" style="display:none"></span>
+							<input class="page-coll-input" ng-if="isAddingTag()" type="text" placeholder="tag name" ng-model="filter.name">
+							<ul class="page-coll-opts" style="display:none">
+								<li class="page-coll-opt long-text" ng-repeat="tag in allTags" data-id="{{tag.id}}">{{tag.name}}</li>
+							</ul>
+					  </span>
 					</li>
 				</ul>
 			</div>

@@ -5,6 +5,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 .directive('kfDetail', [
 	'keepService', 'tagService',
 	function (keepService, tagService) {
+		var isAddingTag = false;
 		return {
 			replace: true,
 			restrict: 'A',
@@ -24,6 +25,19 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.$watch(scope.getPreviewed, function (keep) {
 					scope.keep = keep;
 				});
+
+
+				scope.isAddingTag = function () {
+					return isAddingTag;
+				};
+
+				scope.hasTags = function () {
+					return scope.keep && scope.keep.tagList && scope.keep.tagList.length > 0;
+				};
+
+				scope.addTag = function () {
+					return isAddingTag = true;
+				};
 
 				scope.getPrivateConversationText = function () {
 					return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
