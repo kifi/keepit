@@ -44,7 +44,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					}
 
 					var selected = scope.getSelected();
-					if (_.every(selected, 'isMine')) {
+					if (_.every(selected, 'isMyBookmark')) {
 						return _.every(selected, 'isPrivate') ? 'private' : 'public';
 					}
 					return null;
@@ -62,6 +62,12 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 				scope.removeTag = function (keep, tag) {
 					tagService.removeKeepsFromTag(tag.id, [keep.id]);
+				};
+
+				scope.toggleKeep = function () {
+				};
+
+				scope.togglePrivate = function () {
 				};
 			}
 		};

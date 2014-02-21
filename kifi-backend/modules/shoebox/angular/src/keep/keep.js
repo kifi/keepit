@@ -16,8 +16,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 			controller: 'KeepCtrl',
 			templateUrl: 'keep/keep.tpl.html',
 			link: function (scope /*, element, attrs*/ ) {
-				scope.isMine = function () {
-					return scope.keep.isMine || false;
+				scope.isMyBookmark = function () {
+					return scope.keep.isMyBookmark || false;
 				};
 
 				function hasExampleTag(tags) {

@@ -31,7 +31,7 @@ angular.module('kifi.keepService', [])
 			_.forEach(list, function (keep) {
 				if (keep.tagList) {
 					keep.tagList = keep.tagList.filter(function (tag) {
-						return tag.id != tagId;
+						return tag.id !== tagId;
 					});
 				}
 			});
@@ -39,15 +39,15 @@ angular.module('kifi.keepService', [])
 
 		$rootScope.$on('tags.removeFromKeep', function (e, data) {
 			var tagId = data.tagId,
-			    keepId = data.keepId;
-			console.log("[removeFromKeep] ", e, data, tagId, keepId);
+				keepId = data.keepId;
+			console.log('[removeFromKeep] ', e, data, tagId, keepId);
 			_.forEach(list, function (keep) {
 				if (keep.id === keepId && keep.tagList) {
-					console.log("pre:", keep.tagList);
+					console.log('pre:', keep.tagList);
 					keep.tagList = keep.tagList.filter(function (tag) {
-						return tag.id != tagId;
+						return tag.id !== tagId;
 					});
-					console.log("post:", keep.tagList);
+					console.log('post:', keep.tagList);
 				}
 			});
 		});
@@ -92,7 +92,8 @@ angular.module('kifi.keepService', [])
 					isDetailOpen = true;
 					singleKeepBeingPreviewed = false;
 					return null;
-				} else if (api.isPreviewed(keep)) {
+				}
+				else if (api.isPreviewed(keep)) {
 					return api.preview(null);
 				}
 				return api.preview(keep);
@@ -250,7 +251,7 @@ angular.module('kifi.keepService', [])
 					before = list.length ? list[list.length - 1].id : null;
 
 					_.forEach(keeps, function (keep) {
-						keep.isMine = true;
+						keep.isMyBookmark = true;
 					});
 
 					return keeps;
@@ -284,7 +285,9 @@ angular.module('kifi.keepService', [])
 				if (keep != null) {
 					var url = env.xhrBaseEliza + '/chatter';
 
-					var data = { url: keep.url };
+					var data = {
+						url: keep.url
+					};
 
 					return $http.post(url, data).then(function (res) {
 						var data = res.data;
@@ -313,6 +316,42 @@ angular.module('kifi.keepService', [])
 						previewUrls[key] = imgUrl;
 						doc.createElement('img').src = imgUrl;
 					}
+				});
+			},
+
+			keep: function (keeps, isPrivate) {
+				if (!(keeps && keeps.length)) {
+					return $q.when([]);
+				}
+
+				isPrivate = !! isPrivate;
+
+				var url = env.xhrBase + '/keeps/add';
+				return $http.post(url, {
+					keeps: keeps.map(function (keep) {
+						return {
+							title: keep.title,
+							url: keep.url,
+							isPrivate: isPrivate
+						};
+					})
+				}).then(function () {
+					_.forEach(keeps, function (keep) {
+						keep.isMyBookmark = true;
+						keep.isPrivate = isPrivate;
+					});
+					return keeps;
+				});
+			},
+
+			unkeep: function (keeps) {
+				if (!(keeps && keeps.length)) {
+					return $q.when([]);
+				}
+
+				var url = env.xhrBase + '/keeps/remove';
+				return $http.post(url, _.pluck(keeps, 'url')).then(function () {
+					return keeps;
 				});
 			}
 		};
