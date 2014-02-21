@@ -26,6 +26,14 @@ angular.module('kifi.keepService', [])
 			}
 			return null;
 		}
+		function indexById(id) {
+			for (var i = 0, l = list.length; i < l; i++) {
+				if (list[i].id === id) {
+					return i;
+				}
+			}
+			return -1;
+		}
 
 		$rootScope.$on('tags.remove', function (tagId) {
 			_.forEach(list, function (keep) {
@@ -40,14 +48,26 @@ angular.module('kifi.keepService', [])
 		$rootScope.$on('tags.removeFromKeep', function (e, data) {
 			var tagId = data.tagId,
 			    keepId = data.keepId;
-			console.log("[removeFromKeep] ", e, data, tagId, keepId);
 			_.forEach(list, function (keep) {
 				if (keep.id === keepId && keep.tagList) {
-					console.log("pre:", keep.tagList);
 					keep.tagList = keep.tagList.filter(function (tag) {
 						return tag.id != tagId;
 					});
-					console.log("post:", keep.tagList);
+				}
+			});
+		});
+
+		$rootScope.$on('tags.addToKeep', function (e, data) {
+			var tag = data.tag,
+			    keepId = data.keep.id;
+			_.forEach(list, function (keep) {
+				if (keep.id === keepId && keep.tagList) {
+					var isAlreadyThere = keep.tagList.find(function (existingTag) {
+						return existingTag.id === tag.id;
+					});
+					if (!isAlreadyThere) {
+						keep.tagList.push(tag);
+					}
 				}
 			});
 		});

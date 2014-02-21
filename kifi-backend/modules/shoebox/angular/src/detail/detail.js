@@ -3,9 +3,10 @@
 angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube'])
 
 .directive('kfDetail', [
-	'keepService', 'tagService',
-	function (keepService, tagService) {
+	'keepService', 'tagService', '$filter', '$sce',
+	function (keepService, tagService, $filter, $sce) {
 		var isAddingTag = false;
+
 		return {
 			replace: true,
 			restrict: 'A',
@@ -20,12 +21,62 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 				tagService.fetchAll().then(function (res) {
 					scope.allTags = res;
+					filterTags(null);
 				});
 
 				scope.$watch(scope.getPreviewed, function (keep) {
 					scope.keep = keep;
+					scope.tagFilter.name = '';
+					filterTags(null);
 				});
 
+				scope.tagFilter = {name: ''};
+
+				scope.tagTypeAheadResults = {};
+
+				var filterTags = function (tagFilterTerm) {
+					function keepHasTag(tagId) {
+						return scope.keep && scope.allTags && scope.keep.tagList && !!scope.keep.tagList.find(function (keepTag) {
+							return keepTag.id === tagId;
+						});
+					}
+					function allTagsExceptPreexisting() {
+						return scope.tagTypeAheadResults = scope.allTags.filter(function (tag) {
+							return !keepHasTag(tag.id);
+						}).slice(0, 5);
+					}
+          var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
+					if (scope.allTags && tagFilterTerm) {
+						var filtered = scope.allTags.filter(function (tag) {
+							// for given tagFilterTerm (user search value) and a tag, returns true if
+							// every part of the tagFilterTerm exists at the beginning of a part of the tag
+
+							return !keepHasTag(tag.id) && splitTf.every(function (tfTerm) {
+								return tag.name.split(/[\W]+/).find(function (tagTerm) {
+									return tagTerm.toLowerCase().indexOf(tfTerm.toLowerCase()) === 0;
+								});
+							});
+						});
+
+						scope.tagTypeAheadResults = filtered.slice(0, 5);
+					} else if (scope.allTags && !tagFilterTerm) {
+						scope.tagTypeAheadResults = allTagsExceptPreexisting();
+					}
+
+					scope.tagTypeAheadResults.forEach(function (tag) {
+						var safe = tag.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+						// todo: highlight matching terms
+						tag.prettyHtml = $sce.trustAsHtml(safe);
+					});
+				}
+
+				scope.$watch('tagFilter.name', filterTags);
+
+				scope.addTag = function (tag, keep) {
+					tagService.addKeepsToTag(tag, [keep]);
+					scope.tagFilter.name = '';
+					return isAddingTag = false;
+				};
 
 				scope.isAddingTag = function () {
 					return isAddingTag;
@@ -35,7 +86,9 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return scope.keep && scope.keep.tagList && scope.keep.tagList.length > 0;
 				};
 
-				scope.addTag = function () {
+				scope.showAddTagDropdown = function () {
+					scope.tagFilter.name = '';
+					filterTags(null);
 					return isAddingTag = true;
 				};
 
