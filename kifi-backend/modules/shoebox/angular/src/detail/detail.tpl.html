@@ -21,19 +21,21 @@
 					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-locator="/messages"><span class="chatter-count">{{keep.conversationCount || 0}}</span>{{getPrivateConversationText()}}</a>
 				</div>
 			</div>
-			<div class="page-colls" ng-class="{ some: collections.length }">
-				<h2 class="kf-detail-header">Tags:</h2>
+			<div class="page-colls">
+				<h2 class="kf-detail-header" ng-if="keep.tagList.length > 0">In Tags:</h2>
+				<h2 class="kf-detail-header" ng-if="keep.tagList.length == 0">Tags:</h2>
 				<ul class="page-coll-list">
-					<li class="page-coll" data-template data-id="{{id}}">
-						<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a>
-						<a class="page-coll-x" href="javascript:"></a>
+					<li class="page-coll" data-id="{{tag.id}}" ng-repeat="tag in keep.tagList">
+						<a class="page-coll-a" href="/tag/{{tag.id}}">{{tag.name}}</a>
+						<a class="page-coll-x" href="javascript:" ng-click="removeTag(keep, tag)">×</a>
 					</li>
-					<li class="page-coll-new" data-after-template>
-						<a class="page-coll-add" href="javascript:"></a>
+					<li class="page-coll-new">
+						<a class="page-coll-add-circle" href="javascript:" ng-if="keep.tagList.length > 0">+</a>
+						<a class="page-coll-add" href="javascript:" ng-if="keep.tagList.length == 0"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
 						<span class="page-coll-sizer" style="display:none"></span>
 						<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
 						<ul class="page-coll-opts" style="display:none">
-							<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
+							<li class="page-coll-opt long-text" ng-repeat="tag in allTags" data-id="{{tag.id}}">{{tag.name}}</li>
 						</ul>
 					</li>
 				</ul>

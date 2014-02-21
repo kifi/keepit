@@ -184,6 +184,9 @@ module.exports = function (grunt) {
 			},
 			test: {
 				src: ['<%= path.test.coverage %>/*']
+			},
+			library: {
+				src: ['<%= path.client.lib %>/*']
 			}
 		},
 		copy: {
@@ -364,7 +367,8 @@ module.exports = function (grunt) {
 	// Development task
 	grunt.registerTask('dev', [
 		'env:dev',
-		'clean',
+		'clean:dist',
+		'clean:test',
 		'stylus:dev',
 		'cssmin',
 		'html2js',
@@ -389,7 +393,8 @@ module.exports = function (grunt) {
 	// Release task
 	grunt.registerTask('release', [
 		'env:release',
-		'clean',
+		'clean:dist',
+		'clean:test',
 		'stylus:dev',
 		'cssmin',
 		'html2js',

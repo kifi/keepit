@@ -3,7 +3,7 @@ package com.keepit.controllers.internal
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
-import com.keepit.common.social.{FakeSocialGraphModule, BasicUserRepo}
+import com.keepit.common.social.{FakeShoeboxSecureSocialModule, FakeSocialGraphModule, BasicUserRepo}
 import com.keepit.model._
 import com.keepit.search.{TestSearchServiceClientModule, Lang}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
@@ -23,7 +23,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperConfigModule, FakeScrapeSchedulerModule}
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -37,10 +37,11 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
-    AuthHelperModule(),
+    FakeShoeboxSecureSocialModule(),
     TestABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule()
+    FakeScrapeSchedulerModule(),
+    TestScraperConfigModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

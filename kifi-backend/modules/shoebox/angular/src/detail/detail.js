@@ -3,8 +3,8 @@
 angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube'])
 
 .directive('kfDetail', [
-	'keepService',
-	function (keepService) {
+	'keepService', 'tagService',
+	function (keepService, tagService) {
 		return {
 			replace: true,
 			restrict: 'A',
@@ -16,6 +16,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
 				scope.closeDetail = keepService.togglePreview.bind(null, null);
+
+				tagService.fetchAll().then(function (res) {
+					scope.allTags = res;
+				});
 
 				scope.$watch(scope.getPreviewed, function (keep) {
 					scope.keep = keep;
@@ -54,6 +58,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 				scope.isPublic = function () {
 					return scope.howKept === 'public';
+				};
+
+				scope.removeTag = function (keep, tag) {
+					tagService.removeKeepsFromTag(tag.id, [keep.id]);
 				};
 			}
 		};
