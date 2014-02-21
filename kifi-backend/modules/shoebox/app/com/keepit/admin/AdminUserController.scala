@@ -698,16 +698,16 @@ class AdminUserController @Inject() (
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     val contactResF = prefixContactSearchDirect(userId, query)
     val socialResOpt = prefixSocialSearchDirect(userId, query)
-    contactResF map { econtactRes =>
+    contactResF map { contactRes =>
       socialResOpt match {
         case None =>
-          if (econtactRes.isEmpty)
+          if (contactRes.isEmpty)
             Ok(s"No match found for $query")
           else
-            Ok(econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+            Ok(contactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
         case Some(socialRes) =>
-          Ok(socialResOpt.get.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
-            econtactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+          Ok(socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
+             contactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
       }
     }
   }
