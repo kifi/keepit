@@ -232,7 +232,7 @@ class InviteCommander @Inject() (
           |Kifi also lets you message your friends about what you keep and
           |find alongside any web page, to get their opinion or gain from their
           |expertise.
-          | """
+          | """.stripMargin
       )
       val messageWithUrl = s"$message\n$url$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
       log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
