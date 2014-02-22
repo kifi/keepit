@@ -62,7 +62,7 @@ angular.module('kifi.keepService', [])
 			    keepId = data.keep.id;
 			_.forEach(list, function (keep) {
 				if (keep.id === keepId && keep.tagList) {
-					var isAlreadyThere = keep.tagList.find(function (existingTag) {
+					var isAlreadyThere = _.find(keep.tagList, function (existingTag) {
 						return existingTag.id === tag.id;
 					});
 					if (!isAlreadyThere) {
