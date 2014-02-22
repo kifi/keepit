@@ -110,6 +110,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return scope.highlightedTag === tag;
 				};
 
+				scope.highlightTag = function (tag) {
+					return scope.highlightedTag = tag;
+				};
+
 				scope.highlightNext = function () {
 					var index = indexOfTag(scope.highlightedTag);
 					if (index === -1) {
@@ -213,6 +217,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return isAddingTag = true;
 				};
 
+				scope.hideAddTagDropdown = function () {
+					return isAddingTag = false;
+				};
+
 				scope.getPrivateConversationText = function () {
 					return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
 				};
@@ -233,15 +241,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 						scope.selectTag();
 						break;
 					case KEY_ESC:
-						// if (scope.highlight) {
-						// 	scope.highlightNewSuggestion();
-						// }
-						// else {
-						// 	scope.clearFilter();
-						// }
+						scope.hideAddTagDropdown();
 						break;
 					case KEY_DEL:
-						// scope.remove(scope.highlight);
+						scope.hideAddTagDropdown();
 						break;
 					case KEY_F2:
 						// scope.rename(scope.highlight);
