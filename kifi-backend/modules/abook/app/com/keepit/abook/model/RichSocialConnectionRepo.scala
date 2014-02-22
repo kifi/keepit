@@ -65,7 +65,8 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
 
     getByUserAndFriend(userId, friendId) match {
-      case Some(incompleteRichConnection) if incompleteRichConnection.userSocialId.isEmpty && userSocialId.isDefined => save(incompleteRichConnection.copy(userSocialId = userSocialId))
+      case Some(incompleteSocialConnection) if friendId.isLeft && incompleteSocialConnection.userSocialId.isEmpty && userSocialId.isDefined =>
+        save(incompleteSocialConnection.copy(userSocialId = userSocialId))
       case Some(richConnection) => richConnection
       case None => {
         val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
@@ -74,7 +75,7 @@ class RichSocialConnectionRepoImpl @Inject() (
 
         save(RichSocialConnection(
           userId = userId,
-          userSocialId = userSocialId,
+          userSocialId = userSocialId.filter(_ => friendId.isLeft),
           connectionType = connectionType,
           friendSocialId = friendId.left.toOption,
           friendEmailAddress = friendId.right.toOption,
@@ -135,8 +136,18 @@ class RichSocialConnectionRepoImpl @Inject() (
     sqlu"""
       UPDATE rich_social_connection
       SET common_kifi_friends_count = common_kifi_friends_count + 1
-      WHERE user_id = $userId AND friend_email_address, friend_social_id IN (
-        SELECT friend_email_address, friend_social_id
+      WHERE user_id = $userId AND friend_social_id IN (
+        SELECT friend_social_id
+        FROM rich_social_connection
+        WHERE user_id = $kifiFriend
+      )
+    """.execute()
+
+    sqlu"""
+      UPDATE rich_social_connection
+      SET common_kifi_friends_count = common_kifi_friends_count + 1
+      WHERE user_id = $userId AND friend_email_address IN (
+        SELECT friend_email_address
         FROM rich_social_connection
         WHERE user_id = $kifiFriend
       )
