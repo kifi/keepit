@@ -17,6 +17,7 @@ import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
 import scala.collection.JavaConversions._
 import play.api._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
@@ -160,7 +161,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
   }
 
-  override def onError(request: RequestHeader, ex: Throwable): Future[SimpleResult] = {
+  override def onError(request: RequestHeader, ex: Throwable): Future[SimpleResult] = Future {
     try {
       val errorId: ExternalId[_] = ex match {
         case reported: ReportedException => reported.id
@@ -175,11 +176,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       } else {
         errorId.id
       }
-      Future.successful(allowCrossOrigin(request, InternalServerError(message)))
+      allowCrossOrigin(request, InternalServerError(message))
     } catch {
       case NonFatal(e) => {
         Logger.error("Error while rendering default error page", e)
-        Future.successful(InternalServerError)
+        InternalServerError
       }
     }
   }
