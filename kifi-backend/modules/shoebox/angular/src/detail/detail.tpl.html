@@ -38,7 +38,7 @@
 							<input class="page-coll-input" ng-if="isAddingTag()" type="text" placeholder="tag name" ng-model="tagFilter.name" ng-keydown="onKeydown($event)">
 							<ul class="page-coll-opts">
 								<li class="page-coll-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-click="addTag(tag, keep)" ng-bind-html="tag.prettyHtml" ng-mouseover="highlightTag(tag)"></li>
-								<li class="page-coll-opt" ng-if="isAddTagShown()" ng-click="createAndAddTag(keep)" ng-class="{ current: highlightedTag === null }" ng-mouseover="highlightTag(null)">{{tagFilter.name}}<span class="new-label">NEW</span></li>
+								<li class="page-coll-opt" ng-if="isAddTagShown()" ng-click="createAndAddTag(keep)" ng-class="{ current: isTagHighlighted(null) }" ng-mouseover="highlightTag(null)">{{tagFilter.name}}<span class="new-label">NEW</span></li>
 							</ul>
 					  </span>
 					</li>

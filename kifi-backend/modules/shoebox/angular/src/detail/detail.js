@@ -50,7 +50,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 				var filterTags = function (tagFilterTerm) {
 					function keepHasTag(tagId) {
-						return scope.keep && scope.allTags && scope.keep.tagList && !!scope.keep.tagList.find(function (keepTag) {
+						return scope.keep && scope.allTags && scope.keep.tagList && !!_.find(scope.keep.tagList, function (keepTag) {
 							return keepTag.id === tagId;
 						});
 					}
@@ -59,14 +59,14 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 							return !keepHasTag(tag.id);
 						}).slice(0, 5);
 					}
-          var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
+                    var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
 					if (scope.allTags && tagFilterTerm) {
 						var filtered = scope.allTags.filter(function (tag) {
 							// for given tagFilterTerm (user search value) and a tag, returns true if
 							// every part of the tagFilterTerm exists at the beginning of a part of the tag
 
 							return !keepHasTag(tag.id) && splitTf.every(function (tfTerm) {
-								return tag.name.split(/[\W]+/).find(function (tagTerm) {
+								return _.find(tag.name.split(/[\W]+/), function (tagTerm) {
 									return tagTerm.toLowerCase().indexOf(tfTerm.toLowerCase()) === 0;
 								});
 							});
@@ -88,8 +88,6 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					});
 				}
 
-				scope.$watch('tagFilter.name', filterTags);
-
 				scope.addTag = function (tag, keep) {
 					tagService.addKeepsToTag(tag, [keep]);
 					scope.tagFilter.name = '';
@@ -110,6 +108,20 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return scope.highlightedTag === tag;
 				};
 
+                // check if the highlighted tag is still in the list
+                scope.checkHighlight = function() {
+                    if (!_.find(scope.tagTypeAheadResults, function(tag) { return scope.highlightedTag === tag; })) {
+                        scope.highlightTag(null);
+                    }
+                };
+
+                var refreshTagDropdown = function(tagFilterTerm) {
+                    filterTags(tagFilterTerm);
+                    scope.checkHighlight();
+                }
+
+                scope.$watch('tagFilter.name', refreshTagDropdown);
+
 				scope.highlightTag = function (tag) {
 					return scope.highlightedTag = tag;
 				};
@@ -125,7 +137,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					if (index === scope.tagTypeAheadResults.length - 1) {
 						// last item on the list
 
-						if (scope.isAddTagShown) {
+						if (scope.isAddTagShown()) {
 							// highlight the new tag if available
 							return scope.highlightNewSuggestion();
 						}
@@ -149,12 +161,12 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					if (index === 0) {
 						// last item on the list
 
-						if (scope.isAddTagShown) {
+						if (scope.isAddTagShown()) {
 							// highlight the new tag if available
 							return scope.highlightNewSuggestion();
 						}
 
-						// the first, otherwise
+						// the last, otherwise
 						return scope.highlightLast();
 					}
 
@@ -163,7 +175,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				};
 
 				scope.isAddTagShown = function () {
-					return scope.tagFilter.name.length > 0 && scope.tagTypeAheadResults.find(function (tag) {
+					return scope.tagFilter.name.length > 0 && _.find(scope.tagTypeAheadResults, function (tag) {
 						return tag.name === scope.tagFilter.name;
 					}) === undefined;
 				}
@@ -180,7 +192,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 					index = ((index % len) + len) % len;
 					var tag = tags[index];
-					scope.highlightedTag = tag;
+					scope.highlightTag(tag);
 					//dom.scrollIntoViewLazy(element.find('.kf-tag')[index]);
 					return tag;
 				};
@@ -304,6 +316,8 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					}
 					return keepService.togglePrivate(keeps);
 				};
+
+                scope.highlightTag(null);
 			}
 		};
 	}
