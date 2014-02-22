@@ -333,10 +333,8 @@ input.page-coll-input
   -webkit-font-smoothing: antialiased
   -webkit-transition: width 60ms ease-in-out
   transition: width 60ms ease-in-out
+  width: 150px
 
-
-input.page-coll-input
-  width: 20ex
 
 .page-coll-opts
   display: none
@@ -355,6 +353,7 @@ input.page-coll-input
   display: block
 
 .page-coll-opt
+  position: relative
   padding: 0 16px
   font-size: 13px
   color: #888b93
@@ -363,7 +362,7 @@ input.page-coll-input
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  width: 120px
+  width: 150px
 
 .page-coll-opt.current
   background-color: #f1f2f6
@@ -372,12 +371,10 @@ input.page-coll-input
   position: relative
   padding-right: 36px
 
-.page-coll-opt[data-id=""]::after
-  content: "NEW"
+.new-label
   position: absolute
-  right: 5px
-  top: 5px
-  bottom: 5px
+  right: 35px
+  top: 6px
   height: 14px
   line-height: 13px
   padding: 0 4px
