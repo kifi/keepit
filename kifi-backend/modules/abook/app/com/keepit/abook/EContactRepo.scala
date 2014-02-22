@@ -70,18 +70,21 @@ class EContactRepoImpl @Inject() (
   }
 
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact] = {
-    val valueMap = econtactCache.bulkGetOrElse(ids.map(EContactKey(_)).toSet) { keys =>
-      val missing = keys.map(_.id)
-      val contacts = (for(f <- rows if f.id.inSet(missing)) yield f).iterator
-      val res = contacts.collect { case (c) if c.state == EContactStates.ACTIVE =>
-        (EContactKey(c.id.get) -> c)
-      }.toMap
-      log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")})] MISS: ids:(len=${ids.size})${ids.mkString(",")} res=${res.values.toSeq.take(20)}")
+    if (ids.isEmpty) Map.empty[Id[EContact], EContact]
+    else {
+      val valueMap = econtactCache.bulkGetOrElse(ids.map(EContactKey(_)).toSet) { keys =>
+        val missing = keys.map(_.id)
+        val contacts = (for(f <- rows if f.id.inSet(missing)) yield f).iterator
+        val res = contacts.collect { case (c) if c.state == EContactStates.ACTIVE =>
+          (EContactKey(c.id.get) -> c)
+        }.toMap
+        log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")})] MISS: ids:(len=${ids.size})${ids.mkString(",")} res=${res.values.toSeq.take(20)}")
+        res
+      }
+      val res = valueMap.map { case(k,v) => (k.id -> v) }
+      log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")}): ALL: res(sz=${res.size})${res.values.toSeq.take(20)}")
       res
     }
-    val res = valueMap.map { case(k,v) => (k.id -> v) }
-    log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")}): ALL: res(sz=${res.size})${res.values.toSeq.take(20)}")
-    res
   }
 
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {

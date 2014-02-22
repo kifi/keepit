@@ -43,32 +43,35 @@ class EContactTypeahead @Inject() (
   override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, MYSQL_MAX_ROWS) // MySQL limit
 
   override protected def getAllInfosForUser(id: Id[User]):Seq[EContact] = {
-    Await.result(asyncGetAllInfosForUser(id), 1 minute) // todo(ray):revisit
+    Await.result(asyncGetAllInfosForUser(id), Duration.Inf) // todo(ray):revisit
   }
 
   override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = {
-    val s3F = econtactCache.bulkGetOrElseFuture(ids.map(EContactKey(_)).toSet) { keys =>
-      val missing = keys.map(_.id)
-      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] missing(len=${missing.size}):${missing.take(10).mkString(",")}")
-      val res = abookClient.getEContactsByIds(missing.toSeq).map { res =>
-        res.map(e => EContactKey(e.id.get) -> e).toMap
+    if (ids.isEmpty) Future.successful(Seq.empty[EContact])
+    else {
+      val s3F = econtactCache.bulkGetOrElseFuture(ids.map(EContactKey(_)).toSet) { keys =>
+        val missing = keys.map(_.id)
+        log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] missing(len=${missing.size}):${missing.take(10).mkString(",")}")
+        val res = abookClient.getEContactsByIds(missing.toSeq).map { res =>
+          res.map(e => EContactKey(e.id.get) -> e).toMap
+        }
+        res
+       }
+      val localF = s3F map { res =>
+        val v = res.valuesIterator.toVector
+        log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] res=$v")
+        v
       }
-      res
-     }
-    val localF = s3F map { res =>
-      val v = res.valuesIterator.toVector
-      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] res=$v")
-      v
+      val abookF = abookClient.getEContactsByIds(ids) map { res =>
+        log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
+        res
+      }
+      Future.firstCompletedOf(Seq(localF, abookF))
     }
-    val abookF = abookClient.getEContactsByIds(ids) map { res =>
-      log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
-      res
-    }
-    Future.firstCompletedOf(Seq(localF, abookF))
   }
 
   override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] ={
-    Await.result(asyncGetInfos(ids), 1 minute) // todo(ray):revisit
+    Await.result(asyncGetInfos(ids), Duration.Inf) // todo(ray):revisit
   }
 
   def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {
