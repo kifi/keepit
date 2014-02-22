@@ -35,8 +35,13 @@ trait Typeahead[E, I] extends Logging {
           log.warn(s"[search($userId,$query)] NO FILTER found. res=NONE")
           None
         case Some(filter) =>
-          val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-          search(getInfos(filter.filterBy(queryTerms)), queryTerms)
+          if (filter.isEmpty) {
+            log.info(s"[search($userId,$query)] filter is EMPTY")
+            None
+          } else {
+            val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+            search(getInfos(filter.filterBy(queryTerms)), queryTerms)
+          }
       }
     } else {
       None
@@ -51,9 +56,14 @@ trait Typeahead[E, I] extends Logging {
           log.warn(s"[asyncSearch($userId,$query)] NO FILTER found")
           Future.successful(None)
         case Some(filter) =>
-          val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-          asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
-            search(infos, queryTerms)
+          if (filter.isEmpty) {
+            log.info(s"[asyncSearch($userId,$query)] filter is EMPTY")
+            Future.successful(None)
+          } else {
+            val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+            asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
+              search(infos, queryTerms)
+            }
           }
       }
     } else {

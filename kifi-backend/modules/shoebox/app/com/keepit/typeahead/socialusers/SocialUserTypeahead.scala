@@ -50,8 +50,11 @@ class SocialUserTypeahead @Inject() (
   }
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
-    db.readOnly { implicit session =>
-      socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
+    if (ids.isEmpty) Seq.empty[SocialUserBasicInfo]
+    else {
+      db.readOnly { implicit session =>
+        socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
+      }
     }
   }
 

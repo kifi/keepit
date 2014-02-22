@@ -63,9 +63,12 @@ class EContactABookTypeahead @Inject() (
     }
   }
 
-  override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = { // todo(ray):add cache + bulkGet
-    db.readOnly(attempts = 2) { implicit ro =>
-      econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
+  override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = {
+    if (ids.isEmpty) Seq.empty[EContact]
+    else {
+      db.readOnly(attempts = 2) { implicit ro =>
+        econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
+      }
     }
   }
 

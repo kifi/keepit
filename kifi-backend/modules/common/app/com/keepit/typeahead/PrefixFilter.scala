@@ -60,6 +60,7 @@ object PrefixFilter {
 
 class PrefixFilter[T](val data: Array[Long]) extends AnyVal {
   def filterBy(query: Array[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, query)
+  def isEmpty = (data.length == 1)
   override def toString = s"[PrefixFilter] (len=${data.length - 1}) ${data.drop(1).take(10).grouped(2).map{t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}"}.mkString(",")}"
 }
 
