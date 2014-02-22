@@ -6,7 +6,7 @@
     <br/>
     <table class="table table-striped">
         <tr>
-            <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.TypeaheadAdminController.socialSearch(user.id.get)" target="socialSearch_frame">
+            <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.TypeaheadAdminController.search(user.id.get)" target="search_frame">
                 <div class="form-group">
                     UserId:<input type="number" name="userId" value="@user.id.get">
                 </div>
@@ -14,11 +14,14 @@
                     Prefix:<input type="text" name="search">
                 </div>
                 <div class="form-group">
-                    <input type="submit" class="btn btn-default" value="Search Social Connections">
+                    <input type="submit" class="btn btn-default" value="Search Connections">
                 </div>
             </form>
         </tr>
     </table>
-    <iframe name="socialSearch_frame" src="@com.keepit.controllers.admin.routes.TypeaheadAdminController.socialSearch(user.id.get)" width="500"/>
+    <div>
+        <!-- todo: someone pls fixme -->
+        <iframe name="search_frame" src="@com.keepit.controllers.admin.routes.TypeaheadAdminController.search(user.id.get)" width="800"/>
+    </div>
     <br/>
 }

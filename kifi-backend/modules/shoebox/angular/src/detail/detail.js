@@ -136,7 +136,6 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 				scope.highlightPrev = function () {
 					var index = indexOfTag(scope.highlightedTag);
-					console.log(scope.highlightedTag, index);
 					if (index === -1) {
 						// no highlight
 						// highlight the first
@@ -166,7 +165,6 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				}
 
 				scope.highlightAt = function (index) {
-					console.log("highlighting: ", index, scope.tagTypeAheadResults.length);
 					if (index == null) {
 						return scope.highlightNewSuggestion();
 					}
@@ -262,7 +260,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					}
 
 					var selected = scope.getSelected();
-					if (_.every(selected, 'isMine')) {
+					if (_.every(selected, 'isMyBookmark')) {
 						return _.every(selected, 'isPrivate') ? 'private' : 'public';
 					}
 					return null;
@@ -280,6 +278,28 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 
 				scope.removeTag = function (keep, tag) {
 					tagService.removeKeepsFromTag(tag.id, [keep.id]);
+				};
+
+				scope.toggleKeep = function () {
+					var keeps;
+					if (scope.isSingleKeep()) {
+						keeps = [scope.getPreviewed()];
+					}
+					else {
+						keeps = scope.getSelected();
+					}
+					return keepService.toggleKeep(keeps);
+				};
+
+				scope.togglePrivate = function () {
+					var keeps;
+					if (scope.isSingleKeep()) {
+						keeps = [scope.getPreviewed()];
+					}
+					else {
+						keeps = scope.getSelected();
+					}
+					return keepService.togglePrivate(keeps);
 				};
 			}
 		};

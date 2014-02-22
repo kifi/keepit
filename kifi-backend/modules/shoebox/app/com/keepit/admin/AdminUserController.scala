@@ -87,7 +87,6 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
@@ -111,7 +110,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit s =>
       val fromUser = userRepo.get(fromUserId)
       val toUser = userRepo.get(toUserId)
-      for (email <- emailAddressRepo.getAllByUser(fromUserId)) {
+      for (email <- emailRepo.getAllByUser(fromUserId)) {
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
@@ -605,6 +604,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
+        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address) }
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -672,8 +672,20 @@ class AdminUserController @Inject() (
   }
 
   private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
-    abookClient.prefixSearch(userId, query)
+    implicit val ord = TypeaheadHit.defaultOrdering[EContact]
+    val localF = econtactTypeahead.asyncSearch(userId, query) map { resOpt =>
+      val res = resOpt getOrElse Seq.empty[EContact]
+      log.info(s"[prefixContactSearchDirect($userId)-LOCAL] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val abookF = abookClient.prefixSearch(userId, query) map { res =>
+      log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val resF = Future.firstCompletedOf(Seq(localF, abookF))
+    resF
   }
+
   def prefixContactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     prefixContactSearchDirect(userId, query) map { res =>
       if (res.isEmpty)
@@ -686,16 +698,16 @@ class AdminUserController @Inject() (
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     val contactResF = prefixContactSearchDirect(userId, query)
     val socialResOpt = prefixSocialSearchDirect(userId, query)
-    contactResF map { econtactRes =>
+    contactResF map { contactRes =>
       socialResOpt match {
         case None =>
-          if (econtactRes.isEmpty)
+          if (contactRes.isEmpty)
             Ok(s"No match found for $query")
           else
-            Ok(econtactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+            Ok(contactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
         case Some(socialRes) =>
-          Ok(socialResOpt.get.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
-            econtactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+          Ok(socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
+             contactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
       }
     }
   }
