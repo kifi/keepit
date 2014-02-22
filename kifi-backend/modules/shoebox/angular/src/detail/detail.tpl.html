@@ -30,13 +30,17 @@
 						<a class="page-coll-x" href="javascript:" ng-click="removeTag(keep, tag)">×</a>
 					</li>
 					<li class="page-coll-new">
-						<a class="page-coll-add-circle" href="javascript:" ng-if="keep.tagList.length > 0">+</a>
-						<a class="page-coll-add" href="javascript:" ng-if="keep.tagList.length == 0"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
-						<span class="page-coll-sizer" style="display:none"></span>
-						<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
-						<ul class="page-coll-opts" style="display:none">
-							<li class="page-coll-opt long-text" ng-repeat="tag in allTags" data-id="{{tag.id}}">{{tag.name}}</li>
-						</ul>
+					  <span ng-show="!isAddingTag()">
+							<a class="page-coll-add-circle" href="javascript:" ng-show="hasTags()" ng-click="showAddTagDropdown()">+</a>
+							<a class="page-coll-add" href="javascript:" ng-show="!hasTags()" ng-click="showAddTagDropdown()"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
+					  </span>
+					  <span ng-if="isAddingTag()">
+							<input class="page-coll-input" ng-if="isAddingTag()" type="text" placeholder="tag name" ng-model="tagFilter.name" ng-keydown="onKeydown($event)">
+							<ul class="page-coll-opts">
+								<li class="page-coll-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-click="addTag(tag, keep)" ng-bind-html="tag.prettyHtml"></li>
+								<li class="page-coll-opt" ng-if="isAddTagShown()" ng-click="createAndAddTag(keep)" ng-class="{ current: highlightedTag === null }">{{tagFilter.name}}<span class="new-label">NEW</span></li>
+							</ul>
+					  </span>
 					</li>
 				</ul>
 			</div>

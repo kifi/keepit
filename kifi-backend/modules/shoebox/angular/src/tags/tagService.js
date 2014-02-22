@@ -17,6 +17,16 @@ angular.module('kifi.tagService', [])
 			return -1;
 		}
 
+		function updateKeepCount(id, delta) {
+			var index = indexById(id);
+			if (index !== -1) {
+				var tag = list[index];
+				tag.keeps = (tag.keeps || 0) + delta;
+				return tag;
+			}
+			return null;
+		}
+
 		return {
 			list: list,
 
@@ -95,9 +105,26 @@ angular.module('kifi.tagService', [])
 			removeKeepsFromTag: function (tagId, keepIds) {
 				var url = env.xhrBase + '/collections/' + tagId + '/removeKeeps';
 				$http.post(url, keepIds).then(function (res) {
-					// handle stuff
+					updateKeepCount(tagId, -keepIds.length);
+					// broadcast change to interested parties
 					keepIds.forEach(function (keepId) {
 						$rootScope.$emit('tags.removeFromKeep', {tagId: tagId, keepId: keepId});
+					});
+					return res;
+				});
+			},
+
+			addKeepsToTag: function (tag, keeps) {
+				var url = env.xhrBase + '/keeps/add';
+				var payload = {
+					collectionId: tag.id,
+					keeps: keeps
+				};
+				$http.post(url, payload).then(function (res) {
+					updateKeepCount(tag.id, keeps.length);
+					// broadcast change to interested parties
+					keeps.forEach(function (keep) {
+						$rootScope.$emit('tags.addToKeep', {tag: tag, keep: keep});
 					});
 					return res;
 				});
