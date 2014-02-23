@@ -532,8 +532,12 @@ for each (let win in windows) {
   }
   for each (let tab in win.tabs) {
     log("[windows]", tab.id, tab.url);
-    tabsById[tab.id] = tab;
-    pages[tab.id] || createPage(tab);
+    if (tab.id) {
+      tabsById[tab.id] = tab;
+      pages[tab.id] || createPage(tab);
+    } else {
+      Airbrake.push({error: Error('Firefox tab has no ID'), tab: tab, win: win});
+    }
   }
 }
 
