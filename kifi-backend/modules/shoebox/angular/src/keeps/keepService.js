@@ -3,8 +3,8 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env', '$q', '$timeout', '$document',
-	function ($http, env, $q, $timeout, $document) {
+	'$http', 'env', '$q', '$timeout', '$document', '$rootScope',
+	function ($http, env, $q, $timeout, $document, $rootScope) {
 
 		var list = [],
 			selected = {},
@@ -26,6 +26,51 @@ angular.module('kifi.keepService', [])
 			}
 			return null;
 		}
+		function indexById(id) {
+			for (var i = 0, l = list.length; i < l; i++) {
+				if (list[i].id === id) {
+					return i;
+				}
+			}
+			return -1;
+		}
+
+		$rootScope.$on('tags.remove', function (tagId) {
+			_.forEach(list, function (keep) {
+				if (keep.tagList) {
+					keep.tagList = keep.tagList.filter(function (tag) {
+						return tag.id !== tagId;
+					});
+				}
+			});
+		});
+
+		$rootScope.$on('tags.removeFromKeep', function (e, data) {
+			var tagId = data.tagId,
+			    keepId = data.keepId;
+			_.forEach(list, function (keep) {
+				if (keep.id === keepId && keep.tagList) {
+					keep.tagList = keep.tagList.filter(function (tag) {
+						return tag.id !== tagId;
+					});
+				}
+			});
+		});
+
+		$rootScope.$on('tags.addToKeep', function (e, data) {
+			var tag = data.tag,
+			    keepId = data.keep.id;
+			_.forEach(list, function (keep) {
+				if (keep.id === keepId && keep.tagList) {
+					var isAlreadyThere = _.find(keep.tagList, function (existingTag) {
+						return existingTag.id === tag.id;
+					});
+					if (!isAlreadyThere) {
+						keep.tagList.push(tag);
+					}
+				}
+			});
+		});
 
 		var api = {
 			list: list,
@@ -67,7 +112,8 @@ angular.module('kifi.keepService', [])
 					isDetailOpen = true;
 					singleKeepBeingPreviewed = false;
 					return null;
-				} else if (api.isPreviewed(keep)) {
+				}
+				else if (api.isPreviewed(keep)) {
 					return api.preview(null);
 				}
 				return api.preview(keep);
@@ -225,7 +271,7 @@ angular.module('kifi.keepService', [])
 					before = list.length ? list[list.length - 1].id : null;
 
 					_.forEach(keeps, function (keep) {
-						keep.isMine = true;
+						keep.isMyBookmark = true;
 					});
 
 					return keeps;
@@ -259,7 +305,9 @@ angular.module('kifi.keepService', [])
 				if (keep != null) {
 					var url = env.xhrBaseEliza + '/chatter';
 
-					var data = { url: keep.url };
+					var data = {
+						url: keep.url
+					};
 
 					return $http.post(url, data).then(function (res) {
 						var data = res.data;
@@ -279,7 +327,7 @@ angular.module('kifi.keepService', [])
 						return res.data.urls;
 					});
 				}
-				return $q.when([]);
+				return $q.when(keeps || []);
 			},
 
 			prefetchImages: function (urls) {
@@ -289,6 +337,69 @@ angular.module('kifi.keepService', [])
 						doc.createElement('img').src = imgUrl;
 					}
 				});
+			},
+
+			keep: function (keeps, isPrivate) {
+				if (!(keeps && keeps.length)) {
+					return $q.when(keeps || []);
+				}
+
+				isPrivate = !! isPrivate;
+
+				var url = env.xhrBase + '/keeps/add';
+				return $http.post(url, {
+					keeps: keeps.map(function (keep) {
+						return {
+							title: keep.title,
+							url: keep.url,
+							isPrivate: isPrivate
+						};
+					})
+				}).then(function () {
+					_.forEach(keeps, function (keep) {
+						keep.isMyBookmark = true;
+						keep.isPrivate = isPrivate;
+					});
+					return keeps;
+				});
+			},
+
+			unkeep: function (keeps) {
+				if (!(keeps && keeps.length)) {
+					return $q.when(keeps || []);
+				}
+
+				var url = env.xhrBase + '/keeps/remove';
+				return $http.post(url, _.map(keeps, function (keep) {
+					return {
+						url: keep.url
+					};
+				})).then(function () {
+					var map = _.reduce(keeps, function (map, keep) {
+						map[keep.id] = true;
+						return map;
+					}, {});
+
+					_.remove(list, function (keep) {
+						return map[keep.id];
+					});
+
+					return keeps;
+				});
+			},
+
+			toggleKeep: function (keeps, isPrivate) {
+				var isKept = _.every(keeps, 'isMyBookmark');
+				isPrivate = isPrivate == null ? _.some(keeps, 'isPrivate') : !! isPrivate;
+
+				if (isKept) {
+					return api.unkeep(keeps);
+				}
+				return api.keep(keeps, isPrivate);
+			},
+
+			togglePrivate: function (keeps) {
+				return api.keep(keeps, !_.every(keeps, 'isPrivate'));
 			}
 		};
 

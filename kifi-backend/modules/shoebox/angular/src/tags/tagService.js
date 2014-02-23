@@ -3,8 +3,8 @@
 angular.module('kifi.tagService', [])
 
 .factory('tagService', [
-	'$http', 'env', '$q',
-	function ($http, env, $q) {
+	'$http', 'env', '$q', '$rootScope',
+	function ($http, env, $q, $rootScope) {
 		var list = [],
 			fetchAllPromise = null;
 
@@ -15,6 +15,16 @@ angular.module('kifi.tagService', [])
 				}
 			}
 			return -1;
+		}
+
+		function updateKeepCount(id, delta) {
+			var index = indexById(id);
+			if (index !== -1) {
+				var tag = list[index];
+				tag.keeps = (tag.keeps || 0) + delta;
+				return tag;
+			}
+			return null;
 		}
 
 		return {
@@ -45,17 +55,6 @@ angular.module('kifi.tagService', [])
 
 			create: function (name) {
 				var url = env.xhrBase + '/collections/create';
-				if (env.dev) {
-					var deferred = $q.defer();
-					var tag = {
-						id: name + Date.now() + Math.floor(1000000 * Math.random()),
-						name: name,
-						keeps: 0
-					};
-					deferred.resolve(tag);
-					list.unshift(tag);
-					return deferred.promise;
-				}
 
 				return $http.post(url, {
 					name: name
@@ -75,16 +74,10 @@ angular.module('kifi.tagService', [])
 					}
 				}
 
-				if (env.dev) {
-					var deferred = $q.defer();
-					removeTag(tagId);
-					deferred.resolve(tagId);
-					return deferred.promise;
-				}
-
 				var url = env.xhrBase + '/collections/' + tagId + '/delete';
 				return $http.post(url).then(function () {
 					removeTag(tagId);
+					$rootScope.$emit('tags.remove', tagId);
 					return tagId;
 				});
 			},
@@ -100,18 +93,40 @@ angular.module('kifi.tagService', [])
 					return null;
 				}
 
-				if (env.dev) {
-					var deferred = $q.defer();
-					deferred.resolve(renameTag(tagId, name));
-					return deferred.promise;
-				}
-
 				var url = env.xhrBase + '/collections/' + tagId + '/update';
 				return $http.post(url, {
 					name: name
 				}).then(function (res) {
 					var tag = res.data;
 					return renameTag(tag.id, tag.name);
+				});
+			},
+
+			removeKeepsFromTag: function (tagId, keepIds) {
+				var url = env.xhrBase + '/collections/' + tagId + '/removeKeeps';
+				$http.post(url, keepIds).then(function (res) {
+					updateKeepCount(tagId, -keepIds.length);
+					// broadcast change to interested parties
+					keepIds.forEach(function (keepId) {
+						$rootScope.$emit('tags.removeFromKeep', {tagId: tagId, keepId: keepId});
+					});
+					return res;
+				});
+			},
+
+			addKeepsToTag: function (tag, keeps) {
+				var url = env.xhrBase + '/keeps/add';
+				var payload = {
+					collectionId: tag.id,
+					keeps: keeps
+				};
+				$http.post(url, payload).then(function (res) {
+					updateKeepCount(tag.id, keeps.length);
+					// broadcast change to interested parties
+					keeps.forEach(function (keep) {
+						$rootScope.$emit('tags.addToKeep', {tag: tag, keep: keep});
+					});
+					return res;
 				});
 			}
 		};

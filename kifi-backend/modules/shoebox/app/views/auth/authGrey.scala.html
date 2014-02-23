@@ -1,4 +1,4 @@
-@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "", inviteVideo: Boolean = false)
+@(view: String = "", emailAddress: String = "", firstName: String = "", lastName: String = "", picturePath: String = "", network: Option[com.keepit.social.SocialNetworkType] = None, titleText: String = "", titleDesc: String = "", inviteVideo: Boolean = false)(implicit secureSocialClientIds: com.keepit.social.SecureSocialClientIds)
 @import com.keepit.controllers.core.routes.{AuthController => routes}
 @headScripts = {
     <meta property="og:image" content="https://www.kifi.com/assets/images/kifi-fb-preview.png">
@@ -153,17 +153,7 @@
 }
 
 @scripts = {
-<script src="/assets/js/jquery-ui-position.min.js"></script>
-<script src="/assets/js/jquery-ui-slider.min.js"></script>
-<script src="/assets/js/auth.js"></script>
-<script src="/assets/js/auth-footer.js"></script>
-<script src="/assets/js/video.js"></script>
-<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
-<script src="//platform.linkedin.com/in.js">
-api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
-onLoad:onLoadLinkedInApi
-authorize:true
-</script>
+@helper.authScripts(secureSocialClientIds)
 <script type="text/javascript">
 var fb_param = {};
 fb_param.pixel_id = '6012675515696';

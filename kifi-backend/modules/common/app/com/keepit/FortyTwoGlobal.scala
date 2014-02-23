@@ -1,7 +1,6 @@
 package com.keepit
 
 import java.io.File
-
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.strings._
@@ -14,12 +13,11 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
 import com.keepit.common.time.{currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime}
-
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
 import scala.collection.JavaConversions._
-
 import play.api._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
@@ -30,6 +28,7 @@ import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingCli
 import com.amazonaws.AmazonClientException
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.keepit.common.shutdown.ShutdownCommander
+import java.util.concurrent.atomic.AtomicLong
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
@@ -123,7 +122,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   override def onLoadConfig(config: Configuration, path: File, classloader: ClassLoader, mode: Mode.Mode) = {
     val localConfig = Configuration(ConfigFactory.parseFile(getUserFile("local.conf")))
-    super.onLoadConfig(config ++ localConfig, path, classloader, mode)
+    val overrideConfig = Configuration(ConfigFactory.parseFile(new File(path, "override.conf"))) // Configuration override (erased with the next deploy)
+    super.onLoadConfig(config ++ localConfig ++ overrideConfig, path, classloader, mode)
   }
   override def onBadRequest(request: RequestHeader, error: String): Future[SimpleResult] = {
     val errorId = ExternalId[Exception]()
@@ -146,24 +146,22 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     Future.successful(allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId))))
   }
 
-  @volatile private var lastAlert: Long = -1
+  private[this] val lastAlert = new AtomicLong(-1)
 
   private def serviceDiscoveryHandleError(): Unit = {
     val now = System.currentTimeMillis()
-    if (now - lastAlert > 600000) { //10 minute
-      synchronized {
-        if (now - lastAlert > 600000) { //10 minutes - double check after getting into the synchronized block
-          val serviceDiscovery = injector.instance[ServiceDiscovery]
-          serviceDiscovery.changeStatus(ServiceStatus.SICK)
-          serviceDiscovery.startSelfCheck()
-          serviceDiscovery.forceUpdate()
-          lastAlert = System.currentTimeMillis()
-        }
+    val last = lastAlert.get
+    if (now - last > 600000) { //10 minute
+      if (lastAlert.compareAndSet(last, now)) {
+        val serviceDiscovery = injector.instance[ServiceDiscovery]
+        serviceDiscovery.changeStatus(ServiceStatus.SICK)
+        serviceDiscovery.startSelfCheck()
+        serviceDiscovery.forceUpdate()
       }
     }
   }
 
-  override def onError(request: RequestHeader, ex: Throwable): Future[SimpleResult] = {
+  override def onError(request: RequestHeader, ex: Throwable): Future[SimpleResult] = Future {
     try {
       val errorId: ExternalId[_] = ex match {
         case reported: ReportedException => reported.id
@@ -178,11 +176,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       } else {
         errorId.id
       }
-      Future.successful(allowCrossOrigin(request, InternalServerError(message)))
+      allowCrossOrigin(request, InternalServerError(message))
     } catch {
       case NonFatal(e) => {
         Logger.error("Error while rendering default error page", e)
-        Future.successful(InternalServerError)
+        InternalServerError
       }
     }
   }
