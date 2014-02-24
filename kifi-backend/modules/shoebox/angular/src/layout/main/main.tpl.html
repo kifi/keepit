@@ -1,16 +1,16 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
-	<div class="kf-query-wrap" ng-class="{ empty: isEmpty(), focus: focus }">
-		<input class="kf-query" type="text" placeholder="Find anything..." ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()">
-		<span class="kf-query-icon">
-			<b class="kf-query-mag"></b>
-			<a class="kf-query-x" href="javascript:" ng-click="clear()"></a>
-		</span>
-		<div class="kf-undo" ng-if="undoAction">
-			<span class="kf-undo-box">
-				<span class="kf-undo-message">{{undoAction.message}}</span>
-				<a class="kf-undo-link" href="javascript:" ng-click="undo()">Undo</a>
-			<span>
-		</div>
-	</div>
-	<div kf-keeps></div>
+  <div class="kf-query-wrap" ng-class="{ empty: isEmpty(), focus: focus }">
+    <input class="kf-query" type="text" placeholder="Find anything..." ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()">
+    <span class="kf-query-icon">
+      <b class="kf-query-mag"></b>
+      <a class="kf-query-x" href="javascript:" ng-click="clear()"></a>
+    </span>
+    <div class="kf-undo" ng-if="undoAction">
+      <span class="kf-undo-box">
+        <span class="kf-undo-message">{{undoAction.message}}</span>
+        <a class="kf-undo-link" href="javascript:" ng-click="undo()">Undo</a>
+      <span>
+    </div>
+  </div>
+  <div ng-view></div>
 </div>
