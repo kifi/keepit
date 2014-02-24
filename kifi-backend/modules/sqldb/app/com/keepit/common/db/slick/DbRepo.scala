@@ -12,7 +12,6 @@ import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{TypedType, ColumnOption}
 import scala.slick.driver.{JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.collection.mutable
 
 import com.keepit.common.logging.Logging
 import scala.slick.lifted.{AbstractTable, BaseTag}
