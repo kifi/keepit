@@ -3,14 +3,14 @@
 angular.module('kifi.home', ['util', 'kifi.keepService'])
 
 .config([
-	'$routeProvider',
-	function ($routeProvider) {
-	}
+  '$routeProvider',
+  function ($routeProvider) {
+  }
 ])
 
 .controller('HomeCtrl', [
-	'$scope', 'keepService',
-	function ($scope, keepService) {
-		console.log('home ctrl', keepService);
-	}
+  '$scope', 'keepService',
+  function ($scope, keepService) {
+    console.log('home ctrl', keepService);
+  }
 ]);
