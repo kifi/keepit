@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('focusWhen', [])
+angular.module('kifi.focus', [])
 
 .directive('focusWhen', [
 	'$timeout',
@@ -25,4 +25,20 @@ angular.module('focusWhen', [])
 			}
 		};
 	}
+])
+
+.directive('withFocus', [
+    function() {
+        return {
+            restrict: "A",
+            scope: {
+                withFocus: "&"
+            },
+            link: function (scope, element /*, attrs*/ ) {
+                if (scope.withFocus()) {
+                    element.focus();
+                }
+            }
+        }
+    }
 ]);

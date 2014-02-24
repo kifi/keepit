@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.focus'])
 
 .directive('kfDetail', [
 	'keepService', 'tagService', '$filter', '$sce',
@@ -59,7 +59,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 							return !keepHasTag(tag.id);
 						}).slice(0, 5);
 					}
-                    var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
+					var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
 					if (scope.allTags && tagFilterTerm) {
 						var filtered = scope.allTags.filter(function (tag) {
 							// for given tagFilterTerm (user search value) and a tag, returns true if
@@ -108,19 +108,19 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return scope.highlightedTag === tag;
 				};
 
-                // check if the highlighted tag is still in the list
-                scope.checkHighlight = function() {
-                    if (!_.find(scope.tagTypeAheadResults, function(tag) { return scope.highlightedTag === tag; })) {
-                        scope.highlightTag(null);
-                    }
-                };
+				// check if the highlighted tag is still in the list
+				scope.checkHighlight = function() {
+					if (!_.find(scope.tagTypeAheadResults, function(tag) { return scope.highlightedTag === tag; })) {
+						scope.highlightTag(null);
+					}
+				};
 
-                var refreshTagDropdown = function(tagFilterTerm) {
-                    filterTags(tagFilterTerm);
-                    scope.checkHighlight();
-                }
+				var refreshTagDropdown = function(tagFilterTerm) {
+					filterTags(tagFilterTerm);
+					scope.checkHighlight();
+				}
 
-                scope.$watch('tagFilter.name', refreshTagDropdown);
+				scope.$watch('tagFilter.name', refreshTagDropdown);
 
 				scope.highlightTag = function (tag) {
 					return scope.highlightedTag = tag;
@@ -317,7 +317,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return keepService.togglePrivate(keeps);
 				};
 
-                scope.highlightTag(null);
+				scope.highlightTag(null);
 			}
 		};
 	}
