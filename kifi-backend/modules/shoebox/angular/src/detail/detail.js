@@ -1,11 +1,10 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.focus'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus'])
 
 .directive('kfDetail', [
-	'keepService', 'tagService', '$filter', '$sce',
-	function (keepService, tagService, $filter, $sce) {
-		var isAddingTag = false;
+	'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
+	function (keepService, tagService, $filter, $sce, $document, profileService) {
 		var KEY_UP = 38,
 			KEY_DOWN = 40,
 			KEY_ENTER = 13,
@@ -13,12 +12,13 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 			//KEY_TAB = 9,
 			KEY_DEL = 46,
 			KEY_F2 = 113;
+		var dropdownSuggestionCount = 5;
 
 		return {
 			replace: true,
 			restrict: 'A',
 			templateUrl: 'detail/detail.tpl.html',
-			link: function (scope /*, element, attrs*/ ) {
+			link: function (scope, element/*, attrs*/ ) {
 				scope.isSingleKeep = keepService.isSingleKeep;
 				scope.getLength = keepService.getSelectedLength;
 				scope.isDetailOpen = keepService.isDetailOpen;
@@ -55,11 +55,12 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 						});
 					}
 					function allTagsExceptPreexisting() {
-						return scope.tagTypeAheadResults = scope.allTags.filter(function (tag) {
+						return scope.allTags.filter(function (tag) {
 							return !keepHasTag(tag.id);
-						}).slice(0, 5);
+						}).slice(0, dropdownSuggestionCount);
 					}
 					var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
+					dropdownSuggestionCount = Math.min(10, Math.max(3, ($document.height() - element.find('.page-coll-list').offset().top) / 24 - 1));
 					if (scope.allTags && tagFilterTerm) {
 						var filtered = scope.allTags.filter(function (tag) {
 							// for given tagFilterTerm (user search value) and a tag, returns true if
@@ -71,8 +72,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 								});
 							});
 						});
-
-						scope.tagTypeAheadResults = filtered.slice(0, 5);
+						scope.tagTypeAheadResults = filtered.slice(0, dropdownSuggestionCount);
 					} else if (scope.allTags && !tagFilterTerm) {
 						scope.tagTypeAheadResults = allTagsExceptPreexisting();
 					}
@@ -91,7 +91,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.addTag = function (tag, keep) {
 					tagService.addKeepsToTag(tag, [keep]);
 					scope.tagFilter.name = '';
-					return isAddingTag = false;
+					return scope.isAddingTag = false;
 				};
 
 				scope.createAndAddTag = function (keep) {
@@ -100,24 +100,20 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					});
 				};
 
-				scope.isAddingTag = function () {
-					return isAddingTag;
-				};
-
 				scope.isTagHighlighted = function (tag) {
 					return scope.highlightedTag === tag;
 				};
 
 				// check if the highlighted tag is still in the list
 				scope.checkHighlight = function() {
-					if (!_.find(scope.tagTypeAheadResults, function(tag) { return scope.highlightedTag === tag; })) {
-						scope.highlightTag(null);
-					}
+						if (!_.find(scope.tagTypeAheadResults, function(tag) { return scope.highlightedTag === tag; })) {
+							scope.highlightTag(null);
+						}
 				};
 
 				var refreshTagDropdown = function(tagFilterTerm) {
-					filterTags(tagFilterTerm);
-					scope.checkHighlight();
+						filterTags(tagFilterTerm);
+						scope.checkHighlight();
 				}
 
 				scope.$watch('tagFilter.name', refreshTagDropdown);
@@ -133,19 +129,15 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 						// highlight the first
 						return scope.highlightFirst();
 					}
-
 					if (index === scope.tagTypeAheadResults.length - 1) {
 						// last item on the list
-
 						if (scope.isAddTagShown()) {
 							// highlight the new tag if available
 							return scope.highlightNewSuggestion();
 						}
-
 						// the first, otherwise
 						return scope.highlightFirst();
 					}
-
 					// highlight the next item
 					return scope.highlightAt(index + 1);
 				};
@@ -154,23 +146,19 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					var index = indexOfTag(scope.highlightedTag);
 					if (index === -1) {
 						// no highlight
-						// highlight the first
+						// highlight the last
 						return scope.highlightLast();
 					}
-
 					if (index === 0) {
-						// last item on the list
-
+						// first item on the list
 						if (scope.isAddTagShown()) {
 							// highlight the new tag if available
 							return scope.highlightNewSuggestion();
 						}
-
 						// the last, otherwise
 						return scope.highlightLast();
 					}
-
-					// highlight the next item
+					// highlight the previous item
 					return scope.highlightAt(index - 1);
 				};
 
@@ -193,7 +181,6 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					index = ((index % len) + len) % len;
 					var tag = tags[index];
 					scope.highlightTag(tag);
-					//dom.scrollIntoViewLazy(element.find('.kf-tag')[index]);
 					return tag;
 				};
 
@@ -226,11 +213,12 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 				scope.showAddTagDropdown = function () {
 					scope.tagFilter.name = '';
 					filterTags(null);
-					return isAddingTag = true;
+					element.find('.page-coll-input').focus();
+					return scope.isAddingTag = true;
 				};
 
 				scope.hideAddTagDropdown = function () {
-					return isAddingTag = false;
+					return scope.isAddingTag = false;
 				};
 
 				scope.getPrivateConversationText = function () {
@@ -317,6 +305,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.keepWhoPics', 'kifi.kee
 					return keepService.togglePrivate(keeps);
 				};
 
+				scope.me = profileService.me;
 				scope.highlightTag(null);
 			}
 		};

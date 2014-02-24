@@ -237,9 +237,9 @@ class InviteCommander @Inject() (
       val messageWithUrl = s"$message\n$url$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
       log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
       val resp = Await.result(linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl), Duration.Inf) // todo(ray): refactor; map future resp
-      log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText}")
+      log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
       if (resp.status != Status.CREATED) { // per LinkedIn doc
-        airbrake.notify(s"Failed to send LinkedIn invite for $userId; invite=$invite; socialUser=$socialUserInfo")
+        airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
         None
       } else {
         val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))

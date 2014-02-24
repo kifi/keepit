@@ -338,7 +338,7 @@ class UserCommander @Inject() (
       } getOrElse ""
     }
 
-    abookServiceClient.prefixQuery(userId, limit, search, after) map { paged =>
+    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
       val objs = paged.take(limit).map { e =>
         Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }

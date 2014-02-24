@@ -150,18 +150,25 @@
   border-top: 1px solid #cdd6e0
   margin: 18px 0 5px
 
+.kf-page-who
+  .kf-keep-who-text
+    color: #556179
+
 .kf-page-who-pics
   margin: 5px 0 13px
   white-space: nowrap
 
-  .pic
+  .kf-keep-who-pic
     position: relative
     display: inline-block
     width: 38px
     height: 38px
     border-radius: 2px
-    margin-right: 1px
+    margin-right: -2px
     background-size: 100%
+
+    &.me
+      border-radius: 2px
 
 .kf-page-who-text
   font-size: 12px
@@ -333,13 +340,13 @@ input.page-coll-input
   -webkit-font-smoothing: antialiased
   -webkit-transition: width 60ms ease-in-out
   transition: width 60ms ease-in-out
-  width: 150px
+  width: 180px
 
 
 .page-coll-opts
   display: none
   position: absolute
-  width: 150px
+  width: 180px
   border: 1px solid #cdd6e0
   border-top: none
   -webkit-box-sizing: border-box
@@ -365,10 +372,6 @@ input.page-coll-input
 
 .page-coll-opt.current
   background-color: #f1f2f6
-
-.page-coll-opt[data-id=""]
-  position: relative
-  padding-right: 36px
 
 .new-label
   position: absolute
