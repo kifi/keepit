@@ -3,8 +3,8 @@
 angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus'])
 
 .directive('kfDetail', [
-	'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
-	function (keepService, tagService, $filter, $sce, $document, profileService) {
+	'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService', '$timeout',
+	function (keepService, tagService, $filter, $sce, $document, profileService, $timeout) {
 		var KEY_UP = 38,
 			KEY_DOWN = 40,
 			KEY_ENTER = 13,
@@ -19,12 +19,15 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 			restrict: 'A',
 			templateUrl: 'detail/detail.tpl.html',
 			link: function (scope, element/*, attrs*/ ) {
+				scope.data = {};
 				scope.isSingleKeep = keepService.isSingleKeep;
 				scope.getLength = keepService.getSelectedLength;
 				scope.isDetailOpen = keepService.isDetailOpen;
 				scope.getPreviewed = keepService.getPreviewed;
 				scope.getSelected = keepService.getSelected;
 				scope.closeDetail = keepService.togglePreview.bind(null, null);
+				scope.me = profileService.me;
+				scope.data.isClickingInList = false;
 
 				tagService.fetchAll().then(function (res) {
 					scope.allTags = res;
@@ -35,6 +38,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 					scope.keep = keep;
 					scope.tagFilter.name = '';
 					filterTags(null);
+					scope.hideAddTagDropdown();
 				});
 
 				scope.tagFilter = {name: ''};
@@ -46,6 +50,15 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 						return scope.tagTypeAheadResults.indexOf(tag);
 					}
 					return -1;
+				}
+
+				function getSelectedKeeps() {
+					if (scope.isSingleKeep()) {
+						return [scope.getPreviewed()];
+					}
+					else {
+						return scope.getSelected();
+					}
 				}
 
 				var filterTags = function (tagFilterTerm) {
@@ -88,10 +101,10 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 					});
 				}
 
-				scope.addTag = function (tag, keep) {
-					tagService.addKeepsToTag(tag, [keep]);
+				scope.addTag = function (tag) {
+					tagService.addKeepsToTag(tag, getSelectedKeeps());
 					scope.tagFilter.name = '';
-					return scope.isAddingTag = false;
+					return scope.hideAddTagDropdown();
 				};
 
 				scope.createAndAddTag = function (keep) {
@@ -179,6 +192,7 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 					}
 
 					index = ((index % len) + len) % len;
+
 					var tag = tags[index];
 					scope.highlightTag(tag);
 					return tag;
@@ -214,6 +228,8 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 					scope.tagFilter.name = '';
 					filterTags(null);
 					element.find('.page-coll-input').focus();
+					scope.data.focusInput = true;
+
 					return scope.isAddingTag = true;
 				};
 
@@ -284,28 +300,27 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 				};
 
 				scope.toggleKeep = function () {
-					var keeps;
-					if (scope.isSingleKeep()) {
-						keeps = [scope.getPreviewed()];
-					}
-					else {
-						keeps = scope.getSelected();
-					}
+					var keeps = getSelectedKeeps();
 					return keepService.toggleKeep(keeps);
 				};
 
 				scope.togglePrivate = function () {
-					var keeps;
-					if (scope.isSingleKeep()) {
-						keeps = [scope.getPreviewed()];
-					}
-					else {
-						keeps = scope.getSelected();
-					}
+					var keeps = getSelectedKeeps();
 					return keepService.togglePrivate(keeps);
 				};
 
-				scope.me = profileService.me;
+				element.on('mousedown', '.page-coll-opt', function () {
+					scope.data.isClickingInList = true;
+				}).on('mouseup', '.page-coll-opt', function () {
+					scope.data.isClickingInList = false;
+				});
+
+				scope.blurTagFilter = function () {
+					if (!scope.data.isClickingInList) {
+						scope.hideAddTagDropdown();
+					}
+				};
+
 				scope.highlightTag(null);
 			}
 		};
