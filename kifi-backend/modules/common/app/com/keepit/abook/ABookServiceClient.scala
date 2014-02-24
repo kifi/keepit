@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+// import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -30,6 +30,8 @@ import com.keepit.common.net.HttpClientImpl
 import scala.util.Success
 
 trait ABookServiceClient extends ServiceClient {
+
+  implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.ABOOK
 
   def importContacts(userId:Id[User], oauth2Token:OAuth2Token):Future[Try[ABookInfo]] // gmail
