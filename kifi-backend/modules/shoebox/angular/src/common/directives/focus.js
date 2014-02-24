@@ -3,42 +3,42 @@
 angular.module('kifi.focus', [])
 
 .directive('focusWhen', [
-	'$timeout',
-	function ($timeout) {
-		return {
-			restrict: 'A',
-			scope: {
-				focusWhen: '='
-			},
-			link: function (scope, element /*, attrs*/ ) {
+  '$timeout',
+  function ($timeout) {
+    return {
+      restrict: 'A',
+      scope: {
+        focusWhen: '='
+      },
+      link: function (scope, element /*, attrs*/ ) {
 
-				function focus() {
-					element.focus();
-					scope.focusWhen = false;
-				}
+        function focus() {
+          element.focus();
+          scope.focusWhen = false;
+        }
 
-				scope.$watch('focusWhen', function (val) {
-					if (val) {
-						$timeout(focus);
-					}
-				});
-			}
-		};
-	}
+        scope.$watch('focusWhen', function (val) {
+          if (val) {
+            $timeout(focus);
+          }
+        });
+      }
+    };
+  }
 ])
 
 .directive('withFocus', [
-    function() {
-        return {
-            restrict: "A",
-            scope: {
-                withFocus: "&"
-            },
-            link: function (scope, element /*, attrs*/ ) {
-                if (scope.withFocus()) {
-                    element.focus();
-                }
-            }
+  function () {
+    return {
+      restrict: 'A',
+      scope: {
+        withFocus: '&'
+      },
+      link: function (scope, element /*, attrs*/ ) {
+        if (scope.withFocus()) {
+          element.focus();
         }
-    }
+      }
+    };
+  }
 ]);
