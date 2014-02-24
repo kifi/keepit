@@ -141,35 +141,35 @@ case class HttpClientImpl(
     await(getFuture(url, onFailure))
 
   def getFuture(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
-    report(req(url) tapWith {_.get()}, onFailure)
+    report(req(url), _.get(), onFailure)
 
   def post(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(postFuture(url, body, onFailure))
 
   def postFuture(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
-    report(req(url) tapWith {_.post(body)}, onFailure)
+    report(req(url), _.post(body), onFailure)
 
   def postText(url: HttpUri, body: String, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = await(postTextFuture(url, body, onFailure))
 
   def postTextFuture(url: HttpUri, body: String, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
-    report(req(url) tapWith {_.post(body)}, onFailure)
+    report(req(url), _.post(body), onFailure)
 
   def postXml(url: HttpUri, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = await(postXmlFuture(url, body, onFailure))
 
   def postXmlFuture(url: HttpUri, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
-    report(req(url) tapWith {_.post(body)}, onFailure)
+    report(req(url), _.post(body), onFailure)
 
   def put(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(putFuture(url, body, onFailure))
 
   def putFuture(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
-    report(req(url) tapWith {_.put(body)}, onFailure)
+    report(req(url), _.put(body), onFailure)
 
   def delete(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse =
     await(deleteFuture(url, onFailure))
 
   def deleteFuture(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] =
-    report(req(url) tapWith {_.delete()}, onFailure)
+    report(req(url), _.delete(), onFailure)
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(callTimeouts.responseTimeout.get, TimeUnit.MILLISECONDS))
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withRequestTimeout(callTimeouts.responseTimeout.get), url, headers, accessLog, serviceDiscovery)
@@ -212,10 +212,9 @@ case class HttpClientImpl(
     copy(callTimeouts = this.callTimeouts.overrideWith(callTimeouts))
   }
 
-  private def report(reqRes: (Request, Future[Response]), onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
-    val (request, responseFuture) = reqRes
-    responseFuture.map(r => res(request, r))(immediate) tap { f =>
-      f.onFailure(onFailure(request) orElse defaultFailureHandler(request)) (immediate)
+  private def report(request: Request, getResponse: Request=>Future[Response], onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
+    getResponse(request).map(r => res(request, r))(immediate) tap { f =>
+      f.onFailure(onFailure(request) orElse defaultFailureHandler(request))
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
         case unknown => airbrake.get.notify(s"Unknown object in http client onSuccess: $unknown on $request")
@@ -278,16 +277,15 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
   var timer: AccessLogTimer = _
   var tracer: StackTrace = _
 
-  private def record() = {
+  @inline private[this] def startTimer() = {
     timer = accessLog.timer(HTTP_OUT)
-    tracer = new StackTrace()
   }
 
-  def get() =               {record(); wsRequest.get()}
-  def put(body: JsValue) =  {record(); wsRequest.put(body)}
-  def post(body: String) =  {record(); wsRequest.post(body)}
-  def post(body: JsValue) = {record(); wsRequest.post(body)}
-  def post(body: NodeSeq) = {record(); wsRequest.post(body)}
-  def delete() =            {record(); wsRequest.delete()}
+  def get() =               try { startTimer(); wsRequest.get()      } finally { tracer = new StackTrace() }
+  def put(body: JsValue) =  try { startTimer(); wsRequest.put(body)  } finally { tracer = new StackTrace() }
+  def post(body: String) =  try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
+  def post(body: JsValue) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
+  def post(body: NodeSeq) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
+  def delete() =            try { startTimer(); wsRequest.delete()   } finally { tracer = new StackTrace() }
 }
 
