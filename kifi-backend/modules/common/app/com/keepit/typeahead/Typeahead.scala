@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.performance._
 import com.keepit.model.User
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+//import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
@@ -20,9 +20,9 @@ trait Typeahead[E, I] extends Logging {
 
   protected def getAllInfosForUser(id: Id[User]): Seq[I]
 
-  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]] = SafeFuture { getInfos(ids) }
+  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]] = SafeFuture { getInfos(ids) }(com.keepit.common.concurrent.ExecutionContext.fj)
 
-  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]] = SafeFuture { getAllInfosForUser(id) }
+  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]] = SafeFuture { getAllInfosForUser(id) }(com.keepit.common.concurrent.ExecutionContext.fj)
 
   protected def extractId(info: I): Id[E]
 
@@ -61,6 +61,7 @@ trait Typeahead[E, I] extends Logging {
             Future.successful(None)
           } else {
             val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+            implicit val fjCtx = com.keepit.common.concurrent.ExecutionContext.fj
             asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
               search(infos, queryTerms)
             }
@@ -97,7 +98,7 @@ trait Typeahead[E, I] extends Logging {
           log.info(s"[build($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
           filter
         }
-      }
+      }(com.keepit.common.concurrent.ExecutionContext.fj)
     }
   }
 }
@@ -118,4 +119,3 @@ object TypeaheadHit {
 }
 
 case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
-

@@ -150,18 +150,25 @@
   border-top: 1px solid #cdd6e0
   margin: 18px 0 5px
 
+.kf-page-who
+  .kf-keep-who-text
+    color: #556179
+
 .kf-page-who-pics
   margin: 5px 0 13px
   white-space: nowrap
 
-  .pic
+  .kf-keep-who-pic
     position: relative
     display: inline-block
     width: 38px
     height: 38px
     border-radius: 2px
-    margin-right: 1px
+    margin-right: -2px
     background-size: 100%
+
+    &.me
+      border-radius: 2px
 
 .kf-page-who-text
   font-size: 12px
@@ -204,16 +211,16 @@
   .page-coll-list
     margin-top: 10px
 
-  li
+  .page-coll-list>li
     display: inline-block
+
+  li
     line-height: 24px
     vertical-align: top
 
   a[href]
     color: #fff
     vertical-align: top
-
-
 
 .page-coll
   position: relative
@@ -333,13 +340,13 @@ input.page-coll-input
   -webkit-font-smoothing: antialiased
   -webkit-transition: width 60ms ease-in-out
   transition: width 60ms ease-in-out
-  width: 150px
+  width: 180px
 
 
 .page-coll-opts
   display: none
   position: absolute
-  width: 100%
+  width: 180px
   border: 1px solid #cdd6e0
   border-top: none
   -webkit-box-sizing: border-box
@@ -362,22 +369,17 @@ input.page-coll-input
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  width: 150px
 
 .page-coll-opt.current
   background-color: #f1f2f6
 
-.page-coll-opt[data-id=""]
-  position: relative
-  padding-right: 36px
-
 .new-label
   position: absolute
-  right: 35px
-  top: 6px
+  right: 8px
+  top: 4px
   height: 14px
   line-height: 13px
-  padding: 0 4px
+  padding: 2px 4px 0
   font-size: 9px
   font-weight: bold
   background-color: #b8c5d2

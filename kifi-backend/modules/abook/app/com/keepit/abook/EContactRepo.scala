@@ -14,6 +14,8 @@ import com.keepit.common.logging.Logging
 import play.api.Play.current
 import play.api.Play
 import scala.util.{Success, Try, Failure}
+import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
+import com.keepit.abook.typeahead.EContactABookTypeahead
 
 
 @ImplementedBy(classOf[EContactRepoImpl])
@@ -21,6 +23,7 @@ trait EContactRepo extends Repo[EContact] {
   def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
   def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact]
+  def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession): CloseableIterator[EContact]
   def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
@@ -36,6 +39,8 @@ trait EContactRepo extends Repo[EContact] {
 class EContactRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+//  val econtactTypeahead: EContactABookTypeahead,
+  val econtactTypeaheadCache: EContactTypeaheadCache,
   val econtactCache: EContactCache
 ) extends DbRepo[EContact] with EContactRepo with Logging {
 
@@ -56,8 +61,11 @@ class EContactRepoImpl @Inject() (
 
   override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
     econtactCache.remove(EContactKey(e.id.get))
+    econtactTypeaheadCache.remove(EContactTypeaheadKey(e.userId))
   }
-  override def invalidateCache(e: EContact)(implicit session: RSession): Unit = deleteCache(e)
+  override def invalidateCache(e: EContact)(implicit session: RSession): Unit = {
+    deleteCache(e) // todo
+  }
 
   // todo(ray): wire-up cache
 
@@ -69,12 +77,16 @@ class EContactRepoImpl @Inject() (
     (for(f <- rows if f.id.inSet(ids)) yield f).list
   }
 
+  def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession):CloseableIterator[EContact] = {
+    (for(f <- rows if f.id.inSet(ids)) yield f).iterator
+  }
+
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact] = {
     if (ids.isEmpty) Map.empty[Id[EContact], EContact]
     else {
       val valueMap = econtactCache.bulkGetOrElse(ids.map(EContactKey(_)).toSet) { keys =>
         val missing = keys.map(_.id)
-        val contacts = (for(f <- rows if f.id.inSet(missing)) yield f).iterator
+        val contacts = getByIdsIter(missing)
         val res = contacts.collect { case (c) if c.state == EContactStates.ACTIVE =>
           (EContactKey(c.id.get) -> c)
         }.toMap
