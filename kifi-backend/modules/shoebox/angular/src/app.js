@@ -12,6 +12,7 @@ angular.module('kifi', [
 	'antiscroll',
 	'jun.smartScroll',
 	'angularMoment',
+	'kifi.home',
 	'kifi.focus',
 	'kifi.youtube',
 	'kifi.templates',
@@ -39,6 +40,11 @@ angular.module('kifi', [
 		});
 
 		$httpProvider.defaults.withCredentials = true;
+
+		$routeProvider.when('/', {
+			templateUrl: 'home/home.tpl.html',
+			controller: 'HomeCtrl'
+		});
 	}
 ])
 
