@@ -34,8 +34,8 @@
 							<a class="page-coll-add-circle" href="javascript:" ng-show="hasTags()" ng-click="showAddTagDropdown()">+</a>
 							<a class="page-coll-add" href="javascript:" ng-show="!hasTags()" ng-click="showAddTagDropdown()"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
 					  </span>
-					  <span ng-if="isAddingTag">
-							<input class="page-coll-input" focus-when="isAddingTag" ng-if="isAddingTag" type="text" placeholder="tag name" ng-model="tagFilter.name" ng-keydown="onKeydown($event)">
+					  <span ng-show="isAddingTag">
+							<input class="page-coll-input" focus-when="data.focusInput" type="text" placeholder="tag name" ng-model="tagFilter.name" ng-keydown="onKeydown($event)" ng-blur="blurTagFilter()" ng-mousedown="data.isClickingInList = true" ng-mouseup="data.isClickingInList = false">
 							<ul class="page-coll-opts">
 								<li class="page-coll-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-click="addTag(tag, keep)" ng-bind-html="tag.prettyHtml" ng-mouseover="highlightTag(tag)"></li>
 								<li class="page-coll-opt" ng-if="isAddTagShown()" ng-click="createAndAddTag(keep)" ng-class="{ current: isTagHighlighted(null) }" ng-mouseover="highlightTag(null)">{{tagFilter.name}}<span class="new-label">NEW</span></li>
