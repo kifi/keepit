@@ -18,7 +18,8 @@
   width: @pane-width;
   height: auto;
   background: @pane-color;
-  font: 12px Arial, sans-serif;
+  font-size: 12px;
+  line-height: 15px;
   text-align: left;
   direction: ltr;
   z-index: 999999999991 !important; // defensive
@@ -199,15 +200,13 @@ a.kifi-pane-top-menu-a.kifi-active {
   position: fixed;
   top: 2px;
   right: 50px;
-  text-align: left;
-  line-height: 20px;
-  font: 16px/1.5 Arial, sans-serif !important;
-  color: #515051;
+  z-index: 999999999999;
+  font-size: 16px;
+  line-height: 24px;
   background-color: #474e54;
   color: #fff !important;
   padding: 10px;
   border-radius: 10px !important;
-  z-index: 999999999999;
 }
 .kifi-signed-out-tooltip > .kifi-signed-out-icon {
   height: 18px;
