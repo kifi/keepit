@@ -2,7 +2,17 @@
 
 angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
-.controller('TagCtrl', [
+.config([
+	'$routeProvider',
+	function ($routeProvider) {
+		$routeProvider.when('/tag/:id', {
+			templateUrl: 'keeps/keeps.tpl.html',
+			controller: 'TagsCtrl'
+		});
+	}
+])
+
+.controller('TagsCtrl', [
 	'$scope', '$timeout', 'tagService',
 	function ($scope, $timeout, tagService) {
 		$scope.create = function (name) {
@@ -39,6 +49,13 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 	}
 ])
 
+.controller('TagCtrl', [
+	'$scope', '$timeout', 'tagService',
+	function ($scope, $timeout, tagService) {
+		console.log('hi');
+	}
+])
+
 .directive('kfTags', [
 	'$timeout', '$location', 'util', 'dom', 'tagService',
 	function ($timeout, $location, util, dom, tagService) {
@@ -54,7 +71,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 			restrict: 'A',
 			templateUrl: 'tags/tags.tpl.html',
 			scope: {},
-			controller: 'TagCtrl',
+			controller: 'TagsCtrl',
 			link: function (scope, element /*, attrs*/ ) {
 				scope.tags = tagService.list;
 
