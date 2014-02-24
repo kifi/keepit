@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+//import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import java.io.IOException
 import com.keepit.model._
@@ -114,6 +114,7 @@ case class ScraperThreadInstanceInfo(info:AmazonInstanceInfo, details:String) {
 }
 
 trait ScraperServiceClient extends ServiceClient {
+  implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
 
   def asyncScrape(uri:NormalizedURI):Future[(NormalizedURI, Option[Article])] // pass in simple url? not sure if Tuple2
