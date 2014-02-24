@@ -12,6 +12,7 @@ import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{TypedType, ColumnOption}
 import scala.slick.driver.{JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.collection.mutable
 
 import com.keepit.common.logging.Logging
 import scala.slick.lifted.{AbstractTable, BaseTag}
@@ -24,7 +25,6 @@ case class RepoEntryAdded[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryRemoved[M <: Model[M]](model: M) extends RepoModification[M]
 
 trait Repo[M <: Model[M]] {
-  protected val changeListeners: scala.collection.mutable.SynchronizedSet[RepoModification[M]=>Unit]
   def get(id: Id[M])(implicit session: RSession): M
   def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
@@ -32,7 +32,6 @@ trait Repo[M <: Model[M]] {
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): Unit
   def deleteCache(model: M)(implicit session: RSession): Unit
-  def onChange(listener: RepoModification[M]=>Unit ): Unit
 }
 
 trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with Logging {
@@ -44,7 +43,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   lazy val dbLog = Logger("com.keepit.db")
 
-  protected val changeListeners = new scala.collection.mutable.HashSet[RepoModification[M]=>Unit] with scala.collection.mutable.SynchronizedSet[RepoModification[M]=>Unit]
+  protected val changeListeners : Set[RepoModification[M]=>Unit] = Set.empty
+  protected val hasListeners = !changeListeners.isEmpty
 
 
   type RepoImpl <: RepoTable[M]
@@ -72,7 +72,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
       case _ => invalidateCache(result)
     }
-    session.onTransactionSuccess{
+    if (hasListeners) session.onTransactionSuccess{
      if(newItem) notifyChangeListeners(RepoEntryAdded(model))
      else notifyChangeListeners(RepoEntryUpdated(model))
     }
@@ -126,11 +126,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     model
   }
 
-  def onChange(listener: RepoModification[M]=>Unit ): Unit = {
-    changeListeners += listener
-  }
-
-  protected def notifyChangeListeners(modification: RepoModification[M]) = {
+  protected def notifyChangeListeners(modification: RepoModification[M]): Unit = {
     changeListeners.foreach{ _(modification) }
   }
 
@@ -191,7 +187,7 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
     deleteCache(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    session.onTransactionSuccess{
+    if (hasListeners) session.onTransactionSuccess{
      notifyChangeListeners(RepoEntryRemoved(model))
     }
     count
