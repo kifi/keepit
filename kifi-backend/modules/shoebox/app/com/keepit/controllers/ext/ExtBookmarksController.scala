@@ -169,7 +169,7 @@ class ExtBookmarksController @Inject() (
         SafeFuture {
           log.debug("adding bookmarks import of user %s".format(userId))
 
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
           bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId))
         }
         Status(ACCEPTED)(JsNumber(0))
@@ -177,7 +177,7 @@ class ExtBookmarksController @Inject() (
         SafeFuture {
           log.debug("adding bookmarks of user %s".format(userId))
 
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
           bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)
           searchClient.updateURIGraph()
         }
