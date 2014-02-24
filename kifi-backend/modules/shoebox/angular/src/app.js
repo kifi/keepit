@@ -12,7 +12,7 @@ angular.module('kifi', [
 	'antiscroll',
 	'jun.smartScroll',
 	'angularMoment',
-	'focusWhen',
+	'kifi.focus',
 	'kifi.youtube',
 	'kifi.templates',
 	'kifi.profileCard',

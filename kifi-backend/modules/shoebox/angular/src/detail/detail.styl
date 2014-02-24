@@ -211,16 +211,16 @@
   .page-coll-list
     margin-top: 10px
 
-  li
+  .page-coll-list>li
     display: inline-block
+
+  li
     line-height: 24px
     vertical-align: top
 
   a[href]
     color: #fff
     vertical-align: top
-
-
 
 .page-coll
   position: relative
@@ -346,7 +346,7 @@ input.page-coll-input
 .page-coll-opts
   display: none
   position: absolute
-  width: 100%
+  width: 180px
   border: 1px solid #cdd6e0
   border-top: none
   -webkit-box-sizing: border-box
@@ -369,18 +369,17 @@ input.page-coll-input
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  width: 146px
 
 .page-coll-opt.current
   background-color: #f1f2f6
 
 .new-label
   position: absolute
-  right: 5px
-  top: 6px
+  right: 8px
+  top: 4px
   height: 14px
   line-height: 13px
-  padding: 0 4px
+  padding: 2px 4px 0
   font-size: 9px
   font-weight: bold
   background-color: #b8c5d2

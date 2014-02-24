@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService'])
+angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus'])
 
 .directive('kfDetail', [
 	'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
@@ -306,7 +306,6 @@ angular.module('kifi.detail', ['kifi.keepService', 'kifi.tagService', 'kifi.keep
 				};
 
 				scope.me = profileService.me;
-
 				scope.highlightTag(null);
 			}
 		};
