@@ -29,11 +29,14 @@ angular.module('kifi.keepWhoText', [])
 
 				scope.getFriendText = function () {
 					var keepers = scope.keep.keepers,
-						len = keepers && keepers.length || 0;
+						len = keepers && keepers.length || 0,
+						text;
 					if (keepers.length === 1) {
-						return '1 friend';
+						text = '1 friend';
 					}
-					return len + ' friends';
+					text = len + ' friends';
+					// todo: if is mine, return '+ ' + text. else, text.
+					return '+ ' + text;
 				};
 
 				scope.getOthersText = function () {
