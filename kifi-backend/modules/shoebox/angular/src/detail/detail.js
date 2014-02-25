@@ -231,7 +231,6 @@ angular.module('kifi.detail',
           scope.tagFilter.name = '';
           filterTags(null);
           element.find('.page-coll-input').focus();
-          scope.data.focusInput = true;
 
           return scope.isAddingTag = true;
         };
@@ -331,24 +330,26 @@ angular.module('kifi.detail',
 ])
 
 .directive('kfTagSuggestions', [
-    '$timeout',
-    function ($timeout) {
-        return function(scope, element /*, attrs*/ ) {
-            $timeout(function() {
-                var hiddenElement = element.find('span');
-                var input = element.find('input');
-                scope.$watch('tagFilter.name', function (value) {
-                    var html = value;
-                    if (scope.isAddTagShown()) {
-                        html += scope.newTagLabel;
-                    }
-                    hiddenElement.html(html);
-                    var width = hiddenElement[0].offsetWidth + 10;
-                    input.css('width', width + 'px');
-                });
-            });
-        }
+  '$timeout',
+  function ($timeout) {
+    return function(scope, element /*, attrs*/ ) {
+      $timeout(function() {
+        var hiddenElement = element.find('.page-coll-opt-hidden');
+        var input = element.find('input');
+        scope.$watch('tagFilter.name', function (value) {
+          var html = value;
+          if (scope.isAddTagShown()) {
+              html += scope.newTagLabel;
+          }
+          hiddenElement.html(html);
+          var parentWidth = element.parents('.page-coll-list')[0].offsetWidth - 20; // a padding offset
+          var width = hiddenElement[0].offsetWidth + 10;
+          if (width > parentWidth) width = parentWidth;
+          input.css('width', width + 'px');
+        });
+      });
     }
+  }
 ])
 
 .directive('kfKeepDetail', [
