@@ -1840,21 +1840,6 @@ function qualify(key) {
   return api.mode.isDev() ? key + '@dev' : key;
 }
 
-// TODO: delete this code for migrating storage keys Feb 20
-(function (keys) {
-  delete api.storage.development_kifi_installation_id;
-  for (var old in keys) {
-    var qOld = 'production_' + old;
-    if (qOld in api.storage) {
-      var val = api.storage[qOld];
-      if (val != null) {
-        api.storage[keys[old] || old] = val;
-      }
-      delete api.storage[qOld];
-    }
-  }
-}({kifi_installation_id: 'installation_id', prompt_to_import_bookmarks: null, logout: null}));
-
 // ===== Helper functions
 
 function enabled(setting) {

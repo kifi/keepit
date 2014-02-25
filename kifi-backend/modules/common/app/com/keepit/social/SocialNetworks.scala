@@ -24,7 +24,7 @@ object SocialNetworkType {
 
 object SocialNetworks {
   val SUPPORTED = Seq(FACEBOOK, LINKEDIN)
-  val ALL = Seq(FACEBOOK, LINKEDIN, FORTYTWO)
+  val ALL = Seq(FACEBOOK, LINKEDIN, FORTYTWO, EMAIL)
   val REFRESHING = Seq(FACEBOOK, LINKEDIN)
   case object LINKEDIN extends SocialNetworkType("linkedin", "LinkedIn", "linkedin")
   case object FACEBOOK extends SocialNetworkType("facebook", "Facebook", "facebook")

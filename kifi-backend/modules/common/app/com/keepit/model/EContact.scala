@@ -22,6 +22,7 @@ case class EContact(
   name:      Option[String] = None,
   firstName: Option[String] = None,
   lastName:  Option[String] = None,
+  contactUserId: Option[Id[User]] = None,
   state:     State[EContact] = EContactStates.ACTIVE
 ) extends ModelWithState[EContact] {
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
@@ -40,6 +41,7 @@ object EContact {
       (__ \ 'name).formatNullable[String] and
       (__ \ 'firstName).formatNullable[String] and
       (__ \ 'lastName).formatNullable[String] and
+      (__ \ 'contactUserId).formatNullable(Id.format[User]) and
       (__ \ 'state).format(State.format[EContact])
     )(EContact.apply, unlift(EContact.unapply))
 }

@@ -24,6 +24,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.commanders.LocalRichConnectionCommander
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -61,7 +62,8 @@ class ABookController @Inject() (
   oauth2TokenRepo:OAuth2TokenRepo,
   typeahead:EContactABookTypeahead,
   abookCommander:ABookCommander,
-  contactsUpdater:ContactsUpdaterPlugin
+  contactsUpdater:ContactsUpdaterPlugin,
+  richConnectionCommander: LocalRichConnectionCommander
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
   // gmail
@@ -350,25 +352,9 @@ class ABookController @Inject() (
     }
   }
 
-//  def rebuildPrefixFilters() = Action { request =>
-//    val allABooks = db.readOnly { implicit ro =>
-//      abookInfoRepo.all()
-//    }
-//    val userIds = allABooks.foldLeft(Set.empty[Id[User]]){(a,c) => a += c.userId} // optimize
-//    val filterFutures = new ArrayBuffer[Future[PrefixFilter[EContact]]]
-//    for (userId <- userIds) {
-//      val filterF = typeahead.build(userId)
-//      filterF map { filter =>
-//
-//      }
-//      filterFutures += filterF
-//    }
-//
-//  }
-
   def richConnectionUpdate() = Action(parse.json) { request =>
     val updateMessage = request.body.as[RichConnectionUpdateMessage]
-    //ZZZ needs to actully do something with the data
+    richConnectionCommander.processUpdateImmediate(updateMessage)
     Ok("")
   }
 

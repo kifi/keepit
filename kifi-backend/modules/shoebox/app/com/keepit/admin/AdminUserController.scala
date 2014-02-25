@@ -53,7 +53,8 @@ case class UserStatisticsPage(
   userThreadStats: Map[Id[User], Future[UserThreadStats]],
   page: Int,
   userCount: Int,
-  pageSize: Int) {
+  pageSize: Int,
+  newUsers: Option[Int]) {
 
   def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), Duration.Inf)
 }
@@ -61,7 +62,7 @@ case class UserStatisticsPage(
 sealed trait UserViewType
 object UserViewTypes {
   case object AllUsersViewType extends UserViewType
-  case object RealUsersViewType extends UserViewType
+  case object RegisteredUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
   case class ByExperimentUsersViewType(exp: ExperimentType) extends UserViewType
 }
@@ -268,7 +269,7 @@ class AdminUserController @Inject() (
   }
 
   def allUsersView = usersView(0)
-  def allRealUsersView = realUsersView(0)
+  def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
@@ -286,36 +287,38 @@ class AdminUserController @Inject() (
 
   def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
     val PAGE_SIZE: Int = 50
-    val users = db.readOnly { implicit s =>
+    val (users, userCount) = db.readOnly { implicit s =>
       userViewType match {
-        case AllUsersViewType => userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
-        case RealUsersViewType => userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
-        case FakeUsersViewType => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
-        case ByExperimentUsersViewType(exp) => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(exp)(page, PAGE_SIZE) map userStatistics
+        case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, PAGE_SIZE) map userStatistics,
+                                  userRepo.countIncluding(UserStates.ACTIVE))
+        case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE) map userStatistics,
+                                         userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+        case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE) map userStatistics,
+                                   userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+        case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, PAGE_SIZE) map userStatistics,
+                                                userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
       }
     }
+
+    val newUsers = userViewType match {
+      case RegisteredUsersViewType => db.readOnly { implicit s => Some(userRepo.countNewUsers) }
+      case _ => None
+    }
+
     val userThreadStats = (users.par.map { u =>
       val userId = u.user.id.get
       (userId -> eliza.getUserThreadStats(u.user.id.get))
     }).seq.toMap
 
-    val userCount = db.readOnly { implicit s =>
-      userViewType match {
-        case AllUsersViewType => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)
-        case RealUsersViewType => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
-        case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
-        case ByExperimentUsersViewType(exp) => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(exp)
-      }
-    }
-    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE)
+    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE, newUsers)
   }
 
   def usersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, AllUsersViewType), None))
   }
 
-  def realUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
-    Ok(html.admin.users(userStatisticsPage(page, RealUsersViewType), None))
+  def registeredUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, RegisteredUsersViewType), None))
   }
 
   def fakeUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
@@ -340,7 +343,7 @@ class AdminUserController @Inject() (
           val userId = u.user.id.get
           (userId -> eliza.getUserThreadStats(u.user.id.get))
         }).seq.toMap
-        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, userThreadStats, 0, users.size, users.size), searchTerm))
+        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, userThreadStats, 0, users.size, users.size, None), searchTerm))
     }
   }
 

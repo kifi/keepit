@@ -54,7 +54,8 @@ class EContactRepoImpl @Inject() (
     def name       = column[String]("name", O.Nullable)
     def firstName  = column[String]("first_name", O.Nullable)
     def lastName   = column[String]("last_name", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, email, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+    def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, email, name.?, firstName.?, lastName.?, contactUserId.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
 
   def table(tag: Tag) = new EContactTable(tag)

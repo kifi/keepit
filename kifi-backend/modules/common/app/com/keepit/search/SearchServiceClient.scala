@@ -22,8 +22,6 @@ import com.keepit.search.feed.Feed
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
 
-  def logResultClicked(resultClicked: ResultClicked): Unit
-  def logSearchEnded(searchEnded: SearchEnded): Unit
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
   def warmUpUser(userId: Id[User]): Unit
 
@@ -83,16 +81,6 @@ class SearchServiceClientImpl(
 
   // request consolidation
   private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
-
-  def logResultClicked(resultClicked: ResultClicked): Unit = {
-    val json = Json.toJson(resultClicked)
-    call(Search.internal.logResultClicked(), json)
-  }
-
-  def logSearchEnded(searchEnded: SearchEnded): Unit = {
-    val json = Json.toJson(searchEnded)
-    call(Search.internal.logSearchEnded(), json)
-  }
 
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
     val json = JsArray(uriIds.map(Id.format[NormalizedURI].writes))
