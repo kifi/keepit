@@ -7,6 +7,7 @@ angular.module('kifi', [
   'ngSanitize',
   'ngAnimate',
   'ui.bootstrap',
+  //'ui.router',
   'util',
   'dom',
   'antiscroll',
@@ -28,22 +29,25 @@ angular.module('kifi', [
   'kifi.layout.rightCol'
 ])
 
+.run(['$route', angular.noop])
+
 .config([
   '$routeProvider', '$locationProvider', '$httpProvider',
   function ($routeProvider, $locationProvider, $httpProvider) {
     $locationProvider
       .html5Mode(true)
       .hashPrefix('!');
+console.log('route!');
 
     $routeProvider
     .when('/', {
+      template: '<h1>Home</h1>',
       controller: function () {
-        console.log('hi');
+        console.log('ROOT!');
       }
-    })
-    .otherwise({
-      redirectTo: '/'
     });
+
+    $routeProvider.otherwise('/');
 
     $httpProvider.defaults.withCredentials = true;
   }

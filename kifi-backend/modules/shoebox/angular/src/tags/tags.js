@@ -2,16 +2,6 @@
 
 angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/tag/:id', {
-      templateUrl: 'keeps/keeps.tpl.html',
-      controller: 'TagsCtrl'
-    });
-  }
-])
-
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
   function ($scope, $timeout, tagService) {
