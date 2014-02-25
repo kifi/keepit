@@ -37,13 +37,11 @@ angular.module('kifi', [
     $locationProvider
       .html5Mode(true)
       .hashPrefix('!');
-console.log('route!');
 
     $routeProvider
     .when('/', {
       template: '<h1>Home</h1>',
       controller: function () {
-        console.log('ROOT!');
       }
     });
 
