@@ -32,7 +32,7 @@ class AdminExperimentController @Inject() (
 
   def overview = AdminHtmlAction.authenticated { request =>
     val (totalUserCount, experimentsWithCount) = db.readOnly { implicit session =>
-      (userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED),
+      (userRepo.countIncluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED),
       experimentRepo.getDistinctExperimentsWithCounts().toMap)
     }
 
