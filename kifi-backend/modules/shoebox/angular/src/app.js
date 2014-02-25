@@ -35,7 +35,13 @@ angular.module('kifi', [
       .html5Mode(true)
       .hashPrefix('!');
 
-    $routeProvider.otherwise({
+    $routeProvider
+    .when('/', {
+      controller: function () {
+        console.log('hi');
+      }
+    })
+    .otherwise({
       redirectTo: '/'
     });
 
