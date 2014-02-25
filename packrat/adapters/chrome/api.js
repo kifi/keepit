@@ -676,10 +676,3 @@ var api = function() {
     version: chrome.app.getDetails().version
   };
 }();
-
-// TODO: remove Feb 20
-delete localStorage[':maxResults'];
-delete localStorage[':suppressLog'];
-delete localStorage[':showSlider'];
-delete localStorage[':showScores'];
-delete localStorage[':env'];

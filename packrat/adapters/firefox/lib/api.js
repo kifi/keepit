@@ -701,10 +701,3 @@ exports.onUnload = function (reason) {
     removeFromWindow(win);
   }
 };
-
-// TODO: remove Feb 20
-delete prefs.maxResults;
-delete prefs.suppressLog;
-delete prefs.showSlider;
-delete prefs.showScores;
-delete prefs.env;
