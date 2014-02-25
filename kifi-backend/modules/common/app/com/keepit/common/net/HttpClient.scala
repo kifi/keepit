@@ -20,9 +20,9 @@ import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.{MidFlightRequests, CommonHeaders}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
-import org.apache.commons.lang3.RandomStringUtils
 import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
+import java.util.Random
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
@@ -260,7 +260,7 @@ case class HttpClientImpl(
 //This request class is not reusable for more then one call
 class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(String, String)], accessLog: AccessLog, serviceDiscovery: ServiceDiscovery) extends Logging {
 
-  val trackingId = RandomStringUtils.randomAlphanumeric(5)
+  val trackingId = TrackingId.get()
   val instance = serviceDiscovery.thisInstance
   private val headersWithTracking =
     (CommonHeaders.TrackingId, trackingId) ::
@@ -287,5 +287,23 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
   def post(body: JsValue) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
   def post(body: NodeSeq) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
   def delete() =            try { startTimer(); wsRequest.delete()   } finally { tracer = new StackTrace() }
+}
+
+object TrackingId {
+  private[this] val rnd = new Random(System.currentTimeMillis)
+  private[this] val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+  def get(): String = {
+    val buf = new Array[Char](5)
+    val len = chars.length
+    var i = 0
+    var value = rnd.nextInt(Int.MaxValue)
+    while (i < 5) {
+      buf(i) = chars.charAt(value % len)
+      value = value / len
+      i += 1
+    }
+    new String(buf)
+  }
 }
 
