@@ -30,6 +30,7 @@ angular.module('kifi.detail',
         scope.closeDetail = keepService.togglePreview.bind(null, null);
         scope.me = profileService.me;
         scope.data.isClickingInList = false;
+        scope.newTagLabel = 'NEW';
 
         tagService.fetchAll().then(function (res) {
           scope.allTags = res;
@@ -327,6 +328,27 @@ angular.module('kifi.detail',
       }
     };
   }
+])
+
+.directive('kfTagSuggestions', [
+    '$timeout',
+    function ($timeout) {
+        return function(scope, element /*, attrs*/ ) {
+            $timeout(function() {
+                var hiddenElement = element.find('span');
+                var input = element.find('input');
+                scope.$watch('tagFilter.name', function (value) {
+                    var html = value;
+                    if (scope.isAddTagShown()) {
+                        html += scope.newTagLabel;
+                    }
+                    hiddenElement.html(html);
+                    var width = hiddenElement[0].offsetWidth + 10;
+                    input.css('width', width + 'px');
+                });
+            });
+        }
+    }
 ])
 
 .directive('kfKeepDetail', [
