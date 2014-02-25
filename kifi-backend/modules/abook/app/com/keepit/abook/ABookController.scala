@@ -348,6 +348,22 @@ class ABookController @Inject() (
 
   def refreshPrefixFilter(userId:Id[User]) = Action.async { request =>
     typeahead.refresh(userId) map { filter =>
+      log.info(s"[refreshPrefixFilter($userId)] updated; filter=$filter")
+      Ok(Json.obj("code" -> "success"))
+    }
+  }
+
+  def refreshPrefixFiltersByIds() = Action.async(parse.json) { request =>
+    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
+    val userIds = jsArray.value map { x => Id[User](x.as[Long]) }
+    log.info(s"[refreshPrefixFiltersByIds] ids(len=${userIds.length});${userIds.take(50).mkString(",")}")
+    typeahead.refreshByIds(userIds) map { r =>
+      Ok(Json.obj("code" -> "success"))
+    }
+  }
+
+  def refreshAllPrefixFilters() = Action.async { request =>
+    typeahead.refreshAll map { r =>
       Ok(Json.obj("code" -> "success"))
     }
   }

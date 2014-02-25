@@ -96,9 +96,9 @@ class EContactTypeahead @Inject() (
     filter
   }
 
-  def refresh(userId: Id[User]): Future[Unit] = {
-    abookClient.refreshPrefixFilter(userId)
-  }
+  def refresh(userId: Id[User]): Future[Unit] = abookClient.refreshPrefixFilter(userId)
+  def refreshByIds(ids: Seq[Id[User]]): Future[Unit] = abookClient.refreshPrefixFiltersByIds(ids)
+  def refreshAll(): Future[Unit] = abookClient.refreshAllFilters()
 }
 
 trait EContactTypeaheadStore extends PrefixFilterStore[User]
