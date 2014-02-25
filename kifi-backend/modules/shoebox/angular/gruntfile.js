@@ -37,14 +37,10 @@ module.exports = function (grunt) {
       client: {
         lib: 'lib',
         libCss: [
-          'lib/normalize-css/normalize.css',
-          'lib/bootstrap/dist/css/bootstrap.css',
-          'lib/antiscroll/antiscroll.css'
+          'lib/normalize-css/normalize.css'
         ],
         libMinCss: [
-          'lib/normalize-css/normalize.css',
-          'lib/bootstrap/dist/css/bootstrap.min.css',
-          'lib/antiscroll/antiscroll.css'
+          'lib/normalize-css/normalize.css'
         ],
         libJs: [
           'lib/lodash/dist/lodash.js',
