@@ -48,10 +48,10 @@ class UserTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnly { implicit session =>
-          userRepoImpl.pageIncludingWithoutExp()(ExperimentType.FAKE)().head === user
-          userRepoImpl.pageIncludingWithExp()(ExperimentType.FAKE)().length === 0
-          userRepoImpl.countIncludingWithoutExp()(ExperimentType.FAKE) === 1
-          userRepoImpl.countIncludingWithExp()(ExperimentType.FAKE) === 0
+          userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE)().head === user
+          userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE)().length === 0
+          userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 1
+          userRepoImpl.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 0
         }
 
         db.readWrite { implicit session =>
@@ -60,10 +60,10 @@ class UserTest extends Specification with ShoeboxTestInjector {
 
         db.readOnly { implicit session =>
           val updatedUser = userRepo.get(user.id.get)
-          userRepoImpl.pageIncludingWithoutExp()(ExperimentType.FAKE)().length === 0
-          userRepoImpl.pageIncludingWithExp()(ExperimentType.FAKE)().head === updatedUser
-          userRepoImpl.countIncludingWithoutExp()(ExperimentType.FAKE) === 0
-          userRepoImpl.countIncludingWithExp()(ExperimentType.FAKE) === 1
+          userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE)().length === 0
+          userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE)().head === updatedUser
+          userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 0
+          userRepoImpl.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 1
         }
       }
     }
