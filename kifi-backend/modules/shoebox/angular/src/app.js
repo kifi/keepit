@@ -38,13 +38,6 @@ angular.module('kifi', [
       .html5Mode(true)
       .hashPrefix('!');
 
-    $routeProvider
-    .when('/', {
-      template: '<h1>Home</h1>',
-      controller: function () {
-      }
-    });
-
     $routeProvider.otherwise('/');
 
     $httpProvider.defaults.withCredentials = true;

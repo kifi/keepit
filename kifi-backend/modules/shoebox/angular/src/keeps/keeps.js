@@ -60,38 +60,12 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
-
-        scope.page = {
-          title: 'Browse your Keeps'
-        };
-
-        scope.results = {
-          numShown: 0,
-          myTotal: 300,
-          friendsTotal: 0,
-          othersTotal: 12342
-        };
-
-        scope.filter = {
-          type: 'm'
-        };
-
-        scope.selectedKeep = null;
-
         scope.checkEnabled = true;
 
         scope.getSubtitle = function () {
           var subtitle = scope.subtitle;
           var numShown = scope.results.numShown;
           switch (subtitle.type) {
-          case 'query':
-            switch (numShown) {
-            case 0:
-              return 'Sorry, no results found for &#x201c;' + (scope.results.query || '') + '&#x202c;';
-            case 1:
-              return '1 result found';
-            }
-            return 'Top ' + numShown + ' results';
           case 'tag':
             switch (numShown) {
             case 0:
@@ -122,48 +96,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
           return subtitle.text;
         };
 
-        scope.setSearching = function () {
-          scope.subtitle = {
-            text: 'Searching...'
-          };
-        };
-
         scope.setLoading = function () {
           scope.subtitle = {
             text: 'Loading...'
           };
-        };
-
-        scope.isFilterSelected = function (type) {
-          return scope.filter.type === type;
-        };
-
-        function getFilterCount(type) {
-          switch (type) {
-          case 'm':
-            return scope.results.myTotal;
-          case 'f':
-            return scope.results.friendsTotal;
-          case 'a':
-            return scope.results.othersTotal;
-          }
-        }
-
-        scope.isEnabled = function (type) {
-          if (scope.isFilterSelected(type)) {
-            return false;
-          }
-          return !!getFilterCount(type);
-        };
-
-        scope.getFilterUrl = function (type) {
-          if (scope.isEnabled(type)) {
-            var count = getFilterCount(type);
-            if (count) {
-              return '/find?q=' + (scope.results.query || '') + '&f=' + type + '&maxHits=30';
-            }
-          }
-          return '';
         };
 
         scope.setLoading();
