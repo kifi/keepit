@@ -26,7 +26,7 @@ class LinkedInProvider(application: Application)
 
   override def fillProfile(user: SocialUser): SocialUser = {
     val accessToken = user.oAuth2Info.get.accessToken
-    val promise = WS.url(LinkedInProvider.Api + accessToken).get()
+    val promise = WS.url(LinkedInProvider.Api + accessToken).withRequestTimeout(120000).get()
 
     try {
       val response = awaitResult(promise)

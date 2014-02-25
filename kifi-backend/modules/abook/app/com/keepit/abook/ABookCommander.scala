@@ -91,7 +91,7 @@ class ABookCommander @Inject() (
     }
 
     val userInfoF:Future[GmailABookOwnerInfo] = getGmailOwnerInfo(userId, accessToken)
-    val contactsRespF:Future[Response] = WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
+    val contactsRespF:Future[Response] = WS.url(CONTACTS_URL).withRequestTimeout(120000).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
     for {
       userInfo <- userInfoF
       contactsResp <- contactsRespF
