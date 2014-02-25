@@ -56,6 +56,8 @@ trait ABookServiceClient extends ServiceClient {
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def refreshPrefixFilter(userId:Id[User]):Future[Unit]
+  def refreshPrefixFiltersByIds(userIds:Seq[Id[User]]):Future[Unit]
+  def refreshAllFilters():Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
 }
 
@@ -205,6 +207,14 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.refreshPrefixFilter(userId)).map { r => Unit }
   }
 
+  def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit] = {
+    call(ABook.internal.refreshPrefixFiltersByIds(), JsArray(userIds.map(u => JsNumber(u.id)))) map { r => Unit }
+  }
+
+  override def refreshAllFilters(): Future[Unit] = {
+    call(ABook.internal.refreshAllPrefixFilters()).map { r => Unit }
+  }
+
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] = {
     callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map{r => ()}
   }
@@ -257,6 +267,10 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 
   def refreshPrefixFilter(userId: Id[User]): Future[Unit] = ???
+
+  def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit] = ???
+
+  def refreshAllFilters(): Future[Unit] = ???
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
 }

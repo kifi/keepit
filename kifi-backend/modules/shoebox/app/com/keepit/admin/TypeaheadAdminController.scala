@@ -13,6 +13,7 @@ import com.keepit.abook.ABookServiceClient
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.JsArray
 
 class TypeaheadAdminController @Inject() (
   db:Database,
@@ -33,6 +34,30 @@ class TypeaheadAdminController @Inject() (
       abookRes <- abookF
     } yield {
       Ok(s"PrefixFilter for $userId has been refreshed")
+    }
+  }
+
+  def refreshPrefixFiltersByIds() = AdminHtmlAction.authenticatedAsync(parse.json) { request =>
+    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
+    val userIds = jsArray.value map { x => Id[User](x.as[Long]) }
+    val abookF = econtactTypeahead.refreshByIds(userIds)
+    val socialF = socialUserTypeahead.refreshByIds(userIds)
+    for {
+      socialRes <- socialF
+      abookRes <- abookF
+    } yield {
+      Ok(s"PrefixFilters for #${userIds.length} updated; ${userIds.take(50).mkString(",")}")
+    }
+  }
+
+  def refreshAllPrefixFilters() = AdminHtmlAction.authenticatedAsync { request =>
+    val abookF = econtactTypeahead.refreshAll()
+    val socialF = socialUserTypeahead.refreshAll()
+    for {
+      socialRes <- socialF
+      abookRes <- abookF
+    } yield {
+      Ok(s"All PrefixFilters updated")
     }
   }
 
