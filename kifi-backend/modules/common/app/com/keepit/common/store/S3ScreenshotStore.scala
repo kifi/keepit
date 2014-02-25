@@ -83,7 +83,7 @@ class S3ScreenshotStoreImpl(
     } else {
       val url = normalizedUri.url
       val externalId = normalizedUri.externalId
-      val future = WS.url(screenshotUrl(url)).get().map { response =>
+      val future = WS.url(screenshotUrl(url)).withRequestTimeout(120000).get().map { response =>
         Option(response.ahcResponse.getHeader("X-PP-Error")) match {
           case Some("True") =>
             log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
