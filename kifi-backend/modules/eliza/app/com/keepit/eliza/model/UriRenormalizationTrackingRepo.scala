@@ -46,13 +46,13 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
   }
   def table(tag: Tag) = new UriRenormalizationEventTable(tag)
 
-  
+
   override def deleteCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
 
   def getCurrentSequenceNumber()(implicit session: RSession): Long = {
     import scala.slick.jdbc.StaticQuery.interpolation
-    val sql = sql"select max(sequenceNumber) as max from uri_renormalization_event"
+    val sql = sql"select max(sequence_number) as max from uri_renormalization_event"
     sql.as[Long].firstOption().getOrElse(0L)
   }
 
