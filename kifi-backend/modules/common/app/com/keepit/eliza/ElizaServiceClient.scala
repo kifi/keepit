@@ -1,13 +1,13 @@
 package com.keepit.eliza
 
 import com.keepit.model.{NotificationCategory, User}
-import com.keepit.common.db.Id
+import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
-import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.zookeeper.{ServiceInstance, ServiceCluster}
 import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
@@ -38,6 +38,8 @@ trait ElizaServiceClient extends ServiceClient {
 
   //migration
   def importThread(data: JsObject): Unit
+
+  def getRenormalizationSequenceNumber(): Future[Long]
 }
 
 
@@ -106,6 +108,8 @@ class ElizaServiceClientImpl @Inject() (
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
   }
+
+  def getRenormalizationSequenceNumber(): Future[Long] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as[Long])
 }
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
@@ -135,4 +139,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
+  def getRenormalizationSequenceNumber(): Future[Long] = Future.successful(0)
 }
