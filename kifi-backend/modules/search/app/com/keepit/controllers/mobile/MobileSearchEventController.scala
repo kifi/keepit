@@ -1,28 +1,28 @@
-package com.keepit.controllers.ext
+package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.heimdal._
-import com.keepit.search._
+import com.keepit.common.controller.{MobileController, SearchServiceController, ActionAuthenticator}
+import com.keepit.heimdal.{KifiHitContext, SearchEngine, BasicSearchContext, HeimdalContextBuilderFactory}
+import com.keepit.search.SearchEventCommander
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.time._
 import com.keepit.common.logging.Logging
+import com.keepit.common.time._
 import com.keepit.model.ExperimentType
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
+import play.api.libs.json.JsArray
+import play.api.libs.concurrent.Execution.Implicits._
 
-class ExtSearchEventController @Inject() (
+class MobileSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   searchEventCommander: SearchEventCommander)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-  extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+  extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
 
 
   def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
-    val clickedAt = currentDateTime
+    val clickedAt = clock.now()
     val userId = request.userId
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
@@ -47,7 +47,7 @@ class ExtSearchEventController @Inject() (
   }
 
   def searched = JsonAction.authenticatedParseJson { request =>
-    val time = clock.now()
+    val time = currentDateTime
     val userId = request.userId
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
@@ -58,12 +58,6 @@ class ExtSearchEventController @Inject() (
     }
     Ok
   }
-
-  def updateBrowsingHistory() = JsonAction.authenticatedParseJson { request =>
-    val userId = request.userId
-    val browsedUrls = request.body.as[JsArray].value.map(_.as[String])
-    searchEventCommander.browsedPages(userId, browsedUrls)
-    Ok
-  }
 }
+
 

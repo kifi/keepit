@@ -1,13 +1,11 @@
 package com.keepit.controllers.mobile
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{MobileController, SearchServiceController, ActionAuthenticator}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.IdFilterCompressor
 import com.keepit.search.result.KifiSearchResult
@@ -17,7 +15,7 @@ import com.keepit.search.SearchCommander
 class MobileSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   searchCommander: SearchCommander
-) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
 
   def searchV1(
     query: String,

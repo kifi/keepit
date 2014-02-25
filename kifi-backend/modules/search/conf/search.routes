@@ -16,6 +16,8 @@ GET         /search/users/search        @com.keepit.controllers.ext.ExtUserSearc
 GET         /m/1/search        @com.keepit.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 GET         /m/1/search/users/page        @com.keepit.controllers.mobile.MobileUserSearchController.pageV1(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
 GET         /m/1/search/users/search        @com.keepit.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
+POST        /m/1/search/events/clickedSearchResult        @com.keepit.controllers.mobile.MobileSearchEventController.clickedSearchResult()
+POST        /m/1/search/events/searched        @com.keepit.controllers.mobile.MobileSearchEventController.searched()
 
 ##########################################
 # INTERNAL ROUTES/Search
