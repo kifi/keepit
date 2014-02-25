@@ -57,13 +57,13 @@ class AmazonSQSQueue(override val queueUrl:String, override val name:String, cli
       val sentTS = m.getAttributes.get(SENT_TS)
       val approxFirstRecvTS = m.getAttributes.get(APPROX_FIRST_RECEIVE_TS)
       val sqm = SimpleQueueMessage(
-        if (sentTS != null) sentTS.toLong else 0,
+        if (sentTS != null) sentTS else "",
         m.getMessageId,
         m.getReceiptHandle,
         m.getMD5OfBody,
         m.getBody
       )
-      log.info(s"[SQS.receive($queueUrl)] body=$body sentTS=$sentTS approxFirstRecvTS=$approxFirstRecvTS elapsed milliseconds:${System.currentTimeMillis - sqm.ts}")
+      log.info(s"[SQS.receive($queueUrl)] body=$body sentTS=$sentTS approxFirstRecvTS=$approxFirstRecvTS")
       sqm
     }
     res

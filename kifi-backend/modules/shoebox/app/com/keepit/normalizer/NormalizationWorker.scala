@@ -44,7 +44,7 @@ class NormalizationWorker @Inject()(
         val receiveTS = System.currentTimeMillis()
         for (m <- messages) {
           try {
-            log.info(s"[consume] received msg $m; elapsed milliseconds: ${receiveTS - m.ts}")
+            log.info(s"[consume] received msg $m")
             val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
 
             taskOpt map { task =>
@@ -54,7 +54,7 @@ class NormalizationWorker @Inject()(
               val ref = NormalizationReference(nuri, task.isNew)
               log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
               for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-                log.info(s"[consume] normalizationService.update result: $nuriOpt; (approx) elapsed milliseconds: ${System.currentTimeMillis - m.ts}")
+                log.info(s"[consume] normalizationService.update result: $nuriOpt")
               }
             }
           } catch {
