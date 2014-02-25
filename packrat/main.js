@@ -1106,7 +1106,7 @@ function insertNewNotification(n) {
     for (var kind in o) {
       if (o[kind]) {
         var tl = threadLists[kind === 'page' ? n.url : kind];
-        if (tl && tl.insertOrReplace(n0, n) && kind === 'page') {
+        if (tl && tl.insertOrReplace(n0, n, log) && kind === 'page') {
           forEachTabAt(n.url, function (tab) {
             sendPageThreadCount(tab, tl);
           });
@@ -1135,7 +1135,7 @@ function markUnread(threadId, messageId) {
     th.unreadAuthors = th.unreadMessages = 1;
     (function insertIntoUnread(tl) {
       if (tl && tl.includesAllSince(th)) {
-        tl.insertOrReplace(thOld, th);
+        tl.insertOrReplace(thOld, th, log);
       } else if (tl) {
         tl.numTotal++;
       }
@@ -1174,7 +1174,7 @@ function markRead(threadId, messageId, time) {
     th.unreadAuthors = th.unreadMessages = 0;
     (function removeFromUnread(tl) {
       if (!tl) return;
-      var numRemoved = tl.remove(th.thread);
+      var numRemoved = tl.remove(th.thread, log);
       if (!tl.includesOldest) {
         if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
           tl.numTotal--;
@@ -1194,7 +1194,7 @@ function markRead(threadId, messageId, time) {
       tlKeys.forEach(function (key) {
         var tl = threadLists[key];
         if (tl) {
-          tl.decNumUnreadUnmuted();
+          tl.decNumUnreadUnmuted(log);
         }
       });
     }
@@ -1266,7 +1266,7 @@ function setMuted(threadId, muted) {
       tlKeys.forEach(function (key) {
         var tl = threadLists[key];
         if (tl) {
-          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted']();
+          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted'](log);
         }
       });
       tellVisibleTabsNoticeCountIfChanged();

@@ -17,13 +17,13 @@
       return this.ids.indexOf(threadId) >= 0;
     },
     // Returns whether the new thread was new to this list (true if nNew was just inserted, false if nNew replaced nOld).
-    insertOrReplace: function (nOld, nNew) {
+    insertOrReplace: function (nOld, nNew, log) {
       // remove old thread from old position
       var iOld = nOld ? this.ids.indexOf(nOld.thread) : -1;
       if (iOld >= 0) {
         this.ids.splice(iOld, 1);
         if (nOld.unread && !nOld.muted) {
-          this.decNumUnreadUnmuted();
+          this.decNumUnreadUnmuted(log);
         }
       }
 
@@ -45,7 +45,7 @@
     insertOlder: function (olderThreadIds) {
       Array.prototype.push.apply(this.ids, olderThreadIds);
     },
-    remove: function (threadId) {
+    remove: function (threadId, log) {
       var nRemoved = 0, i;
       while (~(i = this.ids.indexOf(threadId))) {
         var n = this.ids.splice(i, 1)[0];
@@ -53,7 +53,7 @@
           this.numTotal--;
         }
         if (n.unread && !n.muted) {
-          this.decNumUnreadUnmuted();
+          this.decNumUnreadUnmuted(log);
         }
         nRemoved++;
       }
@@ -90,7 +90,7 @@
       }
       return n;
     },
-    decNumUnreadUnmuted: function() {
+    decNumUnreadUnmuted: function (log) {
       if (this.numUnreadUnmuted != null) {
         if (this.numUnreadUnmuted > 0) {
           this.numUnreadUnmuted--;
@@ -102,7 +102,7 @@
         }
       }
     },
-    incNumUnreadUnmuted: function() {
+    incNumUnreadUnmuted: function () {
       if (this.numUnreadUnmuted != null) {
         this.numUnreadUnmuted++;
       }
