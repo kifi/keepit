@@ -1,32 +1,16 @@
 package com.keepit.search
 
-import com.keepit.common.zookeeper._
-import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
-import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
-import com.keepit.common.net.HttpClient
 import com.keepit.model.Collection
-import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import com.keepit.common.routes.Search
-import com.keepit.common.routes.Common
-import scala.concurrent.Promise
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
-import com.keepit.social.BasicUser
-import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
-import com.keepit.search.user.UserSearchRequest
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, null) {
-
-  override def logResultClicked(resultClicked: ResultClicked): Unit = {}
-
-  override def logSearchEnded(searchEnded: SearchEnded): Unit = {}
 
   override def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {}
 
