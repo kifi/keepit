@@ -25,7 +25,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.model.Bookmark
 import com.keepit.model.BookmarkSource
-import com.keepit.search.graph.bookmark.URIGraphCommanderImpl
+import com.keepit.search.graph.bookmark._
 
 
 class FeedCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
@@ -84,7 +84,7 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
         shardedUriGraphIndexer.update()
         userGraphIndexer.update()
 
-        val uriGraphCommander = new URIGraphCommanderImpl(shardedUriGraphIndexer)
+        val uriGraphCommander = new URIGraphCommanderImpl(RequestingUser(users(0).id.get), shardedUriGraphIndexer)
         val metaProvider = new FeedMetaInfoProvider(client)
         val feedCommander = new FeedCommanderImpl(userGraphsCommander, uriGraphCommander, client, metaProvider)
 

@@ -15,43 +15,63 @@ import scala.concurrent.duration.Duration
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.{InMemoryObjectStore, S3Bucket}
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
+import com.keepit.typeahead
 
 class SocialUserTypeahead @Inject() (
   db: Database,
-  override val store: SocialUserTypeaheadStore,
+  store: SocialUserTypeaheadStore,
   cache: SocialUserTypeaheadCache,
   socialConnRepo:SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
   override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
-    cache.getOrElseOpt(SocialUserTypeaheadKey(userId)){ store.get(userId) }.map{ new PrefixFilter[SocialUserInfo](_) }
+    val (filter, msg) = cache.get(SocialUserTypeaheadKey(userId)) match {
+      case Some(filter) =>
+        (Some(new PrefixFilter[SocialUserInfo](filter)), "Cache.get")
+      case None =>
+        val (filter, msg) = store.get(userId) match {
+          case Some(filter) =>
+            (new PrefixFilter[SocialUserInfo](filter), "Store.get")
+          case None =>
+            val pFilter = Await.result(build(userId), Duration.Inf)
+            store += (userId -> pFilter.data)
+            (pFilter, "Built")
+        }
+        cache.set(SocialUserTypeaheadKey(userId), filter.data)
+        (Some(filter), msg)
+    }
+    log.info(s"[social.getPrefixFilter($userId)] ($msg) ${filter}")
+    filter
   }
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
-    db.readOnly { implicit session =>
-      socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toSeq
+    if (ids.isEmpty) Seq.empty[SocialUserBasicInfo]
+    else {
+      db.readOnly { implicit session =>
+        socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
+      }
     }
   }
 
   override protected def getAllInfosForUser(id: Id[User]): Seq[SocialUserBasicInfo] = {
-    val builder = mutable.ArrayBuilder.make[SocialUserBasicInfo]
+    val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnly { implicit session =>
-      val infos = socialUserRepo.getSocialUserBasicInfosByUser(id)
-      log.info(s"[getAllInfosForUser($id)] res=${infos.mkString(",")}")
+      val infos = socialUserRepo.getSocialUserBasicInfosByUser(id) // todo: filter out fortytwo?
+      log.info(s"[social.getAllInfosForUser($id)] res(len=${infos.length}):${infos.mkString(",")}")
       for (info <- infos) {
         val connInfos = socialConnRepo.getSocialUserConnections(info.id)
-        log.info(s"[getConns($id)] (${info.id},${info.networkType}).conns=(${connInfos.mkString(",")})")
+        log.info(s"[social.getConns($id)] (${info.id},${info.networkType}).conns(len=${connInfos.length}):${connInfos.mkString(",")}")
         builder ++= connInfos.map { SocialUserBasicInfo.fromSocialUser(_) } // conversion overhead
       }
     }
     val res = builder.result
-    log.info(s"[getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
-    res.toSeq
+    log.info(s"[social.getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
+    res
   }
 
   override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id

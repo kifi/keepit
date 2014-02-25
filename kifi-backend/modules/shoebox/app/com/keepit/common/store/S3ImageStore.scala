@@ -148,7 +148,7 @@ class S3ImageStoreImpl @Inject() (
         val px = if (sizeName == "original") "1000" else sizeName
         val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
         val usedImage = if(useDefaultImage) S3UserPictureConfig.defaultName else pictureName
-        WS.url(originalImageUrl).get().map { response =>
+        WS.url(originalImageUrl).withRequestTimeout(120000).get().map { response =>
           val key = keyByExternalId(sizeName, externalId, usedImage)
           val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
 

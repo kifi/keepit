@@ -14,15 +14,28 @@ import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.user.UserGraphsCommander
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
+import com.keepit.search.graph.bookmark.URIGraphCommanderFactory
 
-@ImplementedBy(classOf[FeedCommanderImpl])
+
+class FeedCommanderFactory @Inject()(
+  uriGraphCommanderFactory: URIGraphCommanderFactory,
+  userGraphsCommander: UserGraphsCommander,
+  shoeboxClient: ShoeboxServiceClient,
+  feedMetaInfoProvider: FeedMetaInfoProvider
+){
+  def apply(userId: Id[User]): FeedCommander = {
+    val ugCmdr = uriGraphCommanderFactory(userId)
+    new FeedCommanderImpl(userGraphsCommander, ugCmdr, shoeboxClient, feedMetaInfoProvider)
+  }
+}
+
+
 trait FeedCommander {
   def getFeeds(userId: Id[User], limit: Int): Seq[Feed]
   def getFeeds(userId: Id[User], pageNum: Int, pageSize: Int): Seq[Feed]
 }
 
-@Singleton
-class FeedCommanderImpl @Inject()(
+class FeedCommanderImpl(
   userGraphsCommander: UserGraphsCommander,
   uriGraphCommander: URIGraphCommander,
   shoeboxClient: ShoeboxServiceClient,
@@ -62,20 +75,25 @@ class FeedCommanderImpl @Inject()(
       aggregateAndSort(uriLists.flatMap{_.publicList}.toSeq).take(limit)
     }.flatten
 
-    val urisSorted = uriLists.sortBy(-_._2)
+    val urisSorted = uriLists.sortBy(-_._2).toArray
 
-    val feedInfos = urisSorted.view.flatMap{ case (id, time) =>
+    var (i, cnt) = (0, 0)
+    val feeds = new Array[Feed](limit)
+
+    while(i < urisSorted.size && cnt < limit){
+      val (id, time) = urisSorted(i)
       val uid = Id[NormalizedURI](id)
       val meta = feedMetaInfoProvider.getFeedMetaInfo(uid)
       if (feedFilter.accept(meta) && !mykeeps.contains(id)){
         val sharingUserInfo = shards.find(_.contains(uid)).map{ shard =>
           uriGraphSearchers(shard).getSharingUserInfo(uid)
         }
-        Some((meta.uri, time, sharingUserInfo.get.sharingUserIds, sharingUserInfo.get.keepersEdgeSetSize))
-      } else None
-    }.take(limit).toArray
-
-    feedInfos.map{case(uri, time, sharingUsers, totalKeeperSize) => buildFeed(uri, time, sharingUsers, totalKeeperSize)}
+        feeds(cnt) = buildFeed(meta.uri, time, sharingUserInfo.get.sharingUserIds, sharingUserInfo.get.keepersEdgeSetSize)
+        cnt += 1
+      }
+      i += 1
+    }
+    feeds.take(cnt)
   }
 
   def getFeeds(userId: Id[User], pageNum: Int, pageSize: Int): Seq[Feed] = {

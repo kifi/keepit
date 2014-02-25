@@ -53,56 +53,51 @@ class UriIntegrityActor @Inject()(
 
   /** tricky point: make sure (user, uri) pair is unique.  */
   private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
+
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
       bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
           bookmarkRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
-          bookmarkRepo.save(oldBm.withNormUriId(newUriId)); None
+          bookmarkRepo.save(oldBm.withNormUriId(newUriId))
+          Some(oldBm, None)
         }
-        case Some(bm) => if (oldBm.state == BookmarkStates.ACTIVE) {
-          if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
-          bookmarkRepo.save(oldBm.withActive(false));
-          bookmarkRepo.deleteCache(oldBm); Some(oldBm, bm)
-        } else None
+        case Some(bm) =>
+          if (oldBm.state == BookmarkStates.ACTIVE) {
+            if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
+            bookmarkRepo.save(oldBm.withActive(false))
+            bookmarkRepo.deleteCache(oldBm)
+            Some(oldBm, Some(bm))
+          } else {
+            None
+          }
       }
     }
 
-    deactivatedBms.flatten.map {
-      case (oldBm, newBm) => {
-        val co1 = keepToCollectionRepo.getCollectionsForBookmark(oldBm.id.get).toSet
-        val co2 = keepToCollectionRepo.getCollectionsForBookmark(newBm.id.get).toSet
-        val inter = co1 & co2
-        val diff = co1 -- co2
-        val collectionsToUpdate = keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).map { ktc =>
-          var collections: Set[Id[Collection]] = Set.empty[Id[Collection]]
-          if (inter.contains(ktc.collectionId)) {
-            collections = collections + ktc.collectionId
-            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-          }
-
-          if (diff.contains(ktc.collectionId)) {
-            val inactiveKtc = keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId)
-            if (inactiveKtc.isDefined) {
-              inactiveKtc.foreach { inactiveKtc =>
-                collections = collections + inactiveKtc.collectionId
-                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-                keepToCollectionRepo.save(inactiveKtc.copy(state = KeepToCollectionStates.ACTIVE))
+    val collectionsToUpdate = deactivatedBms.flatten.map {
+      case (oldBm, None) => {
+        keepToCollectionRepo.getCollectionsForBookmark(oldBm.id.get).toSet
+      }
+      case (oldBm, Some(newBm)) => {
+        var collections = Set.empty[Id[Collection]]
+        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
+          collections += ktc.collectionId
+          keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId) match {
+            case Some(newKtc) =>
+              if (ktc.state == KeepToCollectionStates.ACTIVE && newKtc.state == KeepToCollectionStates.INACTIVE) {
+                keepToCollectionRepo.save(newKtc.copy(state = KeepToCollectionStates.ACTIVE))
               }
-            } else {
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+            case None =>
               keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
-            }
-            collections = collections + ktc.collectionId
           }
-          collections
-        }.flatten
-
-        collectionsToUpdate.foreach { collId =>
-          collectionRepo.collectionChanged(collId)
         }
+        collections
       }
-    }
+    }.flatten
+
+    collectionsToUpdate.foreach(collectionRepo.collectionChanged(_))
   }
 
   private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {

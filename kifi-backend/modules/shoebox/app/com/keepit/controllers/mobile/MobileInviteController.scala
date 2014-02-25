@@ -16,18 +16,22 @@ import com.keepit.model.{InvitationStates, Invitation, SocialUserInfo, User}
 import play.api.mvc.Result
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
+import com.keepit.inject.FortyTwoConfig
 
 
 class MobileInviteController @Inject()(
   actionAuthenticator:ActionAuthenticator,
   inviteCommander:InviteCommander,
-  abookServiceClient:ABookServiceClient
+  abookServiceClient:ABookServiceClient,
+  fortytwoConfig: FortyTwoConfig
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  private val url = current.configuration.getString("application.baseUrl").get // todo: removeme
+  private val url = fortytwoConfig.applicationBaseUrl // todo: removeme
 
   def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
-    Json.fromJson[InviteInfo](request.body).asOpt map { inviteInfo =>
+    val inviteInfoOpt = Json.fromJson[InviteInfo](request.body).asOpt
+    log.info(s"[inviteConnection(${request.userId})] invite=$inviteInfoOpt")
+    inviteInfoOpt map { inviteInfo =>
       val userId = request.userId
       val user = request.user
       if (inviteInfo.fullSocialId.network == "email") {
@@ -44,6 +48,7 @@ class MobileInviteController @Inject()(
         }
       } else {
         val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, url)
+        log.info(s"[inviteConnection(${request.userId})] inviteStatus=$inviteStatus")
         if (inviteStatus.sent) resolve(Ok(Json.obj("code" -> "invitation_sent")))
         else if (inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") { // special handling
           inviteStatus.savedInvite match {

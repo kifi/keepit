@@ -53,7 +53,8 @@ case class UserStatisticsPage(
   userThreadStats: Map[Id[User], Future[UserThreadStats]],
   page: Int,
   userCount: Int,
-  pageSize: Int) {
+  pageSize: Int,
+  newUsers: Option[Int]) {
 
   def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), Duration.Inf)
 }
@@ -61,7 +62,7 @@ case class UserStatisticsPage(
 sealed trait UserViewType
 object UserViewTypes {
   case object AllUsersViewType extends UserViewType
-  case object RealUsersViewType extends UserViewType
+  case object RegisteredUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
   case class ByExperimentUsersViewType(exp: ExperimentType) extends UserViewType
 }
@@ -87,7 +88,6 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
@@ -111,7 +111,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit s =>
       val fromUser = userRepo.get(fromUserId)
       val toUser = userRepo.get(toUserId)
-      for (email <- emailAddressRepo.getAllByUser(fromUserId)) {
+      for (email <- emailRepo.getAllByUser(fromUserId)) {
         emailRepo.save(email.copy(userId = toUserId))
       }
       val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
@@ -269,7 +269,7 @@ class AdminUserController @Inject() (
   }
 
   def allUsersView = usersView(0)
-  def allRealUsersView = realUsersView(0)
+  def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
@@ -287,36 +287,38 @@ class AdminUserController @Inject() (
 
   def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
     val PAGE_SIZE: Int = 50
-    val users = db.readOnly { implicit s =>
+    val (users, userCount) = db.readOnly { implicit s =>
       userViewType match {
-        case AllUsersViewType => userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
-        case RealUsersViewType => userRepo.pageExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
-        case FakeUsersViewType => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)(page, PAGE_SIZE) map userStatistics
-        case ByExperimentUsersViewType(exp) => userRepo.pageExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(exp)(page, PAGE_SIZE) map userStatistics
+        case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, PAGE_SIZE) map userStatistics,
+                                  userRepo.countIncluding(UserStates.ACTIVE))
+        case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE) map userStatistics,
+                                         userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+        case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE) map userStatistics,
+                                   userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+        case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, PAGE_SIZE) map userStatistics,
+                                                userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
       }
     }
+
+    val newUsers = userViewType match {
+      case RegisteredUsersViewType => db.readOnly { implicit s => Some(userRepo.countNewUsers) }
+      case _ => None
+    }
+
     val userThreadStats = (users.par.map { u =>
       val userId = u.user.id.get
       (userId -> eliza.getUserThreadStats(u.user.id.get))
     }).seq.toMap
 
-    val userCount = db.readOnly { implicit s =>
-      userViewType match {
-        case AllUsersViewType => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)
-        case RealUsersViewType => userRepo.countExcludingWithoutExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
-        case FakeUsersViewType => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(ExperimentType.FAKE)
-        case ByExperimentUsersViewType(exp) => userRepo.countExcludingWithExp(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(exp)
-      }
-    }
-    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE)
+    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE, newUsers)
   }
 
   def usersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, AllUsersViewType), None))
   }
 
-  def realUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
-    Ok(html.admin.users(userStatisticsPage(page, RealUsersViewType), None))
+  def registeredUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+    Ok(html.admin.users(userStatisticsPage(page, RegisteredUsersViewType), None))
   }
 
   def fakeUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
@@ -341,7 +343,7 @@ class AdminUserController @Inject() (
           val userId = u.user.id.get
           (userId -> eliza.getUserThreadStats(u.user.id.get))
         }).seq.toMap
-        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, userThreadStats, 0, users.size, users.size), searchTerm))
+        Ok(html.admin.users(UserStatisticsPage(AllUsersViewType, users, userThreadStats, 0, users.size, users.size, None), searchTerm))
     }
   }
 
@@ -605,6 +607,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
+        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address) }
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -654,50 +657,61 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  private def prefixSocialSearchDirect(userId:Id[User], query:String):Future[Seq[SocialUserBasicInfo]] = {
-    val socialFilterF = socialUserTypeahead.getPrefixFilter(userId) match {
-      case Some(filter) => Future.successful(filter)
-      case None => socialUserTypeahead.build(userId)
-    }
-    socialFilterF map { filter =>
-      implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-      val resOpt = socialUserTypeahead.search(userId, query)
-      log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
-      resOpt getOrElse Seq.empty[SocialUserBasicInfo]
-    }
+  private def prefixSocialSearchDirect(userId:Id[User], query:String):Option[Seq[SocialUserBasicInfo]] = {
+    implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
+    val resOpt = socialUserTypeahead.search(userId, query)
+    log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
+    resOpt
   }
-  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request => 
-    prefixSocialSearchDirect(userId, query) map { res =>
-      if (res.isEmpty)
+
+  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
+    val resOpt = prefixSocialSearchDirect(userId, query)
+    resOpt match {
+      case None =>
         Ok(s"No social match found for $query")
-      else
-        Ok(res.mkString("<br/>"))
+      case Some(res) =>
+        Ok(res.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
     }
   }
 
   private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
-    abookClient.prefixSearch(userId, query)
+    implicit val ord = TypeaheadHit.defaultOrdering[EContact]
+    val localF = econtactTypeahead.asyncSearch(userId, query) map { resOpt =>
+      val res = resOpt getOrElse Seq.empty[EContact]
+      log.info(s"[prefixContactSearchDirect($userId)-LOCAL] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val abookF = abookClient.prefixSearch(userId, query) map { res =>
+      log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
+      res
+    }
+    val resF = Future.firstCompletedOf(Seq(localF, abookF))
+    resF
   }
+
   def prefixContactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     prefixContactSearchDirect(userId, query) map { res =>
       if (res.isEmpty)
         Ok(s"No contact match found for $query")
       else
-        Ok(res.mkString("<br/>"))
+        Ok(res.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
     }
   }
 
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     val contactResF = prefixContactSearchDirect(userId, query)
-    val socialResF = prefixSocialSearchDirect(userId, query)
-    for {
-      socialRes <- socialResF
-      econtactRes <- contactResF
-    } yield {
-      if (socialRes.isEmpty && econtactRes.isEmpty)
-        Ok(s"No match found for $query")
-      else
-        Ok(socialRes.mkString("<br/>") + econtactRes.mkString("<br/>")) // ugly
+    val socialResOpt = prefixSocialSearchDirect(userId, query)
+    contactResF map { contactRes =>
+      socialResOpt match {
+        case None =>
+          if (contactRes.isEmpty)
+            Ok(s"No match found for $query")
+          else
+            Ok(contactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+        case Some(socialRes) =>
+          Ok(socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
+             contactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+      }
     }
   }
 

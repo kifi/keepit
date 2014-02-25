@@ -71,4 +71,6 @@ GET 	/internal/search/cache/warmResultClick   @com.keepit.controllers.search.Sea
 
 GET     /internal/search/spell/suggest          @com.keepit.controllers.search.SpellCorrectorController.correct(input: String, enableBoost: Boolean)
 
+GET     /internal/search/feed                   @com.keepit.controllers.search.FeedController.getFeeds(userId: Id[User], limit: Int)
+
 ->  / common.Routes

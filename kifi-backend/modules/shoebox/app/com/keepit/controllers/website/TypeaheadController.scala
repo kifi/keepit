@@ -8,13 +8,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.Id
 import com.keepit.model._
-import scala.concurrent.Future
-import com.keepit.typeahead.TypeaheadHit
+import scala.concurrent.{Await, Future}
+import com.keepit.typeahead.{PrefixFilter, TypeaheadHit}
 import com.keepit.common.db.slick.DBSession.RSession
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration.Duration
 
 case class InviteStatus(label:String, image:Option[String], value:String, status:String)
 
@@ -83,17 +84,19 @@ class TypeaheadController @Inject() (
     val connections = {
       val filteredConnections = search match {
         case Some(query) if query.trim.length > 0 => {
-          val prefixFilter = socialUserTypeahead.getPrefixFilter(userId) match {
-            case Some(filter) => filter
-            case None => socialUserTypeahead.build(userId)
+          val infos = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
+          val res = network match {
+            case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
+            case None => infos
           }
-          socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
+          log.info(s"[querySocialConnections($userId,$search,$network,$after,$limit)] res=${res.mkString(",")}")
+          res
         }
         case None => {
           val infos = db.readOnly { implicit s =>
             socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
           }
-          infos.values.flatten.toSeq
+          infos.values.flatten.toVector
         }
       }
       log.info(s"[queryConnections($userId,$search,$network,$after,$limit)] filteredConns=${filteredConnections.mkString(",")}")
@@ -119,53 +122,7 @@ class TypeaheadController @Inject() (
       queryContacts(userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
     @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
-
-    def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
-      sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
-          case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
-            // This is a hint that that cache may be stale as userId should be set
-            socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
-              socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
-            }
-            "joined"
-          }
-          case inv if inv.state != InvitationStates.INACTIVE => "invited"
-        } getOrElse ""
-      }
-    }
-
-    val connections = {
-      val filteredConnections = search match {
-        case Some(query) if query.trim.length > 0 => {
-          val prefixFilter = socialUserTypeahead.getPrefixFilter(userId) match {
-            case Some(filter) => filter
-            case None => socialUserTypeahead.build(userId)
-          }
-          socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
-        }
-        case None => {
-          val infos = db.readOnly { implicit s =>
-            socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
-          }
-          infos.values.flatten.toSeq
-        }
-      }
-      log.info(s"[queryConnections($userId,$search,$network,$after,$limit)] filteredConns=${filteredConnections.mkString(",")}")
-
-      val paged = (after match {
-        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filteredConnections
-      }).take(limit)
-
-      db.readOnly { implicit ro =>
-        paged.map(getWithInviteStatus)
-      }
-    }
-
+    val connections = querySocialConnections(userId, search, network, after, limit)
     val jsConns: Seq[JsObject] = connections.map { conn =>
 //      val status = InviteStatus(conn._1.fullName, conn._1.getPictureUrl(75, 75), socialIdString(conn._1), conn._2) // todo
 //      Json.toJson[InviteStatus](status)

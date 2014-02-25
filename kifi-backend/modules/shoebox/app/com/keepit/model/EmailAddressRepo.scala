@@ -77,28 +77,11 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) = {
     // returns (isValidVerificationCode, isFirstTimeUsed)
     val now = clock.now()
-    rows.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
-      .map(e => (e.verifiedAt, e.updatedAt, e.state)).update((now, now, EmailAddressStates.VERIFIED)) match {
-      case count if count > 0 =>
-        val user = userRepo.get(userId)
-        val pendingPrimary = if (user.primaryEmailId.isEmpty) {
-          getByUserAndCode(userId, verificationCode)
-        } else {
-          userValueRepo.getValue(userId, "pending_primary_email").flatMap { pending =>
-            getByUserAndCode(userId, verificationCode).flatMap { ver =>
-              if (ver.address == pending) {
-                Some(ver)
-              } else None
-            }
-          }
-        }
-        pendingPrimary.map { pp =>
-          userValueRepo.clearValue(userId, "pending_primary_email")
-          userRepo.save(user.copy(primaryEmailId = pp.id))
-        }
-        (true, true)
-      case _ => (getByUserAndCode(userId, verificationCode).isDefined, false)
-    }
+    val updateCount = rows.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
+      .map(e => (e.verifiedAt, e.updatedAt, e.state)).update((now, now, EmailAddressStates.VERIFIED))
+
+    if (updateCount > 0) (true, true)
+    else (getByUserAndCode(userId, verificationCode).isDefined, false)
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {

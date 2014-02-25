@@ -9,9 +9,18 @@ import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ShardedURIGraphIndexer
 
 case class UserURIList(publicList: Option[URIList], privateList: Option[URIList])
+case class RequestingUser(userId: Id[User])
 
-@ImplementedBy(classOf[URIGraphCommanderImpl])
+class NotAuthorizedURIGraphQueryException(msg: String) extends Exception(msg)
+
+class URIGraphCommanderFactory @Inject()(shardedUriGraphIndexer: ShardedURIGraphIndexer) {
+  def apply(userId: Id[User]): URIGraphCommander = {
+    new URIGraphCommanderImpl(RequestingUser(userId), shardedUriGraphIndexer)
+  }
+}
+
 trait URIGraphCommander{
+  val requestingUser: RequestingUser
   def getIndexShards: Seq[Shard[NormalizedURI]]
   def getIndexer(shard: Shard[NormalizedURI]): URIGraphIndexer
   def getUserUriList(userId: Id[User], publicOnly: Boolean): Map[Shard[NormalizedURI], UserURIList]
@@ -19,8 +28,8 @@ trait URIGraphCommander{
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList]
 }
 
-@Singleton
-class URIGraphCommanderImpl @Inject()(
+class URIGraphCommanderImpl(
+  override val requestingUser: RequestingUser,
   shardedUriGraphIndexer: ShardedURIGraphIndexer
 ) extends URIGraphCommander{
 
@@ -30,15 +39,18 @@ class URIGraphCommanderImpl @Inject()(
   def getShardedIndexers = shardedUriGraphIndexer.indexShards
 
   private def getURIList(userId: Id[User], publicOnly: Boolean, searcher: URIGraphSearcher): UserURIList = {
+    if (publicOnly != true && requestingUser.userId != userId) throw new NotAuthorizedURIGraphQueryException(s"requesting user ${requestingUser.userId} should not have access to user ${userId}'s private keeps")
     val edgeSet = searcher.getUserToUriEdgeSet(userId, publicOnly)
     UserURIList(edgeSet.getPublicList, edgeSet.getPrivateList)
   }
 
   def getUserUriList(userId: Id[User], publicOnly: Boolean): Map[Shard[NormalizedURI], UserURIList] = {
+    if (publicOnly != true && requestingUser.userId != userId) throw new NotAuthorizedURIGraphQueryException(s"requesting user ${requestingUser.userId} should not have access to user ${userId}'s private keeps")
     getIndexShards.map{shard => shard -> getUserUriList(userId, publicOnly, shard)}.toMap
   }
 
   def getUserUriList(userId: Id[User], publicOnly: Boolean, shard: Shard[NormalizedURI]): UserURIList = {
+    if (publicOnly != true && requestingUser.userId != userId) throw new NotAuthorizedURIGraphQueryException(s"requesting user ${requestingUser.userId} should not have access to user ${userId}'s private keeps")
     shardedUriGraphIndexer.indexShards.get(shard) match {
       case Some(indexer) =>
         val searcher = URIGraphSearcher(indexer)
@@ -48,6 +60,7 @@ class URIGraphCommanderImpl @Inject()(
   }
 
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList] = {
+    if (publicOnly != true && userIds.exists( _ != requestingUser.userId)) throw new NotAuthorizedURIGraphQueryException(s"requesting user ${requestingUser.userId} should not have access to other user's private keeps")
     shardedUriGraphIndexer.indexShards.get(shard) match {
       case Some(indexer) =>
         val searcher = URIGraphSearcher(indexer)

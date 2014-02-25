@@ -10,10 +10,27 @@ import org.apache.lucene.index.AtomicReader
 
 class CollectionNameDetector(indexReader: AtomicReader, collectionIdList: Array[Long]) {
 
-  def detectAll(terms: IndexedSeq[Term]): Set[(Int,Int, Long)] = {
+  def detectAll(terms: IndexedSeq[Term], partialMatch: Boolean): Set[(Int,Int, Long)] = {
     var result = Set.empty[(Int, Int, Long)] // (position, length, collectionId)
-    detectInternal(terms){ (position, length, collectionId) => result += ((position, length, collectionId)) }
+    if (partialMatch) {
+      detectPartialMatch(terms){ (position, length, collectionId) => result += ((position, length, collectionId)) }
+    } else {
+      detectInternal(terms){ (position, length, collectionId) => result += ((position, length, collectionId)) }
+    }
     result
+  }
+
+  private def detectPartialMatch(terms: IndexedSeq[Term])(f: (Int, Int, Long)=>Unit): Unit = {
+    val numTerms = terms.size
+    var index = 0
+    while (index < numTerms) {
+      val t = terms(index)
+      val tp = indexReader.termPositionsEnum(t)
+      if (tp != null) {
+        while (tp.nextDoc() < NO_MORE_DOCS) f(index, 1, collectionIdList(tp.docID))
+      }
+      index += 1
+    }
   }
 
   private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int, Long)=>Unit): Unit = {

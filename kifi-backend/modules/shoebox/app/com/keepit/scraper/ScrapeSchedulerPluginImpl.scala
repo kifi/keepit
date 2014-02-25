@@ -45,7 +45,6 @@ private[scraper] class ScrapeScheduler @Inject() (
   implicit val config = scraperConfig
 
   def checkOverdues(): Unit = {
-    // todo(ray): check overdue count
     val (assignedCount, assignedOverdues) = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
       val assignedCount = scrapeInfoRepo.getAssignedCount()
       val assignedOverdues = scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))

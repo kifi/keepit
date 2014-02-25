@@ -1,49 +1,39 @@
-<li class="kf-keep" ng-class="{ mine: isMine(), example: isExample(), private: isPrivate(), detailed: isPreviewed(), selected: isSelected() }">
-	<time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
-	<div class="kf-keep-handle">
-		<div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
-	</div>
-	<div class="kf-keep-title">
-		<span class="kf-example-tag">Example keep</span>
-		<a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
-		</a>
-	</div>
-	<div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-	<div class="kf-keep-tags">
-		<span class="kf-keep-tag" ng-class="{ example: isExampleTag(tag) }" ng-repeat="tag in getTags()">
-			<a class="kf-keep-tag-link" ng-href="/tag/{{tag.id}}">{{tag.name}}</a>
-		</span>
-	</div>
-	<div class="kf-keep-who">
-		<a class="kf-keep-who-pic me" title="You! You look great!" ng-attr-style="background-image: url({{getPicUrl(me)}})"></a>
-		<a class="kf-keep-who-pic" href="javascript:" data-id="{{id}}" data-name="{{getName(keeper)}}" ng-attr-style="background-image: url({{getPicUrl(keeper)}})" ng-repeat="keeper in keep.keepers | limitTo: 9"></a>
-		<span class="kf-keep-who-others" ng-if="showOthers()"></span>
-		<span class="kf-keep-who-text">
-			<span class="kf-keep-you">
-				You
-				<span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-if="hasKeepers()">Private</span>
-			</span>
-			<span class="kf-keep-friends" ng-if="hasKeepers()">{{getFriendText()}}</span>
-			<span class="kf-keep-others" ng-if="hasOthers()">{{getOthersText()}}</span>
-			<span class="kf-keep-kept-this">kept this</span>
-			<span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-if="isOnlyMine()">Private</span>
-		</span>
-	</div>
-	<div class="kf-keep-arrow-1">
-		<div class="kf-keep-arrow-2">
-			<div class="kf-keep-arrow-3">
-				<div class="kf-keep-arrow-4"></div>
-			</div>
-		</div>
-	</div>
-	<div class="kf-keep-hover-button-wrapper">
-		<div class="kf-keep-hover-button-table">
-			<div class="kf-keep-hover-button-cell">
-				<div class="kf-keep-hover-button">
-					<span class="kf-keep-button-preview">Preview</span>
-					<span class="kf-keep-button-close">Close</span>
-				</div>
-			</div>
-		</div>
-	</div>
+<li class="kf-keep" ng-class="{ mine: isMyBookmark(), example: isExample(), private: isPrivate(), detailed: isPreviewed(), selected: isSelected() }">
+  <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+  <div class="kf-keep-handle">
+    <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
+  </div>
+  <div class="kf-keep-title">
+    <span class="kf-example-tag">Example keep</span>
+    <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
+    </a>
+  </div>
+  <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
+  <div class="kf-keep-tags">
+    <span class="kf-keep-tag" ng-class="{ example: isExampleTag(tag) }" ng-repeat="tag in getTags()">
+      <a class="kf-keep-tag-link" ng-href="/tag/{{tag.id}}">{{tag.name}}</a>
+    </span>
+  </div>
+  <div class="kf-keep-who">
+    <span kf-keep-who-pics me="me" keepers="keep.keepers"></span>
+    <span class="kf-keep-who-others" ng-if="showOthers()"></span>
+    <span kf-keep-who-text keep="keep"></span>
+  </div>
+  <div class="kf-keep-arrow-1">
+    <div class="kf-keep-arrow-2">
+      <div class="kf-keep-arrow-3">
+        <div class="kf-keep-arrow-4"></div>
+      </div>
+    </div>
+  </div>
+  <div class="kf-keep-hover-button-wrapper">
+    <div class="kf-keep-hover-button-table">
+      <div class="kf-keep-hover-button-cell">
+        <div class="kf-keep-hover-button">
+          <span class="kf-keep-button-preview">Preview</span>
+          <span class="kf-keep-button-close">Close</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </li>

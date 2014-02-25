@@ -1,0 +1,12 @@
+@(secureSocialClientIds: com.keepit.social.SecureSocialClientIds)
+
+<script src="/assets/js/jquery-ui-position.min.js"></script>
+<script src="/assets/js/jquery-ui-slider.min.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/auth-footer.js"></script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@secureSocialClientIds.facebook"></script><div id="fb-root"></div>
+<script src="//platform.linkedin.com/in.js">
+api_key:@secureSocialClientIds.linkedin
+onLoad:onLoadLinkedInApi
+authorize:true
+</script>

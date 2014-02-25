@@ -1,12 +1,12 @@
 <div class="kf-my-identity">
-	<a class="kf-my-settings-wrapper" href="/profile">
-		<span class="kf-my-pic" style="background-image: url({{me.picUrl}})"></span>
-		<span class="kf-my-settings-shade"></span>
-		<span class="kf-my-settings">
-			<span class="kf-my-settings-icon"></span>
-			<span class="kf-my-settings-text">Settings</span>
-		</span>
-	</a>
-	<div class="kf-my-name">{{me.firstName}} {{me.lastName}}</div>
-	<div class="kf-my-description">{{me.description}}</div>
+  <a class="kf-my-settings-wrapper" href="/profile">
+    <span class="kf-my-pic" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></span>
+    <span class="kf-my-settings-shade"></span>
+    <span class="kf-my-settings">
+      <span class="kf-my-settings-icon"></span>
+      <span class="kf-my-settings-text">Settings</span>
+    </span>
+  </a>
+  <div class="kf-my-name">{{me.firstName}} {{me.lastName}}</div>
+  <div class="kf-my-description">{{me.description}}</div>
 </div>

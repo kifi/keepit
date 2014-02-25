@@ -39,6 +39,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
 import scala.concurrent.Future
 import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.inject.FortyTwoConfig
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -61,7 +62,9 @@ class AuthHelper @Inject() (
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander,
   userCommander: UserCommander,
-  heimdalContextBuilder: HeimdalContextBuilderFactory
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  secureSocialClientIds: SecureSocialClientIds,
+  fortytwoConfig: FortyTwoConfig
 ) extends HeaderNames with Results with Status with Logging {
 
   def authHandler(request:Request[_], res: SimpleResult)(f : => (Seq[Cookie], Session) => SimpleResult) = {
@@ -157,7 +160,7 @@ class AuthHelper @Inject() (
     }
   )
 
-  private val url = current.configuration.getString("application.baseUrl").get
+  private val url = fortytwoConfig.applicationBaseUrl
 
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
@@ -338,30 +341,24 @@ class AuthHelper @Inject() (
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         val user = userRepo.get(address.userId)
-        val verification = emailAddressRepo.verify(address.userId, code)
-
-        if (verification._2) { // code is being used for the first time
-          if (user.primaryEmailId.isEmpty) {
-            userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            userValueRepo.clearValue(user.id.get, "pending_primary_email")
-          } else {
-            val pendingEmail = userValueRepo.getValue(user.id.get, "pending_primary_email")
-            if (pendingEmail.isDefined && address.address == pendingEmail.get) {
-              userValueRepo.clearValue(user.id.get, "pending_primary_email")
-              userRepo.save(user.copy(primaryEmailId = Some(address.id.get)))
-            }
-          }
+        val (isVerified, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
+        lazy val isPendingPrimaryEmail = {
+          val pendingEmail = userValueRepo.getValue(address.userId, "pending_primary_email")
+          pendingEmail.isDefined && address.address == pendingEmail.get
         }
 
-        verification match {
+        val shouldUpdatePrimaryEmail = isVerifiedForTheFirstTime && (user.primaryEmailId.isEmpty || isPendingPrimaryEmail)
+        if (shouldUpdatePrimaryEmail) userCommander.updateUserPrimaryEmail(address)
+
+        (isVerified, isVerifiedForTheFirstTime) match {
           case (true, _) if user.state == UserStates.PENDING =>
             Redirect(s"/?m=3&email=${address.address}")
-          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id) =>
+          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
             // first time being used, not logged in OR logged in as correct user
-            authenticateUser(user.id.get,
+            authenticateUser(address.userId,
               error => throw error,
               authenticator => {
-                val resp = if (kifiInstallationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
+                val resp = if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
                   // user has no installations
                   Redirect("/install")
                 } else {
@@ -371,13 +368,13 @@ class AuthHelper @Inject() (
                   .withCookies(authenticator.toCookie)
               }
             )
-          case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == user.id.get.id =>
+          case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
             Redirect(s"/?m=3&email=${address.address}")
           case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName))
+            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName, secureSocialClientIds))
         }
       }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code"))
+        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
       }
     }
   }

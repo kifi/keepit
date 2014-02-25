@@ -14,6 +14,7 @@ import com.keepit.common.zookeeper.{DiscoveryModule, ProdDiscoveryModule}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
+import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 
 case class ShoeboxProdModule() extends ShoeboxModule (
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -28,6 +29,7 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   //topicModelModule = LdaTopicModelModule(), //disable for now
   domainTagImporterModule = ProdDomainTagImporterModule(),
   scrapeSchedulerModule = ProdScrapeSchedulerModule(),
+  fjMonitorModule = ProdForkJoinContextMonitorModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {

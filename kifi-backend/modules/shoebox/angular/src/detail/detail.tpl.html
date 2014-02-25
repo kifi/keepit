@@ -1,41 +1,50 @@
-<div class="kf-detail-pane" ng-show="getPreviewed()">
-	<div class="kf-detail-scroll" antiscroll="{ autoHide: false }">
-		<div class="kf-detail-inner {{howKept}}">
-			<a class="kf-detail-x" href="javascript:"></a>
-			<div class="kf-page-meta" data-n="{{getLength()}}">
-				<h2 class="kf-detail-header page-title" ng-bind="getTitleText()"></h2>
-				<div kf-keep-detail ng-show="showSingleKeep()"></div>
-				<a class="kf-page-keep" href="javascript:"></a>
-				<a class="kf-page-priv" href="javascript:"></a>
-			</div>
-			<div ng-show="showSingleKeep()">
-				<div class="kf-page-who">
-					<h2 class="kf-detail-header">Who kept this:</h2>
-					<div class="kf-page-who-pics"></div>
-					<div class="kf-page-who-text"></div>
-				</div>
-				<div class="kf-page-chatter">
-					<h2 class="kf-detail-header">Talking about this Keep:</h2>
-					<a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
-				</div>
-			</div>
-			<div class="page-colls" ng-class="{ some: collections.length }">
-				<h2 class="kf-detail-header">Tags:</h2>
-				<ul class="page-coll-list">
-					<li class="page-coll" data-template data-id="{{id}}">
-						<a class="page-coll-a long-text" href="tag/{{id}}">{{name}}</a>
-						<a class="page-coll-x" href="javascript:"></a>
-					</li>
-					<li class="page-coll-new" data-after-template>
-						<a class="page-coll-add" href="javascript:"></a>
-						<span class="page-coll-sizer" style="display:none"></span>
-						<input class="page-coll-input" style="display:none" type="text" placeholder="tag name">
-						<ul class="page-coll-opts" style="display:none">
-							<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
-						</ul>
-					</li>
-				</ul>
-			</div>
-		</div>
-	</div>
+<div class="kf-detail-pane" ng-show="isDetailOpen()">
+  <div class="kf-detail-scroll" antiscroll="{ autoHide: false }">
+    <div class="kf-detail-inner" ng-class="{ single: isSingleKeep(), multiple: !isSingleKeep(), private: isPrivate(), public: isPublic() }">
+      <a class="kf-detail-x" href="javascript:" ng-click="closeDetail()"></a>
+      <div class="kf-page-meta" data-n="{{getLength()}}">
+        <div kf-keep-detail ng-if="isSingleKeep()"></div>
+        <h2 class="kf-detail-header page-title" ng-hide="isSingleKeep()" ng-bind="getTitleText()"></h2>
+        <a class="kf-page-keep" href="javascript:" ng-click="toggleKeep()"></a>
+        <a class="kf-page-priv" href="javascript:" ng-click="togglePrivate()"></a>
+      </div>
+      <div ng-if="isSingleKeep()">
+        <div class="kf-page-who">
+          <h2 class="kf-detail-header">Who kept this:</h2>
+          <div class="kf-page-who-pics">
+            <span kf-keep-who-pics me="me" keepers="keep.keepers"></span>
+          </div>
+          <div class="kf-page-who-text" kf-keep-who-text keep="keep"></div>
+        </div>
+        <div class="kf-page-chatter">
+          <h2 class="kf-detail-header">Talking about this Keep:</h2>
+          <a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-locator="/messages"><span class="chatter-count">{{keep.conversationCount || 0}}</span>{{getPrivateConversationText()}}</a>
+        </div>
+      </div>
+      <div class="page-colls">
+        <h2 class="kf-detail-header" ng-show="keep.tagList.length > 0">In Tags:</h2>
+        <h2 class="kf-detail-header" ng-show="keep.tagList.length == 0">Tags:</h2>
+        <ul class="page-coll-list">
+          <li class="page-coll" data-id="{{tag.id}}" ng-repeat="tag in keep.tagList">
+            <a class="page-coll-a" href="/tag/{{tag.id}}">{{tag.name}}</a>
+            <a class="page-coll-x" href="javascript:" ng-click="removeTag(keep, tag)">×</a>
+          </li>
+          <li class="page-coll-new">
+            <span ng-show="!isAddingTag">
+              <a class="page-coll-add-circle" href="javascript:" ng-show="hasTags()" ng-click="showAddTagDropdown()">+</a>
+              <a class="page-coll-add" href="javascript:" ng-show="!hasTags()" ng-click="showAddTagDropdown()"><span class="page-coll-add-circle">+</span> Add a tag to this keep</a>
+            </span>
+            <span ng-show="isAddingTag" kf-tag-suggestions>
+              <input with-focus="1" class="page-coll-input" type="text" placeholder="tag name" ng-model="tagFilter.name" ng-keydown="onKeydown($event)" ng-blur="hideAddTagDropdown()">
+              <ul class="page-coll-opts">
+                <li class="page-coll-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-mousedown="addTag(tag, keep)" ng-bind-html="tag.prettyHtml" ng-mouseover="highlightTag(tag)"></li>
+                <li class="page-coll-opt" ng-if="isAddTagShown()" ng-mousedown="createAndAddTag(keep)" ng-class="{ current: isTagHighlighted(null) }" ng-mouseover="highlightTag(null)">{{tagFilter.name}}<span class="new-label">{{newTagLabel}}</span></li>
+              </ul>
+              <span class="page-coll-opt-hidden"></span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>

@@ -1,4 +1,4 @@
-@(email: String, opts: Seq[com.keepit.common.mail.ElectronicMailCategory], msg: Option[String])
+@(email: String, opts: Seq[com.keepit.common.mail.ElectronicMailCategory], msg: Option[String], secureSocialClientIds: com.keepit.social.SecureSocialClientIds)
 
 @import com.keepit.model.NotificationCategory
 @invite = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.INVITATION) }
@@ -32,16 +32,7 @@
 }
 
 @scripts = {
-<script src="/assets/js/jquery-ui-position.min.js"></script>
-<script src="/assets/js/jquery-ui-slider.min.js"></script>
-<script src="/assets/js/auth.js"></script>
-<script src="/assets/js/auth-footer.js"></script>
-<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async data-app-id="@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get"></script><div id="fb-root"></div>
-<script src="//platform.linkedin.com/in.js">
-api_key:@play.api.Play.current.configuration.getString("securesocial.linkedin.clientId").get
-onLoad:onLoadLinkedInApi
-authorize:true
-</script>
+  @auth.helper.authScripts(secureSocialClientIds)
   <script>
     $(function() {
       $form = $("#optout");

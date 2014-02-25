@@ -23,7 +23,7 @@ import com.keepit.search.graph.URIList
 
 class URIGraphCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
   "URIGraphCommander" should {
-    "work" in {
+    "work and check authorization" in {
       running(new TestApplication(FakeShoeboxServiceModule())) {
         implicit val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
         val uriGraphIndexers = activeShards.shards.map { shard =>
@@ -48,9 +48,10 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
 
         shardedUriGraphIndexer.update()
 
-        val uriGraphCommander = new URIGraphCommanderImpl(shardedUriGraphIndexer)
+        val uriGraphCommander = new URIGraphCommanderImpl(RequestingUser(users(0).id.get), shardedUriGraphIndexer)
+        val uriGraphCommander1 = new URIGraphCommanderImpl(RequestingUser(users(1).id.get), shardedUriGraphIndexer)
         val u0list = uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false)
-        val u1list = uriGraphCommander.getUserUriList(users(1).id.get, publicOnly = false)
+        val u1list = uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false)
         val shards = uriGraphCommander.getIndexShards
         shards.size == 2
         shards(0).contains(Id[NormalizedURI](1)) === false
@@ -64,6 +65,8 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
         u1list(shards(0)).privateList.get.ids === Array(6, 8, 10)
         u1list(shards(1)).publicList === None
         u1list(shards(1)).privateList.get.ids.size === 0
+
+        uriGraphCommander1.getUserUriList(users(0).id.get, publicOnly = false) should throwAn[NotAuthorizedURIGraphQueryException]
       }
     }
   }

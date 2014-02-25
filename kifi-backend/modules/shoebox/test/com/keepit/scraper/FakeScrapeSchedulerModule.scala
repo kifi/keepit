@@ -12,9 +12,6 @@ case class FakeScrapeSchedulerModule(fakeArticles: Option[PartialFunction[(Strin
   override def configure() {}
 
   @Provides @Singleton
-  def scraperConfig: ScraperConfig = ScraperConfig()
-
-  @Provides @Singleton
   def fakeScraperPlugin(): ScrapeSchedulerPlugin = new FakeScrapeSchedulerPlugin(fakeArticles)
 }
 

@@ -532,8 +532,12 @@ for each (let win in windows) {
   }
   for each (let tab in win.tabs) {
     log("[windows]", tab.id, tab.url);
-    tabsById[tab.id] = tab;
-    pages[tab.id] || createPage(tab);
+    if (tab.id) {
+      tabsById[tab.id] = tab;
+      pages[tab.id] || createPage(tab);
+    } else {
+      Airbrake.push({error: Error('Firefox tab has no ID'), tab: tab, win: win});
+    }
   }
 }
 
@@ -697,10 +701,3 @@ exports.onUnload = function (reason) {
     removeFromWindow(win);
   }
 };
-
-// TODO: remove Feb 20
-delete prefs.maxResults;
-delete prefs.suppressLog;
-delete prefs.showSlider;
-delete prefs.showScores;
-delete prefs.env;

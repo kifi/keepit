@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+// import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClientImpl, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.queue.RichConnectionUpdateMessage
 import scala.concurrent._
 
 import akka.actor.Scheduler
@@ -30,6 +31,8 @@ import com.keepit.common.net.HttpClientImpl
 import scala.util.Success
 
 trait ABookServiceClient extends ServiceClient {
+
+  implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.ABOOK
 
   def importContacts(userId:Id[User], oauth2Token:OAuth2Token):Future[Try[ABookInfo]] // gmail
@@ -52,6 +55,7 @@ trait ABookServiceClient extends ServiceClient {
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
+  def richConnectionUpdate(message: RichConnectionUpdateMessage): Unit
 }
 
 
@@ -195,6 +199,10 @@ class ABookServiceClientImpl @Inject() (
       Json.fromJson[Seq[EContact]](r.json).get
     }
   }
+
+  def richConnectionUpdate(message: RichConnectionUpdateMessage) = {
+    call(ABook.internal.richConnectionUpdate, Json.toJson(message))
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -242,4 +250,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def prefixSearch(userId: Id[User], query: String): Future[Seq[EContact]] = ???
 
   def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
+
+  def richConnectionUpdate(message: RichConnectionUpdateMessage) =  ???
 }

@@ -34,8 +34,6 @@ class ABookCommander @Inject() (
   contactsUpdater:ContactsUpdaterPlugin
 ) extends Logging {
 
-  val overdueThreshold = sys.props.getOrElse("abook.upload.overdue.threshold", "10").toInt // minutes
-
   def toS3Key(userId:Id[User], origin:ABookOriginType, abookOwnerInfo:Option[ABookOwnerInfo]):String = {
     val k = s"${userId.id}_${origin.name}"
     val ownerId = for (abookOwner <- abookOwnerInfo; ownerId <- abookOwner.id) yield ownerId
@@ -93,7 +91,7 @@ class ABookCommander @Inject() (
     }
 
     val userInfoF:Future[GmailABookOwnerInfo] = getGmailOwnerInfo(userId, accessToken)
-    val contactsRespF:Future[Response] = WS.url(CONTACTS_URL).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
+    val contactsRespF:Future[Response] = WS.url(CONTACTS_URL).withRequestTimeout(120000).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
     for {
       userInfo <- userInfoF
       contactsResp <- contactsRespF
