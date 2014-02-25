@@ -19,6 +19,7 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.keepit.search.IndexInfo
+import java.util.concurrent.atomic.AtomicBoolean
 
 object IndexerPluginMessages {
   case object UpdateIndex
@@ -39,6 +40,8 @@ trait IndexManager[T <: Indexer[_]] {
   def reindex(): Unit
   def close(): Unit
   def indexInfos(name: String): Seq[IndexInfo]
+
+  val pendingUpdateReq = new AtomicBoolean(false)
 }
 
 trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
@@ -87,7 +90,9 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
   }
 
   def update(): Unit = {
-    actor.ref ! UpdateIndex
+    if (indexer.pendingUpdateReq.compareAndSet(false, true)) {
+      actor.ref ! UpdateIndex
+    }
   }
 
   override def reindex(): Unit = {
@@ -124,6 +129,7 @@ class IndexerActor[T <: Indexer[_]](
 
   def receive() = {
     case UpdateIndex => try {
+        indexer.pendingUpdateReq.set(false)
         indexer.update()
       } catch {
         case e: Exception =>
