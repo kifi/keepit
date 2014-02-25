@@ -40,17 +40,21 @@ class UriNormalizationUpdater @Inject() (
   def localSequenceNumber(): Long = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
   def checkAndUpdate(remoteSequenceNumberOpt: Option[Long]) = synchronized {
-    var localSeqNum = localSequenceNumber()
-    log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
-    remoteSequenceNumberOpt match {
-      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader) => {
-        val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
-        updatesFuture.map{ updates =>
-          applyUpdates(updates, reapply=true)
-          db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
+    try {
+      var localSeqNum = localSequenceNumber()
+      log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
+      remoteSequenceNumberOpt match {
+        case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader) => {
+          val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
+          updatesFuture.map{ updates =>
+            applyUpdates(updates, reapply=true)
+            db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
+          }
         }
+        case _ =>
       }
-      case _ =>
+    } catch {
+      case t: Throwable => log.error("Renormalization: Failed to do normalization update: " + t.toString)
     }
   }
 
