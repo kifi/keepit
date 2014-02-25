@@ -25,6 +25,17 @@ class TypeaheadAdminController @Inject() (
     Ok(html.admin.typeahead(request.user))
   }
 
+  def refreshPrefixFilter(userId:Id[User]) = AdminHtmlAction.authenticatedAsync { request =>
+    val abookF = econtactTypeahead.refresh(userId)
+    val socialF = socialUserTypeahead.refresh(userId)
+    for {
+      socialRes <- socialF
+      abookRes <- abookF
+    } yield {
+      Ok(s"PrefixFilter for $userId has been refreshed")
+    }
+  }
+
   def socialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
     val res = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]

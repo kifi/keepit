@@ -411,6 +411,7 @@ GET     /admin/typeahead                    @com.keepit.controllers.admin.Typeah
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], search:String ?= "")
 GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], search:String ?= "")
 GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], search:String ?= "")
+GET     /admin/typeahead/refreshPrefixFilter  @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFilter(userId:Id[User])
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase

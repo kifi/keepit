@@ -18,11 +18,12 @@ import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.abook.typeahead.EContactABookTypeahead
-import com.keepit.typeahead.TypeaheadHit
+import com.keepit.typeahead.{PrefixFilter, TypeaheadHit}
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
+import scala.collection.mutable.ArrayBuffer
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -342,6 +343,28 @@ class ABookController @Inject() (
     val res = prefixSearchDirect(userId, query)
     Ok(Json.toJson(res))
   }
+
+  def refreshPrefixFilter(userId:Id[User]) = Action.async { request =>
+    typeahead.refresh(userId) map { filter =>
+      Ok(Json.obj("code" -> "success"))
+    }
+  }
+
+//  def rebuildPrefixFilters() = Action { request =>
+//    val allABooks = db.readOnly { implicit ro =>
+//      abookInfoRepo.all()
+//    }
+//    val userIds = allABooks.foldLeft(Set.empty[Id[User]]){(a,c) => a += c.userId} // optimize
+//    val filterFutures = new ArrayBuffer[Future[PrefixFilter[EContact]]]
+//    for (userId <- userIds) {
+//      val filterF = typeahead.build(userId)
+//      filterF map { filter =>
+//
+//      }
+//      filterFutures += filterF
+//    }
+//
+//  }
 
   def richConnectionUpdate() = Action(parse.json) { request =>
     val updateMessage = request.body.as[RichConnectionUpdateMessage]
