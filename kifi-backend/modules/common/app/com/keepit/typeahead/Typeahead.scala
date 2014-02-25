@@ -103,6 +103,11 @@ trait Typeahead[E, I] extends Logging {
   }
 
   def refresh(id: Id[User]): Future[Unit] // slow
+
+  def refreshByIds(ids: Seq[Id[User]]): Future[Unit]
+
+  def refreshAll(): Future[Unit]
+
 }
 
 object TypeaheadHit {
