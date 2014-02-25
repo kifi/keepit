@@ -13,6 +13,7 @@ import com.keepit.social.SocialGraphPlugin
 import com.keepit.integrity.{UriIntegrityPlugin, DataIntegrityPlugin}
 import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
+import com.keepit.common.concurrent.{ForkJoinExecContextPlugin}
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -28,6 +29,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
 trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
+    require(injector.instance[ForkJoinExecContextPlugin] != null)
     require(injector.instance[NormalizationUpdaterPlugin] != null)
     require(injector.instance[ScrapeSchedulerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
