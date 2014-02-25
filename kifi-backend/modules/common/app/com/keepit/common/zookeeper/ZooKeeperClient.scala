@@ -304,7 +304,8 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
   }
 
   private def watchNodeInternal[T](node: Node, onDataChanged : Option[T] => Unit, deserializer: Array[Byte] => T): Unit = {
-    log.debug(s"Watching node $node")
+    log.info(s"watching node $node")
+
     def updateData {
       try {
         onDataChanged(Some(zk.getData(node, new NodeWatcher, null)).map(deserializer))
@@ -360,6 +361,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
   }
 
   private def watchChildrenInternal(node: Node, updateChildren: Seq[Node] => Unit): Unit = {
+    log.info(s"watching children of $node")
 
     class ParentWatcher() extends Watcher {
       def process(event: WatchedEvent): Unit = {
@@ -400,6 +402,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
   }
 
   private def watchChildrenWithDataInternal[T](node: Node, updateChildren: Seq[(Node, T)] => Unit, deserializer: Array[Byte] => T, watchedChildren: mutable.HashMap[Node, T]): Unit = {
+    log.info(s"watching children of $node with data")
 
     class ChildWatcher(child: Node) extends Watcher {
       def process(event: WatchedEvent) : Unit = watchedChildren.synchronized {
