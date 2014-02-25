@@ -1753,13 +1753,17 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
   for (var loc in tabsByLocator) {
     var tabs = tabsByLocator[loc];
-    for (var i = tabs.length; i--;) {
-      if (tabs[i] === tab) {
-        tabs.splice(i, 1);
+    if (tabs) {
+      for (var i = tabs.length; i--;) {
+        if (tabs[i] === tab) {
+          tabs.splice(i, 1);
+        }
       }
-    }
-    if (!tabs.length) {
-      delete tabsByLocator[loc];
+      if (!tabs.length) {
+        delete tabsByLocator[loc];
+      }
+    } else {
+      api.errors.push({error: Error('tabsByLocator array undefined'), params: {loc: loc, type: typeof tabs, in: loc in tabsByLocator}});
     }
   }
   if (tabsTagging.length) {
