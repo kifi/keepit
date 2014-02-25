@@ -79,19 +79,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
               return 'Showing all ' + numShown + ' Keeps in this tag';
             }
             return 'Showing the ' + numShown + ' latest Keeps in this tag';
-          case 'keeps':
-            switch (numShown) {
-            case 0:
-              return 'You have no Keeps';
-            case 1:
-              return 'Showing your only Keep';
-            case 2:
-              return 'Showing both of your Keeps';
-            }
-            if (numShown === scope.results.numTotal) {
-              return 'Showing all ' + numShown + ' of your Keeps';
-            }
-            return 'Showing your ' + numShown + ' latest Keeps';
           }
           return subtitle.text;
         };
