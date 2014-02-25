@@ -11,7 +11,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.abook.{EmailParser, EContactRepo}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
 
 class EContactABookTypeahead @Inject() (
@@ -55,6 +55,13 @@ class EContactABookTypeahead @Inject() (
     log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
     filter
 
+  }
+
+  def refresh(userId:Id[User]):Future[Unit] = {
+    build(userId) map { filter =>
+      store += (userId -> filter.data)
+      cache.set(EContactTypeaheadKey(userId), filter.data)
+    }
   }
 
   override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {

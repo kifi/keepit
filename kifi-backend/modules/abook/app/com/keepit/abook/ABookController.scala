@@ -18,11 +18,12 @@ import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.abook.typeahead.EContactABookTypeahead
-import com.keepit.typeahead.TypeaheadHit
+import com.keepit.typeahead.{PrefixFilter, TypeaheadHit}
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
+import scala.collection.mutable.ArrayBuffer
 import com.keepit.commanders.LocalRichConnectionCommander
 
 // provider-specific
@@ -343,6 +344,12 @@ class ABookController @Inject() (
   def prefixSearch(userId:Id[User], query:String) = Action { request =>
     val res = prefixSearchDirect(userId, query)
     Ok(Json.toJson(res))
+  }
+
+  def refreshPrefixFilter(userId:Id[User]) = Action.async { request =>
+    typeahead.refresh(userId) map { filter =>
+      Ok(Json.obj("code" -> "success"))
+    }
   }
 
   def richConnectionUpdate() = Action(parse.json) { request =>

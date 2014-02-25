@@ -101,6 +101,8 @@ trait Typeahead[E, I] extends Logging {
       }(com.keepit.common.concurrent.ExecutionContext.fj)
     }
   }
+
+  def refresh(id: Id[User]): Future[Unit] // slow
 }
 
 object TypeaheadHit {

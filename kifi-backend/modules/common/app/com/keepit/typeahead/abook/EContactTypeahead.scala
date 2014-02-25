@@ -71,7 +71,7 @@ class EContactTypeahead @Inject() (
     }
   }
 
-  override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] ={
+  override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] = {
     Await.result(asyncGetInfos(ids), Duration.Inf) // todo(ray):revisit
   }
 
@@ -94,6 +94,10 @@ class EContactTypeahead @Inject() (
     }
     log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
     filter
+  }
+
+  def refresh(userId: Id[User]): Future[Unit] = {
+    abookClient.refreshPrefixFilter(userId)
   }
 }
 

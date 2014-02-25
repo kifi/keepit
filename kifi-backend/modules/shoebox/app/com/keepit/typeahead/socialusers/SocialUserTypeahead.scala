@@ -77,6 +77,13 @@ class SocialUserTypeahead @Inject() (
   override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id
 
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
+
+  def refresh(userId: Id[User]): Future[Unit] = {
+    build(userId) map { filter =>
+      store += (userId -> filter.data)
+      cache.set(SocialUserTypeaheadKey(userId), filter.data)
+    }
+  }
 }
 
 trait SocialUserTypeaheadStore extends PrefixFilterStore[User]
