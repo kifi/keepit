@@ -65,7 +65,7 @@ class MainQueryParser(
         // detect collection names and augment TextQueries
         collectionSearcher.foreach{ cs =>
           val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap{ t => t.stems.map{ s => t } }
-          cs.detectCollectionNames(phStemmedTerms).foreach{ case (index, length, collectionId) =>
+          cs.detectCollectionNames(phStemmedTerms, true).foreach{ case (index, length, collectionId) =>
             collectionIds += collectionId
             var i = index
             val end = index + length
