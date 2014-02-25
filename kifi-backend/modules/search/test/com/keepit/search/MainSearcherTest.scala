@@ -521,7 +521,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val searchFilter = SearchFilter.mine(monitoredAwait = inject[MonitoredAwait])
         val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get,  "mycoll", english, uris.size, searchFilter, noBoostConfig)
         val res1 = mainSearcher1.search()
-        val expected1 = coll1set.toSet
+        val expected1 = (coll1set ++ coll2set).toSet
 
         res1.hits.size === expected1.size
         res1.hits.map(_.uriId.id).toSet === expected1.map(_.uriId.id).toSet
@@ -535,8 +535,10 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
         val mainSearcher3 = mainSearcherFactory(singleShard, user1.id.get, "different", english, uris.size, searchFilter, noBoostConfig)
         val res3 = mainSearcher3.search()
+        val expected3 = coll2set.toSet
 
-        res3.hits.size === 0
+        res3.hits.size === expected3.size
+        res3.hits.map(_.uriId.id).toSet === expected3.map(_.uriId.id).toSet
       }
     }
   }
