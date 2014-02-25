@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClientImpl, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.queue.RichConnectionUpdateMessage
 import scala.concurrent._
 
 import akka.actor.Scheduler
@@ -54,6 +55,7 @@ trait ABookServiceClient extends ServiceClient {
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
+  def richConnectionUpdate(message: RichConnectionUpdateMessage): Unit
 }
 
 
@@ -197,6 +199,10 @@ class ABookServiceClientImpl @Inject() (
       Json.fromJson[Seq[EContact]](r.json).get
     }
   }
+
+  def richConnectionUpdate(message: RichConnectionUpdateMessage) = {
+    call(ABook.internal.richConnectionUpdate, Json.toJson(message))
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -244,4 +250,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def prefixSearch(userId: Id[User], query: String): Future[Seq[EContact]] = ???
 
   def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
+
+  def richConnectionUpdate(message: RichConnectionUpdateMessage) =  ???
 }
