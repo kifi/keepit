@@ -53,15 +53,17 @@ class RichSocialConnectionRepoImpl @Inject() (
   def deleteCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
   def invalidateCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
 
+  private val Email: SocialNetworkType = SocialNetworks.EMAIL
+
   def getByUserAndFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection] = friendId match {
     case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row).firstOption()
-    case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row).firstOption()
+    case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row).firstOption()
   }
 
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection = {
     val (connectionType, friendName, friendUserId, friendId) = friend match {
       case Left(socialUserInfo) => (socialUserInfo.networkType, Some(socialUserInfo.fullName), socialUserInfo.userId, Left(socialUserInfo.id.get))
-      case Right(eContact) => (SocialNetworks.EMAIL, eContact.name, eContact.contactUserId, Right(eContact.email))
+      case Right(eContact) => (Email, eContact.name, eContact.contactUserId, Right(eContact.email))
     }
 
     getByUserAndFriend(userId, friendId) match {
@@ -93,13 +95,13 @@ class RichSocialConnectionRepoImpl @Inject() (
 
   private def getInvitationCount(friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = friendId match {
     case Left(friendSocialId) => (for { row <- rows if row.friendSocialId === friendSocialId } yield row.invitationCount).firstOption() getOrElse 0
-    case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === SocialNetworks.EMAIL && row.friendEmailAddress === friendEmailAddress } yield row.invitationCount).firstOption() getOrElse 0
+    case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitationCount).firstOption() getOrElse 0
   }
 
   private def incrementKifiFriendsCounts(friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
     val kifiFriendsCount = friendId match {
       case Left(friendSocialId) => sqlu"UPDATE rich_social_connection SET kifi_friends_count = kifi_friends_count + 1 WHERE friend_social_id = $friendSocialId"
-      case Right(friendEmailAddress) => sqlu"UPDATE rich_social_connection SET kifi_friends_count = kifi_friends_count + 1 WHERE friend_email_address = $friendEmailAddress AND friend_email_address = $friendEmailAddress"
+      case Right(friendEmailAddress) => sqlu"UPDATE rich_social_connection SET kifi_friends_count = kifi_friends_count + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress"
     }
     kifiFriendsCount.first()
   }
@@ -117,7 +119,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       case Right(friendEmailAddress) => sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count + 1
-        WHERE connection_type = '#${SocialNetworks.EMAIL}' AND friend_email_address = $friendEmailAddress AND user_id IN (
+        WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress AND user_id IN (
           SELECT friend_user_id
           FROM rich_social_connection
           WHERE user_id = $userId AND friend_user_id IS NOT NULL
@@ -146,10 +148,10 @@ class RichSocialConnectionRepoImpl @Inject() (
     sqlu"""
       UPDATE rich_social_connection
       SET common_kifi_friends_count = common_kifi_friends_count + 1
-      WHERE user_id = $userId AND connection_type = '#${SocialNetworks.EMAIL}' AND friend_email_address IN (
+      WHERE user_id = $userId AND connection_type = '#${Email}' AND friend_email_address IN (
         SELECT friend_email_address
         FROM rich_social_connection
-        WHERE user_id = $kifiFriend AND connection_type = '#${SocialNetworks.EMAIL}'
+        WHERE user_id = $kifiFriend AND connection_type = '#${Email}'
       )
     """.execute()
   }
@@ -162,7 +164,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       }
       case Right(friendEmailAddress) => {
         (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row.invitation).update(invitation)
-        sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE connection_type = '#${SocialNetworks.EMAIL}' AND friend_email_address = $friendEmailAddress".execute()
+        sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
       }
     }
   }
@@ -170,14 +172,14 @@ class RichSocialConnectionRepoImpl @Inject() (
   def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => (for { row <- rows if row.friendSocialId === friendSocialId } yield row.friendUserId).update(friendUserId)
-      case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === SocialNetworks.EMAIL && row.friendEmailAddress === friendEmailAddress } yield row.friendUserId).update(friendUserId)
+      case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.friendUserId).update(friendUserId)
     }
   }
 
   def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row.blocked).update(true)
-      case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === SocialNetworks.EMAIL && row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row.blocked).update(true)
+      case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row.blocked).update(true)
     }
   }
 }

@@ -127,6 +127,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val setSeqDateTimeParameter = setSeqParameter[DateTime]
   implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]
   implicit def setStateParameter[M <: Model[M]] = setParameterFromMapper[State[M]]
+  implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
 
   // GetResult mappers to be used for interpolated query results
 
@@ -140,5 +141,4 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit def getStateResult[M <: Model[M]] = getResultFromMapper[State[M]]
   implicit def getExtIdResult[M <: Model[M]] = getResultFromMapper[ExternalId[M]]
   implicit def getOptExtIdResult[M <: Model[M]] = getResultOptionFromMapper[ExternalId[M]]
-
 }
