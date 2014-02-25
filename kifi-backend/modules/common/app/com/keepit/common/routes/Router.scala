@@ -134,8 +134,6 @@ object Shoebox extends Service {
 
 object Search extends Service {
   object internal {
-    def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
-    def logSearchEnded() = ServiceRoute(POST, "/internal/search/events/searchEnded")
     def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
     def warmUpUser(id: Id[User]) = ServiceRoute(GET, s"/internal/search/warmUp/${id.id}")
     def uriGraphInfo() = ServiceRoute(GET, "/internal/search/uriGraph/info")
