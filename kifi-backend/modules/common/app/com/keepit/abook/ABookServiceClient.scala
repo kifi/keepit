@@ -55,7 +55,7 @@ trait ABookServiceClient extends ServiceClient {
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
-  def richConnectionUpdate(message: RichConnectionUpdateMessage): Unit
+  def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
 }
 
 
@@ -200,8 +200,8 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def richConnectionUpdate(message: RichConnectionUpdateMessage) = {
-    call(ABook.internal.richConnectionUpdate, Json.toJson(message))
+  def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] = {
+    callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map{r => ()}
   }
 }
 
@@ -251,5 +251,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 
-  def richConnectionUpdate(message: RichConnectionUpdateMessage) =  ???
+  def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
 }
