@@ -6,7 +6,7 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider
-    .when('/', {
+    .when('/find', {
       templateUrl: 'search/search.tpl.html',
       controller: 'SearchCtrl'
     });

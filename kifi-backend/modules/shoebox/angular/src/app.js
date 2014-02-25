@@ -14,6 +14,7 @@ angular.module('kifi', [
   'jun.smartScroll',
   'angularMoment',
   'kifi.home',
+  'kifi.search',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
