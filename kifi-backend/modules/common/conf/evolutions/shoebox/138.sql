@@ -3,7 +3,7 @@
 # --- !Ups
 
 ALTER TABLE econtact ADD COLUMN contact_user_id bigint(20);
-CREATE TABLE rich_social_connection (
+CREATE TABLE IF NOT EXISTS rich_social_connection (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     state varchar(20) NOT NULL,
     created_at datetime NOT NULL,
