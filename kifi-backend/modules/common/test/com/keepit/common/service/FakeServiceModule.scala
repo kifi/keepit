@@ -17,7 +17,7 @@ case class FakeServiceModule() extends ScalaModule {
   @Provides
   def service(clock: Clock, fortytwoConfig: FortyTwoConfig): FortyTwoServices = {
     new FortyTwoServices(clock, Mode.Test, None, None, fortytwoConfig) {
-      override lazy val currentVersion = ServiceVersion("0.0.0")
+      override lazy val currentVersion = ServiceVersion("00000000-0000-TEST-0000000")
       override lazy val compilationTime = new SystemClock().now()
       override lazy val baseUrl = "test_kifi.com"
     }

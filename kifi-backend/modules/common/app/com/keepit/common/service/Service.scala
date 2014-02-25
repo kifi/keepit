@@ -19,7 +19,7 @@ object ServiceVersion {
 
 case class ServiceVersion(val value: String) {
   override def toString(): String = value
-  lazy val ServiceVersion.pattern(date, time, branch, hash) = value
+  val ServiceVersion.pattern(date, time, branch, hash) = value
 }
 
 sealed abstract class ServiceType(val name: String, val shortName: String, val isCanary: Boolean = false) {

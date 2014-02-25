@@ -340,13 +340,17 @@ input.page-coll-input
   -webkit-font-smoothing: antialiased
   -webkit-transition: width 60ms ease-in-out
   transition: width 60ms ease-in-out
-  width: 180px
+  min-width: 150px
 
+.page-coll-opt-hidden
+  @extend input.page-coll-input
+  visibility: hidden
+  position: absolute
+  long-text()
 
 .page-coll-opts
   display: none
   position: absolute
-  width: 180px
   border: 1px solid #cdd6e0
   border-top: none
   -webkit-box-sizing: border-box
@@ -354,6 +358,7 @@ input.page-coll-input
   box-sizing: border-box
   background-color: #fff
   font-size: 13px
+  width: 100%
 
 
 .page-coll-opts:not(:empty)
@@ -376,10 +381,10 @@ input.page-coll-input
 .new-label
   position: absolute
   right: 8px
-  top: 4px
+  top: 5px
   height: 14px
   line-height: 13px
-  padding: 2px 4px 0
+  padding: 1px 4px
   font-size: 9px
   font-weight: bold
   background-color: #b8c5d2

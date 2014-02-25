@@ -30,6 +30,7 @@ angular.module('kifi.detail',
         scope.closeDetail = keepService.togglePreview.bind(null, null);
         scope.me = profileService.me;
         scope.data.isClickingInList = false;
+        scope.newTagLabel = 'NEW';
 
         tagService.fetchAll().then(function (res) {
           scope.allTags = res;
@@ -230,7 +231,6 @@ angular.module('kifi.detail',
           scope.tagFilter.name = '';
           filterTags(null);
           element.find('.page-coll-input').focus();
-          scope.data.focusInput = true;
 
           return scope.isAddingTag = true;
         };
@@ -326,6 +326,29 @@ angular.module('kifi.detail',
         scope.highlightTag(null);
       }
     };
+  }
+])
+
+.directive('kfTagSuggestions', [
+  '$timeout',
+  function ($timeout) {
+    return function(scope, element /*, attrs*/ ) {
+      $timeout(function() {
+        var hiddenElement = element.find('.page-coll-opt-hidden');
+        var input = element.find('input');
+        scope.$watch('tagFilter.name', function (value) {
+          var html = value;
+          if (scope.isAddTagShown()) {
+              html += scope.newTagLabel;
+          }
+          hiddenElement.html(html);
+          var parentWidth = element.parents('.page-coll-list')[0].offsetWidth - 20; // a padding offset
+          var width = hiddenElement[0].offsetWidth + 10;
+          if (width > parentWidth) width = parentWidth;
+          input.css('width', width + 'px');
+        });
+      });
+    }
   }
 ])
 
