@@ -21,6 +21,7 @@ import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.typeahead.TypeaheadHit
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
 
 // provider-specific
@@ -340,6 +341,12 @@ class ABookController @Inject() (
   def prefixSearch(userId:Id[User], query:String) = Action { request =>
     val res = prefixSearchDirect(userId, query)
     Ok(Json.toJson(res))
+  }
+
+  def richConnectionUpdate() = Action(parse.json) { request =>
+    val updateMessage = request.body.as[RichConnectionUpdateMessage]
+    //ZZZ needs to actully do something with the data
+    Ok("")
   }
 
 }
