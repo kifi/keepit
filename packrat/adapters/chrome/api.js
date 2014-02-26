@@ -407,6 +407,14 @@ var api = (function createApi() {
     }
   }
 
+  var onXhrLoadEnd = errors.wrap(function onXhrLoadEnd(done, fail) {
+    if (this.status >= 200 && this.status < 300) {
+      if (done) done(/^application\/json/.test(this.getResponseHeader('Content-Type')) ? JSON.parse(this.responseText) : this);
+    } else {
+      if (fail) fail(this);
+    }
+  });
+
   var hostRe = /^https?:\/\/[^\/]*/;
   return {
     bookmarks: {
@@ -535,16 +543,7 @@ var api = (function createApi() {
     },
     request: function(method, uri, data, done, fail) {
       var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = errors.wrap(function() {
-        if (this.readyState == 4) {
-          if (this.status >= 200 && this.status < 300) {
-            done && done(/^application\/json/.test(this.getResponseHeader('Content-Type')) ? JSON.parse(this.responseText) : this);
-          } else if (fail) {
-            fail(this);
-          }
-          done = fail = null;
-        }
-      });
+      xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
       xhr.open(method, uri, true);
       if (data != null && data !== '') {
         if (typeof data !== 'string') {
