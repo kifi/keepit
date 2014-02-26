@@ -149,7 +149,7 @@ angular.module('kifi.keepService', [])
             api.preview(keep);
           }
           else if (countSelected === 1 && isDetailOpen === true) {
-            api.preview(_.values(selected)[0]);
+            api.preview(api.getFirstSelected());
           }
           else {
             previewed = null;
