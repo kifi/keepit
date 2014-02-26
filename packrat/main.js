@@ -641,28 +641,28 @@ api.port.on({
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
-    prefs.enterToSend = data;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
+    if (prefs) prefs.enterToSend = data;
   },
   set_max_results: function(n, respond) {
-    prefs.maxResults = n;
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
     mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
+    if (prefs) prefs.maxResults = n;
   },
   set_show_find_friends: function(show) {
-    prefs.showFindFriends = show;
     ajax('POST', '/ext/pref/showFindFriends?show=' + show);
+    if (prefs) prefs.showFindFriends = show;
   },
   stop_showing_keeper_intro: function() {
-    prefs.showKeeperIntro = false;
     ajax('POST', '/ext/pref/showKeeperIntro?show=false');
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, 'hide_keeper_intro');
     });
+    if (prefs) prefs.showKeeperIntro = false;
   },
   set_show_search_intro: function(show) {
-    prefs.showSearchIntro = show;
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
+    if (prefs) prefs.showSearchIntro = show;
   },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
