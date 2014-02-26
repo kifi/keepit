@@ -12,9 +12,10 @@ class PornDetectorController @Inject()(factory: PornDetectorFactory) extends Scr
     Ok(Json.toJson(factory.model.likelihood))
   }
 
-  def detect(query: String) = Action { request =>
+  def detect() = Action(parse.json) { request =>
+    val query = (request.body \ "query").as[String]
     val detector = factory()
-    val windows = PornDetectorUtil.tokenize(query).sliding(8, 4)
+    val windows = PornDetectorUtil.tokenize(query).sliding(10, 5)
     val badTexts = windows.map{ w => val block = w.mkString(" "); (block, detector.posterior(block)) }.filter(_._2 > 0.5f)
     Ok(Json.toJson(badTexts.toMap))
   }
