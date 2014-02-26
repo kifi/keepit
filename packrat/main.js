@@ -332,6 +332,7 @@ function gotFilteredThreads(kind, tl, arr, numTotal) {
   log('[gotFilteredThreads]', kind, arr, numTotal || '')();
   arr.forEach(function (n) {
     standardizeNotification(n);
+    updateIfJustRead(n);
     threadsById[n.thread] = n;
   });
   tl.ids = arr.map(getThreadId);
@@ -725,6 +726,7 @@ api.port.on({
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_thread_info', id], function (th) {
         standardizeNotification(th);
+        updateIfJustRead(th);
         threadsById[th.thread] = th;
         emitThreadInfoToTab(th, tab);
       });
@@ -796,6 +798,7 @@ api.port.on({
       socket.send(socketMessage, function (arr) {
         arr.forEach(function (th) {
           standardizeNotification(th);
+          updateIfJustRead(th);
           threadsById[th.thread] = th;
         });
         var includesOldest = arr.length < THREAD_BATCH_SIZE;
@@ -1102,11 +1105,7 @@ function insertNewNotification(n) {
   // proceed only if we don't already have this notification or a newer one for the same thread
   if (!n0 || n0.id !== n.id && n0.time < n.time) {
     threadsById[n.thread] = n;
-    // need to mark read if new message was already viewed
-    if (n.unread && threadReadAt[n.thread] >= n.time) {
-      n.unread = false;
-      n.unreadAuthors = n.unreadMessages = 0;
-    }
+    updateIfJustRead(n);
     var o = {all: true, page: true, unread: n.unread, sent: isSent(n)};
     for (var kind in o) {
       if (o[kind]) {
@@ -1127,6 +1126,13 @@ function insertNewNotification(n) {
       }
     });
     return true;
+  }
+}
+
+function updateIfJustRead(th) {
+  if (th.unread && threadReadAt[th.thread] >= th.time) {
+    th.unread = false;
+    th.unreadAuthors = th.unreadMessages = 0;
   }
 }
 
@@ -1608,10 +1614,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
     standardizeNotification(th);
     var oldTh = threadsById[th.thread];
     if (!oldTh || oldTh.time <= th.time) {
-      if (th.unread && threadReadAt[th.thread] >= th.time) {
-        th.unread = false;
-        th.unreadAuthors = th.unreadMessages = 0;
-      }
+      updateIfJustRead(th);
       if (oldTh && oldTh.unread && !th.unread) {
         markRead(th.thread, th.id, th.time);
       }
