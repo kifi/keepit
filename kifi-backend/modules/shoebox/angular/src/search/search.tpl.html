@@ -1,7 +1,7 @@
 <div>
   <div class="kf-main-head">
     <div class="kf-subtitle">
-      <span class="kf-check-all" ng-class="{ enabled: checkEnabled, checked: isSelectedAll() }" ng-click="toggleSelectAll()"></span>
+      <span class="kf-check-all" ng-class="{ enabled: checkEnabled, checked: isSelectedAll() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
       <span class="kf-search-filters" ng-if="subtitle.type === 'query' || true">
         <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">You ({{results.myTotal}})</a>
