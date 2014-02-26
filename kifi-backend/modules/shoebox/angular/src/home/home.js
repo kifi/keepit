@@ -23,23 +23,46 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
 
     $scope.loadingKeeps = true;
 
-    var promise = keepService.getList().then(function (list) {
-      $scope.loadingKeeps = false;
-      return list;
-    });
-
-    $q.all([promise, tagService.fetchAll()]).then(function () {
+    keepService.getList().then(function () {
       $scope.loadingKeeps = false;
     });
 
     $scope.checkEnabled = true;
 
-    $scope.page = {
-      title: 'Browse your Keeps'
+    $scope.mouseoverCheckAll = false;
+
+    $scope.onMouseoverCheckAll = function () {
+      $scope.mouseoverCheckAll = true;
+    };
+
+    $scope.onMouseoutCheckAll = function () {
+      $scope.mouseoverCheckAll = false;
     };
 
     $scope.getSubtitle = function () {
-      var numShown = $scope.keeps && $scope.keeps.length || 0;
+      if ($scope.loadingKeeps) {
+        return 'Loading...';
+      }
+
+      var selectedCount = keepService.getSelectedLength(),
+        numShown = $scope.keeps && $scope.keeps.length || 0;
+
+      if ($scope.mouseoverCheckAll) {
+        if (selectedCount === numShown) {
+          return 'Deselect all ' + numShown + ' Keeps below';
+        }
+        return 'Select all ' + numShown + ' Keeps below';
+      }
+
+      switch (selectedCount) {
+      case 0:
+        break;
+      case 1:
+        return selectedCount + ' Keep selected';
+      default:
+        return selectedCount + ' Keeps selected';
+      }
+
       switch (numShown) {
       case 0:
         return 'You have no Keeps';
@@ -58,6 +81,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     };
 
     $scope.scrollDisabled = false;
+
     $scope.getNextKeeps = function () {
       if ($scope.loadingKeeps) {
         return $q.when([]);
@@ -67,7 +91,6 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
 
       return keepService.getList().then(function (list) {
         $scope.loadingKeeps = false;
-        //$scope.refreshScroll();
         return list;
       });
     };

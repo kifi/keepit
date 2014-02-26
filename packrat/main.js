@@ -723,7 +723,11 @@ api.port.on({
       emitThreadInfoToTab(th, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id]);
+      socket.send(['get_thread_info', id], function (th) {
+        standardizeNotification(th);
+        threadsById[th.thread] = th;
+        emitThreadInfoToTab(th, tab);
+      });
     }
     var msgs = messageData[id];
     if (msgs) {
@@ -1042,6 +1046,7 @@ function unsilence(tab) {
 }
 
 function onTagChangeFromServer(op, tag) {
+  if (!tags || !tagsById) return;
   var tagId = tag.id;
   switch (op) {
     case 'create':
@@ -1057,7 +1062,7 @@ function onTagChangeFromServer(op, tag) {
       tags = tags.filter(idIsNot(tagId));
       delete tagsById[tagId];
   }
-  tabsTagging.forEach(function(tab) {
+  tabsTagging.forEach(function (tab) {
     api.tabs.emit(tab, 'tag_change', this);
   }, {op: op, tag: tag});
 }
@@ -1336,8 +1341,9 @@ function reloadKifiAppTabs() {
 
 function forEachTabAt() { // (url[, url]..., f)
   var done = {};
-  var f = arguments[arguments.length - 1];
-  for (var i = arguments.length - 1; i--;) {
+  var i = arguments.length - 1;
+  var f = arguments[i];
+  while (--i >= 0) {
     var url = arguments[i];
     if (!done[url]) {
       done[url] = true;

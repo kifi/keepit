@@ -126,6 +126,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getSignature(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
   def getPornDetectorModel(): Future[Map[String, Float]]
+  def detectPorn(query: String): Future[Map[String, Float]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -191,6 +192,12 @@ class ScraperServiceClientImpl @Inject() (
       Json.fromJson[Map[String, Float]](r.json).get
     }
   }
+
+  def detectPorn(query: String): Future[Map[String, Float]] = {
+    call(Scraper.internal.detectPorn(query)).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
@@ -216,4 +223,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
 
   def getPornDetectorModel(): Future[Map[String, Float]] = ???
+
+  def detectPorn(query: String): Future[Map[String, Float]] = ???
 }

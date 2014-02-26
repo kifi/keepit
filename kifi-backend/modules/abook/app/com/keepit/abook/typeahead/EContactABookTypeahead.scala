@@ -14,6 +14,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import scala.concurrent.{Promise, Future, Await}
 import scala.concurrent.duration.Duration
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.common.akka.SafeFuture
 
 class EContactABookTypeahead @Inject() (
   db:Database,
