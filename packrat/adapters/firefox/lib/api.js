@@ -202,7 +202,7 @@ exports.popup = {
 var portHandlers, portMessageTypes;
 exports.port = {
   on: function (handlers) {
-    if (portHandlers) throw Error("api.port.on already called");
+    if (portHandlers) throw Error('api.port.on already called');
     portHandlers = handlers;
     portMessageTypes = Object.keys(handlers);
     for each (let page in pages) {
@@ -218,8 +218,13 @@ function bindPortHandlers(worker, page) {
 }
 var onPortMessage = errors.wrap(function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
-  portHandlers[type](data, this.port.emit.bind(this.port, 'api:respond', callbackId), page);
+  portHandlers[type](data, respondToTab.bind(this, callbackId), page);
 });
+function respondToTab(callbackId, response) {
+  if (this.handling) {
+    this.port.emit('api:respond', callbackId, response);
+  }
+}
 
 exports.request = function(method, url, data, done, fail) {
   var options = {
