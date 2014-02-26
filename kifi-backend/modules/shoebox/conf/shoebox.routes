@@ -437,6 +437,8 @@ GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedCon
 POST    /adimin/feed/query             @com.keepit.controllers.admin.AdminFeedController.queryFeeds
 GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int)
 
+GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
