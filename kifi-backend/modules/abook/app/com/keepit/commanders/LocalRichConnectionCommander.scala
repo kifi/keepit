@@ -50,7 +50,7 @@ class LocalRichConnectionCommander @Inject() (
               processQueueItems()
             }
             case Failure(t) => {
-              airbrake.notify("Error processing RichConnectionUpdate from queue")
+              airbrake.notify("Error processing RichConnectionUpdate from queue", t)
               processQueueItems()
             }
           }
@@ -71,12 +71,6 @@ class LocalRichConnectionCommander @Inject() (
   }
 
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = synchronized {
-    //ZZZ actually apply updates to DB
-    // def recordInvitation(userId: Id[User], invitation: Id[Invitation], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
-    // def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit
-    // def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
-
-
     try {
       message match {
         case CreateRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: SocialUserInfo) => {
@@ -85,16 +79,18 @@ class LocalRichConnectionCommander @Inject() (
         case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => {
           db.readWrite { implicit session =>  repo.recordKifiConnection(firstUserId, secondUserId) }
         }
-        // case RecordInvitation(userId: Id[User], invitation: Id[Invitation], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
-        //   val friend = Left(friendSocialId) getOrElse
-        //   db.readWrite { implicit session => repo.recordInvitation(userId, invitation, friend: Either[Id[SocialUserInfo], String])
-        // }
-        // case RecordFriendUserId(networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) => {
-        //   db.readWrite { implicit session =>
-        // }
-        // case Block(userId: Id[User], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
-        //   db.readWrite { implicit session =>
-        // }
+        case RecordInvitation(userId: Id[User], invitation: Id[Invitation], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
+          val friend = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
+          db.readWrite { implicit session => repo.recordInvitation(userId, invitation, friend) }
+        }
+        case RecordFriendUserId(networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) => {
+          val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
+          db.readWrite { implicit session => repo.recordFriendUserId(friendId, friendUserId) }
+        }
+        case Block(userId: Id[User], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
+          val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
+          db.readWrite { implicit session => repo.block(userId, friendId) }
+        }
       }
       Future.successful(())
     } catch {
