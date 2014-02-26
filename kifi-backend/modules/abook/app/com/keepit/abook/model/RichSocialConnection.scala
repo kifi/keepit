@@ -21,6 +21,7 @@ case class RichSocialConnection(
   connectionType: SocialNetworkType,
   friendSocialId: Option[Id[SocialUserInfo]],
   friendEmailAddress: Option[String],
+  friendName: Option[String],
   friendUserId: Option[Id[User]],
   commonKifiFriendsCount: Int,
   kifiFriendsCount: Int,

@@ -26,7 +26,7 @@ import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.{TopicUpdater, FakeWordTopicModule, DevTopicModelModule}
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{TestScraperConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
@@ -65,6 +65,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestHeimdalServiceClientModule(),
         TestABookServiceClientModule(),
         TestScraperServiceClientModule(),
+        TestScraperConfigModule(),
         KeepImportsModule()
       )) {
         val ClassRoute = "@(.+)@.+".r

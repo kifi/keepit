@@ -13,6 +13,7 @@ import java.nio.channels.FileChannel.MapMode
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import java.util.Random
 import com.google.inject.Inject
 import com.keepit.search.ProbablisticLRUStore
@@ -94,7 +95,7 @@ class InMemoryResultClickTrackerBuffer(tableSize: Int) extends SimpleLocalBuffer
 
 class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer with Logging {
 
-  private[this] val consolidateChunkReq = new RequestConsolidator[Int, Array[Int]](1 second)
+  private[this] val consolidateChunkReq = new RequestConsolidator[Int, IntBufferWrapper](3 second)
 
   private def loadChunk(chunkId: Int) : Array[Int] = {
     val fullId = FullFilterChunkId(filterName.name, chunkId)
@@ -110,9 +111,9 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 
   private def saveChunk(chunkId: Int, chunk: Array[Int]) : ProbablisticLRUChunkKey  = {
     val fullId = FullFilterChunkId(filterName.name, chunkId)
-    dataStore += (fullId, chunk)
     val cacheKey = ProbablisticLRUChunkKey(fullId)
     cache.set(cacheKey, chunk)
+    dataStore += (fullId, chunk)
     cacheKey
   }
 
@@ -130,37 +131,42 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
     Await.result(getChunkFuture(key), 10 seconds)
   }
 
-  override def getChunkFuture(key: Long) : Future[IntBufferWrapper] = {
-    val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
-    val future  = consolidateChunkReq(chunkId){ cid => SafeFuture{ loadChunk(cid) } }
-    future.map{ thisChunk =>
-      var dirtyEntries : Set[Int] = Set[Int]()
+  private def wrap(chunkId: Int, thisChunk: Array[Int]): IntBufferWrapper = {
+    new IntBufferWrapper {
 
-      new IntBufferWrapper {
+      private[this] val dirtyEntries: AtomicReference[Set[Int]] = new AtomicReference(Set())
 
-        val syncLock : AnyRef = new AnyRef
-        val putLock  : AnyRef = new AnyRef
+      def get(pos: Int) : Int = thisChunk(pos)
 
-        def get(pos: Int) : Int = thisChunk(pos)
-
-        def sync : Unit = SafeFuture {
-          syncLock.synchronized {
+      def sync : Unit = SafeFuture {
+        val entries = dirtyEntries.getAndSet(Set())
+        if (entries.nonEmpty) {
+          synchronized {
             val storedChunk = loadChunk(chunkId)
-            dirtyEntries.foreach { pos => storedChunk(pos) = thisChunk(pos) }
-            dirtyEntries = Set()
-            consolidateChunkReq.set(chunkId, Future.successful(storedChunk))
+            entries.foreach { pos => storedChunk(pos) = thisChunk(pos) }
+            consolidateChunkReq.set(chunkId, Future.successful(wrap(chunkId, storedChunk)))
             saveChunk(chunkId, storedChunk)
           }
         }
+      }
 
-        def put(pos: Int, value: Int) = putLock.synchronized {
-          thisChunk(pos) = value
-          dirtyEntries = dirtyEntries + pos
+      def put(pos: Int, value: Int) = {
+        thisChunk(pos) = value
+        var entries = dirtyEntries.get
+        while (!dirtyEntries.compareAndSet(entries, entries + pos)) {
+          entries = dirtyEntries.get
         }
       }
     }
+
   }
 
+  override def getChunkFuture(key: Long) : Future[IntBufferWrapper] = {
+    val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
+    consolidateChunkReq(chunkId){ cid =>
+      SafeFuture{ wrap(cid, loadChunk(cid)) }
+    }
+  }
 }
 
 
@@ -193,8 +199,8 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
   private[this] val rnd = new Random
 
   private[this] var inserts = new AtomicLong(0L)
-  private[this] var syncs = 0L
-  private[this] var dirtyChunks = Set[IntBufferWrapper]()
+  private[this] var syncs = new AtomicLong(0L)
+  private[this] var dirtyChunks = new AtomicReference[List[IntBufferWrapper]](Nil)
 
   def setSeed(seed: Long) = rnd.setSeed(seed)
 
@@ -209,7 +215,10 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
   }
 
   def getFuture(key: Long): Future[Probe] = {
-    getValueHashesFuture(key).map{ case (p, h) => new Probe(key, p, h) }
+    buffer.getChunkFuture(key).map{ bufferChunk =>
+      val (p, h) = getValueHashes(key, bufferChunk)
+      new Probe(key, p, h)
+    }
   }
 
   def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
@@ -220,20 +229,18 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
     }
   }
 
-  def sync = synchronized {
-    dirtyChunks.foreach(_.sync)
-    dirtyChunks = Set[IntBufferWrapper]()
-
-    syncs += 1
+  def sync = {
+    dirtyChunks.getAndSet(Nil).foreach(_.sync)
+    syncs.incrementAndGet()
     this
   }
 
   def numInserts = inserts.get
-  def numSyncs = syncs
+  def numSyncs = syncs.get
 
   protected def putValueHash(key: Long, value: Long, updateStrength: Double) {
     def putValueHashOnce(bufferChunk: IntBufferWrapper): Boolean = {
-      val (positions, values) = Await.result(getValueHashesFuture(key), 10 seconds)
+      val (positions, values) = getValueHashes(key, bufferChunk)
 
       // count open positions
       var openCount = 0
@@ -260,31 +267,38 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
     }
 
     val bufferChunk = buffer.getChunk(key)
-    if (putValueHashOnce(bufferChunk)) dirtyChunks = dirtyChunks + bufferChunk
+    if (putValueHashOnce(bufferChunk)) {
+      var chunks = dirtyChunks.get
+      while (!dirtyChunks.compareAndSet(chunks, bufferChunk :: chunks)) {
+        chunks = dirtyChunks.get
+      }
+    }
   }
 
   protected def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
-    Await.result(getValueHashesFuture(key), 10 seconds)
+    getValueHashes(key, buffer.getChunk(key))
   }
 
   protected def getValueHashesFuture(key: Long): Future[(Array[Int], Array[Int])] = {
-    buffer.getChunkFuture(key).map{ bufferChunk =>
-      val tableSize = buffer.chunkSize
-      val p = new Array[Int](numHashFuncs)
-      val h = new Array[Int](numHashFuncs)
+    buffer.getChunkFuture(key).map{ bufferChunk => getValueHashes(key, bufferChunk) }
+  }
 
-      var v = init(key)
-      var i = 0
-      val tsize = tableSize.toLong
-      while (i < numHashFuncs) {
-        v = next(v)
-        val pos = (v % tsize).toInt + 1
-        p(i) = pos
-        h(i) = bufferChunk.get(pos)
-        i += 1
-      }
-      (p, h)
+  protected def getValueHashes(key: Long, bufferChunk: IntBufferWrapper): (Array[Int], Array[Int]) = {
+    val tableSize = buffer.chunkSize
+    val p = new Array[Int](numHashFuncs)
+    val h = new Array[Int](numHashFuncs)
+
+    var v = init(key)
+    var i = 0
+    val tsize = tableSize.toLong
+    while (i < numHashFuncs) {
+      v = next(v)
+      val pos = (v % tsize).toInt + 1
+      p(i) = pos
+      h(i) = bufferChunk.get(pos)
+      i += 1
     }
+    (p, h)
   }
 
   @inline private[this] def init(k: Long) = k & 0x7FFFFFFFFFFFFFFFL

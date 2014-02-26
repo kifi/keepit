@@ -9,7 +9,7 @@ class AdminPornDetectorController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
   def index() = AdminHtmlAction.authenticated{ implicit request =>
-    Ok
+    Ok(html.admin.pornDetector())
   }
 
   def detect() = AdminHtmlAction.authenticated{ implicit request =>

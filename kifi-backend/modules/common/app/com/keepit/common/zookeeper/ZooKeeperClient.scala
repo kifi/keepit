@@ -1,20 +1,15 @@
 package com.keepit.common.zookeeper
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import java.util.{List => JList}
 import com.keepit.common.logging.Logging
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.collection.immutable.Set
+import scala.collection.mutable.ArrayBuffer
 import org.apache.zookeeper.{CreateMode, KeeperException, Watcher, WatchedEvent, ZooKeeper}
 import org.apache.zookeeper.data.{ACL, Stat, Id}
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.Watcher.Event.EventType
 import org.apache.zookeeper.Watcher.Event.KeeperState
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.collection.JavaConversions._
-import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,12 +25,12 @@ object Node {
   }
 
   def apply(parent: Node, name: String): Node = {
-    if (isSimpleName(name)) throw new Exception(s"not a simple name: $name")
+    if (!isSimpleName(name)) throw new Exception(s"not a simple name: $name")
     new Node(parent.path + "/" + name, name)
   }
 
   private def isSimpleName(name: String): Boolean =  {
-    name.indexOf('/') >= 0
+    name.indexOf('/') < 0
   }
 }
 
@@ -186,7 +181,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
   sealed trait RegisteredWatch
   case class RegisteredNodeWatch[T](node: Node, onDataChanged : Option[T] => Unit, deserializer: Array[Byte] => T) extends RegisteredWatch
   case class RegisteredChildWatch(node: Node, updateChildren: Seq[Node] => Unit) extends RegisteredWatch
-  case class RegisteredChildWatchWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit, deserializer: Array[Byte] => T) extends RegisteredWatch
+  case class RegisteredChildWatchWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit, deserializer: Array[Byte] => T, watchedChildren: mutable.HashMap[Node, T]) extends RegisteredWatch
   private[this] val watchList = new ArrayBuffer[RegisteredWatch]
   private def registerWatch(watch: RegisteredWatch): Unit = watchList.synchronized { watchList += watch }
 
@@ -208,9 +203,12 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     watchList.synchronized {
       watchList.foreach{ registeredWatch =>
         registeredWatch match {
-          case RegisteredNodeWatch(node, onDataChanged, deserializer) => watchNode(node, onDataChanged)(deserializer)
-          case RegisteredChildWatch(node, updateChildren) => watchChildren(node, updateChildren)
-          case RegisteredChildWatchWithData(node, updateChildren, deserializer) => watchChildrenWithData(node, updateChildren)(deserializer)
+          case RegisteredNodeWatch(node, onDataChanged, deserializer) =>
+            watchNodeInternal(node, onDataChanged, deserializer)
+          case RegisteredChildWatch(node, updateChildren) =>
+            watchChildrenInternal(node, updateChildren)
+          case RegisteredChildWatchWithData(node, updateChildren, deserializer, watchedChildren) =>
+            watchChildrenWithDataInternal(node, updateChildren, deserializer, watchedChildren)
         }
       }
     }
@@ -301,7 +299,13 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
    * None and will track the node's re-creation with an existence watch.
    */
   def watchNode[T](node: Node, onDataChanged : Option[T] => Unit)(implicit deserializer: Array[Byte] => T): Unit = {
-    log.debug(s"Watching node $node")
+    registerWatch(RegisteredNodeWatch(node, onDataChanged, deserializer))
+    watchNodeInternal(node, onDataChanged, deserializer)
+  }
+
+  private def watchNodeInternal[T](node: Node, onDataChanged : Option[T] => Unit, deserializer: Array[Byte] => T): Unit = {
+    log.info(s"watching node $node")
+
     def updateData {
       try {
         onDataChanged(Some(zk.getData(node, new NodeWatcher, null)).map(deserializer))
@@ -331,12 +335,18 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case EventType.NodeDataChanged | EventType.NodeCreated => updateData
           case EventType.NodeDeleted => deletedData
           case EventType.NodeChildrenChanged => reregister
-          case _ => log.info(s"session event, losing a watch on ${node.path}") // session event, we intentionally lose this watch
+          case _ =>
+            event.getState match {
+              case KeeperState.Disconnected | KeeperState.Expired =>
+                log.info(s"session event, losing a NodeWatcher on ${node.path}") // session event, we intentionally lose this watch
+              case _ =>
+                log.info(s"session event, keep watching")
+                reregister
+            }
         }
       }
     }
 
-    registerWatch(RegisteredNodeWatch(node, onDataChanged, deserializer))
     updateData
   }
 
@@ -346,25 +356,35 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
    * re-watches the node's children.
    */
   def watchChildren(node: Node, updateChildren: Seq[Node] => Unit): Unit = {
+    registerWatch(RegisteredChildWatch(node, updateChildren))
+    watchChildrenInternal(node, updateChildren)
+  }
+
+  private def watchChildrenInternal(node: Node, updateChildren: Seq[Node] => Unit): Unit = {
+    log.info(s"watching children of $node")
 
     class ParentWatcher() extends Watcher {
       def process(event: WatchedEvent): Unit = {
         //in case deleted, watch for recreation
         event.getType match {
           case EventType.NodeDataChanged | EventType.NodeCreated | EventType.NodeChildrenChanged =>
-            val children = getChildren(node, new ParentWatcher())
-            updateChildren(children)
+            updateChildren(getChildren(node, new ParentWatcher()))
           case EventType.NodeDeleted =>
             // the node may be re-created by the time we called zk.exists
-            val children = if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
-            updateChildren(children)
-          case _ => log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+            updateChildren(if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher()))
+          case _ =>
+            event.getState match {
+              case KeeperState.Disconnected | KeeperState.Expired =>
+                log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+              case _ =>
+                log.info(s"session event, keep watching")
+                updateChildren(getChildren(node, new ParentWatcher()))
+            }
         }
       }
     }
 
     //check immediately
-    registerWatch(RegisteredChildWatch(node, updateChildren))
     val children = try{
       getChildren(node, new ParentWatcher())
     } catch {
@@ -376,56 +396,72 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
   }
 
   def watchChildrenWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T): Unit = {
-    val watchedChildren = scala.collection.mutable.HashMap[Node, T]()
+    val watchedChildren = mutable.HashMap[Node, T]()
+    registerWatch(RegisteredChildWatchWithData(node, updateChildren, deserializer, watchedChildren))
+    watchChildrenWithDataInternal(node, updateChildren, deserializer, watchedChildren)
+  }
+
+  private def watchChildrenWithDataInternal[T](node: Node, updateChildren: Seq[(Node, T)] => Unit, deserializer: Array[Byte] => T, watchedChildren: mutable.HashMap[Node, T]): Unit = {
+    log.info(s"watching children of $node with data")
 
     class ChildWatcher(child: Node) extends Watcher {
       def process(event: WatchedEvent) : Unit = watchedChildren.synchronized {
         watchedChildren -= child
         event.getType match {
           case EventType.NodeDataChanged | EventType.NodeCreated =>
-            val children = getChildren(node)
             doWatchChildren(Seq(child))
-            updateChildren(watchedChildren.toSeq)
           case EventType.NodeChildrenChanged =>
             doWatchChildren(Seq(child))
           case EventType.NodeDeleted => // deletion handled via parent watch
-          case _ => log.info(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
+          case _ =>
+            event.getState match {
+              case KeeperState.Disconnected | KeeperState.Expired =>
+                log.info(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
+              case _ =>
+                log.info(s"session event, keep watching")
+                doWatchChildren(Seq(child))
+            }
         }
       }
     }
 
     class ParentWatcher() extends Watcher {
-      def process(event: WatchedEvent): Unit = watchedChildren.synchronized {
+      def process(event: WatchedEvent): Unit = {
         //in case deleted, watch for recreation
         event.getType match {
           case EventType.NodeDataChanged | EventType.NodeCreated | EventType.NodeChildrenChanged =>
-            val children = getChildren(node, new ParentWatcher())
-            doWatchChildren(children)
-            updateChildren(watchedChildren.toSeq)
+            doWatchChildren(getChildren(node, new ParentWatcher()))
           case EventType.NodeDeleted =>
             // the node may be re-created by the time we called zk.exists
-            val children = if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
-            doWatchChildren(children)
-            updateChildren(watchedChildren.toSeq)
-          case _ => log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+            doWatchChildren(if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher()))
+          case _ =>
+            event.getState match {
+              case KeeperState.Disconnected | KeeperState.Expired =>
+                log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+              case _ =>
+                log.info(s"session event, keep watching")
+                doWatchChildren(getChildren(node, new ParentWatcher()))
+            }
         }
       }
     }
 
-    def doWatchChildren(children: Seq[Node]) : Unit = {
+    def doWatchChildren(children: Seq[Node]) : Unit = watchedChildren.synchronized {
       children.filterNot(watchedChildren.contains _).foreach{ child =>
         try {
           watchedChildren += (child -> deserializer(zk.getData(child.path, new ChildWatcher(child), null)))
         } catch {
-        case e: KeeperException =>
-          watchedChildren -= child
-          log.warn(s"Failed to place watch on a child node!: ${child.path}", e)
+          case e: KeeperException.NoNodeException =>
+            watchedChildren -= child
+          case e: KeeperException =>
+            log.error(s"Failed to place watch on a child node!: ${child.path}", e)
+            watchedChildren -= child
         }
       }
+      updateChildren(watchedChildren.toSeq)
     }
 
     //check immediately
-    registerWatch(RegisteredChildWatchWithData(node, updateChildren, deserializer))
     val children = try{
       getChildren(node, new ParentWatcher())
     } catch {
@@ -434,6 +470,5 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
         if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
     }
     doWatchChildren(children)
-    updateChildren(watchedChildren.toSeq)
   }
 }

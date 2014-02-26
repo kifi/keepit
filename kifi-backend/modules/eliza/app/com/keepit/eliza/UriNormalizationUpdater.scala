@@ -37,20 +37,26 @@ class UriNormalizationUpdater @Inject() (
 
   centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate _)
 
-  def localSequenceNumber: Long = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
+  def localSequenceNumber(): Long = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
-  def checkAndUpdate(remoteSequenceNumberOpt: Option[Long]) = synchronized {
-    log.info("Renormalization: Checking if I need to update")
+  def checkAndUpdate(remoteSequenceNumberOpt: Option[Long]) : Unit = synchronized {
+    var localSeqNum = localSequenceNumber()
+    log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
     remoteSequenceNumberOpt match {
-      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSequenceNumber && serviceDiscovery.isLeader) => {
-        val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
+      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader) => {
+        val upperBound = if (remoteSequenceNumber - localSequenceNumber > 500) localSequenceNumber + 500 else remoteSequenceNumber
+        val thereIsMore = upperBound < remoteSequenceNumber
+        val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, upperBound)
         updatesFuture.map{ updates =>
           applyUpdates(updates, reapply=true)
-          db.readWrite{ implicit session => renormRepo.addNew(remoteSequenceNumber, updates.size, updates.map{_._1}) }
+          db.readWrite{ implicit session => renormRepo.addNew(upperBound, updates.size, updates.map{_._1}) }
+        }.onComplete{ _ =>
+          if (thereIsMore) checkAndUpdate(remoteSequenceNumberOpt)
         }
       }
       case _ =>
     }
+
   }
 
   private def applyUpdates(updates: Seq[(Id[NormalizedURI], NormalizedURI)], reapply: Boolean = false) : Unit = {

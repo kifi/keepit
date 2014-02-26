@@ -15,6 +15,7 @@ import play.api.libs.json._
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.queue.{NormalizationUpdateTask, NormalizationUpdateJobQueue}
+import com.keepit.common.aws.AwsConfig
 
 case object Consume
 
@@ -25,7 +26,8 @@ class NormalizationWorker @Inject()(
   sqs:SimpleQueueService,
   q:NormalizationUpdateJobQueue,
   normalizationService:NormalizationService,
-  val scheduling: SchedulingProperties
+  val scheduling: SchedulingProperties,
+  awsConfig: AwsConfig
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive = {
@@ -33,7 +35,7 @@ class NormalizationWorker @Inject()(
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  val sqsEnable:Boolean = (Play.maybeApplication.isDefined && Play.current.configuration.getBoolean("amazon.sqs.enable").getOrElse(false)) // todo(ray):removeme
+  val sqsEnable:Boolean = awsConfig.sqsEnabled // todo(ray):removeme
   def consume() = {
     if (sqsEnable) {
       try {
@@ -42,7 +44,7 @@ class NormalizationWorker @Inject()(
         val receiveTS = System.currentTimeMillis()
         for (m <- messages) {
           try {
-            log.info(s"[consume] received msg $m; elapsed milliseconds: ${receiveTS - m.ts}")
+            log.info(s"[consume] received msg $m")
             val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
 
             taskOpt map { task =>
@@ -52,7 +54,7 @@ class NormalizationWorker @Inject()(
               val ref = NormalizationReference(nuri, task.isNew)
               log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
               for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-                log.info(s"[consume] normalizationService.update result: $nuriOpt; (approx) elapsed milliseconds: ${System.currentTimeMillis - m.ts}")
+                log.info(s"[consume] normalizationService.update result: $nuriOpt")
               }
             }
           } catch {

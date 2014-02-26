@@ -207,17 +207,21 @@ body.kifi-snapshot-root {
   color: white;
   padding: 10px 15px;
   border-radius: 15px !important;
+  font-size: 14px;
   cursor: move;
 }
 .kifi-snapshot-cancel {
   display: inline-block;
   padding: 2px 6px 3px;
+  border: none;
   border-image: initial;
+  border-radius: 3px;
   background-color: buttonface;
   color: buttontext;
-  font: -webkit-small-control;
   -webkit-box-align: center;
   text-align: center;
+  font-size: 13px;
+  line-height: 13px;
   cursor: pointer;
 }
 .kifi-snapshot-cancel:active {
@@ -239,7 +243,6 @@ body.kifi-snapshot-root {
   margin: 0;
   border: none !important;
   background-color: #fff;
-  font: inherit;
   box-shadow: none !important;
 }
 .kifi-compose input.kifi-compose-to, /* initial input */
@@ -275,7 +278,6 @@ body.kifi-snapshot-root {
   overflow: hidden;
   background-color: #fff;
   color: #524d4d;
-  font: inherit;
   cursor: text;
 }
 .kifi-ti-token-input { /* input wrapper */
@@ -317,7 +319,8 @@ body.kifi-snapshot-root {
   background-color: #fff;
   overflow: hidden;
   cursor: default;
-  font: 12px Arial, sans-serif;
+  font-size: 12px;
+  line-height: 15px;
   color: #000;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -327,7 +330,6 @@ body.kifi-snapshot-root {
   float: none;
   margin: 0 !important;
   padding: 0 !important;
-  font: inherit;
   color: inherit;
 }
 .kifi-ti-dropdown-item {
@@ -338,7 +340,6 @@ body.kifi-snapshot-root {
   padding: 2px 6px 2px 42px !important;
   list-style-type: none;
   text-align: left;
-  font: inherit;
   color: inherit;
   line-height: 28px;
 }

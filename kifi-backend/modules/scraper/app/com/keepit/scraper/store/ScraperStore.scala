@@ -5,9 +5,11 @@ import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.time.Clock
-
 import play.api.Play._
 import com.keepit.common.aws.AwsModule
+import com.keepit.common.logging.AccessLog
+import com.keepit.learning.porndetector._
+import com.google.inject.Provider
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -28,7 +30,12 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
   }
 
-
+  @Singleton
+  @Provides
+  def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog) = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
+    new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
+  }
 }
 
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
@@ -47,4 +54,11 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
     new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
   }
 
+  @Singleton
+  @Provides
+  def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) ={
+    whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
+      prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryPornWordLikelihoodStore())
+  }
 }

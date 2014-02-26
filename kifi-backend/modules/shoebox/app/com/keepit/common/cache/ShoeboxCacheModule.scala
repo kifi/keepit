@@ -224,4 +224,10 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides
   def econtactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new EContactTypeaheadCache(stats, accessLog, (outerRepo, 15 minutes))
+
+
+  @Singleton
+  @Provides
+  def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new EContactCache(stats, accessLog, (outerRepo, 15 minutes))
 }

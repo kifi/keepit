@@ -69,9 +69,8 @@ class ContactsUpdater @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  airbrake:AirbrakeNotifier) extends Logging {
-
-  val batchSize = sys.props.getOrElse("abook.upload.batch.size", "200").toInt
+  airbrake:AirbrakeNotifier,
+  abookUploadConf:ABookUploadConf) extends Logging {
 
   implicit class RichOptString(o:Option[String]) {
     def trimOpt = o collect { case s:String if (s!= null && !s.trim.isEmpty) => s }
@@ -122,7 +121,7 @@ class ContactsUpdater @Inject() (
 
           log.infoP(s"abookRawInfo=$abookRawInfo existingEmails=$existingEmails")
           val cBuilder = mutable.ArrayBuilder.make[Contact]
-          abookRawInfo.contacts.value.grouped(batchSize).foreach { g =>
+          abookRawInfo.contacts.value.grouped(abookUploadConf.batchSize).foreach { g =>
             val econtactsToAddBuilder = mutable.ArrayBuilder.make[EContact]
             batchNum += 1
             g.foreach { contact =>

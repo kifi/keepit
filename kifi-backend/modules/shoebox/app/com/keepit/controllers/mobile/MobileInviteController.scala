@@ -16,15 +16,17 @@ import com.keepit.model.{InvitationStates, Invitation, SocialUserInfo, User}
 import play.api.mvc.Result
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
+import com.keepit.inject.FortyTwoConfig
 
 
 class MobileInviteController @Inject()(
   actionAuthenticator:ActionAuthenticator,
   inviteCommander:InviteCommander,
-  abookServiceClient:ABookServiceClient
+  abookServiceClient:ABookServiceClient,
+  fortytwoConfig: FortyTwoConfig
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  private val url = current.configuration.getString("application.baseUrl").get // todo: removeme
+  private val url = fortytwoConfig.applicationBaseUrl // todo: removeme
 
   def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
     val inviteInfoOpt = Json.fromJson[InviteInfo](request.body).asOpt

@@ -19,11 +19,14 @@ import play.api.test.Helpers._
 import play.api.db.DB
 import java.sql.Driver
 import scala.concurrent.Await
+import com.keepit.common.queue.FakeSimpleQueueModule
+
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 
   val modules = Seq(
-    ABookCacheModule(HashMapMemoryCacheModule())
+    ABookCacheModule(HashMapMemoryCacheModule()),
+    FakeSimpleQueueModule()
   )
 
   "abook controller" should {

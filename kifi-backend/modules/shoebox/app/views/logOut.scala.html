@@ -1,4 +1,4 @@
-@(user: Option[securesocial.core.Identity])
+@(user: Option[securesocial.core.Identity], facebookClientId: String)
 
 <!doctype html>
 @if(user.isEmpty) {
@@ -9,7 +9,7 @@
   <script>
   function fbAsyncInit() {
     FB.Event.subscribe("auth.authResponseChange", onStatus);
-    FB.init({appId: '@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get'});
+    FB.init({appId: '@facebookClientId'});
     FB.getLoginStatus(onStatus);
   }
   function onStatus(o) {

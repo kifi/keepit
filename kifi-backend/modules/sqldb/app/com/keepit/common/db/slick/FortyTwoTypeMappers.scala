@@ -5,7 +5,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import java.sql.{Clob, Date, Timestamp}
 import org.joda.time.{DateTime, LocalDate}
-import scala.slick.jdbc.{PositionedParameters, SetParameter}
+import scala.slick.jdbc.{PositionedResult, GetResult, PositionedParameters, SetParameter}
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
 import com.keepit.classify.DomainTagName
@@ -31,8 +31,8 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit def idMapper[M <: Model[M]] = MappedColumnType.base[Id[M], Long](_.id, Id[M])
   implicit def stateTypeMapper[M <: Model[M]] = MappedColumnType.base[State[M], String](_.value, State[M])
   implicit def externalIdTypeMapper[M <: Model[M]] = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
-  implicit def dateTimeMapper[M <: Model[M]] = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
+  implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
 
   implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
@@ -63,9 +63,9 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
   implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
-  implicit def experimentTypeProbabilityDensityMapper(implicit outcomeFormat: Format[ExperimentType]) = MappedColumnType.base[ProbabilityDensity[ExperimentType], String](
-    obj => Json.stringify(ProbabilityDensity.format[ExperimentType].writes(obj)),
-    str => Json.parse(str).as(ProbabilityDensity.format[ExperimentType])
+  implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
+    obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
+    str => Json.parse(str).as(ProbabilityDensity.format[T])
   )
 
   implicit val searchConfigMapper = MappedColumnType.base[SearchConfig, String]({ value =>
@@ -116,32 +116,29 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
     Json.parse(src)
   })
 
-  def seqParam[A](implicit pconv: SetParameter[A]): SetParameter[Seq[A]] = SetParameter {
-    case (seq, pp) =>
-      for (a <- seq) {
-        pconv.apply(a, pp)
-      }
-  }
+  // SetParameter conversions to be used for interpolated query parameters
 
-  implicit val listStringSP: SetParameter[List[String]] = seqParam[String]
+  def setParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[T] = SetParameter { case (value, parameters) => mapper.setValue(value, parameters) }
+  def setOptionParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[Option[T]] = SetParameter { case (option, parameters) => mapper.setOption(option, parameters) }
+  def setSeqParameter[T](implicit pconv: SetParameter[T]): SetParameter[Seq[T]] = SetParameter { case (seq, parameters) => seq.foreach(pconv(_, parameters)) }
 
-  // Time
+  implicit val setSeqStringParameter = setSeqParameter[String]
+  implicit val setDateTimeParameter = setParameterFromMapper[DateTime]
+  implicit val setSeqDateTimeParameter = setSeqParameter[DateTime]
+  implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]
+  implicit def setStateParameter[M <: Model[M]] = setParameterFromMapper[State[M]]
+  implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
 
-  implicit object SetDateTime extends SetParameter[DateTime] {
-    def apply(v: DateTime, pp: PositionedParameters) {
-      pp.setTimestamp(new Timestamp(v.toDate().getTime()))
-    }
-  }
+  // GetResult mappers to be used for interpolated query results
 
-  implicit val listDateTimeSP: SetParameter[Seq[DateTime]] = seqParam[DateTime]
+  def getResultFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[T] = GetResult[T](mapper.nextValue)
+  def getResultOptionFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[Option[T]] = GetResult[Option[T]](mapper.nextOption)
 
-  implicit object SetLocalDate extends SetParameter[LocalDate] {
-    def apply(v: LocalDate, pp: PositionedParameters) {
-      pp.setDate(new Date(v.toDate().getTime()))
-    }
-  }
-
-  implicit val listLocalDateSP: SetParameter[Seq[LocalDate]] = seqParam[LocalDate]
-
-
+  implicit val getDateTimeResult = getResultFromMapper[DateTime]
+  implicit val getSequenceNumberResult = getResultFromMapper[SequenceNumber]
+  implicit def getIdResult[M <: Model[M]] = getResultFromMapper[Id[M]]
+  implicit def getOptIdResult[M <: Model[M]] = getResultOptionFromMapper[Id[M]]
+  implicit def getStateResult[M <: Model[M]] = getResultFromMapper[State[M]]
+  implicit def getExtIdResult[M <: Model[M]] = getResultFromMapper[ExternalId[M]]
+  implicit def getOptExtIdResult[M <: Model[M]] = getResultOptionFromMapper[ExternalId[M]]
 }

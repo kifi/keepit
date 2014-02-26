@@ -3,8 +3,17 @@ package com.keepit.common.integration
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.normalizer.{NormalizationUpdaterPluginImpl, NormalizationUpdaterPlugin}
+import com.google.inject.{Provides, Singleton}
+import play.api.Play.current
 
-trait ReaperModule extends ScalaModule
+trait ReaperModule extends ScalaModule {
+  @Singleton
+  @Provides
+  def autogenReaperConf: AutogenReaperConf = AutogenReaperConf(
+    current.configuration.getBoolean("cron.reaper.sui.delete").getOrElse(true),
+    current.configuration.getBoolean("cron.reaper.user.delete").getOrElse(false)
+  )
+}
 
 case class ProdReaperModule() extends ReaperModule {
   def configure() {

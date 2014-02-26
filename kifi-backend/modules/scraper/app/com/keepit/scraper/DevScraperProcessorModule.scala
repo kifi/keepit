@@ -15,28 +15,26 @@ case class DevScraperProcessorModule() extends ScrapeProcessorModule {
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[AsyncScrapeProcessor].to[SimpleAsyncScrapeProcessor].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
+    install(ProdScraperConfigModule())
   }
 
   @Singleton
   @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig()
-
-  @Singleton
-  @Provides
-  def httpFetcher(airbrake:AirbrakeNotifier, schedulingProperties:SchedulingProperties): HttpFetcher = {
+  def httpFetcher(airbrake:AirbrakeNotifier, schedulingProperties:SchedulingProperties, scraperConfig: ScraperConfig): HttpFetcher = {
     new HttpFetcherImpl(
       airbrake,
       userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
       connectionTimeout = 5 * 1000,
       soTimeOut = 5 * 1000,
       trustBlindly = true,
-      schedulingProperties
+      schedulingProperties,
+      scraperConfig.httpConfig
     )
   }
 
   @Singleton
   @Provides
-  def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor]):SyncScrapeProcessor = {
+  def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor], scraperConfig: ScraperConfig):SyncScrapeProcessor = {
     new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors)
   }
 }

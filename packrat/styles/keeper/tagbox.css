@@ -161,7 +161,6 @@ html[kifi-with-pane] .kifi-tagbox {
   color: black;
   background: transparent;
   outline: 0;
-  font: inherit;
 }
 .kifi-tagbox-input-placeholder {
   display: none;

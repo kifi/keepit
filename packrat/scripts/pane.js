@@ -341,7 +341,9 @@ var pane = pane || function () {  // idempotent for Chrome
     }
     if ($pane) {
       $pane.find('.kifi-pane-box').triggerHandler('kifi:remove');
-      api.port.emit('pane', {old: $pane[0].dataset.locator});
+      if ($pane.data('state') !== 'closing') {
+        api.port.emit('pane', {old: $pane[0].dataset.locator});
+      }
       $pane.remove();
       $pane = null;
     }

@@ -134,6 +134,6 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def econtactCache(stats:CacheStatistics, accessLog:AccessLog, innerRepo:InMemoryCachePlugin, outerRepo:FortyTwoCachePlugin) =
-    new EContactCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+    new EContactCache(stats, accessLog, (outerRepo, 15 minutes))
 
 }

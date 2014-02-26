@@ -20,9 +20,11 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
 import com.keepit.typeahead
+import scala.collection.mutable.ArrayBuffer
 
 class SocialUserTypeahead @Inject() (
   db: Database,
+  userRepo: UserRepo,
   store: SocialUserTypeaheadStore,
   cache: SocialUserTypeaheadCache,
   socialConnRepo:SocialConnectionRepo,
@@ -50,8 +52,11 @@ class SocialUserTypeahead @Inject() (
   }
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
-    db.readOnly { implicit session =>
-      socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
+    if (ids.isEmpty) Seq.empty[SocialUserBasicInfo]
+    else {
+      db.readOnly { implicit session =>
+        socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
+      }
     }
   }
 
@@ -74,6 +79,29 @@ class SocialUserTypeahead @Inject() (
   override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id
 
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
+
+  def refresh(userId: Id[User]): Future[Unit] = {
+    build(userId) map { filter =>
+      store += (userId -> filter.data)
+      cache.set(SocialUserTypeaheadKey(userId), filter.data)
+      log.info(s"[refresh($userId)] cache updated; filter=$filter")
+    }
+  }
+
+  def refreshByIds(ids: Seq[Id[User]]): Future[Unit] = {
+    val futures = new ArrayBuffer[Future[Unit]]
+    for (id <- ids) {
+      futures += refresh(id)
+    }
+    Future.sequence(futures) map { seq => Unit }
+  }
+
+  def refreshAll(): Future[Unit] = {
+    val userIds = db.readOnly { implicit ro =>
+      userRepo.getAllActiveIds()
+    }
+    refreshByIds(userIds)
+  }
 }
 
 trait SocialUserTypeaheadStore extends PrefixFilterStore[User]

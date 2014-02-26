@@ -7,11 +7,19 @@ import play.api.Play._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.regions._
 import com.keepit.inject.AppScoped
+import play.api.Play
 
-class AwsModule extends ScalaModule {
+case class AwsConfig(sqsEnabled: Boolean)
+
+case class AwsModule() extends ScalaModule {
   def configure: Unit = {
     bind[FortyTwoElasticLoadBalancingClient].to[FortyTwoElasticLoadBalancingClientImpl].in[AppScoped]
   }
+
+  @Singleton
+  @Provides
+  def awsConfig: AwsConfig =
+    AwsConfig(Play.maybeApplication.isDefined && Play.current.configuration.getBoolean("amazon.sqs.enable").getOrElse(false))
 
   @Singleton
   @Provides

@@ -26,22 +26,22 @@
   height: 100%
   z-index: 1
 
-  &.kf-page-pic-special-cell
-    display: table-cell
+.kf-page-pic-special-cell
+  display: table-cell
 
-  .youtube
-    position: relative
-    padding-bottom: 56.25% /* 16:9 */
-    height: 0
-    z-index: 2
+.kf-youtube
+  position: relative
+  padding-bottom: 56.25% /* 16:9 */
+  height: 0
+  z-index: 2
 
-    object
-    embed
-      position: absolute
-      top: 0
-      left: 0
-      width: 100%
-      height: 100%
+  object
+  embed
+    position: absolute
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
 
 .kf-page-pic[href]
   display: table-cell
@@ -104,7 +104,8 @@
   max-width: 0
   transition: width .18s, max-width .18s
 
-  [data-kept^=p] &
+  .public &
+  .private &
     width: 48px
     max-width: 48px
 
@@ -128,20 +129,21 @@
   transform-origin: right
   transition: transform .18s, top .18s
 
-  [data-kept^=p] &
+  .public &
+  .private &
     transform: none
 
 .kf-page-how-pub
   background-color: #accc98
 
-  .pri &
+  .private &
     top: 100%
     z-index: 0
 
 .kf-page-how-pri
   background-color: #e78881
 
-  .pub &
+  .public &
     top: -100%
     z-index: 0
 

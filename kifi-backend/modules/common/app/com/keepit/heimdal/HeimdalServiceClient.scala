@@ -201,5 +201,5 @@ class HeimdalServiceClientImpl @Inject() (
   }
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
-    call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]))
+    call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
 }

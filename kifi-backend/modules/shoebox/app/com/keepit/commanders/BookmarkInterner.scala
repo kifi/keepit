@@ -120,7 +120,7 @@ class BookmarkInterner @Inject() (
     (persisted.values.map(_.get).flatten.toSeq, failed.keys.toList)
   }
 
-  val MAX_RANDOM_SCHEDULE_DELAY: Int = sys.props.get("scraper.queue.delay") map (_.toInt) getOrElse 600000
+  val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: BookmarkSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._

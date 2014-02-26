@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentMap
 import scala.collection.JavaConversions._
 import com.keepit.common.amazon.MyAmazonInstanceInfo
 import com.keepit.common.logging.Logging
+import java.util.concurrent.atomic.AtomicLong
 
 //todo(eishay): add alerts/stats on the longest outstanding request and/or average time using the value of the currentRequests map
 @Singleton
@@ -17,7 +18,7 @@ class MidFlightRequests @Inject() (
   private val currentRequests: ConcurrentMap[RequestHeader, Long] = new MapMaker().concurrencyLevel(4).weakKeys().makeMap()
 
   def count: Int = currentRequests.size()
-  @volatile private var lastAlert: Long = -1
+  private[this] val lastAlert = new AtomicLong(-1)
 
   private lazy val MaxMidFlightRequests = {
     val max = myInstanceInfo.get.info.instantTypeInfo.ecu * 7
@@ -38,12 +39,10 @@ class MidFlightRequests @Inject() (
 
   private def alert(count: Long): Unit = {
     val now = System.currentTimeMillis()
-    if (now - lastAlert > TEN_MINUTES) {
-      synchronized {
-        if (now - lastAlert > TEN_MINUTES) { //double check after getting into the synchronized block
-          airbrake.get.notify(s"$count concurrent requests: $topRequests")
-          lastAlert = System.currentTimeMillis()
-        }
+    val last = lastAlert.get
+    if (now - last > TEN_MINUTES) {
+      if (lastAlert.compareAndSet(last, now)) {
+        airbrake.get.notify(s"$count concurrent requests: $topRequests")
       }
     }
   }

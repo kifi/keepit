@@ -122,14 +122,17 @@ class SocialUserInfoRepoImpl @Inject() (
     }
 
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {
-    val valueMap = basicInfoCache.bulkGetOrElse(ids.map(SocialUserBasicInfoKey(_)).toSet){ keys =>
-      val missing = keys.map(_.id)
-      val suis = (for(f <- rows if f.id.inSet(missing)) yield f).list
-      suis.collect{ case sui if sui.state != SocialUserInfoStates.INACTIVE =>
-        (SocialUserBasicInfoKey(sui.id.get) -> SocialUserBasicInfo.fromSocialUser(sui))
-      }.toMap
+    if (ids.isEmpty) Map.empty[Id[SocialUserInfo], SocialUserBasicInfo]
+    else {
+      val valueMap = basicInfoCache.bulkGetOrElse(ids.map(SocialUserBasicInfoKey(_)).toSet){ keys =>
+        val missing = keys.map(_.id)
+        val suis = (for(f <- rows if f.id.inSet(missing)) yield f).list
+        suis.collect{ case sui if sui.state != SocialUserInfoStates.INACTIVE =>
+          (SocialUserBasicInfoKey(sui.id.get) -> SocialUserBasicInfo.fromSocialUser(sui))
+        }.toMap
+      }
+      valueMap.map{ case (k, v) => (k.id -> v) }
     }
-    valueMap.map{ case (k, v) => (k.id -> v) }
   }
 
   def getSocialUserBasicInfosByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserBasicInfo] = {

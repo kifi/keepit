@@ -41,9 +41,14 @@ class AdminClusterController @Inject() (
       } catch {
         case _: Throwable => "00000000-0000-NANA-0000000"
       }
+      val serviceVersion = try {
+        ServiceVersion(versionResp)
+      } catch {
+        case t: Throwable => ServiceVersion("00000000-0000-HUHH-0000000")
+      }
       val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName
           val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString()).getOrElse("NA")
-          ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, ServiceVersion(versionResp), name)
+          ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, serviceVersion, name)
       }
     }
 

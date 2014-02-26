@@ -226,6 +226,7 @@
   direction: inherit;
   empty-cells: inherit;
   font: inherit;
+  font-family: inherit !important;
   font-size-adjust: inherit;
   font-stretch: inherit;
   letter-spacing: inherit;
@@ -246,6 +247,9 @@
   word-spacing: inherit;
   word-wrap: inherit;
   writing-mode: inherit;
+}
+.kifi-root.kifi-root.kifi-root {
+  font-family: Arial,sans-serif !important;
 }
 .kifi-root.kifi-root p,
 .kifi-root.kifi-root ol,
@@ -275,10 +279,10 @@
   cursor: pointer;
 }
 .kifi-root.kifi-root ::-moz-placeholder {
-  font: inherit;
+  font: inherit !important;
 }
 .kifi-root.kifi-root ::-webkit-input-placeholder {
-  font: inherit;
+  font: inherit !important;
 }
 .kifi-root.kifi-root ::selection {
   background: initial;

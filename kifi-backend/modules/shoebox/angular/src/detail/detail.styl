@@ -93,7 +93,8 @@
 .kf-page-priv
   border-left: 1px solid #eff2f7
 
-[data-kept^=p] .kf-page-keep:before
+.public .kf-page-keep:before
+.private .kf-page-keep:before
 .kf-page-priv:before
   content: " "
   display: inline-block
@@ -103,42 +104,44 @@
   vertical-align: -1px
   margin-right: 8px
 
-:not([data-kept=pri]) .kf-page-priv:before
+.kf-page-priv:before
   width: 10px
   background-position: -11px 0
 
-[data-kept=pri] .kf-page-priv:before
-  width: 13px
-  background-position: -21px 0
+  .private &
+    width: 13px
+    background-position: -21px 0
 
 .kf-page-keep:after
   content: "Keep"
 
-  [data-kept^=p] &
+  .public &
+  .private &
     content: "Unkeep"
 
-  :not([data-n="1"]) &
+  .multiple &
     content: "Keep all"
 
-  [data-kept^=p] :not([data-n="1"]) &
+  .multiple.public &
+  .multiple.private &
     content: "Unkeep all"
 
 .kf-page-priv:after
   content: "Keep privately"
 
-  [data-kept=pub] &
+  .public &
     content: "Make private"
 
-  [data-kept=pri] &
+  .private &
     content: "Make public"
 
-  :not([data-n="1"]) &
+  .multiple &
     content: "Keep all privately"
 
-  [data-kept=pub] not([data-n="1"]) &
+  .multiple.public &
     content: "Make all private"
 
-  [data-kept=pri] :not([data-n="1"]) &
+  .multiple.private &
     content: "Make all public"
 
 .kf-page-who
@@ -147,18 +150,25 @@
   border-top: 1px solid #cdd6e0
   margin: 18px 0 5px
 
+.kf-page-who
+  .kf-keep-who-text
+    color: #556179
+
 .kf-page-who-pics
   margin: 5px 0 13px
   white-space: nowrap
 
-  .pic
+  .kf-keep-who-pic
     position: relative
     display: inline-block
     width: 38px
     height: 38px
     border-radius: 2px
-    margin-right: 1px
+    margin-right: -2px
     background-size: 100%
+
+    &.me
+      border-radius: 2px
 
 .kf-page-who-text
   font-size: 12px
@@ -192,3 +202,196 @@
 
     &:before
       color: rgba(0,137,213,.35)
+
+.page-colls
+  margin: 18px 0 5px
+  border-top: 1px solid #cdd6e0
+  padding: 11px 0 0
+
+  .page-coll-list
+    margin-top: 10px
+
+  .page-coll-list>li
+    display: inline-block
+
+  li
+    line-height: 24px
+    vertical-align: top
+
+  a[href]
+    color: #fff
+    vertical-align: top
+
+.page-coll
+  position: relative
+  overflow: hidden
+  white-space: nowrap
+  background-color: #b8c5d2
+  margin: 0 3px 3px 0
+  font-size: 13px
+  line-height: 24px
+  -webkit-font-smoothing: antialiased
+
+  a:hover
+    background-color: #a0b1c2
+    display: inline-block
+
+  a:active
+    background-color: #8699ab
+
+  &.removed
+    width: 0 !important
+    -webkit-transition: width .12s ease-in-out
+    transition: width .12s ease-in-out
+
+.page-coll-a
+  padding: 0 16px
+  long-text()
+
+.page-coll:hover > .page-coll-a
+  padding: 0 25px 0 7px
+
+
+.page-coll-x
+  position: absolute
+  right: 0
+  top: 0
+  bottom: 0
+  width: 0
+  text-align: center
+  background-color: inherit
+  transition: width .05s ease-in-out
+
+  .page-coll:hover> &
+    width: 18px
+
+.page-coll-new
+  position: relative
+
+.page-coll-add-circle
+  display: inline-block
+  white-space: nowrap
+  font-size: 0
+  vertical-align: top
+  width: 18px
+  height: 18px
+  border-radius: 50%
+  vertical-align: bottom
+  position: relative
+  bottom: 3px
+  background: url("data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7") center/8px no-repeat, #b8c5d2
+  image-rendering: -moz-crisp-edges
+  image-rendering: -webkit-optimize-contrast
+  image-rendering: crisp-edges
+  margin-top: 6px
+
+  &:hover
+    background: url("data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7") center/8px no-repeat, #a0b1c2
+
+.page-coll-add
+  position: relative
+  overflow: hidden
+  white-space: nowrap
+  background-color: #b8c5d2
+  margin: 0 3px 3px 0
+  font-size: 13px
+  line-height: 24px
+  -webkit-font-smoothing: antialiased
+  display: inline-block
+  padding-right: 12px
+  color: #fff
+  font-size: 13px
+
+  &:hover
+    background-color: #a0b1c2
+    display: inline-block
+
+  &:active
+    background-color: #8699ab
+
+  .page-coll-add-circle
+    width: 16px
+    height: 16px
+    bottom: 4px
+    margin-left: 8px
+    margin-right: 4px
+    background-color: #f7fafe
+    background-image: url("data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7")
+
+
+.page-coll-sizer
+  position: absolute
+  visibility: hidden
+
+
+.page-coll-sizer,
+input.page-coll-input
+  display: inline-block
+  border: 1px solid #cdd6e0
+  padding: 0 16px
+  height: 24px
+  vertical-align: top
+  -webkit-box-sizing: border-box
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  color: inherit
+  font-family: inherit
+  font-size: 13px
+  -webkit-font-smoothing: antialiased
+  -webkit-transition: width 60ms ease-in-out
+  transition: width 60ms ease-in-out
+  min-width: 150px
+
+.page-coll-opt-hidden
+  @extend input.page-coll-input
+  visibility: hidden
+  position: absolute
+  long-text()
+
+.page-coll-opts
+  display: none
+  position: absolute
+  border: 1px solid #cdd6e0
+  border-top: none
+  -webkit-box-sizing: border-box
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  background-color: #fff
+  font-size: 13px
+  width: 100%
+
+
+.page-coll-opts:not(:empty)
+  display: block
+
+.page-coll-opt
+  position: relative
+  padding: 0 16px
+  font-size: 13px
+  color: #888b93
+  -webkit-font-smoothing: antialiased
+  cursor: pointer
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.page-coll-opt.current
+  background-color: #f1f2f6
+
+.new-label
+  position: absolute
+  right: 8px
+  top: 5px
+  height: 14px
+  line-height: 13px
+  padding: 1px 4px
+  font-size: 9px
+  font-weight: bold
+  background-color: #b8c5d2
+  color: white
+  border-radius: 2px
+  -webkit-font-smoothing: subpixel-antialiased
+
+.page-coll-opt[data-id=""]:not(:first-child)
+  border-top: 1px solid #cdd6e0
+

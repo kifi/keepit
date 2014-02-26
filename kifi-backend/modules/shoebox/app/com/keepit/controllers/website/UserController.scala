@@ -12,7 +12,7 @@ import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.model._
 import play.api.libs.json.Json.toJson
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{ABookUploadConf, ABookServiceClient}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -41,6 +41,7 @@ import play.api.libs.json.JsNumber
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
+import com.keepit.inject.FortyTwoConfig
 
 class UserController @Inject() (
   db: Database,
@@ -65,8 +66,9 @@ class UserController @Inject() (
   abookServiceClient: ABookServiceClient,
   airbrakeNotifier: AirbrakeNotifier,
   authCommander: AuthCommander,
-  emailAddressRepo: EmailAddressRepo,
-  searchClient: SearchServiceClient
+  searchClient: SearchServiceClient,
+  abookUploadConf: ABookUploadConf,
+  fortytwoConfig: FortyTwoConfig
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // hotspot -- need optimization; gather timing info for analysis
@@ -235,7 +237,7 @@ class UserController @Inject() (
     }
   }
 
-  private val siteUrl = current.configuration.getString("application.baseUrl").get
+
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
@@ -245,63 +247,9 @@ class UserController @Inject() (
       if (hasInvalidEmails) {
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
+        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmailId, _))
         db.readWrite { implicit session =>
-          val pendingPrimary = userValueRepo.getValue(request.userId, "pending_primary_email")
-          for (emails <- userData.emails.map(_.toSet)) {
-            val emailStrings = emails.map(_.address)
-            val (existing, toRemove) = emailRepo.getAllByUser(request.user.id.get).partition(em => emailStrings contains em.address)
-            // Remove missing emails
-            for (email <- toRemove) {
-              val isPrimary = request.user.primaryEmailId.isDefined && (request.user.primaryEmailId.get == email.id.get)
-              val isLast = existing.isEmpty
-              val isLastVerified = !existing.exists(em => em != email && em.verified)
-              if (!isPrimary && !isLast && !isLastVerified) {
-                if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
-                  userValueRepo.clearValue(request.userId, "pending_primary_email")
-                }
-                emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
-              }
-            }
-            // Add new emails
-            for (address <- emailStrings -- existing.map(_.address)) {
-              if (emailRepo.getByAddressOpt(address).isEmpty) {
-                val emailAddr = emailAddressRepo.save(EmailAddress(userId = request.userId, address = address).withVerificationCode(clock.now))
-                val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
-                postOffice.sendMail(ElectronicMail(
-                  from = EmailAddresses.NOTIFICATIONS,
-                  to = Seq(GenericEmailAddress(address)),
-                  subject = "Kifi.com | Please confirm your email address",
-                  htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-                  category = NotificationCategory.User.EMAIL_CONFIRMATION
-                ))
-              }
-            }
-            // Set the correct email as primary
-            for (emailInfo <- emails) {
-              if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
-                val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
-                emailRecordOpt.collect { case emailRecord if emailRecord.userId == request.user.id.get =>
-                  if (emailRecord.verified) {
-                    if (request.user.primaryEmailId.isEmpty || request.user.primaryEmailId.get != emailRecord.id.get) {
-                      updateUserPrimaryEmail(request.userId, emailRecord.id.get)
-                    }
-                  } else {
-                    userValueRepo.setValue(request.userId, "pending_primary_email", emailInfo.address)
-                  }
-                }
-              }
-            }
-          }
-          userValueRepo.getValue(request.userId, "pending_primary_email").map { pp =>
-            emailRepo.getByAddressOpt(pp) match {
-              case Some(em) =>
-                if (em.verified && em.address == pp) {
-                  updateUserPrimaryEmail(request.userId, em.id.get)
-                }
-              case None => userValueRepo.clearValue(request.userId, "pending_primary_email")
-            }
-          }
           userData.description foreach { description =>
             val trimmed = description.trim
             if (trimmed != "") {
@@ -325,12 +273,6 @@ class UserController @Inject() (
     } getOrElse {
       BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
-  }
-
-  private def updateUserPrimaryEmail(userId: Id[User], emailId: Id[EmailAddress])(implicit session: RWSession) = {
-    userValueRepo.clearValue(userId, "pending_primary_email")
-    val currentUser = userRepo.get(userId)
-    userRepo.save(currentUser.copy(primaryEmailId = Some(emailId)))
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
@@ -451,12 +393,12 @@ class UserController @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  private val url = current.configuration.getString("application.baseUrl").get
+  private val url = fortytwoConfig.applicationBaseUrl
   def resendVerificationEmail(email: String) = HtmlAction.authenticated { implicit request =>
     db.readWrite { implicit s =>
-      emailAddressRepo.getByAddressOpt(email) match {
+      emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
-          val emailAddr = emailAddressRepo.save(emailAddressRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
+          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS,
@@ -525,7 +467,6 @@ class UserController @Inject() (
   }
 
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  val abookUploadTimeoutThreshold = sys.props.getOrElse("abook.upload.timeout.threshold", "30").toInt * 1000
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = HtmlAction.authenticated { request =>
     import ABookInfoStates._
     val ts = System.currentTimeMillis
@@ -546,7 +487,7 @@ class UserController @Inject() (
               case PENDING => resp
             }
         }
-        if ((System.currentTimeMillis - ts) > abookUploadTimeoutThreshold) {
+        if ((System.currentTimeMillis - ts) > abookUploadConf.timeoutThreshold * 1000) {
           done.set(true)
           Some(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>")
         } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")

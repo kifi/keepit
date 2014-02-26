@@ -21,6 +21,7 @@ import com.keepit.queue._
 import play.api.libs.json._
 import play.api.Play._
 import play.api.Play
+import com.keepit.common.aws.AwsConfig
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -48,7 +49,8 @@ class NormalizedURIRepoImpl @Inject() (
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo],
   taskQ:NormalizationUpdateJobQueue,
-  airbrake: AirbrakeNotifier)
+  airbrake: AirbrakeNotifier,
+  awsConfig: AwsConfig)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 
   import db.Driver.simple._
@@ -196,7 +198,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    *
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
-  val sqsEnable:Boolean = (Play.maybeApplication.isDefined && Play.current.configuration.getBoolean("amazon.sqs.enable").getOrElse(false)) // todo(ray):removeme
+  val sqsEnable:Boolean = awsConfig.sqsEnabled // todo(ray):removeme
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {

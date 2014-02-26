@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.heimdal._
-import com.keepit.social.BasicUser
+import com.keepit.social.{SecureSocialClientIds, BasicUser}
 import com.keepit.common.crypto.SimpleDESCrypt
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -28,7 +28,8 @@ class ExtAuthController @Inject() (
   socialUserRepo: SocialUserInfoRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  heimdal: HeimdalServiceClient)
+  heimdal: HeimdalServiceClient,
+  secureSocialClientIds: SecureSocialClientIds)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private val crypt = new SimpleDESCrypt
@@ -120,7 +121,7 @@ class ExtAuthController @Inject() (
 
   // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
   def logOut = JsonAction.authenticated { implicit request =>
-    Ok(views.html.logOut(Some(request.identity))).withNewSession
+    Ok(views.html.logOut(Some(request.identity), secureSocialClientIds.facebook)).withNewSession
   }
 
   def whois = JsonAction.authenticated { request =>

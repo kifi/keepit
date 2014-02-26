@@ -63,7 +63,7 @@ class MobileBookmarksController @Inject() (
   def keepMultiple() = JsonAction.authenticated { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
       val source = BookmarkSource.mobile
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
       val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
       Ok(Json.obj(
         "keeps" -> keeps,

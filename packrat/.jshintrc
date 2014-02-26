@@ -55,7 +55,7 @@
 	"regexdash": false,
 	// This option suppresses warnings about unescaped - in the end of regular expressions.
 	"scripturl": false,
-	"smarttabs": false,
+	"smarttabs": true,
 	"shadow": false,
 	"sub": false,
 	"supernew": false,
@@ -95,5 +95,7 @@
     // 3rd Party Libraries
     "Q": true,
     "_": true
-  }
+  },
+
+  "-W093": false
 }

@@ -1,0 +1,32 @@
+@(user:User)
+
+@admin("Typeahead Search", stylesheets=List("admin_user")) {
+    <h2>Refresh Filter</h2>
+    <br/>
+    <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.TypeaheadAdminController.refreshPrefixFilter(user.id.get)">
+        <div class="form-group">
+            UserId:<input type="number" name="userId" value="@user.id.get">
+            <input type="submit" name="refresh value="Refresh!">
+        </div>
+    </form>
+    <br/>
+
+    <h2>Prefix Search</h2>
+    <br/>
+    <table class="table table-striped">
+        <tr>
+            <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.TypeaheadAdminController.search(user.id.get)" target="search_frame">
+                <div class="form-group">
+                    UserId:<input type="number" name="userId" value="@user.id.get">
+                </div>
+                <div class="form-group">
+                    Prefix:<input type="text" name="search" onkeyup="submit()">
+                </div>
+            </form>
+        </tr>
+    </table>
+    <div>
+        <iframe name="search_frame" src="@com.keepit.controllers.admin.routes.TypeaheadAdminController.search(user.id.get)" width="800"/>
+    </div>
+    <br/>
+}

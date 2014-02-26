@@ -32,7 +32,7 @@ class AirbrakeTest extends Specification with TestInjector {
     "deployment payload" in {
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
-        formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/FortyTwoEng/keepit&deploy[scm_revision]=0.0.0"
+        formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/FortyTwoEng/keepit&deploy[scm_revision]=00000000-0000-TEST-0000000"
       }
     }
 
@@ -71,7 +71,7 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "error" \ "message").head === <message>[0L] java.lang.NullPointerException</message>
         (xml \ "error" \ "backtrace" \ "line").size === 188
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
-        (xml \ "server-environment" \ "app-version").head.text === "0.0.0"
+        (xml \ "server-environment" \ "app-version").head.text === "00000000-0000-TEST-0000000"
         (xml \ "server-environment" \ "project-root").head.text === "TEST_MODE"
       }
     }

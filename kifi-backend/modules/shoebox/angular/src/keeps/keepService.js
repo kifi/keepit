@@ -3,295 +3,406 @@
 angular.module('kifi.keepService', [])
 
 .factory('keepService', [
-	'$http', 'env', '$q', '$timeout', '$document',
-	function ($http, env, $q, $timeout, $document) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope',
+  function ($http, env, $q, $timeout, $document, $rootScope) {
 
-		var list = [],
-			selected = {},
-			before = null,
-			end = false,
-			previewed = null,
-			limit = 30,
-			isDetailOpen = false,
-			singleKeepBeingPreviewed = false,
-			previewUrls = {},
-			doc = $document[0];
+    var list = [],
+      selected = {},
+      before = null,
+      end = false,
+      previewed = null,
+      limit = 30,
+      isDetailOpen = false,
+      singleKeepBeingPreviewed = false,
+      previewUrls = {},
+      doc = $document[0];
 
-		function getKeepId(keep) {
-			if (keep) {
-				if (typeof keep === 'string') {
-					return keep;
-				}
-				return keep.id || null;
-			}
-			return null;
-		}
+    function getKeepId(keep) {
+      if (keep) {
+        if (typeof keep === 'string') {
+          return keep;
+        }
+        return keep.id || null;
+      }
+      return null;
+    }
+    function indexById(id) {
+      for (var i = 0, l = list.length; i < l; i++) {
+        if (list[i].id === id) {
+          return i;
+        }
+      }
+      return -1;
+    }
 
-		var api = {
-			list: list,
+    $rootScope.$on('tags.remove', function (tagId) {
+      _.forEach(list, function (keep) {
+        if (keep.tagList) {
+          keep.tagList = keep.tagList.filter(function (tag) {
+            return tag.id !== tagId;
+          });
+        }
+      });
+    });
 
-			isDetailOpen: function () {
-				return isDetailOpen;
-			},
+    $rootScope.$on('tags.removeFromKeep', function (e, data) {
+      var tagId = data.tagId,
+          keepId = data.keepId;
+      _.forEach(list, function (keep) {
+        if (keep.id === keepId && keep.tagList) {
+          keep.tagList = keep.tagList.filter(function (tag) {
+            return tag.id !== tagId;
+          });
+        }
+      });
+    });
 
-			isSingleKeep: function () {
-				return singleKeepBeingPreviewed;
-			},
+    $rootScope.$on('tags.addToKeep', function (e, data) {
+      var tag = data.tag,
+          keepId = data.keep.id;
+      _.forEach(list, function (keep) {
+        if (keep.id === keepId && keep.tagList) {
+          var isAlreadyThere = _.find(keep.tagList, function (existingTag) {
+            return existingTag.id === tag.id;
+          });
+          if (!isAlreadyThere) {
+            keep.tagList.push(tag);
+          }
+        }
+      });
+    });
 
-			getPreviewed: function () {
-				return previewed || null;
-			},
+    var api = {
+      list: list,
 
-			isPreviewed: function (keep) {
-				return !!previewed && previewed === keep;
-			},
+      isDetailOpen: function () {
+        return isDetailOpen;
+      },
 
-			preview: function (keep) {
-				if (keep == null) {
-					singleKeepBeingPreviewed = false;
-					isDetailOpen = false;
-				}
-				else {
-					singleKeepBeingPreviewed = true;
-					isDetailOpen = true;
-				}
-				previewed = keep;
-				api.getChatter(previewed);
+      isSingleKeep: function () {
+        return singleKeepBeingPreviewed;
+      },
 
-				return keep;
-			},
+      getPreviewed: function () {
+        return previewed || null;
+      },
 
-			togglePreview: function (keep) {
-				if (api.isPreviewed(keep) && _.size(selected) > 1) {
-					previewed = null;
-					isDetailOpen = true;
-					singleKeepBeingPreviewed = false;
-					return null;
-				} else if (api.isPreviewed(keep)) {
-					return api.preview(null);
-				}
-				return api.preview(keep);
-			},
+      isPreviewed: function (keep) {
+        return !!previewed && previewed === keep;
+      },
 
-			isSelected: function (keep) {
-				var id = getKeepId(keep);
-				if (id) {
-					return selected.hasOwnProperty(id);
-				}
-				return false;
-			},
+      preview: function (keep) {
+        if (keep == null) {
+          singleKeepBeingPreviewed = false;
+          isDetailOpen = false;
+        }
+        else {
+          singleKeepBeingPreviewed = true;
+          isDetailOpen = true;
+        }
+        previewed = keep;
+        api.getChatter(previewed);
 
-			select: function (keep) {
-				var id = getKeepId(keep);
-				if (id) {
-					isDetailOpen = true;
-					selected[id] = true;
-					if (_.size(selected) === 1) {
-						api.preview(keep);
-					}
-					else {
-						previewed = null;
-						singleKeepBeingPreviewed = false;
-					}
-					return true;
-				}
-				return false;
-			},
+        return keep;
+      },
 
-			unselect: function (keep) {
-				var id = getKeepId(keep);
-				if (id) {
-					delete selected[id];
-					var countSelected = _.size(selected);
-					if (countSelected === 0 && isDetailOpen === true) {
-						api.preview(keep);
-					}
-					else if (countSelected === 1 && isDetailOpen === true) {
-						api.preview(_.keys(selected)[0]);
-					}
-					else {
-						previewed = null;
-						singleKeepBeingPreviewed = false;
-					}
-					return true;
-				}
-				return false;
-			},
+      togglePreview: function (keep) {
+        if (api.isPreviewed(keep) && _.size(selected) > 1) {
+          previewed = null;
+          isDetailOpen = true;
+          singleKeepBeingPreviewed = false;
+          return null;
+        }
+        else if (api.isPreviewed(keep)) {
+          return api.preview(null);
+        }
+        return api.preview(keep);
+      },
 
-			toggleSelect: function (keep) {
-				if (api.isSelected(keep)) {
-					return api.unselect(keep);
-				}
-				return api.select(keep);
-			},
+      isSelected: function (keep) {
+        return keep && keep.id && !!selected[keep.id];
+      },
 
-			getFirstSelected: function () {
-				var id = _.keys(selected)[0];
-				if (!id) {
-					return null;
-				}
+      select: function (keep) {
+        var id = keep.id;
+        if (id) {
+          isDetailOpen = true;
+          selected[id] = keep;
+          if (_.size(selected) === 1) {
+            api.preview(keep);
+          }
+          else {
+            previewed = null;
+            singleKeepBeingPreviewed = false;
+          }
+          return true;
+        }
+        return false;
+      },
 
-				for (var i = 0, l = list.length, keep; i < l; i++) {
-					keep = list[i];
-					if (keep.id === id) {
-						return keep;
-					}
-				}
+      unselect: function (keep) {
+        var id = keep.id;
+        if (id) {
+          delete selected[id];
+          var countSelected = _.size(selected);
+          if (countSelected === 0 && isDetailOpen === true) {
+            api.preview(keep);
+          }
+          else if (countSelected === 1 && isDetailOpen === true) {
+            api.preview(_.values(selected)[0]);
+          }
+          else {
+            previewed = null;
+            singleKeepBeingPreviewed = false;
+          }
+          return true;
+        }
+        return false;
+      },
 
-				return null;
-			},
+      toggleSelect: function (keep) {
+        if (api.isSelected(keep)) {
+          return api.unselect(keep);
+        }
+        return api.select(keep);
+      },
 
-			getSelectedLength: function () {
-				return _.keys(selected).length;
-			},
+      getFirstSelected: function () {
+        var id = _.keys(selected)[0];
+        if (!id) {
+          return null;
+        }
 
-			getSelected: function () {
-				return list.filter(function (keep) {
-					return keep.id in selected;
-				});
-			},
+        for (var i = 0, l = list.length, keep; i < l; i++) {
+          keep = list[i];
+          if (keep.id === id) {
+            return keep;
+          }
+        }
 
-			selectAll: function () {
-				selected = _.reduce(list, function (map, keep) {
-					map[keep.id] = true;
-					return map;
-				}, {});
-				if (list.length === 0) {
-					api.clearState();
-				}
-				else if (list.length === 1) {
-					api.preview(list[0]);
-				}
-				else {
-					previewed = null;
-					isDetailOpen = true;
-					singleKeepBeingPreviewed = false;
-				}
-			},
+        return null;
+      },
 
-			unselectAll: function () {
-				selected = {};
-				api.clearState();
-			},
+      getSelectedLength: function () {
+        return _.keys(selected).length;
+      },
 
-			clearState: function () {
-				previewed = null;
-				isDetailOpen = false;
-				singleKeepBeingPreviewed = false;
-			},
+      getSelected: function () {
+        return list.filter(function (keep) {
+          return keep.id in selected;
+        });
+      },
 
-			isSelectedAll: function () {
-				return list.length && list.length === api.getSelectedLength();
-			},
+      selectAll: function () {
+        selected = _.reduce(list, function (map, keep) {
+          map[keep.id] = true;
+          return map;
+        }, {});
+        if (list.length === 0) {
+          api.clearState();
+        }
+        else if (list.length === 1) {
+          api.preview(list[0]);
+        }
+        else {
+          previewed = null;
+          isDetailOpen = true;
+          singleKeepBeingPreviewed = false;
+        }
+      },
 
-			toggleSelectAll: function () {
-				if (api.isSelectedAll()) {
-					return api.unselectAll();
-				}
-				return api.selectAll();
-			},
+      unselectAll: function () {
+        selected = {};
+        api.clearState();
+      },
 
-			resetList: function () {
-				before = null;
-				list.length = 0;
-			},
+      clearState: function () {
+        previewed = null;
+        isDetailOpen = false;
+        singleKeepBeingPreviewed = false;
+      },
 
-			getList: function (params) {
-				var url = env.xhrBase + '/keeps/all';
-				params = params || {};
-				params.count = params.count || limit;
-				params.before = before || void 0;
+      isSelectedAll: function () {
+        return list.length && list.length === api.getSelectedLength();
+      },
 
-				var config = {
-					params: params
-				};
+      toggleSelectAll: function () {
+        if (api.isSelectedAll()) {
+          return api.unselectAll();
+        }
+        return api.selectAll();
+      },
 
-				if (end) {
-					return $q.when([]);
-				}
+      resetList: function () {
+        before = null;
+        list.length = 0;
+      },
 
-				return $http.get(url, config).then(function (res) {
-					var data = res.data,
-						keeps = data.keeps || [];
-					if (!keeps.length) {
-						end = true;
-					}
+      getList: function (params) {
+        var url = env.xhrBase + '/keeps/all';
+        params = params || {};
+        params.count = params.count || limit;
+        params.before = before || void 0;
 
-					if (!data.before) {
-						list.length = 0;
-					}
+        var config = {
+          params: params
+        };
 
-					list.push.apply(list, keeps);
-					before = list.length ? list[list.length - 1].id : null;
+        if (end) {
+          return $q.when([]);
+        }
 
-					_.forEach(keeps, function (keep) {
-						keep.isMine = true;
-					});
+        return $http.get(url, config).then(function (res) {
+          var data = res.data,
+            keeps = data.keeps || [];
+          if (!keeps.length) {
+            end = true;
+          }
 
-					return keeps;
-				}).then(function (list) {
-					api.fetchScreenshotUrls(list).then(function (urls) {
-						$timeout(function () {
-							api.prefetchImages(urls);
-						});
-						_.forEach(list, function (keep) {
-							keep.screenshot = urls[keep.url];
-						});
-					});
-					return list;
-				});
-			},
+          if (!data.before) {
+            list.length = 0;
+          }
 
-			joinTags: function (keeps, tags) {
-				var idMap = _.reduce(tags, function (map, tag) {
-					map[tag.id] = tag;
-					return map;
-				}, {});
+          list.push.apply(list, keeps);
+          before = list.length ? list[list.length - 1].id : null;
 
-				_.forEach(keeps, function (keep) {
-					keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
-						return idMap[tagId] || null;
-					});
-				});
-			},
+          _.forEach(keeps, function (keep) {
+            keep.isMyBookmark = true;
+          });
 
-			getChatter: function (keep) {
-				if (keep != null) {
-					var url = env.xhrBaseEliza + '/chatter';
+          return keeps;
+        }).then(function (list) {
+          api.fetchScreenshotUrls(list).then(function (urls) {
+            $timeout(function () {
+              api.prefetchImages(urls);
+            });
+            _.forEach(list, function (keep) {
+              keep.screenshot = urls[keep.url];
+            });
+          });
+          return list;
+        });
+      },
 
-					var data = { url: keep.url };
+      joinTags: function (keeps, tags) {
+        var idMap = _.reduce(tags, function (map, tag) {
+          if (tag && tag.id) {
+            map[tag.id] = tag;
+          }
+          return map;
+        }, {});
 
-					return $http.post(url, data).then(function (res) {
-						var data = res.data;
-						keep.conversationCount = data.threads;
-						return data;
-					});
-				}
-				return $q.when([]);
-			},
+        _.forEach(keeps, function (keep) {
+          keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
+            return idMap[tagId] || null;
+          }).filter(function (tag) {
+            return tag != null;
+          });
+        });
+      },
 
-			fetchScreenshotUrls: function (keeps) {
-				if (keeps && keeps.length) {
-					var url = env.xhrBase + '/keeps/screenshot';
-					return $http.post(url, {
-						urls: _.pluck(keeps, 'url')
-					}).then(function (res) {
-						return res.data.urls;
-					});
-				}
-				return $q.when([]);
-			},
+      getChatter: function (keep) {
+        if (keep && keep.url) {
+          var url = env.xhrBaseEliza + '/chatter';
 
-			prefetchImages: function (urls) {
-				_.forEach(urls, function (imgUrl, key) {
-					if (!(key in previewUrls)) {
-						previewUrls[key] = imgUrl;
-						doc.createElement('img').src = imgUrl;
-					}
-				});
-			}
-		};
+          var data = {
+            url: keep.url
+          };
 
-		return api;
-	}
+          return $http.post(url, data).then(function (res) {
+            var data = res.data;
+            keep.conversationCount = data.threads;
+            return data;
+          });
+        }
+        return $q.when({'threads': 0});
+      },
+
+      fetchScreenshotUrls: function (keeps) {
+        if (keeps && keeps.length) {
+          var url = env.xhrBase + '/keeps/screenshot';
+          return $http.post(url, {
+            urls: _.pluck(keeps, 'url')
+          }).then(function (res) {
+            return res.data.urls;
+          });
+        }
+        return $q.when(keeps || []);
+      },
+
+      prefetchImages: function (urls) {
+        _.forEach(urls, function (imgUrl, key) {
+          if (!(key in previewUrls)) {
+            previewUrls[key] = imgUrl;
+            doc.createElement('img').src = imgUrl;
+          }
+        });
+      },
+
+      keep: function (keeps, isPrivate) {
+        if (!(keeps && keeps.length)) {
+          return $q.when(keeps || []);
+        }
+
+        isPrivate = !! isPrivate;
+
+        var url = env.xhrBase + '/keeps/add';
+        return $http.post(url, {
+          keeps: keeps.map(function (keep) {
+            return {
+              title: keep.title,
+              url: keep.url,
+              isPrivate: isPrivate
+            };
+          })
+        }).then(function () {
+          _.forEach(keeps, function (keep) {
+            keep.isMyBookmark = true;
+            keep.isPrivate = isPrivate;
+          });
+          return keeps;
+        });
+      },
+
+      unkeep: function (keeps) {
+        if (!(keeps && keeps.length)) {
+          return $q.when(keeps || []);
+        }
+
+        var url = env.xhrBase + '/keeps/remove';
+        return $http.post(url, _.map(keeps, function (keep) {
+          return {
+            url: keep.url
+          };
+        })).then(function () {
+          var map = _.reduce(keeps, function (map, keep) {
+            map[keep.id] = true;
+            return map;
+          }, {});
+
+          _.remove(list, function (keep) {
+            return map[keep.id];
+          });
+
+          return keeps;
+        });
+      },
+
+      toggleKeep: function (keeps, isPrivate) {
+        var isKept = _.every(keeps, 'isMyBookmark');
+        isPrivate = isPrivate == null ? _.some(keeps, 'isPrivate') : !! isPrivate;
+
+        if (isKept) {
+          return api.unkeep(keeps);
+        }
+        return api.keep(keeps, isPrivate);
+      },
+
+      togglePrivate: function (keeps) {
+        return api.keep(keeps, !_.every(keeps, 'isPrivate'));
+      }
+    };
+
+    return api;
+  }
 ]);

@@ -10,12 +10,14 @@ import com.keepit.common.mail.GenericEmailAddress
 import scala.util.{Success, Failure}
 import play.api.data.Form
 import play.api.data.Forms.{tuple, text, optional}
+import com.keepit.social.SecureSocialClientIds
 
 class EmailOptOutController @Inject() (
   db: Database,
   actionAuthenticator: ActionAuthenticator,
   emailOptOutRepo: EmailOptOutRepo,
-  commander: EmailOptOutCommander)
+  commander: EmailOptOutCommander,
+  secureSocialClientIds: SecureSocialClientIds)
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def optOut(optOutToken: String) = Action { implicit request =>
@@ -27,7 +29,7 @@ class EmailOptOutController @Inject() (
           emailOptOutRepo.getByEmailAddress(addr).collect { case c => c.category }
         }
 
-        Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg")))
+        Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg"), secureSocialClientIds))
       case Failure(ex) => BadRequest(ex.toString)
     }
 

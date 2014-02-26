@@ -43,9 +43,9 @@ class URIGraphController @Inject()(
   }
 
   def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
-    val infosFuture = future {
+    future {
       val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
-      ids.map{ id =>
+      val info = ids.map{ id =>
         activeShards.find(id) match {
           case Some(shard) =>
             val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
@@ -54,8 +54,8 @@ class URIGraphController @Inject()(
             throw new Exception("shard not found")
         }
       }
+      Ok(Json.toJson(info))
     }
-    infosFuture.map(info => Ok(Json.toJson(info)))
   }
 
   def indexInfo = Action { implicit request =>

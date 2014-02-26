@@ -48,7 +48,7 @@ case class ScrapeInfo(
 
   def withFailure()(implicit config: ScraperConfig) = {
     val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))
-    val newInterval = min(config.maxInterval, (interval + config.intervalIncrement))
+    val newInterval = min(config.intervalConfig.maxInterval, (interval + config.intervalConfig.intervalIncrement))
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(backoff) + config.randomDelay),
          interval = newInterval,
@@ -56,7 +56,7 @@ case class ScrapeInfo(
   }
 
   def withDocumentUnchanged()(implicit config: ScraperConfig) = {
-    val newInterval = min(config.maxInterval, (interval + config.intervalIncrement))
+    val newInterval = min(config.intervalConfig.maxInterval, (interval + config.intervalConfig.intervalIncrement))
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),
          interval = newInterval,
@@ -64,7 +64,7 @@ case class ScrapeInfo(
   }
 
   def withDocumentChanged(newSignature: String)(implicit config: ScraperConfig) = {
-    val newInterval = max(config.minInterval, interval - config.intervalDecrement)
+    val newInterval = max(config.intervalConfig.minInterval, interval - config.intervalConfig.intervalDecrement)
     val now = currentDateTime
     copy(lastScrape = now,
          nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),

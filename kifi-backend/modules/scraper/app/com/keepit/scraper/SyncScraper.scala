@@ -64,7 +64,7 @@ class SyncScraper @Inject() (
           latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
           latestUri.state != NormalizedURIStates.SCRAPE_WANTED &&
           latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
-          signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+          signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
           helper.syncSaveScrapeInfo(info.withDocumentUnchanged())

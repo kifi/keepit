@@ -57,7 +57,7 @@ class HomeController @Inject() (
   }
 
   private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
-    db.readWrite { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
+    db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
   }
 
   def version = Action {
@@ -83,8 +83,6 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.terms(isLoggedIn)))
   }
@@ -95,8 +93,6 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.privacy(isLoggedIn)))
   }
@@ -211,7 +207,7 @@ class HomeController @Inject() (
   }
 
   def install = HtmlAction.authenticated { implicit request =>
-    val toBeNotified = db.readWrite { implicit session =>
+    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
       for {
         su <- socialUserRepo.getByUser(request.user.id.get)
         invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)

@@ -42,7 +42,7 @@ trait HttpFetcher {
   def close()
 }
 
-class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties:SchedulingProperties) extends HttpFetcher with Logging with ScraperUtils {
+class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties:SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
@@ -106,7 +106,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   val httpClient = httpClientBuilder.build()
 
   val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // Play reference can be removed
-  val Q_SIZE_THRESHOLD = sys.props.get("fetcher.queue.size.threshold") map (_.toInt) getOrElse (100)
+  val Q_SIZE_THRESHOLD = scraperHttpConfig.httpFetcherQSizeThreshold
 
   case class FetchInfo(url:String, ts:Long, htpGet:HttpGet, thread:Thread) {
     val killCount = new AtomicInteger()
@@ -199,7 +199,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
       thread
     }
   })
-  val ENFORCER_FREQ: Int = sys.props.get("scraper.fetcher.enforcer.freq") map (_.toInt) getOrElse (5)
+  val ENFORCER_FREQ: Int = scraperHttpConfig.httpFetcherEnforcerFreq
   if (schedulingProperties.enabled) {
     scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
   }

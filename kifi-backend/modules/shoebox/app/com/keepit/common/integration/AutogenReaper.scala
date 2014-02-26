@@ -45,6 +45,8 @@ class AutogenReaperPluginImpl @Inject() (
 
 private[integration] case class Reap()
 
+case class AutogenReaperConf(deleteSocialUserInfo: Boolean, deleteUser: Boolean)
+
 private[integration] class AutogenReaper @Inject() (
   db: Database,
   userExperimentRepo: UserExperimentRepo,
@@ -57,11 +59,12 @@ private[integration] class AutogenReaper @Inject() (
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
   k2cRepo: KeepToCollectionRepo,
-  airbrake: AirbrakeNotifier
+  airbrake: AirbrakeNotifier,
+  autogenReaperConf: AutogenReaperConf
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  val deleteSocialUserInfo = sys.props.getOrElse("cron.reaper.sui.delete", "true").toBoolean
-  val deleteUser = sys.props.getOrElse("cron.reaper.user.delete", "false").toBoolean // todo
+  val deleteSocialUserInfo = autogenReaperConf.deleteSocialUserInfo
+  val deleteUser = autogenReaperConf.deleteUser
 
   log.info(s"[AutogenReaper.ctr] deleteSUI=$deleteSocialUserInfo deleteUser=$deleteUser")
 

@@ -11,6 +11,7 @@ import play.api.Mode._
 import play.api.libs.json._
 import scala.concurrent.{Future, promise}
 import com.keepit.common.amazon.{AmazonInstanceType, AmazonInstanceInfo}
+import com.keepit.inject.FortyTwoConfig
 
 object ServiceVersion {
   val pattern = """([0-9]{8})-([0-9]{4})-([0-9a-zA-Z_]*)-([0-9a-z]*)""".r
@@ -18,7 +19,7 @@ object ServiceVersion {
 
 case class ServiceVersion(val value: String) {
   override def toString(): String = value
-  lazy val ServiceVersion.pattern(date, time, branch, hash) = value
+  val ServiceVersion.pattern(date, time, branch, hash) = value
 }
 
 sealed abstract class ServiceType(val name: String, val shortName: String, val isCanary: Boolean = false) {
@@ -71,14 +72,15 @@ class FortyTwoServices(
   clock: Clock,
   playMode: Mode,
   compilationTimeFile: Option[URL],
-  currentVersionFile: Option[URL]) {
+  currentVersionFile: Option[URL],
+  fortytwoConfig: FortyTwoConfig) {
 
   val started = clock.now
 
   lazy val currentService: ServiceType = playMode match {
     case Mode.Test => ServiceType.TEST_MODE
     case Mode.Dev => ServiceType.DEV_MODE
-    case Mode.Prod => ServiceType.fromString(Play.current.configuration.getString("application.name").get)
+    case Mode.Prod => ServiceType.fromString(fortytwoConfig.applicationName)
   }
 
   lazy val currentVersion: ServiceVersion = playMode match {
@@ -95,6 +97,6 @@ class FortyTwoServices(
 	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.UTC).parseDateTime(timeStr)
   }
 
-  lazy val baseUrl: String = Play.current.configuration.getString("application.baseUrl").get
+  lazy val baseUrl: String = fortytwoConfig.applicationBaseUrl
 }
 

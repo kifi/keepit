@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.social.SocialNetworkType
+import com.keepit.social.{SecureSocialClientIds, SocialNetworkType}
 
 import play.api.Play._
 import play.api.libs.json.{JsNumber, Json}
@@ -50,7 +50,8 @@ class AuthController @Inject() (
     emailAddressRepo: EmailAddressRepo,
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
-    heimdalServiceClient: HeimdalServiceClient
+    heimdalServiceClient: HeimdalServiceClient,
+    implicit val secureSocialClientIds: SecureSocialClientIds
   ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private val PopupKey = "popup"

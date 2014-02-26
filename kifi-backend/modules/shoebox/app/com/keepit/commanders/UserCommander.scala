@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses, EmailAddressHolder}
+import com.keepit.common.mail._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.{UserIdentity, SocialNetworks}
@@ -19,14 +19,12 @@ import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
+import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient, HeimdalContextBuilder}
 import com.keepit.search.SearchServiceClient
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
-import play.api.Play
-import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
@@ -34,7 +32,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
-
+import com.keepit.inject.FortyTwoConfig
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -100,7 +98,9 @@ class UserCommander @Inject() (
   elizaServiceClient: ElizaServiceClient,
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
-  emailOptOutCommander: EmailOptOutCommander) extends Logging {
+  emailOptOutCommander: EmailOptOutCommander,
+  heimdalClient: HeimdalServiceClient,
+  fortytwoConfig: FortyTwoConfig) extends Logging {
 
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -253,7 +253,7 @@ class UserCommander @Inject() (
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
 
       if (withVerification) {
-        val url = current.configuration.getString("application.baseUrl").get
+        val url = fortytwoConfig.applicationBaseUrl
         db.readWrite { implicit session =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
@@ -338,7 +338,7 @@ class UserCommander @Inject() (
       } getOrElse ""
     }
 
-    abookServiceClient.prefixQuery(userId, limit, search, after) map { paged =>
+    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
       val objs = paged.take(limit).map { e =>
         Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
       }
@@ -604,7 +604,77 @@ class UserCommander @Inject() (
     }
   }
 
+
+  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[EmailAddress]], emails: Seq[EmailInfo]): Unit = {
+    db.readWrite { implicit session =>
+      val pendingPrimary = userValueRepo.getValue(userId, "pending_primary_email")
+      val uniqueEmailStrings = emails.map(_.address).toSet
+      val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmailStrings contains em.address)
+      // Remove missing emails
+      for (email <- toRemove) {
+        val isPrimary = primaryEmailId.isDefined && (primaryEmailId.get == email.id.get)
+        val isLast = existing.isEmpty
+        val isLastVerified = !existing.exists(em => em != email && em.verified)
+        if (!isPrimary && !isLast && !isLastVerified) {
+          if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
+            userValueRepo.clearValue(userId, "pending_primary_email")
+          }
+          emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+        }
+      }
+      // Add new emails
+      for (address <- uniqueEmailStrings -- existing.map(_.address)) {
+        if (emailRepo.getByAddressOpt(address).isEmpty) {
+          val emailAddr = emailRepo.save(EmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
+          val siteUrl = fortytwoConfig.applicationBaseUrl
+          val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+
+          postOffice.sendMail(ElectronicMail(
+            from = EmailAddresses.NOTIFICATIONS,
+            to = Seq(GenericEmailAddress(address)),
+            subject = "Kifi.com | Please confirm your email address",
+            htmlBody = views.html.email.verifyEmail(firstName, verifyUrl).body,
+            category = NotificationCategory.User.EMAIL_CONFIRMATION
+          ))
+        }
+      }
+      // Set the correct email as primary
+      for (emailInfo <- emails) {
+        if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+          val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
+          emailRecordOpt.collect { case emailRecord if emailRecord.userId == userId =>
+            if (emailRecord.verified) {
+              if (primaryEmailId.isEmpty || primaryEmailId.get != emailRecord.id.get) {
+                updateUserPrimaryEmail(emailRecord)
+              }
+            } else {
+              userValueRepo.setValue(userId, "pending_primary_email", emailInfo.address)
+            }
+          }
+        }
+      }
+
+      userValueRepo.getValue(userId, "pending_primary_email").map { pp =>
+        emailRepo.getByAddressOpt(pp) match {
+          case Some(em) =>
+            if (em.verified && em.address == pp) {
+              updateUserPrimaryEmail(em)
+            }
+          case None => userValueRepo.clearValue(userId, "pending_primary_email")
+        }
+      }
+    }
+  }
+
+  def updateUserPrimaryEmail(primaryEmail: EmailAddress)(implicit session: RWSession) = {
+    require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
+    userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
+    val currentUser = userRepo.get(primaryEmail.userId)
+    userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get)))
+    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address))
+  }
 }
+
 
 object DefaultKeeps {
   val orderedTags: Seq[String] = Seq(

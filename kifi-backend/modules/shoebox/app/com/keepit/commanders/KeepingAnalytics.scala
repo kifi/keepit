@@ -103,6 +103,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
         val contextBuilder = new HeimdalContextBuilder
         contextBuilder.data ++= context.data
         contextBuilder += ("action", "unkeptPage")
+        contextBuilder += ("keepSource", keep.source.value)
         contextBuilder += ("isPrivate", keep.isPrivate)
         contextBuilder += ("hasTitle", keep.title.isDefined)
         contextBuilder += ("uriId", keep.uriId.toString)

@@ -13,7 +13,7 @@ import com.keepit.common.db.{Id, ExternalId, State}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.social.{SocialGraphPlugin, SocialNetworks, SocialNetworkType, SocialId}
+import com.keepit.social._
 import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
 import com.keepit.heimdal._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
@@ -26,10 +26,10 @@ import play.api.templates.Html
 import com.keepit.common.mail._
 import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
-import com.keepit.social.SocialId
 import com.keepit.model.Invitation
 import scala.util.{Failure, Try, Success}
 import com.keepit.commanders.{FullSocialId, InviteInfo, InviteCommander}
+import com.keepit.inject.FortyTwoConfig
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -48,7 +48,9 @@ class InviteController @Inject() (db: Database,
   heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
-  inviteCommander: InviteCommander
+  inviteCommander: InviteCommander,
+  fortytwoConfig: FortyTwoConfig,
+  secureSocialClientIds: SecureSocialClientIds
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite = HtmlAction.authenticated { implicit request =>
@@ -57,8 +59,8 @@ class InviteController @Inject() (db: Database,
 
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
 
-  private val url = current.configuration.getString("application.baseUrl").get
-  private val appId = current.configuration.getString("securesocial.facebook.clientId").get
+  private val url = fortytwoConfig.applicationBaseUrl
+  private val appId = secureSocialClientIds.facebook
   private def fbInviteUrl(invite: Invitation): String = {
     db.readOnly(attempts = 2) { implicit ro =>
       val identity = socialUserInfoRepo.get(invite.recipientSocialUserId.get)
@@ -147,7 +149,7 @@ class InviteController @Inject() (db: Database,
             }
             nameOpt.map {
               case Some(name) =>
-                val baseUrl = current.configuration.getString("application.baseUrl").get
+                val baseUrl = fortytwoConfig.applicationBaseUrl
                 val inviter = inviterUserOpt.get.firstName
                 val pageUrl = baseUrl + request.uri
                 val titleText = s"$inviter sent you an invite to kifi"

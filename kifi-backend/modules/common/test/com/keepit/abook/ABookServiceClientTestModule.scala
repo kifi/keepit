@@ -19,4 +19,7 @@ case class TestABookServiceClientModule() extends ABookServiceClientModule {
     new FakeABookServiceClientImpl(airbrakeNotifier, new FakeScheduler())
   }
 
+  @Singleton
+  @Provides
+  def abookUploadConf: ABookUploadConf = ABookUploadConf(30, 200)
 }
