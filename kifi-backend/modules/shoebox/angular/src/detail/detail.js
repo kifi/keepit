@@ -22,7 +22,6 @@ angular.module('kifi.detail',
         scope.me = profileService.me;
 
         scope.$watch(scope.getPreviewed, function (keep) {
-          console.log("[kfDetail]", keep)
           scope.keep = keep;
         });
 
@@ -113,10 +112,21 @@ angular.module('kifi.detail',
         });
 
         scope.$watch('keep', function (keep) {
-          console.log("[kfTagList]", keep)
           scope.tagFilter.name = '';
           filterTags(null);
           scope.hideAddTagDropdown();
+        });
+
+        scope.getCommonTags = function () {
+          var tagLists = _.pluck(scope.getSelectedKeeps(), 'tagList');
+          var tagIds = _.map(tagLists, function (tagList) { return _.pluck(tagList, 'id'); });
+          var commonTagIds = _.intersection.apply(this, tagIds);
+          var tagMap = _.indexBy(_.flatten(tagLists, true), 'id');
+          return _.map(commonTagIds, function (tagId) { return tagMap[tagId]; });
+        }
+
+        scope.$watchCollection(scope.getCommonTags, function (commonTags) {
+          scope.commonTags = commonTags;
         });
 
         function indexOfTag(tag) {
@@ -128,7 +138,7 @@ angular.module('kifi.detail',
 
         function filterTags(tagFilterTerm) {
           function keepHasTag(tagId) {
-            return scope.keep && scope.allTags && scope.keep.tagList && !!_.find(scope.keep.tagList, function (keepTag) {
+            return scope.keep && scope.allTags && scope.commonTags && !!_.find(scope.commonTags, function (keepTag) {
               return keepTag.id === tagId;
             });
           }
@@ -291,7 +301,7 @@ angular.module('kifi.detail',
         };
 
         scope.hasTags = function () {
-          return scope.keep && scope.keep.tagList && scope.keep.tagList.length > 0;
+          return scope.commonTags && scope.commonTags.length > 0;
         };
 
         scope.showAddTagDropdown = function () {
@@ -329,8 +339,8 @@ angular.module('kifi.detail',
           }
         };
 
-        scope.removeTag = function (keep, tag) {
-          tagService.removeKeepsFromTag(tag.id, [keep.id]);
+        scope.removeTagFromSelectedKeeps = function (tag) {
+          tagService.removeKeepsFromTag(tag.id, _.pluck(scope.getSelectedKeeps(), 'id'));
         };
 
         element.on('mousedown', '.page-coll-opt', function () {
@@ -344,6 +354,14 @@ angular.module('kifi.detail',
             scope.hideAddTagDropdown();
           }
         };
+
+        scope.addTagLabel = function () {
+          if (scope.getSelectedKeeps().length == 1) {
+            return "Add a tag to this keep";
+          } else {
+            return "Add a tag to these keeps";
+          }
+        }
 
         scope.highlightTag(null);
       }

@@ -21,17 +21,7 @@
           <a class="kf-page-chatter-messages" href="{{url}}" target="_blank" data-locator="/messages"><span class="chatter-count">{{keep.conversationCount || 0}}</span>{{getPrivateConversationText()}}</a>
         </div>
       </div>
-      <div class="page-colls">
-        <h2 class="kf-detail-header" ng-show="keep.tagList.length > 0">In Tags:</h2>
-        <h2 class="kf-detail-header" ng-show="keep.tagList.length == 0">Tags:</h2>
-        <ul class="page-coll-list">
-          <li class="page-coll" data-id="{{tag.id}}" ng-repeat="tag in keep.tagList">
-            <a class="page-coll-a" href="/tag/{{tag.id}}">{{tag.name}}</a>
-            <a class="page-coll-x" href="javascript:" ng-click="removeTag(keep, tag)">×</a>
-          </li>
-          <span kf-tag-list keep="keep" get-selected-keeps="getSelectedKeeps()"></span>
-        </ul>
-      </div>
+      <span kf-tag-list keep="keep" get-selected-keeps="getSelectedKeeps()"></span>
     </div>
   </div>
 </div>
