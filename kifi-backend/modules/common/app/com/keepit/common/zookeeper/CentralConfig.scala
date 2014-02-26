@@ -5,6 +5,7 @@ import org.apache.zookeeper.{CreateMode, KeeperException}
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
+import com.keepit.common.akka.SafeFuture
 
 // //Sample Usage****************************************
 //
@@ -93,7 +94,7 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
 
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit): Unit = zkClient.session{ zk =>
     watches += ((key, handler))
-    zk.watchNode[String](key.toNode, data => future{ handler(data) })(fromByteArray)
+    zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
   }
 }
 
