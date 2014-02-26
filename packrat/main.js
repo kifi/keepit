@@ -272,7 +272,10 @@ function onSocketConnect() {
 }
 
 function onSocketDisconnect(why) {
-  reportError('socket disconnect (' + why + ')');
+  log('[onSocketDisconnect]', why)();
+  if (api.mode.isDev() !== api.isPackaged()) {
+    ajax('POST', '/error/report', {message: 'socket disconnect (' + why + ')'});
+  }
 }
 
 function getLatestThreads() {
@@ -1025,10 +1028,6 @@ api.port.on({
   },
   import_bookmarks_declined: function() {
     unstore('prompt_to_import_bookmarks')
-  },
-  report_error: function(data, _, tag) {
-    // TODO: filter errors and improve fidelity/completeness of information
-    //reportError(data.message, data.url, data.lineNo);
   },
   toggle_mode: function () {
     if (!api.isPackaged()) {
@@ -2152,13 +2151,3 @@ authenticate(function() {
     store('prompt_to_import_bookmarks', true);
   }
 }, 3000);
-
-function reportError(errMsg, url, lineNo) {
-  log('Reporting error "%s" in %s line %s', errMsg, url, lineNo)();
-  if (api.mode.isDev() !== api.isPackaged()) {
-    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
-  }
-}
-if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
-  window.onerror = reportError;
-}
