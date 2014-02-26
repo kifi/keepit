@@ -24,6 +24,8 @@ angular.module('antiscroll', [])
         };
 
         scope.refreshScroll();
+
+        scope.$on('refreshScroll', scope.refreshScroll);
       },
       template: '<div class="antiscroll-inner" ng-transclude></div>'
     };
