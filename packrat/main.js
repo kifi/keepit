@@ -146,14 +146,14 @@ function insertUpdateChronologically(arr, o, timePropName) {
 // ===== Server requests
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
-  if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
+  if (service === 'GET' || service === 'POST') { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
-  if (typeof data == 'function') {  // shift args if data is missing and done is present
+  if (typeof data === 'function') {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
   }
 
-  if (data && method.match(/^(?:GET|HEAD)$/)) {
+  if (data && method === 'GET') {
     var a = [];
     for (var key in data) {
       if (data.hasOwnProperty(key)) {
@@ -167,7 +167,22 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
     data = null;
   }
 
-  api.request(method, serviceNameToUri(service) + uri, data, done, fail);
+  uri = serviceNameToUri(service) + uri;
+  api.request(
+    method, uri, data, done,
+    fail || (method === 'GET' ? onGetFail.bind(null, uri, done, 1) : null));
+}
+
+function onGetFail(uri, done, failures, req) {
+  if (failures < 10) {
+    var ms = failures * 2000;
+    log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
+    api.timers.setTimeout(
+      api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
+      ms);
+  } else {
+    log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+  }
 }
 
 // ===== Event logging
@@ -265,10 +280,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules();
-  getPrefs();
-  getTags();
-  getFriends();
+  getRules(getPrefs.bind(null, getTags.bind(null, getFriends)));
 }
 
 function onSocketDisconnect(why) {
@@ -1934,47 +1946,51 @@ var elizaBaseUri = devUriOr.bind(0, apiUri("eliza"));
 var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
 var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
 
-function getFriends() {
-  ajax("GET", "/ext/user/friends", function(fr) {
-    log("[getFriends]", fr)();
+function getFriends(next) {
+  ajax('GET', '/ext/user/friends', function gotFriends(fr) {
+    log('[gotFriends]', fr)();
     friends = fr;
     friendsById = {};
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
       friendsById[f.id] = f;
     }
+    if (next) next();
   });
 }
 
-function getTags() {
-  ajax("GET", "/tags", function(arr) {
-    log("[getTags]", arr)();
+function getTags(next) {
+  ajax('GET', '/tags', function gotTags(arr) {
+    log('[gotTags]', arr)();
     tags = arr;
     tagsById = tags.reduce(function(o, tag) {
       o[tag.id] = tag;
       return o;
     }, {});
+    if (next) next();
   });
 }
 
-function getPrefs () {
-  ajax('GET', '/ext/prefs', function (arr) {
-    log('[getPrefs]', arr)();
+function getPrefs(next) {
+  ajax('GET', '/ext/prefs', function gotPrefs(arr) {
+    log('[gotPrefs]', arr)();
     if (me) {
       prefs = arr[1];
       eip = arr[2];
       socket.send(['eip', eip]);
     }
+    if (next) next();
   });
 }
 
-function getRules() {
-  ajax("GET", "/ext/pref/rules", {version: ruleSet.version}, function(o) {
-    log("[getRules]", o)();
+function getRules(next) {
+  ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
+    log('[gotRules]', o)();
     if (o && Object.getOwnPropertyNames(o).length > 0) {
       ruleSet = o.slider_rules;
       urlPatterns = compilePatterns(o.url_patterns);
     }
+    if (next) next();
   });
 }
 
@@ -2021,7 +2037,7 @@ function authenticate(callback, retryMs) {
 }
 
 function startSession(callback, retryMs) {
-  ajax("POST", "/kifi/start", {
+  ajax('POST', '/kifi/start', {
     installation: stored('installation_id'),
     version: api.version
   },
