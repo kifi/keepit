@@ -1337,8 +1337,9 @@ function reloadKifiAppTabs() {
 
 function forEachTabAt() { // (url[, url]..., f)
   var done = {};
-  var f = arguments[arguments.length - 1];
-  for (var i = arguments.length - 1; i--;) {
+  var i = arguments.length - 1;
+  var f = arguments[i];
+  while (--i >= 0) {
     var url = arguments[i];
     if (!done[url]) {
       done[url] = true;
