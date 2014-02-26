@@ -32,10 +32,10 @@ class ElizaSequenceNumberChecker @Inject() (
 
   protected def checkRenormalizationSequenceNumber(): Unit = {
     val elizaRenormalizationSequenceNumber = elizaServiceClient.getRenormalizationSequenceNumber()
-    val shoeboxRenormalizationSequenceNumber = db.readOnly { implicit session => changedUriRepo.getHighestSeqNum().get.value }
+    val shoeboxRenormalizationSequenceNumber = db.readOnly { implicit session => changedUriRepo.getHighestSeqNum().get }
     elizaRenormalizationSequenceNumber.foreach { elizaSeq =>
       log.info(s"[Renormalization] Sequence Numbers of Shoebox: $shoeboxRenormalizationSequenceNumber vs Eliza: $elizaSeq")
-      if (shoeboxRenormalizationSequenceNumber - elizaSeq > threshold) {
+      if (shoeboxRenormalizationSequenceNumber.value - elizaSeq.value > threshold) {
         airbrake.notify(AirbrakeError(new SequenceNumberOffException(s"[Renormalization] Eliza is falling behind, at sequence number $elizaSeq while Shoebox is at $shoeboxRenormalizationSequenceNumber")))
       }
     }

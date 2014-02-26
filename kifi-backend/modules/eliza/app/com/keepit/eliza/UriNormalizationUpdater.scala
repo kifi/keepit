@@ -3,7 +3,7 @@ package com.keepit.eliza
 
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.db.Id
+import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.NormalizedURI
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.logging.Logging
@@ -35,16 +35,16 @@ class UriNormalizationUpdater @Inject() (
     system: ActorSystem
   ) extends Logging {
 
-  centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate _)
+  centralConfig.onChange(URIMigrationSeqNumKey)(seqOpt => checkAndUpdate(seqOpt.map(SequenceNumber.apply)))
 
-  def localSequenceNumber(): Long = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
+  def localSequenceNumber(): SequenceNumber = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
-  def checkAndUpdate(remoteSequenceNumberOpt: Option[Long]) = synchronized {
+  def checkAndUpdate(remoteSequenceNumberOpt: Option[SequenceNumber]) = synchronized {
     try {
       var localSeqNum = localSequenceNumber()
       log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
       remoteSequenceNumberOpt match {
-        case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader) => {
+        case Some(remoteSequenceNumber) if (remoteSequenceNumber > localSeqNum && serviceDiscovery.isLeader) => {
           val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, remoteSequenceNumber)
           updatesFuture.map{ updates =>
             applyUpdates(updates, reapply=true)

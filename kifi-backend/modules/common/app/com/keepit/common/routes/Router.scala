@@ -1,9 +1,7 @@
 package com.keepit.common.routes
 
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{SequenceNumber, ExternalId, Id, State}
 import com.keepit.model._
-import com.keepit.common.db.Id
-import com.keepit.common.db.State
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
@@ -31,6 +29,7 @@ object ParamValue {
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(i.id)
   implicit def idToParam[T](i: Id[T]) = ParamValue(i.id.toString)
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if(i.nonEmpty) e(i.get) else ParamValue("")
+  implicit def seqNumToParam(seqNum: SequenceNumber) = ParamValue(seqNum.value.toString)
 }
 
 abstract class Method(name: String)
@@ -104,7 +103,7 @@ object Shoebox extends Service {
     def getUnfriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/unfriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
-    def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq), Param("highSeq", highSeq))
+    def getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq.value), Param("highSeq", highSeq.value))
     def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
     def assignScrapeTasks(zkId:Long, max:Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")

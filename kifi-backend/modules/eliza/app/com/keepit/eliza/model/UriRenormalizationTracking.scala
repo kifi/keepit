@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.{Model, Id}
+import com.keepit.common.db.{SequenceNumber, Model, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
@@ -17,7 +17,7 @@ case class UriRenormalizationEvent(
     id: Option[Id[UriRenormalizationEvent]] = None,
     createdAt: DateTime = currentDateTime,
     updateAt: DateTime = currentDateTime,
-    sequenceNumber: Long,
+    sequenceNumber: SequenceNumber,
     numIdsChanged: Long,
     idsRetired: Seq[Id[NormalizedURI]]
   )
