@@ -23,6 +23,10 @@ case class RepoEntryUpdated[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryAdded[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryRemoved[M <: Model[M]](model: M) extends RepoModification[M]
 
+object RepoModification{
+  type Listener[M <: Model[M]] = Function1[RepoModification[M], Unit]
+}
+
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
   def all()(implicit session: RSession): Seq[M]
@@ -42,7 +46,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   lazy val dbLog = Logger("com.keepit.db")
 
-  protected val changeListener : Option[RepoModification[M]=>Unit] = None
+  protected val changeListener : Option[RepoModification.Listener[M]] = None
 
 
   type RepoImpl <: RepoTable[M]
