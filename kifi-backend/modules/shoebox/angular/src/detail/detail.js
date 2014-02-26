@@ -125,9 +125,11 @@ angular.module('kifi.detail',
           return _.map(commonTagIds, function (tagId) { return tagMap[tagId]; });
         }
 
-        scope.$watchCollection(scope.getCommonTags, function (commonTags) {
-          scope.commonTags = commonTags;
-        });
+        scope.$watch(function () {
+          return _.pluck(scope.getSelectedKeeps(), 'tagList');
+        }, function () {
+          scope.commonTags = scope.getCommonTags();
+        }, true);
 
         function indexOfTag(tag) {
           if (tag) {
