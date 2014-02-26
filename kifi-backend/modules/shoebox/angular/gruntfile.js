@@ -42,10 +42,11 @@ module.exports = function (grunt) {
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
-					'src/common/lib/bootstrap/bootstrap.css'
+          'src/common/lib/bootstrap/bootstrap.css'
         ],
         libJs: [
           'lib/lodash/dist/lodash.js',
+          'lib/underscore.string/lib/underscore.string.js',
           'lib/jquery/dist/jquery.js',
           'lib/angular/angular.js',
           'lib/angular-cookies/angular-cookies.js',
@@ -63,6 +64,7 @@ module.exports = function (grunt) {
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
+          'lib/underscore.string/dist/underscore.string.min.js',
           'lib/jquery/dist/jquery.min.js',
           'lib/angular/angular.min.js',
           'lib/angular-cookies/angular-cookies.min.js',
