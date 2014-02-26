@@ -39,7 +39,9 @@ angular.module('kifi', [
       .html5Mode(true)
       .hashPrefix('!');
 
-    $routeProvider.otherwise('/');
+    $routeProvider.otherwise({
+      redirectTo: '/'
+    });
 
     $httpProvider.defaults.withCredentials = true;
   }
