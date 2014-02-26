@@ -7,6 +7,7 @@ import com.keepit.common.db.{Id, State}
 import com.keepit.common.time.Clock
 import scala.collection.mutable
 import scala.slick.jdbc.{StaticQuery => Q}
+import scala.slick.util.CloseableIterator
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] {
@@ -18,7 +19,11 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
   def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
-}
+  def getBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
+  def getBySenderIdIter(senderId:Id[User], max:Int)(implicit session: RSession):CloseableIterator[Invitation]
+  def getSocialInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
+  def getEmailInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
+  }
 
 @Singleton
 class InvitationRepoImpl @Inject() (
@@ -100,6 +105,22 @@ class InvitationRepoImpl @Inject() (
 
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation] = {
     (for(b <- rows if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
+  }
+
+  def getBySenderIdIter(senderId:Id[User], max:Int)(implicit session: RSession):CloseableIterator[Invitation] = {
+    (for(b <- rows if b.senderUserId === senderId) yield b).iteratorTo(max)
+  }
+
+  def getBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation] = {
+    (for(b <- rows if b.senderUserId === senderId) yield b).list
+  }
+
+  def getSocialInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation] = {
+    (for(b <- rows if b.senderUserId === senderId && b.recipientSocialUserId.isNotNull) yield b).list
+  }
+
+  def getEmailInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation] = {
+    (for(b <- rows if b.senderUserId === senderId && b.recipientEContactId.isNotNull) yield b).list
   }
 }
 

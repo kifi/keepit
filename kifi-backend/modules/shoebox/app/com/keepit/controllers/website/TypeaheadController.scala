@@ -16,6 +16,8 @@ import play.api.libs.functional.syntax._
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration.Duration
+import com.keepit.social.{SocialNetworks, SocialNetworkType}
+import scala.collection.mutable
 
 case class InviteStatus(label:String, image:Option[String], value:String, status:String)
 
@@ -42,19 +44,23 @@ class TypeaheadController @Inject() (
 
   def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email:String) = s"email/$email"
-    @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
-      contactIdOpt flatMap { contactId =>
-        db.readOnly { implicit s =>
-          invitationRepo.getBySenderIdAndRecipientEContactId(userId, contactId) map { inv =>
-            if (inv.state != InvitationStates.INACTIVE) "invited" else ""
-          }
-        }
-      } getOrElse ""
-    }
-
     abookServiceClient.prefixQuery(userId, limit, search, after) map { paged =>
-      val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
+      val allEmailInvites = db.readOnly { implicit ro =>
+        invitationRepo.getEmailInvitesBySenderId(userId)
+      }
+      val invitesMap = new collection.mutable.HashMap[Id[EContact], Invitation]
+      allEmailInvites.foreach { invite =>
+        invitesMap += (invite.recipientEContactId.get -> invite)
+      }
+      val withStatus = paged map { e =>
+        val status = invitesMap.get(e.id.get) map { inv =>
+          if (inv.state != InvitationStates.INACTIVE) "invited" else ""
+        } getOrElse ""
+        (e, status)
+      }
+
+      val objs = withStatus.take(limit).map { case (e, status) =>
+        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> status)
       }
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs
@@ -65,29 +71,13 @@ class TypeaheadController @Inject() (
 
   def querySocialConnections(userId:Id[User], search:Option[String], network:Option[String], after:Option[String], limit:Int):Seq[(SocialUserBasicInfo, String)] = {
     @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
-
-    def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
-      sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
-          case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
-            // This is a hint that that cache may be stale as userId should be set
-            socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
-              socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
-            }
-            "joined"
-          }
-          case inv if inv.state != InvitationStates.INACTIVE => "invited"
-        } getOrElse ""
-      }
-    }
-
     val connections = {
       val filteredConnections = search match {
         case Some(query) if query.trim.length > 0 => {
           val infos = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
           val res = network match {
             case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
-            case None => infos
+            case None => infos.filter(info => info.networkType.name != SocialNetworks.FORTYTWO) // backward compatibility
           }
           log.info(s"[querySocialConnections($userId,$search,$network,$after,$limit)] res=${res.mkString(",")}")
           res
@@ -99,7 +89,7 @@ class TypeaheadController @Inject() (
           infos.values.flatten.toVector
         }
       }
-      log.info(s"[queryConnections($userId,$search,$network,$after,$limit)] filteredConns=${filteredConnections.mkString(",")}")
+      log.info(s"[queryConnections($userId,$search,$network,$after,$limit)] filteredConns(len=${filteredConnections.length});${filteredConnections.take(20).mkString(",")}")
 
       val paged = (after match {
         case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
@@ -110,7 +100,27 @@ class TypeaheadController @Inject() (
       }).take(limit)
 
       db.readOnly { implicit ro =>
-        paged.map(getWithInviteStatus)
+        val allInvites = invitationRepo.getSocialInvitesBySenderId(userId)
+        val invitesMap = new collection.mutable.HashMap[Id[SocialUserInfo], Invitation]
+        allInvites.foreach { invite =>
+          invitesMap += (invite.recipientSocialUserId.get -> invite)
+        }
+        val resWithStatus = paged map { sci =>
+          val status = sci.userId match {
+            case Some(userId) => "joined"
+            case None => invitesMap.get(sci.id) collect {
+              case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED =>
+                // This is a hint that that cache may be stale as userId should be set
+                socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
+                  socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
+                }
+                "joined"
+              case inv if inv.state != InvitationStates.INACTIVE => "invited"
+            } getOrElse ""
+          }
+          (sci, status)
+        }
+        resWithStatus
       }
     }
 
@@ -139,7 +149,6 @@ class TypeaheadController @Inject() (
       jsCombined
     }
   }
-
 
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync {  request =>
     queryConnections(request.userId, search, network, after, limit) map { res =>
