@@ -42,22 +42,24 @@ class LocalRichConnectionCommander @Inject() (
   private def processQueueItems(): Unit = {
     val fut = queue.nextWithLock(1 minute)
     fut.onComplete{
-      case Success(queueMessage) => {
-        try {
-          processUpdateImmediate(queueMessage.body).onComplete{
-            case Success(_) => {
-              queueMessage.consume()
-              processQueueItems()
+      case Success(queueMessageOpt) => {
+        queueMessageOpt.map { queueMessage =>
+          try {
+            processUpdateImmediate(queueMessage.body).onComplete{
+              case Success(_) => {
+                queueMessage.consume()
+                processQueueItems()
+              }
+              case Failure(t) => {
+                airbrake.notify("Error processing RichConnectionUpdate from queue", t)
+                processQueueItems()
+              }
             }
-            case Failure(t) => {
-              airbrake.notify("Error processing RichConnectionUpdate from queue", t)
-              processQueueItems()
-            }
+          } catch {
+            case t: Throwable => airbrake.notify("Fatal error processing RichConnectionUpdate from queue", t)
+            processQueueItems()
           }
-        } catch {
-          case t: Throwable => airbrake.notify("Fatal error processing RichConnectionUpdate from queue", t)
-          processQueueItems()
-        }
+        } getOrElse processQueueItems()
       }
       case Failure(t) => {
         airbrake.notify("Failed getting RichConnectionUpdate from queue", t)
