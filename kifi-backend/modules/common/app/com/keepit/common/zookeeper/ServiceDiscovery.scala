@@ -54,15 +54,15 @@ class ServiceDiscoveryImpl(
     servicesToListenOn: Seq[ServiceType])
   extends ServiceDiscovery with Logging {
 
-  private var lastStatusChangeTime = System.currentTimeMillis
+  @volatile private var lastStatusChangeTime = System.currentTimeMillis
 
   private[this] val registrationLock = new AnyRef
   @volatile private[this] var registered = false
   @volatile private[this] var unregistered = false
 
   private lazy val myAmazonInstanceInfo = amazonInstanceInfo
-  private var myInstance: Option[ServiceInstance] = None
-  private var myServiceStatus: ServiceStatus = ServiceStatus.STARTING // keeping track of the status
+  @volatile private var myInstance: Option[ServiceInstance] = None
+  @volatile private var myServiceStatus: ServiceStatus = ServiceStatus.STARTING // keeping track of the status
 
   private var selfCheckIsRunning: Boolean = false
   private var selfCheckFutureOpt: Option[Future[Boolean]] = None
@@ -189,9 +189,9 @@ class ServiceDiscoveryImpl(
     if (stillRegistered()) synchronized {
       myInstance foreach { instance =>
         log.info(s"Changing instance status to $newStatus")
+        lastStatusChangeTime = System.currentTimeMillis
         myServiceStatus = newStatus
         instance.setRemoteService(getThisRemoteService)
-        lastStatusChangeTime = System.currentTimeMillis
         zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
       }
     }
