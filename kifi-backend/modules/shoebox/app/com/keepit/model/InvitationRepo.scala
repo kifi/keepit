@@ -25,7 +25,8 @@ class InvitationRepoImpl @Inject() (
                                      val db: DataBaseComponent,
                                      val userRepo: UserRepoImpl,
                                      val socialUserInfoRepo: SocialUserInfoRepoImpl,
-                                     val clock: Clock)
+                                     val clock: Clock,
+                                     override protected val changeListener: Option[RepoModification.Listener[Invitation]])
   extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
 
   import DBSession._
