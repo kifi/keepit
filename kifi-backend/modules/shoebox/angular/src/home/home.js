@@ -34,10 +34,6 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
 
     $scope.checkEnabled = true;
 
-    $scope.page = {
-      title: 'Browse your Keeps'
-    };
-
     $scope.mouseoverCheckAll = false;
 
     $scope.onMouseoverCheckAll = function () {
