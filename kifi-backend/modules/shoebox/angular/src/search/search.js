@@ -14,8 +14,10 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 ])
 
 .controller('SearchCtrl', [
-  '$scope', 'keepService',
+  '$scope', 'keepService', '$routeParams',
   function ($scope, keepService) {
+    console.log($routeParams);
+
     $scope.results = {
       numShown: 0,
       myTotal: 300,

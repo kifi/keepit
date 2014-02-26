@@ -3,8 +3,8 @@
 angular.module('kifi.layout.main', [])
 
 .controller('MainCtrl', [
-  '$scope',
-  function ($scope) {
+  '$scope', '$location',
+  function ($scope, $location) {
     var KEY_ESC = 27;
 
     $scope.search = {};
@@ -37,6 +37,21 @@ angular.module('kifi.layout.main', [])
 
     $scope.undo = function () {
       $scope.undoAction = null;
+    };
+
+    var throttled = _.throttle(function () {
+      var text = $scope.search.text || '';
+      text = _.str.trim(text);
+      if (text) {
+        $location.path('/find').search('q', text);
+      }
+      else {
+        $location.path('/');
+      }
+    }, 500);
+
+    $scope.onChange = function () {
+      throttled();
     };
   }
 ]);
