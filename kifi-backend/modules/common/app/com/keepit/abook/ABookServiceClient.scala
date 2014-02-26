@@ -56,6 +56,8 @@ trait ABookServiceClient extends ServiceClient {
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def refreshPrefixFilter(userId:Id[User]):Future[Unit]
+  def refreshPrefixFiltersByIds(userIds:Seq[Id[User]]):Future[Unit]
+  def refreshAllFilters():Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
 }
 
@@ -185,24 +187,56 @@ class ABookServiceClientImpl @Inject() (
 
   def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
     call(ABook.internal.queryEContacts(userId, limit, search, after)).map { r =>
-      Json.fromJson[Seq[EContact]](r.json).get
+      r.status match {
+        case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
+        case _ => throw new IllegalStateException(s"[queryEContacts($userId,$limit,$search,$after)] failed with ${r.status}; body=${r.body}")
+      }
     }
   }
 
   def prefixSearch(userId: Id[User], query: String): Future[Seq[EContact]] = {
     call(ABook.internal.prefixSearch(userId, query)).map { r =>
-      Json.fromJson[Seq[EContact]](r.json).get
+      r.status match {
+        case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
+        case _ => throw new IllegalStateException(s"[prefixSearch($userId,$query)] failed with ${r.status}; body=${r.body}")
+      }
     }
   }
 
   def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
     call(ABook.internal.prefixQuery(userId, limit, search, after)).map { r =>
-      Json.fromJson[Seq[EContact]](r.json).get
+      r.status match {
+        case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
+        case _ => throw new IllegalStateException(s"[prefixQuery($userId,$limit,$search,$after)] failed with ${r.status}; body=${r.body}")
+      }
     }
   }
 
   def refreshPrefixFilter(userId: Id[User]): Future[Unit] = {
-    call(ABook.internal.refreshPrefixFilter(userId)).map { r => Unit }
+    call(ABook.internal.refreshPrefixFilter(userId)).map { r =>
+      r.status match {
+        case Status.OK => Unit
+        case _ => throw new IllegalStateException(s"[refreshPrefixFilter($userId) failed with ${r.status}; body=${r.body}")
+      }
+    }
+  }
+
+  def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit] = {
+    call(ABook.internal.refreshPrefixFiltersByIds(), JsArray(userIds.map(u => JsNumber(u.id)))) map { r =>
+      r.status match {
+        case Status.OK => Unit
+        case _ => throw new IllegalStateException(s"[refreshPrefixFiltersByIds(${userIds.length};${userIds.take(50).mkString(",")})] failed with ${r.status}; body=${r.body}")
+      }
+    }
+  }
+
+  override def refreshAllFilters(): Future[Unit] = {
+    call(ABook.internal.refreshAllPrefixFilters()).map { r =>
+      r.status match {
+        case Status.OK => Unit
+        case _ => throw new IllegalStateException(s"[refreshAllFilters] failed with ${r.status}; body=${r.body}")
+      }
+    }
   }
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] = {
@@ -257,6 +291,10 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def prefixQuery(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 
   def refreshPrefixFilter(userId: Id[User]): Future[Unit] = ???
+
+  def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit] = ???
+
+  def refreshAllFilters(): Future[Unit] = ???
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
 }

@@ -15,6 +15,7 @@ import org.joda.time.DateTime
 import scala.slick.lifted.{TableQuery, Tag}
 import scala.slick.jdbc.{StaticQuery => Q}
 import Q.interpolation
+import scalax.io.CloseableIterator
 
 
 @ImplementedBy(classOf[UserRepoImpl])
@@ -31,6 +32,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getNoCache(id: Id[User])(implicit session: RSession): User
   def getOpt(id: Id[User])(implicit session: RSession): Option[User]
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
+  def getAllActiveIds()(implicit session: RSession):Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User]
 }
 
@@ -189,6 +191,10 @@ class UserRepoImpl @Inject() (
 
   def getAllIds()(implicit session: RSession): Set[Id[User]] = { //Note: Need to revisit when we have >50k users.
     (for (row <- rows) yield row.id).list.toSet
+  }
+
+  def getAllActiveIds()(implicit session: RSession): Seq[Id[User]] = {
+    (for (f <- rows if f.state === UserStates.ACTIVE) yield f.id).list
   }
 
   def getUsersSince(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[User] = super.getBySequenceNumber(seq, fetchSize)

@@ -641,28 +641,28 @@ api.port.on({
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
-    prefs.enterToSend = data;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
+    if (prefs) prefs.enterToSend = data;
   },
   set_max_results: function(n, respond) {
-    prefs.maxResults = n;
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
     mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
+    if (prefs) prefs.maxResults = n;
   },
   set_show_find_friends: function(show) {
-    prefs.showFindFriends = show;
     ajax('POST', '/ext/pref/showFindFriends?show=' + show);
+    if (prefs) prefs.showFindFriends = show;
   },
   stop_showing_keeper_intro: function() {
-    prefs.showKeeperIntro = false;
     ajax('POST', '/ext/pref/showKeeperIntro?show=false');
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, 'hide_keeper_intro');
     });
+    if (prefs) prefs.showKeeperIntro = false;
   },
   set_show_search_intro: function(show) {
-    prefs.showSearchIntro = show;
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
+    if (prefs) prefs.showSearchIntro = show;
   },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
@@ -1106,7 +1106,7 @@ function insertNewNotification(n) {
     for (var kind in o) {
       if (o[kind]) {
         var tl = threadLists[kind === 'page' ? n.url : kind];
-        if (tl && tl.insertOrReplace(n0, n) && kind === 'page') {
+        if (tl && tl.insertOrReplace(n0, n, log) && kind === 'page') {
           forEachTabAt(n.url, function (tab) {
             sendPageThreadCount(tab, tl);
           });
@@ -1135,7 +1135,7 @@ function markUnread(threadId, messageId) {
     th.unreadAuthors = th.unreadMessages = 1;
     (function insertIntoUnread(tl) {
       if (tl && tl.includesAllSince(th)) {
-        tl.insertOrReplace(thOld, th);
+        tl.insertOrReplace(thOld, th, log);
       } else if (tl) {
         tl.numTotal++;
       }
@@ -1174,7 +1174,7 @@ function markRead(threadId, messageId, time) {
     th.unreadAuthors = th.unreadMessages = 0;
     (function removeFromUnread(tl) {
       if (!tl) return;
-      var numRemoved = tl.remove(th.thread);
+      var numRemoved = tl.remove(th.thread, log);
       if (!tl.includesOldest) {
         if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
           tl.numTotal--;
@@ -1194,7 +1194,7 @@ function markRead(threadId, messageId, time) {
       tlKeys.forEach(function (key) {
         var tl = threadLists[key];
         if (tl) {
-          tl.decNumUnreadUnmuted();
+          tl.decNumUnreadUnmuted(log);
         }
       });
     }
@@ -1266,7 +1266,7 @@ function setMuted(threadId, muted) {
       tlKeys.forEach(function (key) {
         var tl = threadLists[key];
         if (tl) {
-          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted']();
+          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted'](log);
         }
       });
       tellVisibleTabsNoticeCountIfChanged();
@@ -1753,13 +1753,17 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
   for (var loc in tabsByLocator) {
     var tabs = tabsByLocator[loc];
-    for (var i = tabs.length; i--;) {
-      if (tabs[i] === tab) {
-        tabs.splice(i, 1);
+    if (tabs) {
+      for (var i = tabs.length; i--;) {
+        if (tabs[i] === tab) {
+          tabs.splice(i, 1);
+        }
       }
-    }
-    if (!tabs.length) {
-      delete tabsByLocator[loc];
+      if (!tabs.length) {
+        delete tabsByLocator[loc];
+      }
+    } else {
+      api.errors.push({error: Error('tabsByLocator array undefined'), params: {loc: loc, type: typeof tabs, in: loc in tabsByLocator}});
     }
   }
   if (tabsTagging.length) {

@@ -30,7 +30,7 @@ errors.wrap = function (fn) {
       errors.push({error: e, params: {arguments: Array.slice(arguments)}})
     }
   };
-}
+};
 
 // TODO: load some of these APIs on demand instead of up front
 const self = require('sdk/self');
@@ -410,13 +410,13 @@ exports.tabs = {
           worker.port.emit(type, data);
           if (!emitted) {
             emitted = true;
-            log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+            log('[api.tabs.emit]', tab.id, 'type:', type, 'data:', data, 'url:', tab.url);
           }
         }
       }
     }
     if (!emitted) {
-      if (opts && opts.queue) {
+      if (page && opts && opts.queue) {
         if (page.toEmit) {
           if (opts.queue === 1) {
             for (var i = 0; i < page.toEmit.length; i++) {
@@ -431,7 +431,7 @@ exports.tabs = {
           page.toEmit = [[type, data]];
         }
       } else {
-        log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
+        log('[api.tabs.emit]', tab.id, 'type:', type, 'neither emitted nor queued for:', tab.url);
       }
     }
   },
@@ -592,7 +592,7 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     }
   } else {
     let page = pages[tabId];
-    if (page.url != tab.url) {
+    if (page && page.url !== tab.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
         dispatch.call(exports.tabs.on.unload, page, true);
         page.url = tab.url;
@@ -631,37 +631,6 @@ function onPageHide(tabId) {
 }
 
 // attaching content scripts
-const {PageMod} = require("sdk/page-mod");
-require('./meta').contentScripts.forEach(function (arr) {
-  const path = arr[0], urlRe = arr[1], o = deps(path);
-  log('defining PageMod:', path, 'deps:', o);
-  PageMod({
-    include: urlRe,
-    contentStyleFile: o.styles.map(self.data.url),
-    contentScriptFile: o.scripts.map(self.data.url),
-    contentScriptWhen: arr[2] ? 'start' : 'ready',
-    contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
-    attachTo: ['existing', 'top'],
-    onAttach: errors.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
-      const tab = worker.tab;
-      const page = getPageOrHideOldAndCreatePage(tab);
-
-      log('[onAttach]', tab.id, this.contentScriptFile, tab.url, page);
-      page.injectedCss = mergeArr({}, o.styles);
-      const injectedJs = mergeArr({}, o.scripts);
-      workerNs(page).workers.push(worker);
-      worker
-        .on('pageshow', workerOnPageShow.bind(null, tab, page, worker))  // pageshow/pagehide discussion at bugzil.la/766088#c2
-        .on('pagehide', workerOnPageHide.bind(null, tab.id));
-      if (portHandlers) {
-        bindPortHandlers(worker, page);
-      }
-      worker.handling = {};
-      worker.port
-      .on('api:handling', workerOnApiHandling.bind(null, page, worker))
-      .on('api:require', workerOnApiRequire.bind(null, page, worker, injectedJs));
-    })});
-});
 
 var workerOnPageShow = errors.wrap(function workerOnPageShow(tab, page, worker) {
   if (pages[tab.id] !== page) {  // bfcache used
@@ -695,6 +664,38 @@ var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, i
   mergeArr(page.injectedCss, o.styles);
   mergeArr(injectedJs, o.scripts);
   worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+});
+
+const {PageMod} = require('sdk/page-mod');
+require('./meta').contentScripts.forEach(function (arr) {
+  const path = arr[0], urlRe = arr[1], o = deps(path);
+  log('defining PageMod:', path, 'deps:', o);
+  PageMod({
+    include: urlRe,
+    contentStyleFile: o.styles.map(self.data.url),
+    contentScriptFile: o.scripts.map(self.data.url),
+    contentScriptWhen: arr[2] ? 'start' : 'ready',
+    contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
+    attachTo: ['existing', 'top'],
+    onAttach: errors.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
+      const tab = worker.tab;
+      const page = getPageOrHideOldAndCreatePage(tab);
+
+      log('[onAttach]', tab.id, this.contentScriptFile, tab.url, page);
+      page.injectedCss = mergeArr({}, o.styles);
+      const injectedJs = mergeArr({}, o.scripts);
+      workerNs(page).workers.push(worker);
+      worker
+        .on('pageshow', workerOnPageShow.bind(null, tab, page, worker))  // pageshow/pagehide discussion at bugzil.la/766088#c2
+        .on('pagehide', workerOnPageHide.bind(null, tab.id));
+      if (portHandlers) {
+        bindPortHandlers(worker, page);
+      }
+      worker.handling = {};
+      worker.port
+      .on('api:handling', workerOnApiHandling.bind(null, page, worker))
+      .on('api:require', workerOnApiRequire.bind(null, page, worker, injectedJs));
+    })});
 });
 
 function emitQueuedMessages(page, worker) {

@@ -93,8 +93,8 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
   }
 
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit): Unit = zkClient.session{ zk =>
-    zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
     watches += ((key, handler))
+    zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
   }
 }
 
