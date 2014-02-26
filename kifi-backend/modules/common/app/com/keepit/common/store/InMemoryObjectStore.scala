@@ -10,7 +10,7 @@ import org.apache.commons.io.FileUtils
 
 trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
-  if (Play.isProd) throw new Exception("Can't have in memory object store in production")
+  if (Play.maybeApplication.isDefined && Play.isProd) throw new Exception("Can't have in memory object store in production")
 
   protected val localStore = new HashMap[A, B]()
 
@@ -33,7 +33,7 @@ trait InMemoryObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
 trait InMemoryFileStore[A] extends ObjectStore[A, File] {
 
-  require(!Play.isProd, "Can't have in memory file store in production")
+  require(!(Play.maybeApplication.isDefined && Play.isProd), "Can't have in memory file store in production")
 
   protected val pathMap = new HashMap[A, String]()
   protected val localStore = FileUtils.getTempDirectory
