@@ -54,7 +54,7 @@ class ServiceVersionMap @Inject() (httpClient: HttpClient) {
 
   private[this] val weakMap = new WeakHashMap[ServiceInstance, ServiceVersion]
 
-  def apply(serviceInstance: ServiceInstance): ServiceVersion = {
+  def apply(serviceInstance: ServiceInstance): ServiceVersion = synchronized {
     weakMap.get(serviceInstance) match {
       case Some(version) => version
       case None =>
