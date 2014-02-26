@@ -17,24 +17,6 @@ angular.module('kifi.keepService', [])
       previewUrls = {},
       doc = $document[0];
 
-    function getKeepId(keep) {
-      if (keep) {
-        if (typeof keep === 'string') {
-          return keep;
-        }
-        return keep.id || null;
-      }
-      return null;
-    }
-    function indexById(id) {
-      for (var i = 0, l = list.length; i < l; i++) {
-        if (list[i].id === id) {
-          return i;
-        }
-      }
-      return -1;
-    }
-
     $rootScope.$on('tags.remove', function (tagId) {
       _.forEach(list, function (keep) {
         if (keep.tagList) {
