@@ -307,6 +307,11 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
         };
 
         var list = element.find('.kf-tag-list');
+        list.css({
+          position: 'absolute',
+          top: list.position().top,
+          bottom: 0
+        });
 
         scope.$watch('filter.name', function () {
           $timeout(scope.refreshHighlight);
@@ -317,16 +322,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
           scope.refreshScroll();
         });
 
-        tagService.fetchAll().then(function () {
-          var pos;
-          if (pos = list.position() && pos && pos.top) {
-            list.css({
-              position: 'absolute',
-              top: pos.top,
-              bottom: 0
-            });
-          }
-        });
+        tagService.fetchAll();
       }
     };
   }
