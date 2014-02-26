@@ -44,20 +44,7 @@ private[scraper] class ScrapeScheduler @Inject() (
 
   implicit val config = scraperConfig
 
-  def checkFJCtx(): Unit = {
-    val fj = com.keepit.common.concurrent.ExecutionContext.fjPool
-    log.info(s"[checkFJCtx] #queuedSubmission=${fj.getQueuedSubmissionCount} #queuedTasks=${fj.getQueuedTaskCount} fj=${fj}")
-    if (fj.getQueuedSubmissionCount > Runtime.getRuntime.availableProcessors * 5) { // todo: tweak; airbrake if this proves useful
-      systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG,
-        to = Seq(EmailAddresses.RAY),
-        category = NotificationCategory.System.HEALTHCHECK, // may need a new category
-        subject = s"fjPool-queuedSubmission=${fj.getQueuedSubmissionCount}",
-        htmlBody = s"ForkJoinPool-backed context queued submission count exceeded threshold ${fj}"))
-    }
-  }
-
   def checkOverdues(): Unit = {
-    checkFJCtx() // todo(ray): remove or rename
     val (assignedCount, assignedOverdues) = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
       val assignedCount = scrapeInfoRepo.getAssignedCount()
       val assignedOverdues = scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))

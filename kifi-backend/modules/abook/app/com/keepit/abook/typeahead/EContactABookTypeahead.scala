@@ -8,16 +8,18 @@ import com.keepit.common.logging.Logging
 import com.keepit.typeahead.{PrefixFilter, Typeahead}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.abook.{EmailParser, EContactRepo}
+import com.keepit.abook.{ABookInfoRepo, EmailParser, EContactRepo}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import scala.concurrent.Await
+import scala.concurrent.{Promise, Future, Await}
 import scala.concurrent.duration.Duration
+import scala.collection.mutable.ArrayBuffer
 
 class EContactABookTypeahead @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
   store:EContactTypeaheadStore,
+  abookInfoRepo: ABookInfoRepo,
   econtactRepo: EContactRepo,
   cache: EContactTypeaheadCache
 ) extends Typeahead[EContact, EContact] with Logging {
@@ -55,6 +57,30 @@ class EContactABookTypeahead @Inject() (
     log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
     filter
 
+  }
+
+  def refresh(userId:Id[User]):Future[Unit] = {
+    build(userId) map { filter =>
+      store += (userId -> filter.data)
+      cache.set(EContactTypeaheadKey(userId), filter.data)
+      log.info(s"[refresh($userId)] cache updated; filter=$filter")
+    }
+  }
+
+  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = {
+    val futures = new ArrayBuffer[Future[Unit]]
+    for (userId <- userIds) {
+      futures += refresh(userId)
+    }
+    Future.sequence(futures.toSeq) map { s => Unit }
+  }
+
+  def refreshAll():Future[Unit] = {
+    val infos = db.readOnly { implicit ro =>
+      abookInfoRepo.all() // only retrieve users with existing abooks (todo: deal with deletes)
+    }
+    val userIds = infos.foldLeft(Set.empty[Id[User]]) {(a,c) => a + c.userId } // inefficient
+    refreshByIds(userIds.toSeq)
   }
 
   override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {

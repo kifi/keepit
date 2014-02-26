@@ -8,37 +8,21 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.{Host, URI}
-import com.keepit.common._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.healthcheck._
 import play.api.libs.json._
-import com.keepit.search.tracker.ClickedURI
-import scala.Some
-import com.keepit.search.tracker.BrowsedURI
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.tracker.BrowsingHistoryTracker
-import com.keepit.search.tracker.ClickHistoryTracker
-import com.keepit.search.tracker.ResultClickTracker
 
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  shoeboxClient: ShoeboxServiceClient,
-  clickHistoryTracker: ClickHistoryTracker,
-  browsingHistoryTracker: BrowsingHistoryTracker,
-  resultClickedTracker: ResultClickTracker,
-  articleSearchResultStore: ArticleSearchResultStore,
-  searchAnalytics: SearchAnalytics,
-  healthCheckMailer: SystemAdminMailSender,
-  heimdalContextBuilder: HeimdalContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  searchEventCommander: SearchEventCommander)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
   extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
 
   def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
-    val time = currentDateTime
+    val clickedAt = currentDateTime
     val userId = request.userId
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
@@ -51,51 +35,26 @@ class ExtSearchEventController @Inject() (
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       SearchEngine.get(resultSource) match {
-
         case SearchEngine.Kifi => {
           val kifiHitContext = (json \ "hit").as[KifiHitContext]
-          shoeboxClient.getNormalizedURIByURL(searchResultUrl).onSuccess { case Some(uri) =>
-            val uriId = uri.id.get
-            resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
-            clickHistoryTracker.add(userId, ClickedURI(uriId))
-            if (kifiHitContext.isOwnKeep) shoeboxClient.clickAttribution(userId, uriId) else shoeboxClient.clickAttribution(userId, uriId, kifiHitContext.keepers: _*)
-          }
-          searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), contextBuilder)
+          searchEventCommander.clickedKifiResult(userId, basicSearchContext, query, searchResultUrl, resultPosition, isDemo, clickedAt, kifiHitContext)(contextBuilder.build)
         }
-
-        case theOtherGuys => {
-
-          getDestinationUrl(searchResultUrl, theOtherGuys).foreach { url =>
-            shoeboxClient.getNormalizedURIByURL(url).onSuccess {
-              case Some(uri) =>
-                val uriId = uri.id.get
-                resultClickedTracker.add(userId, query, uriId, resultPosition, false) // We do this for a Google result, too.
-                clickHistoryTracker.add(userId, ClickedURI(uri.id.get))
-              case None =>
-                resultClickedTracker.moderate(userId, query)
-            }
-          }
-          searchAnalytics.clickedSearchResult(userId, time, basicSearchContext, theOtherGuys, resultPosition, None, contextBuilder)
-        }
+        case theOtherGuys =>
+          searchEventCommander.clickedOtherResult(userId, basicSearchContext, query, searchResultUrl, resultPosition, clickedAt, theOtherGuys)(contextBuilder.build)
       }
     }
     Ok
   }
 
-  def endedSearch = JsonAction.authenticatedParseJson { request =>
-    // Deprecated
-    Ok
-  }
-
   def searched = JsonAction.authenticatedParseJson { request =>
-    val time = currentDateTime
+    val time = clock.now()
     val userId = request.userId
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
     val endedWith = (json \ "endedWith").as[String]
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-      searchAnalytics.searched(userId, time, basicSearchContext, endedWith, contextBuilder)
+      searchEventCommander.searched(userId, time, basicSearchContext, endedWith)(contextBuilder.build)
     }
     Ok
   }
@@ -103,24 +62,8 @@ class ExtSearchEventController @Inject() (
   def updateBrowsingHistory() = JsonAction.authenticatedParseJson { request =>
     val userId = request.userId
     val browsedUrls = request.body.as[JsArray].value.map(_.as[String])
-    browsedUrls.foreach { url =>
-      shoeboxClient.getNormalizedURIByURL(url).foreach(_.foreach { uri =>
-        browsingHistoryTracker.add(userId, BrowsedURI(uri.id.get))
-      })
-    }
+    searchEventCommander.browsedPages(userId, browsedUrls)
     Ok
   }
-
-  private def getDestinationUrl(searchResultUrl: String, searchEngine: SearchEngine): Option[String] = {
-    searchEngine match {
-      case SearchEngine.Google => searchResultUrl match {
-        case URI(_, _, Some(Host("com", "youtube", _*)), _, _, _, _) => Some(searchResultUrl)
-        case URI(_, _, Some(Host("org", "wikipedia", _*)), _, _, _, _) => Some(searchResultUrl)
-        case URI(_, _, Some(host), _, Some("/url"), Some(query), _) if host.domain.contains("google") => query.params.find(_.name == "url").flatMap { _.decodedValue }
-        case _ => None
-      }
-      case _ => None
-    }
-  } tap { urlOpt => if (urlOpt.isEmpty) log.error(s"failed to extract the destination URL from $searchEngine: $searchResultUrl") }
 }
 

@@ -4,7 +4,7 @@ function ReconnectingWebSocket(opts) {
   var ws, self = this, buffer = [], disTimeout, pingTimeout, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   this.send = function(data) {
-    if (ws && ws.readyState == WebSocket.OPEN && !disTimeout) {
+    if (ws && ws.readyState === WebSocket.OPEN && !disTimeout) {
       ws.send(data);
       if (Date.now() - lastRecOrPingTime > idlePingDelayMs) {  // a way to recover from timeout failure/unreliability
         ping();
@@ -38,12 +38,14 @@ function ReconnectingWebSocket(opts) {
 
   function disconnect(why, timeoutSec) {
     var permanently = why === "close";
-    log("#0bf", "[RWS.disconnect] why:", why, "readyState:", ws.readyState, "buffered:", buffer.length, "retry:", permanently ? "no" : retryConnectDelayMs)();
+    log("#0bf", "[RWS.disconnect] why:", why, "readyState:", ws && ws.readyState, "buffered:", buffer.length, "retry:", permanently ? "no" : retryConnectDelayMs)();
     clearTimeout(disTimeout), disTimeout = null;
     clearTimeout(pingTimeout), pingTimeout = null;
-    ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
-    ws.close();  // noop if already closed
-    ws = null;
+    if (ws) {
+      ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+      ws.close();  // noop if already closed
+      ws = null;
+    }
     if (!permanently) {
       setTimeout(connect, retryConnectDelayMs);
       retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);

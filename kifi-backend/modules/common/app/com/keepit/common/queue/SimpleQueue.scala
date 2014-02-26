@@ -1,6 +1,6 @@
 package com.keepit.common.queue
 
-case class SimpleQueueMessage(ts:Long, id:String, receiptHandle:String, md5Body:String, body:String) {
+case class SimpleQueueMessage(ts:String, id:String, receiptHandle:String, md5Body:String, body:String) {
   override def toString = s"SimpleQueueMessage(id=$id,body=${body},receiptHandle=${receiptHandle.take(20)})"
 }
 

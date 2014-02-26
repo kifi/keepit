@@ -1,6 +1,6 @@
 // API for main.js
 /*jshint globalstrict:true */
-"use strict";
+'use strict';
 
 function dispatch() {
   var args = arguments;
@@ -21,12 +21,22 @@ function mergeArr(o, arr) {
   return o;
 }
 
+var errors = [];
+errors.wrap = function (fn) {
+  return function wrapped() {
+    try {
+      return fn.apply(this, arguments)
+    } catch (e) {
+      errors.push({error: e, params: {arguments: Array.slice(arguments)}})
+    }
+  };
+};
+
 // TODO: load some of these APIs on demand instead of up front
 const self = require('sdk/self');
-const timers = require("sdk/timers");
+const timers = require('sdk/timers');
 const {Ci, Cc, Cu} = require('chrome');
 const {deps} = require('./deps');
-const {Airbrake} = require('./airbrake.min');
 const {Listeners} = require('./listeners');
 const icon = require('./icon');
 const windows = require('sdk/windows').browserWindows;
@@ -37,7 +47,7 @@ const httpRe = /^https?:/;
 
 const pages = {}, tabsById = {};
 function createPage(tab) {
-  if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
+  if (!tab || !tab.id) throw Error(tab ? 'tab without id' : 'tab required');
   log('[createPage]', tab.id, tab.url);
   var page = pages[tab.id] = {id: tab.id, url: tab.url};
   workerNs(page).workers = [];
@@ -45,6 +55,20 @@ function createPage(tab) {
 }
 
 exports.bookmarks = require("./bookmarks");
+
+exports.errors = {
+  init: function (handler) {
+    while (errors.length) {
+      handler.push(errors.shift());
+    }
+    handler.wrap = errors.wrap;
+    errors = handler;
+  },
+  push: function (o) {
+    errors.push(o);
+  },
+  wrap: errors.wrap
+};
 
 exports.icon = {
   on: {click: new Listeners},
@@ -58,7 +82,7 @@ exports.icon = {
       }
     }
   }};
-var onIconClick = Airbrake.wrap(function onIconClick(win) {
+var onIconClick = errors.wrap(function onIconClick(win) {
   dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
 });
 
@@ -132,17 +156,17 @@ exports.play = function(path) {
 
 exports.popup = {
   open: function(options, handlers) {
-    var onReady = Airbrake.wrap(function onReady(tab) {
+    var onReady = errors.wrap(function onReady(tab) {
       handlers.navigate.call(tab, tab.url);
     });
     var win = windows.open({
       url: options.url,
-      onOpen: Airbrake.wrap(function() {
+      onOpen: errors.wrap(function() {
         if (handlers && handlers.navigate) {
           win.tabs.activeTab.on("ready", onReady);
         }
       }),
-      onClose: Airbrake.wrap(function() {
+      onClose: errors.wrap(function() {
         win.tabs.activeTab.removeListener("ready", onReady);
       })
     });
@@ -192,7 +216,7 @@ function bindPortHandlers(worker, page) {
     worker.port.on(type, onPortMessage.bind(worker, page, type));
   });
 }
-var onPortMessage = Airbrake.wrap(function onPortMessage(page, type, data, callbackId) {
+var onPortMessage = errors.wrap(function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
   portHandlers[type](data, this.port.emit.bind(this.port, 'api:respond', callbackId), page);
 });
@@ -200,7 +224,7 @@ var onPortMessage = Airbrake.wrap(function onPortMessage(page, type, data, callb
 exports.request = function(method, url, data, done, fail) {
   var options = {
     url: url,
-    onComplete: Airbrake.wrap(function (resp) {
+    onComplete: errors.wrap(function (resp) {
       var keys = [];
       for (var key in resp) {
         keys.push(key);
@@ -299,7 +323,7 @@ exports.socket = {
     return sc;
   }
 }
-var onSocketConnect = Airbrake.wrap(function onSocketConnect(socketId) {
+var onSocketConnect = errors.wrap(function onSocketConnect(socketId) {
   var sc = socketCommanders[socketId];
   if (sc) {
     sc.onConnect();
@@ -307,7 +331,7 @@ var onSocketConnect = Airbrake.wrap(function onSocketConnect(socketId) {
     log('[onSocketConnect] no SocketCommander', socketId);
   }
 });
-var onSocketDisconnect = Airbrake.wrap(function onSocketDisconnect(socketId, why) {
+var onSocketDisconnect = errors.wrap(function onSocketDisconnect(socketId, why) {
   var sc = socketCommanders[socketId];
   if (sc) {
     sc.onDisconnect(why);
@@ -315,7 +339,7 @@ var onSocketDisconnect = Airbrake.wrap(function onSocketDisconnect(socketId, why
     log('[onSocketDisconnect] no SocketCommander', socketId, why);
   }
 });
-var onSocketMessage = Airbrake.wrap(function onSocketMessage(socketId, data) {
+var onSocketMessage = errors.wrap(function onSocketMessage(socketId, data) {
   var sc = socketCommanders[socketId];
   if (sc) {
     sc.onMessage(data);
@@ -352,7 +376,7 @@ exports.tabs = {
     log('[api.tabs.open]', url);
     var params = {url: url};
     if (callback) {
-      params.onOpen = Airbrake.wrap(function (tab) {
+      params.onOpen = errors.wrap(function (tab) {
         callback && callback(tab.id);
       });
     }
@@ -386,13 +410,13 @@ exports.tabs = {
           worker.port.emit(type, data);
           if (!emitted) {
             emitted = true;
-            log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+            log('[api.tabs.emit]', tab.id, 'type:', type, 'data:', data, 'url:', tab.url);
           }
         }
       }
     }
     if (!emitted) {
-      if (opts && opts.queue) {
+      if (page && opts && opts.queue) {
         if (page.toEmit) {
           if (opts.queue === 1) {
             for (var i = 0; i < page.toEmit.length; i++) {
@@ -407,7 +431,7 @@ exports.tabs = {
           page.toEmit = [[type, data]];
         }
       } else {
-        log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
+        log('[api.tabs.emit]', tab.id, 'type:', type, 'neither emitted nor queued for:', tab.url);
       }
     }
   },
@@ -445,10 +469,10 @@ exports.tabs = {
 
 exports.timers = {
   setTimeout: function (f, ms) {
-    timers.setTimeout(Airbrake.wrap(f), ms);
+    timers.setTimeout(errors.wrap(f), ms);
   },
   setInterval: function (f, ms) {
-    timers.setInterval(Airbrake.wrap(f), ms);
+    timers.setInterval(errors.wrap(f), ms);
   },
   clearTimeout: timers.clearTimeout.bind(timers),
   clearInterval: timers.clearInterval.bind(timers)
@@ -458,16 +482,16 @@ exports.version = self.version;
 // initializing tabs and pages
 
 tabs
-.on('open', Airbrake.wrap(function onTabOpen(tab) {
+.on('open', errors.wrap(function onTabOpen(tab) {
   log("[tabs.open]", tab.id, tab.url);
   tabsById[tab.id] = tab;
 }))
-.on('close', Airbrake.wrap(function onTabClose(tab) {
+.on('close', errors.wrap(function onTabClose(tab) {
   log("[tabs.close]", tab.id, tab.url);
   onPageHide(tab.id);
   delete tabsById[tab.id];
 }))
-.on('activate', Airbrake.wrap(function onTabActivate(tab) {
+.on('activate', errors.wrap(function onTabActivate(tab) {
   var page = pages[tab.id];
   if (!page || !page.active) {
     log("[tabs.activate]", tab.id, tab.url);
@@ -487,7 +511,7 @@ tabs
     }
   }
 }))
-.on('deactivate', Airbrake.wrap(function onTabDeactivate(tab) {  // note: can fire after "close"
+.on('deactivate', errors.wrap(function onTabDeactivate(tab) {  // note: can fire after "close"
   log("[tabs.deactivate]", tab.id, tab.url);
   if (tab.window === windows.activeWindow) {
     var page = pages[tab.id];
@@ -496,28 +520,28 @@ tabs
     }
   }
 }))
-.on('ready', Airbrake.wrap(function onTabReady(tab) {
+.on('ready', errors.wrap(function onTabReady(tab) {
   log("[tabs.ready]", tab.id, tab.url);
 }));
 
 var activeWinHasFocus = true;
 windows
-.on('open', Airbrake.wrap(function onWindowOpen(win) {
-  log("[windows.open]", win.title);
+.on('open', errors.wrap(function onWindowOpen(win) {
+  log('[windows.open]', win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 }))
-.on('close', Airbrake.wrap(function onWindowClose(win) {
-  log("[windows.close]", win.title);
+.on('close', errors.wrap(function onWindowClose(win) {
+  log('[windows.close]', win.title);
   removeFromWindow(win);
 }))
-.on('activate', Airbrake.wrap(function onWindowActivate(win) {
+.on('activate', errors.wrap(function onWindowActivate(win) {
   activeWinHasFocus = true;
   var page = pages[win.tabs.activeTab.id];
   if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
 }))
-.on('deactivate', Airbrake.wrap(function onWindowDeactivate(win) {
+.on('deactivate', errors.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
   var page = pages[win.tabs.activeTab.id];
   if (page && httpRe.test(page.url)) {
@@ -525,25 +549,27 @@ windows
   }
 }));
 
-for each (let win in windows) {
-  if (!win.removeIcon) {
-    log("[windows] adding icon to window:", win.title);
-    win.removeIcon = icon.addToWindow(win, onIconClick);
-  }
-  for each (let tab in win.tabs) {
-    log("[windows]", tab.id, tab.url);
-    if (tab.id) {
-      tabsById[tab.id] = tab;
-      pages[tab.id] || createPage(tab);
-    } else {
-      Airbrake.push({error: Error('Firefox tab has no ID'), tab: tab, win: win});
+errors.wrap(function initTabsAndPages() {
+  for each (let win in windows) {
+    if (!win.removeIcon) {
+      log('[windows] adding icon to window:', win.title);
+      win.removeIcon = icon.addToWindow(win, onIconClick);
+    }
+    for each (let tab in win.tabs) {
+      log('[windows]', tab.id, tab.url);
+      if (tab.id) {
+        tabsById[tab.id] = tab;
+        pages[tab.id] || createPage(tab);
+      } else {
+        errors.push({error: Error('Firefox tab has no ID'), tab: tab, win: win});
+      }
     }
   }
-}
+})();
 
 // before search
 
-require('./location').onFocus(Airbrake.wrap(dispatch.bind(exports.on.beforeSearch)));
+require('./location').onFocus(errors.wrap(dispatch.bind(exports.on.beforeSearch)));
 
 // navigation handling
 
@@ -551,7 +577,7 @@ const stripHashRe = /^[^#]*/;
 const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
 const plusRe = /\+/g;
 
-require('./location').onChange(Airbrake.wrap(function onLocationChange(tabId, newPage) { // called before onAttach for all pages except images
+require('./location').onChange(errors.wrap(function onLocationChange(tabId, newPage) { // called before onAttach for all pages except images
   const tab = tabsById[tabId];
   log('[location:change]', tabId, 'newPage:', newPage, tab.url);
   if (newPage) {
@@ -566,7 +592,7 @@ require('./location').onChange(Airbrake.wrap(function onLocationChange(tabId, ne
     }
   } else {
     let page = pages[tabId];
-    if (page.url != tab.url) {
+    if (page && page.url !== tab.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
         dispatch.call(exports.tabs.on.unload, page, true);
         page.url = tab.url;
@@ -605,39 +631,8 @@ function onPageHide(tabId) {
 }
 
 // attaching content scripts
-  const {PageMod} = require("sdk/page-mod");
-  require('./meta').contentScripts.forEach(function (arr) {
-    const path = arr[0], urlRe = arr[1], o = deps(path);
-    log('defining PageMod:', path, 'deps:', o);
-    PageMod({
-      include: urlRe,
-      contentStyleFile: o.styles.map(self.data.url),
-      contentScriptFile: o.scripts.map(self.data.url),
-      contentScriptWhen: arr[2] ? 'start' : 'ready',
-      contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
-      attachTo: ['existing', 'top'],
-      onAttach: Airbrake.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
-        const tab = worker.tab;
-        const page = getPageOrHideOldAndCreatePage(tab);
 
-        log('[onAttach]', tab.id, this.contentScriptFile, tab.url, page);
-        page.injectedCss = mergeArr({}, o.styles);
-        const injectedJs = mergeArr({}, o.scripts);
-        workerNs(page).workers.push(worker);
-        worker
-          .on('pageshow', workerOnPageShow.bind(null, tab, page, worker))  // pageshow/pagehide discussion at bugzil.la/766088#c2
-          .on('pagehide', workerOnPageHide.bind(null, tab.id));
-        if (portHandlers) {
-          bindPortHandlers(worker, page);
-        }
-        worker.handling = {};
-        worker.port
-        .on('api:handling', workerOnApiHandling.bind(null, page, worker))
-        .on('api:require', workerOnApiRequire.bind(null, page, worker, injectedJs));
-      })});
-  });
-
-var workerOnPageShow = Airbrake.wrap(function workerOnPageShow(tab, page, worker) {
+var workerOnPageShow = errors.wrap(function workerOnPageShow(tab, page, worker) {
   if (pages[tab.id] !== page) {  // bfcache used
     log('[api:pageshow] tab:', tab.id, 'updating:', pages[tab.id], '->', page);
     pages[tab.id] = page;
@@ -650,12 +645,12 @@ var workerOnPageShow = Airbrake.wrap(function workerOnPageShow(tab, page, worker
   emitQueuedMessages(page, worker);
 });
 
-var workerOnPageHide = Airbrake.wrap(function workerOnPageHide(tabId) {
+var workerOnPageHide = errors.wrap(function workerOnPageHide(tabId) {
   log('[pagehide] tab:', tabId);
   onPageHide(tabId);
 });
 
-var workerOnApiHandling = Airbrake.wrap(function workerOnApiHandling(page, worker, types) {
+var workerOnApiHandling = errors.wrap(function workerOnApiHandling(page, worker, types) {
   log('[api:handling]', types);
   for each (let type in types) {
     worker.handling[type] = true;
@@ -663,12 +658,44 @@ var workerOnApiHandling = Airbrake.wrap(function workerOnApiHandling(page, worke
   emitQueuedMessages(page, worker);
 });
 
-var workerOnApiRequire = Airbrake.wrap(function workerOnApiRequire(page, worker, injectedJs, paths, callbackId) {
+var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, injectedJs, paths, callbackId) {
   var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
   log('[api:require] tab:', page.id, o);
   mergeArr(page.injectedCss, o.styles);
   mergeArr(injectedJs, o.scripts);
   worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+});
+
+const {PageMod} = require('sdk/page-mod');
+require('./meta').contentScripts.forEach(function (arr) {
+  const path = arr[0], urlRe = arr[1], o = deps(path);
+  log('defining PageMod:', path, 'deps:', o);
+  PageMod({
+    include: urlRe,
+    contentStyleFile: o.styles.map(self.data.url),
+    contentScriptFile: o.scripts.map(self.data.url),
+    contentScriptWhen: arr[2] ? 'start' : 'ready',
+    contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
+    attachTo: ['existing', 'top'],
+    onAttach: errors.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
+      const tab = worker.tab;
+      const page = getPageOrHideOldAndCreatePage(tab);
+
+      log('[onAttach]', tab.id, this.contentScriptFile, tab.url, page);
+      page.injectedCss = mergeArr({}, o.styles);
+      const injectedJs = mergeArr({}, o.scripts);
+      workerNs(page).workers.push(worker);
+      worker
+        .on('pageshow', workerOnPageShow.bind(null, tab, page, worker))  // pageshow/pagehide discussion at bugzil.la/766088#c2
+        .on('pagehide', workerOnPageHide.bind(null, tab.id));
+      if (portHandlers) {
+        bindPortHandlers(worker, page);
+      }
+      worker.handling = {};
+      worker.port
+      .on('api:handling', workerOnApiHandling.bind(null, page, worker))
+      .on('api:require', workerOnApiRequire.bind(null, page, worker, injectedJs));
+    })});
 });
 
 function emitQueuedMessages(page, worker) {
@@ -701,10 +728,3 @@ exports.onUnload = function (reason) {
     removeFromWindow(win);
   }
 };
-
-// TODO: remove Feb 20
-delete prefs.maxResults;
-delete prefs.suppressLog;
-delete prefs.showSlider;
-delete prefs.showScores;
-delete prefs.env;

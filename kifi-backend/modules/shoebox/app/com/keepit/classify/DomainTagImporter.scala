@@ -82,7 +82,7 @@ private[classify] class DomainTagImportActor @Inject() (
         val outputFilename = FILE_FORMAT.format(clock.now.toString(DATE_FORMAT))
         val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
         log.info(s"refetching all domains to $outputPath")
-        WS.url(settings.url).get().onSuccess { case res =>
+        WS.url(settings.url).withRequestTimeout(120000).get().onSuccess { case res =>
           persistEvent(IMPORT_START, new HeimdalContextBuilder)
           val startTime = currentDateTime
           systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),

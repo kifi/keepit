@@ -114,8 +114,10 @@ class SearchAnalytics @Inject() (
     searchedAt: DateTime,
     basicSearchContext: BasicSearchContext,
     endedWith: String,
-    contextBuilder: HeimdalContextBuilder
+    existingContext: HeimdalContext
   ) = {
+    val contextBuilder = new HeimdalContextBuilder
+    contextBuilder.data ++= existingContext.data
     processBasicSearchContext(userId, basicSearchContext, contextBuilder)
     contextBuilder += ("endedWith", endedWith)
     heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.SEARCHED, searchedAt))
@@ -128,9 +130,11 @@ class SearchAnalytics @Inject() (
     resultSource: SearchEngine,
     resultPosition: Int,
     kifiHitContext: Option[KifiHitContext],
-    contextBuilder: HeimdalContextBuilder
+    existingContext: HeimdalContext
   ) = {
 
+    val contextBuilder = new HeimdalContextBuilder
+    contextBuilder.data ++= existingContext.data
     processBasicSearchContext(userId, basicSearchContext, contextBuilder)
 
     // Click Information

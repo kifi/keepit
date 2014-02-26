@@ -71,7 +71,7 @@ class InMemSimpleQueue(override val queueUrl:String, override val name:String) e
 
   def send(s: String): Unit = {
     val idx = counter.getAndIncrement
-    val m = SimpleQueueMessage(System.currentTimeMillis, idx.toString, idx.toString, "md5", s)
+    val m = SimpleQueueMessage(System.currentTimeMillis.toString, idx.toString, idx.toString, "md5", s)
     q.add(m)
     log.info(s"[send($s)] msg ($m) sent")
   }

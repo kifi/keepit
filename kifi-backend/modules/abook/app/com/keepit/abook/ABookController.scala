@@ -18,10 +18,13 @@ import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.abook.typeahead.EContactABookTypeahead
-import com.keepit.typeahead.TypeaheadHit
+import com.keepit.typeahead.{PrefixFilter, TypeaheadHit}
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
+import scala.collection.mutable.ArrayBuffer
+//import com.keepit.commanders.LocalRichConnectionCommander
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -60,6 +63,7 @@ class ABookController @Inject() (
   typeahead:EContactABookTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin
+//  richConnectionCommander: LocalRichConnectionCommander
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
   // gmail
@@ -340,6 +344,34 @@ class ABookController @Inject() (
   def prefixSearch(userId:Id[User], query:String) = Action { request =>
     val res = prefixSearchDirect(userId, query)
     Ok(Json.toJson(res))
+  }
+
+  def refreshPrefixFilter(userId:Id[User]) = Action.async { request =>
+    typeahead.refresh(userId) map { filter =>
+      log.info(s"[refreshPrefixFilter($userId)] updated; filter=$filter")
+      Ok(Json.obj("code" -> "success"))
+    }
+  }
+
+  def refreshPrefixFiltersByIds() = Action.async(parse.json) { request =>
+    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
+    val userIds = jsArray.value map { x => Id[User](x.as[Long]) }
+    log.info(s"[refreshPrefixFiltersByIds] ids(len=${userIds.length});${userIds.take(50).mkString(",")}")
+    typeahead.refreshByIds(userIds) map { r =>
+      Ok(Json.obj("code" -> "success"))
+    }
+  }
+
+  def refreshAllPrefixFilters() = Action.async { request =>
+    typeahead.refreshAll map { r =>
+      Ok(Json.obj("code" -> "success"))
+    }
+  }
+
+  def richConnectionUpdate() = Action(parse.json) { request =>
+    val updateMessage = request.body.as[RichConnectionUpdateMessage]
+//    richConnectionCommander.processUpdateImmediate(updateMessage)
+    Ok("")
   }
 
 }

@@ -317,11 +317,11 @@ GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
-GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRealUsersView
+GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
-GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.realUsersView(page: Int)
+GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.registeredUsersView(page: Int)
 GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
@@ -411,6 +411,9 @@ GET     /admin/typeahead                    @com.keepit.controllers.admin.Typeah
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], search:String ?= "")
 GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], search:String ?= "")
 GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], search:String ?= "")
+GET     /admin/typeahead/refreshPrefixFilter        @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFilter(userId:Id[User])
+POST    /admin/typeahead/refreshPrefixFiltersByIds  @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFiltersByIds()
+GET     /admin/typeahead/refreshAllPrefixFilters    @com.keepit.controllers.admin.TypeaheadAdminController.refreshAllPrefixFilters()
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase

@@ -13,9 +13,20 @@ function log() {
   return console.log.apply.bind(console.log, console, args);
 }
 
-var api = function() {
+var api = (function createApi() {
   'use strict';
   var httpRe = /^https?:/;
+
+  var errors = [];
+  errors.wrap = function (fn) {
+    return function wrapped() {
+      try {
+        return fn.apply(this, arguments)
+      } catch (e) {
+        errors.push({error: e, params: {arguments: Array.prototype.slice.call(arguments)}})
+      }
+    };
+  }
 
   function dispatch() {
     var args = arguments;
@@ -41,23 +52,23 @@ var api = function() {
     }
   }
 
-  var injectContentScriptsIfDomReady = Airbrake.wrap(function (page, arr) {
+  var injectContentScriptsIfDomReady = errors.wrap(function (page, arr) {
     if (arr && (arr[0] === 'interactive' || arr[0] === 'complete')) {
       injectContentScripts(page);
     }
   });
 
-  chrome.pageAction.onClicked.addListener(Airbrake.wrap(function (tab) {
+  chrome.pageAction.onClicked.addListener(errors.wrap(function (tab) {
     log("[pageAction.onClicked]", tab)();
     dispatch.call(api.icon.on.click, pages[tab.id]);
   }));
 
-  chrome.runtime.onStartup.addListener(Airbrake.wrap(function () {
+  chrome.runtime.onStartup.addListener(errors.wrap(function () {
     log("[onStartup]")();
     api.loadReason = "startup";
   }));
 
-  chrome.runtime.onInstalled.addListener(Airbrake.wrap(function (details) {
+  chrome.runtime.onInstalled.addListener(errors.wrap(function (details) {
     log("[onInstalled] details:", details)();
     if (details.reason === "install" || details.reason === "update") {
       api.loadReason = details.reason;
@@ -65,19 +76,19 @@ var api = function() {
   }));
 
   var updateCheckRequested, updateVersion;
-  chrome.runtime.onUpdateAvailable.addListener(Airbrake.wrap(function (details) {
+  chrome.runtime.onUpdateAvailable.addListener(errors.wrap(function (details) {
     log("#666", "[onUpdateAvailable]", updateVersion = details.version)();
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
   }));
 
-  chrome.tabs.onCreated.addListener(Airbrake.wrap(function (tab) {
+  chrome.tabs.onCreated.addListener(errors.wrap(function (tab) {
     log("#666", "[tabs.onCreated]", tab.id, tab.url)();
     normalTab[tab.id] = !!selectedTabIds[tab.windowId];
   }));
 
-  chrome.tabs.onActivated.addListener(Airbrake.wrap(function (info) {
+  chrome.tabs.onActivated.addListener(errors.wrap(function (info) {
     log("#666", "[tabs.onActivated] tab info:", info)();
     var prevPageId = selectedTabIds[info.windowId];
     if (prevPageId) { // ignore popups, etc.
@@ -97,7 +108,7 @@ var api = function() {
   var googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
   var plusRe = /\+/g;
 
-  chrome.webNavigation.onBeforeNavigate.addListener(Airbrake.wrap(function (details) {
+  chrome.webNavigation.onBeforeNavigate.addListener(errors.wrap(function (details) {
     var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
       var query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
@@ -105,34 +116,34 @@ var api = function() {
     }
   }));
 
-  chrome.webNavigation.onDOMContentLoaded.addListener(Airbrake.wrap(function (details) {
+  chrome.webNavigation.onDOMContentLoaded.addListener(errors.wrap(function (details) {
     if (!details.frameId && httpRe.test(details.url)) {
       var page = pages[details.tabId];
       if (page) {
         if (page.url === details.url) {
-          log("[onDOMContentLoaded]", details.tabId, details.url)();
+          log('[onDOMContentLoaded]', details.tabId, details.url)();
         } else {
-          log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url)();
+          log('#a00', '[onDOMContentLoaded] %i url mismatch:\n%s\n%s', details.tabId, details.url, page.url)();
         }
         injectContentScripts(page);
       } else if (normalTab[details.tabId]) {
-        log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url)();
+        log('#a00', '[onDOMContentLoaded] no page for', details.tabId, details.url)();
       }
     }
   }));
 
-  chrome.webNavigation.onCommitted.addListener(Airbrake.wrap(function (e) {
+  chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log("#666", "[onCommitted]", e.tabId, e)();
+    log('#666', '[onCommitted]', e.tabId, e)();
     onRemoved(e.tabId, {temp: true});
     createPage(e.tabId, e.url);
   }));
 
-  chrome.webNavigation.onHistoryStateUpdated.addListener(Airbrake.wrap(function (e) {
+  chrome.webNavigation.onHistoryStateUpdated.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log("#666", "[onHistoryStateUpdated]", e.tabId, e)();
+    log('#666', '[onHistoryStateUpdated]', e.tabId, e)();
     var page = pages[e.tabId];
-    if (page.url != e.url) {
+    if (page && page.url !== e.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
         dispatch.call(api.tabs.on.unload, page, true);
         page.url = e.url;
@@ -143,20 +154,23 @@ var api = function() {
     }
   }));
 
-  chrome.webNavigation.onReferenceFragmentUpdated.addListener(Airbrake.wrap(function (e) {
+  chrome.webNavigation.onReferenceFragmentUpdated.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log("#666", "[onReferenceFragmentUpdated]", e.tabId, e)();
-    pages[e.tabId].url = e.url;
-  }));
-
-  chrome.tabs.onUpdated.addListener(Airbrake.wrap(function (tabId, change) {
-    if ((change.status || change.url) && normalTab[tabId]) {
-      log("#666", "[tabs.onUpdated] %i change: %o", tabId, change)();
+    log('#666', '[onReferenceFragmentUpdated]', e.tabId, e)();
+    var page = pages[e.tabId];
+    if (page) {
+      page.url = e.url;
     }
   }));
 
-  chrome.tabs.onReplaced.addListener(Airbrake.wrap(function (newTabId, oldTabId) {
-    log("#666", "[tabs.onReplaced]", oldTabId, "->", newTabId)();
+  chrome.tabs.onUpdated.addListener(errors.wrap(function (tabId, change) {
+    if ((change.status || change.url) && normalTab[tabId]) {
+      log('#666', '[tabs.onUpdated] %i change: %o', tabId, change)();
+    }
+  }));
+
+  chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
+    log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId)();
     normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
     for (var winId in selectedTabIds) {
@@ -166,11 +180,11 @@ var api = function() {
     }
     chrome.tabs.get(newTabId, safeCreatePageAndInjectContentScripts);
   }));
-  var safeCreatePageAndInjectContentScripts = Airbrake.wrap(function (tab) {
+  var safeCreatePageAndInjectContentScripts = errors.wrap(function (tab) {
     createPageAndInjectContentScripts(tab);
   });
 
-  chrome.tabs.onRemoved.addListener(Airbrake.wrap(onRemoved));
+  chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
   function onRemoved(tabId, info) {
     if (!info || !info.temp) {
       delete normalTab[tabId];
@@ -184,23 +198,23 @@ var api = function() {
     }
   }
 
-  chrome.windows.onCreated.addListener(Airbrake.wrap(function (win) {
-    if (win.type === "normal") {
+  chrome.windows.onCreated.addListener(errors.wrap(function (win) {
+    if (win.type === 'normal') {
       selectedTabIds[win.id] = -1;  // indicates that the window is normal (supports tabs)
     }
   }));
 
-  chrome.windows.onRemoved.addListener(Airbrake.wrap(function (winId) {
+  chrome.windows.onRemoved.addListener(errors.wrap(function (winId) {
     delete selectedTabIds[winId];
   }));
 
   var focusedWinId, topNormalWinId;
-  chrome.windows.getLastFocused(null, Airbrake.wrap(function (win) {
+  chrome.windows.getLastFocused(null, errors.wrap(function (win) {
     focusedWinId = win && win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
-    topNormalWinId = win && win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
+    topNormalWinId = win && win.type == 'normal' ? win.id : chrome.windows.WINDOW_ID_NONE;
   }));
-  chrome.windows.onFocusChanged.addListener(Airbrake.wrap(function (winId) {
-    log("[onFocusChanged] win %o -> %o", focusedWinId, winId)();
+  chrome.windows.onFocusChanged.addListener(errors.wrap(function (winId) {
+    log('[onFocusChanged] win %o -> %o', focusedWinId, winId)();
     if (focusedWinId > 0) {
       var page = pages[selectedTabIds[focusedWinId]];
       if (page && httpRe.test(page.url)) {
@@ -219,7 +233,7 @@ var api = function() {
     }
   }));
 
-  chrome.webRequest.onBeforeRequest.addListener(Airbrake.wrap(function () {
+  chrome.webRequest.onBeforeRequest.addListener(errors.wrap(function () {
     dispatch.call(api.on.beforeSearch);
   }), {
     tabId: -1,
@@ -233,7 +247,7 @@ var api = function() {
   var pages = {};  // by tab.id in "normal" windows only
   var normalTab = {};  // by tab.id (true if tab is in a "normal" window)
   var selectedTabIds = {};  // by window.id in "normal" windows only
-  chrome.tabs.query({windowType: 'normal'}, Airbrake.wrap(function (tabs) {
+  chrome.tabs.query({windowType: 'normal'}, errors.wrap(function (tabs) {
     tabs.forEach(function (tab) {
       normalTab[tab.id] = true;
       if (!pages[tab.id]) {
@@ -285,7 +299,7 @@ var api = function() {
     "api:require": function(data, respond, page) {
       injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
-  chrome.runtime.onConnect.addListener(Airbrake.wrap(function (port) {
+  chrome.runtime.onConnect.addListener(errors.wrap(function (port) {
     var tab = port.sender.tab;
     var tabId = tab && tab.id;
     log('#0a0', '[onConnect]', tabId, port.name, tab ? tab.url : '')();
@@ -300,7 +314,7 @@ var api = function() {
       port.onDisconnect.addListener(onPortDisconnect.bind(null, tabId));
     }
   }));
-  var onPortMessage = Airbrake.wrap(function (tabId, port, msg) {
+  var onPortMessage = errors.wrap(function (tabId, port, msg) {
     var page = pages[tabId];
     var kind = msg[0], data = msg[1], callbackId = msg[2];
     var handler = portHandlers[kind];
@@ -311,7 +325,7 @@ var api = function() {
       log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler)();
     }
   });
-  var onPortDisconnect = Airbrake.wrap(function (tabId) {
+  var onPortDisconnect = errors.wrap(function (tabId) {
     log('#0a0', '[onDisconnect]', tabId)();
     delete ports[tabId].handling;
     delete ports[tabId];
@@ -379,7 +393,7 @@ var api = function() {
   function injectAll(tabId, inject, paths, callback) {
     var n = 0, N = paths.length;
     if (N) {
-      var afterInject = Airbrake.wrap(function () {
+      var afterInject = errors.wrap(function () {
         if (++n === N) {
           callback();
         }
@@ -397,18 +411,18 @@ var api = function() {
   return {
     bookmarks: {
       create: function(parentId, name, url, callback) {
-        chrome.bookmarks.create({parentId: parentId, title: name, url: url}, Airbrake.wrap(callback));
+        chrome.bookmarks.create({parentId: parentId, title: name, url: url}, errors.wrap(callback));
       },
       createFolder: function(parentId, name, callback) {
-        chrome.bookmarks.create({parentId: parentId, title: name}, Airbrake.wrap(callback));
+        chrome.bookmarks.create({parentId: parentId, title: name}, errors.wrap(callback));
       },
       get: function(id, callback) {
-        chrome.bookmarks.get(id, Airbrake.wrap(function (bm) {
+        chrome.bookmarks.get(id, errors.wrap(function (bm) {
           callback(bm && bm[0]);
         }));
       },
       getAll: function(callback) {
-        chrome.bookmarks.getTree(Airbrake.wrap(function (bm) {
+        chrome.bookmarks.getTree(errors.wrap(function (bm) {
           var arr = [];
           !function traverse(b) {
             if (b.children) {
@@ -431,6 +445,19 @@ var api = function() {
       },
       remove: chrome.bookmarks.remove.bind(chrome.bookmarks),
       search: chrome.bookmarks.search.bind(chrome.bookmarks)
+    },
+    errors: {
+      init: function (handler) {
+        while (errors.length) {
+          handler.push(errors.shift());
+        }
+        handler.wrap = errors.wrap;
+        errors = handler;
+      },
+      push: function (o) {
+        errors.push(o);
+      },
+      wrap: errors.wrap
     },
     icon: {
       on: {click: new Listeners},
@@ -478,19 +505,19 @@ var api = function() {
         var popupWinId, popupTabId;
         options.type = "popup";
         delete options.name;
-        chrome.windows.create(options, Airbrake.wrap(function (win) {
+        chrome.windows.create(options, errors.wrap(function (win) {
           popupWinId = win.id;
           popupTabId = win.tabs[0].id;
         }));
         if (handlers && handlers.navigate) {
-          var onUpdated = Airbrake.wrap(function (tabId, changed, tab) {
+          var onUpdated = errors.wrap(function (tabId, changed, tab) {
             if (tabId == popupTabId && changed.status === 'loading') {
               handlers.navigate.call({close: function() {
                 chrome.windows.remove(popupWinId);
               }}, changed.url);
             }
           });
-          var onClosed = Airbrake.wrap(function (winId) {
+          var onClosed = errors.wrap(function (winId) {
             chrome.tabs.onUpdated.removeListener(onUpdated);
             chrome.windows.onRemoved.removeListener(onClosed);
           });
@@ -508,7 +535,7 @@ var api = function() {
     },
     request: function(method, uri, data, done, fail) {
       var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = Airbrake.wrap(function() {
+      xhr.onreadystatechange = errors.wrap(function() {
         if (this.readyState == 4) {
           if (this.status >= 200 && this.status < 300) {
             done && done(/^application\/json/.test(this.getResponseHeader('Content-Type')) ? JSON.parse(this.responseText) : this);
@@ -545,7 +572,7 @@ var api = function() {
         chrome.runtime.reload();
       } else {
         updateCheckRequested = true;
-        chrome.runtime.requestUpdateCheck(Airbrake.wrap(function (status) {
+        chrome.runtime.requestUpdateCheck(errors.wrap(function (status) {
           log("[requestUpdateCheck]", status)();
         }));
       }
@@ -555,13 +582,13 @@ var api = function() {
         log('[api.socket.open]', url)();
         var sc, rws = new ReconnectingWebSocket({
           url: url,
-          onConnect: Airbrake.wrap(function () {
+          onConnect: errors.wrap(function () {
             sc.onConnect();
           }),
-          onDisconnect: Airbrake.wrap(function () {
+          onDisconnect: errors.wrap(function () {
             sc.onDisconnect();
           }),
-          onMessage: Airbrake.wrap(function (e) {
+          onMessage: errors.wrap(function (e) {
             sc.onMessage(e.data);
           })
         });
@@ -579,14 +606,14 @@ var api = function() {
         }
       },
       select: function(tabId) {
-        chrome.tabs.update(tabId, {active: true}, Airbrake.wrap(function (tab) {
+        chrome.tabs.update(tabId, {active: true}, errors.wrap(function (tab) {
           if (tab) {
             chrome.windows.update(tab.windowId, {focused: true});
           }
         }));
       },
       open: function(url, callback) {
-        chrome.tabs.create({url: url}, Airbrake.wrap(function (tab) {
+        chrome.tabs.create({url: url}, errors.wrap(function (tab) {
           callback && callback(tab.id);
         }));
       },
@@ -647,7 +674,7 @@ var api = function() {
         return selectedTabIds[focusedWinId] === tab.id;
       },
       navigate: function(tabId, url) {
-        chrome.tabs.update(tabId, {url: url, active: true}, Airbrake.wrap(function (tab) {
+        chrome.tabs.update(tabId, {url: url, active: true}, errors.wrap(function (tab) {
           if (tab) chrome.windows.update(tab.windowId, {focused: true});
         }));
       },
@@ -665,21 +692,14 @@ var api = function() {
     },
     timers: {
       setTimeout: function (f, ms) {
-        window.setTimeout(Airbrake.wrap(f), ms);
+        window.setTimeout(errors.wrap(f), ms);
       },
       setInterval: function (f, ms) {
-        window.setInterval(Airbrake.wrap(f), ms);
+        window.setInterval(errors.wrap(f), ms);
       },
       clearTimeout: window.clearTimeout.bind(window),
       clearInterval: window.clearInterval.bind(window)
     },
     version: chrome.app.getDetails().version
   };
-}();
-
-// TODO: remove Feb 20
-delete localStorage[':maxResults'];
-delete localStorage[':suppressLog'];
-delete localStorage[':showSlider'];
-delete localStorage[':showScores'];
-delete localStorage[':env'];
+}());

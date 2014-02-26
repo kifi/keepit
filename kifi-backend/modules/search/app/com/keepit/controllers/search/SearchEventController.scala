@@ -7,45 +7,15 @@ import com.keepit.model.{User, NormalizedURI}
 import com.keepit.search._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.heimdal.{SearchEngine, SearchAnalytics}
-import com.keepit.search.tracker.BrowsedURI
-import com.keepit.search.tracker.ClickedURI
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.search.tracker.BrowsingHistoryTracker
-import com.keepit.search.tracker.ClickHistoryTracker
-import com.keepit.search.tracker.ResultClickTracker
 
-class SearchEventController @Inject() (
-  clickHistoryTracker: ClickHistoryTracker,
-  browsingHistoryTracker: BrowsingHistoryTracker,
-  resultClickedTracker: ResultClickTracker,
-  searchAnalytics: SearchAnalytics) extends SearchServiceController {
-
-  def logResultClicked = Action(parse.json) { request =>
-    // Deprecated
-    SafeFuture{
-      val resultClicked = Json.fromJson[ResultClicked](request.body).get
-      resultClicked.keptUri match {
-        case Some(uriId) =>
-          clickHistoryTracker.add(resultClicked.userId, ClickedURI(uriId))
-          resultClickedTracker.add(resultClicked.userId, resultClicked.query, uriId, resultClicked.resultPosition, resultClicked.isUserKeep)
-        case None =>
-          resultClickedTracker.moderate(resultClicked.userId, resultClicked.query)
-      }
-    }
-    Ok
-  }
-
-  def logSearchEnded = Action(parse.json) { request =>
-    // Deprecated
-    Ok
-  }
+class SearchEventController @Inject() (searchEventCommander: SearchEventCommander) extends SearchServiceController {
 
   def updateBrowsingHistory(userId: Id[User]) = Action(parse.json) { request =>
     SafeFuture{
-      val browsedUris = request.body.as[JsArray].value.map(Id.format[NormalizedURI].reads)
-      browsedUris.foreach(uriIdJs => browsingHistoryTracker.add(userId, BrowsedURI(uriIdJs.get)))
+      val browsedUris = request.body.as[JsArray].value.map(_.asOpt(Id.format[NormalizedURI])).flatten
+      searchEventCommander.browsedUris(userId, browsedUris)
     }
     Ok
   }

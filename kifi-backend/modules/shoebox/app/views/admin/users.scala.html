@@ -5,7 +5,7 @@
 @userSetDescription = {
     @userData.userViewType match {
         case AllUsersViewType => {Total Users}
-        case RealUsersViewType => {Real Users}
+        case RegisteredUsersViewType => {Registered Users}
         case FakeUsersViewType => {Fake Users}
         case ByExperimentUsersViewType(exp) => {@exp.value}
     }
@@ -14,7 +14,7 @@
 @otherPagesRoute(page: Int) = {
     @userData.userViewType match {
         case AllUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.usersView(page)}
-        case RealUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.realUsersView(page)}
+        case RegisteredUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.registeredUsersView(page)}
         case FakeUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.fakeUsersView(page)}
         case ByExperimentUsersViewType(exp) => {@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(page, exp.value)}
     }
@@ -34,7 +34,14 @@
       alt="@sui.networkType" width="16" height="16"></a>
 }
 
-@admin(userData.userCount + " " + userSetDescription) {
+@newUsersInfo(newUsers: Option[Int]) = {
+    @newUsers match {
+        case Some(count) => {(@count new)}
+        case None => {}
+    }
+}
+
+@admin(userData.userCount + " " + userSetDescription + " " + newUsersInfo(userData.newUsers)) {
   <h2> Showing @userData.users.length (page @(userData.page + 1)) </h2>
 
   @adminHelper.pagination(userData.page, userData.userCount, userData.pageSize, otherPagesRoute _) {

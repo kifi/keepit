@@ -19,6 +19,7 @@ import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.integration.ReaperModule
 import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.queue.{NormalizationUpdateJobQueueModule}
+import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 
 abstract class ShoeboxModule(
   val secureSocialModule: SecureSocialModule,
@@ -33,7 +34,8 @@ abstract class ShoeboxModule(
 //  val topicModelModule: TopicModelModule, //disable for now
   val domainTagImporterModule: DomainTagImporterModule,
   val cacheModule: ShoeboxCacheModule,
-  val scrapeSchedulerModule: ScrapeSchedulerModule
+  val scrapeSchedulerModule: ScrapeSchedulerModule,
+  val fjMonitorModule: ForkJoinContextMonitorModule
 ) extends ConfigurationModule with CommonServiceModule {
 
   // Service clients
