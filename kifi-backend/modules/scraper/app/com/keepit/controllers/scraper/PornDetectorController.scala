@@ -5,6 +5,7 @@ import com.keepit.common.controller.ScraperServiceController
 import com.google.inject.Inject
 import play.api.mvc.Action
 import play.api.libs.json._
+import com.keepit.learning.porndetector.PornDetectorUtil
 
 class PornDetectorController @Inject()(factory: PornDetectorFactory) extends ScraperServiceController {
   def getModel() = Action { request =>
@@ -13,8 +14,8 @@ class PornDetectorController @Inject()(factory: PornDetectorFactory) extends Scr
 
   def detect(query: String) = Action { request =>
     val detector = factory()
-    val prob = detector.posterior(query)
-    val badTexts = if (prob > 0.5f) Map(query -> prob) else Map.empty[String, Float]    // will change this when we have sliding window detector
-    Ok(Json.toJson(badTexts))
+    val windows = PornDetectorUtil.tokenize(query).sliding(8, 4)
+    val badTexts = windows.map{ w => val block = w.mkString(" "); (block, detector.posterior(block)) }.filter(_._2 > 0.5f)
+    Ok(Json.toJson(badTexts.toMap))
   }
 }
