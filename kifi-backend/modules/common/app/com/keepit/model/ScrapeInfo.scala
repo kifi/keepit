@@ -29,6 +29,7 @@ case class ScrapeInfo(
   def withWorkerId(id: Id[ScraperWorker]) = this.copy(workerId = Some(id))
   def withUpdateTime(now: DateTime) = this
   def withState(state: State[ScrapeInfo]) = {
+    if (state == ScrapeInfoStates.INACTIVE) throw new IllegalArgumentException("use withStateAndNextScrape to set the state to INACTIVE")
     log.debug(s"[withState($id, $uriId, $workerId, $destinationUrl)] ${this.state} => ${state.toString.toUpperCase}; nextScrape(not set)=${this.nextScrape}")
     this.copy(state = state)
   }

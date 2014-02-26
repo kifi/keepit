@@ -47,7 +47,7 @@ class ScraperCallbackHelper @Inject()(
             count += 1
             builder += ScrapeRequest(nuri, savedInfo, proxy)
           } else {
-            val saved = scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+            val saved = scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
             log.warn(s"[assignTasks($zkId,$max)] ${nuri.state} in DO_NOT_SCRAPE list; uri=$nuri; deactivated scrapeInfo=$saved")
           }
         }
