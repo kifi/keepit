@@ -28,10 +28,8 @@ trait EContactRepo extends Repo[EContact] {
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
-  def deleteByUserId(userId:Id[User])(implicit session:RWSession):Int
-  def deleteAndInsertAll(userId:Id[User], contactInfos:Seq[EContact])(implicit session:RWSession):Int
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
-  def insertOnDupUpdate(userId:Id[User], contact:EContact)(implicit session:RWSession):Unit
+  def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
 }
 
@@ -39,7 +37,6 @@ trait EContactRepo extends Repo[EContact] {
 class EContactRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-//  val econtactTypeahead: EContactABookTypeahead,
   val econtactTypeaheadCache: EContactTypeaheadCache,
   val econtactCache: EContactCache
 ) extends DbRepo[EContact] with EContactRepo with Logging {
@@ -64,11 +61,23 @@ class EContactRepoImpl @Inject() (
     econtactCache.remove(EContactKey(e.id.get))
     econtactTypeaheadCache.remove(EContactTypeaheadKey(e.userId))
   }
-  override def invalidateCache(e: EContact)(implicit session: RSession): Unit = {
-    deleteCache(e) // todo
+  override def invalidateCache(e: EContact)(implicit session: RSession): Unit = { // eager
+    econtactCache.set(EContactKey(e.id.get), e)
+    log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
   }
 
-  // todo(ray): wire-up cache
+  def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit = { // special handling for bulk insert/delete (i.e. insertAll)
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+    contacts.foreach { e =>
+      e.id match {
+        case Some(id) => econtactCache.set(EContactKey(id), e)
+        case None =>
+          log.warn(s"[bulkInvalidateCache($userId)] $e does not have id set")
+          // moving on
+      }
+    }
+    log.info(s"[bulkInvalidateCache($userId)] #contacts=${contacts.length}; ${contacts.take(20).mkString(",")}")
+  }
 
   def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
     (for(f <- rows if f.id === econtactId) yield f).firstOption
@@ -126,19 +135,13 @@ class EContactRepoImpl @Inject() (
     }
   }
 
-  def deleteByUserId(userId: Id[User])(implicit session: RWSession): Int = {
+  private[this] def deleteByUserId(userId: Id[User])(implicit session: RWSession): Int = {
     Q.updateNA(s"delete from econtact where user_id=${userId.id}").first
-  }
-
-  def deleteAndInsertAll(userId: Id[User], contacts: Seq[EContact])(implicit session: RWSession): Int = {
-    val rows = deleteByUserId(userId)
-    insertAll(userId, contacts)
-    rows
   }
 
   val NULL = "NULL"
 
-  def insertOnDupUpdate(userId: Id[User], c: EContact)(implicit session: RWSession): Unit = {
+  private[this] def insertOnDupUpdate(userId: Id[User], c: EContact)(implicit session: RWSession): Unit = {
     val cdt = currentDateTime
     if (Play.maybeApplication.isDefined && Play.isProd) {
       sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update id=id".execute
@@ -164,7 +167,10 @@ class EContactRepoImpl @Inject() (
     insertOnDupUpdate(userId, c) // todo: optimize (if needed)
     val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
     cOpt match {
-      case Some(econtact) => econtact
+      case Some(e) => {
+        invalidateCache(e)
+        e
+      }
       case None => throw new IllegalStateException(s"Failed to retrieve econtact for $email")
     }
   }
