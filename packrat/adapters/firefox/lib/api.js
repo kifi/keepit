@@ -410,13 +410,13 @@ exports.tabs = {
           worker.port.emit(type, data);
           if (!emitted) {
             emitted = true;
-            log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+            log('[api.tabs.emit]', tab.id, 'type:', type, 'data:', data, 'url:', tab.url);
           }
         }
       }
     }
     if (!emitted) {
-      if (opts && opts.queue) {
+      if (page && opts && opts.queue) {
         if (page.toEmit) {
           if (opts.queue === 1) {
             for (var i = 0; i < page.toEmit.length; i++) {
@@ -431,7 +431,7 @@ exports.tabs = {
           page.toEmit = [[type, data]];
         }
       } else {
-        log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
+        log('[api.tabs.emit]', tab.id, 'type:', type, 'neither emitted nor queued for:', tab.url);
       }
     }
   },
