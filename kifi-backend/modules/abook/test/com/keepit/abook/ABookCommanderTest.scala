@@ -16,30 +16,18 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
+import com.keepit.typeahead.abook.{EContactTypeaheadStore, EContactTypeahead}
+import com.keepit.abook.typeahead.EContactABookTypeahead
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
-  def setup()(implicit injector:Injector) = {
-    val db = inject[Database]
-    val airbrake = inject[AirbrakeNotifier]
-    val abookInfoRepo = inject[ABookInfoRepo]
-    val contactRepo = inject[ContactRepo]
-    val econtactRepo = inject[EContactRepo]
-    val contactsUpdater = inject[ContactsUpdaterPlugin]
-    val s3 = inject[ABookRawInfoStore]
-    val commander = new ABookCommander(db, airbrake, s3, abookInfoRepo, contactRepo, econtactRepo, contactsUpdater)
-    commander
-  }
-
   implicit def strSeqToJsArray(s:Seq[String]):JsArray = JsArray(s.map(JsString(_)))
 
-//  implicit val system = ActorSystem("test")
   val modules = Seq(
     FakeABookStoreModule(),
     TestContactsUpdaterPluginModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
-//    StandaloneTestActorSystemModule(),
     FakeAirbrakeModule(),
     ABookCacheModule(HashMapMemoryCacheModule())
   )
@@ -48,7 +36,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
     "handle imports from IOS and gmail" in {
       withDb(modules: _*) { implicit injector =>
-        val (commander) = setup()
+        val (commander) = inject[ABookCommander] //setup()
 
       db.readOnly(inject[ABookInfoRepo].count(_))
         // empty abook upload
@@ -141,7 +129,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
     "handle imports from multiple gmail accounts" in {
       withDb(modules: _*) { implicit injector =>
-        val (commander) = setup()
+        val (commander) = inject[ABookCommander] // setup()
         val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](1)
         gbookInfo.origin === ABookOrigins.GMAIL

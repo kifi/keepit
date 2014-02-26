@@ -23,11 +23,13 @@ import play.api.libs.ws.{Response, WS}
 import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
+import com.keepit.abook.typeahead.EContactABookTypeahead
 
 class ABookCommander @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
+  econtactTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
@@ -244,6 +246,7 @@ class ABookCommander @Inject() (
     val res = db.readWrite(attempts = 2) { implicit s =>
       econtactRepo.getOrCreate(userId, email, name, firstName, lastName)
     }
+    econtactTypeahead.refresh(userId) // async
     log.info(s"[getOrCreateEContact($userId,$email,${name.getOrElse("")})] res=$res")
     res
   }

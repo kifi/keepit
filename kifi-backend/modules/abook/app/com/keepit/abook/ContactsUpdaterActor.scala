@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 import com.google.inject.{Provider, ImplementedBy, Inject, Singleton}
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -23,6 +23,7 @@ import java.sql.SQLException
 import play.api.libs.iteratee.{Step, Iteratee}
 import com.keepit.common.performance._
 import scala.util.{Try, Failure, Success}
+import com.keepit.abook.typeahead.EContactABookTypeahead
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -66,6 +67,7 @@ import Logging._
 class ContactsUpdater @Inject() (
   db:Database,
   s3:ABookRawInfoStore,
+  econtactABookTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
@@ -192,6 +194,15 @@ class ContactsUpdater @Inject() (
             saved
           }
 
+          // batch inserts (i.e. insertAll) do not work well with current model; upper layer handle cache invalidation for now
+          SafeFuture {
+            val econtacts = db.readOnly { implicit ro =>
+              econtactRepo.getByUserId(userId) // get all of 'em
+            }
+            econtactRepo.bulkInvalidateCache(userId, econtacts)
+          }
+          econtactABookTypeahead.refresh(userId) // async
+
           val contacts = cBuilder.result
           if (!contacts.isEmpty) {
             asyncUpdateContactsRepo(userId, abookInfo, origin, contacts)
@@ -216,7 +227,7 @@ class ContactsUpdater @Inject() (
   }
 
   def asyncUpdateContactsRepo(userId: Id[User], abookInfo: ABookInfo, origin: ABookOriginType, contacts: Array[Contact]) {
-    future {
+    SafeFuture {
       Try {
         db.readWrite(attempts = 2) { implicit session =>
           contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
