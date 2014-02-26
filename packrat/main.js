@@ -22,11 +22,11 @@ var pageData = {}; // normUrl => PageData
 var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'unread')
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
-var friends = [];
-var friendsById = {};
-var ruleSet = {};
-var urlPatterns = [];
-var tags;  // [] means user has none
+var friends;
+var friendsById;
+var ruleSet = {rules: {}};
+var urlPatterns;
+var tags;
 var tagsById;
 
 function clearDataCache() {
@@ -44,10 +44,10 @@ function clearDataCache() {
   threadLists = {};
   threadsById = {};
   messageData = {};
-  friends = [];
-  friendsById = {};
-  ruleSet = {};
-  urlPatterns = [];
+  friends = null;
+  friendsById = null;
+  ruleSet = {rules: {}};
+  urlPatterns = null;
   tags = null;
   tagsById = null;
 }
@@ -359,40 +359,46 @@ function gotFilteredThreads(kind, tl, arr, numTotal) {
 }
 
 var socketHandlers = {
-  denied: function() {
-    log("[socket:denied]")();
+  denied: function () {
+    log('[socket:denied]')();
     clearSession();
   },
-  version: function(v) {
+  version: function (v) {
     log('[socket:version]', v)();
     if (api.version !== v) {
       api.requestUpdateCheck();
     }
   },
-  experiments: function(exp) {
-    log("[socket:experiments]", exp)();
+  experiments: function (exp) {
+    log('[socket:experiments]', exp)();
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
-  new_friends: function(fr) {
-    log("[socket:new_friends]", fr)();
-    for (var i = 0; i < fr.length; i++) {
-      var f = fr[i];
-      if (friendsById[f.id]) {
-        friends = friends.filter(function(e) {return e.id !== f.id})
+  new_friends: function (fr) {
+    log('[socket:new_friends]', fr)();
+    if (friends) {
+      for (var i = 0; i < fr.length; i++) {
+        var f = fr[i];
+        if (friendsById[f.id]) {
+          friends = friends.filter(idIsNot(f.id))
+        }
+        friends.push(f)
+        friendsById[f.id] = f;
       }
-      friends.push(f)
-      friendsById[f.id] = f;
+      // TODO: push friends to interested tabs
     }
   },
-  lost_friends: function(fr) {
-    log("[socket:lost_friends]", fr)();
-    for (var i = 0; i < fr.length; i++) {
-      var f = fr[i];
-      if (friendsById[f.id]) {
-        friends = friends.filter(function(e) {return e.id !== f.id});
+  lost_friends: function (fr) {
+    log('[socket:lost_friends]', fr)();
+    if (friends) {
+      for (var i = 0; i < fr.length; i++) {
+        var f = fr[i];
+        if (friendsById[f.id]) {
+          friends = friends.filter(idIsNot(f.id));
+        }
+        delete friendsById[f.id];
       }
-      delete friendsById[f.id];
+      // TODO: push friends to interested tabs
     }
   },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
@@ -574,6 +580,8 @@ function makeRequest(name, method, url, data, callbacks) {
 }
 
 // ===== Handling messages from content scripts or other extension pages
+
+var SUPPORT = {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', firstName: 'Tamila, Kifi Help', lastName: '', name: 'Tamila, Kifi Help', pictureName: 'tmilz.jpg'};
 
 api.port.on({
   deauthenticate: deauthenticate,
@@ -916,7 +924,7 @@ api.port.on({
     respond(webBaseUri());
   },
   get_friends: function(_, respond) {
-    respond(friends);
+    respond(friends || [SUPPORT]);
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
@@ -937,7 +945,7 @@ api.port.on({
     api.tabs.emit(tab, 'open_to', {
       trigger: 'deepLink',
       locator: '/messages',
-      composeTo: friendsById && friendsById['aa345838-70fe-45f2-914c-f27c865bdb91'] || {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', name: 'Tamila, Kifi Help'}
+      composeTo: friendsById && friendsById[SUPPORT.id] || SUPPORT
     }, {queue: 1});
   },
   open_login_popup: function(o) {
@@ -1955,6 +1963,7 @@ function getFriends(next) {
       var f = fr[i];
       friendsById[f.id] = f;
     }
+    // TODO: push friends to potentially interested tabs
     if (next) next();
   });
 }
