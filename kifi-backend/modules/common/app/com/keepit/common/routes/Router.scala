@@ -244,6 +244,7 @@ object Scraper extends Service {
     def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
     def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
+    def detectPorn(query: String) = ServiceRoute(GET, s"/internal/scraper/detectPorn")
   }
 }
 
