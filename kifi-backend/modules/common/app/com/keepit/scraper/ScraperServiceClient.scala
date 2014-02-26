@@ -125,6 +125,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getBasicArticle(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
   def getSignature(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
+  def getPornDetectorModel(): Future[Map[String, Float]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -184,6 +185,12 @@ class ScraperServiceClientImpl @Inject() (
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = {
     broadcastWithUrls(Common.internal.threadDetails(Some("ForkJoinPool"), filterState)) map { _ map {response => ScraperThreadInstanceInfo(response.uri.serviceInstance.instanceInfo, response.response.body) } }
   }
+
+  def getPornDetectorModel(): Future[Map[String, Float]] = {
+    call(Scraper.internal.getPornDetectorModel()).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
@@ -207,4 +214,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]] = ???
 
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
+
+  def getPornDetectorModel(): Future[Map[String, Float]] = ???
 }

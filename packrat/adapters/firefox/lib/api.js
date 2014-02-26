@@ -202,7 +202,7 @@ exports.popup = {
 var portHandlers, portMessageTypes;
 exports.port = {
   on: function (handlers) {
-    if (portHandlers) throw Error("api.port.on already called");
+    if (portHandlers) throw Error('api.port.on already called');
     portHandlers = handlers;
     portMessageTypes = Object.keys(handlers);
     for each (let page in pages) {
@@ -218,8 +218,13 @@ function bindPortHandlers(worker, page) {
 }
 var onPortMessage = errors.wrap(function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
-  portHandlers[type](data, this.port.emit.bind(this.port, 'api:respond', callbackId), page);
+  portHandlers[type](data, respondToTab.bind(this, callbackId), page);
 });
+function respondToTab(callbackId, response) {
+  if (this.handling) {
+    this.port.emit('api:respond', callbackId, response);
+  }
+}
 
 exports.request = function(method, url, data, done, fail) {
   var options = {
@@ -410,13 +415,13 @@ exports.tabs = {
           worker.port.emit(type, data);
           if (!emitted) {
             emitted = true;
-            log("[api.tabs.emit]", tab.id, "type:", type, "data:", data, "url:", tab.url);
+            log('[api.tabs.emit]', tab.id, 'type:', type, 'data:', data, 'url:', tab.url);
           }
         }
       }
     }
     if (!emitted) {
-      if (opts && opts.queue) {
+      if (page && opts && opts.queue) {
         if (page.toEmit) {
           if (opts.queue === 1) {
             for (var i = 0; i < page.toEmit.length; i++) {
@@ -431,7 +436,7 @@ exports.tabs = {
           page.toEmit = [[type, data]];
         }
       } else {
-        log("[api.tabs.emit]", tab.id, "type:", type, "neither emitted nor queued for:", tab.url);
+        log('[api.tabs.emit]', tab.id, 'type:', type, 'neither emitted nor queued for:', tab.url);
       }
     }
   },
@@ -592,7 +597,7 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     }
   } else {
     let page = pages[tabId];
-    if (page.url != tab.url) {
+    if (page && page.url !== tab.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
         dispatch.call(exports.tabs.on.unload, page, true);
         page.url = tab.url;

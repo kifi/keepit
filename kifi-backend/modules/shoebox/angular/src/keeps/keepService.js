@@ -120,18 +120,14 @@ angular.module('kifi.keepService', [])
       },
 
       isSelected: function (keep) {
-        var id = getKeepId(keep);
-        if (id) {
-          return selected.hasOwnProperty(id);
-        }
-        return false;
+        return keep && keep.id && !!selected[keep.id];
       },
 
       select: function (keep) {
-        var id = getKeepId(keep);
+        var id = keep.id;
         if (id) {
           isDetailOpen = true;
-          selected[id] = true;
+          selected[id] = keep;
           if (_.size(selected) === 1) {
             api.preview(keep);
           }
@@ -145,7 +141,7 @@ angular.module('kifi.keepService', [])
       },
 
       unselect: function (keep) {
-        var id = getKeepId(keep);
+        var id = keep.id;
         if (id) {
           delete selected[id];
           var countSelected = _.size(selected);
@@ -153,7 +149,7 @@ angular.module('kifi.keepService', [])
             api.preview(keep);
           }
           else if (countSelected === 1 && isDetailOpen === true) {
-            api.preview(_.keys(selected)[0]);
+            api.preview(_.values(selected)[0]);
           }
           else {
             previewed = null;
@@ -290,19 +286,23 @@ angular.module('kifi.keepService', [])
 
       joinTags: function (keeps, tags) {
         var idMap = _.reduce(tags, function (map, tag) {
-          map[tag.id] = tag;
+          if (tag && tag.id) {
+            map[tag.id] = tag;
+          }
           return map;
         }, {});
 
         _.forEach(keeps, function (keep) {
           keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
             return idMap[tagId] || null;
+          }).filter(function (tag) {
+            return tag != null;
           });
         });
       },
 
       getChatter: function (keep) {
-        if (keep != null) {
+        if (keep && keep.url) {
           var url = env.xhrBaseEliza + '/chatter';
 
           var data = {
@@ -315,7 +315,7 @@ angular.module('kifi.keepService', [])
             return data;
           });
         }
-        return $q.when([]);
+        return $q.when({'threads': 0});
       },
 
       fetchScreenshotUrls: function (keeps) {

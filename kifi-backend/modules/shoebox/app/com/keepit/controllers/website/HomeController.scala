@@ -83,8 +83,6 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.terms(isLoggedIn)))
   }
@@ -95,8 +93,6 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.privacy(isLoggedIn)))
   }

@@ -4,7 +4,37 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 
 .controller('KeepCtrl', [
   '$scope',
-  function () {}
+  function ($scope) {
+    $scope.isMyBookmark = function (keep) {
+      return keep.isMyBookmark || false;
+    };
+
+    $scope.isPrivate = function (keep) {
+      return keep.isPrivate || false;
+    };
+
+    $scope.isExampleTag = function (tag) {
+      return (tag && tag.name && tag.name.toLowerCase()) === 'example keep';
+    };
+
+    function hasExampleTag(tags) {
+      if (tags && tags.length) {
+        for (var i = 0, l = tags.length; i < l; i++) {
+          if ($scope.isExampleTag(tags[i])) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    $scope.isExample = function (keep) {
+      if (keep.isExample == null) {
+        keep.isExample = hasExampleTag($scope.getTags());
+      }
+      return keep.isExample;
+    };
+  }
 ])
 
 .directive('kfKeep', [
@@ -16,35 +46,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
       controller: 'KeepCtrl',
       templateUrl: 'keep/keep.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
-        scope.isMyBookmark = function () {
-          return scope.keep.isMyBookmark || false;
-        };
-
-        function hasExampleTag(tags) {
-          if (tags && tags.length) {
-            for (var i = 0, l = tags.length; i < l; i++) {
-              if (scope.isExampleTag(tags[i])) {
-                return true;
-              }
-            }
-          }
-          return false;
-        }
-
-        scope.isExampleTag = function (tag) {
-          return (tag && tag.name && tag.name.toLowerCase()) === 'example keep';
-        };
-
         scope.getTags = function () {
           return scope.keep.tagList;
-        };
-
-        scope.isExample = function () {
-          var keep = scope.keep;
-          if (keep.isExample == null) {
-            keep.isExample = hasExampleTag(scope.getTags());
-          }
-          return keep.isExample;
         };
 
         var aUrlParser = $document[0].createElement('a');
@@ -157,18 +160,10 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
           return !scope.hasKeepers() && !! scope.keep.others;
         };
 
-        scope.isSelected = function () {
-          return scope.isSelectedKeep(scope.keep);
-        };
-
-        scope.isPreviewed = function () {
-          return scope.isPreviewedKeep(scope.keep);
-        };
-
         scope.onCheck = function (e) {
           // needed to prevent previewing
           e.stopPropagation();
-          return scope.toggleSelectKeep(scope.keep);
+          return scope.toggleSelect(scope.keep);
         };
       }
     };

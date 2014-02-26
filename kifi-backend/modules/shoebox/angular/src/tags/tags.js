@@ -2,16 +2,6 @@
 
 angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/tag/:id', {
-      templateUrl: 'keeps/keeps.tpl.html',
-      controller: 'TagsCtrl'
-    });
-  }
-])
-
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
   function ($scope, $timeout, tagService) {
@@ -317,6 +307,11 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
         };
 
         var list = element.find('.kf-tag-list');
+        list.css({
+          position: 'absolute',
+          top: list.position().top,
+          bottom: 0
+        });
 
         scope.$watch('filter.name', function () {
           $timeout(scope.refreshHighlight);
@@ -327,13 +322,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
           scope.refreshScroll();
         });
 
-        tagService.fetchAll().then(function (a, b) {
-          list.css({
-            position: 'absolute',
-            top: list.position().top,
-            bottom: 0
-          });
-        });
+        tagService.fetchAll();
       }
     };
   }

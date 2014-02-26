@@ -5,6 +5,8 @@ import play.api.mvc.{PathBindable, QueryStringBindable}
 
 case class SequenceNumber(value: Long) extends AnyVal with Ordered[SequenceNumber] {
   def compare(that: SequenceNumber) = value compare that.value
+  def +(offset: Long): SequenceNumber = SequenceNumber(this.value + offset)
+  def -(other: SequenceNumber): Long = this.value - other.value
   override def toString = value.toString
 }
 

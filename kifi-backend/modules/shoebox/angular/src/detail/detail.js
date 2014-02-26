@@ -5,23 +5,14 @@ angular.module('kifi.detail',
 )
 
 .directive('kfDetail', [
-  'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
-  function (keepService, tagService, $filter, $sce, $document, profileService) {
-    var KEY_UP = 38,
-      KEY_DOWN = 40,
-      KEY_ENTER = 13,
-      KEY_ESC = 27,
-      //KEY_TAB = 9,
-      KEY_DEL = 46,
-      KEY_F2 = 113;
-    var dropdownSuggestionCount = 5;
+  'keepService', '$filter', '$sce', '$document', 'profileService',
+  function (keepService, $filter, $sce, $document, profileService) {
 
     return {
       replace: true,
       restrict: 'A',
       templateUrl: 'detail/detail.tpl.html',
       link: function (scope, element/*, attrs*/ ) {
-        scope.data = {};
         scope.isSingleKeep = keepService.isSingleKeep;
         scope.getLength = keepService.getSelectedLength;
         scope.isDetailOpen = keepService.isDetailOpen;
@@ -29,33 +20,13 @@ angular.module('kifi.detail',
         scope.getSelected = keepService.getSelected;
         scope.closeDetail = keepService.togglePreview.bind(null, null);
         scope.me = profileService.me;
-        scope.data.isClickingInList = false;
-        scope.newTagLabel = 'NEW';
-
-        tagService.fetchAll().then(function (res) {
-          scope.allTags = res;
-          filterTags(null);
-        });
 
         scope.$watch(scope.getPreviewed, function (keep) {
+          console.log("[kfDetail]", keep)
           scope.keep = keep;
-          scope.tagFilter.name = '';
-          filterTags(null);
-          scope.hideAddTagDropdown();
         });
 
-        scope.tagFilter = {name: ''};
-
-        scope.tagTypeAheadResults = [];
-
-        function indexOfTag(tag) {
-          if (tag) {
-            return scope.tagTypeAheadResults.indexOf(tag);
-          }
-          return -1;
-        }
-
-        function getSelectedKeeps() {
+        scope.getSelectedKeeps = function() {
           if (scope.isSingleKeep()) {
             return [scope.getPreviewed()];
           }
@@ -64,7 +35,98 @@ angular.module('kifi.detail',
           }
         }
 
-        var filterTags = function (tagFilterTerm) {
+        scope.getPrivateConversationText = function () {
+          return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
+        };
+
+        scope.getTitleText = function () {
+          return keepService.getSelectedLength() + ' Keeps selected';
+        };
+
+        scope.howKept = null;
+
+        scope.$watch(function () {
+          if (scope.isSingleKeep()) {
+            if (scope.keep) {
+              return scope.keep.isPrivate ? 'private' : 'public';
+            }
+            return null;
+          }
+
+          var selected = scope.getSelected();
+          if (_.every(selected, 'isMyBookmark')) {
+            return _.every(selected, 'isPrivate') ? 'private' : 'public';
+          }
+          return null;
+        }, function (howKept) {
+          scope.howKept = howKept;
+        });
+
+        scope.isPrivate = function () {
+          return scope.howKept === 'private';
+        };
+
+        scope.isPublic = function () {
+          return scope.howKept === 'public';
+        };
+
+        scope.togglePrivate = function () {
+          var keeps = scope.getSelectedKeeps();
+          return keepService.togglePrivate(keeps);
+        };
+
+      }
+    };
+  }
+])
+
+.directive('kfTagList', [
+  'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
+  function (keepService, tagService, $filter, $sce, $document, profileService) {
+    var KEY_UP = 38,
+      KEY_DOWN = 40,
+      KEY_ENTER = 13,
+      KEY_ESC = 27,
+      KEY_DEL = 46,
+      KEY_F2 = 113;
+    var dropdownSuggestionCount = 5;
+
+    return {
+      scope: {
+        'keep': '=',
+        'getSelectedKeeps': '&'
+      },
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'detail/tagList.tpl.html',
+      link: function (scope, element/*, attrs*/ ) {
+        scope.data = {};
+        scope.data.isClickingInList = false;
+        scope.newTagLabel = 'NEW';
+        scope.tagFilter = { name: '' };
+        scope.tagTypeAheadResults = [];
+        scope.shouldGiveFocus = false;
+
+        tagService.fetchAll().then(function (res) {
+          scope.allTags = res;
+          filterTags(null);
+        });
+
+        scope.$watch('keep', function (keep) {
+          console.log("[kfTagList]", keep)
+          scope.tagFilter.name = '';
+          filterTags(null);
+          scope.hideAddTagDropdown();
+        });
+
+        function indexOfTag(tag) {
+          if (tag) {
+            return scope.tagTypeAheadResults.indexOf(tag);
+          }
+          return -1;
+        }
+
+        function filterTags(tagFilterTerm) {
           function keepHasTag(tagId) {
             return scope.keep && scope.allTags && scope.keep.tagList && !!_.find(scope.keep.tagList, function (keepTag) {
               return keepTag.id === tagId;
@@ -75,8 +137,15 @@ angular.module('kifi.detail',
               return !keepHasTag(tag.id);
             }).slice(0, dropdownSuggestionCount);
           }
+          function generateDropdownSuggestionCount() {
+            var elem, offset;
+            if (elem = element.find('.page-coll-list') && elem && elem.offset().top) {
+              return Math.min(10, Math.max(3, ($document.height() - elem.offset().top) / 24 - 1));
+            }
+            return dropdownSuggestionCount;
+          }
           var splitTf = tagFilterTerm && tagFilterTerm.split(/[\W]+/);
-          dropdownSuggestionCount = Math.min(10, Math.max(3, ($document.height() - element.find('.page-coll-list').offset().top) / 24 - 1));
+          dropdownSuggestionCount = generateDropdownSuggestionCount();
           if (scope.allTags && tagFilterTerm) {
             var filtered = scope.allTags.filter(function (tag) {
               // for given tagFilterTerm (user search value) and a tag, returns true if
@@ -105,7 +174,7 @@ angular.module('kifi.detail',
         };
 
         scope.addTag = function (tag) {
-          tagService.addKeepsToTag(tag, getSelectedKeeps());
+          tagService.addKeepsToTag(tag, scope.getSelectedKeeps());
           scope.tagFilter.name = '';
           return scope.hideAddTagDropdown();
         };
@@ -127,12 +196,10 @@ angular.module('kifi.detail',
           }
         };
 
-        var refreshTagDropdown = function (tagFilterTerm) {
+        scope.$watch('tagFilter.name', function (tagFilterTerm) {
           filterTags(tagFilterTerm);
           scope.checkHighlight();
-        };
-
-        scope.$watch('tagFilter.name', refreshTagDropdown);
+        });
 
         scope.highlightTag = function (tag) {
           return scope.highlightedTag = tag;
@@ -230,21 +297,13 @@ angular.module('kifi.detail',
         scope.showAddTagDropdown = function () {
           scope.tagFilter.name = '';
           filterTags(null);
-          element.find('.page-coll-input').focus();
+          scope.shouldGiveFocus = true;
 
           return scope.isAddingTag = true;
         };
 
         scope.hideAddTagDropdown = function () {
           return scope.isAddingTag = false;
-        };
-
-        scope.getPrivateConversationText = function () {
-          return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
-        };
-
-        scope.getTitleText = function () {
-          return keepService.getSelectedLength() + ' Keeps selected';
         };
 
         scope.onKeydown = function (e) {
@@ -270,45 +329,8 @@ angular.module('kifi.detail',
           }
         };
 
-        scope.howKept = null;
-
-        scope.$watch(function () {
-          if (scope.isSingleKeep()) {
-            if (scope.keep) {
-              return scope.keep.isPrivate ? 'private' : 'public';
-            }
-            return null;
-          }
-
-          var selected = scope.getSelected();
-          if (_.every(selected, 'isMyBookmark')) {
-            return _.every(selected, 'isPrivate') ? 'private' : 'public';
-          }
-          return null;
-        }, function (howKept) {
-          scope.howKept = howKept;
-        });
-
-        scope.isPrivate = function () {
-          return scope.howKept === 'private';
-        };
-
-        scope.isPublic = function () {
-          return scope.howKept === 'public';
-        };
-
         scope.removeTag = function (keep, tag) {
           tagService.removeKeepsFromTag(tag.id, [keep.id]);
-        };
-
-        scope.toggleKeep = function () {
-          var keeps = getSelectedKeeps();
-          return keepService.toggleKeep(keeps);
-        };
-
-        scope.togglePrivate = function () {
-          var keeps = getSelectedKeeps();
-          return keepService.togglePrivate(keeps);
         };
 
         element.on('mousedown', '.page-coll-opt', function () {
@@ -377,8 +399,8 @@ angular.module('kifi.detail',
 
         function testEmbed(keep) {
           if (keep) {
-            var url = keep.url;
-            if (isYoutubeVideo(url)) {
+            var url = keep && keep.url;
+            if (url && isYoutubeVideo(url)) {
               var vid = getYoutubeVideoId(url);
               if (vid) {
                 keep.videoId = vid;

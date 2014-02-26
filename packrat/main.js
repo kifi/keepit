@@ -641,28 +641,28 @@ api.port.on({
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
-    prefs.enterToSend = data;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
+    if (prefs) prefs.enterToSend = data;
   },
   set_max_results: function(n, respond) {
-    prefs.maxResults = n;
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
     mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
+    if (prefs) prefs.maxResults = n;
   },
   set_show_find_friends: function(show) {
-    prefs.showFindFriends = show;
     ajax('POST', '/ext/pref/showFindFriends?show=' + show);
+    if (prefs) prefs.showFindFriends = show;
   },
   stop_showing_keeper_intro: function() {
-    prefs.showKeeperIntro = false;
     ajax('POST', '/ext/pref/showKeeperIntro?show=false');
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, 'hide_keeper_intro');
     });
+    if (prefs) prefs.showKeeperIntro = false;
   },
   set_show_search_intro: function(show) {
-    prefs.showSearchIntro = show;
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
+    if (prefs) prefs.showSearchIntro = show;
   },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
@@ -723,7 +723,11 @@ api.port.on({
       emitThreadInfoToTab(th, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id]);
+      socket.send(['get_thread_info', id], function (th) {
+        standardizeNotification(th);
+        threadsById[th.thread] = th;
+        emitThreadInfoToTab(th, tab);
+      });
     }
     var msgs = messageData[id];
     if (msgs) {
@@ -1042,6 +1046,7 @@ function unsilence(tab) {
 }
 
 function onTagChangeFromServer(op, tag) {
+  if (!tags || !tagsById) return;
   var tagId = tag.id;
   switch (op) {
     case 'create':
@@ -1057,7 +1062,7 @@ function onTagChangeFromServer(op, tag) {
       tags = tags.filter(idIsNot(tagId));
       delete tagsById[tagId];
   }
-  tabsTagging.forEach(function(tab) {
+  tabsTagging.forEach(function (tab) {
     api.tabs.emit(tab, 'tag_change', this);
   }, {op: op, tag: tag});
 }
@@ -1336,8 +1341,9 @@ function reloadKifiAppTabs() {
 
 function forEachTabAt() { // (url[, url]..., f)
   var done = {};
-  var f = arguments[arguments.length - 1];
-  for (var i = arguments.length - 1; i--;) {
+  var i = arguments.length - 1;
+  var f = arguments[i];
+  while (--i >= 0) {
     var url = arguments[i];
     if (!done[url]) {
       done[url] = true;
@@ -1753,13 +1759,17 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
   for (var loc in tabsByLocator) {
     var tabs = tabsByLocator[loc];
-    for (var i = tabs.length; i--;) {
-      if (tabs[i] === tab) {
-        tabs.splice(i, 1);
+    if (tabs) {
+      for (var i = tabs.length; i--;) {
+        if (tabs[i] === tab) {
+          tabs.splice(i, 1);
+        }
       }
-    }
-    if (!tabs.length) {
-      delete tabsByLocator[loc];
+      if (!tabs.length) {
+        delete tabsByLocator[loc];
+      }
+    } else {
+      api.errors.push({error: Error('tabsByLocator array undefined'), params: {loc: loc, type: typeof tabs, in: loc in tabsByLocator}});
     }
   }
   if (tabsTagging.length) {

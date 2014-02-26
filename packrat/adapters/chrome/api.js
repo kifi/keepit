@@ -121,29 +121,29 @@ var api = (function createApi() {
       var page = pages[details.tabId];
       if (page) {
         if (page.url === details.url) {
-          log("[onDOMContentLoaded]", details.tabId, details.url)();
+          log('[onDOMContentLoaded]', details.tabId, details.url)();
         } else {
-          log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url)();
+          log('#a00', '[onDOMContentLoaded] %i url mismatch:\n%s\n%s', details.tabId, details.url, page.url)();
         }
         injectContentScripts(page);
       } else if (normalTab[details.tabId]) {
-        log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url)();
+        log('#a00', '[onDOMContentLoaded] no page for', details.tabId, details.url)();
       }
     }
   }));
 
   chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log("#666", "[onCommitted]", e.tabId, e)();
+    log('#666', '[onCommitted]', e.tabId, e)();
     onRemoved(e.tabId, {temp: true});
     createPage(e.tabId, e.url);
   }));
 
   chrome.webNavigation.onHistoryStateUpdated.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log("#666", "[onHistoryStateUpdated]", e.tabId, e)();
+    log('#666', '[onHistoryStateUpdated]', e.tabId, e)();
     var page = pages[e.tabId];
-    if (page.url != e.url) {
+    if (page && page.url !== e.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
         dispatch.call(api.tabs.on.unload, page, true);
         page.url = e.url;
@@ -156,18 +156,21 @@ var api = (function createApi() {
 
   chrome.webNavigation.onReferenceFragmentUpdated.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log("#666", "[onReferenceFragmentUpdated]", e.tabId, e)();
-    pages[e.tabId].url = e.url;
+    log('#666', '[onReferenceFragmentUpdated]', e.tabId, e)();
+    var page = pages[e.tabId];
+    if (page) {
+      page.url = e.url;
+    }
   }));
 
   chrome.tabs.onUpdated.addListener(errors.wrap(function (tabId, change) {
     if ((change.status || change.url) && normalTab[tabId]) {
-      log("#666", "[tabs.onUpdated] %i change: %o", tabId, change)();
+      log('#666', '[tabs.onUpdated] %i change: %o', tabId, change)();
     }
   }));
 
   chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
-    log("#666", "[tabs.onReplaced]", oldTabId, "->", newTabId)();
+    log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId)();
     normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
     for (var winId in selectedTabIds) {
@@ -196,7 +199,7 @@ var api = (function createApi() {
   }
 
   chrome.windows.onCreated.addListener(errors.wrap(function (win) {
-    if (win.type === "normal") {
+    if (win.type === 'normal') {
       selectedTabIds[win.id] = -1;  // indicates that the window is normal (supports tabs)
     }
   }));
@@ -208,10 +211,10 @@ var api = (function createApi() {
   var focusedWinId, topNormalWinId;
   chrome.windows.getLastFocused(null, errors.wrap(function (win) {
     focusedWinId = win && win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
-    topNormalWinId = win && win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
+    topNormalWinId = win && win.type == 'normal' ? win.id : chrome.windows.WINDOW_ID_NONE;
   }));
   chrome.windows.onFocusChanged.addListener(errors.wrap(function (winId) {
-    log("[onFocusChanged] win %o -> %o", focusedWinId, winId)();
+    log('[onFocusChanged] win %o -> %o', focusedWinId, winId)();
     if (focusedWinId > 0) {
       var page = pages[selectedTabIds[focusedWinId]];
       if (page && httpRe.test(page.url)) {

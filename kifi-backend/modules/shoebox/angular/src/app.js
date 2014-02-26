@@ -7,12 +7,14 @@ angular.module('kifi', [
   'ngSanitize',
   'ngAnimate',
   'ui.bootstrap',
+  //'ui.router',
   'util',
   'dom',
   'antiscroll',
   'jun.smartScroll',
   'angularMoment',
   'kifi.home',
+  'kifi.search',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
@@ -27,6 +29,8 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol'
 ])
+
+.run(['$route', angular.noop])
 
 .config([
   '$routeProvider', '$locationProvider', '$httpProvider',

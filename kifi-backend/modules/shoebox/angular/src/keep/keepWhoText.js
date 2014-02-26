@@ -31,7 +31,7 @@ angular.module('kifi.keepWhoText', [])
           var keepers = scope.keep.keepers,
             len = keepers && keepers.length || 0,
             text;
-          if (keepers.length === 1) {
+          if (len === 1) {
             text = '1 friend';
           }
           text = len + ' friends';
