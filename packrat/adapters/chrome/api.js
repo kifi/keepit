@@ -143,7 +143,7 @@ var api = (function createApi() {
     if (e.frameId || !normalTab[e.tabId]) return;
     log('#666', '[onHistoryStateUpdated]', e.tabId, e)();
     var page = pages[e.tabId];
-    if (page.url != e.url) {
+    if (page && page.url !== e.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
         dispatch.call(api.tabs.on.unload, page, true);
         page.url = e.url;

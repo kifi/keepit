@@ -592,7 +592,7 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     }
   } else {
     let page = pages[tabId];
-    if (page.url != tab.url) {
+    if (page && page.url !== tab.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
         dispatch.call(exports.tabs.on.unload, page, true);
         page.url = tab.url;
