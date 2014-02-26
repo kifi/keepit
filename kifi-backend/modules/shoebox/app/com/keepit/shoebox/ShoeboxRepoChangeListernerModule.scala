@@ -44,3 +44,24 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   })
 
 }
+
+case class FakeShoeboxRepoChangeListenerModule() extends ScalaModule {
+  def configure(): Unit = {}
+
+  @Provides
+  @Singleton
+  def socialConnectionChangeListener(): Option[RepoModification.Listener[SocialConnection]] = None
+
+  @Provides
+  @Singleton
+  def userConnectionChangeListener(): Option[RepoModification.Listener[UserConnection]] = None
+
+  @Provides
+  @Singleton
+  def invitationChangeListener(): Option[RepoModification.Listener[Invitation]] = None
+
+  @Provides
+  @Singleton
+  def socialUserChangeListener(): Option[RepoModification.Listener[SocialUserInfo]] = None
+
+}
