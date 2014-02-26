@@ -120,7 +120,7 @@ angular.module('kifi.keepService', [])
       },
 
       isSelected: function (keep) {
-        return !!selected[keep];
+        return keep && keep.id && !!selected[keep.id];
       },
 
       select: function (keep) {

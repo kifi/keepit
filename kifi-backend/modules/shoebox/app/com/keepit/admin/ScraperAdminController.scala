@@ -7,7 +7,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.search.ArticleStore
-
 import views.html
 import com.keepit.common.db.slick.Database.Slave
 import play.api.libs.concurrent.Execution.Implicits._
@@ -15,6 +14,7 @@ import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.mvc.Action
 import com.keepit.scraper.ScraperServiceClient
 import scala.concurrent.Future
+import play.api.libs.json.Json
 
 class ScraperAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -127,6 +127,10 @@ class ScraperAdminController @Inject() (
     Redirect(routes.ScraperAdminController.getProxies)
   }
 
+  def getPornDetectorModel = AdminHtmlAction.authenticatedAsync{ implicit request =>
+    val modelFuture = scraperServiceClient.getPornDetectorModel()
+    for(model <- modelFuture) yield Ok(Json.toJson(model))
+  }
 
 }
 
