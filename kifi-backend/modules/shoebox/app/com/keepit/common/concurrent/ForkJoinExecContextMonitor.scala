@@ -28,7 +28,7 @@ class ForkJoinExecContextMonitor @Inject() (
     log.info(s"[checkFJContext] #queuedSubmission=${fj.getQueuedSubmissionCount} #queuedTasks=${fj.getQueuedTaskCount} fj=${fj}")
     if (fj.getQueuedSubmissionCount > Runtime.getRuntime.availableProcessors * 5) { // todo: tweak; airbrake if this proves useful
       systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG,
-        to = Seq(EmailAddresses.RAY),
+        to = Seq(EmailAddresses.ENG),
         category = NotificationCategory.System.HEALTHCHECK, // may need a new category
         subject = s"fjPool-queuedSubmission=${fj.getQueuedSubmissionCount}",
         htmlBody = s"ForkJoinPool-backed context queued submission count exceeded threshold ${fj}"))
@@ -48,7 +48,7 @@ class ForkJoinExecContextPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info(s"[onStart] starting ForkJoinExecContextPluginImpl")
-    scheduleTaskOnAllMachines(actor.system, 30 seconds, 15 seconds, actor.ref, CheckFJContext)
+    scheduleTaskOnAllMachines(actor.system, 45 seconds, 5 seconds, actor.ref, CheckFJContext)
   }
   override def onStop() {
     log.info(s"[onStop] ForkJoinExecContextPluginImpl stopped")

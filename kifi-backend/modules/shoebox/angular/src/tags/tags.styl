@@ -188,8 +188,27 @@ nav-item()
         border-top-color: white
 
   .dropdown-menu
+    position: absolute
+    top: 100%
+    z-index: 1000
+    display: none
+    float: left
+    min-width: 160px
+    padding: 5px 0
+    margin: 2px 0 0
+    font-size: 14px
+    list-style: none
+    background-color: #fff
+    border: 1px solid #ccc
+    border: 1px solid rgba(0,0,0,.15)
+    border-radius: 4px
+    box-shadow: 0 6px 12px rgba(0,0,0,.175)
+    background-clip: padding-box
     left: auto
     right: 0
+
+  .open>.dropdown-menu
+    display: block
 
 .kf-tag-rename.kf-tag-rename
   width: 100%

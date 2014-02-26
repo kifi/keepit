@@ -1,22 +1,14 @@
 package com.keepit.common.analytics
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ Inject, Singleton}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.normalizer.NormalizationCandidate
-import com.keepit.common.net.{Host, URI}
-import play.api.libs.json.JsArray
-import scala.util.Success
-import play.api.libs.json.JsObject
-import org.joda.time.DateTime
 
 abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends Logging {
   def onEvent: PartialFunction[Event, Unit]
@@ -44,100 +36,6 @@ class EventHelperActor @Inject() (
       val events = listeners.filter(_.onEvent.isDefinedAt(event))
       events.map(_.onEvent(event))
     case m => throw new UnsupportedActorMessage(m)
-  }
-}
-
-@Singleton
-class ResultClickedListener @Inject() (
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  searchServiceClient: SearchServiceClient,
-  db: Database,
-  bookmarkRepo: BookmarkRepo,
-  userBookmarkClicksRepo: UserBookmarkClicksRepo)
-  extends EventListener(userRepo, normalizedURIRepo) {
-
-  def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SEARCH, eventName, externalUser, _, experiments, metaData, _), createdAt, _) if ResultSource.isDefinedAt(eventName) =>
-      val resultClicked = db.readOnly { implicit s => parseResultClicked(externalUser, metaData, eventName, createdAt) }
-      searchServiceClient.logResultClicked(resultClicked)
-      resultClicked.keptUri.foreach { uriId =>
-
-        // if bookmark is kept by this user
-        if (resultClicked.isUserKeep) {
-          db.readWrite{ implicit s =>
-            userBookmarkClicksRepo.increaseCounts(resultClicked.userId, uriId, isSelf = true)
-          }
-        }
-        // if kept by others, others get credit
-        else {
-          searchServiceClient.sharingUserInfo(resultClicked.userId, uriId).onComplete{
-            case Success(sharingUserInfo) => {
-              sharingUserInfo.sharingUserIds.foreach{ userId =>
-                db.readWrite{ implicit s =>
-                  userBookmarkClicksRepo.increaseCounts(userId, uriId, isSelf = false)
-                }
-              }
-            }
-            case _ => log.warn("fail to get sharing user info from search client")
-          }
-        }
-      }
-  }
-
-  object ResultSource extends PartialFunction[String, String] {
-    val kifiResultClicked = "kifiResultClicked"
-    val googleResultClicked = "googleResultClicked"
-    val validEvents = Set(kifiResultClicked, googleResultClicked)
-
-    def isDefinedAt(eventName: String): Boolean = validEvents.contains(eventName)
-    def apply(eventName: String): String = eventName match {
-      case this.kifiResultClicked => "Kifi"
-      case this.googleResultClicked => "Google"
-    }
-  }
-
-  def parseResultClicked(externalUser: ExternalId[User], json: JsObject, eventName: String, createdAt: DateTime)(implicit s: RSession) = {
-
-    val query = (json \ "query").asOpt[String].getOrElse("")
-    val url: String = getDestinationURL(json, eventName).getOrElse("")
-    val user = userRepo.get(externalUser)
-    val rank = getRank(json, eventName)
-    val kifiResultsCount = (json \ "kifiResultsCount").as[Int]
-    val queryUUID = ExternalId.asOpt[ArticleSearchResult]((json \ "queryUUID").asOpt[String].getOrElse(""))
-    val searchExperiment = (json \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-    val normUrl = normalizedURIRepo.getByUri(url)
-    val isUserKeep = normUrl.exists(n => bookmarkRepo.getByUriAndUser(n.id.get, user.id.get).isDefined)
-    val keptUri = normUrl.map(_.id.get).filter(id => isUserKeep || bookmarkRepo.latestBookmark(id).isDefined)
-    ResultClicked(user.id.get, searchExperiment, queryUUID, query, kifiResultsCount, ResultSource(eventName), rank, keptUri, isUserKeep, createdAt)
-  }
-
-  private def getRank(json: JsObject, eventName: String): Int = {
-    eventName match {
-      case ResultSource.kifiResultClicked => (json \ "whichResult").asOpt[Int].getOrElse(0)
-      case _ => 0
-    }
-  }
-
-  private def getDestinationURL(json: JsObject, eventName: String): Option[String] = {
-    val urlOpt = (json \ "url").asOpt[String]
-    eventName match {
-      case ResultSource.googleResultClicked => urlOpt.flatMap { url => getDestinationFromGoogleURL(url) }
-      case _ => urlOpt
-    }
-  }
-
-  private def getDestinationFromGoogleURL(url: String): Option[String] = {
-    val urlOpt = url match {
-      case URI(_, _, Some(Host("com", "youtube", _*)), _, _, _, _) => Some(url)
-      case URI(_, _, Some(Host("org", "wikipedia", _*)), _, _, _, _) => Some(url)
-      case URI(_, _, Some(host), _, Some("/url"), Some(query), _) if host.domain.contains("google") =>
-        query.params.find(_.name == "url").flatMap { _.decodedValue }
-      case _ =>
-        None
-    }
-    if (!urlOpt.isDefined) log.error(s"failed to extract the destination URL from: ${url}")
-    urlOpt
   }
 }
 
@@ -179,40 +77,5 @@ class SliderShownListener @Inject() (
         (user, normUri)
       }
       normUri.foreach(n => sliderHistoryTracker.add(user.id.get, n.id.get))
-  }
-}
-
-abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo)
-  extends EventListener(userRepo, normalizedURIRepo)
-
-@Singleton
-class SearchUnloadListenerImpl @Inject() (
-  db: Database,
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  searchClient: SearchServiceClient)
-  extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
-
-  def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", extUserId, _, _, metaData, _), createdAt, _) => {
-      val userId = db.readOnly { implicit session => userRepo.get(extUserId).id.get }
-      val queryUUID = ExternalId.asOpt[ArticleSearchResult]((metaData \ "queryUUID").asOpt[String].getOrElse(""))
-      val kifiResultsCount = (metaData \ "kifiShownURIs").as[JsArray].value.length
-      val kifiResultsClicked = (metaData \ "kifiResultsClicked").as[Int]
-      val googleResultsClicked = (metaData \ "googleResultsClicked").as[Int]
-      val searchExperiment = (metaData \ "experimentId").asOpt[Long].map(Id[SearchConfigExperiment](_))
-      val searchEnded = SearchEnded(userId, searchExperiment, queryUUID, kifiResultsCount, kifiResultsClicked, googleResultsClicked, createdAt)
-      searchClient.logSearchEnded(searchEnded)
-    }
-  }
-}
-
-class FakeSearchUnloadListenerImpl @Inject() (
-    userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo)
-  extends SearchUnloadListener(userRepo, normalizedURIRepo) {
-
-  def onEvent: PartialFunction[Event, Unit] = {
-    case event @ Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) =>
   }
 }

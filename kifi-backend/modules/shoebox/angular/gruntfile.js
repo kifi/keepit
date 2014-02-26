@@ -37,10 +37,12 @@ module.exports = function (grunt) {
       client: {
         lib: 'lib',
         libCss: [
-          'lib/normalize-css/normalize.css'
+          'lib/normalize-css/normalize.css',
+          'src/common/lib/bootstrap/bootstrap.css'
         ],
         libMinCss: [
-          'lib/normalize-css/normalize.css'
+          'lib/normalize-css/normalize.css',
+					'src/common/lib/bootstrap/bootstrap.css'
         ],
         libJs: [
           'lib/lodash/dist/lodash.js',
@@ -52,7 +54,8 @@ module.exports = function (grunt) {
           'lib/angular-route/angular-route.js',
           //'lib/angular-ui-router/release/angular-ui-router.js',
           'lib/angular-animate/angular-animate.js',
-          'lib/angular-bootstrap/ui-bootstrap-tpls.js',
+          //'lib/angular-bootstrap/ui-bootstrap-tpls.js',
+          'src/common/lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/jquery.mousewheel/jquery.mousewheel.js',
           'lib/antiscroll/antiscroll.js',
           //'lib/angular-antiscroll/angular-antiscroll.js',
@@ -70,7 +73,8 @@ module.exports = function (grunt) {
           'lib/angular-route/angular-route.min.js',
           //'lib/angular-ui-router/release/angular-ui-router.min.js',
           'lib/angular-animate/angular-animate.min.js',
-          'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
+          //'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
+          'src/common/lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/jquery.mousewheel/jquery.mousewheel.js',
           'lib/antiscroll/antiscroll.js',
           //'lib/angular-antiscroll/angular-antiscroll.js',

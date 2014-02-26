@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, BrowserExtensionController, SearchServiceController}
+import com.keepit.common.controller.{MobileController, ActionAuthenticator, SearchServiceController}
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
@@ -20,7 +20,7 @@ class MobileUserSearchController @Inject()(
   filterFactory: UserSearchFilterFactory,
   shoeboxClient: ShoeboxServiceClient,
   actionAuthenticator: ActionAuthenticator
-) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
 
   val EXCLUDED_EXPERIMENTS = Seq("fake")
 

@@ -3,7 +3,6 @@
 
 var api = api || require('./api');
 var log = log || api.log;
-var ThreadList = ThreadList || require('./threadlist').ThreadList;
 
 var THREAD_BATCH_SIZE = 8;
 
@@ -52,6 +51,48 @@ function clearDataCache() {
   tags = null;
   tagsById = null;
 }
+
+// ===== Error reporting
+
+(function (ab) {
+  ab.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
+  ab.addReporter(function airbrake(notice, opts) {
+    notice.params = breakLoops(notice.params);
+    notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
+    notice.context.version = api.version;
+    notice.context.userAgent = api.browser.userAgent;
+    notice.context.userId = me && me.id;
+    api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
+      log('#c00', '[airbrake] report', o.id, o.url)();
+    });
+  });
+  api.timers.setTimeout(api.errors.init.bind(null, ab), 0);
+
+  function breakLoops(obj) {
+    var n = 0, seen = [];
+    return visit(obj, 0);
+
+    function visit(o, d) {
+      if (typeof o !== 'object') return o;
+      if (seen.indexOf(o) >= 0) return '[circular]';
+      if (d >= 4) return '[too deep]';
+      seen.push(o)
+
+      var o2 = {};
+      for (var k in o) {
+        if (o.hasOwnProperty(k)) {
+          if (++n > 1000) break;
+          o2[k] = visit(o[k], d + 1);
+        }
+      }
+      return o2;
+    }
+  }
+}(this.Airbrake || require('./airbrake.min').Airbrake));
+
+// ===== Types/Classes
+
+var ThreadList = ThreadList || require('./threadlist').ThreadList;
 
 function PageData() {
 }
@@ -516,42 +557,6 @@ function makeRequest(name, method, url, data, callbacks) {
   });
 }
 
-// ===== Error reporting
-
-var Airbrake = Airbrake || require('./airbrake.min').Airbrake;
-Airbrake.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
-Airbrake.setEnvironmentName(api.isPackaged() && !api.mode.isDev() ? 'production' : 'development');
-Airbrake.addReporter(function airbrake(notice, opts) {
-  notice.params = breakLoops(notice.params);
-  notice.context.version = api.version;
-  notice.context.userAgent = api.browser.userAgent;
-  notice.context.userId = me && me.id;
-  api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
-    log('#c00', '[airbrake] report', o.id, o.url)();
-  });
-});
-
-function breakLoops(obj) {
-  var n = 0, seen = [];
-  return visit(obj, 0);
-
-  function visit(o, d) {
-    if (typeof o !== 'object') return o;
-    if (seen.indexOf(o) >= 0) return '[circular]';
-    if (d >= 4) return '[too deep]';
-    seen.push(o)
-
-    var o2 = {};
-    for (var k in o) {
-      if (o.hasOwnProperty(k)) {
-        if (++n > 1000) break;
-        o2[k] = visit(o[k], d + 1);
-      }
-    }
-    return o2;
-  }
-}
-
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
@@ -636,28 +641,28 @@ api.port.on({
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_enter_to_send: function(data) {
-    prefs.enterToSend = data;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
+    if (prefs) prefs.enterToSend = data;
   },
   set_max_results: function(n, respond) {
-    prefs.maxResults = n;
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
     mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
+    if (prefs) prefs.maxResults = n;
   },
   set_show_find_friends: function(show) {
-    prefs.showFindFriends = show;
     ajax('POST', '/ext/pref/showFindFriends?show=' + show);
+    if (prefs) prefs.showFindFriends = show;
   },
   stop_showing_keeper_intro: function() {
-    prefs.showKeeperIntro = false;
     ajax('POST', '/ext/pref/showKeeperIntro?show=false');
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, 'hide_keeper_intro');
     });
+    if (prefs) prefs.showKeeperIntro = false;
   },
   set_show_search_intro: function(show) {
-    prefs.showSearchIntro = show;
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
+    if (prefs) prefs.showSearchIntro = show;
   },
   useful_page: function(o, _, tab) {
     ajax('search', 'POST', '/search/events/browsed', [tab.url]);
@@ -735,7 +740,7 @@ api.port.on({
       if (o.kind === 'unread') { // detect, report, recover from unread threadlist constistency issues
         if (tl.ids.map(idToThread).filter(isUnread).length < tl.ids.length) {
           getLatestThreads();
-          Airbrake.push({error: Error('Read threads found in threadLists.unread'), params: {
+          api.errors.push({error: Error('Read threads found in threadLists.unread'), params: {
             threads: tl.ids.map(idToThread).map(function (th) {
               return {thread: th.thread, id: th.id, time: th.time, unread: th.unread, readAt: threadReadAt[th.thread]};
             })
@@ -743,7 +748,7 @@ api.port.on({
           return;
         } else if (tl.ids.length === 0 && tl.numTotal > 0) {
           socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
-          Airbrake.push({error: Error('No unread threads available to show'), params: {threadList: tl}});
+          api.errors.push({error: Error('No unread threads available to show'), params: {threadList: tl}});
           return;
         }
       }
@@ -1101,7 +1106,7 @@ function insertNewNotification(n) {
     for (var kind in o) {
       if (o[kind]) {
         var tl = threadLists[kind === 'page' ? n.url : kind];
-        if (tl && tl.insertOrReplace(n0, n) && kind === 'page') {
+        if (tl && tl.insertOrReplace(n0, n, log) && kind === 'page') {
           forEachTabAt(n.url, function (tab) {
             sendPageThreadCount(tab, tl);
           });
@@ -1130,7 +1135,7 @@ function markUnread(threadId, messageId) {
     th.unreadAuthors = th.unreadMessages = 1;
     (function insertIntoUnread(tl) {
       if (tl && tl.includesAllSince(th)) {
-        tl.insertOrReplace(thOld, th);
+        tl.insertOrReplace(thOld, th, log);
       } else if (tl) {
         tl.numTotal++;
       }
@@ -1169,7 +1174,7 @@ function markRead(threadId, messageId, time) {
     th.unreadAuthors = th.unreadMessages = 0;
     (function removeFromUnread(tl) {
       if (!tl) return;
-      var numRemoved = tl.remove(th.thread);
+      var numRemoved = tl.remove(th.thread, log);
       if (!tl.includesOldest) {
         if (numRemoved === 0 && tl.numTotal > 0 && !tl.includesAllSince(th)) {
           tl.numTotal--;
@@ -1189,7 +1194,7 @@ function markRead(threadId, messageId, time) {
       tlKeys.forEach(function (key) {
         var tl = threadLists[key];
         if (tl) {
-          tl.decNumUnreadUnmuted();
+          tl.decNumUnreadUnmuted(log);
         }
       });
     }
@@ -1261,7 +1266,7 @@ function setMuted(threadId, muted) {
       tlKeys.forEach(function (key) {
         var tl = threadLists[key];
         if (tl) {
-          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted']();
+          tl[muted ? 'decNumUnreadUnmuted' : 'incNumUnreadUnmuted'](log);
         }
       });
       tellVisibleTabsNoticeCountIfChanged();
@@ -1748,13 +1753,17 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
   for (var loc in tabsByLocator) {
     var tabs = tabsByLocator[loc];
-    for (var i = tabs.length; i--;) {
-      if (tabs[i] === tab) {
-        tabs.splice(i, 1);
+    if (tabs) {
+      for (var i = tabs.length; i--;) {
+        if (tabs[i] === tab) {
+          tabs.splice(i, 1);
+        }
       }
-    }
-    if (!tabs.length) {
-      delete tabsByLocator[loc];
+      if (!tabs.length) {
+        delete tabsByLocator[loc];
+      }
+    } else {
+      api.errors.push({error: Error('tabsByLocator array undefined'), params: {loc: loc, type: typeof tabs, in: loc in tabsByLocator}});
     }
   }
   if (tabsTagging.length) {
@@ -1839,21 +1848,6 @@ function unstore(key) {
 function qualify(key) {
   return api.mode.isDev() ? key + '@dev' : key;
 }
-
-// TODO: delete this code for migrating storage keys Feb 20
-(function (keys) {
-  delete api.storage.development_kifi_installation_id;
-  for (var old in keys) {
-    var qOld = 'production_' + old;
-    if (qOld in api.storage) {
-      var val = api.storage[qOld];
-      if (val != null) {
-        api.storage[keys[old] || old] = val;
-      }
-      delete api.storage[qOld];
-    }
-  }
-}({kifi_installation_id: 'installation_id', prompt_to_import_bookmarks: null, logout: null}));
 
 // ===== Helper functions
 
