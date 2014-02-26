@@ -10,7 +10,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.list.length;
     }, function () {
-      console.log('cntorl hi');
       //$scope.refreshScroll();
       if ($scope.keeps && $scope.keeps.length && tagService.list.length) {
         keepService.joinTags($scope.keeps, tagService.list);
