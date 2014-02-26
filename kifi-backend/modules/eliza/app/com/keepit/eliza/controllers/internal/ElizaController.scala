@@ -11,7 +11,7 @@ import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.mvc.Action
-import play.api.libs.json.{JsNumber, JsObject, JsArray}
+import play.api.libs.json.{Json, JsNumber, JsObject, JsArray}
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.ElizaStatsCommander
@@ -60,6 +60,6 @@ class ElizaController @Inject() (
 
   def getRenormalizationSequenceNumber() = Action { _ =>
     val seqNumber = elizaStatsCommander.getCurrentRenormalizationSequenceNumber
-    Ok(JsNumber(seqNumber))
+    Ok(Json.toJson(seqNumber))
   }
 }

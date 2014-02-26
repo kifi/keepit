@@ -144,7 +144,7 @@ object ApplicationBuild extends Build {
     "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
 
   lazy val _routesImport = Seq(
-    "com.keepit.common.db.{ExternalId, Id, State}",
+    "com.keepit.common.db.{ExternalId, Id, State, SequenceNumber}",
     "com.keepit.model._",
     "com.keepit.social._",
     "com.keepit.search._"

@@ -392,7 +392,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
 
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
-  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
+  def getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
@@ -585,7 +585,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val changed = allSearchFriends.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
-  
+
   def isSensitiveURI(uri: String): Future[Boolean] = {
     Future.successful(uri.contains("isSensitive"))
   }

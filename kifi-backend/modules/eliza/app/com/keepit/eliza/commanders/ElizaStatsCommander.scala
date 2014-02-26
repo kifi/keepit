@@ -18,6 +18,6 @@ class ElizaStatsCommander @Inject() (
     }
   }
 
-  def getCurrentRenormalizationSequenceNumber(): Long = db.readOnly { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
+  def getCurrentRenormalizationSequenceNumber(): SequenceNumber = db.readOnly { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
 
   }

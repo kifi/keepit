@@ -39,7 +39,7 @@ trait ElizaServiceClient extends ServiceClient {
   //migration
   def importThread(data: JsObject): Unit
 
-  def getRenormalizationSequenceNumber(): Future[Long]
+  def getRenormalizationSequenceNumber(): Future[SequenceNumber]
 }
 
 
@@ -109,7 +109,7 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.importThread, data)
   }
 
-  def getRenormalizationSequenceNumber(): Future[Long] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as[Long])
+  def getRenormalizationSequenceNumber(): Future[SequenceNumber] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as[SequenceNumber])
 }
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
@@ -139,5 +139,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
-  def getRenormalizationSequenceNumber(): Future[Long] = Future.successful(0)
+  def getRenormalizationSequenceNumber(): Future[SequenceNumber] = Future.successful(SequenceNumber.ZERO)
 }

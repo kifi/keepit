@@ -82,9 +82,9 @@ class ShoeboxDataPipeController @Inject() (
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
-  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long) = Action { request =>
+  def getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber) = Action { request =>
     val changes = db.readOnly(2, Slave) { implicit s =>
-      changedUriRepo.getChangesBetween(SequenceNumber(lowSeq), SequenceNumber(highSeq)).map{ change =>
+      changedUriRepo.getChangesBetween(lowSeq, highSeq).map{ change =>
         (change.oldUriId, normUriRepo.get(change.newUriId))
       }
     }

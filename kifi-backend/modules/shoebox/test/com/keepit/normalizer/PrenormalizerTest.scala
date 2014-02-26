@@ -194,7 +194,7 @@ class PrenormalizerTest extends Specification {
       Prenormalizer(path) === "http://www.linkedin.com/profile/view?id=12345678"
 
       path = "http://www.linkedin.com/profile/view?authToken=xXmj&authType=NAME_SEARCH&goback=.fps_PBCK_*1_John_Smith_*1_*1_*1_*1_*2_*1_Y_*1_*1_*1_false_1_R_*1_*51_*1_*51_true_" +
-          "*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2&id=12345678&locale=en_US&pvs=ps&srchid=717d2924-e9c4-40b7-8352-be3d67e2cddf-0" +
+          "*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2&locale=en_US&pvs=ps&srchid=717d2924-e9c4-40b7-8352-be3d67e2cddf-0&id=12345678" +
           "&srchindex=1&srchtotal=3&trk=pp_profile_name_link"
 
       Prenormalizer(path) === "http://www.linkedin.com/profile/view?id=12345678"

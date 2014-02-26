@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.{Model, Id}
+import com.keepit.common.db.{SequenceNumber, Model, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
@@ -13,9 +13,9 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[UriRenormalizationTrackingRepoImpl])
 trait UriRenormalizationTrackingRepo extends Repo[UriRenormalizationEvent] {
 
-  def getCurrentSequenceNumber()(implicit session: RSession): Long
+  def getCurrentSequenceNumber()(implicit session: RSession): SequenceNumber
 
-  def addNew(sequenceNumber: Long, numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession) : Unit
+  def addNew(sequenceNumber: SequenceNumber, numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession) : Unit
 }
 
 @Singleton
@@ -39,7 +39,7 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
 
   type RepoImpl = UriRenormalizationEventTable
   class UriRenormalizationEventTable(tag: Tag) extends RepoTable[UriRenormalizationEvent](db, tag, "uri_renormalization_event") {
-    def sequenceNumber = column[Long]("sequence_number", O.NotNull)
+    def sequenceNumber = column[SequenceNumber]("sequence_number", O.NotNull)
     def numIdsChanged = column[Long]("num_ids_changed", O.NotNull)
     def idsRetired = column[Seq[Id[NormalizedURI]]]("ids_retired", O.NotNull)
     def * = (id.?, createdAt, updatedAt, sequenceNumber, numIdsChanged, idsRetired) <> ((UriRenormalizationEvent.apply _).tupled, UriRenormalizationEvent.unapply _)
@@ -50,13 +50,13 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
   override def deleteCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
 
-  def getCurrentSequenceNumber()(implicit session: RSession): Long = {
+  def getCurrentSequenceNumber()(implicit session: RSession): SequenceNumber = {
     import scala.slick.jdbc.StaticQuery.interpolation
     val sql = sql"select max(sequence_number) as max from uri_renormalization_event"
-    sql.as[Long].firstOption().getOrElse(0L)
+    sql.as[SequenceNumber].firstOption().getOrElse(SequenceNumber.ZERO)
   }
 
-  def addNew(sequenceNumber: Long, numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
+  def addNew(sequenceNumber: SequenceNumber, numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
     super.save(UriRenormalizationEvent(sequenceNumber=sequenceNumber, numIdsChanged=numIdsChanged, idsRetired=idsRetired))
   }
 }

@@ -91,7 +91,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
-  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
+  def getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
@@ -578,7 +578,7 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.createDeepLink, payload)
   }
 
-  def getNormalizedUriUpdates(lowSeq: Long, highSeq: Long): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
+  def getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
     call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq)).map{ r =>
       var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]
       r.json match {

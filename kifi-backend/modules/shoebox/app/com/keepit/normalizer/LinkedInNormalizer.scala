@@ -5,7 +5,7 @@ import com.keepit.common.net.Param
 
 object LinkedInNormalizer extends StaticNormalizer {
 
-  val linkedInPrivateProfile = """^https?://([a-z]{2,3})\.linkedin\.com/profile/view\?.*?id=([0-9]{1,20}).*""".r
+  val linkedInPrivateProfile = """^https?://([a-z]{2,3})\.linkedin\.com/profile/view\?(?:.*&)?id=([0-9]{1,20}).*""".r
   val linkedInCanonicalPublicProfile = """^https?://([a-z]{2,3})\.linkedin\.com/(?:in/\w+(?:/[a-z]{2,3})?|pub/[\P{M}\p{M}\w]+(?:/\w+){3})(/)?$""".r
 
   def isDefinedAt(uri: URI) = {
