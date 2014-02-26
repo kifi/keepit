@@ -149,7 +149,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
   if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
-  if (typeof data == "function") {  // shift args if data is missing and done is present
+  if (typeof data == 'function') {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
   }
 
@@ -159,11 +159,11 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
       if (data.hasOwnProperty(key)) {
         var val = data[key];
         if (val != null) {
-          a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val));
+          a.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
         }
       }
     }
-    uri += (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
+    uri += (~uri.indexOf('?') ? '&' : '?') + a.join('&').replace(/%20/g, '+');
     data = null;
   }
 
@@ -2124,7 +2124,7 @@ function deauthenticate() {
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
-api.timers.setTimeout(function() {
+api.timers.setTimeout(api.errors.wrap(function() {
   for(var a={},b=0;38>b;b++) // 38 = 42 - 42/10
     a[parseInt(" 0 5 611214041 h j s x1n3c3i3j3k3l3m3n6g6r6t6u6v6w6x6y6zcyczd0d1d2d3dgdhdkdl".substr(2*b,2),36).toString(2)]=" |_i(mMe/\\n\ngor.cy!W:ahst')V,v24Juwbdl".charAt(b);
   for(var d=[],b=0;263>b;b++) // lowest prime that is an irregular prime, an Eisenstein prime, a long prime, a Chen prime, a Gaussian prime, a happy prime, a sexy prime, a safe prime, and a Higgs prime. I think.
@@ -2134,12 +2134,12 @@ api.timers.setTimeout(function() {
       h+=e[g],g++;
     f+=a[h]
   }
-  log("\n"+f)();
-});
+  console.log('\n'+f);
+}));
 
-authenticate(function() {
+api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
-    log("[main] fresh install")();
+    log('[main] fresh install')();
     var tab = api.tabs.anyAt(webBaseUri() + '/install');
     if (tab) {
       api.tabs.navigate(tab.id, webBaseUri() + '/');
@@ -2150,4 +2150,4 @@ authenticate(function() {
   if (api.loadReason === 'install' || api.mode.isDev()) {
     store('prompt_to_import_bookmarks', true);
   }
-}, 3000);
+}, 3000))();
