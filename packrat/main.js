@@ -1042,6 +1042,7 @@ function unsilence(tab) {
 }
 
 function onTagChangeFromServer(op, tag) {
+  if (!tags || !tagsById) return;
   var tagId = tag.id;
   switch (op) {
     case 'create':
@@ -1057,7 +1058,7 @@ function onTagChangeFromServer(op, tag) {
       tags = tags.filter(idIsNot(tagId));
       delete tagsById[tagId];
   }
-  tabsTagging.forEach(function(tab) {
+  tabsTagging.forEach(function (tab) {
     api.tabs.emit(tab, 'tag_change', this);
   }, {op: op, tag: tag});
 }
