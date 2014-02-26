@@ -7,7 +7,6 @@ import play.api.Play._
 import java.io.File
 import com.keepit.learning.porndetector.InMemoryPornWordLikelihoodStore
 import com.keepit.learning.porndetector.PornWordLikelihoodStore
-import com.keepit.common.store.FakePornWordLikelihoodStore
 
 case class ScraperTestStoreModule() extends StoreModule() {
   def configure() {}
