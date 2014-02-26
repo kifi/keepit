@@ -1,0 +1,33 @@
+@()
+
+@admin("Porn Detector"){
+	<form id = "detect">
+		<textarea id = "textForDetect"></textarea>
+		<button type = "submit">Detect</button>
+	</form>
+
+	<p id = "detectResult"></p>
+
+
+	<script type="text/javascript">
+
+		$(document).ready(function(){
+
+			$("#detect").submit(function(){
+				event.preventDefault();
+				$.post('@com.keepit.controllers.admin.routes.AdminPornDetectorController.detect',
+					{query: $("#textForDetect").val()}
+				).done(done).fail(fail);
+
+				function done(data) { $("#detectResult").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+			})
+
+
+
+		});
+
+	</script>
+
+}
