@@ -194,7 +194,8 @@ class ScraperServiceClientImpl @Inject() (
   }
 
   def detectPorn(query: String): Future[Map[String, Float]] = {
-    call(Scraper.internal.detectPorn(query)).map{ r =>
+    val payload = Json.obj("query" -> query)
+    call(Scraper.internal.detectPorn(), payload).map{ r =>
       Json.fromJson[Map[String, Float]](r.json).get
     }
   }
