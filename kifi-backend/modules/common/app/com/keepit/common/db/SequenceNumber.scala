@@ -3,7 +3,7 @@ package com.keepit.common.db
 import play.api.libs.json._
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
-case class SequenceNumber[T](value: Long) extends AnyVal with Ordered[SequenceNumber[T]] {
+case class SequenceNumber[T](value: Long) extends Ordered[SequenceNumber[T]] {
   def compare(that: SequenceNumber[T]) = value compare that.value
   def +(offset: Long): SequenceNumber[T] = SequenceNumber[T](this.value + offset)
   def -[T](other: SequenceNumber[T]): Long = this.value - other.value

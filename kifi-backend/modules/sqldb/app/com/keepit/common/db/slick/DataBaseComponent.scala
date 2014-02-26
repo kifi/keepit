@@ -17,7 +17,7 @@ trait DataBaseComponent {
   val masterDb: SlickDatabase
   val slaveDb: Option[SlickDatabase]
 
-  def getSequence(name: String): DbSequence
+  def getSequence[T](name: String): DbSequence[T]
 
   // MySQL and H2 have different preferences on casing the table and column names.
   // H2 specifically rather have them in upper case

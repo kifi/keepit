@@ -29,7 +29,7 @@ object ParamValue {
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(i.id)
   implicit def idToParam[T](i: Id[T]) = ParamValue(i.id.toString)
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if(i.nonEmpty) e(i.get) else ParamValue("")
-  implicit def seqNumToParam(seqNum: SequenceNumber) = ParamValue(seqNum.value.toString)
+  implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(seqNum.value.toString)
 }
 
 abstract class Method(name: String)
