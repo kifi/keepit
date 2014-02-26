@@ -58,6 +58,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     };
 
     $scope.scrollDisabled = false;
+
     $scope.getNextKeeps = function () {
       if ($scope.loadingKeeps) {
         return $q.when([]);
