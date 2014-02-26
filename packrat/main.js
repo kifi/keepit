@@ -723,7 +723,11 @@ api.port.on({
       emitThreadInfoToTab(th, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id]);
+      socket.send(['get_thread_info', id], function (th) {
+        standardizeNotification(th);
+        threadsById[th.thread] = th;
+        emitThreadInfoToTab(th, tab);
+      });
     }
     var msgs = messageData[id];
     if (msgs) {
