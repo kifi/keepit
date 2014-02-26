@@ -3,9 +3,9 @@
 angular.module('kifi.layout.rightCol', [])
 
 .controller('RightColCtrl', [
-  '$scope',
-  function ($scope) {
-    console.log('RightColCtrl');
+  '$scope', '$window',
+  function ($scope, $window) {
+    $window.console.log('RightColCtrl');
   }
 ]);
 
