@@ -296,7 +296,7 @@ function getLatestThreads() {
 }
 
 function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
-  log('[gotLatestThreads]', arr, numUnreadUnmuted, numUnread)();
+  log('[gotLatestThreads]', arr, numUnreadUnmuted, numUnread, serverTime)();
 
   var serverTimeDate = new Date(serverTime);
   var staleMessageIds = (threadLists.all || {ids: []}).ids.reduce(function (o, threadId) {
@@ -308,7 +308,8 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   arr.forEach(function (n) {
     standardizeNotification(n);
     threadsById[n.thread] = n;
-    if (serverTimeDate - new Date(n.time) < 60000 && !staleMessageIds[n.id]) {
+    var ageMs = serverTimeDate - new Date(n.time);
+    if (ageMs >= 0 && ageMs < 60000 && !staleMessageIds[n.id]) {
       handleRealTimeNotification(n);
     }
   });
