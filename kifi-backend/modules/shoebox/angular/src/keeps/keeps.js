@@ -21,28 +21,13 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 ])
 
 .directive('kfKeeps', [
-
-  function () {
-
-    function delegateFn(scope, name) {
-      return function (keep) {
-        return scope[name]({
-          keep: keep
-        });
-      };
-    }
+  'keepService',
+  function (keepService) {
 
     return {
       restrict: 'A',
       scope: {
         keeps: '=',
-        checkKeep: '&',
-        uncheckKeep: '&',
-        toggleCheckKeep: '&',
-        isCheckedKeep: '&',
-        previewKeep: '&',
-        togglePreviewKeep: '&',
-        isPreviewedKeep: '&',
         scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
@@ -50,13 +35,13 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
-        scope.select = delegateFn(scope, 'checkKeep');
-        scope.unselect = delegateFn(scope, 'uncheckKeep');
-        scope.toggleSelect = delegateFn(scope, 'toggleCheckKeep');
-        scope.isSelected = delegateFn(scope, 'isCheckedKeep');
-        scope.preview = delegateFn(scope, 'previewKeep');
-        scope.togglePreview = delegateFn(scope, 'togglePreviewKeep');
-        scope.isPreviewed = delegateFn(scope, 'isPreviewedKeep');
+        scope.select = keepService.select;
+        scope.unselect = keepService.unselect;
+        scope.toggleSelect = keepService.toggleSelect;
+        scope.isSelected = keepService.isSelected;
+        scope.preview = keepService.preview;
+        scope.togglePreview = keepService.togglePreview;
+        scope.isPreviewed = keepService.isPreviewed;
 
         scope.getSubtitle = function () {
           var subtitle = scope.subtitle;
