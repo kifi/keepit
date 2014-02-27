@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('kifi.detail',
-	['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus']
+	['kifi.keepService', 'kifi.tagService', 'kifi.keepDetailWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus']
 )
 
 .directive('kfDetail', [

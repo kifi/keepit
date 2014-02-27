@@ -61,15 +61,13 @@ class ServiceVersionMap @Inject() (httpClient: HttpClient) {
         val versionResp : String = try {
           httpClient.get(new ServiceUri(serviceInstance, "http", 9000, Common.internal.version().url), httpClient.ignoreFailure).body
         } catch {
-          case _: Throwable => "00000000-0000-NANA-0000000"
+          case _: Throwable => return ServiceVersion("00000000-0000-NANA-0000000")
         }
-        val version = try {
-          ServiceVersion(versionResp)
+        try {
+          ServiceVersion(versionResp) tap { version => weakMap += (serviceInstance -> version) }
         } catch {
-          case t: Throwable => ServiceVersion("00000000-0000-HUHH-0000000")
+          case t: Throwable => return ServiceVersion("00000000-0000-HUHH-0000000")
         }
-        weakMap += (serviceInstance -> version)
-        version
     }
   }
 }
