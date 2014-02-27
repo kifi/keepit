@@ -15,10 +15,11 @@ import scala.concurrent.{Promise, Future, Await}
 import scala.concurrent.duration.Duration
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext
 
 class EContactABookTypeahead @Inject() (
   db:Database,
-  airbrake:AirbrakeNotifier,
+  override val airbrake:AirbrakeNotifier,
   store:EContactTypeaheadStore,
   abookInfoRepo: ABookInfoRepo,
   econtactRepo: EContactRepo,
@@ -39,25 +40,17 @@ class EContactABookTypeahead @Inject() (
 
   override protected def extractId(info: EContact): Id[EContact] = info.id.get
 
-  override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[EContact]] = { // todo(ray):factor out common code
-    val (filter, msg) = cache.get(EContactTypeaheadKey(userId)) match {
-      case Some(filter) =>
-        (Some(new PrefixFilter[EContact](filter)), "Cache.get")
-      case None =>
-        val (filter, msg) = store.get(userId) match {
-          case Some(filter) =>
-            (new PrefixFilter[EContact](filter), "Store.get")
-          case None =>
-            val pFilter = Await.result(build(userId), Duration.Inf)
-            store += (userId -> pFilter.data)
-            (pFilter, "Built")
-        }
-        cache.set(EContactTypeaheadKey(userId), filter.data)
-        (Some(filter), msg)
-    }
-    log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
-    filter
-
+  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
+    cache.getOrElseFuture(EContactTypeaheadKey(userId)) {
+      store.get(userId) match {
+        case Some(filter) => Future.successful(filter)
+        case None =>
+          build(userId).map{ filter =>
+            store += (userId -> filter.data)
+            filter.data
+          }(ExecutionContext.fj)
+      }
+    }.map{ new PrefixFilter[EContact](_) }(ExecutionContext.fj)
   }
 
   def refresh(userId:Id[User]):Future[Unit] = {

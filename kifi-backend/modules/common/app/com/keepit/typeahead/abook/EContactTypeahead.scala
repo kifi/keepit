@@ -12,14 +12,15 @@ import com.keepit.abook.{EmailParser, ABookServiceClient}
 import com.keepit.common.store.S3Bucket
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.{Duration, DurationInt}
-//import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class EContactTypeahead @Inject() (
-  airbrake:AirbrakeNotifier,
+  override val airbrake:AirbrakeNotifier,
   store: EContactTypeaheadStore,
-  typeaheadCache: EContactTypeaheadCache,
+  cache: EContactTypeaheadCache,
   econtactCache: EContactCache,
   abookClient:ABookServiceClient
 )extends Typeahead[EContact, EContact] with Logging {
@@ -75,25 +76,17 @@ class EContactTypeahead @Inject() (
     Await.result(asyncGetInfos(ids), Duration.Inf) // todo(ray):revisit
   }
 
-  def getPrefixFilter(userId: Id[User]):Option[PrefixFilter[EContact]] = {
-    // cache.getOrElseOpt(EContactTypeaheadKey(userId)) { store.get(userId) } map { new PrefixFilter[EContact](_) }
-    val (filter, msg) = typeaheadCache.get(EContactTypeaheadKey(userId)) match {
-      case Some(filter) =>
-        (Some(new PrefixFilter[EContact](filter)), "Cache.get")
-      case None =>
-        val (filter, msg) = store.get(userId) match {
-          case Some(filter) =>
-            (new PrefixFilter[EContact](filter), "Store.get")
-          case None =>
-            val pFilter = Await.result(build(userId), Duration.Inf)
-            store += (userId -> pFilter.data)
-            (pFilter, "Built")
-        }
-        typeaheadCache.set(EContactTypeaheadKey(userId), filter.data)
-        (Some(filter), msg)
-    }
-    log.info(s"[email.getPrefixFilter($userId)] ($msg) ${filter}")
-    filter
+  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
+    cache.getOrElseFuture(EContactTypeaheadKey(userId)) {
+      store.get(userId) match {
+        case Some(filter) => Future.successful(filter)
+        case None =>
+          build(userId).map{ filter =>
+            store += (userId -> filter.data)
+            filter.data
+          }(ExecutionContext.fj)
+      }
+    }.map{ new PrefixFilter[EContact](_) }(ExecutionContext.fj)
   }
 
   def refresh(userId: Id[User]): Future[Unit] = abookClient.refreshPrefixFilter(userId)
