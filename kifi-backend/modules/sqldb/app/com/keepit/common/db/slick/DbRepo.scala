@@ -61,7 +61,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   def initTable() = {
-    rows // force `rows` lazy evaluation
+    rows // force `rows` lazy evaluationRe
   }
 
   def save(model: M)(implicit session: RWSession): M = try {
@@ -156,9 +156,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   trait SeqNumberColumn[M <: ModelWithSeqNumber[M]] extends RepoTable[M] {
-    implicit val seqMapper = MappedColumnType.base[SequenceNumber[M], Long](_.value, SequenceNumber[M].apply)
-
-    def seq[M] = column[SequenceNumber[M]]("seq", O.NotNull)
+    def seq = column[SequenceNumber[M]]("seq", O.NotNull)
   }
 }
 

@@ -6,7 +6,8 @@ import play.api.mvc.{PathBindable, QueryStringBindable}
 case class SequenceNumber[T](value: Long) extends Ordered[SequenceNumber[T]] {
   def compare(that: SequenceNumber[T]) = value compare that.value
   def +(offset: Long): SequenceNumber[T] = SequenceNumber[T](this.value + offset)
-  def -[T](other: SequenceNumber[T]): Long = this.value - other.value
+  def -(other: SequenceNumber[T]): Long = this.value - other.value
+  def max(other: SequenceNumber[T]): SequenceNumber[T] = SequenceNumber[T](this.value max other.value)
   override def toString = value.toString
 }
 
@@ -15,7 +16,7 @@ case class SequenceNumber[T](value: Long) extends Ordered[SequenceNumber[T]] {
 object SequenceNumber {
   def ZERO[T] = SequenceNumber[T](0)
   def MinValue[T] = SequenceNumber[T](Long.MinValue)
-  implicit def sequenceNumberFormat[T] = new Format[SequenceNumber[T]] {
+  implicit def format[T] = new Format[SequenceNumber[T]] {
     def reads(json: JsValue): JsResult[SequenceNumber[T]] = __.read[Long].reads(json).map(SequenceNumber[T](_))
     def writes(o: SequenceNumber[T]): JsValue = JsNumber(o.value)
   }

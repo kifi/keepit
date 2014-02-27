@@ -34,7 +34,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
   implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
 
-  implicit def sequenceNumberTypeMapper[T] = MappedColumnType.base[SequenceNumber[T], Long](_.value, SequenceNumber.apply[T])
+  implicit def sequenceNumberTypeMapper[T] = MappedColumnType.base[SequenceNumber[T], Long](_.value, SequenceNumber[T](_))
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
   implicit val userToDomainKindMapper = MappedColumnType.base[UserToDomainKind, String](_.value, UserToDomainKind.apply)
