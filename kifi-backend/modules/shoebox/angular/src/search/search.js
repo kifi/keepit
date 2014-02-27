@@ -16,13 +16,15 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 .controller('SearchCtrl', [
   '$scope', 'keepService', '$routeParams',
   function ($scope, keepService, $routeParams) {
-    keepService.unselectAll();
+    keepService.reset();
 
     var query = $routeParams.q || '',
       filter = $routeParams.f || 'm',
       lastResult = null;
 
-    $scope.keeps = [];
+    $scope.keepService = keepService;
+
+    $scope.keeps = keepService.list;
 
     $scope.results = {
       myTotal: 0,
@@ -91,16 +93,11 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
       keepService.find(query, filter, lastResult && lastResult.context).then(function (data) {
         $scope.loading = false;
 
-        $scope.results.myTotal = $scope.results.myTotal || data.myTotal || 0;
-        $scope.results.friendsTotal = $scope.results.friendsTotal || data.friendsTotal || 0;
-        $scope.results.othersTotal = $scope.results.othersTotal || data.othersTotal || 0;
+        $scope.results.myTotal = $scope.results.myTotal || data.myTotal;
+        $scope.results.friendsTotal = $scope.results.friendsTotal || data.friendsTotal;
+        $scope.results.othersTotal = $scope.results.othersTotal || data.othersTotal;
 
-        var hits = data.hits || [];
-        if (hits.length) {
-          $scope.keeps.push.apply($scope.keeps, hits);
-        }
-
-        if (!data.mayHaveMore) {
+        if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
         }
 
