@@ -85,12 +85,13 @@ var pane = pane || function () {  // idempotent for Chrome
       var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden").layout();
       var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
       var $old = $cart.find(".kifi-pane-box");
+      $old.triggerHandler('kifi:removing');
       var $new = $(render('html/keeper/pane_' + name, params))[left ? "prependTo" : "appendTo"]($cart).layout();
       $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
       .on("transitionend", function end(e) {
         if (e.target !== this) return;
         if (!left) $cart.removeClass("kifi-animated kifi-back kifi-forward");
-        $old.triggerHandler("kifi:remove");
+        $old.triggerHandler('kifi:remove');
         $old.remove();
         $new.data("shown", true).triggerHandler("kifi:shown");
         $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
@@ -272,6 +273,7 @@ var pane = pane || function () {  // idempotent for Chrome
       $(tile).css('transform', '');
       keeper.discard();
     }
+    $pane.find('.kifi-pane-box').triggerHandler('kifi:removing');
     pane.onHide.dispatch();
     $pane
     .data('state', 'closing')
