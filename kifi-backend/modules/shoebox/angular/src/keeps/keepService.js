@@ -406,6 +406,27 @@ angular.module('kifi.keepService', [])
         return !!end;
       },
 
+      getSubtitle: function (mouseover) {
+        var selectedCount = api.getSelectedLength(),
+          numShown = list.length;
+
+        if (mouseover) {
+          if (selectedCount === numShown) {
+            return 'Deselect all ' + numShown + ' Keeps below';
+          }
+          return 'Select all ' + numShown + ' Keeps below';
+        }
+
+        switch (selectedCount) {
+        case 0:
+          return null;
+        case 1:
+          return selectedCount + ' Keep selected';
+        default:
+          return selectedCount + ' Keeps selected';
+        }
+      },
+
       find: function (query, filter, context) {
         if (end) {
           return $q.when([]);
