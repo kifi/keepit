@@ -24,13 +24,13 @@ import com.keepit.common.db.slick.Database
 
 import com.kifi.franz.FormattedSQSQueue
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{Inject, Singleton, Provider}
 
 @Singleton
 class ShoeboxRichConnectionCommander @Inject() (
     abook: ABookServiceClient,
     queue: FormattedSQSQueue[RichConnectionUpdateMessage],
-    socialUserInfoRepo: SocialUserInfoRepo,
+    socialUserInfoRepo: Provider[SocialUserInfoRepo],
     db: Database
   ) extends RemoteRichConnectionCommander(abook, queue) {
 
@@ -38,7 +38,7 @@ class ShoeboxRichConnectionCommander @Inject() (
     change match {
       case RepoEntryAdded(socialConnection) => {
         val (sUser1, sUser2) = db.readOnly { implicit session =>
-          (socialUserInfoRepo.get(socialConnection.socialUser1), socialUserInfoRepo.get(socialConnection.socialUser2))
+          (socialUserInfoRepo.get.get(socialConnection.socialUser1), socialUserInfoRepo.get.get(socialConnection.socialUser2))
         }
         sUser1.userId.map { userId =>
           processUpdate(CreateRichConnection(userId, sUser1.id.get, sUser2))
