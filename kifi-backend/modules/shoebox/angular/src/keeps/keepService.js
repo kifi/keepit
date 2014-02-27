@@ -400,6 +400,10 @@ angular.module('kifi.keepService', [])
 
       togglePrivate: function (keeps) {
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
+      },
+
+      find: function (query, filter) {
+
       }
     };
 

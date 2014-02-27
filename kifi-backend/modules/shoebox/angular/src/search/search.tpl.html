@@ -10,5 +10,17 @@
       </span>
     </div>
   </div>
-  <div kf-keeps></div>
+  <div kf-keeps
+    keeps="keeps"
+    check-keep="keepService.select(keep)"
+    uncheck-keep="keepService.unselect(keep)"
+    toggle-check-keep="keepService.toggleSelect(keep)"
+    is-checked-keep="keepService.isSelected(keep)"
+    preview-keep="keepService.preview(keep)"
+    toggle-preview-keep="keepService.togglePreview(keep)"
+    is-previewed-keep="keepService.isPreviewed(keep)"
+    scroll-distance="scrollDistance"
+    scroll-disabled="scrollDisabled"
+    scroll-next="getNextKeeps()"
+  ></div>
 </div>

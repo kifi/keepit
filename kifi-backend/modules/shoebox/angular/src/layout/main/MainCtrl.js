@@ -39,19 +39,15 @@ angular.module('kifi.layout.main', [])
       $scope.undoAction = null;
     };
 
-    var throttled = _.throttle(function () {
+    $scope.onChange = _.throttle(function () {
       var text = $scope.search.text || '';
       text = _.str.trim(text);
       if (text) {
         $location.path('/find').search('q', text);
       }
       else {
-        $location.path('/');
+        $location.path('/').search('');
       }
     }, 500);
-
-    $scope.onChange = function () {
-      throttled();
-    };
   }
 ]);
