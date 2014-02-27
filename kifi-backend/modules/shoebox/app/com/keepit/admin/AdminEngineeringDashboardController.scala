@@ -10,4 +10,7 @@ class AdminEngineeringDashboardController @Inject() (
   def overview = AdminHtmlAction.authenticated { implicit request =>
       Ok(html.admin.engineeringDashboard())
   }
+  def seyren = AdminHtmlAction.authenticated { implicit request =>
+      Ok(html.admin.seyren())
+  }
 }
