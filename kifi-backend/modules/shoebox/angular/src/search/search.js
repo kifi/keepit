@@ -15,15 +15,31 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 
 .controller('SearchCtrl', [
   '$scope', 'keepService', '$routeParams',
-  function ($scope, keepService) {
-    console.log($routeParams);
+  function ($scope, keepService, $routeParams) {
+    keepService.unselectAll();
+
+    var query = $routeParams.q,
+      filter = $routeParams.f;
+
+    $scope.keeps = [];
+
+    $scope.loadingKeeps = true;
 
     $scope.results = {
       numShown: 0,
-      myTotal: 300,
+      myTotal: 0,
       friendsTotal: 0,
-      othersTotal: 12342
+      othersTotal: 0
     };
+
+    keepService.find(query, filter).then(function (data) {
+      $scope.results.myTotal = data.myTotal;
+      $scope.results.friendsTotal = data.friendsTotal;
+      $scope.results.othersTotal = data.othersTotal;
+      $scope.loadingKeeps = false;
+      $scope.keeps = data.hits;
+      console.log(data);
+    });
 
     $scope.filter = {
       type: 'm'
@@ -77,6 +93,12 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
         return 'Top ' + numShown + ' results';
       }
 
+    };
+
+    $scope.scrollDistance = '100%';
+    $scope.scrollDisabled = false;
+
+    $scope.getNextKeeps = function () {
     };
   }
 ]);

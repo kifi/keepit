@@ -16,6 +16,8 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
 .controller('HomeCtrl', [
   '$scope', 'tagService', 'keepService', '$q',
   function ($scope, tagService, keepService, $q) {
+    keepService.unselectAll();
+
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
     $scope.keepService = keepService;
