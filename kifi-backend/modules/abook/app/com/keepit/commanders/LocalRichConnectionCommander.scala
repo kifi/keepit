@@ -35,8 +35,10 @@ class LocalRichConnectionCommander @Inject() (
     repo: RichSocialConnectionRepo
   ) extends RichConnectionCommander {
 
-  if (serviceDiscovery.isLeader()) {
-    processQueueItems()
+  def startUpdateProcessing() = {
+    if (serviceDiscovery.isLeader()) {
+      processQueueItems()
+    }
   }
 
   private def processQueueItems(): Unit = {
