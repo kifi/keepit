@@ -1,21 +1,22 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstanceId}
+import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceInstanceId}
 import com.keepit.common.service.{ServiceUri, ServiceType, ServiceStatus, ServiceVersion}
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.routes.Common
 import com.keepit.common.net.HttpClient
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import views.html
 import java.net.InetAddress
+import scala.collection.mutable.WeakHashMap
 
 case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, isLeader: Boolean, instanceInfo: AmazonInstanceInfo,
         localHostName:String, state: ServiceStatus, capabilities: List[String], version: ServiceVersion, name: String)
 
 class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
-    httpClient: HttpClient,
+    serviceVersionMap: ServiceVersionMap,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
     val machineNames = Map[String, String](
@@ -34,21 +35,12 @@ class AdminClusterController @Inject() (
     def clustersInfo : Seq[ClusterMemberInfo] = ServiceType.inProduction.flatMap{ serviceType =>
       val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
       serviceCluster.allMembers.map { serviceInstance =>
-      val isLeader = serviceCluster.leader.exists(_ == serviceInstance)
-      val testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
-      val versionResp : String = try {
-        httpClient.get(new ServiceUri(serviceInstance, "http", 9000, Common.internal.version().url), httpClient.ignoreFailure).body
-      } catch {
-        case _: Throwable => "00000000-0000-NANA-0000000"
-      }
-      val serviceVersion = try {
-        ServiceVersion(versionResp)
-      } catch {
-        case t: Throwable => ServiceVersion("00000000-0000-HUHH-0000000")
-      }
-      val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName
-          val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString()).getOrElse("NA")
-          ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, serviceVersion, name)
+        val isLeader = serviceCluster.leader.exists(_ == serviceInstance)
+        val testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
+        val serviceVersion = serviceVersionMap(serviceInstance)
+        val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName
+        val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString()).getOrElse("NA")
+        ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, serviceVersion, name)
       }
     }
 
@@ -56,3 +48,28 @@ class AdminClusterController @Inject() (
       Ok(html.admin.adminClustersView(clustersInfo))
     }
 }
+
+@Singleton
+class ServiceVersionMap @Inject() (httpClient: HttpClient) {
+
+  private[this] val weakMap = new WeakHashMap[ServiceInstance, ServiceVersion]
+
+  def apply(serviceInstance: ServiceInstance): ServiceVersion = synchronized {
+    weakMap.get(serviceInstance) match {
+      case Some(version) => version
+      case None =>
+        val versionResp : String = try {
+          httpClient.get(new ServiceUri(serviceInstance, "http", 9000, Common.internal.version().url), httpClient.ignoreFailure).body
+        } catch {
+          case _: Throwable => return ServiceVersion("00000000-0000-NANA-0000000")
+        }
+        try {
+          ServiceVersion(versionResp) tap { version => weakMap += (serviceInstance -> version) }
+        } catch {
+          case t: Throwable => return ServiceVersion("00000000-0000-HUHH-0000000")
+        }
+    }
+  }
+}
+
+

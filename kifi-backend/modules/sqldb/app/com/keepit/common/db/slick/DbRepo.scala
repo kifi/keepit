@@ -23,6 +23,10 @@ case class RepoEntryUpdated[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryAdded[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryRemoved[M <: Model[M]](model: M) extends RepoModification[M]
 
+object RepoModification{
+  type Listener[M <: Model[M]] = Function1[RepoModification[M], Unit]
+}
+
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
   def all()(implicit session: RSession): Seq[M]
@@ -42,8 +46,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   lazy val dbLog = Logger("com.keepit.db")
 
-  protected val changeListeners : Set[RepoModification[M]=>Unit] = Set.empty
-  protected val hasListeners = !changeListeners.isEmpty
+  protected val changeListener : Option[RepoModification.Listener[M]] = None
 
 
   type RepoImpl <: RepoTable[M]
@@ -71,9 +74,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
       case _ => invalidateCache(result)
     }
-    if (hasListeners) session.onTransactionSuccess{
-     if(newItem) notifyChangeListeners(RepoEntryAdded(model))
-     else notifyChangeListeners(RepoEntryUpdated(model))
+    if (changeListener.isDefined) session.onTransactionSuccess{
+     if(newItem) changeListener.get(RepoEntryAdded(model))
+     else changeListener.get(RepoEntryUpdated(model))
     }
     result
   } catch {
@@ -123,10 +126,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
     }
     model
-  }
-
-  protected def notifyChangeListeners(modification: RepoModification[M]): Unit = {
-    changeListeners.foreach{ _(modification) }
   }
 
   abstract class RepoTable[M <: Model[M]](val db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name)) with FortyTwoGenericTypeMappers with Logging  {
@@ -186,8 +185,8 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
     deleteCache(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    if (hasListeners) session.onTransactionSuccess{
-     notifyChangeListeners(RepoEntryRemoved(model))
+    if (changeListener.isDefined) session.onTransactionSuccess{
+     changeListener.get(RepoEntryRemoved(model))
     }
     count
   }

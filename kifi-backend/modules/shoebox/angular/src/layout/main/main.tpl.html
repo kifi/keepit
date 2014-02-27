@@ -1,6 +1,6 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
   <div class="kf-query-wrap" ng-class="{ empty: isEmpty(), focus: focus }">
-    <input class="kf-query" type="text" placeholder="Find anything..." ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()">
+    <input class="kf-query" type="text" placeholder="Find anything..." ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()" ng-change="onChange()">
     <span class="kf-query-icon">
       <b class="kf-query-mag"></b>
       <a class="kf-query-x" href="javascript:" ng-click="clear()"></a>

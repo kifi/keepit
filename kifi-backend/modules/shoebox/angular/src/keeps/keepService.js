@@ -17,24 +17,6 @@ angular.module('kifi.keepService', [])
       previewUrls = {},
       doc = $document[0];
 
-    function getKeepId(keep) {
-      if (keep) {
-        if (typeof keep === 'string') {
-          return keep;
-        }
-        return keep.id || null;
-      }
-      return null;
-    }
-    function indexById(id) {
-      for (var i = 0, l = list.length; i < l; i++) {
-        if (list[i].id === id) {
-          return i;
-        }
-      }
-      return -1;
-    }
-
     $rootScope.$on('tags.remove', function (tagId) {
       _.forEach(list, function (keep) {
         if (keep.tagList) {
@@ -71,6 +53,27 @@ angular.module('kifi.keepService', [])
         }
       });
     });
+
+    function fetchScreenshots(keeps) {
+      if (keeps && keeps.length) {
+        api.fetchScreenshotUrls(keeps).then(function (urls) {
+          $timeout(function () {
+            api.prefetchImages(urls);
+          });
+
+          _.forEach(keeps, function (keep) {
+            keep.screenshot = urls[keep.url];
+          });
+        });
+      }
+    }
+
+    function processHit(hit) {
+      _.extend(hit, hit.bookmark);
+
+      hit.keepers = hit.users;
+      hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+    }
 
     var api = {
       list: list,
@@ -270,17 +273,9 @@ angular.module('kifi.keepService', [])
             keep.isMyBookmark = true;
           });
 
+          fetchScreenshots(keeps);
+
           return keeps;
-        }).then(function (list) {
-          api.fetchScreenshotUrls(list).then(function (urls) {
-            $timeout(function () {
-              api.prefetchImages(urls);
-            });
-            _.forEach(list, function (keep) {
-              keep.screenshot = urls[keep.url];
-            });
-          });
-          return list;
         });
       },
 
@@ -400,6 +395,27 @@ angular.module('kifi.keepService', [])
 
       togglePrivate: function (keeps) {
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
+      },
+
+      find: function (query, filter, context) {
+        var url = env.xhrBaseSearch;
+        return $http.get(url, {
+          params: {
+            q: query || void 0,
+            f: filter || 'm',
+            maxHits: 30,
+            context: context || void 0
+          }
+        }).then(function (res) {
+          var data = res.data,
+            hits = data.hits || [];
+
+          hits.forEach(processHit);
+          fetchScreenshots(hits);
+
+          return data;
+        });
+
       }
     };
 

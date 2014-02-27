@@ -3,6 +3,7 @@ package com.keepit.abook
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
+import com.keepit.commanders.LocalRichConnectionCommander
 import play.api.Mode._
 import play.api._
 
@@ -13,6 +14,7 @@ object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
     log.info("starting abook")
     startABookServices()
     super.onStart(app)
+    injector.instance[LocalRichConnectionCommander].startUpdateProcessing()
     log.info("abook started")
   }
 

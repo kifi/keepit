@@ -27,7 +27,8 @@ import play.api.mvc.AnyContent
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  userCommander: UserCommander)
+  userCommander: UserCommander,
+  typeaheadCommander: TypeaheadCommander)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
   def getFriends() = JsonAction.authenticated { request =>
@@ -81,19 +82,19 @@ class MobileUserController @Inject() (
 
   // todo: removeme (legacy api)
   def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+    typeaheadCommander.queryConnections(request.userId, search, network, after, limit) map { r =>
       Ok(Json.toJson(r))
     }
   }
 
   def querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
+    typeaheadCommander.queryConnections(request.userId, search, network, after, limit) map { r =>
       Ok(Json.toJson(r))
     }
   }
 
   def queryContacts(search: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    userCommander.queryContacts(request.userId, search, after, limit) map { r =>
+    typeaheadCommander.queryContacts(request.userId, search, after, limit) map { r =>
       Ok(Json.toJson(r))
     }
   }
