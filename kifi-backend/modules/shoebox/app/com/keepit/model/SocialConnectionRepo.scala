@@ -38,6 +38,7 @@ class SocialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, i
 class SocialConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  override protected val changeListener: Option[RepoModification.Listener[SocialConnection]],
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialRepo: SocialUserInfoRepoImpl)
   extends DbRepo[SocialConnection] with SocialConnectionRepo {

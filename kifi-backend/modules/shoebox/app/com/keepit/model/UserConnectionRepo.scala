@@ -39,7 +39,8 @@ class UserConnectionRepoImpl @Inject() (
   val connCountCache: UserConnectionCountCache,
   val userConnCache: UserConnectionIdCache,
   val unfriendedCache: UnfriendedConnectionsCache,
-  val searchFriendsCache: SearchFriendsCache)
+  val searchFriendsCache: SearchFriendsCache,
+  override protected val changeListener: Option[RepoModification.Listener[UserConnection]])
   extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection]{
 
   import db.Driver.simple._
