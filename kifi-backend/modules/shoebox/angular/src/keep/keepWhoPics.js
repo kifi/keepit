@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.keepWhoPics', [])
+angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
 
 .directive('kfKeepWhoPics', [
-
-  function () {
+  'keepWhoService',
+  function (keepWhoService) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,13 +13,8 @@ angular.module('kifi.keepWhoPics', [])
         me: '=',
         keepers: '='
       },
-      link: function (scope) {
-        scope.getPicUrl = function (user) {
-          if (user) {
-            return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
-          }
-          return '';
-        };
+      link: function(scope) {
+        scope.getPicUrl = keepWhoService.getPicUrl;
       }
     };
   }
