@@ -408,9 +408,9 @@ this.tagbox = (function ($, win) {
 				.then(this.focusInput.bind(this))
 				.then(this.updateScroll.bind(this))
 				.fail(function (err) {
-				this.hide('error:failed to init');
-				throw err;
-			}.bind(this))
+					this.hide('error:failed to init');
+					throw err;
+				}.bind(this))
 				.fail(this.logError.bind(this));
 			log('initTags.end');
 		},
