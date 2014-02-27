@@ -71,25 +71,22 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   // Fake sequence counters
 
   private val userSeqCounter = new AtomicInteger(0)
-  private def nextUserSeqNum() = SequenceNumber(userSeqCounter.incrementAndGet())
+  private def nextUserSeqNum() = SequenceNumber[User](userSeqCounter.incrementAndGet())
 
   private val uriSeqCounter = new AtomicInteger(0)
-  private def nextUriSeqNum() = { SequenceNumber(uriSeqCounter.incrementAndGet()) }
+  private def nextUriSeqNum() = { SequenceNumber[NormalizedURI](uriSeqCounter.incrementAndGet()) }
 
   private val bookmarkSeqCounter = new AtomicInteger(0)
-  private def nextBookmarkSeqNum() = { SequenceNumber(bookmarkSeqCounter.incrementAndGet()) }
+  private def nextBookmarkSeqNum() = { SequenceNumber[Bookmark](bookmarkSeqCounter.incrementAndGet()) }
 
   private val collectionSeqCounter = new AtomicInteger(0)
-  private def nextCollectionSeqNum() = { SequenceNumber(collectionSeqCounter.incrementAndGet()) }
-
-  private val commentSeqCounter = new AtomicInteger(0)
-  private def nextCommentSeqNum() = { SequenceNumber(commentSeqCounter.incrementAndGet()) }
+  private def nextCollectionSeqNum() = { SequenceNumber[Collection](collectionSeqCounter.incrementAndGet()) }
 
   private val userConnSeqCounter = new AtomicInteger(0)
-  private def nextUserConnSeqNum() = SequenceNumber(userConnSeqCounter.incrementAndGet())
+  private def nextUserConnSeqNum() = SequenceNumber[UserConnection](userConnSeqCounter.incrementAndGet())
 
   private val searchFriendSeqCounter = new AtomicInteger(0)
-  private def nextSearchFriendSeqNum() = SequenceNumber(searchFriendSeqCounter.incrementAndGet())
+  private def nextSearchFriendSeqNum() = SequenceNumber[SearchFriend](searchFriendSeqCounter.incrementAndGet())
 
   // Fake repos
 
@@ -318,7 +315,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(bookmarks)
   }
 
-  def getBookmarksChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Bookmark]] = {
+  def getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fetchSize: Int): Future[Seq[Bookmark]] = {
     val bookmarks = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(bookmarks)
   }
@@ -380,7 +377,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
-  def getPhrasesChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
+  def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
@@ -392,9 +389,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
 
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
-  def getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
+  def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 
-  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
+  def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(collections)
   }
@@ -416,32 +413,32 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
 
-  def getIndexable(seqNum: Long, fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
-    val uris = allNormalizedURIs.values.filter(_.seq > SequenceNumber(seqNum)).toSeq.sortBy(_.seq)
+  def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
+    val uris = allNormalizedURIs.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris)
   }
 
-  def getIndexableUris(seqNum: Long, fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
-    val uris = allNormalizedURIs.values.filter(_.seq > SequenceNumber(seqNum)).toSeq.sortBy(_.seq)
+  def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
+    val uris = allNormalizedURIs.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
-  def getScrapedUris(seqNum: Long, fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
+  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_WANTED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
-    val uris = allNormalizedURIs.values.filter(x => x.seq > SequenceNumber(seqNum) && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
+    val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
-  def getHighestUriSeq(): Future[Long] = {
-    val seq = allNormalizedURIs.values.map{_.seq.value}
-    Future.successful(if (seq.isEmpty) 0L else seq.max)
+  def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]] = {
+    val seq = allNormalizedURIs.values.map{_.seq}
+    Future.successful(if (seq.isEmpty) SequenceNumber.ZERO else seq.max)
   }
 
-  def getUserIndexable(seqNum: Long, fetchSize: Int): Future[Seq[User]] = {
-    val users = allUsers.values.filter(_.seq.value > seqNum).toSeq.sortBy(_.seq.value).take(fetchSize)
+  def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]] = {
+    val users = allUsers.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(users)
   }
 
@@ -535,7 +532,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
                           url: => String,
                           urlHash: => UrlHash,
                           state: => State[NormalizedURI],
-                          seq: => SequenceNumber,
+                          seq: => SequenceNumber[NormalizedURI],
                           screenshotUpdatedAt: => Option[DateTime],
                           restriction: => Option[Restriction],
                           normalization: => Option[Normalization],
@@ -576,13 +573,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful()
   }
 
-  def getUserConnectionsChanged(seq: Long, fetchSize: Int): Future[Seq[UserConnection]] = {
-    val changed = allConnections.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
+  def getUserConnectionsChanged(seq: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
+    val changed = allConnections.values.filter(_.seq > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 
-  def getSearchFriendsChanged(seq: Long, fetchSize: Int): Future[Seq[SearchFriend]] = {
-    val changed = allSearchFriends.values.filter(_.seq.value > seq).toSeq.sortBy(_.seq)
+  def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
+    val changed = allSearchFriends.values.filter(_.seq > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 
