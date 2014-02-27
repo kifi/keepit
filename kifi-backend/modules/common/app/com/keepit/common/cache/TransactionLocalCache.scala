@@ -40,16 +40,16 @@ class TransactionLocalCache[K <: Key[T], T] private(
     txnLocalStore += (key -> LFound(serializer.writes(valueOpt)))
   }
 
-  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]] = {
-    keys.foldLeft(Map.empty[K, Option[T]]){ (result, key) =>
+  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
+    keys.foldLeft(Map.empty[K, ObjectState[T]]){ (result, key) =>
       txnLocalStore.get(key) match {
         case Some(state) =>
           state match {
-            case LFound(serialized) => result + (key -> serializer.reads(serialized))
-            case LRemoved() => result + (key -> None)
+            case LFound(serialized) => result + (key -> Found(serializer.reads(serialized)))
+            case LRemoved() => result + (key -> Removed())
             case state => throw new Exception(s"this state ($state) should not be in the cache")
           }
-        case None => result
+        case None => result + (key -> NotFound())
       }
     }
   }
@@ -60,8 +60,8 @@ class TransactionLocalCache[K <: Key[T], T] private(
 
   def flush(): Unit = {
     // all changes made in the transaction are going to be flushed directly to the underlying cache
-    txnLocalStore.foreach{ case (key, valueOptOpt) =>
-      valueOptOpt match {
+    txnLocalStore.foreach{ case (key, state) =>
+      state match {
         case LFound(serialized) => underlying.set(key, serializer.reads(serialized))
         case LRemoved() => underlying.remove(key)
         case state => throw new Exception(s"this state ($state) should not be in the cache")
@@ -77,7 +77,7 @@ class ReadOnlyCacheWrapper[K <: Key[T], T](underlying: ObjectCache[K, T]) extend
 
   protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = { } // ignore silently
 
-  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]] = underlying.bulkGetFromInnerCache(keys)
+  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = underlying.bulkGetFromInnerCache(keys)
 
   def remove(key: K): Unit = { } // ignore silently
 }
