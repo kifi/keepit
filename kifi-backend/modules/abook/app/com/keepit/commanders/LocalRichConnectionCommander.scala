@@ -38,10 +38,10 @@ class LocalRichConnectionCommander @Inject() (
 
   def startUpdateProcessing() = {
     log.info("RConn: Triggered queued update processing")
-    if (serviceDiscovery.isLeader()) {
-      log.info("RConn: I'm the leader, let's go")
+    //if (serviceDiscovery.isLeader()) {
+      //log.info("RConn: I'm the leader, let's go")
       processQueueItems()
-    } else log.info("RConn: I'm not the leader, nothing to do")
+    //} else log.info("RConn: I'm not the leader, nothing to do")
   }
 
   private def processQueueItems(): Unit = {
