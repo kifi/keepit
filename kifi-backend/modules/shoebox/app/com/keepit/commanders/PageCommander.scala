@@ -70,7 +70,7 @@ class PageCommander @Inject() (
     val (keepers, keeps) = nUri map { uri =>
       val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
       val keepers: Seq[BasicUser] = db.readOnly { implicit session =>
-        sharingUserInfo.sharingUserIds.map(basicUserRepo.load).toSeq
+        basicUserRepo.loadAll(sharingUserInfo.sharingUserIds).values.toSeq
       }
       (keepers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
