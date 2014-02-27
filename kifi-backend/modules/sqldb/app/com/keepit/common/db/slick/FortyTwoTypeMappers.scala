@@ -34,7 +34,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
   implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
 
-  implicit val sequenceNumberTypeMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
+  implicit def sequenceNumberTypeMapper[T] = MappedColumnType.base[SequenceNumber[T], Long](_.value, SequenceNumber[T](_))
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
   implicit val userToDomainKindMapper = MappedColumnType.base[UserToDomainKind, String](_.value, UserToDomainKind.apply)
@@ -135,7 +135,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   def getResultOptionFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[Option[T]] = GetResult[Option[T]](mapper.nextOption)
 
   implicit val getDateTimeResult = getResultFromMapper[DateTime]
-  implicit val getSequenceNumberResult = getResultFromMapper[SequenceNumber]
+  implicit def getSequenceNumberResult[T] = getResultFromMapper[SequenceNumber[T]]
   implicit def getIdResult[M <: Model[M]] = getResultFromMapper[Id[M]]
   implicit def getOptIdResult[M <: Model[M]] = getResultOptionFromMapper[Id[M]]
   implicit def getStateResult[M <: Model[M]] = getResultFromMapper[State[M]]

@@ -80,7 +80,7 @@ class TopicUpdater @Inject() (
     val (uriSeq, bookmarkSeq) = db.readOnly { implicit s =>
       getAccessor(useActive).topicSeqInfoRepo.getSeqNums match {
         case Some((uriSeq, bookmarkSeq)) => (uriSeq, bookmarkSeq)
-        case None => (SequenceNumber.ZERO, SequenceNumber.ZERO)
+        case None => (SequenceNumber.ZERO[NormalizedURI], SequenceNumber.ZERO[Bookmark])
       }
     }
     val m = updateUriTopic(uriSeq, useActive)
@@ -108,8 +108,8 @@ class TopicUpdater @Inject() (
     log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
   }
 
-  private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
-    def getOverdueUris(seqNum: SequenceNumber): Seq[NormalizedURI] = {
+  private def updateUriTopic(seqNum: SequenceNumber[NormalizedURI], useActive: Boolean): Int = {
+    def getOverdueUris(seqNum: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = {
       db.readOnly { implicit s =>
         uriRepo.getChanged(seqNum, Set(NormalizedURIStates.SCRAPED), fetchSize)
       }
@@ -129,8 +129,8 @@ class TopicUpdater @Inject() (
     uris.size
   }
 
-  private def updateUserTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
-    def getOverdueUserUris(seqNum: SequenceNumber): Seq[Bookmark] = {
+  private def updateUserTopic(seqNum: SequenceNumber[Bookmark], useActive: Boolean): Int = {
+    def getOverdueUserUris(seqNum: SequenceNumber[Bookmark]): Seq[Bookmark] = {
       db.readOnly { implicit s =>
         bookmarkRepo.getBookmarksChanged(seqNum, fetchSize)
       }

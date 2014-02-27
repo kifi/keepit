@@ -20,7 +20,7 @@ trait SearchFriendRepo extends Repo[SearchFriend] with SeqNumberFunction[SearchF
   def includeFriend(userId: Id[User], friendId: Id[User])(implicit session: RWSession): Boolean = {
     includeFriends(userId, Set(friendId)) > 0
   }
-  def getSearchFriendsChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[SearchFriend]
+  def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int)(implicit session: RSession): Seq[SearchFriend]
 }
 
 @Singleton
@@ -34,7 +34,7 @@ class SearchFriendRepoImpl @Inject() (
   import DBSession._
   import db.Driver.simple._
 
-  private val sequence = db.getSequence("search_friend_sequence")
+  private val sequence = db.getSequence[SearchFriend]("search_friend_sequence")
 
   type RepoImpl = SearchFriendTable
   class SearchFriendTable(tag: Tag) extends RepoTable[SearchFriend](db, tag, "search_friend") with SeqNumberColumn[SearchFriend] {
@@ -114,5 +114,5 @@ class SearchFriendRepoImpl @Inject() (
     allConnections -- excludedConnections
   }
 
-  def getSearchFriendsChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[SearchFriend] = super.getBySequenceNumber(seq, fetchSize)
+  def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int)(implicit session: RSession): Seq[SearchFriend] = super.getBySequenceNumber(seq, fetchSize)
 }

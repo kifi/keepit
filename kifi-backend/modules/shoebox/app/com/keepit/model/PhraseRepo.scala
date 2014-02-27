@@ -14,7 +14,7 @@ trait PhraseRepo extends Repo[Phrase] with SeqNumberFunction[Phrase]{
   def get(phrase: String, lang: Lang, excludeState: Option[State[Phrase]] = Some(PhraseStates.INACTIVE))(implicit session: RSession): Option[Phrase]
   def insertAll(phrases: Seq[Phrase])(implicit session: RWSession): Option[Int]
   def allIterator(implicit session: RSession): CloseableIterator[Phrase]
-  def getPhrasesChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Phrase]
+  def getPhrasesChanged(seq: SequenceNumber[Phrase], fetchSize: Int)(implicit session: RSession): Seq[Phrase]
 }
 
 @Singleton
@@ -22,7 +22,7 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence("phrase_sequence")
+  private val sequence = db.getSequence[Phrase]("phrase_sequence")
 
   type RepoImpl = PhraseTable
   class PhraseTable(tag: Tag) extends RepoTable[Phrase](db, tag, "phrase") with SeqNumberColumn[Phrase]{
@@ -50,5 +50,5 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     rows.map(t => t).iterator
   }
 
-  def getPhrasesChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Phrase] = super.getBySequenceNumber(seq, fetchSize)
+  def getPhrasesChanged(seq: SequenceNumber[Phrase], fetchSize: Int)(implicit session: RSession): Seq[Phrase] = super.getBySequenceNumber(seq, fetchSize)
 }

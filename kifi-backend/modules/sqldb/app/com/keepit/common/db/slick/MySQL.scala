@@ -12,18 +12,18 @@ class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
   val Driver = MySQLDriver
   val dialect = MySqlDatabaseDialect
 
-  def getSequence(name: String): DbSequence = new DbSequence(name) {
-    def incrementAndGet()(implicit sess: RWSession): SequenceNumber = {
+  def getSequence[T](name: String): DbSequence[T] = new DbSequence[T](name) {
+    def incrementAndGet()(implicit sess: RWSession): SequenceNumber[T] = {
       sess.getPreparedStatement(s"UPDATE $name SET id=LAST_INSERT_ID(id+1);").execute()
       val rs = sess.getPreparedStatement(s"SELECT LAST_INSERT_ID();").executeQuery()
       rs.next()
-      SequenceNumber(rs.getLong(1))
+      SequenceNumber[T](rs.getLong(1))
     }
 
-    def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber = {
+    def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber[T] = {
       val rs = session.getPreparedStatement(s"SELECT id from $name;").executeQuery()
       rs.next()
-      SequenceNumber(rs.getLong(1))
+      SequenceNumber[T](rs.getLong(1))
     }
   }
 }

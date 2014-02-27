@@ -61,7 +61,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   def initTable() = {
-    rows // force `rows` lazy evaluation
+    rows // force `rows` lazy evaluationRe
   }
 
   def save(model: M)(implicit session: RWSession): M = try {
@@ -156,9 +156,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   trait SeqNumberColumn[M <: ModelWithSeqNumber[M]] extends RepoTable[M] {
-    implicit val seqMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
-
-    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def seq = column[SequenceNumber[M]]("seq", O.NotNull)
   }
 }
 
@@ -194,8 +192,8 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
 
 
 trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
-  def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M]
-  def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M]
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M]
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M]
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
@@ -204,12 +202,12 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
   protected def rowsWithSeq = TableQuery(tableWithSeq)
 
-  def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
     val q = (for(t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
     if (fetchSize > 0) q.take(fetchSize).list else q.list
   }
 
-  def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M] = {
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M] = {
     if (lowerBound > upperBound) throw new IllegalArgumentException(s"expecting upperBound > lowerBound, received: lowerBound = ${lowerBound}, upperBound = ${upperBound}")
     else if (lowerBound == upperBound) Seq()
     else (for(t <- rowsWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list

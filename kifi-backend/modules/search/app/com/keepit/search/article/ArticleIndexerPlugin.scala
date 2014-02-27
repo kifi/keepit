@@ -14,16 +14,16 @@ import com.keepit.search.sharding.ShardedArticleIndexer
 import com.keepit.search.sharding.ShardedIndexerPlugin
 import com.keepit.search.sharding.ShardedIndexerPluginImpl
 
-trait ArticleIndexerPlugin extends ShardedIndexerPlugin[NormalizedURI, ArticleIndexer]
+trait ArticleIndexerPlugin extends ShardedIndexerPlugin[NormalizedURI, NormalizedURI, ArticleIndexer]
 
 class ArticleIndexerPluginImpl @Inject() (
   actor: ActorInstance[ArticleIndexerActor],
   indexer: ShardedArticleIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends ShardedIndexerPluginImpl[NormalizedURI, ArticleIndexer, ArticleIndexerActor](indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
+) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, ArticleIndexer, ArticleIndexerActor](indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
 
 class ArticleIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
   indexer: ShardedArticleIndexer
-) extends IndexerActor[ArticleIndexer](airbrake, indexer)
+) extends IndexerActor[NormalizedURI, ArticleIndexer](airbrake, indexer)

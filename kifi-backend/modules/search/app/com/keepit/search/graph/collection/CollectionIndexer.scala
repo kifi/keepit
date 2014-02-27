@@ -40,7 +40,7 @@ class CollectionIndexer(
     indexWriterConfig: IndexWriterConfig,
     collectionNameIndexer: CollectionNameIndexer,
     airbrake: AirbrakeNotifier)
-  extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
+  extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
   import CollectionFields._
   import CollectionIndexer.CollectionIndexable
@@ -52,7 +52,7 @@ class CollectionIndexer(
 
   def getSearchers: (Searcher, Searcher) = searchers
 
-  override def onFailure(indexable: Indexable[Collection], e: Throwable): Unit = {
+  override def onFailure(indexable: Indexable[Collection, Collection], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -97,7 +97,7 @@ object CollectionIndexer {
   def shouldDelete(collection: Collection): Boolean = (collection.state == INACTIVE)
   val bookmarkSource = BookmarkSource("BookmarkStore")
 
-  def fetchData(sequenceNumber: SequenceNumber, fetchSize: Int, shoeboxClient: ShoeboxServiceClient): Seq[(Collection, Seq[BookmarkUriAndTime])] = {
+  def fetchData(sequenceNumber: SequenceNumber[Collection], fetchSize: Int, shoeboxClient: ShoeboxServiceClient): Seq[(Collection, Seq[BookmarkUriAndTime])] = {
     val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
     collections.map{ collection =>
       val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
@@ -123,11 +123,11 @@ object CollectionIndexer {
 
   class CollectionIndexable(
     override val id: Id[Collection],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[Collection],
     override val isDeleted: Boolean,
     val collection: Collection,
     val normalizedUris: Seq[BookmarkUriAndTime]
-  ) extends Indexable[Collection] {
+  ) extends Indexable[Collection, Collection] {
 
     override def buildDocument = {
       val doc = super.buildDocument

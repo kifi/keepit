@@ -6,6 +6,7 @@ import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.SequenceNumber
 
 // //Sample Usage****************************************
 //
@@ -53,6 +54,9 @@ trait StringCentralConfigKey extends CentralConfigKey {
   override def fullKey: String = s"${namespace}/${key}.string"
 }
 
+trait SequenceNumberCentralConfigKey[T] {
+  def longKey: LongCentralConfigKey
+}
 
 trait ConfigStore {
   def get(key: CentralConfigKey): Option[String]
@@ -132,6 +136,7 @@ class CentralConfig @Inject() (cs: ConfigStore){
 
   def apply(key: StringCentralConfigKey) : Option[String] = cs.get(key)
 
+  def apply[T](key: SequenceNumberCentralConfigKey[T]) : Option[SequenceNumber[T]] = apply(key.longKey).map(SequenceNumber[T](_))
 
   def update(key: BooleanCentralConfigKey, value: Boolean) : Unit = cs.set(key, value.toString)
 
@@ -141,6 +146,7 @@ class CentralConfig @Inject() (cs: ConfigStore){
 
   def update(key: StringCentralConfigKey, value: String) : Unit = cs.set(key,value)
 
+  def update[T](key: SequenceNumberCentralConfigKey[T], value: SequenceNumber[T]): Unit = update(key.longKey, value.value)
 
   def onChange(key: BooleanCentralConfigKey)(handler: Option[Boolean] => Unit) : Unit =
     cs.watch(key){ stringValueOpt =>
@@ -161,6 +167,8 @@ class CentralConfig @Inject() (cs: ConfigStore){
     cs.watch(key){ stringValueOpt =>
       handler(stringValueOpt)
     }
+
+  def onChange[T](key: SequenceNumberCentralConfigKey[T])(handler: Option[SequenceNumber[T]] => Unit): Unit = onChange(key.longKey) { longValueOpt: Option[Long] => handler(longValueOpt.map(SequenceNumber[T](_))) }
 
 }
 

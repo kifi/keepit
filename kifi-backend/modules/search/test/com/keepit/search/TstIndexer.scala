@@ -12,9 +12,9 @@ import java.io.StringReader
 
 class Tst(val id: Id[Tst], val text: String, val personalText: String)
 
-class TstIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Tst](indexDirectory, indexWriterConfig) {
-  def buildIndexable(id: Id[Tst]): Indexable[Tst] = throw new UnsupportedOperationException()
-  def buildIndexable(data: Tst): Indexable[Tst] = new TstIndexable(data.id, data.text, data.personalText, indexWriterConfig.getAnalyzer)
+class TstIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Tst, Tst, TstIndexer](indexDirectory, indexWriterConfig) {
+  def buildIndexable(id: Id[Tst]): Indexable[Tst, Tst] = throw new UnsupportedOperationException()
+  def buildIndexable(data: Tst): Indexable[Tst, Tst] = new TstIndexable(data.id, data.text, data.personalText, indexWriterConfig.getAnalyzer)
 
   def index(id: Id[Tst], text: String, personalText: String) = {
     indexDocuments(Some(buildIndexable(new Tst(id, text, personalText))).iterator, 100)
@@ -25,11 +25,11 @@ class TstIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterC
   def update(): Int = ???
 }
 
-class TstIndexable[Tst](override val id: Id[Tst], val text: String, val personalText: String, analyzer: Analyzer) extends Indexable[Tst] {
+class TstIndexable(override val id: Id[Tst], val text: String, val personalText: String, analyzer: Analyzer) extends Indexable[Tst, Tst] {
 
   implicit def toReader(text: String) = new StringReader(text)
 
-  override val sequenceNumber = SequenceNumber.ZERO
+  override val sequenceNumber = SequenceNumber.ZERO[Tst]
   override val isDeleted = false
 
   override def buildDocument = {
