@@ -18,8 +18,6 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
   function ($scope, tagService, keepService, $q) {
     keepService.unselectAll();
 
-    $scope.toggleSelectAll = keepService.toggleSelectAll;
-    $scope.isSelectedAll = keepService.isSelectedAll;
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
 
@@ -29,8 +27,10 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
       $scope.loadingKeeps = false;
     });
 
-    $scope.checkEnabled = true;
+    $scope.toggleSelectAll = keepService.toggleSelectAll;
+    $scope.isSelectedAll = keepService.isSelectedAll;
 
+    $scope.checkEnabled = true;
     $scope.mouseoverCheckAll = false;
 
     $scope.onMouseoverCheckAll = function () {

@@ -64,6 +64,20 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
       return '';
     };
 
+    $scope.toggleSelectAll = keepService.toggleSelectAll;
+    $scope.isSelectedAll = keepService.isSelectedAll;
+
+    $scope.checkEnabled = true;
+    $scope.mouseoverCheckAll = false;
+
+    $scope.onMouseoverCheckAll = function () {
+      $scope.mouseoverCheckAll = true;
+    };
+
+    $scope.onMouseoutCheckAll = function () {
+      $scope.mouseoverCheckAll = false;
+    };
+
     $scope.getSubtitle = function () {
       if ($scope.loading) {
         return 'Searching...';
