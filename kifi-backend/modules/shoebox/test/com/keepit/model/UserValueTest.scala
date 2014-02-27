@@ -46,6 +46,21 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
         sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
         }
+
+        db.readOnly { implicit s =>
+          userValueRepo.getValues(user1.id.get, "test", "test1")
+        } === Map("test" -> Some("this right here!"), "test1" -> None)
+
+        db.readWrite { implicit s =>
+          userValueRepo.save(UserValue(userId = user1.id.get, name = "test2", value = "this right there!"))
+        }
+        db.readOnly { implicit s =>
+          userValueRepo.getValues(user1.id.get, "test", "test1", "test2")
+        } === Map(
+          "test" -> Some("this right here!"),
+          "test1" -> None,
+          "test2" -> Some("this right there!")
+        )
       }
     }
   }
