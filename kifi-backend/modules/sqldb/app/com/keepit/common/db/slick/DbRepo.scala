@@ -75,8 +75,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       case _ => invalidateCache(result)
     }
     if (changeListener.isDefined) session.onTransactionSuccess{
-     if(newItem) changeListener.get(RepoEntryAdded(model))
-     else changeListener.get(RepoEntryUpdated(model))
+     if(newItem) changeListener.get(RepoEntryAdded(result))
+     else changeListener.get(RepoEntryUpdated(result))
     }
     result
   } catch {
