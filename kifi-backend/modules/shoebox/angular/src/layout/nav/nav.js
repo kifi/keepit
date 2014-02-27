@@ -3,17 +3,23 @@
 angular.module('kifi.layout.nav', ['util'])
 
 .directive('kfNav', [
-  '$location', 'util',
-  function ($location, util) {
+  '$location', 'util', 'keepService',
+  function ($location, util, keepService) {
     return {
       //replace: true,
       restrict: 'A',
       templateUrl: 'layout/nav/nav.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
         scope.counts = {
-          keepCount: 483,
-          friendsNotiConut: 18
+          keepCount: keepService.totalKeepCount,
+          friendsNotifCount: 0
         };
+
+        scope.$watch(function () {
+          return keepService.totalKeepCount;
+        }, function (val) {
+          scope.counts.keepCount = val;
+        });
 
         scope.isActive = function (path) {
           var loc = $location.path();
