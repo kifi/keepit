@@ -35,6 +35,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
+        keepService.reset();
+
         scope.select = keepService.select;
         scope.unselect = keepService.unselect;
         scope.toggleSelect = keepService.toggleSelect;
