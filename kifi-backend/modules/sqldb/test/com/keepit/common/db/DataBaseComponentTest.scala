@@ -103,18 +103,6 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
       }
     }
 
-    "attempt retry not with MySQLIntegrityConstraintViolationException" in {
-      withDb() { implicit injector: Injector =>
-        var counter = 0
-        (inject[Database].readWrite(attempts = 3) { implicit s1 =>
-          counter = counter + 1
-          if (1 == 1) throw new MySQLIntegrityConstraintViolationException("i'm really bad")
-          true
-        }) must throwA[MySQLIntegrityConstraintViolationException]
-        counter === 1
-      }
-    }
-
     "do batch update using readWriteBatch" in {
       withDb() { implicit injector: Injector =>
         val result = (inject[Database].readWriteBatch(Seq(0, 1, 2, 3, 4)) { (s, i) =>
