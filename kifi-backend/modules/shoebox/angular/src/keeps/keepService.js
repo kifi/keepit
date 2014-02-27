@@ -399,6 +399,7 @@ angular.module('kifi.keepService', [])
 
       find: function (query, filter, context) {
         var url = env.xhrBaseSearch;
+        console.log(query, filter, context);
         return $http.get(url, {
           params: {
             q: query || void 0,
