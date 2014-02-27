@@ -10,7 +10,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
   def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String]
-  def getValues(userId: Id[User], keys: String*)(implicit session: RSession): Option[Map[String, Option[String]]]
+  def getValues(userId: Id[User], keys: String*)(implicit session: RSession): Map[String, Option[String]]
   def getUserValue(userId: Id[User], key: String)(implicit session: RSession): Option[UserValue]
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String
   def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean
@@ -59,14 +59,15 @@ class UserValueRepoImpl @Inject() (
     }
   }
 
-  def getValues(userId: Id[User], names: String*)(implicit session: RSession): Map[String, Option[String]] = {
-    valueCache.bulkGetOrElse(names map { name => UserValueKey(userId, name)} toSet ) { missingNames =>
+  def getValues(userId: Id[User], names: String*)(implicit session: RSession): Map[String, Option[String]] =
+    valueCache.bulkGetOrElseOpt(names map { name => UserValueKey(userId, name)} toSet ) { missingNames =>
       val missingValues = missingNames map {missingName =>
         missingName -> (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === missingName.key) yield f.value).firstOption.map(_.value)
       }
       missingValues.toMap
+    } map { case (k, v) =>
+      k.key -> v
     }
-  }
 
   def getUserValue(userId: Id[User], name: String)(implicit session: RSession): Option[UserValue] =
     (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f).firstOption

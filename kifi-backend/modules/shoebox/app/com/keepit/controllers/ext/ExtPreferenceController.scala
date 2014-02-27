@@ -126,31 +126,19 @@ class ExtPreferenceController @Inject() (
     Ok
   }
 
-  /**
-   * most of the vals are in memcached, so most likely we won't hit the db in any of the calls (or open sessions).
-   * Hitting memcached will be done in parallel so it would be faster to return a value
-   */
   private def loadUserPrefs(userId: Id[User]): Future[UserPrefs] = {
-    val enterToSendFuture = db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true)}
-    val maxResultsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1)}
-    val showKeeperIntroFuture = db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "ext_show_keeper_intro").map(_.toBoolean).getOrElse(false)}
-    val showSearchIntroFuture = db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "ext_show_search_intro").map(_.toBoolean).getOrElse(false)}
-    val showFindFriendsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(false)}
-    val messagingEmailsFuture = db.readOnlyAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE)}
+    val userValsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
+    val messagingEmailsFuture = db.readOnlyAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {
-      enterToSend <- enterToSendFuture
-      maxResults <- maxResultsFuture
-      showKeeperIntro <- showKeeperIntroFuture
-      showSearchIntro <- showSearchIntroFuture
-      showFindFriends <- showFindFriendsFuture
+      userVals <- userValsFuture
       messagingEmails <- messagingEmailsFuture
     } yield {
       UserPrefs(
-        enterToSend = enterToSend,
-        maxResults = maxResults,
-        showKeeperIntro = showKeeperIntro,
-        showSearchIntro = showSearchIntro,
-        showFindFriends = showFindFriends,
+        enterToSend = UserValues.enterToSend.getFromMap(userVals),
+        maxResults = UserValues.maxResults.getFromMap(userVals),
+        showKeeperIntro = UserValues.showKeeperIntro.getFromMap(userVals),
+        showSearchIntro = UserValues.showSearchIntro.getFromMap(userVals),
+        showFindFriends = UserValues.showFindFriends.getFromMap(userVals),
         messagingEmails = messagingEmails)
     }
   }
