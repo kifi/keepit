@@ -16,7 +16,7 @@ case class UserConnection(
     state: State[UserConnection] = UserConnectionStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    seq: SequenceNumber = SequenceNumber.ZERO
+    seq: SequenceNumber[UserConnection] = SequenceNumber.ZERO
   ) extends ModelWithState[UserConnection] with ModelWithSeqNumber[UserConnection]{
   def withId(id: Id[UserConnection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -31,7 +31,7 @@ object UserConnection {
     (__ \'state).format(State.format[UserConnection]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format[UserConnection])
   )(UserConnection.apply, unlift(UserConnection.unapply))
 }
 
