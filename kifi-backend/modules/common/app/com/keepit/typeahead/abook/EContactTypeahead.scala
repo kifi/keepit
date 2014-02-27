@@ -48,7 +48,7 @@ class EContactTypeahead @Inject() (
   }
 
   override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = {
-    implicit val fjCtx = com.keepit.common.concurrent.ExecutionContext.fj
+    implicit val fj = ExecutionContext.fj
     if (ids.isEmpty) Future.successful(Seq.empty[EContact])
     else {
       val s3F = econtactCache.bulkGetOrElseFuture(ids.map(EContactKey(_)).toSet) { keys =>
