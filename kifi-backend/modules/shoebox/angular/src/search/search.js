@@ -65,12 +65,16 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
     };
 
     $scope.getSubtitle = function () {
-      var numShown = $scope.keeps.length;
-
       if ($scope.loading) {
         return 'Searching...';
       }
 
+      var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
+      if (subtitle) {
+        return subtitle;
+      }
+
+      var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
         return 'Sorry, no results found for &#x201c;' + query + '&#x202c;';
