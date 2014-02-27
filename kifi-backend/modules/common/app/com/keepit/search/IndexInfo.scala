@@ -5,7 +5,7 @@ import com.keepit.model.User
 import play.api.libs.json._
 case class IndexInfo(
   name: String,
-  sequenceNumber: SequenceNumber,
+  sequenceNumber: Long,
   numDocs: Int,
   committedAt: Option[String],
   indexSize: Option[Long]
@@ -13,14 +13,14 @@ case class IndexInfo(
 
 case class ReadableIndexInfo(
   name: String,
-  sequenceNumber: SequenceNumber,
+  sequenceNumber: Long,
   numDocs: Int,
   committedAt: Option[String],
   indexSize: Option[String]
 )
 
 object IndexInfo {
-  implicit val indexInfoFormat = Json.format[IndexInfo]
+  implicit def indexInfoFormat = Json.format[IndexInfo]
 
   def toReadableSize(n: Long): String = {
     (n/1e3, n/1e6, n/1e9) match {

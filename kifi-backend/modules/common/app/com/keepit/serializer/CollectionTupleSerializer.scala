@@ -10,6 +10,6 @@ object CollectionTupleSerializer {
   implicit val collectionTupleFormat = (
     (__ \ 'collId).format(Id.format[Collection]) and
     (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format)
   ).tupled
 }

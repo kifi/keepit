@@ -12,7 +12,7 @@ import com.keepit.search.IndexInfo
 import com.keepit.search.Lang
 import scala.concurrent.duration._
 
-abstract class PhraseIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
+abstract class PhraseIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase, Phrase, PhraseIndexer](indexDirectory, indexWriterConfig) {
   def update(): Int
 }
 
@@ -42,13 +42,13 @@ class PhraseIndexerImpl(
     super.indexInfos("PhraseIndex" + name)
   }
 
-  override def onFailure(indexable: Indexable[Phrase], e: Throwable): Unit = {
+  override def onFailure(indexable: Indexable[Phrase, Phrase], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
   }
 
-  override def onSuccess(indexable: Indexable[Phrase]): Unit = {
+  override def onSuccess(indexable: Indexable[Phrase, Phrase]): Unit = {
     if (firstInBatch < 0) firstInBatch = indexable.id.id
     countInBatch += 1
     super.onSuccess(indexable)
@@ -57,7 +57,7 @@ class PhraseIndexerImpl(
   private[this] var firstInBatch = -1L
   private[this] var countInBatch = 0
 
-  override def onStart(batch: Seq[Indexable[Phrase]]): Unit = {
+  override def onStart(batch: Seq[Indexable[Phrase, Phrase]]): Unit = {
     firstInBatch = -1L
     countInBatch = 0
   }
@@ -66,10 +66,10 @@ class PhraseIndexerImpl(
 
 class PhraseIndexable(
   override val id: Id[Phrase],
-  override val sequenceNumber: SequenceNumber,
+  override val sequenceNumber: SequenceNumber[Phrase],
   override val isDeleted: Boolean,
   phrase: String, lang: Lang)
-extends Indexable[Phrase] with PhraseFieldBuilder {
+extends Indexable[Phrase, Phrase] with PhraseFieldBuilder {
   override def buildDocument = {
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))

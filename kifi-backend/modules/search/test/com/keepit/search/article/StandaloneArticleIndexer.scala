@@ -23,7 +23,7 @@ class StandaloneArticleIndexer(
     var total = 0
     var done = false
     while (!done) {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, 1000), 180 seconds)
+      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber, 1000), 180 seconds)
       done = uris.isEmpty
       total += update("", uris, Shard(0,1))
     }
@@ -34,7 +34,7 @@ class StandaloneArticleIndexer(
     resetSequenceNumberIfReindex()
 
     doUpdate("ArticleIndex") {
-      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
+      val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber, fsize), 180 seconds)
       uris.iterator.map(buildIndexable)
     }
   }

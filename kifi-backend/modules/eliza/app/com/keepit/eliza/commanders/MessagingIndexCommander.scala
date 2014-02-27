@@ -30,7 +30,7 @@ class MessagingIndexCommander @Inject() (
     else getMessages(fromId, Id[Message](toId.id+100), maxId)
   }
 
-  private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber): Future[ThreadContent] = {
+  private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
     val thread = db.readOnly{ implicit session => threadRepo.get(threadId) }
     val participants : Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(participants)

@@ -1,7 +1,7 @@
 package com.keepit.search.graph.user
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.model.{UserConnection, User}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
 import org.apache.lucene.index.IndexWriterConfig
@@ -27,7 +27,7 @@ class UserGraphIndexer(
   indexWriterConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends Indexer[User](indexDirectory, indexWriterConfig){
+) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory, indexWriterConfig){
 
   import UserGraphIndexer._
 
@@ -36,14 +36,14 @@ class UserGraphIndexer(
 
   private def getIndexables(): Seq[UserGraphIndexable] = {
     // get userConn changed
-    val conns = Await.result(shoeboxClient.getUserConnectionsChanged(sequenceNumber.value, fetchSize), 30 seconds)
+    val conns = Await.result(shoeboxClient.getUserConnectionsChanged(sequenceNumber, fetchSize), 30 seconds)
 
     // find users affected, order by seqNum
-    val m = MutableMap.empty[Id[User], Long]
+    val m = MutableMap.empty[Id[User], SequenceNumber[UserConnection]]
     conns.foreach{ c =>
-      val (u1, u2, seq) = (c.user1, c.user2, c.seq.value)
-      m(u1) = m.getOrElse(u1, SequenceNumber.MinValue.value) max seq
-      m(u2) = m.getOrElse(u2, SequenceNumber.MinValue.value) max seq
+      val (u1, u2, seq) = (c.user1, c.user2, c.seq)
+      m(u1) = m.getOrElse(u1, SequenceNumber.MinValue) max seq
+      m(u2) = m.getOrElse(u2, SequenceNumber.MinValue) max seq
     }
 
     val userAndSeq = m.toArray.sortBy(_._2).toList
@@ -54,11 +54,11 @@ class UserGraphIndexer(
 
     // convert to indexable
     (userAndSeq zip friendsLists) map { case ((user, seq), friends) =>
-      new UserGraphIndexable(user, SequenceNumber(seq), friends.isEmpty, friends.toSeq)
+      new UserGraphIndexable(user, seq, friends.isEmpty, friends.toSeq)
     }
   }
 
-  override def onFailure(indexable: Indexable[User], e: Throwable): Unit = {
+  override def onFailure(indexable: Indexable[User, UserConnection], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -90,10 +90,10 @@ object UserGraphIndexer {
 
   class UserGraphIndexable(
     override val id: Id[User],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[UserConnection],
     override val isDeleted: Boolean,
     val friends: Seq[Id[User]]
-  ) extends Indexable[User] {
+  ) extends Indexable[User, UserConnection] {
 
     override def buildDocument = {
       val doc = super.buildDocument
