@@ -13,19 +13,19 @@ angular.module('util', [])
 
 .directive('postRepeatDirective', [
   '$timeout', '$window',
-  function($timeout, $window) {
-    return function(scope) {
+  function ($timeout, $window) {
+    return function (scope) {
       if (scope.$first) {
         if ($window.console && $window.console.time) {
-          console.time('postRepeatDirective');
+          $window.console.time('postRepeatDirective');
         }
       }
 
       if (scope.$last) {
-        $timeout(function() {
+        $timeout(function () {
           if ($window.console && $window.console.time) {
-            console.time('postRepeatDirective');
-            console.timeEnd('postRepeatDirective');
+            $window.console.time('postRepeatDirective');
+            $window.console.timeEnd('postRepeatDirective');
           }
         });
       }

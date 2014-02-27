@@ -22,6 +22,7 @@ import com.keepit.queue.{NormalizationUpdateJobQueueModule}
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 
 abstract class ShoeboxModule(
+  //these are modules that inheriting modules need to provide
   val secureSocialModule: SecureSocialModule,
   val mailModule: MailModule,
   val reaperModule: ReaperModule,
@@ -37,7 +38,7 @@ abstract class ShoeboxModule(
   val scrapeSchedulerModule: ScrapeSchedulerModule,
   val fjMonitorModule: ForkJoinContextMonitorModule
 ) extends ConfigurationModule with CommonServiceModule {
-
+  //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
@@ -53,6 +54,8 @@ abstract class ShoeboxModule(
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
+
+  val repoChangeListenerRepo = ShoeboxRepoChangeListenerModule()
 
   val mailerModule = PlayMailerModule()
 }

@@ -25,14 +25,14 @@ angular.module('kifi.detail',
           scope.keep = keep;
         });
 
-        scope.getSelectedKeeps = function() {
+        scope.getSelectedKeeps = function () {
           if (scope.isSingleKeep()) {
             return [scope.getPreviewed()];
           }
           else {
             return scope.getSelected();
           }
-        }
+        };
 
         scope.getPrivateConversationText = function () {
           return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
@@ -80,8 +80,8 @@ angular.module('kifi.detail',
 ])
 
 .directive('kfTagList', [
-  'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
-  function (keepService, tagService, $filter, $sce, $document, profileService) {
+  'keepService', 'tagService', '$filter', '$sce', '$document',
+  function (keepService, tagService, $filter, $sce, $document) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,
@@ -123,7 +123,7 @@ angular.module('kifi.detail',
           var commonTagIds = _.intersection.apply(this, tagIds);
           var tagMap = _.indexBy(_.flatten(tagLists, true), 'id');
           return _.map(commonTagIds, function (tagId) { return tagMap[tagId]; });
-        }
+        };
 
         scope.$watch(function () {
           return _.pluck(scope.getSelectedKeeps(), 'tagList');
@@ -150,8 +150,8 @@ angular.module('kifi.detail',
             }).slice(0, dropdownSuggestionCount);
           }
           function generateDropdownSuggestionCount() {
-            var elem, offset;
-            if (elem = element.find('.page-coll-list') && elem && elem.offset().top) {
+            var elem = element.find('.page-coll-list');
+            if (elem && elem.offset().top) {
               return Math.min(10, Math.max(3, ($document.height() - elem.offset().top) / 24 - 1));
             }
             return dropdownSuggestionCount;
@@ -183,7 +183,7 @@ angular.module('kifi.detail',
             // todo: highlight matching terms
             tag.prettyHtml = $sce.trustAsHtml(safe);
           });
-        };
+        }
 
         scope.addTag = function (tag) {
           tagService.addKeepsToTag(tag, scope.getSelectedKeeps());
@@ -358,12 +358,12 @@ angular.module('kifi.detail',
         };
 
         scope.addTagLabel = function () {
-          if (scope.getSelectedKeeps().length == 1) {
-            return "Add a tag to this keep";
+          if (scope.getSelectedKeeps().length === 1) {
+            return 'Add a tag to this keep';
           } else {
-            return "Add a tag to these keeps";
+            return 'Add a tag to these keeps';
           }
-        }
+        };
 
         scope.highlightTag(null);
       }
@@ -374,23 +374,25 @@ angular.module('kifi.detail',
 .directive('kfTagSuggestions', [
   '$timeout',
   function ($timeout) {
-    return function(scope, element /*, attrs*/ ) {
-      $timeout(function() {
+    return function (scope, element/*, attrs*/) {
+      $timeout(function () {
         var hiddenElement = element.find('.page-coll-opt-hidden');
         var input = element.find('input');
         scope.$watch('tagFilter.name', function (value) {
           var html = value;
           if (scope.isAddTagShown()) {
-              html += scope.newTagLabel;
+            html += scope.newTagLabel;
           }
           hiddenElement.html(html);
           var parentWidth = element.parents('.page-coll-list')[0].offsetWidth - 20; // a padding offset
           var width = hiddenElement[0].offsetWidth + 10;
-          if (width > parentWidth) width = parentWidth;
+          if (width > parentWidth) {
+            width = parentWidth;
+          }
           input.css('width', width + 'px');
         });
       });
-    }
+    };
   }
 ])
 

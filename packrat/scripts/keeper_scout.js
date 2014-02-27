@@ -7,12 +7,6 @@ var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log("[keeper_scout]", location.hostname)();
 
-  window.onerror = function(message, url, lineNo) {
-    if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
-      api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
-    }
-  };
-
   var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount, onScroll;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
