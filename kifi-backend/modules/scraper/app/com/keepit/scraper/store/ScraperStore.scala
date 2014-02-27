@@ -32,7 +32,7 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog) = {
+  def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog): PornWordLikelihoodStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
     new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
   }

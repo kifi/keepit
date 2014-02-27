@@ -38,14 +38,15 @@ module.exports = function (grunt) {
         lib: 'lib',
         libCss: [
           'lib/normalize-css/normalize.css',
-          'src/common/lib/bootstrap/bootstrap.css'
+          'managed-lib/bootstrap/bootstrap.css'
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
-					'src/common/lib/bootstrap/bootstrap.css'
+          'managed-lib/bootstrap/bootstrap.css'
         ],
         libJs: [
           'lib/lodash/dist/lodash.js',
+          'lib/underscore.string/lib/underscore.string.js',
           'lib/jquery/dist/jquery.js',
           'lib/angular/angular.js',
           'lib/angular-cookies/angular-cookies.js',
@@ -54,17 +55,17 @@ module.exports = function (grunt) {
           'lib/angular-route/angular-route.js',
           //'lib/angular-ui-router/release/angular-ui-router.js',
           'lib/angular-animate/angular-animate.js',
-          //'lib/angular-bootstrap/ui-bootstrap-tpls.js',
-          'src/common/lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/jquery.mousewheel/jquery.mousewheel.js',
           'lib/antiscroll/antiscroll.js',
           //'lib/angular-antiscroll/angular-antiscroll.js',
           'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
           'lib/moment/moment.js',
-          'lib/angular-moment/angular-moment.js'
+          'lib/angular-moment/angular-moment.js',
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
+          'lib/underscore.string/dist/underscore.string.min.js',
           'lib/jquery/dist/jquery.min.js',
           'lib/angular/angular.min.js',
           'lib/angular-cookies/angular-cookies.min.js',
@@ -74,17 +75,17 @@ module.exports = function (grunt) {
           //'lib/angular-ui-router/release/angular-ui-router.min.js',
           'lib/angular-animate/angular-animate.min.js',
           //'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
-          'src/common/lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/jquery.mousewheel/jquery.mousewheel.js',
           'lib/antiscroll/antiscroll.js',
           //'lib/angular-antiscroll/angular-antiscroll.js',
           'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
           'lib/moment/min/moment.min.js',
-          'lib/angular-moment/angular-moment.min.js'
+          'lib/angular-moment/angular-moment.min.js',
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js'
         ],
         src: 'src',
-        common: 'src/common',
-        commonStyl: 'src/common/*.styl',
+        common: 'src/common/build-css',
+        commonStyl: 'src/common/build-css/*.styl',
         assets: 'assets',
         js: 'src/**/*.js',
         styl: 'src/**/*.styl',

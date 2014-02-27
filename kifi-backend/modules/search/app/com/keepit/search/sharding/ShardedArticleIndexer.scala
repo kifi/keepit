@@ -14,7 +14,7 @@ class ShardedArticleIndexer(
   override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
   articleStore: ArticleStore,
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[NormalizedURI, ArticleIndexer] with Logging{
+) extends ShardedIndexer[NormalizedURI, NormalizedURI, ArticleIndexer] with Logging{
 
   private val fetchSize = 2000
 
@@ -24,10 +24,10 @@ class ShardedArticleIndexer(
     var total = 0
     var done = false
     while (!done && !closing) {
-      val uris =  if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fetchSize), 180 seconds)
+      val uris =  if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber, fetchSize), 180 seconds)
       else {
         log.info(s"ShardedArticleIndexer in catch up mode: skip active uris until seq number passes ${catchUpSeqNumber.value}")
-        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fetchSize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
+        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber, fetchSize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
         if (uris.nonEmpty) uris else  { sequenceNumber = catchUpSeqNumber; return total }
       }
       done = uris.isEmpty
@@ -47,9 +47,9 @@ class ShardedArticleIndexer(
     resetSequenceNumberIfReindex()
 
     var total = 0
-    val uris = if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber.value, fsize), 180 seconds)
+    val uris = if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber, fsize), 180 seconds)
       else {
-        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber.value, fsize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
+        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber, fsize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
         if (uris.nonEmpty) uris else { sequenceNumber = catchUpSeqNumber; return total }
       }
     indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
@@ -61,8 +61,8 @@ class ShardedArticleIndexer(
     total
   }
 
-  override def getDbHighestSeqNum(): SequenceNumber = {
-    SequenceNumber(Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds))
+  override def getDbHighestSeqNum(): SequenceNumber[NormalizedURI] = {
+    Await.result(shoeboxClient.getHighestUriSeq(), 5 seconds)
   }
 
 }

@@ -89,5 +89,7 @@
     "_": true
   },
 
-  "-W093": false
+  "-W093": false,
+  "-W072": false, // function has too many parameters
+  "-W071": false // function has too many statements
 }

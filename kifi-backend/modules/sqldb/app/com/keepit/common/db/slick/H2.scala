@@ -26,20 +26,20 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
   tablesToInit foreach { case (tableName, ddl) => initTableNow(tableName, ddl) }
   val dialect = H2DatabaseDialect
 
-  def getSequence(name: String): DbSequence = new DbSequence(name) {
+  def getSequence[T](name: String): DbSequence[T] = new DbSequence[T](name) {
     initSequence(name)
-    def incrementAndGet()(implicit sess: RWSession): SequenceNumber = {
+    def incrementAndGet()(implicit sess: RWSession): SequenceNumber[T] = {
       val stmt = sess.conn.prepareStatement(s"""SELECT NEXTVAL('$name')""")
       val rs = stmt.executeQuery()
       rs.next()
-      SequenceNumber(rs.getLong(1))
+      SequenceNumber[T](rs.getLong(1))
     }
 
-    def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber = {
+    def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber[T] = {
       val stmt = session.conn.prepareStatement(s"""SELECT CURRVAL('$name')""")
       val rs = stmt.executeQuery()
       rs.next()
-      SequenceNumber(rs.getLong(1))
+      SequenceNumber[T](rs.getLong(1))
     }
   }
 

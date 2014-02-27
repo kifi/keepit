@@ -9,18 +9,19 @@ import com.keepit.search.index.IndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
+import com.keepit.model.Phrase
 
-trait PhraseIndexerPlugin extends IndexerPlugin[PhraseIndexer]
+trait PhraseIndexerPlugin extends IndexerPlugin[Phrase, PhraseIndexer]
 
 class PhraseIndexerPluginImpl @Inject() (
   actor: ActorInstance[PhraseIndexerActor],
   indexer: PhraseIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[PhraseIndexer, PhraseIndexerActor](indexer.asInstanceOf[IndexManager[PhraseIndexer]], actor, serviceDiscovery) with PhraseIndexerPlugin
+) extends IndexerPluginImpl[Phrase, PhraseIndexer, PhraseIndexerActor](indexer, actor, serviceDiscovery) with PhraseIndexerPlugin
 
 class PhraseIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
   indexer: PhraseIndexer
-) extends IndexerActor[PhraseIndexer](airbrake, indexer.asInstanceOf[IndexManager[PhraseIndexer]])
+) extends IndexerActor[Phrase, PhraseIndexer](airbrake, indexer)
 

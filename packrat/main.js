@@ -22,11 +22,11 @@ var pageData = {}; // normUrl => PageData
 var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'unread')
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
-var friends = [];
-var friendsById = {};
-var ruleSet = {};
-var urlPatterns = [];
-var tags;  // [] means user has none
+var friends;
+var friendsById;
+var ruleSet = {rules: {}};
+var urlPatterns;
+var tags;
 var tagsById;
 
 function clearDataCache() {
@@ -44,10 +44,10 @@ function clearDataCache() {
   threadLists = {};
   threadsById = {};
   messageData = {};
-  friends = [];
-  friendsById = {};
-  ruleSet = {};
-  urlPatterns = [];
+  friends = null;
+  friendsById = null;
+  ruleSet = {rules: {}};
+  urlPatterns = null;
   tags = null;
   tagsById = null;
 }
@@ -146,28 +146,43 @@ function insertUpdateChronologically(arr, o, timePropName) {
 // ===== Server requests
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
-  if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
+  if (service === 'GET' || service === 'POST') { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
-  if (typeof data == "function") {  // shift args if data is missing and done is present
+  if (typeof data === 'function') {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
   }
 
-  if (data && method.match(/^(?:GET|HEAD)$/)) {
+  if (data && method === 'GET') {
     var a = [];
     for (var key in data) {
       if (data.hasOwnProperty(key)) {
         var val = data[key];
         if (val != null) {
-          a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val));
+          a.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
         }
       }
     }
-    uri += (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
+    uri += (~uri.indexOf('?') ? '&' : '?') + a.join('&').replace(/%20/g, '+');
     data = null;
   }
 
-  api.request(method, serviceNameToUri(service) + uri, data, done, fail);
+  uri = serviceNameToUri(service) + uri;
+  api.request(
+    method, uri, data, done,
+    fail || (method === 'GET' ? onGetFail.bind(null, uri, done, 1) : null));
+}
+
+function onGetFail(uri, done, failures, req) {
+  if (failures < 10) {
+    var ms = failures * 2000;
+    log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
+    api.timers.setTimeout(
+      api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
+      ms);
+  } else {
+    log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+  }
 }
 
 // ===== Event logging
@@ -265,14 +280,14 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules();
-  getPrefs();
-  getTags();
-  getFriends();
+  getRules(getPrefs.bind(null, getTags.bind(null, getFriends)));
 }
 
 function onSocketDisconnect(why) {
-  reportError('socket disconnect (' + why + ')');
+  log('[onSocketDisconnect]', why)();
+  if (api.mode.isDev() !== api.isPackaged()) {
+    ajax('POST', '/error/report', {message: 'socket disconnect (' + why + ')'});
+  }
 }
 
 function getLatestThreads() {
@@ -332,6 +347,7 @@ function gotFilteredThreads(kind, tl, arr, numTotal) {
   log('[gotFilteredThreads]', kind, arr, numTotal || '')();
   arr.forEach(function (n) {
     standardizeNotification(n);
+    updateIfJustRead(n);
     threadsById[n.thread] = n;
   });
   tl.ids = arr.map(getThreadId);
@@ -343,40 +359,46 @@ function gotFilteredThreads(kind, tl, arr, numTotal) {
 }
 
 var socketHandlers = {
-  denied: function() {
-    log("[socket:denied]")();
+  denied: function () {
+    log('[socket:denied]')();
     clearSession();
   },
-  version: function(v) {
+  version: function (v) {
     log('[socket:version]', v)();
     if (api.version !== v) {
       api.requestUpdateCheck();
     }
   },
-  experiments: function(exp) {
-    log("[socket:experiments]", exp)();
+  experiments: function (exp) {
+    log('[socket:experiments]', exp)();
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
-  new_friends: function(fr) {
-    log("[socket:new_friends]", fr)();
-    for (var i = 0; i < fr.length; i++) {
-      var f = fr[i];
-      if (friendsById[f.id]) {
-        friends = friends.filter(function(e) {return e.id !== f.id})
+  new_friends: function (fr) {
+    log('[socket:new_friends]', fr)();
+    if (friends) {
+      for (var i = 0; i < fr.length; i++) {
+        var f = fr[i];
+        if (friendsById[f.id]) {
+          friends = friends.filter(idIsNot(f.id))
+        }
+        friends.push(f)
+        friendsById[f.id] = f;
       }
-      friends.push(f)
-      friendsById[f.id] = f;
+      // TODO: push friends to interested tabs
     }
   },
-  lost_friends: function(fr) {
-    log("[socket:lost_friends]", fr)();
-    for (var i = 0; i < fr.length; i++) {
-      var f = fr[i];
-      if (friendsById[f.id]) {
-        friends = friends.filter(function(e) {return e.id !== f.id});
+  lost_friends: function (fr) {
+    log('[socket:lost_friends]', fr)();
+    if (friends) {
+      for (var i = 0; i < fr.length; i++) {
+        var f = fr[i];
+        if (friendsById[f.id]) {
+          friends = friends.filter(idIsNot(f.id));
+        }
+        delete friendsById[f.id];
       }
-      delete friendsById[f.id];
+      // TODO: push friends to interested tabs
     }
   },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
@@ -559,6 +581,8 @@ function makeRequest(name, method, url, data, callbacks) {
 
 // ===== Handling messages from content scripts or other extension pages
 
+var SUPPORT = {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', firstName: 'Tamila, Kifi Help', lastName: '', name: 'Tamila, Kifi Help', pictureName: 'tmilz.jpg'};
+
 api.port.on({
   deauthenticate: deauthenticate,
   get_keeps: searchOnServer,
@@ -725,6 +749,7 @@ api.port.on({
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_thread_info', id], function (th) {
         standardizeNotification(th);
+        updateIfJustRead(th);
         threadsById[th.thread] = th;
         emitThreadInfoToTab(th, tab);
       });
@@ -796,6 +821,7 @@ api.port.on({
       socket.send(socketMessage, function (arr) {
         arr.forEach(function (th) {
           standardizeNotification(th);
+          updateIfJustRead(th);
           threadsById[th.thread] = th;
         });
         var includesOldest = arr.length < THREAD_BATCH_SIZE;
@@ -898,7 +924,7 @@ api.port.on({
     respond(webBaseUri());
   },
   get_friends: function(_, respond) {
-    respond(friends);
+    respond(friends || [SUPPORT]);
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
@@ -919,7 +945,7 @@ api.port.on({
     api.tabs.emit(tab, 'open_to', {
       trigger: 'deepLink',
       locator: '/messages',
-      composeTo: friendsById && friendsById['aa345838-70fe-45f2-914c-f27c865bdb91'] || {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', name: 'Tamila, Kifi Help'}
+      composeTo: friendsById && friendsById[SUPPORT.id] || SUPPORT
     }, {queue: 1});
   },
   open_login_popup: function(o) {
@@ -1023,10 +1049,6 @@ api.port.on({
   import_bookmarks_declined: function() {
     unstore('prompt_to_import_bookmarks')
   },
-  report_error: function(data, _, tag) {
-    // TODO: filter errors and improve fidelity/completeness of information
-    //reportError(data.message, data.url, data.lineNo);
-  },
   toggle_mode: function () {
     if (!api.isPackaged()) {
       api.mode.toggle();
@@ -1102,11 +1124,7 @@ function insertNewNotification(n) {
   // proceed only if we don't already have this notification or a newer one for the same thread
   if (!n0 || n0.id !== n.id && n0.time < n.time) {
     threadsById[n.thread] = n;
-    // need to mark read if new message was already viewed
-    if (n.unread && threadReadAt[n.thread] >= n.time) {
-      n.unread = false;
-      n.unreadAuthors = n.unreadMessages = 0;
-    }
+    updateIfJustRead(n);
     var o = {all: true, page: true, unread: n.unread, sent: isSent(n)};
     for (var kind in o) {
       if (o[kind]) {
@@ -1127,6 +1145,13 @@ function insertNewNotification(n) {
       }
     });
     return true;
+  }
+}
+
+function updateIfJustRead(th) {
+  if (th.unread && threadReadAt[th.thread] >= th.time) {
+    th.unread = false;
+    th.unreadAuthors = th.unreadMessages = 0;
   }
 }
 
@@ -1608,10 +1633,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
     standardizeNotification(th);
     var oldTh = threadsById[th.thread];
     if (!oldTh || oldTh.time <= th.time) {
-      if (th.unread && threadReadAt[th.thread] >= th.time) {
-        th.unread = false;
-        th.unreadAuthors = th.unreadMessages = 0;
-      }
+      updateIfJustRead(th);
       if (oldTh && oldTh.unread && !th.unread) {
         markRead(th.thread, th.id, th.time);
       }
@@ -1932,47 +1954,52 @@ var elizaBaseUri = devUriOr.bind(0, apiUri("eliza"));
 var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
 var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
 
-function getFriends() {
-  ajax("GET", "/ext/user/friends", function(fr) {
-    log("[getFriends]", fr)();
+function getFriends(next) {
+  ajax('GET', '/ext/user/friends', function gotFriends(fr) {
+    log('[gotFriends]', fr)();
     friends = fr;
     friendsById = {};
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
       friendsById[f.id] = f;
     }
+    // TODO: push friends to potentially interested tabs
+    if (next) next();
   });
 }
 
-function getTags() {
-  ajax("GET", "/tags", function(arr) {
-    log("[getTags]", arr)();
+function getTags(next) {
+  ajax('GET', '/tags', function gotTags(arr) {
+    log('[gotTags]', arr)();
     tags = arr;
     tagsById = tags.reduce(function(o, tag) {
       o[tag.id] = tag;
       return o;
     }, {});
+    if (next) next();
   });
 }
 
-function getPrefs () {
-  ajax('GET', '/ext/prefs', function (arr) {
-    log('[getPrefs]', arr)();
+function getPrefs(next) {
+  ajax('GET', '/ext/prefs', function gotPrefs(arr) {
+    log('[gotPrefs]', arr)();
     if (me) {
       prefs = arr[1];
       eip = arr[2];
       socket.send(['eip', eip]);
     }
+    if (next) next();
   });
 }
 
-function getRules() {
-  ajax("GET", "/ext/pref/rules", {version: ruleSet.version}, function(o) {
-    log("[getRules]", o)();
+function getRules(next) {
+  ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
+    log('[gotRules]', o)();
     if (o && Object.getOwnPropertyNames(o).length > 0) {
       ruleSet = o.slider_rules;
       urlPatterns = compilePatterns(o.url_patterns);
     }
+    if (next) next();
   });
 }
 
@@ -2019,7 +2046,7 @@ function authenticate(callback, retryMs) {
 }
 
 function startSession(callback, retryMs) {
-  ajax("POST", "/kifi/start", {
+  ajax('POST', '/kifi/start', {
     installation: stored('installation_id'),
     version: api.version
   },
@@ -2122,7 +2149,7 @@ function deauthenticate() {
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
-api.timers.setTimeout(function() {
+api.timers.setTimeout(api.errors.wrap(function() {
   for(var a={},b=0;38>b;b++) // 38 = 42 - 42/10
     a[parseInt(" 0 5 611214041 h j s x1n3c3i3j3k3l3m3n6g6r6t6u6v6w6x6y6zcyczd0d1d2d3dgdhdkdl".substr(2*b,2),36).toString(2)]=" |_i(mMe/\\n\ngor.cy!W:ahst')V,v24Juwbdl".charAt(b);
   for(var d=[],b=0;263>b;b++) // lowest prime that is an irregular prime, an Eisenstein prime, a long prime, a Chen prime, a Gaussian prime, a happy prime, a sexy prime, a safe prime, and a Higgs prime. I think.
@@ -2132,12 +2159,12 @@ api.timers.setTimeout(function() {
       h+=e[g],g++;
     f+=a[h]
   }
-  log("\n"+f)();
-});
+  console.log('\n'+f);
+}));
 
-authenticate(function() {
+api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
-    log("[main] fresh install")();
+    log('[main] fresh install')();
     var tab = api.tabs.anyAt(webBaseUri() + '/install');
     if (tab) {
       api.tabs.navigate(tab.id, webBaseUri() + '/');
@@ -2148,14 +2175,4 @@ authenticate(function() {
   if (api.loadReason === 'install' || api.mode.isDev()) {
     store('prompt_to_import_bookmarks', true);
   }
-}, 3000);
-
-function reportError(errMsg, url, lineNo) {
-  log('Reporting error "%s" in %s line %s', errMsg, url, lineNo)();
-  if (api.mode.isDev() !== api.isPackaged()) {
-    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
-  }
-}
-if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
-  window.onerror = reportError;
-}
+}, 3000))();

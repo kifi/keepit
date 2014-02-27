@@ -22,7 +22,7 @@ case class User(
   state: State[User] = UserStates.ACTIVE,
   pictureName: Option[String] = None, // denormalized UserPicture.name
   userPictureId: Option[Id[UserPicture]] = None,
-  seq: SequenceNumber = SequenceNumber.ZERO,
+  seq: SequenceNumber[User] = SequenceNumber.ZERO,
   primaryEmailId: Option[Id[EmailAddress]] = None
 ) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User]{
   def withId(id: Id[User]) = this.copy(id = Some(id))
@@ -47,7 +47,7 @@ object User {
     (__ \ 'state).format(State.format[User]) and
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat) and
+    (__ \ 'seq).format(SequenceNumber.format[User]) and
     (__ \ 'primaryEmailId).formatNullable[Id[EmailAddress]]
   )(User.apply, unlift(User.unapply))
 

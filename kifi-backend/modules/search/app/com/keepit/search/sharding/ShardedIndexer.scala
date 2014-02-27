@@ -7,12 +7,12 @@ import com.keepit.search.index.Indexer
 import com.keepit.search.IndexInfo
 import com.keepit.common.logging.Logging
 
-trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] with Logging{
-  val indexShards: Map[Shard[K], T]
+trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] with Logging{
+  val indexShards: Map[Shard[K], I]
   protected val updateLock = new AnyRef
   @volatile protected var closing = false
 
-  def commitSequenceNumber: SequenceNumber = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
+  def commitSequenceNumber: SequenceNumber[S] = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
 
   def committedAt: Option[String] = {
     indexShards.valuesIterator.reduce{ (a, b) =>
@@ -20,17 +20,17 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] with Logging{
     }.committedAt
   }
 
-  private[this] var _sequenceNumber: SequenceNumber = commitSequenceNumber
+  private[this] var _sequenceNumber: SequenceNumber[S] = commitSequenceNumber
 
   def sequenceNumber = _sequenceNumber
 
-  protected def sequenceNumber_=(n: SequenceNumber) {
+  protected def sequenceNumber_=(n: SequenceNumber[S]) {
     _sequenceNumber = n
   }
 
-  protected def getDbHighestSeqNum(): SequenceNumber = SequenceNumber.ZERO
+  protected def getDbHighestSeqNum(): SequenceNumber[S] = SequenceNumber.ZERO
 
-  private[this] lazy val catchUpSeqNum: SequenceNumber = {
+  private[this] lazy val catchUpSeqNum: SequenceNumber[S] = {
     val dbSeq = getDbHighestSeqNum()
     val safeSeq = indexShards.valuesIterator.map{indexer =>  if (indexer.numDocs == 0) dbSeq else indexer.catchUpSeqNumber}.min
     indexShards.valuesIterator.foreach{indexer => if (indexer.catchUpSeqNumber < safeSeq) indexer.catchUpSeqNumber_=(safeSeq) }
@@ -46,8 +46,8 @@ trait ShardedIndexer[K, T <: Indexer[_]] extends IndexManager[T] with Logging{
     }
   }
 
-  def getIndexerFor(id: Id[K]): T = getIndexer(indexShards.keysIterator.find(_.contains(id)).get)
-  def getIndexer(shard: Shard[K]): T = indexShards(shard)
+  def getIndexerFor(id: Id[K]): I = getIndexer(indexShards.keysIterator.find(_.contains(id)).get)
+  def getIndexer(shard: Shard[K]): I = indexShards(shard)
 
   def indexInfos(name: String): Seq[IndexInfo] = {
     indexShards.flatMap{ case (shard, indexer) => indexer.indexInfos(shard.indexNameSuffix) }.toSeq

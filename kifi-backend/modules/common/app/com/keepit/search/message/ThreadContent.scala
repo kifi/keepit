@@ -37,7 +37,7 @@ object ThreadContentUpdateMode {
 case class ThreadContent(
   mode: ThreadContentUpdateMode,
   id: Id[ThreadContent],
-  seq: SequenceNumber,
+  seq: SequenceNumber[ThreadContent],
   participants: Seq[BasicUser],
   updatedAt: DateTime,
   url: String,
@@ -55,7 +55,7 @@ object ThreadContent {
   implicit def format = (
     (__ \ 'mode).format[ThreadContentUpdateMode] and
     (__ \ 'id).format(Id.format[ThreadContent]) and
-    (__ \ 'seq).format[SequenceNumber] and
+    (__ \ 'seq).format(SequenceNumber.format[ThreadContent]) and
     (__ \ 'participants).format[Seq[BasicUser]] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'url).format[String] and

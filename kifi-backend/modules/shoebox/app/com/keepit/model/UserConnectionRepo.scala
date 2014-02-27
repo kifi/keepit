@@ -20,7 +20,7 @@ trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[Use
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
-  def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
+  def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
 }
 
 case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]] {
@@ -39,12 +39,13 @@ class UserConnectionRepoImpl @Inject() (
   val connCountCache: UserConnectionCountCache,
   val userConnCache: UserConnectionIdCache,
   val unfriendedCache: UnfriendedConnectionsCache,
-  val searchFriendsCache: SearchFriendsCache)
+  val searchFriendsCache: SearchFriendsCache,
+  override protected val changeListener: Option[RepoModification.Listener[UserConnection]])
   extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection]{
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence("user_connection_sequence")
+  private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
 
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
     val seqNum = sequence.incrementAndGet()
@@ -169,5 +170,5 @@ class UserConnectionRepoImpl @Inject() (
     rows.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = sequence.incrementAndGet())}.toSeq: _*)
   }
 
-  def getUserConnectionChanged(seq: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
+  def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
 }

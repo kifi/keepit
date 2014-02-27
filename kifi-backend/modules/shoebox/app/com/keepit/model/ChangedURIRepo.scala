@@ -10,9 +10,9 @@ import com.keepit.common.db.State
 
 @ImplementedBy(classOf[ChangedURIRepoImpl])
 trait ChangedURIRepo extends Repo[ChangedURI] with SeqNumberFunction[ChangedURI]{
-  def getChangesSince(num: SequenceNumber, limit: Int, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]
-  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
-  def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber]
+  def getChangesSince(num: SequenceNumber[ChangedURI], limit: Int, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]
+  def getChangesBetween(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI], state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI]   // (low, high]
+  def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber[ChangedURI]]
   def page(pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[ChangedURI]
   def countState(state: State[ChangedURI])(implicit session: RSession): Int
   def saveWithoutIncreSeqnum(model: ChangedURI)(implicit session: RWSession): ChangedURI     // useful when we track processed merge requests
@@ -26,7 +26,7 @@ class ChangedURIRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence("changed_uri_sequence")
+  private val sequence = db.getSequence[ChangedURI]("changed_uri_sequence")
 
   type RepoImpl = ChangedURITable
 
@@ -47,15 +47,15 @@ class ChangedURIRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def getChangesSince(num: SequenceNumber, limit: Int = -1, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
+  def getChangesSince(num: SequenceNumber[ChangedURI], limit: Int = -1, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
     super.getBySequenceNumber(num, limit).filter(_.state == state)
   }
 
-  def getChangesBetween(lowSeq: SequenceNumber, highSeq: SequenceNumber, state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
+  def getChangesBetween(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI], state: State[ChangedURI] = ChangedURIStates.APPLIED)(implicit session: RSession): Seq[ChangedURI] = {
     super.getBySequenceNumber(lowSeq, highSeq).filter(_.state == state)
   }
 
-  def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber] = {
+  def getHighestSeqNum()(implicit session: RSession): Option[SequenceNumber[ChangedURI]] = {
     Some(sequence.getLastGeneratedSeq())
   }
 

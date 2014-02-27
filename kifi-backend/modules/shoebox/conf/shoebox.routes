@@ -254,6 +254,7 @@ GET     /api/desk/isLoggedIn        @com.keepit.controllers.api.DeskController.i
 GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
+GET     /admin/engineering/seyren   @com.keepit.controllers.admin.AdminEngineeringDashboardController.seyren
 
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
@@ -464,7 +465,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 
 
-GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Long)
+GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
 POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.internal.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
@@ -479,29 +480,29 @@ GET     /internal/shoebox/database/getUserOpt                          @com.keep
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])
 POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()
 GET     /internal/shoebox/database/getExperimentGenerators             @com.keepit.controllers.internal.ShoeboxController.getExperimentGenerators()
-GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.internal.ShoeboxDataPipeController.getNormalizedUriUpdates(lowSeq: SequenceNumber, highSeq: SequenceNumber)
+GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.internal.ShoeboxDataPipeController.getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI])
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.internal.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.internal.ShoeboxController.getBookmarks(userId: Id[User])
-GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.internal.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
 GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.internal.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.internal.ShoeboxController.saveBookmark
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
-GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.internal.ShoeboxDataPipeController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int)
+GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.internal.ShoeboxDataPipeController.getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int)
 GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.internal.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
 GET     /internal/shoebox/database/getUriIdsInCollection @com.keepit.controllers.internal.ShoeboxController.getUriIdsInCollection(collectionId: Id[Collection])
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.internal.ShoeboxController.getCollectionsByUser(userId: Id[User])
-GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
+GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
+GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
-GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int)
+GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int)
+GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()

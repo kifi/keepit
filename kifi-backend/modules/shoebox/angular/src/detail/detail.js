@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('kifi.detail',
-	['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus']
+	['kifi.keepService', 'kifi.tagService', 'kifi.keepDetailWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus']
 )
 
 .directive('kfDetail', [
@@ -12,7 +12,7 @@ angular.module('kifi.detail',
       replace: true,
       restrict: 'A',
       templateUrl: 'detail/detail.tpl.html',
-      link: function (scope, element/*, attrs*/ ) {
+      link: function (scope/*, element, attrs*/) {
         scope.isSingleKeep = keepService.isSingleKeep;
         scope.getLength = keepService.getSelectedLength;
         scope.isDetailOpen = keepService.isDetailOpen;
@@ -22,18 +22,17 @@ angular.module('kifi.detail',
         scope.me = profileService.me;
 
         scope.$watch(scope.getPreviewed, function (keep) {
-          console.log("[kfDetail]", keep)
           scope.keep = keep;
         });
 
-        scope.getSelectedKeeps = function() {
+        scope.getSelectedKeeps = function () {
           if (scope.isSingleKeep()) {
             return [scope.getPreviewed()];
           }
           else {
             return scope.getSelected();
           }
-        }
+        };
 
         scope.getPrivateConversationText = function () {
           return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
@@ -81,8 +80,8 @@ angular.module('kifi.detail',
 ])
 
 .directive('kfTagList', [
-  'keepService', 'tagService', '$filter', '$sce', '$document', 'profileService',
-  function (keepService, tagService, $filter, $sce, $document, profileService) {
+  'keepService', 'tagService', '$filter', '$sce', '$document',
+  function (keepService, tagService, $filter, $sce, $document) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,
@@ -112,12 +111,25 @@ angular.module('kifi.detail',
           filterTags(null);
         });
 
-        scope.$watch('keep', function (keep) {
-          console.log("[kfTagList]", keep)
+        scope.$watch('keep', function () {
           scope.tagFilter.name = '';
           filterTags(null);
           scope.hideAddTagDropdown();
         });
+
+        scope.getCommonTags = function () {
+          var tagLists = _.pluck(scope.getSelectedKeeps(), 'tagList');
+          var tagIds = _.map(tagLists, function (tagList) { return _.pluck(tagList, 'id'); });
+          var commonTagIds = _.intersection.apply(this, tagIds);
+          var tagMap = _.indexBy(_.flatten(tagLists, true), 'id');
+          return _.map(commonTagIds, function (tagId) { return tagMap[tagId]; });
+        };
+
+        scope.$watch(function () {
+          return _.pluck(scope.getSelectedKeeps(), 'tagList');
+        }, function () {
+          scope.commonTags = scope.getCommonTags();
+        }, true);
 
         function indexOfTag(tag) {
           if (tag) {
@@ -128,7 +140,7 @@ angular.module('kifi.detail',
 
         function filterTags(tagFilterTerm) {
           function keepHasTag(tagId) {
-            return scope.keep && scope.allTags && scope.keep.tagList && !!_.find(scope.keep.tagList, function (keepTag) {
+            return scope.keep && scope.allTags && scope.commonTags && !!_.find(scope.commonTags, function (keepTag) {
               return keepTag.id === tagId;
             });
           }
@@ -138,8 +150,8 @@ angular.module('kifi.detail',
             }).slice(0, dropdownSuggestionCount);
           }
           function generateDropdownSuggestionCount() {
-            var elem, offset;
-            if (elem = element.find('.page-coll-list') && elem && elem.offset().top) {
+            var elem = element.find('.page-coll-list');
+            if (elem && elem.offset().top) {
               return Math.min(10, Math.max(3, ($document.height() - elem.offset().top) / 24 - 1));
             }
             return dropdownSuggestionCount;
@@ -171,7 +183,7 @@ angular.module('kifi.detail',
             // todo: highlight matching terms
             tag.prettyHtml = $sce.trustAsHtml(safe);
           });
-        };
+        }
 
         scope.addTag = function (tag) {
           tagService.addKeepsToTag(tag, scope.getSelectedKeeps());
@@ -291,7 +303,7 @@ angular.module('kifi.detail',
         };
 
         scope.hasTags = function () {
-          return scope.keep && scope.keep.tagList && scope.keep.tagList.length > 0;
+          return scope.commonTags && scope.commonTags.length > 0;
         };
 
         scope.showAddTagDropdown = function () {
@@ -329,8 +341,8 @@ angular.module('kifi.detail',
           }
         };
 
-        scope.removeTag = function (keep, tag) {
-          tagService.removeKeepsFromTag(tag.id, [keep.id]);
+        scope.removeTagFromSelectedKeeps = function (tag) {
+          tagService.removeKeepsFromTag(tag.id, _.pluck(scope.getSelectedKeeps(), 'id'));
         };
 
         element.on('mousedown', '.page-coll-opt', function () {
@@ -345,6 +357,14 @@ angular.module('kifi.detail',
           }
         };
 
+        scope.addTagLabel = function () {
+          if (scope.getSelectedKeeps().length === 1) {
+            return 'Add a tag to this keep';
+          } else {
+            return 'Add a tag to these keeps';
+          }
+        };
+
         scope.highlightTag(null);
       }
     };
@@ -354,23 +374,25 @@ angular.module('kifi.detail',
 .directive('kfTagSuggestions', [
   '$timeout',
   function ($timeout) {
-    return function(scope, element /*, attrs*/ ) {
-      $timeout(function() {
+    return function (scope, element/*, attrs*/) {
+      $timeout(function () {
         var hiddenElement = element.find('.page-coll-opt-hidden');
         var input = element.find('input');
         scope.$watch('tagFilter.name', function (value) {
           var html = value;
           if (scope.isAddTagShown()) {
-              html += scope.newTagLabel;
+            html += scope.newTagLabel;
           }
           hiddenElement.html(html);
           var parentWidth = element.parents('.page-coll-list')[0].offsetWidth - 20; // a padding offset
           var width = hiddenElement[0].offsetWidth + 10;
-          if (width > parentWidth) width = parentWidth;
+          if (width > parentWidth) {
+            width = parentWidth;
+          }
           input.css('width', width + 'px');
         });
       });
-    }
+    };
   }
 ])
 

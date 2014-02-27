@@ -9,6 +9,7 @@ POST    /internal/scraper/scheduleScrapeWithRequest     @com.keepit.scraper.Scra
 POST    /internal/scraper/asyncScrapeWithInfo           @com.keepit.scraper.ScraperController.asyncScrapeWithInfo
 POST    /internal/scraper/asyncScrapeWithRequest        @com.keepit.scraper.ScraperController.asyncScrapeWithRequest
 GET     /internal/scraper/getPornDetectorModel          @com.keepit.controllers.scraper.PornDetectorController.getModel
+POST     /internal/scraper/detectPorn                    @com.keepit.controllers.scraper.PornDetectorController.detect
 
 
 ->  / common.Routes

@@ -23,6 +23,10 @@ case class RepoEntryUpdated[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryAdded[M <: Model[M]](model: M) extends RepoModification[M]
 case class RepoEntryRemoved[M <: Model[M]](model: M) extends RepoModification[M]
 
+object RepoModification{
+  type Listener[M <: Model[M]] = Function1[RepoModification[M], Unit]
+}
+
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
   def all()(implicit session: RSession): Seq[M]
@@ -42,8 +46,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   lazy val dbLog = Logger("com.keepit.db")
 
-  protected val changeListeners : Set[RepoModification[M]=>Unit] = Set.empty
-  protected val hasListeners = !changeListeners.isEmpty
+  protected val changeListener : Option[RepoModification.Listener[M]] = None
 
 
   type RepoImpl <: RepoTable[M]
@@ -58,7 +61,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   def initTable() = {
-    rows // force `rows` lazy evaluation
+    rows // force `rows` lazy evaluationRe
   }
 
   def save(model: M)(implicit session: RWSession): M = try {
@@ -71,9 +74,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
       case _ => invalidateCache(result)
     }
-    if (hasListeners) session.onTransactionSuccess{
-     if(newItem) notifyChangeListeners(RepoEntryAdded(model))
-     else notifyChangeListeners(RepoEntryUpdated(model))
+    if (changeListener.isDefined) session.onTransactionSuccess{
+     if(newItem) changeListener.get(RepoEntryAdded(result))
+     else changeListener.get(RepoEntryUpdated(result))
     }
     result
   } catch {
@@ -125,10 +128,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     model
   }
 
-  protected def notifyChangeListeners(modification: RepoModification[M]): Unit = {
-    changeListeners.foreach{ _(modification) }
-  }
-
   abstract class RepoTable[M <: Model[M]](val db: DataBaseComponent, tag: Tag, name: String) extends Table[M](tag: Tag, db.entityName(name)) with FortyTwoGenericTypeMappers with Logging  {
     //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
@@ -157,9 +156,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
 
   trait SeqNumberColumn[M <: ModelWithSeqNumber[M]] extends RepoTable[M] {
-    implicit val seqMapper = MappedColumnType.base[SequenceNumber, Long](_.value, SequenceNumber.apply)
-
-    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def seq = column[SequenceNumber[M]]("seq", O.NotNull)
   }
 }
 
@@ -186,8 +183,8 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
     deleteCache(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
-    if (hasListeners) session.onTransactionSuccess{
-     notifyChangeListeners(RepoEntryRemoved(model))
+    if (changeListener.isDefined) session.onTransactionSuccess{
+     changeListener.get(RepoEntryRemoved(model))
     }
     count
   }
@@ -195,8 +192,8 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
 
 
 trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
-  def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M]
-  def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M]
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M]
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M]
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
@@ -205,12 +202,12 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
   protected def rowsWithSeq = TableQuery(tableWithSeq)
 
-  def getBySequenceNumber(lowerBound: SequenceNumber, fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
     val q = (for(t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
     if (fetchSize > 0) q.take(fetchSize).list else q.list
   }
 
-  def getBySequenceNumber(lowerBound: SequenceNumber, upperBound: SequenceNumber)(implicit session: RSession): Seq[M] = {
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M] = {
     if (lowerBound > upperBound) throw new IllegalArgumentException(s"expecting upperBound > lowerBound, received: lowerBound = ${lowerBound}, upperBound = ${upperBound}")
     else if (lowerBound == upperBound) Seq()
     else (for(t <- rowsWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list

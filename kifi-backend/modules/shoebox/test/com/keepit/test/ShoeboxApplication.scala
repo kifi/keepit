@@ -17,7 +17,7 @@ import com.keepit.normalizer.TestNormalizationServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.shoebox.{AbuseControlModule, FakeKeepImportsModule}
+import com.keepit.shoebox.{AbuseControlModule, FakeKeepImportsModule, FakeShoeboxRepoChangeListenerModule}
 import com.keepit.common.actor.TestSchedulerModule
 import com.keepit.common.queue.{FakeSimpleQueueModule}
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
@@ -44,7 +44,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       FakeKeepImportsModule(),
       FakeSimpleQueueModule(),
       FakeNormalizationUpdateJobQueueModule(),
-      AwsModule()
+      AwsModule(),
+      FakeShoeboxRepoChangeListenerModule()
     ), overridingModules
   ))
 
@@ -67,6 +68,7 @@ trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with Shoe
     TestSchedulerModule(),
     FakeSimpleQueueModule(),
     FakeNormalizationUpdateJobQueueModule(),
-    AwsModule()
+    AwsModule(),
+    FakeShoeboxRepoChangeListenerModule()
   )
 }

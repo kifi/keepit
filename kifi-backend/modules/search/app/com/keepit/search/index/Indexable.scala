@@ -77,10 +77,10 @@ object Indexable {
 }
 
 
-trait Indexable[T] extends Logging{
+trait Indexable[T, S] extends Logging{
   import Indexable._
 
-  val sequenceNumber: SequenceNumber
+  val sequenceNumber: SequenceNumber[S]
   val id: Id[T]
   val isDeleted: Boolean
 

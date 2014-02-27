@@ -24,6 +24,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.scraper.{TestScraperConfigModule, FakeScrapeSchedulerModule}
+import com.keepit.common.db.SequenceNumber
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -121,10 +122,10 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     "return phrases changed from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
-        val route = com.keepit.controllers.internal.routes.ShoeboxDataPipeController.getPhrasesChanged(4, 2).toString
+        val route = com.keepit.controllers.internal.routes.ShoeboxDataPipeController.getPhrasesChanged(SequenceNumber(4) , 2).toString
         route === "/internal/shoebox/database/getPhrasesChanged?seqNum=4&fetchSize=2"
         val shoeboxController = inject[ShoeboxDataPipeController]
-        val result = shoeboxController.getPhrasesChanged(4 ,2)(FakeRequest())
+        val result = shoeboxController.getPhrasesChanged(SequenceNumber(4), 2)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must contain("gaz parfait");

@@ -17,13 +17,15 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.{InMemoryObjectStore, S3Bucket}
 import scala.concurrent.{Await, Future}
 import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
 import com.keepit.typeahead
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class SocialUserTypeahead @Inject() (
   db: Database,
+  override val airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
   store: SocialUserTypeaheadStore,
   cache: SocialUserTypeaheadCache,
@@ -31,24 +33,17 @@ class SocialUserTypeahead @Inject() (
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
-  override def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[SocialUserInfo]] = {
-    val (filter, msg) = cache.get(SocialUserTypeaheadKey(userId)) match {
-      case Some(filter) =>
-        (Some(new PrefixFilter[SocialUserInfo](filter)), "Cache.get")
-      case None =>
-        val (filter, msg) = store.get(userId) match {
-          case Some(filter) =>
-            (new PrefixFilter[SocialUserInfo](filter), "Store.get")
-          case None =>
-            val pFilter = Await.result(build(userId), Duration.Inf)
-            store += (userId -> pFilter.data)
-            (pFilter, "Built")
-        }
-        cache.set(SocialUserTypeaheadKey(userId), filter.data)
-        (Some(filter), msg)
-    }
-    log.info(s"[social.getPrefixFilter($userId)] ($msg) ${filter}")
-    filter
+  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
+    cache.getOrElseFuture(SocialUserTypeaheadKey(userId)) {
+      store.get(userId) match {
+        case Some(filter) => Future.successful(filter)
+        case None =>
+          build(userId).map{ filter =>
+            store += (userId -> filter.data)
+            filter.data
+          }(ExecutionContext.fj)
+      }
+    }.map{ new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
   }
 
   override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
@@ -81,11 +76,11 @@ class SocialUserTypeahead @Inject() (
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 
   def refresh(userId: Id[User]): Future[Unit] = {
-    build(userId) map { filter =>
+    build(userId).map{ filter =>
       store += (userId -> filter.data)
       cache.set(SocialUserTypeaheadKey(userId), filter.data)
       log.info(s"[refresh($userId)] cache updated; filter=$filter")
-    }
+    }(ExecutionContext.fj)
   }
 
   def refreshByIds(ids: Seq[Id[User]]): Future[Unit] = {
@@ -93,6 +88,7 @@ class SocialUserTypeahead @Inject() (
     for (id <- ids) {
       futures += refresh(id)
     }
+    implicit val fj = ExecutionContext.fj
     Future.sequence(futures) map { seq => Unit }
   }
 

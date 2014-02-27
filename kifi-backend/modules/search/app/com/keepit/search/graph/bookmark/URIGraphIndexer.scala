@@ -50,7 +50,7 @@ class URIGraphIndexer(
     indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
     airbrake: AirbrakeNotifier)
-  extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
+  extends Indexer[User, Bookmark, URIGraphIndexer](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable
 
@@ -72,7 +72,7 @@ class URIGraphIndexer(
 
   def getSearchers: (Searcher, Searcher) = searchers
 
-  override def onFailure(indexable: Indexable[User], e: Throwable) {
+  override def onFailure(indexable: Indexable[User, Bookmark], e: Throwable) {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -84,7 +84,7 @@ class URIGraphIndexer(
     val cnt = doUpdate("URIGraphIndex" + name) {
       bookmarkStore.update(name, bookmarks, shard)
 
-      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
+      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber[Bookmark]]) { (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
       usersChanged.iterator.map(buildIndexable)
     }
     // update searchers together to get a consistent view of indexes
@@ -102,7 +102,7 @@ class URIGraphIndexer(
     bookmarkStore.backup()
   }
 
-  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIGraphIndexable = {
+  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber[Bookmark])): URIGraphIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
     val bookmarks = bookmarkStore.getBookmarks(userId)
     new URIGraphIndexable(id = userId,
@@ -120,10 +120,10 @@ object URIGraphIndexer {
 
   class URIGraphIndexable(
     override val id: Id[User],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[Bookmark],
     override val isDeleted: Boolean,
     val bookmarks: Seq[Bookmark]
-  ) extends Indexable[User] with LineFieldBuilder with Logging{
+  ) extends Indexable[User, Bookmark] with LineFieldBuilder with Logging{
 
     override def buildDocument = {
       val doc = super.buildDocument

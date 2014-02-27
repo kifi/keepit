@@ -229,25 +229,21 @@ function respondToTab(callbackId, response) {
 exports.request = function(method, url, data, done, fail) {
   var options = {
     url: url,
-    onComplete: errors.wrap(function (resp) {
-      var keys = [];
-      for (var key in resp) {
-        keys.push(key);
-      }
-      if (resp.status >= 200 && resp.status < 300) {
-        done && done(resp.json || resp);
-      } else if (fail) {
-        fail(resp);
-      }
-      done = fail = null;
-    })
+    onComplete: onRequestEnd.bind(null, done, fail)
   };
   if (data != null && data !== '') {
-    options.contentType = "application/json; charset=utf-8";
+    options.contentType = 'application/json; charset=utf-8';
     options.content = typeof data === 'string' ? data : JSON.stringify(data);
   }
   require('sdk/request').Request(options)[method.toLowerCase()]();
 };
+var onRequestEnd = errors.wrap(function onRequestEnd(done, fail, resp) {
+  if (resp.status >= 200 && resp.status < 300) {
+    if (done) done(resp.json || resp);
+  } else {
+    if (fail) fail(resp);
+  }
+});
 
 exports.postRawAsForm = function(url, data) {
   var options = {

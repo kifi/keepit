@@ -9,18 +9,19 @@ import com.keepit.search.index.IndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
+import com.keepit.model.User
 
-trait UserIndexerPlugin extends IndexerPlugin[UserIndexer]
+trait UserIndexerPlugin extends IndexerPlugin[User, UserIndexer]
 
 class UserIndexerPluginImpl @Inject() (
   actor: ActorInstance[UserIndexerActor],
   indexer: UserIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[UserIndexer, UserIndexerActor](indexer.asInstanceOf[IndexManager[UserIndexer]], actor, serviceDiscovery) with UserIndexerPlugin
+) extends IndexerPluginImpl[User, UserIndexer, UserIndexerActor](indexer, actor, serviceDiscovery) with UserIndexerPlugin
 
 class UserIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
   indexer: UserIndexer
-) extends IndexerActor[UserIndexer](airbrake, indexer.asInstanceOf[IndexManager[UserIndexer]])
+) extends IndexerActor[User, UserIndexer](airbrake, indexer)
 

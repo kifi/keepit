@@ -16,7 +16,7 @@ case class Phrase (
   lang: Lang,
   source: String,
   state: State[Phrase] = PhraseStates.ACTIVE,
-  seq: SequenceNumber = SequenceNumber.ZERO
+  seq: SequenceNumber[Phrase] = SequenceNumber.ZERO
   ) extends ModelWithState[Phrase] with ModelWithSeqNumber[Phrase] {
   def withId(id: Id[Phrase]): Phrase = copy(id = Some(id))
   def withUpdateTime(now: DateTime): Phrase = this.copy(updatedAt = now)
@@ -33,7 +33,7 @@ object Phrase {
     (__ \ 'lang).format[String].inmap(Lang.apply, unlift(Lang.unapply)) and
     (__ \ 'source).format[String] and
     (__ \ 'state).format(State.format[Phrase]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format[Phrase])
     )(Phrase.apply, unlift(Phrase.unapply))
 }
 
