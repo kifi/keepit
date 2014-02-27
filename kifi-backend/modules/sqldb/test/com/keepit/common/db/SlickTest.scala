@@ -42,7 +42,7 @@ class SlickTest extends Specification with DbTestInjector {
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
                     import DBSession._
-          import scala.slick.driver.JdbcDriver.simple._
+          import scala.slick.driver.H2Driver.simple._
 
           private val sequence = db.getSequence("normalized_uri_sequence")
 
@@ -54,7 +54,7 @@ class SlickTest extends Specification with DbTestInjector {
 
           type RepoImpl = BarTable
           class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") {
-            import scala.slick.driver.JdbcDriver.simple._
+            import scala.slick.driver.H2Driver.simple._
             def name = column[String]("name")
             def * = (id.?, name) <> (Bar.tupled, Bar.unapply _)
           }
@@ -105,7 +105,7 @@ class SlickTest extends Specification with DbTestInjector {
       withDb() { implicit injector =>
         val db = inject[Database]
                 import DBSession._
-        import scala.slick.driver.JdbcDriver.simple._
+        import scala.slick.driver.H2Driver.simple._
 
 
         val table = (tag: Tag) => new Table[Int](tag, "t") {
@@ -192,7 +192,7 @@ class SlickTest extends Specification with DbTestInjector {
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
                     import DBSession._
-          import scala.slick.driver.JdbcDriver.simple._
+          import scala.slick.driver.H2Driver.simple._
 
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
@@ -201,7 +201,7 @@ class SlickTest extends Specification with DbTestInjector {
 
           type RepoImpl = BarTable
           class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") with ExternalIdColumn[Bar] {
-            import scala.slick.driver.JdbcDriver.simple._
+            import scala.slick.driver.H2Driver.simple._
             def name = column[String]("name")
             def * = (id.?, externalId, name) <> (Bar.tupled, Bar.unapply _)
           }

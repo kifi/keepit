@@ -30,14 +30,14 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
 
       class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
                 import DBSession._
-        import scala.slick.driver.JdbcDriver.simple._
+        import scala.slick.driver.H2Driver.simple._
 
         override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
         override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
 
         type RepoImpl = BarTable
         class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") {
-          import scala.slick.driver.JdbcDriver.simple._
+          import scala.slick.driver.H2Driver.simple._
           def name = column[String]("name")
           def * = (id.?, name) <> (Bar.tupled, Bar.unapply _)
         }
