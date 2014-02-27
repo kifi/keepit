@@ -101,6 +101,23 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     }
   }
 
+  def getWithMetadata(id: A): Option[(B, ObjectMetadata)] = {
+    val timer = accessLog.timer(S3)
+    doWithS3Client("getting an item from S3BStore"){ s3Client =>
+      val key = idToKey(id)
+      val s3obj = try {
+        Some(s3Client.getObject(bucketName, key))
+      } catch {
+        case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
+      }
+      val t = s3obj map { o =>
+        (unpackValue(o), o.getObjectMetadata)
+      }
+      accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
+      t
+    }
+  }
+
 }
 
 class S3ObjectJsonParsinException(message: String) extends Exception(message)

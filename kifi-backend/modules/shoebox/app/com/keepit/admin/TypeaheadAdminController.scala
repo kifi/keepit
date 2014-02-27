@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.model.{EContact, SocialUserBasicInfo, User}
+import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.typeahead.TypeaheadHit
 import views.html
@@ -12,7 +12,7 @@ import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.abook.ABookServiceClient
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.concurrent.ExecutionContext
 import play.api.libs.json.JsArray
 
 class TypeaheadAdminController @Inject() (
@@ -21,6 +21,8 @@ class TypeaheadAdminController @Inject() (
   abookServiceClient:ABookServiceClient,
   econtactTypeahead:EContactTypeahead,
   socialUserTypeahead:SocialUserTypeahead) extends AdminController(actionAuthenticator) {
+
+  implicit val fj = ExecutionContext.fj
 
   def index = AdminHtmlAction.authenticated { request =>
     Ok(html.admin.typeahead(request.user))
