@@ -122,9 +122,9 @@ class ShoeboxController @Inject() (
     Ok("true")
   }
 
-  def getNormalizedURI(id: Long) = SafeAsyncAction {
+  def getNormalizedURI(id: Id[NormalizedURI]) = SafeAsyncAction {
     val uri = db.readOnly { implicit s =>
-      normUriRepo.get(Id[NormalizedURI](id))//using cache
+      normUriRepo.get(id)//using cache
     }
     Ok(Json.toJson(uri))
   }

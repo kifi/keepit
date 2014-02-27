@@ -28,12 +28,12 @@ object IndexerPluginMessages {
   case object WarmUpIndexDirectory
 }
 
-trait IndexManager[T <: Indexer[_]] {
+trait IndexManager[S, I <: Indexer[_, S, I]] {
   def update(): Int
   def backup(): Unit
   def numDocs: Int
-  def sequenceNumber: SequenceNumber
-  def commitSequenceNumber: SequenceNumber
+  def sequenceNumber: SequenceNumber[S]
+  def commitSequenceNumber: SequenceNumber[S]
   def committedAt: Option[String]
   def refreshSearcher(): Unit
   def warmUpIndexDirectory(): Unit
@@ -44,23 +44,23 @@ trait IndexManager[T <: Indexer[_]] {
   val pendingUpdateReq = new AtomicBoolean(false)
 }
 
-trait IndexerPlugin[T <: Indexer[_]] extends SchedulerPlugin {
+trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
   def update()
   def reindex()
   def refreshSearcher()
   def warmUpIndexDirectory()
   def numDocs(): Int
-  def sequenceNumber: SequenceNumber
-  def commitSequenceNumber: SequenceNumber
+  def sequenceNumber: SequenceNumber[S]
+  def commitSequenceNumber: SequenceNumber[S]
   def committedAt: Option[String]
   def indexInfos: Seq[IndexInfo]
 }
 
-abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
-  indexer: IndexManager[T],
+abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, I]](
+  indexer: IndexManager[S, I],
   actor: ActorInstance[A],
   serviceDiscovery: ServiceDiscovery
-) extends IndexerPlugin[T] {
+) extends IndexerPlugin[S, I] {
 
   import IndexerPluginMessages._
 
@@ -111,18 +111,18 @@ abstract class IndexerPluginImpl[T <: Indexer[_], A <: IndexerActor[T]](
 
   override def numDocs: Int = indexer.numDocs
 
-  override def sequenceNumber: SequenceNumber = indexer.sequenceNumber
+  override def sequenceNumber: SequenceNumber[S] = indexer.sequenceNumber
 
-  override def commitSequenceNumber: SequenceNumber = indexer.commitSequenceNumber
+  override def commitSequenceNumber: SequenceNumber[S] = indexer.commitSequenceNumber
 
   override def committedAt: Option[String] = indexer.committedAt
 
   def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
 }
 
-class IndexerActor[T <: Indexer[_]](
+class IndexerActor[S, I <: Indexer[_, S, I]](
   airbrake: AirbrakeNotifier,
-  indexer: IndexManager[T]
+  indexer: IndexManager[S, I]
 ) extends FortyTwoActor(airbrake) with Logging {
 
   import IndexerPluginMessages._

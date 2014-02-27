@@ -1,7 +1,7 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{Bookmark, NormalizedURI}
 import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.index.Indexer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 class ShardedURIGraphIndexer(
   override val indexShards: Map[Shard[NormalizedURI], URIGraphIndexer],
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[NormalizedURI, URIGraphIndexer] {
+) extends ShardedIndexer[NormalizedURI, Bookmark, URIGraphIndexer] {
 
   private val fetchSize = 2000
 

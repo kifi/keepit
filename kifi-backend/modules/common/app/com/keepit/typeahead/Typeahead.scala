@@ -78,10 +78,9 @@ trait Typeahead[E, I] extends Logging {
             Future.successful(None)
           } else {
             val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-            implicit val fjCtx = ExecutionContext.fj
-            asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
+            asyncGetInfos(filter.filterBy(queryTerms)).map { infos =>
               search(infos, queryTerms)
-            }
+            }(ExecutionContext.fj)
           }
       }
     } else {

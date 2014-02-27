@@ -238,12 +238,19 @@ angular.module('kifi.keepService', [])
         return api.selectAll();
       },
 
-      resetList: function () {
+      reset: function () {
         before = null;
+        end = false;
         list.length = 0;
+        selected = {};
+        api.unselectAll();
       },
 
       getList: function (params) {
+        if (end) {
+          return $q.when([]);
+        }
+
         var url = env.xhrBase + '/keeps/all';
         params = params || {};
         params.count = params.count || limit;
@@ -252,10 +259,6 @@ angular.module('kifi.keepService', [])
         var config = {
           params: params
         };
-
-        if (end) {
-          return $q.when([]);
-        }
 
         return $http.get(url, config).then(function (res) {
           var data = res.data,
@@ -399,7 +402,36 @@ angular.module('kifi.keepService', [])
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
       },
 
+      isEnd: function () {
+        return !!end;
+      },
+
+      getSubtitle: function (mouseover) {
+        var selectedCount = api.getSelectedLength(),
+          numShown = list.length;
+
+        if (mouseover) {
+          if (selectedCount === numShown) {
+            return 'Deselect all ' + numShown + ' Keeps below';
+          }
+          return 'Select all ' + numShown + ' Keeps below';
+        }
+
+        switch (selectedCount) {
+        case 0:
+          return null;
+        case 1:
+          return selectedCount + ' Keep selected';
+        default:
+          return selectedCount + ' Keeps selected';
+        }
+      },
+
       find: function (query, filter, context) {
+        if (end) {
+          return $q.when([]);
+        }
+
         var url = env.xhrBaseSearch;
         return $http.get(url, {
           params: {
@@ -412,12 +444,18 @@ angular.module('kifi.keepService', [])
           var data = res.data,
             hits = data.hits || [];
 
+          if (!data.mayHaveMore) {
+            end = true;
+          }
+
           hits.forEach(processHit);
+
+          list.push.apply(list, hits);
+
           fetchScreenshots(hits);
 
           return data;
         });
-
       }
     };
 

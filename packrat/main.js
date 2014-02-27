@@ -1,6 +1,7 @@
 /*jshint globalstrict:true */
 'use strict';
 
+var global = this;
 var api = api || require('./api');
 var log = log || api.log;
 
@@ -701,10 +702,27 @@ api.port.on({
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
     mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
   },
+  load_draft: function (data, respond, tab) {
+    var drafts = loadDrafts();
+    if (data.to) {
+      respond(drafts[tab.nUri] || drafts[tab.url]);
+    } else {
+      respond(drafts[currentThreadId(tab)]);
+    }
+  },
+  save_draft: function (data, _, tab) {
+    var drafts = loadDrafts();
+    if (data.html || data.to && data.to.length) {
+      saveDraft(data.to ? tab.nUri || tab.url : currentThreadId(tab), data);
+    } else {
+      discardDraft(data.to ? [tab.nUri, tab.url] : [currentThreadId(tab)]);
+    }
+  },
   send_message: function(data, respond, tab) {
+    discardDraft([tab.nUri, tab.url]);
     data.extVersion = api.version;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
-      log("[send_message] resp:", o)();
+      log('[send_message] resp:', o)();
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
       respond({threadId: o.parentId});
@@ -713,6 +731,7 @@ api.port.on({
   send_reply: function(data, respond) {
     var threadId = data.threadId;
     delete data.threadId;
+    discardDraft([threadId]);
     data.extVersion = api.version;
     ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
@@ -1404,6 +1423,13 @@ function forEachThreadOpenInPane(f) {
     }
   }
 }
+function currentThreadId(tab) {
+  for (var loc in tabsByLocator) {
+    if (threadLocatorRe.test(loc) && ~tabsByLocator[loc].indexOf(tab)) {
+      return loc.substr(10);
+    }
+  }
+}
 
 function forEachTabAtUriAndLocator() { // (url[, url]..., loc, f)
   var done = {};
@@ -1883,6 +1909,60 @@ function enabled(setting) {
   return stored('_' + setting) !== 'n';
 }
 
+function loadDrafts() {
+  if (me) {
+    var drafts = stored('drafts_' + me.id);
+    if (drafts) {
+      var lz = global.LZ || require('./lzstring.min').LZ;
+      return JSON.parse(lz.decompress(drafts));
+    }
+  }
+  return {};
+}
+
+function storeDrafts(drafts) {
+  if (me) {
+    var key = 'drafts_' + me.id;
+    drafts = JSON.stringify(drafts);
+    if (drafts === '{}') {
+      unstore(key);
+    } else {
+      var lz = global.LZ || require('./lzstring.min').LZ;
+      api.storage[qualify(key)] = lz.compress(drafts);
+    }
+  }
+}
+
+function saveDraft(key, draft) {
+  log('[saveDraft]', key)();
+  var now = draft.saved = Date.now();
+  var drafts = loadDrafts();
+  for (var k in drafts) {
+    var d = drafts[k];
+    if (now - d.saved > 259.2e6) { // 3 days
+      log('[saveDraft] culling', k, d, Date(d.saved))();
+      delete drafts[k];
+    }
+  }
+  drafts[key] = draft;
+  storeDrafts(drafts);
+}
+
+function discardDraft(keys) {
+  var drafts = loadDrafts(), found;
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (key in drafts) {
+      log('[discardDraft]', key, drafts[key])();
+      delete drafts[key];
+      found = true;
+    }
+  }
+  if (found) {
+    storeDrafts(drafts);
+  }
+}
+
 function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   var secName = type + 'Sec', timerName = type + 'Timer';
@@ -2112,6 +2192,7 @@ function openLogin(callback, retryMs) {
 
 function clearSession() {
   if (me) {
+    unstore('drafts-' + me.id);
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'me_change', null);

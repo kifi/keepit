@@ -36,7 +36,7 @@ class SlickTest extends Specification with DbTestInjector {
         trait BarRepo extends Repo[Bar] {
           //here you may have model specific queries...
           def getByName(name: String)(implicit session: ROSession): Seq[Bar]
-          def getCurrentSeqNum()(implicit session: RSession): SequenceNumber
+          def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[Bar]
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
@@ -44,7 +44,7 @@ class SlickTest extends Specification with DbTestInjector {
                     import DBSession._
           import scala.slick.driver.H2Driver.simple._
 
-          private val sequence = db.getSequence("normalized_uri_sequence")
+          private val sequence = db.getSequence[Bar]("bar")
 
           override def save(bar: Bar)(implicit session: RWSession): Bar = {sequence.incrementAndGet(); super.save(bar)}
           def getCurrentSeqNum()(implicit session: RSession) = {sequence.getLastGeneratedSeq()}

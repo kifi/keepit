@@ -34,7 +34,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     val thread1 = ThreadContent(
       mode =  FULL,
       id = Id[ThreadContent](44),
-      seq = SequenceNumber(1), 
+      seq = SequenceNumber(1),
       participants = Seq(user1, user2),
       updatedAt = currentDateTime,
       url = "http://theenterprise.com",
@@ -46,13 +46,13 @@ class MessageSearcherTest extends Specification with TestInjector{
         "Pretty good. Can't complain.",
         "Good to hear."
       ),
-      participantIds = Seq(Id[User](1), Id[User](2)) 
+      participantIds = Seq(Id[User](1), Id[User](2))
     )
 
     val thread2 = ThreadContent(
       mode =  FULL,
       id = Id[ThreadContent](9),
-      seq = SequenceNumber(2),  
+      seq = SequenceNumber(2),
       participants = Seq(user1, user2),
       updatedAt = currentDateTime,
       url = "http://thereliant.com",
@@ -63,13 +63,13 @@ class MessageSearcherTest extends Specification with TestInjector{
         "How's the vulcan doing? Good?",
         "No complaints. Living long and prosper."
       ),
-      participantIds = Seq(Id[User](1), Id[User](2)) 
+      participantIds = Seq(Id[User](1), Id[User](2))
     )
 
     val thread3 = ThreadContent(
       mode =  FULL,
       id = Id[ThreadContent](388),
-      seq = SequenceNumber(3),  
+      seq = SequenceNumber(3),
       participants = Seq(user1, user3),
       updatedAt = currentDateTime,
       url = "http://amazon.com",
@@ -80,7 +80,7 @@ class MessageSearcherTest extends Specification with TestInjector{
         "Good evening Ambassador. How are you feeling?",
         "You are so illogical."
       ),
-      participantIds = Seq(Id[User](1), Id[User](3)) 
+      participantIds = Seq(Id[User](1), Id[User](3))
     )
 
     val threadIndexable1 = new MessageContentIndexable(
@@ -102,7 +102,7 @@ class MessageSearcherTest extends Specification with TestInjector{
       airbrake = inject[AirbrakeNotifier]
     )
 
-    val threadIndexableIterable = Seq[Indexable[ThreadContent]](threadIndexable1,threadIndexable2,threadIndexable3)
+    val threadIndexableIterable = Seq[Indexable[ThreadContent, ThreadContent]](threadIndexable1,threadIndexable2,threadIndexable3)
 
     val indexer = new MessageIndexer(
       indexDirectory =  new VolatileIndexDirectoryImpl(),
@@ -120,7 +120,7 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     "find and rank correctly" in {
       withInjector(){ implicit injector =>
-        val indexer = setupIndexer() 
+        val indexer = setupIndexer()
 
         val searcher = new MessageSearcher(indexer.getSearcher)
 
@@ -137,7 +137,7 @@ class MessageSearcherTest extends Specification with TestInjector{
             (result \ "digest").as[String]
           }
           digests(0)==="This is thread 1."
-          digests(1)==="This is thread 2."  
+          digests(1)==="This is thread 2."
         }
 
         parser.parse("spock").map{ parsedQuery =>

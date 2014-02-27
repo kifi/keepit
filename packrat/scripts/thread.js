@@ -82,7 +82,11 @@ panes.thread = function () {
     var scroller = $scroll.data('antiscroll');
     $(window).on('resize.thread', scroller.refresh.bind(scroller));
 
-    $paneBox.on('kifi:remove', function () {
+    $paneBox
+    .on('kifi:removing', function () {
+      compose.save();
+    })
+    .on('kifi:remove', function () {
       if ($holder.length && this.contains($holder[0])) {
         window.messageHeader.destroy();
         $holder = $();

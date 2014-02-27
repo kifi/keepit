@@ -35,10 +35,10 @@ object ThreadIndexFields {
 class MessageContentIndexable(
     val data: ThreadContent,
     val id: Id[ThreadContent],
-    val sequenceNumber: SequenceNumber,
+    val sequenceNumber: SequenceNumber[ThreadContent],
     val airbrake: AirbrakeNotifier,
     val isDeleted: Boolean = false
-  ) extends Indexable[ThreadContent] with LineFieldBuilder{
+  ) extends Indexable[ThreadContent, ThreadContent] with LineFieldBuilder{
 
   override def buildDocument: Document = {
     val doc = super.buildDocument
@@ -127,7 +127,7 @@ class MessageIndexer(
     indexWriterConfig: IndexWriterConfig,
     eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier)
-  extends Indexer[ThreadContent](indexDirectory, indexWriterConfig) {
+  extends Indexer[ThreadContent, ThreadContent, MessageIndexer](indexDirectory, indexWriterConfig) {
 
     val loadBatchSize : Int = 100
     override val commitBatchSize : Int = 50
@@ -139,7 +139,7 @@ class MessageIndexer(
       var done = false
       while (!done) {
         total += doUpdate("MessageIndex") {
-          val batch = Await.result(eliza.getThreadContentForIndexing(sequenceNumber.value, loadBatchSize), 60 seconds)
+          val batch = Await.result(eliza.getThreadContentForIndexing(sequenceNumber, loadBatchSize), 60 seconds)
           done = batch.length<=1
           batch.iterator.map{ threadContent =>
             new MessageContentIndexable(

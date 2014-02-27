@@ -75,11 +75,11 @@ class URIGraphController @Inject()(
     )
   }
 
-  private def mkIndexInfo(name: String, indexer: Indexer[_]): IndexInfo = {
+  private def mkIndexInfo(name: String, indexer: Indexer[_, _, _]): IndexInfo = {
     IndexInfo(
       name = name,
       numDocs = indexer.numDocs,
-      sequenceNumber = indexer.commitSequenceNumber,
+      sequenceNumber = indexer.commitSequenceNumber.value,
       committedAt = indexer.committedAt,
       indexSize = None
     )

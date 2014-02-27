@@ -34,7 +34,7 @@ object Indexer {
   }
 }
 
-trait IndexingEventHandler[T] {
+trait IndexingEventHandler[T, S] {
   protected[this] var _successCount: Int = 0
   protected[this] var _failureCount: Int = 0
 
@@ -42,25 +42,25 @@ trait IndexingEventHandler[T] {
 
   def failureCount = _failureCount
 
-  def onStart(batch: Seq[Indexable[T]]): Unit = {}
+  def onStart(batch: Seq[Indexable[T, S]]): Unit = {}
 
-  def onCommit(successful: Seq[Indexable[T]]): Unit = {}
+  def onCommit(successful: Seq[Indexable[T, S]]): Unit = {}
 
-  def onSuccess(indexable: Indexable[T]): Unit = {
+  def onSuccess(indexable: Indexable[T, S]): Unit = {
     _successCount += 1
   }
 
-  def onFailure(indexable: Indexable[T], e: Throwable): Unit = {
+  def onFailure(indexable: Indexable[T, S], e: Throwable): Unit = {
     _failureCount += 1
     throw e
   }
 }
 
-abstract class Indexer[T](
+abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     fieldDecoders: Map[String, FieldDecoder])
-  extends IndexManager[Indexer[T]] with IndexingEventHandler[T] with Logging {
+  extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
 
   def this(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
 
@@ -108,21 +108,21 @@ abstract class Indexer[T](
 
   protected val updateLock = new AnyRef
 
-  private[this] var _sequenceNumber = SequenceNumber(initialSequenceNumberValue)
+  private[this] var _sequenceNumber = SequenceNumber[S](initialSequenceNumberValue)
   def initialSequenceNumberValue: Long = (commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
   def sequenceNumber = _sequenceNumber
 
-  private[search] def sequenceNumber_=(n: SequenceNumber) {
+  private[search] def sequenceNumber_=(n: SequenceNumber[S]) {
     _sequenceNumber = n
   }
 
-  def catchUpSeqNumber_=(n: SequenceNumber) {_catchUpSeqNumber = n}
+  def catchUpSeqNumber_=(n: SequenceNumber[S]) {_catchUpSeqNumber = n}
 
   private[this] var _catchUpSeqNumber = {
     val v1 = commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong
     val v2 = commitData.getOrElse(Indexer.CommitData.catchUpSeqNumForReindex, "-1").toLong
-    SequenceNumber(v1 max v2)
+    SequenceNumber[S](v1 max v2)
   }
 
   def catchUpSeqNumber = _catchUpSeqNumber
@@ -134,11 +134,11 @@ abstract class Indexer[T](
   protected def resetSequenceNumberIfReindex() {
     if (resetSequenceNumber) {
       resetSequenceNumber = false
-      sequenceNumber = SequenceNumber.MinValue
+      sequenceNumber = SequenceNumber.MinValue[S]
     }
   }
 
-  def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T]]): Int = {
+  def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T, S]]): Int = {
     try {
       log.info(s"updating $name")
       val indexables = changedIndexables
@@ -171,13 +171,13 @@ abstract class Indexer[T](
     indexWriter.close()
   }
 
-  def getIndexerFor(id: Long): Indexer[T] = this
+  def getIndexerFor(id: Long): Indexer[T, S, I] = this
 
   def indexInfos(name: String): Seq[IndexInfo] = {
     Seq(IndexInfo(
       name = name,
       numDocs = numDocs,
-      sequenceNumber = commitSequenceNumber,
+      sequenceNumber = commitSequenceNumber.value,
       committedAt = committedAt,
       indexSize = indexSize
     ))
@@ -189,15 +189,15 @@ abstract class Indexer[T](
     }.sum)
   }
 
-  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
+  def indexDocuments(indexables: Iterator[Indexable[T, S]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
     doWithIndexWriter{ indexWriter =>
       var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
-        var successful = new ArrayBuffer[Indexable[T]]
+        var successful = new ArrayBuffer[Indexable[T, S]]
         onStart(indexableBatch)
 
         // create a map from id to its highest seqNum in the batch
-        val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber]){ (m, indexable) =>
+        val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber[S]]){ (m, indexable) =>
           m + (indexable.id -> indexable.sequenceNumber)
         }
         val commitBatch = indexableBatch.filter{ indexable =>
@@ -256,7 +256,7 @@ abstract class Indexer[T](
     if (doCommit) commit()
   }
 
-  private def commit(seqNum: SequenceNumber = this.sequenceNumber) {
+  private def commit(seqNum: SequenceNumber[S] = this.sequenceNumber) {
     this.sequenceNumber = seqNum
     this.catchUpSeqNumber = SequenceNumber(catchUpSeqNumber.value max sequenceNumber.value)
     val commitData = Map(
@@ -274,7 +274,7 @@ abstract class Indexer[T](
     indexDirectory.scheduleBackup()
   }
 
-  override def onCommit(successful: Seq[Indexable[T]]): Unit =
+  override def onCommit(successful: Seq[Indexable[T, S]]): Unit =
     try {
       val start = currentDateTime.getMillis
       if (indexDirectory.doBackup()) {
@@ -304,7 +304,7 @@ abstract class Indexer[T](
     Map() ++ mutableMap
   }
 
-  def commitSequenceNumber: SequenceNumber = {
+  def commitSequenceNumber: SequenceNumber[S] = {
     SequenceNumber(commitData.get(Indexer.CommitData.sequenceNumber).map(v => v.toLong).getOrElse(-1L))
   }
 

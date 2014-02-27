@@ -113,11 +113,6 @@
   transition: border-top-color .8s ease-in;
 }
 
-body[data-view=search] .main-head {
-  padding-top: 10px;
-  height: 38px;
-}
-
 body[data-view=search] .main-head>h1,
 body:not([data-view=mine]):not([data-view=search]) .main-head,
 body:not([data-view=mine]):not([data-view=search]) .main-keeps,

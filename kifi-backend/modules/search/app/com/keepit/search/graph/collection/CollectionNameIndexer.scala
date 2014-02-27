@@ -27,12 +27,12 @@ class CollectionNameIndexer(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     airbrake: AirbrakeNotifier)
-  extends Indexer[User](indexDirectory, indexWriterConfig, CollectionNameFields.decoders) {
+  extends Indexer[User, Collection, CollectionNameIndexer](indexDirectory, indexWriterConfig, CollectionNameFields.decoders) {
 
   override val commitBatchSize = 100
   private val fetchSize = commitBatchSize
 
-  override def onFailure(indexable: Indexable[User], e: Throwable) {
+  override def onFailure(indexable: Indexable[User, Collection], e: Throwable) {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -41,13 +41,13 @@ class CollectionNameIndexer(
   def update(): Int = throw new UnsupportedOperationException("CollectionNameIndex should not be updated by update()")
 
   def update(name: String, collectionsChanged: Seq[Collection], collectionSearcher: CollectionSearcher): Int = updateLock.synchronized {
-    val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
+    val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber[Collection]]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
     doUpdate("CollectionNameIndex" + name) {
       usersChanged.iterator.map(buildIndexable(_, collectionSearcher))
     }
   }
 
-  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber), collectionSearcher: CollectionSearcher): CollectionNameIndexable = {
+  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber[Collection]), collectionSearcher: CollectionSearcher): CollectionNameIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
     val collections = collectionSearcher.getCollections(userId)
     new CollectionNameIndexable(id = userId,
@@ -58,10 +58,10 @@ class CollectionNameIndexer(
 
   class CollectionNameIndexable(
     override val id: Id[User],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[Collection],
     override val isDeleted: Boolean,
     val collections: Seq[(Id[Collection], String)]
-  ) extends Indexable[User] with LineFieldBuilder {
+  ) extends Indexable[User, Collection] with LineFieldBuilder {
 
     override def buildDocument = {
       val doc = super.buildDocument

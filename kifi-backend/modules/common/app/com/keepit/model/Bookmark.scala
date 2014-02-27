@@ -25,7 +25,7 @@ case class Bookmark(
   state: State[Bookmark] = BookmarkStates.ACTIVE,
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
-  seq: SequenceNumber = SequenceNumber.ZERO
+  seq: SequenceNumber[Bookmark] = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] with ModelWithState[Bookmark] with ModelWithSeqNumber[Bookmark]{
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
@@ -68,7 +68,7 @@ object Bookmark {
     (__ \ 'state).format(State.format[Bookmark]) and
     (__ \ 'source).format[String].inmap(BookmarkSource.apply, unlift(BookmarkSource.unapply)) and
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format[Bookmark])
   )(Bookmark.apply, unlift(Bookmark.unapply))
 }
 
