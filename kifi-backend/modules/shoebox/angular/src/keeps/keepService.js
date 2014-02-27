@@ -57,6 +57,8 @@ angular.module('kifi.keepService', [])
     var api = {
       list: list,
 
+      totalKeepCount: 0,
+
       isDetailOpen: function () {
         return isDetailOpen;
       },
