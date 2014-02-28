@@ -263,17 +263,23 @@ class ShoeboxController @Inject() (
   }
 
   def recordScrapedNormalization() = Action(parse.json) { request =>
-    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
-    val signature = Signature((request.body \ "signature").as[String])
+
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
+    val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
+
+    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+    val signature = Signature((request.body \ "signature").as[String])
     val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
-    val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-    val alternateCandidates = for {
-      url <- alternateUrls.toSeq
-      normalization <- SchemeNormalizer.findSchemeNormalization(url)
-    } yield ScrapedCandidate(url, normalization)
-    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization) +: alternateCandidates: _*)
+
+    val (scrapedUri, alternateUris) = db.readOnly { implicit session => (
+      normUriRepo.get(uriId),
+      alternateUrls.flatMap(normUriRepo.getByUri(_))
+    )}
+
+    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate)
+    // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website.
+    alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), scrapedCandidate))
     Ok
   }
 

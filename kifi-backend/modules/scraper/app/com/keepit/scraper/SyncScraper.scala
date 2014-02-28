@@ -86,7 +86,7 @@ class SyncScraper @Inject() (
           }
 
           // Report canonical url
-          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _))
+          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
 
           log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
