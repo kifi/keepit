@@ -3,25 +3,23 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$window', 'kfModal',
-  function ($scope, $window, kfModal) {
-    $scope.gettingStarted = function () {
-      var modalInstance = kfModal.open({
-        //template: '<div class="modal-header"><h3>I\'m a modal!</h3></div><div class="modal-body">What what</div><div class="modal-footer"><button class="btn btn-primary" ng-click="ok()">OK</button><button class="btn btn-warning" ng-click="cancel()">Cancel</button></div>',
-        template: 'Hey',
-        resolve: {
-          items: function () {
-            return $scope.items;
-          }
-        }
-      });
+  '$scope', '$window', 'profileService', '$q', '$http', 'env',
+  function ($scope, $window, profileService, $q, $http, env) {
+    $scope.data = {};
 
-      modalInstance.result.then(function (selectedItem) {
-        $scope.selected = selectedItem;
-      }, function () {
-        $window.console.log("word")
-      });
+    // onboarding.js are using this functions
+    $window.getMe = function() {
+      return profileService.me ? $q.when(profileService.me) : profileService.fetchMe();
     };
-    $window.console.log('RightColCtrl');
+
+    $window.exitOnboarding = function () {
+      $scope.data.showGettingStarted = false;
+      $http.post(env.xhrBase + '/user/prefs', {
+        onboarding_seen: 'true'
+      });
+      $scope.$apply();
+      //initBookmarkImport();
+    };
+
   }
 ]);

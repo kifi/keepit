@@ -456,6 +456,10 @@ angular.module('kifi.keepService', [])
 
           return data;
         });
+      },
+
+      getKeepsByTagId: function (tagId) {
+        return $q.when([]);
       }
     };
 

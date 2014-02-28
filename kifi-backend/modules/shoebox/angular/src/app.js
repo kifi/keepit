@@ -15,6 +15,7 @@ angular.module('kifi', [
   'angularMoment',
   'kifi.home',
   'kifi.search',
+  'kifi.tagKeeps',
   'kifi.profile',
   'kifi.focus',
   'kifi.youtube',

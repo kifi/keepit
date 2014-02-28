@@ -109,6 +109,7 @@ class SharedWsMessagingController @Inject() (
     },
 
     // pre-inbox notification/thread handlers (soon will be obsolete)
+    // mustn't forget about mobile
 
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map { notices =>
@@ -135,7 +136,7 @@ class SharedWsMessagingController @Inject() (
       val lastModified = messagingCommander.setAllNotificationsReadBefore(socket.userId, messageId)
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
-    "get_threads_by_url" -> { case JsString(url) +: _ =>  // deprecated in favor of "get_threads"
+    "get_threads_by_url" -> { case JsString(url) +: _ =>
       messagingCommander.getThreadInfos(socket.userId, url).map { case (_, threadInfos) =>
         socket.channel.push(Json.arr("thread_infos", threadInfos))
       }
