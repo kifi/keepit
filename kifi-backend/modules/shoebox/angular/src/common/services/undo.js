@@ -6,7 +6,7 @@ angular.module('kifi.undo', [])
   '$timeout',
   function ($timeout) {
 
-    var DEFAULT_DURATION = 5000;
+    var DEFAULT_DURATION = 30000;
 
     var api = {
       isSet: function () {
@@ -32,10 +32,13 @@ angular.module('kifi.undo', [])
         api.message = api.callback = api.promise = null;
       },
       undo: function () {
+        var res = null;
         if (api.callback) {
-          api.callback();
+          res = api.callback.call();
         }
         api.clear();
+
+        return res;
       }
     };
 

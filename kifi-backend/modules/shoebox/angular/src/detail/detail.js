@@ -69,6 +69,11 @@ angular.module('kifi.detail',
           return scope.howKept === 'public';
         };
 
+        scope.toggleKeep = function () {
+          var keeps = scope.getSelectedKeeps();
+          return keepService.toggleKeep(keeps);
+        };
+
         scope.togglePrivate = function () {
           var keeps = scope.getSelectedKeeps();
           return keepService.togglePrivate(keeps);

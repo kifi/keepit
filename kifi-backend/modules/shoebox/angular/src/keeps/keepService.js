@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.keepService', [])
+angular.module('kifi.keepService', ['kifi.undo'])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope',
-  function ($http, env, $q, $timeout, $document, $rootScope) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService) {
 
     var list = [],
       selected = {},
@@ -344,6 +344,7 @@ angular.module('kifi.keepService', [])
           return $q.when(keeps || []);
         }
 
+        var keepPrivacy = isPrivate == null;
         isPrivate = !! isPrivate;
 
         var url = env.xhrBase + '/keeps/add';
@@ -352,13 +353,13 @@ angular.module('kifi.keepService', [])
             return {
               title: keep.title,
               url: keep.url,
-              isPrivate: isPrivate
+              isPrivate: keepPrivacy ? !! keep.isPrivate : isPrivate
             };
           })
         }).then(function () {
           _.forEach(keeps, function (keep) {
             keep.isMyBookmark = true;
-            keep.isPrivate = isPrivate;
+            keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
           });
           return keeps;
         });
@@ -382,6 +383,11 @@ angular.module('kifi.keepService', [])
 
           _.remove(list, function (keep) {
             return map[keep.id];
+          });
+
+          var message = keeps.length > 1 ? keeps.length + ' Keeps deleted.' : 'Keep deleted.';
+          undoService.add(message, function () {
+            api.keep(keeps);
           });
 
           return keeps;
