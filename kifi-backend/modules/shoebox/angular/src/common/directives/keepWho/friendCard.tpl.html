@@ -1,8 +1,8 @@
-<div class="kifi-fr-kcard">
+<div class="kifi-fr-kcard tooltip-show-hide" ng-show="tooltipEnabled">
   <div class="kifi-fr-kcard-top">
-    <img class="kifi-fr-kcard-pic" src="{{picUri}}">
+    <img class="kifi-fr-kcard-pic" src="{{getPicUrl(keeper)}}">
     <div class="kifi-fr-kcard-info">
-      <div class="kifi-fr-kcard-name">{{name}}</div>
+      <div class="kifi-fr-kcard-name">{{getName(keeper)}}</div>
       <div class="kifi-fr-kcard-desc">Your kifi friend</div>
     </div>
   </div>
