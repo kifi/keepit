@@ -343,7 +343,7 @@ class AuthHelper @Inject() (
         val user = userRepo.get(address.userId)
         val (isVerified, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
         lazy val isPendingPrimaryEmail = {
-          val pendingEmail = userValueRepo.getValueUnsafe(address.userId, "pending_primary_email")
+          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, "pending_primary_email")
           pendingEmail.isDefined && address.address == pendingEmail.get
         }
 

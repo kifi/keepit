@@ -11,7 +11,7 @@ import com.keepit.model.UserValues.UserValueHandler
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
   def getValue[T](userId: Id[User], handler: UserValueHandler[T])(implicit session: RSession): T
-  def getValueUnsafe[T](userId: Id[User], key: String)(implicit session: RSession): Option[String]
+  def getValueStringOpt(userId: Id[User], key: String)(implicit session: RSession): Option[String]
   def getValues(userId: Id[User], keys: String*)(implicit session: RSession): Map[String, Option[String]]
   def getUserValue(userId: Id[User], key: String)(implicit session: RSession): Option[UserValue]
   def setValue[T](userId: Id[User], name: String, value: T)(implicit session: RWSession): T
@@ -59,14 +59,14 @@ class UserValueRepoImpl @Inject() (
     (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === key) yield f.value).firstOption.map(_.value)
   }
 
-  def getValueUnsafe[T](userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
+  def getValueStringOpt(userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
     valueCache.getOrElseOpt(UserValueKey(userId, key)) {
       getValueUnsafeNoCache(userId, key)
     }
   }
 
   def getValue[T](userId: Id[User], handler: UserValueHandler[T])(implicit session: RSession): T = {
-    val value = getValueUnsafe(userId, handler.name)
+    val value = getValueStringOpt(userId, handler.name)
     handler.parse(value)
   }
 

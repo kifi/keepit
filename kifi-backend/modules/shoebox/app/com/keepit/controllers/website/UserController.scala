@@ -220,7 +220,7 @@ class UserController @Inject() (
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
-          val pendingPrimary = userValueRepo.getValueUnsafe(request.user.id.get, "pending_primary_email")
+          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
           if (emailRecord.userId == request.userId) {
             Ok(Json.toJson(EmailInfo(
               address = emailRecord.address,
@@ -426,11 +426,11 @@ class UserController @Inject() (
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = HtmlAction.authenticated { implicit request =>
     val startTime = clock.now
-    var importHasHappened = new AtomicBoolean(false)
-    var finishedImportAnnounced = new AtomicBoolean(false)
+    val importHasHappened = new AtomicBoolean(false)
+    val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
       val v = db.readOnly { implicit session =>
-        userValueRepo.getValueUnsafe(request.userId, s"import_in_progress_${network}")
+        userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
         None

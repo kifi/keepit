@@ -158,9 +158,9 @@ class UserCommander @Inject() (
   def getUserInfo(user: User): BasicUserInfo = {
     val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnly { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
-      val description =  userValueRepo.getValueUnsafe(user.id.get, "user_description")
+      val description =  userValueRepo.getValueStringOpt(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
-      val pendingPrimary = userValueRepo.getValueUnsafe(user.id.get, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email")
       val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
@@ -203,7 +203,7 @@ class UserCommander @Inject() (
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
     delay {
       val guardKey = "friendsNotifiedAboutJoining"
-      if (!db.readOnly{ implicit session => userValueRepo.getValueUnsafe(newUserId, guardKey).exists(_=="true") }) {
+      if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
         db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
         val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
           val newUser = userRepo.get(newUserId)
@@ -606,7 +606,7 @@ class UserCommander @Inject() (
 
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[EmailAddress]], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
-      val pendingPrimary = userValueRepo.getValueUnsafe(userId, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email")
       val uniqueEmailStrings = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmailStrings contains em.address)
       // Remove missing emails
@@ -653,7 +653,7 @@ class UserCommander @Inject() (
         }
       }
 
-      userValueRepo.getValueUnsafe(userId, "pending_primary_email").map { pp =>
+      userValueRepo.getValueStringOpt(userId, "pending_primary_email").map { pp =>
         emailRepo.getByAddressOpt(pp) match {
           case Some(em) =>
             if (em.verified && em.address == pp) {

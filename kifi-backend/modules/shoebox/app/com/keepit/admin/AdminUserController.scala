@@ -471,7 +471,7 @@ class AdminUserController @Inject() (
           })
         case (Some(name), _, _) => // get it
           db.readOnly { implicit session =>
-            userValueRepo.getValueUnsafe(userId, name)
+            userValueRepo.getValueStringOpt(userId, name)
           }
         case _=>
           None.asInstanceOf[Option[String]]
@@ -625,7 +625,7 @@ class AdminUserController @Inject() (
 
         val allInstallations = kifiInstallationRepo.all(userId)
         if (allInstallations.nonEmpty) { properties += ("installedExtension", allInstallations.maxBy(_.updatedAt).version.toString) }
-        userValueRepo.getValueUnsafe(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
+        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }

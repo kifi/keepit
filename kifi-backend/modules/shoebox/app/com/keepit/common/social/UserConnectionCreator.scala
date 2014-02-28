@@ -48,7 +48,7 @@ class UserConnectionCreator @Inject() (
   }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>
-    userValueRepo.getValueUnsafe(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
+    userValueRepo.getValueStringOpt(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
   }
 
   def updateUserConnections(userId: Id[User]) = timing(s"updateUserConnections($userId)") {

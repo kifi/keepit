@@ -61,7 +61,7 @@ class CollectionCommander @Inject() (
     log.info(s"Getting collection ordering for user $uid")
     val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
     Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
-      userValueRepo.getValueUnsafe(uid, CollectionOrderingKey) getOrElse {
+      userValueRepo.getValueStringOpt(uid, CollectionOrderingKey) getOrElse {
         log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
         userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
       }

@@ -113,8 +113,8 @@ private class RawKeepImporterActor @Inject() (
       log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
       val (doneOpt, totalOpt) = db.readOnly { implicit session =>
-        (userValueRepo.getValueUnsafe(userId, "bookmark_import_done").map(_.toInt),
-          userValueRepo.getValueUnsafe(userId, "bookmark_import_total").map(_.toInt))
+        (userValueRepo.getValueStringOpt(userId, "bookmark_import_done").map(_.toInt),
+          userValueRepo.getValueStringOpt(userId, "bookmark_import_total").map(_.toInt))
       }
 
       db.readWrite { implicit session =>
@@ -139,7 +139,7 @@ private class RawKeepImporterActor @Inject() (
   def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
     Try {
       db.readOnly { implicit session =>
-        userValueRepo.getValueUnsafe(userId, s"bookmark_import_${importId}_context")
+        userValueRepo.getValueStringOpt(userId, s"bookmark_import_${importId}_context")
       }.map { jsonStr =>
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt
       }.flatten
