@@ -32,10 +32,13 @@ angular.module('kifi.undo', [])
         api.message = api.callback = api.promise = null;
       },
       undo: function () {
+        var res = null;
         if (api.callback) {
-          api.callback();
+          res = api.callback();
         }
         api.clear();
+
+        return res;
       }
     };
 
