@@ -19,7 +19,6 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
     keepService.reset();
 
     var tagId = $routeParams.tagId || '';
-    console.log(tagId);
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
@@ -51,12 +50,16 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
-        return 'Sorry, no results found for &#x201c;' + query + '&#x202c;';
+        return 'No Keeps in this tag';
       case 1:
-        return '1 result found';
-      default:
-        return 'Top ' + numShown + ' results';
+        return 'Showing the only Keep in this tag';
+      case 2:
+        return 'Showing both Keeps in this tag';
       }
+      if (keepService.isEnd()) {
+        return 'Showing all ' + numShown + ' Keeps in this tag';
+      }
+      return 'Showing the ' + numShown + ' latest Keeps in this tag';
     };
 
     $scope.scrollDistance = '100%';
