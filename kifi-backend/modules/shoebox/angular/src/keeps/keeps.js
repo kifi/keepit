@@ -28,6 +28,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
       restrict: 'A',
       scope: {
         keeps: '=',
+        keepsLoading: '=',
         scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
