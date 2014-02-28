@@ -64,13 +64,16 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
       sender ! flush()
     case FlushEventQueue =>
       flush()
+      flushIsPending.set(false)
+  }
+
+  private def reset(): Unit = {
+
   }
 
   private def flush(): Unit = {
     scheduledFlush.foreach(_.cancel())
     scheduledFlush = None
-    flushIsPending.set(false)
-
     val thisBatchId = batchId.incrementAndGet
     if (events.nonEmpty) {
       log.info(s"Processing ${events.size} events: $events")
