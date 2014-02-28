@@ -3,8 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$window', 'profileService', '$q',
-  function ($scope, $window, profileService, $q) {
+  '$scope', '$window', 'profileService', '$q', '$http', 'env',
+  function ($scope, $window, profileService, $q, $http, env) {
     $scope.data = {};
 
     // onboarding.js are using this functions
@@ -13,12 +13,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     };
 
     $window.exitOnboarding = function () {
-      data.showGettingStarted = false;
-      // $.postJson(xhrBase + '/user/prefs', {
-      //   onboarding_seen: 'true'
-      // }, function (data) {
-      //   log('[prefs]', data);
-      // });
+      $scope.data.showGettingStarted = false;
+      $http.post(env.xhrBase + '/user/prefs', {
+        onboarding_seen: 'true'
+      });
+      $scope.$apply();
       //initBookmarkImport();
     };
 
