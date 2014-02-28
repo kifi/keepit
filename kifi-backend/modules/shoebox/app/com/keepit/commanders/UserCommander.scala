@@ -33,6 +33,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.typeahead.socialusers.SocialUserTypeahead
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -95,6 +96,7 @@ class UserCommander @Inject() (
   postOffice: LocalPostOffice,
   clock: Clock,
   scheduler: Scheduler,
+  socialUserTypeahead: SocialUserTypeahead,
   elizaServiceClient: ElizaServiceClient,
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
@@ -444,6 +446,7 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+            socialUserTypeahead.refresh(userId)
             searchClient.updateUserGraph()
 
             SafeFuture{
@@ -542,6 +545,7 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
+        socialUserTypeahead.refresh(userId)
         searchClient.updateUserGraph()
       }
       success

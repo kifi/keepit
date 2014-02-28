@@ -23,6 +23,7 @@ import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.typeahead.socialusers.SocialUserTypeahead
 
 private case class FetchUserInfo(socialUserInfoId: Id[SocialUserInfo])
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -38,6 +39,7 @@ private[social] class SocialGraphActor @Inject() (
   socialUserImportFriends: SocialUserImportFriends,
   socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator,
+  socialUserTypeahead: SocialUserTypeahead,
   userValueRepo: UserValueRepo,
   heimdal: HeimdalServiceClient,
   clock: Clock)
@@ -112,6 +114,7 @@ private[social] class SocialGraphActor @Inject() (
             socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
           }
 
+          socialUserTypeahead.refresh(userId)
           connections
         }
       connectionsOpt getOrElse Seq.empty
