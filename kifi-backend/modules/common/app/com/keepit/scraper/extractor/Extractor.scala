@@ -8,9 +8,9 @@ trait Extractor {
   def getContent(): String
   def getMetadata(name: String): Option[String]
   def getKeywords(): Option[String]
-  def getLink(key: String): Option[String]
-  def getCanonicalUrl(): Option[String] = getLink("canonical") orElse getMetadata("og:url")
-  def getAlternateUrls(): Set[String] = Set.empty // to be implemented
+  def getLinks(key: String): Set[String]
+  def getCanonicalUrl(): Option[String] = getLinks("canonical").headOption orElse getMetadata("og:url")
+  def getAlternateUrls(): Set[String] = getLinks("alternate")
 }
 
 trait ExtractorFactory extends Function[String, Extractor]
