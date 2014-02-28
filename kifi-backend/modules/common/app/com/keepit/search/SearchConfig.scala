@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.{ExperimentType, ProbabilisticExperimentGenerator, UserExperimentGenerator, User}
+import com.keepit.model.{ExperimentType, UserExperimentGenerator, User}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import com.keepit.search.query.StringHash64
