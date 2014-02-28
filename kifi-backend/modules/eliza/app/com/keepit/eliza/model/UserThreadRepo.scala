@@ -517,7 +517,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-   (for (row <- rows if row.user===userId && row.uriId===uriId) yield row).firstOption.isDefined
+   (for (row <- rows if row.user===userId && row.uriId===uriId) yield row.id).firstOption.isDefined
   }
 
 }
