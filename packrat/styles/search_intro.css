@@ -18,8 +18,8 @@
   transform-origin: left 33%;
   -webkit-transform: scale(.3,.3);
   transform: scale(.3,.3);
-  transition: opacity .2s linear, -webkit-transform .2s ease-in;
-  transition: opacity .2s linear, transform .2s ease-in;
+  transition: top .2s ease-in-out, opacity .2s linear, -webkit-transform .2s ease-in;
+  transition: top .2s ease-in-out, opacity .2s linear, transform .2s ease-in;
   background: #fff 12px 12px/24px 14px no-repeat;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAOCAYAAAA1+Nx+AAABI0lEQVR4Aa3TMSiEYRjA8Wf6FumwcJ0u3SCD0zfoBt0mAzarTdksVgO7kaKbZHUlNhslGSxIUiiM+ny4CcM9/sNz9fXkvu46w++d3rd/T2+PHJ1d/0BNCdKmfqzhBI/IQBqEQxPKkCaGsIIQYqYQQRPymMEGRl0gdYJLKGIEKOATaqqYQxbfUNz4QDElcAXFOwJsQc0+xPSgBsV5O4ECVjEOwQPULKAX3RCEWEb2r0AO94jNHQaxi0VUkMMH1HlCCdtYwqEPhDiGmjqmkfEf2STwjDK0wQeq0IR1SAuBU+xhMzXgXCBoMTALMRPpAf+o/UDRB76gHm7R1XHAXaxAE3b+OzCGA2jCfKeBVyjqGEYfXqCmhjwixHjDgNuVSYgZQWyiXxD9z6vZdAj5AAAAAElFTkSuQmCC);
 }
@@ -28,12 +28,15 @@
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAcCAYAAAAnbDzKAAACGklEQVR4AdXTO2hTURzH8V+sBhuwIr5iwWcDDhIHLRTldhMs1NVBEXSQDg6CUEFwUkRQEIx27KqI4iTFQhGVqKAtCBmigw9EISA1KsVXbfv3O4bDvYcQb9Kb4fPbLofv4R6NPy1NwxzzCKAW24ETGMUYnmAtFEWMRRiEWmAJjqAEC5FfrIAU0pDHRhRhHjshCMuxF7lmBnTgHGYwh7tYBzly+AiDTwChH59gMNxGRszfmAPOwhxFqEYnXsMi/MYECliFFajAHJfEfIs54BUsxGYIwnlYhBGsgWoMwEKUYw/w3OxWCF34CgtxAQoRwEJMNiPgDMzxEIJwFBbiHZZ53tVzmON4MwI6cBW/sIAJdEMQbsJCXIQ8NuAOfuA9hiBfwH7oP6SRgRwvYSGGsa3GLmQhH19AAEFIoYApjz5kcQqdEISlOIkeCB9gdXoEIcAx5xfLYqTegGGYxw0Im2CYwWM8wGcY8g0EFCEMwvAFz1DCHKyegD2YhUV4gy4nwBFbgMsfgNXwHfgHvVASA/oxBvM4DSU14B7M4z5SMQYUcNDR23iAXwXroRgDDkOuZgTMYx/UrgGXoXYOuNXeAcBQAwF9SQr4iTzk6IZFCFodcA3mUUYGqrEySQEBrsM8RpMekMYLmMehJAcIW1CFRfiOnuQGAAewAIswifRiBUzBHLPIQTWuoOoxgAwqqDqmsR3CuOd7RdiNtyHK/wBxDTYwcBDc4gAAAABJRU5ErkJggg==);
   }
 }
+.kifi-res-bar.kifi-collapsed~.kifi-search-intro {
+  top: -36px;
+}
 .kifi-search-intro.kifi-showing {
   opacity: 1;
   -webkit-transform: none;
   transform: none;
-  transition-timing-function: linear, ease-out;
-  transition-duration: .3s;
+  transition-timing-function: ease-in-out, linear, ease-out;
+  transition-duration: .2s, .3s, .3s;
 }
 .kifi-search-intro-h {
   line-height: 24px;

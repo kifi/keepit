@@ -4,31 +4,51 @@
 // @require scripts/render.js
 // @require scripts/html/search/search_intro.js
 
-var searchIntro = searchIntro || {
-  show: function show($parent) {
-    api.port.emit('prefs', function (prefs) {
-      if (prefs.showSearchIntro && searchIntro.show === show && document.hasFocus()) {
-        searchIntro.$el = $(render('html/search/search_intro'))
+var searchIntro = searchIntro || (function () {
+  var $el, shownTimeout;
+  return {
+    show: function show($parent) {
+      if (!$el && document.hasFocus()) {
+        log('[searchIntro.show]')();
+        $el = $(render('html/search/search_intro'))
           .appendTo($parent)
-          .on('click', '.kifi-search-intro-x', searchIntro.hide)
           .layout()
-          .addClass('kifi-showing');
-        api.port.emit('set_show_search_intro', false);
-        document.addEventListener('keydown', searchIntro.hide, true);
+          .addClass('kifi-showing')
+          .on('click', '.kifi-search-intro-x', onClickX);
+        document.addEventListener('keydown', onKeyDown, true);
+        shownTimeout = setTimeout(turnOffShowPref, 5000);
       }
-    });
-  },
-  hide: function hide(e) {
-    if (e && e.keyCode && (e.keyCode !== 27 || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)) return;
-    document.removeEventListener('keydown', hide, true);
-    var $el = searchIntro.$el;
+    },
+    hide: hide
+  };
+
+  function hide(neverShowAgain) {
     if ($el) {
-      searchIntro.$el = null;
       $el.on('transitionend', $.fn.remove.bind($el, null)).removeClass('kifi-showing');
-      if (e) {
-        e.preventDefault();
+      $el = null;
+      document.removeEventListener('keydown', onKeyDown, true);
+      clearTimeout(shownTimeout), shownTimeout = null;
+      if (neverShowAgain) {
+        turnOffShowPref();
       }
     }
-    searchIntro.show = searchIntro.hide = $.noop;
   }
-};
+
+  function turnOffShowPref() {
+    api.port.emit('set_show_search_intro', false);
+  }
+
+  function onClickX(e) {
+    if (e.which === 1) {
+      e.preventDefault();
+      hide(true);
+    }
+  }
+
+  function onKeyDown(e) {
+    if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.defaultPrevented) {
+      e.preventDefault();
+      hide(true);
+    }
+  }
+}());
