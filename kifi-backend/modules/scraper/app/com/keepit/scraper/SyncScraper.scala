@@ -291,7 +291,7 @@ class SyncScraper @Inject() (
 
   private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
     sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
-      val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _))
+      val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl
       helper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
     }
   }
