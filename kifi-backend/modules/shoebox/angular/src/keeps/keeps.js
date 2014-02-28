@@ -45,27 +45,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
         scope.togglePreview = keepService.togglePreview;
         scope.isPreviewed = keepService.isPreviewed;
 
-        scope.getSubtitle = function () {
-          var subtitle = scope.subtitle;
-          var numShown = scope.results.numShown;
-          switch (subtitle.type) {
-          case 'tag':
-            switch (numShown) {
-            case 0:
-              return 'No Keeps in this tag';
-            case 1:
-              return 'Showing the only Keep in this tag';
-            case 2:
-              return 'Showing both Keeps in this tag';
-            }
-            if (numShown === scope.results.numTotal) {
-              return 'Showing all ' + numShown + ' Keeps in this tag';
-            }
-            return 'Showing the ' + numShown + ' latest Keeps in this tag';
-          }
-          return subtitle.text;
-        };
-
         scope.onClickKeep = function (keep, $event) {
           if ($event.target.tagName !== 'A') {
             scope.togglePreview(keep);

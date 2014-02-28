@@ -23,7 +23,6 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
       lastResult = null;
 
     $scope.keepService = keepService;
-
     $scope.keeps = keepService.list;
 
     $scope.results = {
