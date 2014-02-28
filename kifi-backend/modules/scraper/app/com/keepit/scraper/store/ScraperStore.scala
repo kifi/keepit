@@ -59,6 +59,8 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
   def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) ={
     whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
       prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryPornWordLikelihoodStore())
+    ).getOrElse(new InMemoryPornWordLikelihoodStore() {
+      override def get(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
+    })
   }
 }
