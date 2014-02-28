@@ -59,7 +59,7 @@ class CollectionCommander @Inject() (
   private def userSort(uid: Id[User], unsortedCollections: Seq[BasicCollection]): Seq[BasicCollection] = db.readWrite { implicit s =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValue(uid, CollectionOrderingKey).map{ value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
+    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
       case Some(orderedCollectionIds) =>
         val buf = new ArrayBuffer[BasicCollection](unsortedCollections.size)
         val collectionMap = unsortedCollections.map(c => c.id.get -> c).toMap
@@ -80,7 +80,7 @@ class CollectionCommander @Inject() (
   def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValue(uid, CollectionOrderingKey).map{ value =>
+    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value =>
       Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
     } getOrElse {
       val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)

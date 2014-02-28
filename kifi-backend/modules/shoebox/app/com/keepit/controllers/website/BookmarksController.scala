@@ -244,15 +244,17 @@ class BookmarksController @Inject() (
   }
 
   def importStatus() = JsonAction.authenticated { request =>
-    val (lastStartOpt, doneOpt, totalOpt) = db.readOnly { implicit session =>
-      val lastStartOpt = userValueRepo.getValue(request.user.id.get, "bookmark_import_last_start")
-      val done = userValueRepo.getValue(request.user.id.get, "bookmark_import_done")
-      val total = userValueRepo.getValue(request.user.id.get, "bookmark_import_total")
-      val lastStart = lastStartOpt.map { lastStart =>
-        Seconds.secondsBetween(parseStandardTime(lastStart), clock.now).getSeconds
-      }
-      (lastStart, Try(done.map(_.toInt)).toOption.flatten, Try(total.map(_.toInt)).toOption.flatten)
+    val values = db.readOnly { implicit session =>
+      userValueRepo.getValues(request.user.id.get, "bookmark_import_last_start", "bookmark_import_done", "bookmark_import_total")
     }
-    Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStartOpt))
+    val lastStartOpt = values("bookmark_import_last_start")
+    val done = values("bookmark_import_done")
+    val total = values("bookmark_import_total")
+    val lastStart = lastStartOpt.map { lastStart =>
+      Seconds.secondsBetween(parseStandardTime(lastStart), clock.now).getSeconds
+    }
+    val doneOpt = Try(done.map(_.toInt)).toOption.flatten
+    val totalOpt = Try(total.map(_.toInt)).toOption.flatten
+    Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStart))
   }
 }
