@@ -4,15 +4,14 @@ const api = function() {
   // TODO: 'use strict'; after working around global definitions in eval’d scripts below
   var msgHandlers = [], nextCallbackId = 1, callbacks = {};
 
-  function invokeCallback(callbackId, response) {
+  self.port.on('api:respond', function (callbackId, response) {
     var cb = callbacks[callbackId];
+    log('[api:respond]', cb && cb[0] || '', response != null ? response : '')();
     if (cb) {
       delete callbacks[callbackId];
-      cb(response);
+      cb[1](response);
     }
-  }
-
-  self.port.on("api:respond", invokeCallback);
+  });
 
   self.port.on("api:inject", function(styles, scripts, callbackId) {
     styles.forEach(function(css) {
@@ -23,7 +22,11 @@ const api = function() {
     scripts.forEach(function(js) {
       window.eval(js);
     });
-    invokeCallback(callbackId);
+    var cb = callbacks[callbackId];
+    if (cb) {
+      delete callbacks[callbackId];
+      cb();
+    }
   });
 
   return {
@@ -38,7 +41,7 @@ const api = function() {
         }
         if (callback) {
           var callbackId = nextCallbackId++;
-          callbacks[callbackId] = callback;
+          callbacks[callbackId] = [type, callback];
         }
         self.port.emit(type, data, callbackId);
       },

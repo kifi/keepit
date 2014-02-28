@@ -190,14 +190,14 @@ class UriIntegrityActor @Inject()(
       }
     }
 
-    toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq.value) }
+    toMerge.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     toMerge.size
   }
 
   private def getOverDueList(fetchSize: Int = -1) = {
-    val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse 0L
-    db.readOnly{ implicit s => changedUriRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = ChangedURIStates.ACTIVE)}
+    val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
+    db.readOnly{ implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE)}
   }
 
   private def batchURLMigration(batchSize: Int) = {
@@ -218,13 +218,13 @@ class UriIntegrityActor @Inject()(
       }
     }
 
-    toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq.value)}
+    toMigrate.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URLMigrationSeqNumKey, x.seq)}
     log.info(s"${toMigrate.size} urls renormalized.")
   }
 
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
-    val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse 0L
-    db.readOnly{ implicit s => renormRepo.getChangesSince(SequenceNumber(lowSeq), fetchSize, state = RenormalizedURLStates.ACTIVE)}
+    val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
+    db.readOnly{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
 
 

@@ -1,5 +1,6 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @require scripts/lib/underscore.js
 // @request scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
 
@@ -22,20 +23,34 @@ var initCompose = (function() {
   $composes = $composes.add($f);
   updateKeyTip($f);
 
+  api.port.emit('load_draft', {to: !!$t.length}, function (draft) {
+    if (draft) {
+      if (draft.to && $t.length) {
+        $t.tokenInput('clear');
+        for (var i = 0; i < draft.to.length; i++) {
+          $t.tokenInput('add', draft.to[i]);
+        }
+      }
+      $d.html(draft.html);
+      $f.removeClass('kifi-empty');
+    }
+  });
+
   $d.focus(function () {
-    var r, sel = window.getSelection();
+    var r;
     if (defaultText && $d.text() === defaultText) {
       // select default text for easy replacement
       r = document.createRange();
       r.selectNodeContents(this);
-      sel.removeAllRanges();
-      sel.addRange(r);
       $(this).data('preventNextMouseUp', true); // to avoid clearing selection
-    } else if ((r = $d.data('sel'))) {
-      // restore previous selection
-      sel.removeAllRanges();
-      sel.addRange(r);
+    } else if (!(r = $d.data('sel'))) { // restore previous selection
+      r = document.createRange();
+      r.selectNodeContents(this);
+      r.collapse(); // to end
     }
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
   }).blur(function () {
     if (!convertDraftToText($d.html())) {
       if (defaultText && $t.tokenInput('get').length) {
@@ -73,6 +88,7 @@ var initCompose = (function() {
     if (empty) {
       $d.empty();
     }
+    throttledSaveDraft();
     $f.toggleClass('kifi-empty', empty);
   }).on('paste', function (e) {
     var cd = e.originalEvent.clipboardData;
@@ -123,12 +139,15 @@ var initCompose = (function() {
           $f.removeClass('kifi-empty');
           $d.text(defaultText);
         }
+        throttledSaveDraft();
       },
       onDelete: function () {
+        if (!$f.is($composes)) return;
         if (defaultText && !$t.tokenInput('get').length && $d.text() === defaultText) {
           $d.empty();
           $f.addClass('kifi-empty');
         }
+        throttledSaveDraft();
       },
       onTip: function () {
         api.port.emit('invite_friends', 'composePane');
@@ -149,6 +168,20 @@ var initCompose = (function() {
       submit();
     }
   });
+
+  var throttledSaveDraft = _.throttle(saveDraft, 2000, {leading: false});
+  function saveDraft() {
+    if ($f.data('submitted') || !$f.is($composes)) return;
+    var data = {html: $d.html()};
+    if ($t.length) {
+      data.to = $t.tokenInput('get').map(justIdAndName);
+    }
+    api.port.emit('save_draft', data);
+  }
+
+  function justIdAndName(o) {
+    return {id: o.id, name: o.name};
+  }
 
   function submit() {
     if ($f.data('submitted')) {
@@ -239,6 +272,8 @@ var initCompose = (function() {
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
+
+      saveDraft();
     });
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
@@ -302,7 +337,8 @@ var initCompose = (function() {
       log('[compose.prefill]', r)();
       r.name = r.name || r.firstName + ' ' + r.lastName;
       defaultText = '';
-      $t.tokenInput('add', r);
+      $t.tokenInput('clear').tokenInput('add', r);
+      $d.empty();
     },
     focus: function () {
       log('[compose.focus]')();
@@ -315,8 +351,9 @@ var initCompose = (function() {
     isBlank: function () {
       return $f.hasClass('kifi-empty') && !($t.length && $t.tokenInput('get').length);
     },
+    save: saveDraft,
     destroy: function() {
-      $composes = $composes.not($c);
+      $composes = $composes.not($f);
       if ($t.length) {
         $t.tokenInput('destroy');
       }

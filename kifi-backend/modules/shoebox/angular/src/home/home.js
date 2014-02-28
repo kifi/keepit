@@ -16,18 +16,21 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
 .controller('HomeCtrl', [
   '$scope', 'tagService', 'keepService', '$q',
   function ($scope, tagService, keepService, $q) {
-    $scope.toggleSelectAll = keepService.toggleSelectAll;
-    $scope.isSelectedAll = keepService.isSelectedAll;
+    keepService.unselectAll();
+
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
 
-    $scope.loadingKeeps = true;
+    $scope.toggleSelectAll = keepService.toggleSelectAll;
+    $scope.isSelectedAll = keepService.isSelectedAll;
 
-    keepService.getList().then(function () {
-      $scope.loadingKeeps = false;
-    });
+    $scope.isCheckEnabled = function () {
+      return $scope.keeps.length;
+    };
 
-    $scope.checkEnabled = true;
+    $scope.hasMore = function () {
+      return !keepService.isEnd();
+    };
 
     $scope.mouseoverCheckAll = false;
 
@@ -40,29 +43,16 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     };
 
     $scope.getSubtitle = function () {
-      if ($scope.loadingKeeps) {
+      if ($scope.loading) {
         return 'Loading...';
       }
 
-      var selectedCount = keepService.getSelectedLength(),
-        numShown = $scope.keeps && $scope.keeps.length || 0;
-
-      if ($scope.mouseoverCheckAll) {
-        if (selectedCount === numShown) {
-          return 'Deselect all ' + numShown + ' Keeps below';
-        }
-        return 'Select all ' + numShown + ' Keeps below';
+      var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
+      if (subtitle) {
+        return subtitle;
       }
 
-      switch (selectedCount) {
-      case 0:
-        break;
-      case 1:
-        return selectedCount + ' Keep selected';
-      default:
-        return selectedCount + ' Keeps selected';
-      }
-
+      var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
         return 'You have no Keeps';
@@ -71,11 +61,9 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
       case 2:
         return 'Showing both of your Keeps';
       default:
-        /*
-        if (numShown === $scope.results.numTotal) {
+        if (keepService.isEnd()) {
           return 'Showing all ' + numShown + ' of your Keeps';
         }
-        */
         return 'Showing your ' + numShown + ' latest Keeps';
       }
     };
@@ -83,16 +71,23 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     $scope.scrollDisabled = false;
 
     $scope.getNextKeeps = function () {
-      if ($scope.loadingKeeps) {
+      if ($scope.loading) {
         return $q.when([]);
       }
 
-      $scope.loadingKeeps = true;
+      $scope.loading = true;
 
       return keepService.getList().then(function (list) {
-        $scope.loadingKeeps = false;
+        $scope.loading = false;
+
+        if (keepService.isEnd()) {
+          $scope.scrollDisabled = true;
+        }
+
         return list;
       });
     };
+
+    $scope.getNextKeeps();
   }
 ]);

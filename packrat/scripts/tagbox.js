@@ -197,7 +197,6 @@ this.tagbox = (function ($, win) {
 			this.initCloseIcon();
 			this.initClearAll();
 			this.initTags();
-			this.initScroll();
 			this.onShow.dispatch();
 		},
 
@@ -402,15 +401,15 @@ this.tagbox = (function ($, win) {
 				.then(this.onFetchTags.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
-				.then(this.updateSuggestion.bind(this))
 				.then(this.moveKeeperToBottom.bind(this))
 				.then(this.setLoaded.bind(this, false))
+				.then(this.initScroll.bind(this))
+				.then(this.updateSuggestion.bind(this))
 				.then(this.focusInput.bind(this))
-				.then(this.updateScroll.bind(this))
 				.fail(function (err) {
-				this.hide('error:failed to init');
-				throw err;
-			}.bind(this))
+					this.hide('error:failed to init');
+					throw err;
+				}.bind(this))
 				.fail(this.logError.bind(this));
 			log('initTags.end');
 		},

@@ -2,19 +2,14 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">Browse your Keeps</h1>
     <div class="kf-subtitle">
-      <span class="kf-check-all" ng-class="{ enabled: checkEnabled, checked: isSelectedAll() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
+      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>
   <div kf-keeps
     keeps="keeps"
-    check-keep="keepService.select(keep)"
-    uncheck-keep="keepService.unselect(keep)"
-    toggle-check-keep="keepService.toggleSelect(keep)"
-    is-checked-keep="keepService.isSelected(keep)"
-    preview-keep="keepService.preview(keep)"
-    toggle-preview-keep="keepService.togglePreview(keep)"
-    is-previewed-keep="keepService.isPreviewed(keep)"
+    keeps-loading="loading"
+    keeps-has-more="hasMore()"
     scroll-distance="scrollDistance"
     scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"

@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 class ShardedCollectionIndexer(
   override val indexShards: Map[Shard[NormalizedURI], CollectionIndexer],
   shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[NormalizedURI, CollectionIndexer] {
+) extends ShardedIndexer[NormalizedURI, Collection, CollectionIndexer] {
 
   private val fetchSize = 2000
 

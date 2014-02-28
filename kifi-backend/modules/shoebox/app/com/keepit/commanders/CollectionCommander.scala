@@ -11,6 +11,7 @@ import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
+import scala.collection.mutable.ArrayBuffer
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -43,8 +44,7 @@ class CollectionCommander @Inject() (
     log.info(s"Sorting collections for $userId")
     val collections = sort match {
       case "user" =>
-        val orderedCollectionIds = db.readWrite { implicit s => getCollectionOrdering(userId) }
-        unsortedCollections.sortBy(c => orderedCollectionIds.indexOf(c.id.get))
+        userSort(userId, unsortedCollections)
       case _ => // default is "last_kept"
         unsortedCollections
     }
@@ -56,16 +56,38 @@ class CollectionCommander @Inject() (
     setCollectionOrdering(uid, getCollectionOrdering(uid))
   }
 
+  private def userSort(uid: Id[User], unsortedCollections: Seq[BasicCollection]): Seq[BasicCollection] = db.readWrite { implicit s =>
+    implicit val externalIdFormat = ExternalId.format[Collection]
+    log.info(s"Getting collection ordering for user $uid")
+    userValueRepo.getValue(uid, CollectionOrderingKey).map{ value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
+      case Some(orderedCollectionIds) =>
+        val buf = new ArrayBuffer[BasicCollection](unsortedCollections.size)
+        val collectionMap = unsortedCollections.map(c => c.id.get -> c).toMap
+        val newCollectionIds = (collectionMap.keySet -- orderedCollectionIds)
+        if (newCollectionIds.nonEmpty) {
+          unsortedCollections.foreach{ c => if (newCollectionIds.contains(c.id.get)) buf += c }
+        }
+        orderedCollectionIds.foreach{ id => collectionMap.get(id).foreach{ c => buf += c } }
+        buf
+      case None =>
+        val allCollectionIds = unsortedCollections.map(_.id.get)
+        log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
+        userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
+        unsortedCollections
+    }
+  }
+
   def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
-    Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
-      userValueRepo.getValue(uid, CollectionOrderingKey) getOrElse {
-        log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
-        userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
-      }
-    }).get
+    userValueRepo.getValue(uid, CollectionOrderingKey).map{ value =>
+      Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
+    } getOrElse {
+      val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
+      log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
+      userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
+      allCollectionIds
+    }
   }
 
   def setCollectionOrdering(uid: Id[User],

@@ -21,28 +21,15 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 ])
 
 .directive('kfKeeps', [
-
-  function () {
-
-    function delegateFn(scope, name) {
-      return function (keep) {
-        return scope[name]({
-          keep: keep
-        });
-      };
-    }
+  'keepService',
+  function (keepService) {
 
     return {
       restrict: 'A',
       scope: {
         keeps: '=',
-        checkKeep: '&',
-        uncheckKeep: '&',
-        toggleCheckKeep: '&',
-        isCheckedKeep: '&',
-        previewKeep: '&',
-        togglePreviewKeep: '&',
-        isPreviewedKeep: '&',
+        keepsLoading: '=',
+        keepsHasMore: '=',
         scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
@@ -50,33 +37,18 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
-        scope.select = delegateFn(scope, 'checkKeep');
-        scope.unselect = delegateFn(scope, 'uncheckKeep');
-        scope.toggleSelect = delegateFn(scope, 'toggleCheckKeep');
-        scope.isSelected = delegateFn(scope, 'isCheckedKeep');
-        scope.preview = delegateFn(scope, 'previewKeep');
-        scope.togglePreview = delegateFn(scope, 'togglePreviewKeep');
-        scope.isPreviewed = delegateFn(scope, 'isPreviewedKeep');
+        keepService.reset();
 
-        scope.getSubtitle = function () {
-          var subtitle = scope.subtitle;
-          var numShown = scope.results.numShown;
-          switch (subtitle.type) {
-          case 'tag':
-            switch (numShown) {
-            case 0:
-              return 'No Keeps in this tag';
-            case 1:
-              return 'Showing the only Keep in this tag';
-            case 2:
-              return 'Showing both Keeps in this tag';
-            }
-            if (numShown === scope.results.numTotal) {
-              return 'Showing all ' + numShown + ' Keeps in this tag';
-            }
-            return 'Showing the ' + numShown + ' latest Keeps in this tag';
-          }
-          return subtitle.text;
+        scope.select = keepService.select;
+        scope.unselect = keepService.unselect;
+        scope.toggleSelect = keepService.toggleSelect;
+        scope.isSelected = keepService.isSelected;
+        scope.preview = keepService.preview;
+        scope.togglePreview = keepService.togglePreview;
+        scope.isPreviewed = keepService.isPreviewed;
+
+        scope.isShowMore = function () {
+          return !scope.keepsLoading && scope.keepsHasMore;
         };
 
         scope.onClickKeep = function (keep, $event) {

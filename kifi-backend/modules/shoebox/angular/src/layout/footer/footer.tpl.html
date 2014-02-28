@@ -2,10 +2,13 @@
   <h2 class="kf-footer-header">Getting Started with kifi</h2>
   <ul class="kf-footer-list about-kifi">
     <li>
-      <a class="kf-footer-item-link kifi-tutorial" href="#">
+      <a class="kf-footer-item-link kifi-tutorial" href="#" ng-click="data.showGettingStarted = true">
         <span class="kf-footer-item-icon kf-footer-item-icon-tutorial"></span>
         Quick guide to get started
       </a>
+      <div ng-if="data.showGettingStarted">
+        <iframe class="kifi-onboarding-iframe" src="https://www.kifi.com/assets/onboarding.html" frameborder="0"></iframe>
+      </div>
     </li>
     <li class="install-kifi">
       <a class="kf-footer-item-link" href="/install">

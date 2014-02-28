@@ -24,7 +24,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int
-  def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
+  def getBookmarksChanged(num: SequenceNumber[Bookmark], fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
   def delete(id: Id[Bookmark])(implicit session: RWSession): Unit
@@ -49,7 +49,7 @@ class BookmarkRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence("bookmark_sequence")
+  private val sequence = db.getSequence[Bookmark]("bookmark_sequence")
 
   type RepoImpl = BookmarkTable
   class BookmarkTable(tag: Tag) extends RepoTable[Bookmark](db, tag, "bookmark") with ExternalIdColumn[Bookmark] with NamedColumns with SeqNumberColumn[Bookmark]{
@@ -73,7 +73,7 @@ class BookmarkRepoImpl @Inject() (
   implicit val setBookmarkSourceParameter = setParameterFromMapper[BookmarkSource]
 
   private implicit val getBookmarkResult : GetResult[com.keepit.model.Bookmark] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
-    Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[BookmarkSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber])
+    Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[BookmarkSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Bookmark]])
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
@@ -220,7 +220,7 @@ class BookmarkRepoImpl @Inject() (
     sql.as[Int].first
   }
 
-  def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] = super.getBySequenceNumber(num, limit)
+  def getBookmarksChanged(num: SequenceNumber[Bookmark], limit: Int)(implicit session: RSession): Seq[Bookmark] = super.getBySequenceNumber(num, limit)
 
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int =
     Query((for {

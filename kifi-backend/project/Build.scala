@@ -255,7 +255,7 @@ object ApplicationBuild extends Build {
       commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
     )
     .dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper)
+    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)

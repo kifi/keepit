@@ -14,6 +14,7 @@ import com.keepit.abook.model.RichSocialConnectionRepo
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 
 import com.google.inject.{Inject, Singleton}
 
@@ -25,6 +26,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Success, Failure, Left, Right}
 
+import akka.actor.Scheduler
+
 
 @Singleton
 class LocalRichConnectionCommander @Inject() (
@@ -32,24 +35,37 @@ class LocalRichConnectionCommander @Inject() (
     serviceDiscovery: ServiceDiscovery,
     airbrake: AirbrakeNotifier,
     db: Database,
-    repo: RichSocialConnectionRepo
-  ) extends RichConnectionCommander {
+    repo: RichSocialConnectionRepo,
+    scheduler: Scheduler
+  ) extends RichConnectionCommander with Logging {
 
-  def startUpdateProcessing() = {
+
+  def startUpdateProcessing(): Unit = {
+    log.info("RConn: Triggered queued update processing")
     if (serviceDiscovery.isLeader()) {
+      log.info("RConn: I'm the leader, let's go")
       processQueueItems()
+    } else {
+      log.info("RConn: I'm not the leader, nothing to do yet")
+      scheduler.scheduleOnce(1 minute){
+        startUpdateProcessing()
+      }
     }
   }
 
   private def processQueueItems(): Unit = {
+    log.info("RConn: Fetching one item from the queue")
     val fut = queue.nextWithLock(1 minute)
     fut.onComplete{
       case Success(queueMessageOpt) => {
+        log.info("RConn: Queue call returned")
         queueMessageOpt.map { queueMessage =>
+          log.info("RConn: Got something")
           try {
             processUpdateImmediate(queueMessage.body).onComplete{
               case Success(_) => {
                 queueMessage.consume()
+                log.info("RConn: Consumed message")
                 processQueueItems()
               }
               case Failure(t) => {
@@ -61,9 +77,13 @@ class LocalRichConnectionCommander @Inject() (
             case t: Throwable => airbrake.notify("Fatal error processing RichConnectionUpdate from queue", t)
             processQueueItems()
           }
-        } getOrElse processQueueItems()
+        } getOrElse {
+          log.info("RConn: Got nothing")
+          processQueueItems()
+        }
       }
       case Failure(t) => {
+        log.info("RConn: Queue call failed")
         airbrake.notify("Failed getting RichConnectionUpdate from queue", t)
         processQueueItems()
       }

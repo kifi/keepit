@@ -80,21 +80,19 @@ class MobileUserController @Inject() (
     }
   }
 
-  // todo: removeme (legacy api)
-  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryConnections(request.userId, search, network, after, limit) map { r =>
+  // legacy
+  def queryAll(search: Option[String], network: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
+    typeaheadCommander.queryAll(request.userId, search, network, limit) map { r =>
       Ok(Json.toJson(r))
     }
   }
 
-  def querySocialConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryConnections(request.userId, search, network, after, limit) map { r =>
-      Ok(Json.toJson(r))
-    }
+  def querySocial(search: Option[String], network: Option[String], limit: Int) = JsonAction.authenticated { request =>
+    Ok(Json.toJson(typeaheadCommander.querySocialInviteStatus(request.userId, search, network, limit)))
   }
 
-  def queryContacts(search: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryContacts(request.userId, search, after, limit) map { r =>
+  def queryContacts(search: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
+    typeaheadCommander.queryContactsInviteStatus(request.userId, search, limit) map { r =>
       Ok(Json.toJson(r))
     }
   }

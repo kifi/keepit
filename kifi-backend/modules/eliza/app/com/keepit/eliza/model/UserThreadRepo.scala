@@ -101,6 +101,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
 
+  def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
+
 }
 
 /**
@@ -512,6 +514,10 @@ class UserThreadRepoImpl @Inject() (
         active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
         started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
     }
+  }
+
+  def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
+   (for (row <- rows if row.user===userId && row.uriId===uriId) yield row.id).firstOption.isDefined
   }
 
 }

@@ -8,7 +8,7 @@ angular.module('kifi.keepWhoText', [])
     return {
       restrict: 'A',
       replace: true,
-      templateUrl: 'keep/keepWhoText.tpl.html',
+      templateUrl: 'common/directives/keepWho/keepWhoText.tpl.html',
       scope: {
         keep: '='
       },

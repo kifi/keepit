@@ -54,8 +54,31 @@ angular.module('kifi.keepService', [])
       });
     });
 
+    function fetchScreenshots(keeps) {
+      if (keeps && keeps.length) {
+        api.fetchScreenshotUrls(keeps).then(function (urls) {
+          $timeout(function () {
+            api.prefetchImages(urls);
+          });
+
+          _.forEach(keeps, function (keep) {
+            keep.screenshot = urls[keep.url];
+          });
+        });
+      }
+    }
+
+    function processHit(hit) {
+      _.extend(hit, hit.bookmark);
+
+      hit.keepers = hit.users;
+      hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+    }
+
     var api = {
       list: list,
+
+      totalKeepCount: 0,
 
       isDetailOpen: function () {
         return isDetailOpen;
@@ -215,12 +238,19 @@ angular.module('kifi.keepService', [])
         return api.selectAll();
       },
 
-      resetList: function () {
+      reset: function () {
         before = null;
+        end = false;
         list.length = 0;
+        selected = {};
+        api.unselectAll();
       },
 
       getList: function (params) {
+        if (end) {
+          return $q.when([]);
+        }
+
         var url = env.xhrBase + '/keeps/all';
         params = params || {};
         params.count = params.count || limit;
@@ -229,10 +259,6 @@ angular.module('kifi.keepService', [])
         var config = {
           params: params
         };
-
-        if (end) {
-          return $q.when([]);
-        }
 
         return $http.get(url, config).then(function (res) {
           var data = res.data,
@@ -252,17 +278,9 @@ angular.module('kifi.keepService', [])
             keep.isMyBookmark = true;
           });
 
+          fetchScreenshots(keeps);
+
           return keeps;
-        }).then(function (list) {
-          api.fetchScreenshotUrls(list).then(function (urls) {
-            $timeout(function () {
-              api.prefetchImages(urls);
-            });
-            _.forEach(list, function (keep) {
-              keep.screenshot = urls[keep.url];
-            });
-          });
-          return list;
         });
       },
 
@@ -382,6 +400,68 @@ angular.module('kifi.keepService', [])
 
       togglePrivate: function (keeps) {
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
+      },
+
+      isEnd: function () {
+        return !!end;
+      },
+
+      getSubtitle: function (mouseover) {
+        var selectedCount = api.getSelectedLength(),
+          numShown = list.length;
+
+        if (mouseover) {
+          if (selectedCount === numShown) {
+            return 'Deselect all ' + numShown + ' Keeps below';
+          }
+          return 'Select all ' + numShown + ' Keeps below';
+        }
+
+        switch (selectedCount) {
+        case 0:
+          return null;
+        case 1:
+          return selectedCount + ' Keep selected';
+        default:
+          return selectedCount + ' Keeps selected';
+        }
+      },
+
+      find: function (query, filter, context) {
+        if (end) {
+          return $q.when([]);
+        }
+
+        var url = env.xhrBaseSearch;
+        return $http.get(url, {
+          params: {
+            q: query || void 0,
+            f: filter || 'm',
+            maxHits: 30,
+            context: context || void 0
+          }
+        }).then(function (res) {
+          var data = res.data,
+            hits = data.hits || [];
+
+          if (!data.mayHaveMore) {
+            end = true;
+          }
+
+          hits.forEach(processHit);
+
+          list.push.apply(list, hits);
+
+          fetchScreenshots(hits);
+
+          return data;
+        });
+      },
+
+      getKeepsByTagId: function (tagId, params) {
+        params = params || {};
+        params.collection = tagId;
+        return api.getList(params);
       }
     };
 

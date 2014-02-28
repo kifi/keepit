@@ -77,24 +77,20 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
   }
 
-  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]] = {
+  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
     val timer = accessLog.timer(CACHE)
     val valueMap = try repo.bulkGet(keys.map{_.toString}) catch {
       case e: Throwable =>
         repo.onError(AirbrakeError(e, Some(s"Failed fetching key $keys from $repo")))
-        Map.empty[String, Option[T]]
+        Map.empty[String, ObjectState[T]]
     }
     if (repo.logAccess) {
       keys.headOption.foreach{ key =>
         accessLog.add(timer.done(space = s"${repo.toString}.${key.namespace}", key = keys mkString ",", method = "BULK_GET"))
       }
     }
-    keys.foldLeft(Map.empty[K, Option[T]]){ (m, key) =>
-      val state = decodeValue(key, valueMap.get(key.toString), timer)
-      state match {
-        case Found(obj) => m + (key -> obj)
-        case _ => m
-      }
+    keys.foldLeft(Map.empty[K, ObjectState[T]]){ (m, key) =>
+      m + (key -> decodeValue(key, valueMap.get(key.toString), timer))
     }
   }
 

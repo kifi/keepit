@@ -21,11 +21,11 @@ class TransactionalCachingTest extends Specification {
 
     protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = { store += (key -> valueOpt) }
 
-    protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]] = {
-      keys.foldLeft(Map.empty[K, Option[T]]){ (result, key) =>
+    protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
+      keys.foldLeft(Map.empty[K, ObjectState[T]]){ (result, key) =>
         store.get(key) match {
-          case Some(value) => result + (key -> value)
-          case _ => result + (key -> None)
+          case Some(valueOpt) => result + (key -> Found(valueOpt))
+          case _ => result + (key -> NotFound())
         }
       }
     }

@@ -38,7 +38,7 @@ class UserIndexer(
   writerConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-  ) extends Indexer[User](indexDirectory, writerConfig) {
+  ) extends Indexer[User, User, UserIndexer](indexDirectory, writerConfig) {
 
   import UserIndexer._
 
@@ -68,7 +68,7 @@ class UserIndexer(
   case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType])
 
   private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
-    val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber.value, fetchSize)
+    val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber, fetchSize)
 
     val infoFuture = usersFuture.flatMap{ users =>
       if (users.isEmpty) Future.successful(Seq[UserInfo]())
@@ -111,12 +111,12 @@ class UserIndexer(
 
   class UserIndexable(
     override val id: Id[User],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[User],
     override val isDeleted: Boolean,
     val user: User,
     val basicUser: BasicUser,
     val emails: Seq[String],
-    val experiments: Seq[ExperimentType]) extends Indexable[User] {
+    val experiments: Seq[ExperimentType]) extends Indexable[User, User] {
 
     private def genPrefix(user: User): Set[String] = {
       val fn = PrefixFilter.normalize(user.firstName).take(PREFIX_MAX_LEN)

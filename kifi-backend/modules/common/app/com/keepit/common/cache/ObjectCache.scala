@@ -92,46 +92,111 @@ trait ObjectCache[K <: Key[T], T] {
   //
   // bulk get API
   //
-  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, Option[T]]
+  protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]]
 
-  def bulkGet(keys: Set[K]): Map[K, Option[T]] = {
+  private def internalBulkGet(keys: Set[K]): Map[K, ObjectState[T]] = {
     var result = bulkGetFromInnerCache(keys)
-    if (keys.size > result.size) {
-      outerCache match {
-        case Some(cache) =>
-          val missing = keys -- result.keySet
-          cache.bulkGet(missing).foreach{ kv =>
+
+    outerCache match {
+      case Some(cache) =>
+        val missing = keys -- result.iterator.collect{
+          case (key, Found(_)) => key
+          case (key, Removed()) => key  // if removed at a transaction local cache, do not call outer cache
+        }
+        if (missing.nonEmpty) {
+          cache.internalBulkGet(missing).foreach{ kv =>
             result += kv
-            setInnerCache(kv._1, kv._2)
+            kv match {
+              case (key, Found(valueOpt)) => setInnerCache(key, valueOpt)
+              case _ =>
+            }
           }
-        case None =>
-      }
+        }
+      case None =>
     }
     result
   }
 
+  def bulkGet(keys: Set[K]): Map[K, Option[T]] = {
+    internalBulkGet(keys).mapValues{ state =>
+      state match {
+        case Found(valueOpt) => valueOpt
+        case _ => None
+      }
+    }
+  }
+
   def bulkGetOrElse(keys: Set[K])(orElse: Set[K] => Map[K, T]): Map[K, T] = {
-    val found = bulkGet(keys).collect{ case (k, Some(v)) => (k, v) }
-    if (keys.size > found.size) {
-      val missing = keys -- found.keySet
+    var missing = Set.empty[K]
+    var result = Map.empty[K, T]
+    internalBulkGet(keys).map{ case(key , state) =>
+      state match {
+        case Found(Some(value)) => result += (key -> value)
+        case _ => missing += key
+      }
+    }
+    if (missing.nonEmpty) {
       val valueMap = orElse(missing)
-      valueMap.foreach{ kv => setInnerCache(kv._1, Some(kv._2)) }
-      found ++ valueMap
+      valueMap.foreach{ case (key, value) => set(key, value) }
+      result ++ valueMap
     } else {
-      found
+      result
+    }
+  }
+
+  def bulkGetOrElseOpt(keys: Set[K])(orElse: Set[K] => Map[K, Option[T]]): Map[K, Option[T]] = {
+    var missing = Set.empty[K]
+    var result = Map.empty[K, Option[T]]
+    internalBulkGet(keys).map{ case(key , state) =>
+      state match {
+        case Found(valueOpt) => result += (key -> valueOpt)
+        case _ => missing += key
+      }
+    }
+    if (missing.nonEmpty) {
+      val valueMap = orElse(missing)
+      valueMap.foreach{ case (key, valueOpt) => set(key, valueOpt) }
+      result ++ valueMap
+    } else {
+      result
     }
   }
 
   def bulkGetOrElseFuture(keys: Set[K])(orElse: Set[K] => Future[Map[K, T]]): Future[Map[K, T]] = {
-    val found = bulkGet(keys).collect{ case (k, Some(v)) => (k, v) }
-    if (keys.size > found.size) {
-      val missing = keys -- found.keySet
+    var missing = Set.empty[K]
+    var result = Map.empty[K, T]
+    internalBulkGet(keys).map{ case(key , state) =>
+      state match {
+        case Found(Some(value)) => result += (key -> value)
+        case _ => missing += key
+      }
+    }
+    if (missing.nonEmpty) {
       orElse(missing).map{ valueMap =>
-        valueMap.foreach{ kv => setInnerCache(kv._1, Some(kv._2)) }
-        found ++ valueMap
+        valueMap.foreach{ case (key, value) => set(key, value) }
+        result ++ valueMap
       }
     } else {
-      Promise.successful(found).future
+      Promise.successful(result).future
+    }
+  }
+
+  def bulkGetOrElseFutureOpt(keys: Set[K])(orElse: Set[K] => Future[Map[K, Option[T]]]): Future[Map[K, Option[T]]] = {
+    var missing = Set.empty[K]
+    var result = Map.empty[K, Option[T]]
+    internalBulkGet(keys).map{ case(key , state) =>
+      state match {
+        case Found(valueOpt) => result += (key -> valueOpt)
+        case _ => missing += key
+      }
+    }
+    if (missing.nonEmpty) {
+      orElse(missing).map{ valueMap =>
+        valueMap.foreach{ case (key, valueOpt) => set(key, valueOpt) }
+        result ++ valueMap
+      }
+    } else {
+      Promise.successful(result).future
     }
   }
 }
