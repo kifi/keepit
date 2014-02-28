@@ -14,11 +14,14 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
 ])
 
 .controller('TagKeepsCtrl', [
-  '$scope', 'keepService', '$routeParams',
-  function ($scope, keepService, $routeParams) {
+  '$scope', 'keepService', 'tagService', '$routeParams',
+  function ($scope, keepService, tagService, $routeParams) {
     keepService.reset();
 
     var tagId = $routeParams.tagId || '';
+    tagService.promiseById(tagId).then(function (tag) {
+      console.log(tag);
+    });
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
@@ -65,13 +68,15 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
     $scope.scrollDistance = '100%';
     $scope.scrollDisabled = false;
 
+    var lastResult = null;
+
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
         return;
       }
 
       $scope.loading = true;
-      keepService.find(query, filter, lastResult && lastResult.context).then(function (data) {
+      keepService.getKeepsByTag().then(function (data) {
         $scope.loading = false;
 
         if (keepService.isEnd()) {
