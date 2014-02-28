@@ -208,7 +208,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         }
       }
 
-      if (showPreview && isFirst && resp.prefs.showSearchIntro && document.hasFocus()) {
+      if (resp.show && resp.hits.length && resp.prefs.showSearchIntro && document.hasFocus()) {
         setTimeout(api.require.bind(api, 'scripts/search_intro.js', function () {
           if (tQuery === t1) {
             searchIntro.show($res);
