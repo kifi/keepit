@@ -4,7 +4,7 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
 
 .directive('kfKeepWhoPic', [
   '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'keepWhoService',
-  function($window, $timeout, $rootElement, $compile, $templateCache, keepWhoService) {
+  function ($window, $timeout, $rootElement, $compile, $templateCache, keepWhoService) {
     return {
       restrict: 'A',
       replace: true,
@@ -12,25 +12,25 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
       scope: {
         keeper: '='
       },
-      link: function(scope, element) {
+      link: function (scope, element) {
         scope.tooltipEnabled = false;
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
         var tooltip = null;
 
-        scope.showTooltip = function() {
+        scope.showTooltip = function () {
           if (!tooltip) {
             // Create tooltip
             tooltip = angular.element($templateCache.get('common/directives/keepWho/friendCard.tpl.html'));
             $rootElement.append(tooltip);
             $compile(tooltip)(scope);
           }
-          $timeout(function() {
+          $timeout(function () {
             // Set position
             var triangleOffset = 42;
             var triangleWidth = 1;
             var triangle = tooltip.find('.kifi-fr-kcard-tri');
-            var left = element.offset().left + element.width()/2 - triangleOffset;
+            var left = element.offset().left + element.width() / 2 - triangleOffset;
             var top = element.offset().top - 91;
             var triangleLeft = triangleOffset - triangleWidth;
             if ($window.innerWidth - left - tooltip.width() < 3) {
@@ -42,18 +42,18 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
 
             scope.tooltipEnabled = true;
           });
-        }
+        };
 
-        scope.hideTooltip = function() {
+        scope.hideTooltip = function () {
           scope.tooltipEnabled = false;
-        }
+        };
       }
-    }
+    };
   }
 ])
 
 .directive('kfKeepWhoPics', [
-    'keepWhoService',
+  'keepWhoService',
   function (keepWhoService) {
     return {
       restrict: 'A',
@@ -63,7 +63,7 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
         me: '=',
         keepers: '='
       },
-      link: function(scope) {
+      link: function (scope) {
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
       }
