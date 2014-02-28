@@ -30,7 +30,10 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
 
-    $scope.checkEnabled = true;
+    $scope.isCheckEnabled = function () {
+      return $scope.keeps.length;
+    };
+
     $scope.mouseoverCheckAll = false;
 
     $scope.onMouseoverCheckAll = function () {
