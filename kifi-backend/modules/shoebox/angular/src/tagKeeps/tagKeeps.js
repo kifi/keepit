@@ -29,6 +29,10 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       return $scope.keeps.length;
     };
 
+    $scope.hasMore = function () {
+      return !keepService.isEnd();
+    };
+
     $scope.mouseoverCheckAll = false;
 
     $scope.onMouseoverCheckAll = function () {
