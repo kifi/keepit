@@ -17,6 +17,13 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
         var tooltip = null;
+        var timeout = null;
+
+        scope.cancelTimeout = function () {
+          $timeout.cancel(timeout);
+        }
+
+        scope.$on('$destroy', scope.cancelTimeout);
 
         scope.showTooltip = function () {
           if (!tooltip) {
@@ -37,15 +44,17 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
             left += 2 * triangleOffset - tooltip.width();
             triangleLeft = tooltip.width() - triangleOffset - triangleWidth;
           }
-          tooltip.css({left: left + 'px', top: top + 'px', width: tooltip.width() + 'px'});
+          tooltip.css({left: left + 'px', top: top + 'px', width: tooltip.width() + 'px', visibility: 'hidden'});
           triangle.css({left: triangleLeft});
 
-          $timeout(function () {
+          timeout = $timeout(function () {
+            tooltip.css('visibility', 'visible');
             scope.tooltipEnabled = true;
-          });
+          }, 500);
         };
 
         scope.hideTooltip = function () {
+          scope.cancelTimeout();
           scope.tooltipEnabled = false;
         };
       }
