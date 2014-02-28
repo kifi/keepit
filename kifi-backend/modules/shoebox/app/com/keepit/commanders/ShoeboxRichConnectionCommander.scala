@@ -41,10 +41,10 @@ class ShoeboxRichConnectionCommander @Inject() (
     db: Database
   ) extends RemoteRichConnectionCommander(abook, queue) {
 
-  def sendSocialConnections(): Unit = ???
-  def sendUserConnections(): Unit= ???
-  def sendSocialUsers(): Unit = ???
-  def sendInvitations(): Unit = ???
+  def sendSocialConnections(): Unit = { // @todo(Léo) to be implemented }
+  def sendUserConnections(): Unit= { // @todo(Léo) to be implemented }
+  def sendSocialUsers(): Unit = { // @todo(Léo) to be implemented }
+  def sendInvitations(): Unit = { // @todo(Léo) to be implemented }
 
   def processSocialConnectionChange(change: RepoModification[SocialConnection]): Unit = {
     change match {
