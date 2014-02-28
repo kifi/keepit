@@ -40,10 +40,10 @@ class SocialUserTypeahead @Inject() (
         case Some((filter, meta)) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
             log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
-            rebuild(userId) // async
+            refresh(userId) // async
           }
           Future.successful(filter)
-        case None => rebuild(userId)
+        case None => refresh(userId).map{ _.data }(ExecutionContext.fj)
       }
     }.map{ new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
   }
@@ -77,24 +77,13 @@ class SocialUserTypeahead @Inject() (
 
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 
-  private def rebuild(userId:Id[User]) = {
+  def refresh(userId:Id[User]):Future[PrefixFilter[SocialUserInfo]] = {
     build(userId).map { filter =>
       cache.set(SocialUserTypeaheadKey(userId), filter.data)
       store += (userId -> filter.data)
       log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
-      filter.data
+      filter
     }(ExecutionContext.fj)
-  }
-
-  def refresh(userId: Id[User]): Future[Unit] = rebuild(userId).map{ _ => }(ExecutionContext.fj) // todo(ray): merge with rebuild
-
-  def refreshByIds(ids: Seq[Id[User]]): Future[Unit] = {
-    val futures = new ArrayBuffer[Future[Unit]]
-    for (id <- ids) {
-      futures += refresh(id)
-    }
-    implicit val fj = ExecutionContext.fj
-    Future.sequence(futures) map { seq => Unit }
   }
 
   def refreshAll(): Future[Unit] = {

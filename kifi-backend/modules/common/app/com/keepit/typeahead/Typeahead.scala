@@ -10,6 +10,7 @@ import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.collection.mutable.ArrayBuffer
 
 trait Typeahead[E, I] extends Logging {
 
@@ -118,9 +119,16 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def refresh(id: Id[User]): Future[Unit] // slow
+  def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
 
-  def refreshByIds(ids: Seq[Id[User]]): Future[Unit]
+  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = {
+    implicit val fj = ExecutionContext.fj
+    val futures = new ArrayBuffer[Future[Unit]]
+    for (userId <- userIds) {
+      futures += refresh(userId).map{ _ => }
+    }
+    Future.sequence(futures.toSeq).map{ _ => }
+  }
 
   def refreshAll(): Future[Unit]
 
