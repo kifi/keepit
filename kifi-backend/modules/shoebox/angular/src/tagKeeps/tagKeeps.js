@@ -7,7 +7,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
   function ($routeProvider) {
     $routeProvider
     .when('/tag/:tagId', {
-      templateUrl: 'tagKeeps/tagKeeps.tpl.html',
+      templateUrl: '/tagKeeps/tagKeeps.tpl.html',
       controller: 'TagKeepsCtrl'
     });
   }
@@ -20,7 +20,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
 
     var tagId = $routeParams.tagId || '';
     tagService.promiseById(tagId).then(function (tag) {
-      console.log(tag);
+      console.log('tag', tagId, tag);
     });
 
     $scope.keepService = keepService;
