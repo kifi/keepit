@@ -523,8 +523,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       $slider.appendTo(parent);
     },
     moveToBottom: function (callback) {
-      var dy = window.innerHeight - tile.getBoundingClientRect().bottom;
-      if (dy) {
+      var dy;
+      if (tile.style.display !== 'none' && (dy = window.innerHeight - tile.getBoundingClientRect().bottom)) {
         var $tile = $(tile);
         if (callback) {
           $tile.on('transitionend', function end(e) {
@@ -540,7 +540,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     },
     moveBackFromBottom: function () {
-      $(tile).css('transform', '');
+      if (tile.style.display !== 'none') {
+        $(tile).css('transform', '');
+      }
     },
     engage: function (trigger, type) {
       if (lastCreatedAt) return;

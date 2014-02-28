@@ -5,7 +5,7 @@ import com.keepit.eliza.model.{UriRenormalizationTrackingRepo, UserThreadStats, 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.User
+import com.keepit.model.{ChangedURI, User}
 
 class ElizaStatsCommander @Inject() (
   userThreadRepo: UserThreadRepo,
@@ -18,6 +18,6 @@ class ElizaStatsCommander @Inject() (
     }
   }
 
-  def getCurrentRenormalizationSequenceNumber(): SequenceNumber = db.readOnly { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
+  def getCurrentRenormalizationSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnly { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
 
   }

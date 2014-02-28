@@ -18,5 +18,5 @@ trait ModelWithExternalId[M] extends Model[M] { self: Model[M] =>
 }
 
 trait ModelWithSeqNumber[M] extends Model[M] { self: Model[M]=>
-  val seq: SequenceNumber
+  val seq: SequenceNumber[M]
 }

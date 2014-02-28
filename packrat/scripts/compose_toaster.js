@@ -105,9 +105,12 @@ var toaster = (function () {
     pane.onHide.remove(hide);
     $(document).data('esc').remove(hide);
     hideFindFriends();
-    $toaster.css('overflow', '').on('transitionend', onHidden).addClass('kifi-down');
+    $toaster.css('overflow', '')
+      .on('transitionend', onHidden)
+      .addClass('kifi-down')
+      .data('compose').save();
     $toaster = null;
-    e && e.preventDefault();
+    if (e) e.preventDefault();
   }
 
   function onHidden(e) {

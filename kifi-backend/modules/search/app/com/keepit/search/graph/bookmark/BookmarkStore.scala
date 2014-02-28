@@ -32,11 +32,11 @@ class BookmarkStore(
     indexDirectory: IndexDirectory,
     indexWriterConfig: IndexWriterConfig,
     airbrake: AirbrakeNotifier)
-  extends Indexer[Bookmark](indexDirectory, indexWriterConfig) {
+  extends Indexer[Bookmark, Bookmark, BookmarkStore](indexDirectory, indexWriterConfig) {
 
   import BookmarkStoreFields._
 
-  override def onFailure(indexable: Indexable[Bookmark], e: Throwable): Unit = {
+  override def onFailure(indexable: Indexable[Bookmark, Bookmark], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -104,10 +104,10 @@ class BookmarkStore(
 
   class BookmarkIndexable(
     override val id: Id[Bookmark],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[Bookmark],
     override val isDeleted: Boolean,
     val bookmark: Bookmark
-  ) extends Indexable[Bookmark] {
+  ) extends Indexable[Bookmark, Bookmark] {
 
     implicit def toReader(text: String) = new StringReader(text)
 

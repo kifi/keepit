@@ -15,7 +15,7 @@ case class SearchFriend(
     state: State[SearchFriend] = SearchFriendStates.EXCLUDED,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    seq: SequenceNumber = SequenceNumber.ZERO
+    seq: SequenceNumber[SearchFriend] = SequenceNumber.ZERO
     ) extends ModelWithState[SearchFriend] with ModelWithSeqNumber[SearchFriend] {
   def withId(id: Id[SearchFriend]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -30,7 +30,7 @@ object SearchFriend {
     (__ \ 'state).format(State.format[SearchFriend]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format[SearchFriend])
   )(SearchFriend.apply, unlift(SearchFriend.unapply))
 }
 

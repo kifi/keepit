@@ -30,7 +30,7 @@ class ArticleIndexer(
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
     airbrake: AirbrakeNotifier)
-  extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
+  extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory, indexWriterConfig) {
 
   import ArticleIndexer.ArticleIndexable
 
@@ -38,7 +38,7 @@ class ArticleIndexer(
 
   override val commitBatchSize = 1000
 
-  override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
+  override def onFailure(indexable: Indexable[NormalizedURI, NormalizedURI], e: Throwable) {
     airbrake.notify(s"Error indexing article from normalized uri ${indexable.id}", e)
     super.onFailure(indexable, e)
   }
@@ -74,11 +74,11 @@ object ArticleIndexer extends Logging {
 
   class ArticleIndexable(
     override val id: Id[NormalizedURI],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[NormalizedURI],
     override val isDeleted: Boolean,
     val uri: IndexableUri,
     articleStore: ArticleStore
-  ) extends Indexable[NormalizedURI] {
+  ) extends Indexable[NormalizedURI, NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
     private def enrichedContent(article: Article): String = {

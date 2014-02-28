@@ -90,7 +90,7 @@ class BookmarksCommander @Inject() (
     searchClient.sharingUserInfo(userId, keeps.map(_.uriId)) map { infos =>
       log.info(s"got sharingUserInfo: $infos")
       db.readOnly { implicit s =>
-        val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
+        val idToBasicUser = basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
         val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
         (keeps zip infos).map { case (keep, info) =>
           val collIds =

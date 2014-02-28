@@ -5,6 +5,7 @@ import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
+import com.keepit.learning.porndetector.PornDetectorFactory
 
 object ScraperGlobal extends FortyTwoGlobal(Prod) with ScraperServices {
   val module = ProdScraperServiceModule()

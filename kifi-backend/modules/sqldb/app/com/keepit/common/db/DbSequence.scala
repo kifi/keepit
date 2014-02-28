@@ -18,11 +18,11 @@ CREATE SEQUENCE $sequenceName;
 
 */
 
-abstract class DbSequence(val name: String) {
+abstract class DbSequence[T](val name: String) {
   if (DbSequence.validSequenceName.findFirstIn(name).isEmpty)
     throw new IllegalArgumentException(s"Sequence name $name is invalid")
-  def incrementAndGet()(implicit session: RWSession): SequenceNumber
-  def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber
+  def incrementAndGet()(implicit session: RWSession): SequenceNumber[T]
+  def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber[T]
 }
 
 object DbSequence {
