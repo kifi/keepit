@@ -16,12 +16,12 @@ import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.{InMemoryObjectStore, S3Bucket}
 import scala.concurrent.{Await, Future}
-import com.keepit.common.akka.SafeFuture
 import scala.collection.mutable
-import com.keepit.typeahead
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.time._
+import org.joda.time.Minutes
 
 class SocialUserTypeahead @Inject() (
   db: Database,
@@ -35,13 +35,15 @@ class SocialUserTypeahead @Inject() (
 
   protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
     cache.getOrElseFuture(SocialUserTypeaheadKey(userId)) {
-      store.get(userId) match {
-        case Some(filter) => Future.successful(filter)
-        case None =>
-          build(userId).map{ filter =>
-            store += (userId -> filter.data)
-            filter.data
-          }(ExecutionContext.fj)
+      val res = store.getWithMetadata(userId)
+      res match {
+        case Some((filter, meta)) =>
+          if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
+            log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
+            rebuild(userId) // async
+          }
+          Future.successful(filter)
+        case None => rebuild(userId)
       }
     }.map{ new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
   }
@@ -75,13 +77,16 @@ class SocialUserTypeahead @Inject() (
 
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 
-  def refresh(userId: Id[User]): Future[Unit] = {
-    build(userId).map{ filter =>
-      store += (userId -> filter.data)
+  private def rebuild(userId:Id[User]) = {
+    build(userId).map { filter =>
       cache.set(SocialUserTypeaheadKey(userId), filter.data)
-      log.info(s"[refresh($userId)] cache updated; filter=$filter")
+      store += (userId -> filter.data)
+      log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
+      filter.data
     }(ExecutionContext.fj)
   }
+
+  def refresh(userId: Id[User]): Future[Unit] = rebuild(userId).map{ _ => }(ExecutionContext.fj) // todo(ray): merge with rebuild
 
   def refreshByIds(ids: Seq[Id[User]]): Future[Unit] = {
     val futures = new ArrayBuffer[Future[Unit]]
