@@ -29,6 +29,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
       scope: {
         keeps: '=',
         keepsLoading: '=',
+        keepsHasMore: '=',
         scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
@@ -45,6 +46,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
         scope.preview = keepService.preview;
         scope.togglePreview = keepService.togglePreview;
         scope.isPreviewed = keepService.isPreviewed;
+
+        scope.isShowMore = function () {
+          return !scope.loading && scope.keepsHasMore;
+        };
 
         scope.onClickKeep = function (keep, $event) {
           if ($event.target.tagName !== 'A') {

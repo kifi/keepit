@@ -6,6 +6,6 @@
     </ol>
     <div class="kf-keep-group-title-fixed"></div>
     <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/wait.gif">
-    <a class="kf-keeps-load-more" ng-hide="keepsLoading" href="javascript:">Show more</a>
+    <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()">Show more</a>
   </div>
 </div>
