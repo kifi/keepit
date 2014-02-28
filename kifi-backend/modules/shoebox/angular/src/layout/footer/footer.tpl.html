@@ -6,8 +6,8 @@
         <span class="kf-footer-item-icon kf-footer-item-icon-tutorial"></span>
         Quick guide to get started
       </a>
-      <div kf-plain-modal show="data.showGettingStarted" kf-height="200px" kf-width="300px">
-        What what
+      <div ng-if="data.showGettingStarted">
+        <iframe class="kifi-onboarding-iframe" src="https://www.kifi.com/assets/onboarding.html" frameborder="0"></iframe>
       </div>
     </li>
     <li class="install-kifi">
