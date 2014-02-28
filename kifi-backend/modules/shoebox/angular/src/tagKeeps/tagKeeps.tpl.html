@@ -1,0 +1,14 @@
+<div class="kf-main-tag-keeps">
+  <div class="kf-main-head">
+    <div class="kf-subtitle">
+      <span class="kf-check-all" ng-class="{ enabled: checkEnabled, checked: isSelectedAll() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
+      <span class="kf-subtitle-text">{{getSubtitle()}}</span>
+    </div>
+  </div>
+  <div kf-keeps
+    keeps="keeps"
+    scroll-distance="scrollDistance"
+    scroll-disabled="scrollDisabled"
+    scroll-next="getNextKeeps()"
+  ></div>
+</div>

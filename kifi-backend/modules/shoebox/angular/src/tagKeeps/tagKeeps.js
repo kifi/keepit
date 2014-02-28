@@ -1,67 +1,28 @@
 'use strict';
 
-angular.module('kifi.search', ['util', 'kifi.keepService'])
+angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
 
 .config([
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider
-    .when('/find', {
-      templateUrl: 'search/search.tpl.html',
-      controller: 'SearchCtrl'
+    .when('/tag/:tagId', {
+      templateUrl: 'tagKeeps/tagKeeps.tpl.html',
+      controller: 'TagKeepsCtrl'
     });
   }
 ])
 
-.controller('SearchCtrl', [
+.controller('TagKeepsCtrl', [
   '$scope', 'keepService', '$routeParams',
   function ($scope, keepService, $routeParams) {
     keepService.reset();
 
-    var query = $routeParams.q || '',
-      filter = $routeParams.f || 'm',
-      lastResult = null;
+    var tagId = $routeParams.tagId || '';
+    console.log(tagId);
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
-
-    $scope.results = {
-      myTotal: 0,
-      friendsTotal: 0,
-      othersTotal: 0
-    };
-
-    $scope.isFilterSelected = function (type) {
-      return filter === type;
-    };
-
-    function getFilterCount(type) {
-      switch (type) {
-      case 'm':
-        return $scope.results.myTotal;
-      case 'f':
-        return $scope.results.friendsTotal;
-      case 'a':
-        return $scope.results.othersTotal;
-      }
-    }
-
-    $scope.isEnabled = function (type) {
-      if ($scope.isFilterSelected(type)) {
-        return false;
-      }
-      return !!getFilterCount(type);
-    };
-
-    $scope.getFilterUrl = function (type) {
-      if ($scope.isEnabled(type)) {
-        var count = getFilterCount(type);
-        if (count) {
-          return '/find?q=' + query + '&f=' + type;
-        }
-      }
-      return '';
-    };
 
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
@@ -79,7 +40,7 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 
     $scope.getSubtitle = function () {
       if ($scope.loading) {
-        return 'Searching...';
+        return 'Loading...';
       }
 
       var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
@@ -109,10 +70,6 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
       $scope.loading = true;
       keepService.find(query, filter, lastResult && lastResult.context).then(function (data) {
         $scope.loading = false;
-
-        $scope.results.myTotal = $scope.results.myTotal || data.myTotal;
-        $scope.results.friendsTotal = $scope.results.friendsTotal || data.friendsTotal;
-        $scope.results.othersTotal = $scope.results.othersTotal || data.othersTotal;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
