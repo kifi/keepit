@@ -67,10 +67,6 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
       flushIsPending.set(false)
   }
 
-  private def reset(): Unit = {
-
-  }
-
   private def flush(): Unit = {
     scheduledFlush.foreach(_.cancel())
     scheduledFlush = None
