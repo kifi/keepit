@@ -116,6 +116,10 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserValueCache(stats, accessLog, (outerRepo, 7 days))
 
+  @Provides @Singleton
+  def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SystemValueCache(stats, accessLog, (outerRepo, 7 days))
+
   @Singleton
   @Provides
   def activeExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =

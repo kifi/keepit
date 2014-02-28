@@ -116,6 +116,10 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserValueCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
+  @Provides @Singleton
+  def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SystemValueCache(stats, accessLog, (outerRepo, 7 days))
+
   @Singleton
   @Provides
   def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
