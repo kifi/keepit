@@ -5,10 +5,10 @@
       <b class="kf-query-mag"></b>
       <a class="kf-query-x" href="javascript:" ng-click="clear()"></a>
     </span>
-    <div class="kf-undo" ng-if="undoAction">
+    <div class="kf-undo" ng-if="undo.isSet()">
       <span class="kf-undo-box">
-        <span class="kf-undo-message">{{undoAction.message}}</span>
-        <a class="kf-undo-link" href="javascript:" ng-click="undo()">Undo</a>
+        <span class="kf-undo-message">{{undo.message}}</span>
+        <a class="kf-undo-link" href="javascript:" ng-click="undo.undo()">Undo</a>
       <span>
     </div>
   </div>

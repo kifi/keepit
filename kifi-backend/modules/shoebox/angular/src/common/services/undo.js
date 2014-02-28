@@ -9,7 +9,10 @@ angular.module('kifi.undo', [])
     var DEFAULT_DURATION = 5000;
 
     var api = {
-      set: function (message, callback, duration) {
+      isSet: function () {
+        return !!api.callback;
+      },
+      add: function (message, callback, duration) {
         api.message = message;
         api.callback = callback;
 
