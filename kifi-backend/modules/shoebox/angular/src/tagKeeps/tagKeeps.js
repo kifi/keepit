@@ -72,7 +72,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       }
 
       $scope.loading = true;
-      keepService.getKeepsByTag(tagId).then(function (data) {
+      keepService.getKeepsByTagId(tagId).then(function (data) {
         $scope.loading = false;
 
         if (keepService.isEnd()) {
