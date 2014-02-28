@@ -48,7 +48,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
         scope.isPreviewed = keepService.isPreviewed;
 
         scope.isShowMore = function () {
-          return !scope.loading && scope.keepsHasMore;
+          return !scope.keepsLoading && scope.keepsHasMore;
         };
 
         scope.onClickKeep = function (keep, $event) {
