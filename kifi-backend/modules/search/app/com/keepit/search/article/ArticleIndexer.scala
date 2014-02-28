@@ -114,7 +114,7 @@ object ArticleIndexer extends Logging {
       getArticle(id = uri.id.get, maxRetry = 5, minSleepTime = 1000) match {
         case Some(article) =>
           uri.restriction.map{ reason =>
-            doc.add(buildKeywordField(ArticleVisibility.redirectTerm.field(), ArticleVisibility.redirectTerm.text()))
+            doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
           }
           val titleLang = article.titleLang.getOrElse(Lang("en"))
           val contentLang = article.contentLang.getOrElse(Lang("en"))
