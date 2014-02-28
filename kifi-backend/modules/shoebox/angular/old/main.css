@@ -75,14 +75,6 @@
   box-shadow: inset -1px 0 #dbdee3;
 }
 
-.main-head>h1.tag-head {
-  padding-left: 28px;
-  background-image: url(../img/tag-icon-blue.2x.png);
-  background-repeat: no-repeat;
-  background-size: auto 26px;
-  background-position: 0 center;
-}
-
 .main-keeps::before {
   content: " ";
   position: absolute;
