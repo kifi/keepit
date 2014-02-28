@@ -122,6 +122,9 @@ GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.Mobil
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
 
+POST    /m/1/user/:id/include               @com.keepit.controllers.mobile.MobileUserController.includeFriend(id: ExternalId[User])
+POST    /m/1/user/:id/exclude               @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
+
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 POST    /m/1/auth/upload-binary-image           @com.keepit.controllers.mobile.MobileAuthController.uploadBinaryPicture()
