@@ -10,16 +10,16 @@ import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
 
-trait MessageIndexerPlugin extends IndexerPlugin[MessageIndexer]
+trait MessageIndexerPlugin extends IndexerPlugin[ThreadContent, MessageIndexer]
 
 class MessageIndexerPluginImpl @Inject() (
   actor: ActorInstance[MessageIndexerActor],
   indexer: MessageIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[MessageIndexer, MessageIndexerActor](indexer.asInstanceOf[IndexManager[MessageIndexer]], actor, serviceDiscovery) with MessageIndexerPlugin
+) extends IndexerPluginImpl[ThreadContent, MessageIndexer, MessageIndexerActor](indexer, actor, serviceDiscovery) with MessageIndexerPlugin
 
 class MessageIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
   indexer: MessageIndexer
-) extends IndexerActor[MessageIndexer](airbrake, indexer.asInstanceOf[IndexManager[MessageIndexer]])
+) extends IndexerActor[ThreadContent, MessageIndexer](airbrake, indexer)

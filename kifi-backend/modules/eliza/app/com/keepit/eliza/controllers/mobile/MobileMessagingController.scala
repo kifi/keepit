@@ -5,6 +5,7 @@ import com.keepit.eliza.model.MessageThread
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.heimdal._
+import com.keepit.common.akka.SafeFuture
 
 import play.modules.statsd.api.Statsd
 
@@ -13,6 +14,8 @@ import com.keepit.common.db.{Id, ExternalId}
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
+
+import scala.concurrent.Future
 
 import com.google.inject.Inject
 
@@ -68,5 +71,30 @@ class MobileMessagingController @Inject() (
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
+  }
+
+
+  def getThread(threadId: String) = JsonAction.authenticatedAsync { request =>
+      messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) flatMap { case (thread, msgs) =>
+        val url = thread.url.getOrElse("")  // needs to change when we have detached threads
+        val msgsWithModifiedAuxData = msgs.map { m =>
+          messagingCommander.modifyMessageWithAuxData(m)
+        }
+        Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
+          Ok(Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse))
+        }
+      }
+  }
+
+  def getThreadsByUrl(url: String) = JsonAction.authenticatedAsync { request =>
+    messagingCommander.getThreadInfos(request.userId, url).map { case (_, threadInfos) =>
+      Ok(Json.toJson(threadInfos))
+    }
+  }
+
+  def hasThreadsByUrl(url: String) = JsonAction.authenticatedAsync { request =>
+    messagingCommander.hasThreads(request.userId, url).map { yesorno  =>
+      Ok(Json.toJson(yesorno))
+    }
   }
 }

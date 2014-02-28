@@ -19,8 +19,9 @@ import com.keepit.common.logging.Logging
 import play.api.Play.current
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 class PageCommander @Inject() (
@@ -37,14 +38,26 @@ class PageCommander @Inject() (
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) extends Logging {
 
+  private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
+    searchClient.sharingUserInfo(userId, uri.id.get).map{ sharingUserInfo =>
+      val keepers: Seq[BasicUser] = db.readOnly { implicit session =>
+        basicUserRepo.loadAll(sharingUserInfo.sharingUserIds).values.toSeq
+      }
+      (keepers, sharingUserInfo.keepersEdgeSetSize)
+    }
+  }
+
   def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
-    val (nUriStr, nUri, domain, bookmark, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
+    val (nUriStr, nUri, keepersFutureOpt, domain, bookmark, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
       val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {
         case Left(nUri) => (nUri.url, Some(nUri))
         case Right(pUri) => (pUri, None)
       }
+
+      val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }
+
       val bookmark: Option[Bookmark] = nUri.flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, userId)
       }
@@ -60,20 +73,14 @@ class PageCommander @Inject() (
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }.getOrElse((None, false))
-      (nUriStr, nUri, domain, bookmark, tags, position, neverOnSite, host)
+      (nUriStr, nUri, getKeepersFutureOpt, domain, bookmark, tags, position, neverOnSite, host)
     }
     val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUri.map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
 
-    val (keepers, keeps) = nUri map { uri =>
-      val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
-      val keepers: Seq[BasicUser] = db.readOnly { implicit session =>
-        sharingUserInfo.sharingUserIds.map(basicUserRepo.load).toSeq
-      }
-      (keepers, sharingUserInfo.keepersEdgeSetSize)
-    } getOrElse (Nil, 0)
+    val (keepers, keeps) = keepersFutureOpt.map{ future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
 
     KeeperInfo(
       nUriStr, bookmark.map { b => if (b.isPrivate) "private" else "public" }, tags.map(SendableTag.from),

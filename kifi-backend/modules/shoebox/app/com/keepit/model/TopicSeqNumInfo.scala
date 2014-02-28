@@ -15,17 +15,17 @@ case class TopicSeqNumInfo(
   id: Option[Id[TopicSeqNumInfo]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  uriSeq: SequenceNumber = SequenceNumber.ZERO,
-  bookmarkSeq: SequenceNumber = SequenceNumber.ZERO
+  uriSeq: SequenceNumber[NormalizedURI] = SequenceNumber.ZERO,
+  bookmarkSeq: SequenceNumber[Bookmark] = SequenceNumber.ZERO
 ) extends Model[TopicSeqNumInfo] {
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withId(id: Id[TopicSeqNumInfo]) = this.copy(id = Some(id))
 }
 
 trait TopicSeqNumInfoRepo extends Repo[TopicSeqNumInfo]{
-  def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)]
-  def updateUriSeq(uriSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo
-  def updateBookmarkSeq(bookmarkSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo
+  def getSeqNums(implicit session: RSession): Option[(SequenceNumber[NormalizedURI], SequenceNumber[Bookmark])]
+  def updateUriSeq(uriSeqNum: SequenceNumber[NormalizedURI])(implicit session: RWSession): TopicSeqNumInfo
+  def updateBookmarkSeq(bookmarkSeqNum: SequenceNumber[Bookmark])(implicit session: RWSession): TopicSeqNumInfo
 }
 
 abstract class TopicSeqNumInfoRepoBase(
@@ -38,8 +38,8 @@ abstract class TopicSeqNumInfoRepoBase(
 
   type RepoImpl = TopicSeqNumInfoTable
   class TopicSeqNumInfoTable(tag: Tag) extends RepoTable[TopicSeqNumInfo](db, tag, tableName) {
-    def uriSeq = column[SequenceNumber]("uri_seq", O.NotNull)
-    def bookmarkSeq = column[SequenceNumber]("bookmark_seq", O.NotNull)
+    def uriSeq = column[SequenceNumber[NormalizedURI]]("uri_seq", O.NotNull)
+    def bookmarkSeq = column[SequenceNumber[Bookmark]]("bookmark_seq", O.NotNull)
     def * = (id.?, createdAt, updatedAt, uriSeq, bookmarkSeq) <> ((TopicSeqNumInfo.apply _).tupled, TopicSeqNumInfo.unapply _)
   }
 
@@ -49,18 +49,18 @@ abstract class TopicSeqNumInfoRepoBase(
   override def deleteCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: TopicSeqNumInfo)(implicit session: RSession): Unit = {}
 
-  def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)] = {
+  def getSeqNums(implicit session: RSession): Option[(SequenceNumber[NormalizedURI], SequenceNumber[Bookmark])] = {
     (for( r <- rows ) yield (r.uriSeq, r.bookmarkSeq)).firstOption
   }
 
-  def updateUriSeq(uriSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo = {
+  def updateUriSeq(uriSeqNum: SequenceNumber[NormalizedURI])(implicit session: RWSession): TopicSeqNumInfo = {
     (for (r <- rows) yield r).firstOption match {
       case Some(seqInfo) => save(seqInfo.copy(uriSeq = uriSeqNum))
       case None => save(TopicSeqNumInfo(uriSeq = uriSeqNum))
     }
   }
 
-  def updateBookmarkSeq(bookmarkSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo = {
+  def updateBookmarkSeq(bookmarkSeqNum: SequenceNumber[Bookmark])(implicit session: RWSession): TopicSeqNumInfo = {
     (for (r <- rows) yield r).firstOption match {
       case Some(seqInfo) => save(seqInfo.copy(bookmarkSeq = bookmarkSeqNum))
       case None => save(TopicSeqNumInfo(bookmarkSeq = bookmarkSeqNum))

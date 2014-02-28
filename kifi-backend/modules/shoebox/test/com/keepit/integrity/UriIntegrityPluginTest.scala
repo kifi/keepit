@@ -9,7 +9,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.Id
+import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -85,7 +85,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         }
 
         val centralConfig = inject[CentralConfig]
-        centralConfig(URIMigrationSeqNumKey) === Some(1)
+        centralConfig(URIMigrationSeqNumKey) === Some(SequenceNumber[ChangedURI](1))
 
         // split
 

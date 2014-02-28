@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.model.{NotificationCategory, User}
+import com.keepit.model.{ChangedURI, NotificationCategory, User}
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
@@ -32,14 +32,14 @@ trait ElizaServiceClient extends ServiceClient {
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit
 
-  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]]
+  def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
 
   //migration
   def importThread(data: JsObject): Unit
 
-  def getRenormalizationSequenceNumber(): Future[SequenceNumber]
+  def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
 }
 
 
@@ -88,7 +88,7 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.sendGlobalNotification, payload)
   }
 
-  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
+  def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), callTimeouts = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000)))
       .map{ response =>
         val json = Json.parse(response.body).as[JsArray]
@@ -109,7 +109,7 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.importThread, data)
   }
 
-  def getRenormalizationSequenceNumber(): Future[SequenceNumber] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as[SequenceNumber])
+  def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as(SequenceNumber.format[ChangedURI]))
 }
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
@@ -129,7 +129,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit = {}
 
-  def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long): Future[Seq[ThreadContent]] = {
+  def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())
     p.future
   }
@@ -139,5 +139,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
-  def getRenormalizationSequenceNumber(): Future[SequenceNumber] = Future.successful(SequenceNumber.ZERO)
+  def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = Future.successful(SequenceNumber.ZERO)
 }

@@ -5,24 +5,42 @@ import com.keepit.common.db.Id
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.performance._
 import com.keepit.model.User
-//import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
+import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 trait Typeahead[E, I] extends Logging {
 
+  protected def airbrake: AirbrakeNotifier
+
   protected val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
 
-  def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]]
+  protected val consolidateFetchReq = new RequestConsolidator[Id[User], Option[PrefixFilter[E]]](15 seconds)
+
+  def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]] = {
+    try {
+      val future = consolidateFetchReq(userId) { id =>
+        asyncGetOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
+      }
+      Await.result(future, Duration.Inf)
+    } catch {
+      case t:Throwable =>
+        airbrake.notify(s"[getPrefixFilter($userId)] Caught Exception $t; cause=${t.getCause}",t)
+        None
+    }
+  }
+
+  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]):Future[PrefixFilter[E]]
 
   protected def getInfos(ids: Seq[Id[E]]): Seq[I]
 
   protected def getAllInfosForUser(id: Id[User]): Seq[I]
 
-  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]] = SafeFuture { getInfos(ids) }(com.keepit.common.concurrent.ExecutionContext.fj)
+  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]] = SafeFuture { getInfos(ids) }(ExecutionContext.fj)
 
-  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]] = SafeFuture { getAllInfosForUser(id) }(com.keepit.common.concurrent.ExecutionContext.fj)
+  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]] = SafeFuture { getAllInfosForUser(id) }(ExecutionContext.fj)
 
   protected def extractId(info: I): Id[E]
 
@@ -48,7 +66,6 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  // todo(ray): consolidator
   def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {
@@ -61,10 +78,9 @@ trait Typeahead[E, I] extends Logging {
             Future.successful(None)
           } else {
             val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-            implicit val fjCtx = com.keepit.common.concurrent.ExecutionContext.fj
-            asyncGetInfos(filter.filterBy(queryTerms)) map { infos =>
+            asyncGetInfos(filter.filterBy(queryTerms)).map { infos =>
               search(infos, queryTerms)
-            }
+            }(ExecutionContext.fj)
           }
       }
     } else {
@@ -90,15 +106,15 @@ trait Typeahead[E, I] extends Logging {
   def build(id: Id[User]): Future[PrefixFilter[E]] = {
     consolidateBuildReq(id){ id =>
       SafeFuture {
-        timing(s"build($id)") {
+        timing(s"buildFilter($id)") {
           val builder = new PrefixFilterBuilder[E]
           val allInfos = getAllInfosForUser(id)
           allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
           val filter = builder.build
-          log.info(s"[build($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
+          log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
           filter
         }
-      }(com.keepit.common.concurrent.ExecutionContext.fj)
+      }(ExecutionContext.fj)
     }
   }
 

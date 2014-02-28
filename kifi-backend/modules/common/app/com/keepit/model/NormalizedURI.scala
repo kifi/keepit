@@ -26,7 +26,7 @@ case class NormalizedURI (
   url: String,
   urlHash: UrlHash,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-  seq: SequenceNumber = SequenceNumber.ZERO,
+  seq: SequenceNumber[NormalizedURI] = SequenceNumber.ZERO,
   screenshotUpdatedAt: Option[DateTime] = None,
   restriction: Option[Restriction] = None,
   normalization: Option[Normalization] = None,
@@ -67,7 +67,7 @@ object NormalizedURI {
     (__ \ 'url).format[String] and
     (__ \ 'urlHash).format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply)) and
     (__ \ 'state).format(State.format[NormalizedURI]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat) and
+    (__ \ 'seq).format(SequenceNumber.format[NormalizedURI]) and
     (__ \ 'screenshotUpdatedAt).formatNullable[DateTime] and
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'normalization).formatNullable[Normalization] and
@@ -162,7 +162,7 @@ case class IndexableUri(
    url: String,
    restriction: Option[Restriction] = None,
    state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-   seq: SequenceNumber)
+   seq: SequenceNumber[NormalizedURI])
 
 object IndexableUri {
 
@@ -174,6 +174,6 @@ object IndexableUri {
     (__ \ 'url).format[String] and
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'state).format(State.format[NormalizedURI]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format[NormalizedURI])
   )(IndexableUri.apply, unlift(IndexableUri.unapply))
 }

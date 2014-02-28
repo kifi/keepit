@@ -1,7 +1,7 @@
 package com.keepit.search.graph.user
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.model.{SearchFriend, User}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
 import org.apache.lucene.index.IndexWriterConfig
@@ -25,7 +25,7 @@ class SearchFriendIndexer (
   indexWriterConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends Indexer[User](indexDirectory, indexWriterConfig){
+) extends Indexer[User, SearchFriend, SearchFriendIndexer](indexDirectory, indexWriterConfig){
 
   import SearchFriendIndexer._
 
@@ -33,11 +33,8 @@ class SearchFriendIndexer (
   private val fetchSize = commitBatchSize
 
   private def getIndexables(): Seq[SearchFriendIndexable] = {
-    val changed = Await.result(shoeboxClient.getSearchFriendsChanged(sequenceNumber.value, fetchSize), 5 seconds)
-    val userAndSeq = changed.groupBy(_.userId).map{ case (a, b) =>
-      (a, SequenceNumber(b.map{_.seq.value}.max))
-    }.toSeq.sortBy(_._2)
-
+    val changed = Await.result(shoeboxClient.getSearchFriendsChanged(sequenceNumber, fetchSize), 5 seconds)
+    val userAndSeq = changed.groupBy(_.userId).map { case (a, b) => a -> b.map(_.seq).max }.toSeq.sortBy(_._2)
     val unfriendList = Await.result(Future.traverse(userAndSeq.map{_._1})(u => shoeboxClient.getUnfriends(u)), 5 seconds)
 
     (userAndSeq zip unfriendList).map{ case ((u, seq), unfriends) =>
@@ -45,7 +42,7 @@ class SearchFriendIndexer (
     }
   }
 
-  override def onFailure(indexable: Indexable[User], e: Throwable): Unit = {
+  override def onFailure(indexable: Indexable[User, SearchFriend], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -76,9 +73,9 @@ object SearchFriendIndexer {
 
   class SearchFriendIndexable(
     override val id: Id[User],
-    override val sequenceNumber: SequenceNumber,
+    override val sequenceNumber: SequenceNumber[SearchFriend],
     override val isDeleted: Boolean,
-    val unfriended: Seq[Id[User]]) extends Indexable[User] {
+    val unfriended: Seq[Id[User]]) extends Indexable[User, SearchFriend] {
 
     override def buildDocument = {
       val doc = super.buildDocument

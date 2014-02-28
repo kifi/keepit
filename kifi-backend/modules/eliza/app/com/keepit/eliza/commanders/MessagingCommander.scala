@@ -132,6 +132,17 @@ class MessagingCommander @Inject() (
     })
   }
 
+  def hasThreads(userId: Id[User], url: String): Future[Boolean] = {
+    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
+      nUriOrPrenorm match {
+        case Left(nUri) => {
+          db.readOnly { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
+        }
+        case Right(_) => false
+      }
+    }
+  }
+
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)

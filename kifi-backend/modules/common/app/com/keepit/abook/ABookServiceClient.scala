@@ -59,6 +59,7 @@ trait ABookServiceClient extends ServiceClient {
   def refreshPrefixFiltersByIds(userIds:Seq[Id[User]]):Future[Unit]
   def refreshAllFilters():Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
+  def ripestFruit(): Future[Seq[Id[SocialUserInfo]]]
 }
 
 
@@ -242,6 +243,13 @@ class ABookServiceClientImpl @Inject() (
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] = {
     callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map{r => ()}
   }
+
+  def ripestFruit(): Future[Seq[Id[SocialUserInfo]]] = {
+    implicit val idFormatter = Id.format[SocialUserInfo]
+    call(ABook.internal.ripestFruit).map{ r =>
+      r.json.as[Seq[Id[SocialUserInfo]]]
+    }
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -297,4 +305,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def refreshAllFilters(): Future[Unit] = ???
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
+
+  def ripestFruit(): Future[Seq[Id[SocialUserInfo]]] = ???
 }

@@ -22,7 +22,7 @@ $.fn.layout = function () {
 };
 
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
-if (searchUrlRe.test(document.URL)) !function() {
+if (searchUrlRe.test(document.URL)) !function () {
   'use strict';
   log('[google_inject]')();
 

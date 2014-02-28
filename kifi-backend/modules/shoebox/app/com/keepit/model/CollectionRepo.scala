@@ -21,7 +21,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getByUserAndName(userId: Id[User], name: String,
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
     (implicit session: RSession): Option[Collection]
-  def getCollectionsChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Collection]
+  def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
 }
 
@@ -36,7 +36,7 @@ class CollectionRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence("collection_sequence")
+  private val sequence = db.getSequence[Collection]("collection_sequence")
 
   type RepoImpl = CollectionTable
 
@@ -99,7 +99,7 @@ class CollectionRepoImpl @Inject() (
     }
   }
 
-  def getCollectionsChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
+  def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
 
 
 }

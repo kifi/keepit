@@ -27,9 +27,9 @@ import com.keepit.common.aws.AwsConfig
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getChanged(sequenceNumber: SequenceNumber, includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getCurrentSeqNum()(implicit session: RSession): SequenceNumber
+  def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Either[NormalizedURI, String]
@@ -56,7 +56,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   import db.Driver.simple._
 
 
-  private val sequence = db.getSequence("normalized_uri_sequence")
+  private val sequence = db.getSequence[NormalizedURI]("normalized_uri_sequence")
 
   type RepoImpl = NormalizedURITable
   class NormalizedURITable(tag: Tag) extends RepoTable[NormalizedURI](db, tag, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI] {
@@ -74,16 +74,16 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def table(tag:Tag) = new NormalizedURITable(tag)
   initTable()
 
-  def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+  def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     super.getBySequenceNumber(sequenceNumber, limit)
   }
 
-  def getChanged(sequenceNumber: SequenceNumber, states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+  def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     val q = (for (f <- rows if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
   }
 
-  override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber = {
+  override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI] = {
     sequence.getLastGeneratedSeq()
   }
 

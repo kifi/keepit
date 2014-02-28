@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.commanders.BookmarkInterner
-import com.keepit.common.zookeeper.{LongCentralConfigKey, CentralConfig}
+import com.keepit.common.zookeeper.{SequenceNumberCentralConfigKey, LongCentralConfigKey, CentralConfig}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{Id, SequenceNumber}
@@ -23,11 +23,19 @@ class OrphanCleaner @Inject() (
 
   implicit val dbMasterSlave = Database.Slave // use a slave for scanning part
 
-  class ConfigKey(override val key: String) extends LongCentralConfigKey {
-    override val namespace = "OrphanCleaner"
+  case class OrphanCleanerSequenceNumberKey[T](seqKey: String) extends SequenceNumberCentralConfigKey[T] {
+    val longKey = new LongCentralConfigKey {
+      def key: String = seqKey
+      val namespace: String = "OrphanCleaner"
+    }
   }
 
-  private def getSequenceNumber(key: ConfigKey): SequenceNumber = centralConfig(key).map(SequenceNumber(_)).getOrElse(SequenceNumber.MinValue)
+  val renormalizedURLSeqKey = OrphanCleanerSequenceNumberKey[RenormalizedURL]("RenormalizedURLSeq")
+  val changedURISeqKey = OrphanCleanerSequenceNumberKey[ChangedURI]("ChangedURISeq")
+  val bookmarkSeqKey = OrphanCleanerSequenceNumberKey[Bookmark]("BookmarkSeq")
+  val normalizedURISeqKey = OrphanCleanerSequenceNumberKey[NormalizedURI]("NormalizedURISeq")
+
+  private def getSequenceNumber[T](key: OrphanCleanerSequenceNumberKey[T]): SequenceNumber[T] = centralConfig(key) getOrElse(SequenceNumber.MinValue[T])
 
   private[this] val lock = new AnyRef
 
@@ -65,7 +73,6 @@ class OrphanCleaner @Inject() (
   }
 
   private[integrity] def cleanNormalizedURIsByRenormalizedURL(readOnly: Boolean = true): Unit = {
-    val renormalizedURLSeqKey = new ConfigKey("RenormalizedURLSeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var seq = getSequenceNumber(renormalizedURLSeqKey)
@@ -83,7 +90,7 @@ class OrphanCleaner @Inject() (
           seq = renormalizedURL.seq
         }
       }
-      if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq.value) // update high watermark
+      if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq) // update high watermark
     }
 
     if (readOnly) {
@@ -94,7 +101,6 @@ class OrphanCleaner @Inject() (
   }
 
   private[integrity] def cleanNormalizedURIsByChangedURIs(readOnly: Boolean = true): Unit = {
-    val changedURISeqKey = new ConfigKey("ChangedURISeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var seq = getSequenceNumber(changedURISeqKey)
@@ -112,7 +118,7 @@ class OrphanCleaner @Inject() (
           seq = changedUri.seq
         }
       }
-      if (!done && !readOnly) centralConfig.update(changedURISeqKey, seq.value) // update high watermark
+      if (!done && !readOnly) centralConfig.update(changedURISeqKey, seq) // update high watermark
     }
 
     if (readOnly) {
@@ -123,7 +129,6 @@ class OrphanCleaner @Inject() (
   }
 
   private[integrity] def cleanNormalizedURIsByBookmarks(readOnly: Boolean = true): Unit = {
-    val bookmarkSeqKey = new ConfigKey("BookmarkSeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var numUrisChangedToScrapeWanted = 0
@@ -157,7 +162,7 @@ class OrphanCleaner @Inject() (
           seq = bookmark.seq
         }
       }
-      if (!done && !readOnly) centralConfig.update(bookmarkSeqKey, seq.value) // update high watermark
+      if (!done && !readOnly) centralConfig.update(bookmarkSeqKey, seq) // update high watermark
     }
 
     if (readOnly) {
@@ -169,7 +174,6 @@ class OrphanCleaner @Inject() (
 
 
   private[integrity] def cleanNormalizedURIsByNormalizedURIs(readOnly: Boolean = true): Unit = {
-    val normalizedURISeqKey = new ConfigKey("NormalizedURISeq")
     var numProcessed = 0
     var numUrisChangedToActive = 0
     var seq = getSequenceNumber(normalizedURISeqKey)
@@ -195,7 +199,7 @@ class OrphanCleaner @Inject() (
         }
       }
 
-      if (!done && !readOnly) centralConfig.update(normalizedURISeqKey, seq.value) // update high watermark
+      if (!done && !readOnly) centralConfig.update(normalizedURISeqKey, seq) // update high watermark
     }
 
     if (readOnly) {

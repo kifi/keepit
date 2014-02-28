@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.tagService', [])
+angular.module('kifi.tagService', ['kifi.keepService'])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope',
-  function ($http, env, $q, $rootScope) {
+  '$http', 'env', '$q', '$rootScope', 'keepService',
+  function ($http, env, $q, $rootScope, keepService) {
     var list = [],
       tagsById = {},
       fetchAllPromise = null;
@@ -58,9 +58,13 @@ angular.module('kifi.tagService', [])
           var tags = res.data && res.data.collections || [];
           list.length = 0;
           list.push.apply(list, tags);
+
           list.forEach(function (tag) {
             tagsById[tag.id] = tag;
           });
+
+          keepService.totalKeepCount = res.data.keeps; // a bit weird...
+
           return list;
         });
 

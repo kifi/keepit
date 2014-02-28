@@ -21,7 +21,7 @@ case class Collection(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   lastKeptTo: Option[DateTime] = None,
-  seq: SequenceNumber = SequenceNumber.ZERO
+  seq: SequenceNumber[Collection] = SequenceNumber.ZERO
   ) extends ModelWithExternalId[Collection] with ModelWithState[Collection] with ModelWithSeqNumber[Collection]{
   def withLastKeptTo(now: DateTime) = this.copy(lastKeptTo = Some(now))
   def withId(id: Id[Collection]) = this.copy(id = Some(id))
@@ -39,7 +39,7 @@ object Collection {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'lastKeptTo).formatNullable[DateTime] and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+    (__ \ 'seq).format(SequenceNumber.format[Collection])
   )(Collection.apply, unlift(Collection.unapply))
 
   val MaxNameLength = 64
