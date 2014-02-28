@@ -6,7 +6,6 @@ import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration, ActorInstance}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
@@ -27,7 +26,6 @@ import com.keepit.serializer.TypeCode
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 import org.joda.time.DateTime
-import scala.reflect._
 
 trait HeimdalServiceClient extends ServiceClient {
   final val serviceType = ServiceType.HEIMDAL
@@ -78,7 +76,6 @@ class HeimdalClientActor @Inject() (
   val batchingConf = HeimdalBatchingConfiguration
   def processBatch(events: Seq[HeimdalEvent]): Unit = call(Heimdal.internal.trackEvents, Json.toJson(events))
   def getEventTime(event: HeimdalEvent): DateTime = event.time
-  implicit val eventClass = classTag[HeimdalEvent]
 }
 
 class HeimdalServiceClientImpl @Inject() (
