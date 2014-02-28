@@ -124,15 +124,18 @@ class BookmarksCommander @Inject() (
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
 
     val deactivatedBookmarks = db.readWrite { implicit s =>
-      keepInfos.map { ki =>
+      val bms = keepInfos.map { ki =>
         val url = ki.url
-        uriRepo.getByUri(url).flatMap { uri =>
+        uriRepo.getByUri(ki.url).flatMap { uri =>
           bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
             bookmarkRepo.save(b withActive false)
           }
         }
-      }
-    }.flatten
+      }.flatten
+      val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForBookmark(bm.id.get)).toSet
+      collIds.foreach{ cid => collectionRepo.collectionChanged(cid) }
+      bms
+    }
 
     val deactivatedKeepInfos = deactivatedBookmarks.map(KeepInfo.fromBookmark(_))
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)

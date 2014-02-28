@@ -3,7 +3,7 @@ package com.keepit.model
 import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.cache.{JsonCacheImpl, PrimitiveCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.serializer.TraversableFormat
@@ -31,13 +31,20 @@ case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[I
 class CollectionsForBookmarkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
 
-case class BookmarksForCollectionKey(collectionId: Id[Collection]) extends Key[Seq[Id[Bookmark]]] {
+// NOTE: the following code is left here as comment for record that we used the name space, bookmarks_for_collection. bump up the version number if you want to use it again.
+//case class BookmarksForCollectionKey(collectionId: Id[Collection]) extends Key[Seq[Id[Bookmark]]] {
+//  override val version = 1
+//  val namespace = "bookmarks_for_collection"
+//  def toKey(): String = collectionId.toString
+//}
+
+case class BookmarkCountForCollectionKey(collectionId: Id[Collection]) extends Key[Int] {
   override val version = 1
-  val namespace = "bookmarks_for_collection"
+  val namespace = "bookmark_count_for_collection"
   def toKey(): String = collectionId.toString
 }
 
-class BookmarksForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[BookmarksForCollectionKey, Seq[Id[Bookmark]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Bookmark]))
+class BookmarkCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[BookmarkCountForCollectionKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object KeepToCollectionStates extends States[KeepToCollection]

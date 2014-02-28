@@ -38,7 +38,7 @@ class CollectionCommander @Inject() (
     log.info(s"Getting all collections for $userId (sort $sort)")
     val unsortedCollections = db.readOnly { implicit s =>
       collectionRepo.getByUser(userId).map { c =>
-        val count = keepToCollectionRepo.count(c.id.get)
+        val count = collectionRepo.getBookmarkCount(c.id.get)
         BasicCollection fromCollection(c, Some(count))
       }}
     log.info(s"Sorting collections for $userId")
