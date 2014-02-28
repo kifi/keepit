@@ -148,5 +148,10 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
         léoToMarvin.invitationCount === 2
       }
     }
+
+    "have correct queries" in { //This is for running straight up sql queries to make sure they are correctly formatted
+      db.readOnly { implicit session => richConnectionRepo.getRipestFruit()}
+      1===1
+    }
   }
 }
