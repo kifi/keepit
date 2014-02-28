@@ -10,6 +10,7 @@ trait Extractor {
   def getKeywords(): Option[String]
   def getLinks(key: String): Set[String]
   def getCanonicalUrl(): Option[String] = getLinks("canonical").headOption orElse getMetadata("og:url")
+  def getAlternateUrls(): Set[String] = getLinks("alternate")
 }
 
 trait ExtractorFactory extends Function[String, Extractor]

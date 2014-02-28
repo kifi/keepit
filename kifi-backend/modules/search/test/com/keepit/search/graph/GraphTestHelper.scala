@@ -84,6 +84,7 @@ trait GraphTestHelper extends ApplicationInjector {
         title = title,
         description = None,
         canonicalUrl = None,
+        alternateUrls = Set.empty,
         keywords = None,
         media = None,
         content = content,
