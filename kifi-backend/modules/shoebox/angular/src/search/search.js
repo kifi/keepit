@@ -21,6 +21,7 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
     var query = $routeParams.q || '',
       filter = $routeParams.f || 'm',
       lastResult = null;
+    console.log('search', query, filter);
 
     $scope.keepService = keepService;
 
