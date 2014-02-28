@@ -12,7 +12,7 @@ angular.module('kifi.detail',
       replace: true,
       restrict: 'A',
       templateUrl: 'detail/detail.tpl.html',
-      link: function (scope, element/*, attrs*/ ) {
+      link: function (scope) {
         scope.isSingleKeep = keepService.isSingleKeep;
         scope.getLength = keepService.getSelectedLength;
         scope.isDetailOpen = keepService.isDetailOpen;
@@ -111,7 +111,7 @@ angular.module('kifi.detail',
           filterTags(null);
         });
 
-        scope.$watch('keep', function (keep) {
+        scope.$watch('keep', function () {
           scope.tagFilter.name = '';
           filterTags(null);
           scope.hideAddTagDropdown();
@@ -374,7 +374,7 @@ angular.module('kifi.detail',
 .directive('kfTagSuggestions', [
   '$timeout',
   function ($timeout) {
-    return function (scope, element/*, attrs*/) {
+    return function (scope, element) {
       $timeout(function () {
         var hiddenElement = element.find('.page-coll-opt-hidden');
         var input = element.find('input');

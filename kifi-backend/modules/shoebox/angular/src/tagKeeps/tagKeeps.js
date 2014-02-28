@@ -7,7 +7,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
   function ($routeProvider) {
     $routeProvider
     .when('/tag/:tagId', {
-      templateUrl: '/tagKeeps/tagKeeps.tpl.html',
+      templateUrl: 'tagKeeps/tagKeeps.tpl.html',
       controller: 'TagKeepsCtrl'
     });
   }
@@ -17,14 +17,10 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
   '$scope', 'keepService', 'tagService', '$routeParams',
   function ($scope, keepService, tagService, $routeParams) {
     keepService.reset();
-
-    var tagId = $routeParams.tagId || '';
-    tagService.promiseById(tagId).then(function (tag) {
-      console.log('tag', tagId, tag);
-    });
-
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
+
+    var tagId = $routeParams.tagId || '';
 
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
@@ -76,7 +72,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       }
 
       $scope.loading = true;
-      keepService.getKeepsByTag().then(function (data) {
+      keepService.getKeepsByTag(tagId).then(function (data) {
         $scope.loading = false;
 
         if (keepService.isEnd()) {
@@ -86,7 +82,15 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
         lastResult = data;
       });
     };
-
     $scope.getNextKeeps();
+
+    tagService.promiseById(tagId).then(function (tag) {
+      if (!tag) {
+        return;
+      }
+
+      $scope.tag = tag;
+    });
+
   }
 ]);
