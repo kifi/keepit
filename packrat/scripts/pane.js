@@ -55,42 +55,46 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function showPane(locator, back, redirected) {
-    log('[showPane]', locator, back ? 'back' : '')();
     var locatorCurr = paneHistory && paneHistory[0];
-    var nameCurr = locatorCurr && toPaneName(locatorCurr);
-    var name = toPaneName(locator);
     if (locator === locatorCurr) {
-      // do nothing
-    } else if (name === nameCurr && panes[name].switchTo) {
-      panes[name].switchTo(locator);
-    } else {
-      if (!paneHistory) {
-        paneHistory = [locator];
-      } else if (back) {
-        paneHistory.shift();
-        paneHistory[0] = locator;  // in case paneHistory was empty
-      } else {
-        paneHistory.unshift(locator);
-      }
-      showPaneContinued(locator, back, name, {redirected: redirected});
+      log('[showPane] already at', locator)();
+      return;
     }
-  }
-
-  function showPaneContinued(locator, back, name, params) {  // only called by showPane
-    log('[showPaneContinued]', locator, name)();
+    var paneState = $pane && $pane.data('state');
+    if (paneState && paneState !== 'open') {
+      log('[showPane] aborting', locator, back ? 'back' : '', paneState)();
+      return;
+    }
+    // TODO: have a state for pane-to-pane transitions and avoid interrupting
+    var name = toPaneName(locator);
+    var nameCurr = locatorCurr && toPaneName(locatorCurr);
+    if (name === nameCurr && panes[name].switchTo) {
+      log('[showPane] delegating', name, locator)();
+      panes[name].switchTo(locator);
+      return;
+    }
+    log('[showPane]', locator, name, back ? 'back' : '', redirected ? 'redirected' : '')();
+    if (!paneHistory) {
+      paneHistory = [locator];
+    } else if (back) {
+      paneHistory.shift();
+      paneHistory[0] = locator;  // in case paneHistory was empty
+    } else {
+      paneHistory.unshift(locator);
+    }
     if ($pane) {
-      // TODO: abort if state !== 'open'
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
       keeper.onPaneChange(locator);
       var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden").layout();
       var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
       var $old = $cart.find(".kifi-pane-box");
-      var $new = $(render('html/keeper/pane_' + name, params))[left ? "prependTo" : "appendTo"]($cart).layout();
+      $old.triggerHandler('kifi:removing');
+      var $new = $(render('html/keeper/pane_' + name, {redirected: redirected}))[left ? 'prependTo' : 'appendTo']($cart).layout();
       $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
       .on("transitionend", function end(e) {
         if (e.target !== this) return;
         if (!left) $cart.removeClass("kifi-animated kifi-back kifi-forward");
-        $old.triggerHandler("kifi:remove");
+        $old.triggerHandler('kifi:remove');
         $old.remove();
         $new.data("shown", true).triggerHandler("kifi:shown");
         $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
@@ -102,11 +106,11 @@ var pane = pane || function () {  // idempotent for Chrome
       populatePane($new, name, locator);
     } else {
       $('html').attr('kifi-pane-parent', '');
-      $pane = $(render('html/keeper/pane',
-        $.extend(params, {
+      $pane = $(render('html/keeper/pane', {
+          user: me,
           site: location.hostname,
-          user: me
-        }), {
+          redirected: redirected
+        }, {
           pane_top_menu: 'pane_top_menu',
           pane: 'pane_' + name
         }))
@@ -136,7 +140,16 @@ var pane = pane || function () {  // idempotent for Chrome
         keepLastAndCleanUpIfRemoved();
         $box.data("shown", true).triggerHandler("kifi:shown");
         notifyPageOfResize(true);
-      })
+      });
+      $('html').attr('kifi-with-pane', '');
+      var $box = $pane.find(".kifi-pane-box");
+      populatePane($box, name, locator);
+      setTimeout(attachPaneBindings);
+    }
+  }
+
+  function attachPaneBindings() {
+    $pane
       .hoverfu('.kifi-pane-head-logo', function(configureHover) {
         configureHover({
           mustHoverFor: 700, hideAfter: 2500, click: 'hide',
@@ -251,10 +264,6 @@ var pane = pane || function () {  // idempotent for Chrome
       .on("mousedown click keydown keypress keyup", function (e) {
         e.stopPropagation();
       });
-      $('html').attr('kifi-with-pane', '');
-      var $box = $pane.find(".kifi-pane-box");
-      populatePane($box, name, locator);
-    }
   }
 
   function hidePane(leaveSlider) {
@@ -272,6 +281,7 @@ var pane = pane || function () {  // idempotent for Chrome
       $(tile).css('transform', '');
       keeper.discard();
     }
+    $pane.find('.kifi-pane-box').triggerHandler('kifi:removing');
     pane.onHide.dispatch();
     $pane
     .data('state', 'closing')

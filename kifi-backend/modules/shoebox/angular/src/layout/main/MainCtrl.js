@@ -3,8 +3,8 @@
 angular.module('kifi.layout.main', [])
 
 .controller('MainCtrl', [
-  '$scope', '$location',
-  function ($scope, $location) {
+  '$scope', '$location', '$timeout',
+  function ($scope, $location, $timeout) {
     var KEY_ESC = 27;
 
     $scope.search = {};
@@ -42,12 +42,18 @@ angular.module('kifi.layout.main', [])
     $scope.onChange = _.throttle(function () {
       var text = $scope.search.text || '';
       text = _.str.trim(text);
+
       if (text) {
         $location.path('/find').search('q', text);
       }
       else {
         $location.path('/').search('');
       }
+
+      // hacky solution to url event not getting fired
+      $timeout(function () {
+        $scope.$apply();
+      });
     }, 500);
   }
 ]);

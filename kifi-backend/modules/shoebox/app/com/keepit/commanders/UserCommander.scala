@@ -109,7 +109,7 @@ class UserCommander @Inject() (
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
       } else {
-        userConnectionRepo.getConnectedUsers(user.id.get).map(basicUserRepo.load)
+        basicUserRepo.loadAll(userConnectionRepo.getConnectedUsers(user.id.get)).values.toSet
       }
     }
 

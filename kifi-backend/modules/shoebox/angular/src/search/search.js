@@ -64,13 +64,31 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
       return '';
     };
 
-    $scope.getSubtitle = function () {
-      var numShown = $scope.keeps.length;
+    $scope.toggleSelectAll = keepService.toggleSelectAll;
+    $scope.isSelectedAll = keepService.isSelectedAll;
 
+    $scope.checkEnabled = true;
+    $scope.mouseoverCheckAll = false;
+
+    $scope.onMouseoverCheckAll = function () {
+      $scope.mouseoverCheckAll = true;
+    };
+
+    $scope.onMouseoutCheckAll = function () {
+      $scope.mouseoverCheckAll = false;
+    };
+
+    $scope.getSubtitle = function () {
       if ($scope.loading) {
         return 'Searching...';
       }
 
+      var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
+      if (subtitle) {
+        return subtitle;
+      }
+
+      var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
         return 'Sorry, no results found for &#x201c;' + query + '&#x202c;';
