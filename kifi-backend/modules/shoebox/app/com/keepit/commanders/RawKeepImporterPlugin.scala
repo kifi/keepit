@@ -113,8 +113,8 @@ private class RawKeepImporterActor @Inject() (
       log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
       val (doneOpt, totalOpt) = db.readOnly { implicit session =>
-        (userValueRepo.getValue(userId, "bookmark_import_done").map(_.toInt),
-          userValueRepo.getValue(userId, "bookmark_import_total").map(_.toInt))
+        (userValueRepo.getValueUnsafe(userId, "bookmark_import_done").map(_.toInt),
+          userValueRepo.getValueUnsafe(userId, "bookmark_import_total").map(_.toInt))
       }
 
       db.readWrite { implicit session =>
@@ -127,7 +127,7 @@ private class RawKeepImporterActor @Inject() (
                 userValueRepo.clearValue(userId, s"bookmark_import_${importId}_context")
               }
             } else {
-              userValueRepo.setValue(userId, "bookmark_import_done", (done + rawKeepGroup.length).toString)
+              userValueRepo.setValue(userId, "bookmark_import_done", done + rawKeepGroup.length)
             }
           case _ =>
         }
@@ -139,7 +139,7 @@ private class RawKeepImporterActor @Inject() (
   def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
     Try {
       db.readOnly { implicit session =>
-        userValueRepo.getValue(userId, s"bookmark_import_${importId}_context")
+        userValueRepo.getValueUnsafe(userId, s"bookmark_import_${importId}_context")
       }.map { jsonStr =>
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt
       }.flatten

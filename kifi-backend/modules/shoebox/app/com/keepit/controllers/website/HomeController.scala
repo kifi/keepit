@@ -53,11 +53,11 @@ class HomeController @Inject() (
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
-    db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
+    db.readOnly { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
   private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
-    db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, "has_seen_install", true.toString) }
+    db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
   def version = Action {

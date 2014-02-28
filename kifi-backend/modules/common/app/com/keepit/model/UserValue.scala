@@ -7,6 +7,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.cache.{StringCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration.Duration
+import com.keepit.model.UserValues.UserValueStringHandler
 
 case class UserValue(
   id: Option[Id[UserValue]] = None,
@@ -33,6 +34,7 @@ class UserValueCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
 object UserValueStates extends States[UserValue]
 
 trait Gender
+
 object Gender {
   case object Male extends Gender
   case object Female extends Gender
@@ -47,16 +49,20 @@ object UserValues {
 
   trait UserValueHandler[T] {
     def name: String
-    def get(valOpt: Option[String]): T
-    def getFromMap(valMap: Map[String, Option[String]]): T = get(valMap(name))
+    def parse(valOpt: Option[String]): T
+    def parseFromMap(valMap: Map[String, Option[String]]): T = parse(valMap(name))
   }
 
   case class UserValueBooleanHandler(override val name: String, default: Boolean) extends UserValueHandler[Boolean] {
-    def get(valOpt: Option[String]): Boolean = valOpt.map(_.toBoolean).getOrElse(default)
+    def parse(valOpt: Option[String]): Boolean = valOpt.map(_.toBoolean).getOrElse(default)
   }
 
   case class UserValueIntHandler(override val name: String, default: Int) extends UserValueHandler[Int] {
-    def get(valOpt: Option[String]): Int = valOpt.map(_.toInt).getOrElse(default)
+    def parse(valOpt: Option[String]): Int = valOpt.map(_.toInt).getOrElse(default)
+  }
+
+  case class UserValueStringHandler(override val name: String, default: String) extends UserValueHandler[String] {
+    def parse(valOpt: Option[String]): String = valOpt.getOrElse(default)
   }
 
   val enterToSend = UserValueBooleanHandler("enter_to_send", true)
@@ -66,4 +72,9 @@ object UserValues {
   val showFindFriends = UserValueBooleanHandler("ext_show_find_friends", false)
 
   val UserInitPrefs: Seq[String] = Seq(enterToSend, maxResults, showKeeperIntro, showSearchIntro, showFindFriends).map(_.name)
+
+  val availableInvites = UserValueIntHandler("availableInvites", 1000)
+  val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
+  val welcomeEmailSent = UserValueBooleanHandler("welcomeEmailSent", false)
+
 }

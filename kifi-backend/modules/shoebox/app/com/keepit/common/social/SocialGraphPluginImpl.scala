@@ -105,7 +105,7 @@ private[social] class SocialGraphActor @Inject() (
           val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
           val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
           db.readWrite { implicit c =>
-            latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
+            latestUserValues.collect { case (key, value) if userValueRepo.getValueUnsafe(userId, key) != Some(value) =>
               userValueRepo.setValue(userId, key, value)
               heimdal.setUserProperties(userId, key -> ContextStringData(value))
             }

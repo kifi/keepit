@@ -4,6 +4,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db._
 import com.keepit.test._
+import com.keepit.model.UserValues.{UserValueIntHandler, UserValueStringHandler}
 
 class UserValueTest extends Specification with ShoeboxTestInjector {
 
@@ -11,11 +12,13 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
     "create, update, delete using the cache (and invalidate properly)" in {
       withDb() { implicit injector =>
         val userValueRepo = inject[UserValueRepoImpl]
+        val test = UserValueStringHandler("test", "some default value")
+        val test1 = UserValueIntHandler("test1", -1000)
 
         val (user1, uv) = db.readWrite { implicit session =>
           userValueRepo.valueCache.get(UserValueKey(Id[User](1), "test")).isDefined === false
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
-          userValueRepo.getValue(user1.id.get, "test").isDefined === false
+          userValueRepo.getValue(user1.id.get, test) === test.default
 
           val uv = userValueRepo.save(UserValue(userId = user1.id.get, name = "test", value = "this right here!"))
 
@@ -24,7 +27,7 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
 
         db.readOnly { implicit s =>
           userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).isDefined === false
-          userValueRepo.getValue(user1.id.get, "test").isDefined === true
+          userValueRepo.getValue(user1.id.get, test) === "this right here!"
           userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).get === "this right here!"
         }
         db.readWrite { implicit s =>
@@ -39,12 +42,12 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
         }
 
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test1") }
+          db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, test1) }
         } should throwAn[IllegalStateException]
 
-        db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
+        db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, test) } === "this right here!"
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
+          db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, test) } === "this right here!"
         }
 
         db.readOnly { implicit s =>

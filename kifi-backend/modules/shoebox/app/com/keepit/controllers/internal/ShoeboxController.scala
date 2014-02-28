@@ -587,7 +587,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
-    val value = db.readOnly { implicit session => userValueRepo.getValue(userId, key) } //using cache
+    val value = db.readOnly { implicit session => userValueRepo.getValueUnsafe(userId, key) } //using cache
     Ok(Json.toJson(value))
   }
 

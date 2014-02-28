@@ -68,27 +68,27 @@ class ExtPreferenceController @Inject() (
   }
 
   def setEnterToSend(enterToSend: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.enterToSend.name, enterToSend))
     Ok(JsNumber(0))
   }
 
   def setMaxResults(n: Int) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(0, n), 3).toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.maxResults.name, min(max(0, n), 3)))
     Ok(JsNumber(0))
   }
 
   def setShowKeeperIntro(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_keeper_intro", show.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showKeeperIntro.name, show))
     Ok(JsNumber(0))
   }
 
   def setShowSearchIntro(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_search_intro", show.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showSearchIntro.name, show))
     Ok(JsNumber(0))
   }
 
   def setShowFindFriends(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showFindFriends.name, show))
     Ok(JsNumber(0))
   }
 
@@ -134,11 +134,11 @@ class ExtPreferenceController @Inject() (
       messagingEmails <- messagingEmailsFuture
     } yield {
       UserPrefs(
-        enterToSend = UserValues.enterToSend.getFromMap(userVals),
-        maxResults = UserValues.maxResults.getFromMap(userVals),
-        showKeeperIntro = UserValues.showKeeperIntro.getFromMap(userVals),
-        showSearchIntro = UserValues.showSearchIntro.getFromMap(userVals),
-        showFindFriends = UserValues.showFindFriends.getFromMap(userVals),
+        enterToSend = UserValues.enterToSend.parseFromMap(userVals),
+        maxResults = UserValues.maxResults.parseFromMap(userVals),
+        showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals),
+        showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals),
+        showFindFriends = UserValues.showFindFriends.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }
   }

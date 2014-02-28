@@ -6,13 +6,15 @@ import com.keepit.common.db.{LargeString, State, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import org.joda.time.DateTime
+import com.keepit.model.UserValues.UserValueHandler
 
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
-  def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String]
+  def getValue[T](userId: Id[User], handler: UserValueHandler[T])(implicit session: RSession): T
+  def getValueUnsafe[T](userId: Id[User], key: String)(implicit session: RSession): Option[String]
   def getValues(userId: Id[User], keys: String*)(implicit session: RSession): Map[String, Option[String]]
   def getUserValue(userId: Id[User], key: String)(implicit session: RSession): Option[UserValue]
-  def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String
+  def setValue[T](userId: Id[User], name: String, value: T)(implicit session: RWSession): T
   def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Boolean
 }
 
@@ -53,16 +55,25 @@ class UserValueRepoImpl @Inject() (
     valueCache.remove(UserValueKey(userValue.userId, userValue.name))
   }
 
-  def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] = {
-    valueCache.getOrElseOpt(UserValueKey(userId, name)) {
-      (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f.value).firstOption.map(_.value)
+  private def getValueUnsafeNoCache[T](userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
+    (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === key) yield f.value).firstOption.map(_.value)
+  }
+
+  def getValueUnsafe[T](userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
+    valueCache.getOrElseOpt(UserValueKey(userId, key)) {
+      getValueUnsafeNoCache(userId, key)
     }
+  }
+
+  def getValue[T](userId: Id[User], handler: UserValueHandler[T])(implicit session: RSession): T = {
+    val value = getValueUnsafe(userId, handler.name)
+    handler.parse(value)
   }
 
   def getValues(userId: Id[User], names: String*)(implicit session: RSession): Map[String, Option[String]] =
     valueCache.bulkGetOrElseOpt(names map { name => UserValueKey(userId, name)} toSet ) { missingNames =>
       val missingValues = missingNames map {missingName =>
-        missingName -> (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === missingName.key) yield f.value).firstOption.map(_.value)
+        missingName -> getValueUnsafeNoCache(userId, missingName.key)
       }
       missingValues.toMap
     } map { case (k, v) =>
@@ -72,13 +83,14 @@ class UserValueRepoImpl @Inject() (
   def getUserValue(userId: Id[User], name: String)(implicit session: RSession): Option[UserValue] =
     (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f).firstOption
 
-  def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String = {
-    val updated = (for (v <- rows if v.userId === userId && v.name === name) yield (v.value, v.state, v.updatedAt)).update((value, UserValueStates.ACTIVE, clock.now())) > 0
+  def setValue[T](userId: Id[User], name: String, value: T)(implicit session: RWSession): T = {
+    val stringValue = value.toString
+    val updated = (for (v <- rows if v.userId === userId && v.name === name) yield (v.value, v.state, v.updatedAt)).update((stringValue, UserValueStates.ACTIVE, clock.now())) > 0
     if (updated) {
       valueCache.remove(UserValueKey(userId, name))
       value
     } else {
-        save(UserValue(userId = userId, name = name, value = value))
+        save(UserValue(userId = userId, name = name, value = stringValue))
         value
     }
   }
