@@ -64,10 +64,10 @@ class BookmarkInterner @Inject() (
       db.readWrite { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
         // If it happens, the user will experience the % complete jumping around a bit until it's finished.
-        userValueRepo.setValue(userId, "bookmark_import_last_start", clock.now.toString)
-        userValueRepo.setValue(userId, "bookmark_import_done", "0")
-        userValueRepo.setValue(userId, "bookmark_import_total", total.toString)
-        userValueRepo.setValue(userId, s"bookmark_import_${newImportId}_context", Json.toJson(context).toString())
+        userValueRepo.setValue(userId, "bookmark_import_last_start", clock.now)
+        userValueRepo.setValue(userId, "bookmark_import_done", 0)
+        userValueRepo.setValue(userId, "bookmark_import_total", total)
+        userValueRepo.setValue(userId, s"bookmark_import_${newImportId}_context", Json.toJson(context))
       }
 
       deduped.grouped(500).toList.map { rawKeepGroup =>
@@ -76,7 +76,7 @@ class BookmarkInterner @Inject() (
         val bulkAttempt = db.readWrite(attempts = 2) { implicit session =>
           rawKeepRepo.insertAll(rawKeepGroup)
         }
-        log.info(s"[persistRawKeeps] Persist result: ${bulkAttempt}")
+        log.info(s"[persistRawKeeps] Persist result: $bulkAttempt")
         if (bulkAttempt.isFailure) {
           log.info(s"[persistRawKeeps] Trying one at a time")
           val singleAttempt = db.readWrite { implicit session =>

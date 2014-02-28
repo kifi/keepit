@@ -21,6 +21,8 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getByUserAndName(userId: Id[User], name: String,
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
     (implicit session: RSession): Option[Collection]
+  def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
+  def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
 }
@@ -28,6 +30,8 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 @Singleton
 class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
+  val bookmarkCountForCollectionCache: BookmarkCountForCollectionCache,
+  val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val heimdal: HeimdalServiceClient,
   val db: DataBaseComponent,
@@ -54,10 +58,12 @@ class CollectionRepoImpl @Inject() (
   override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.set(UserCollectionsKey(collection.userId),
       (for (c <- rows if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
+    bookmarkCountForCollectionCache.remove(BookmarkCountForCollectionKey(collection.id.get))
   }
 
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
+    bookmarkCountForCollectionCache.remove(BookmarkCountForCollectionKey(model.id.get))
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
@@ -76,6 +82,17 @@ class CollectionRepoImpl @Inject() (
       (implicit session: RSession): Option[Collection] =
     (for (c <- rows if c.userId === userId && c.name === name
       && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
+
+  def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int = {
+    bookmarkCountForCollectionCache.getOrElse(BookmarkCountForCollectionKey(collId)) { keepToCollectionRepo.count(collId) }
+  }
+
+  def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int] = {
+    val keys = collIds.map(BookmarkCountForCollectionKey)
+    bookmarkCountForCollectionCache.bulkGetOrElse(keys){ missing =>
+      missing.map{ key => key -> keepToCollectionRepo.count(key.collectionId) }.toMap
+    }.map{ case (key, count) => key.collectionId -> count }
+  }
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
@@ -96,10 +113,12 @@ class CollectionRepoImpl @Inject() (
       save(get(collectionId) withLastKeptTo clock.now())
     } else {
       (for (c <- rows if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
+
+      // invalidate count cache
+      bookmarkCountForCollectionCache.remove(BookmarkCountForCollectionKey(collectionId))
     }
   }
 
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
-
-
 }
+

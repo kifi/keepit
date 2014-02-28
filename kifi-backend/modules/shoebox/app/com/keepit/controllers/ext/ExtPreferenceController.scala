@@ -2,22 +2,20 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.classify.{DomainRepo, Domain, DomainStates}
-import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator}
 import com.keepit.common.crypto.SimpleDESCrypt
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.mail.ElectronicMailCategory
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.controllers.core.NetworkInfoLoader
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
-import com.keepit.social.BasicUser
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{__, JsNumber, JsObject, Json}
+import play.api.libs.json.{__, JsNumber, Json}
 
 import scala.math.{max, min}
+import scala.concurrent.Future
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -70,27 +68,27 @@ class ExtPreferenceController @Inject() (
   }
 
   def setEnterToSend(enterToSend: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.enterToSend.name, enterToSend))
     Ok(JsNumber(0))
   }
 
   def setMaxResults(n: Int) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_max_results", min(max(0, n), 3).toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.maxResults.name, min(max(0, n), 3)))
     Ok(JsNumber(0))
   }
 
   def setShowKeeperIntro(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_keeper_intro", show.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showKeeperIntro.name, show))
     Ok(JsNumber(0))
   }
 
   def setShowSearchIntro(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_search_intro", show.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showSearchIntro.name, show))
     Ok(JsNumber(0))
   }
 
   def setShowFindFriends(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "ext_show_find_friends", show.toString))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showFindFriends.name, show))
     Ok(JsNumber(0))
   }
 
@@ -99,10 +97,12 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
-  def getPrefs() = JsonAction.authenticated { request =>
+  def getPrefs() = JsonAction.authenticatedAsync { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
-    Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get), encryptedIp))
+    loadUserPrefs(request.user.id.get) map {prefs =>
+      Ok(Json.arr("prefs", prefs, encryptedIp))
+    }
   }
 
   def setKeeperPosition() = JsonAction.authenticatedParseJson { request =>
@@ -126,15 +126,20 @@ class ExtPreferenceController @Inject() (
     Ok
   }
 
-  private def loadUserPrefs(userId: Id[User]): UserPrefs = {
-    db.readOnly { implicit s =>
+  private def loadUserPrefs(userId: Id[User]): Future[UserPrefs] = {
+    val userValsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
+    val messagingEmailsFuture = db.readOnlyAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
+    for {
+      userVals <- userValsFuture
+      messagingEmails <- messagingEmailsFuture
+    } yield {
       UserPrefs(
-        enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true),
-        maxResults = userValueRepo.getValue(userId, "ext_max_results").map(_.toInt).getOrElse(1),
-        showKeeperIntro = userValueRepo.getValue(userId, "ext_show_keeper_intro").map(_.toBoolean).getOrElse(false),
-        showSearchIntro = userValueRepo.getValue(userId, "ext_show_search_intro").map(_.toBoolean).getOrElse(false),
-        showFindFriends = userValueRepo.getValue(userId, "ext_show_find_friends").map(_.toBoolean).getOrElse(false),
-        messagingEmails = notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE))
+        enterToSend = UserValues.enterToSend.parseFromMap(userVals),
+        maxResults = UserValues.maxResults.parseFromMap(userVals),
+        showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals),
+        showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals),
+        showFindFriends = UserValues.showFindFriends.parseFromMap(userVals),
+        messagingEmails = messagingEmails)
     }
   }
 }

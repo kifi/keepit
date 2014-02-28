@@ -37,10 +37,10 @@ class CollectionCommander @Inject() (
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
     val unsortedCollections = db.readOnly { implicit s =>
-      collectionRepo.getByUser(userId).map { c =>
-        val count = keepToCollectionRepo.count(c.id.get)
-        BasicCollection fromCollection(c, Some(count))
-      }}
+      val colls = collectionRepo.getByUser(userId)
+      val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id.get).toSet)
+      colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id.get).orElse(Some(0))) }
+    }
     log.info(s"Sorting collections for $userId")
     val collections = sort match {
       case "user" =>
@@ -59,7 +59,7 @@ class CollectionCommander @Inject() (
   private def userSort(uid: Id[User], unsortedCollections: Seq[BasicCollection]): Seq[BasicCollection] = db.readWrite { implicit s =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValue(uid, CollectionOrderingKey).map{ value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
+    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
       case Some(orderedCollectionIds) =>
         val buf = new ArrayBuffer[BasicCollection](unsortedCollections.size)
         val collectionMap = unsortedCollections.map(c => c.id.get -> c).toMap
@@ -80,7 +80,7 @@ class CollectionCommander @Inject() (
   def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValue(uid, CollectionOrderingKey).map{ value =>
+    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value =>
       Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
     } getOrElse {
       val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)

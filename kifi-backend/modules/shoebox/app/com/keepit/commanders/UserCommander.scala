@@ -33,6 +33,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.typeahead.socialusers.SocialUserTypeahead
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -95,6 +96,7 @@ class UserCommander @Inject() (
   postOffice: LocalPostOffice,
   clock: Clock,
   scheduler: Scheduler,
+  socialUserTypeahead: SocialUserTypeahead,
   elizaServiceClient: ElizaServiceClient,
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
@@ -158,9 +160,9 @@ class UserCommander @Inject() (
   def getUserInfo(user: User): BasicUserInfo = {
     val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnly { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
-      val description =  userValueRepo.getValue(user.id.get, "user_description")
+      val description =  userValueRepo.getValueStringOpt(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
-      val pendingPrimary = userValueRepo.getValue(user.id.get, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email")
       val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
@@ -191,9 +193,9 @@ class UserCommander @Inject() (
     SafeFuture {
       createDefaultKeeps(newUser.id.get)
       db.readWrite { implicit session =>
-        userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", "true")
-        userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", "true")
-        userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", "true")
+        userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
+        userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
+        userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
       }
       searchClient.warmUpUser(newUser.id.get)
     }
@@ -203,8 +205,8 @@ class UserCommander @Inject() (
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
     delay {
       val guardKey = "friendsNotifiedAboutJoining"
-      if (!db.readOnly{ implicit session => userValueRepo.getValue(newUserId, guardKey).exists(_=="true") }) {
-        db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, "true") }
+      if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
+        db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
         val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
           val newUser = userRepo.get(newUserId)
           val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
@@ -247,10 +249,9 @@ class UserCommander @Inject() (
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
-    val guardKey = "welcomeEmailSent"
     val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
-    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, guardKey).exists(_=="true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, guardKey, "true") }
+    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
 
       if (withVerification) {
         val url = fortytwoConfig.applicationBaseUrl
@@ -444,6 +445,7 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+            socialUserTypeahead.refresh(userId)
             searchClient.updateUserGraph()
 
             SafeFuture{
@@ -542,6 +544,7 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
+        socialUserTypeahead.refresh(userId)
         searchClient.updateUserGraph()
       }
       success
@@ -607,7 +610,7 @@ class UserCommander @Inject() (
 
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[EmailAddress]], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
-      val pendingPrimary = userValueRepo.getValue(userId, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email")
       val uniqueEmailStrings = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmailStrings contains em.address)
       // Remove missing emails
@@ -654,7 +657,7 @@ class UserCommander @Inject() (
         }
       }
 
-      userValueRepo.getValue(userId, "pending_primary_email").map { pp =>
+      userValueRepo.getValueStringOpt(userId, "pending_primary_email").map { pp =>
         emailRepo.getByAddressOpt(pp) match {
           case Some(em) =>
             if (em.verified && em.address == pp) {

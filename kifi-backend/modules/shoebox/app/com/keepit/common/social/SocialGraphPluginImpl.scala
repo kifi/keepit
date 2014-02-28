@@ -23,6 +23,7 @@ import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.typeahead.socialusers.SocialUserTypeahead
 
 private case class FetchUserInfo(socialUserInfoId: Id[SocialUserInfo])
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -38,6 +39,7 @@ private[social] class SocialGraphActor @Inject() (
   socialUserImportFriends: SocialUserImportFriends,
   socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator,
+  socialUserTypeahead: SocialUserTypeahead,
   userValueRepo: UserValueRepo,
   heimdal: HeimdalServiceClient,
   clock: Clock)
@@ -105,13 +107,14 @@ private[social] class SocialGraphActor @Inject() (
           val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
           val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
           db.readWrite { implicit c =>
-            latestUserValues.collect { case (key, value) if userValueRepo.getValue(userId, key) != Some(value) =>
+            latestUserValues.collect { case (key, value) if userValueRepo.getValueStringOpt(userId, key) != Some(value) =>
               userValueRepo.setValue(userId, key, value)
               heimdal.setUserProperties(userId, key -> ContextStringData(value))
             }
             socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
           }
 
+          socialUserTypeahead.refresh(userId)
           connections
         }
       connectionsOpt getOrElse Seq.empty
