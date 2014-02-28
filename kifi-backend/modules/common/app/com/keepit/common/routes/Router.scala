@@ -231,6 +231,7 @@ object ABook extends Service {
     def refreshPrefixFiltersByIds() = ServiceRoute(POST, s"/internal/abook/refreshPrefixFiltersByIds")
     def refreshAllPrefixFilters() = ServiceRoute(GET, s"/internal/abook/refreshAllPrefixFilters")
     def richConnectionUpdate() = ServiceRoute(POST, s"/internal/abook/richConnectionUpdate")
+    def ripestFruit() = ServiceRoute(GET, s"/internal/abook/ripestFruit")
   }
 }
 

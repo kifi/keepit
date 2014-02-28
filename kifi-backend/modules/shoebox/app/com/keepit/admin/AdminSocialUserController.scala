@@ -7,6 +7,7 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
+import com.keepit.abook.ABookServiceClient
 
 import views.html
 import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
@@ -17,7 +18,8 @@ class AdminSocialUserController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRawInfoStore: SocialUserRawInfoStore,
-  socialGraphPlugin: SocialGraphPlugin)
+  socialGraphPlugin: SocialGraphPlugin,
+  abook: ABookServiceClient)
     extends AdminController(actionAuthenticator) {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticated { implicit request =>
@@ -63,5 +65,12 @@ class AdminSocialUserController @Inject() (
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
     socialGraphPlugin.asyncFetch(socialUserInfo)
     Redirect(com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfoId))
+  }
+
+  def ripestFruitView() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    abook.ripestFruit().map{ socialIds =>
+      val socialUsers = db.readOnly { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
+      Ok(html.admin.socialUsers(socialUsers, 0))
+    }
   }
 }
