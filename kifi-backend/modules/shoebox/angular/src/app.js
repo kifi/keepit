@@ -29,7 +29,8 @@ angular.module('kifi', [
   'kifi.layout.leftCol',
   'kifi.layout.main',
   'kifi.layout.nav',
-  'kifi.layout.rightCol'
+  'kifi.layout.rightCol',
+  'kifi.undo'
 ])
 
 .run(['$route', angular.noop])
