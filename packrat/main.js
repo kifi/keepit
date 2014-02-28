@@ -286,9 +286,6 @@ function onSocketConnect() {
 
 function onSocketDisconnect(why) {
   log('[onSocketDisconnect]', why)();
-  if (api.mode.isDev() !== api.isPackaged()) {
-    ajax('POST', '/error/report', {message: 'socket disconnect (' + why + ')'});
-  }
 }
 
 function getLatestThreads() {
