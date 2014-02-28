@@ -50,24 +50,13 @@ abstract class EContactTypeaheadBase(
     Await.result(asyncGetInfos(ids), Duration.Inf)
   }
 
-  protected def rebuild(userId:Id[User]):Future[Array[Long]] = {
+  def refresh(userId:Id[User]):Future[PrefixFilter[EContact]] = {
     build(userId).map { filter =>
       cache.set(EContactTypeaheadKey(userId), filter.data)
       store += (userId -> filter.data)
       log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
-      filter.data
+      filter
     }(ExecutionContext.fj)
-  }
-
-  def refresh(userId:Id[User]):Future[Unit] = rebuild(userId).map{ _ => }(ExecutionContext.fj) // todo(ray):merge with rebuild
-
-  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = {
-    implicit val fj = ExecutionContext.fj
-    val futures = new ArrayBuffer[Future[Unit]]
-    for (userId <- userIds) {
-      futures += refresh(userId)
-    }
-    Future.sequence(futures.toSeq).map{ _ => }
   }
 
   import com.keepit.common.time._
@@ -78,10 +67,10 @@ abstract class EContactTypeaheadBase(
         case Some((filter, meta)) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
             log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
-            rebuild(userId) // async
+            refresh(userId) // async
           }
           Future.successful(filter) // return curr one
-        case None => rebuild(userId)
+        case None => refresh(userId).map{ _.data }(ExecutionContext.fj)
       }
     }.map{ new PrefixFilter[EContact](_) }(ExecutionContext.fj)
   }
