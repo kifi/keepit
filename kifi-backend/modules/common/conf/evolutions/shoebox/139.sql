@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-CREATE TABLE IF NOT EXISTS user_value (
+CREATE TABLE IF NOT EXISTS system_value (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     name varchar(64) NOT NULL,
     value TEXT NOT NULL,
