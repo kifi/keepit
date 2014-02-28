@@ -5,7 +5,7 @@
       <div kf-keep ng-repeat="keep in keeps" ng-click="onClickKeep(keep, $event)" post-repeat-directive></div>
     </ol>
     <div class="kf-keep-group-title-fixed"></div>
-    <img class="kf-keeps-loading" src="/img/wait.gif">
-    <a class="kf-keeps-load-more hidden" href="javascript:">Show more</a>
+    <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/wait.gif">
+    <a class="kf-keeps-load-more" ng-hide="keepsLoading" href="javascript:">Show more</a>
   </div>
 </div>
