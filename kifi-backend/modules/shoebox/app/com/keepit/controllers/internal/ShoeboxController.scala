@@ -267,9 +267,13 @@ class ShoeboxController @Inject() (
     val signature = Signature((request.body \ "signature").as[String])
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
-
+    val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
     val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization))
+    val alternateCandidates = for {
+      url <- alternateUrls.toSeq
+      normalization <- SchemeNormalizer.findSchemeNormalization(url)
+    } yield ScrapedCandidate(url, normalization)
+    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization) +: alternateCandidates: _*)
     Ok
   }
 

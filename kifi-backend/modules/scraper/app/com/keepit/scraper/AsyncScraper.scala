@@ -192,6 +192,7 @@ class AsyncScraper @Inject() (
       title = latestUri.title.getOrElse(""),
       description = None,
       canonicalUrl = None,
+      alternateUrls = Set.empty,
       keywords = None,
       media = None,
       content = "",
@@ -321,6 +322,7 @@ class AsyncScraper @Inject() (
               val title = getTitle(extractor)
               val description = getDescription(extractor)
               val canonicalUrl = getCanonicalUrl(extractor)
+              val alternateUrls = getAlternateUrls(extractor)
               val keywords = getKeywords(extractor)
               val media = getMediaTypeString(extractor)
               val signature = Signature(Seq(title, description.getOrElse(""), keywords.getOrElse(""), content))
@@ -334,6 +336,7 @@ class AsyncScraper @Inject() (
                 title = title,
                 description = description,
                 canonicalUrl = canonicalUrl,
+                alternateUrls = alternateUrls,
                 keywords = keywords,
                 media = media,
                 content = content,
@@ -358,6 +361,8 @@ class AsyncScraper @Inject() (
   private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
 
   private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
+
+  private[this] def getAlternateUrls(x: Extractor): Set[String] = x.getAlternateUrls()
 
   private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
 
@@ -411,9 +416,10 @@ class AsyncScraper @Inject() (
     if (hasFishy301Restriction) Future.successful(true) else isFishy
   }
 
-  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String): Unit = {
+  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
     sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
-      helper.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL)
+      val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _))
+      helper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
     }
   }
 
