@@ -458,8 +458,10 @@ angular.module('kifi.keepService', [])
         });
       },
 
-      getKeepsByTagId: function (tagId) {
-        return $q.when([]);
+      getKeepsByTagId: function (tagId, params) {
+        params = params || {};
+        params.collection = tagId;
+        return api.getList(params);
       }
     };
 
