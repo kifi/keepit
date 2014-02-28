@@ -121,51 +121,51 @@ abstract class RepoModificationActor[R <: RepoModificationEvent[_]](airbrake: Ai
   val batchingConf = DefaultRepoModificationBatchingConfiguration()
 }
 
-case class SocialConnectionModification(modif: RepoModification[SocialConnection]) extends RepoModificationEvent[SocialConnection]
-@Singleton
-class SocialConnectionModificationActor @Inject() (
-  val clock: Clock,
-  val scheduler: Scheduler,
-  airbrake: AirbrakeNotifier,
-  richConnectionCommander: ShoeboxRichConnectionCommander
-) extends RepoModificationActor[SocialConnectionModification](airbrake) {
-  def getEventTime(modification: SocialConnectionModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[SocialConnectionModification]) = richConnectionCommander.sendSocialConnections()
-}
+// case class SocialConnectionModification(modif: RepoModification[SocialConnection]) extends RepoModificationEvent[SocialConnection]
+// @Singleton
+// class SocialConnectionModificationActor @Inject() (
+//   val clock: Clock,
+//   val scheduler: Scheduler,
+//   airbrake: AirbrakeNotifier,
+//   richConnectionCommander: ShoeboxRichConnectionCommander
+// ) extends RepoModificationActor[SocialConnectionModification](airbrake) {
+//   def getEventTime(modification: SocialConnectionModification) = modification.modif.model.updatedAt
+//   def processBatch(modifications: Seq[SocialConnectionModification]) = richConnectionCommander.sendSocialConnections()
+// }
 
-case class UserConnectionModification(modif: RepoModification[UserConnection]) extends RepoModificationEvent[UserConnection]
-@Singleton
-class UserConnectionModificationActor @Inject() (
-  val clock: Clock,
-  val scheduler: Scheduler,
-  airbrake: AirbrakeNotifier,
-  richConnectionCommander: ShoeboxRichConnectionCommander
-  ) extends RepoModificationActor[UserConnectionModification](airbrake) {
-  def getEventTime(modification: UserConnectionModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[UserConnectionModification]) = richConnectionCommander.sendUserConnections()
-}
+// case class UserConnectionModification(modif: RepoModification[UserConnection]) extends RepoModificationEvent[UserConnection]
+// @Singleton
+// class UserConnectionModificationActor @Inject() (
+//   val clock: Clock,
+//   val scheduler: Scheduler,
+//   airbrake: AirbrakeNotifier,
+//   richConnectionCommander: ShoeboxRichConnectionCommander
+//   ) extends RepoModificationActor[UserConnectionModification](airbrake) {
+//   def getEventTime(modification: UserConnectionModification) = modification.modif.model.updatedAt
+//   def processBatch(modifications: Seq[UserConnectionModification]) = richConnectionCommander.sendUserConnections()
+// }
 
-case class SocialUserInfoModification(modif: RepoModification[SocialUserInfo]) extends RepoModificationEvent[SocialUserInfo]
-@Singleton
-class SocialUserInfoModificationActor @Inject() (
-  val clock: Clock,
-  val scheduler: Scheduler,
-  airbrake: AirbrakeNotifier,
-  richConnectionCommander: ShoeboxRichConnectionCommander
-  ) extends RepoModificationActor[SocialUserInfoModification](airbrake) {
-  def getEventTime(modification: SocialUserInfoModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[SocialUserInfoModification]) = richConnectionCommander.sendSocialUsers()
-}
+// case class SocialUserInfoModification(modif: RepoModification[SocialUserInfo]) extends RepoModificationEvent[SocialUserInfo]
+// @Singleton
+// class SocialUserInfoModificationActor @Inject() (
+//   val clock: Clock,
+//   val scheduler: Scheduler,
+//   airbrake: AirbrakeNotifier,
+//   richConnectionCommander: ShoeboxRichConnectionCommander
+//   ) extends RepoModificationActor[SocialUserInfoModification](airbrake) {
+//   def getEventTime(modification: SocialUserInfoModification) = modification.modif.model.updatedAt
+//   def processBatch(modifications: Seq[SocialUserInfoModification]) = richConnectionCommander.sendSocialUsers()
+// }
 
-case class InvitationModification(modif: RepoModification[Invitation]) extends RepoModificationEvent[Invitation]
-@Singleton
-class InvitationModificationActor @Inject() (
-  val clock: Clock,
-  val scheduler: Scheduler,
-  airbrake: AirbrakeNotifier,
-  richConnectionCommander: ShoeboxRichConnectionCommander
-  ) extends RepoModificationActor[InvitationModification](airbrake) {
-  def getEventTime(modification: InvitationModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[InvitationModification]) = richConnectionCommander.sendInvitations()
-}
+// case class InvitationModification(modif: RepoModification[Invitation]) extends RepoModificationEvent[Invitation]
+// @Singleton
+// class InvitationModificationActor @Inject() (
+//   val clock: Clock,
+//   val scheduler: Scheduler,
+//   airbrake: AirbrakeNotifier,
+//   richConnectionCommander: ShoeboxRichConnectionCommander
+//   ) extends RepoModificationActor[InvitationModification](airbrake) {
+//   def getEventTime(modification: InvitationModification) = modification.modif.model.updatedAt
+//   def processBatch(modifications: Seq[InvitationModification]) = richConnectionCommander.sendInvitations()
+// }
 

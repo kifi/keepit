@@ -9,16 +9,17 @@ import com.keepit.model.{
   SocialUserInfo
 }
 
-import com.keepit.commanders.{
-  SocialConnectionModification,
-  SocialConnectionModificationActor,
-  UserConnectionModification,
-  UserConnectionModificationActor,
-  InvitationModification,
-  InvitationModificationActor,
-  SocialUserInfoModification,
-  SocialUserInfoModificationActor
-}
+// import com.keepit.commanders.{
+//   SocialConnectionModification,
+//   SocialConnectionModificationActor,
+//   UserConnectionModification,
+//   UserConnectionModificationActor,
+//   InvitationModification,
+//   InvitationModificationActor,
+//   SocialUserInfoModification,
+//   SocialUserInfoModificationActor
+// }
+
 
 import net.codingwell.scalaguice.ScalaModule
 
@@ -31,26 +32,26 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def socialConnectionChangeListener(socialConnectionModificationActor: ActorInstance[SocialConnectionModificationActor]): Option[RepoModification.Listener[SocialConnection]] = Some(
-    repoModification => socialConnectionModificationActor.ref ! SocialConnectionModification(repoModification)
+  def socialConnectionChangeListener(/*socialConnectionModificationActor: ActorInstance[SocialConnectionModificationActor]*/): Option[RepoModification.Listener[SocialConnection]] = Some(
+    repoModification => {} //socialConnectionModificationActor.ref ! SocialConnectionModification(repoModification)
   )
 
   @Provides
   @Singleton
-  def userConnectionChangeListener(userConnectionModificationActor: ActorInstance[UserConnectionModificationActor]): Option[RepoModification.Listener[UserConnection]] = Some({
-    repoModification => userConnectionModificationActor.ref ! UserConnectionModification(repoModification)
+  def userConnectionChangeListener(/*userConnectionModificationActor: ActorInstance[UserConnectionModificationActor]*/): Option[RepoModification.Listener[UserConnection]] = Some({
+    repoModification => {} //userConnectionModificationActor.ref ! UserConnectionModification(repoModification)
   })
 
   @Provides
   @Singleton
-  def invitationChangeListener(invitationModificationActor: ActorInstance[InvitationModificationActor]): Option[RepoModification.Listener[Invitation]] = Some({
-    repoModification => invitationModificationActor.ref ! InvitationModification(repoModification)
+  def invitationChangeListener(/*invitationModificationActor: ActorInstance[InvitationModificationActor]*/): Option[RepoModification.Listener[Invitation]] = Some({
+    repoModification => {} //invitationModificationActor.ref ! InvitationModification(repoModification)
   })
 
   @Provides
   @Singleton
-  def socialUserChangeListener(socialUserInfoMoficationActor: ActorInstance[SocialUserInfoModificationActor]): Option[RepoModification.Listener[SocialUserInfo]] = Some({
-    repoModification => socialUserInfoMoficationActor.ref ! SocialUserInfoModification(repoModification)
+  def socialUserChangeListener(/*socialUserInfoMoficationActor: ActorInstance[SocialUserInfoModificationActor]*/): Option[RepoModification.Listener[SocialUserInfo]] = Some({
+    repoModification => {} //socialUserInfoMoficationActor.ref ! SocialUserInfoModification(repoModification)
   })
 
 }
