@@ -37,10 +37,10 @@ class CollectionCommander @Inject() (
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
     val unsortedCollections = db.readOnly { implicit s =>
-      collectionRepo.getByUser(userId).map { c =>
-        val count = collectionRepo.getBookmarkCount(c.id.get)
-        BasicCollection fromCollection(c, Some(count))
-      }}
+      val colls = collectionRepo.getByUser(userId)
+      val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id.get).toSet)
+      colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id.get).orElse(Some(0))) }
+    }
     log.info(s"Sorting collections for $userId")
     val collections = sort match {
       case "user" =>
