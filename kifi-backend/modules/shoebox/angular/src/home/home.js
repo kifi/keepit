@@ -21,12 +21,6 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
 
-    $scope.loadingKeeps = true;
-
-    keepService.getList().then(function () {
-      $scope.loadingKeeps = false;
-    });
-
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
 
@@ -45,7 +39,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     };
 
     $scope.getSubtitle = function () {
-      if ($scope.loadingKeeps) {
+      if ($scope.loading) {
         return 'Loading...';
       }
 
@@ -73,14 +67,14 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
     $scope.scrollDisabled = false;
 
     $scope.getNextKeeps = function () {
-      if ($scope.loadingKeeps) {
+      if ($scope.loading) {
         return $q.when([]);
       }
 
-      $scope.loadingKeeps = true;
+      $scope.loading = true;
 
       return keepService.getList().then(function (list) {
-        $scope.loadingKeeps = false;
+        $scope.loading = false;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
@@ -89,5 +83,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
         return list;
       });
     };
+
+    $scope.getNextKeeps();
   }
 ]);

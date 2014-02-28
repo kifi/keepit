@@ -67,32 +67,27 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
     $scope.scrollDistance = '100%';
     $scope.scrollDisabled = false;
 
-    var lastResult = null;
-
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
         return;
       }
 
       $scope.loading = true;
-      keepService.getKeepsByTagId(tagId).then(function (data) {
+      return keepService.getKeepsByTagId(tagId).then(function (list) {
         $scope.loading = false;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
         }
 
-        lastResult = data;
+        return list;
       });
     };
+
     $scope.getNextKeeps();
 
     tagService.promiseById(tagId).then(function (tag) {
-      if (!tag) {
-        return;
-      }
-
-      $scope.tag = tag;
+      $scope.tag = tag || null;
     });
 
   }
