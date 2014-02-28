@@ -87,6 +87,7 @@ class UserCommander @Inject() (
   socialUserRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
   friendRequestRepo: FriendRequestRepo,
+  searchFriendRepo: SearchFriendRepo,
   userCache: SocialUserInfoUserCache,
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialGraphPlugin: SocialGraphPlugin,
@@ -600,6 +601,33 @@ class UserCommander @Inject() (
     }
   }
 
+  def includeFriend(userId:Id[User], id:ExternalId[User]):Option[Boolean] = {
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.includeFriend(userId, friendId)
+        log.info(s"[includeFriend($userId,$id)] friendId=$friendId changed=$changed")
+        searchClient.updateSearchFriendGraph()
+        changed
+      }
+    }
+  }
+
+  def excludeFriend(userId:Id[User], id:ExternalId[User]):Option[Boolean] = {
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.excludeFriend(userId, friendId)
+        log.info(s"[excludeFriend($userId, $id)] friendId=$friendId changed=$changed")
+        searchClient.updateSearchFriendGraph()
+        changed
+      }
+    }
+  }
 
   def delay(f: => Unit) = {
     import scala.concurrent.duration._

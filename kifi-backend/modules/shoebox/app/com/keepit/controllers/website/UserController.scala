@@ -170,32 +170,18 @@ class UserController @Inject() (
   }
 
   def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    db.readWrite { implicit s =>
-      val friendIdOpt = userRepo.getOpt(id) collect {
-        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
-      }
-      friendIdOpt map { friendId =>
-        val changed = searchFriendRepo.excludeFriend(request.userId, friendId)
-        searchClient.updateSearchFriendGraph()
-        Ok(Json.obj("changed" -> changed))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
-      }
+    userCommander.excludeFriend(request.userId, id) map { changed =>
+      Ok(Json.obj("changed" -> changed))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
     }
   }
 
   def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    db.readWrite { implicit s =>
-      val friendIdOpt = userRepo.getOpt(id) collect {
-        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
-      }
-      friendIdOpt map { friendId =>
-        val changed = searchFriendRepo.includeFriend(request.userId, friendId)
-        searchClient.updateSearchFriendGraph()
-        Ok(Json.obj("changed" -> changed))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
-      }
+    userCommander.includeFriend(request.userId, id) map { changed =>
+      Ok(Json.obj("changed" -> changed))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
     }
   }
 
