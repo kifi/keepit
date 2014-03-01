@@ -9,7 +9,10 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
     // onboarding.js are using this functions
     $window.getMe = function() {
-      return profileService.me ? $q.when(profileService.me) : profileService.fetchMe();
+      return (profileService.me ? $q.when(profileService.me) : profileService.fetchMe()).done(function (me) {
+        me.pic200 = me.picUrl;
+        return me;
+      });
     };
 
     $window.exitOnboarding = function () {
