@@ -3,10 +3,14 @@ package com.keepit.common.cache
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.ImmediateMap
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
   val ttl: Duration
+  val consolidationTtl: Option[Duration] = None
+  private val consolidator = consolidationTtl.map(new RequestConsolidator[K, Option[T]](_))
   outerCache map {outer => require(ttl <= outer.ttl)}
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
@@ -69,21 +73,28 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseFuture(key: K)(orElse: => Future[T]): Future[T] = {
+  def getOrElseFuture(key: K, consolidate: Boolean = true)(orElse: => Future[T]): Future[T] = {
     get(key) match {
       case Some(value) => Promise.successful(value).future
       case None =>
-        val valueFuture = orElse
+        val valueFuture = {
+          if (consolidator.isDefined && consolidate)
+            consolidator.get(key)(_ => orElse.imap(Some)).flatMap {
+              case Some(value) => Future.successful(value)
+              case None => orElse
+            }
+          else orElse
+        }
         valueFuture.onSuccess{ case value => set(key, value) }
         valueFuture
     }
   }
 
-  def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
+  def getOrElseFutureOpt(key: K, consolidate: Boolean = true)(orElse: => Future[Option[T]]): Future[Option[T]] = {
     internalGet(key) match {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
-        val valueOptFuture = orElse
+        val valueOptFuture = if (consolidator.isDefined && consolidate) consolidator.get(key)(_ => orElse) else orElse
         valueOptFuture.onSuccess{ case valueOpt => set(key, valueOpt) }
         valueOptFuture
     }
