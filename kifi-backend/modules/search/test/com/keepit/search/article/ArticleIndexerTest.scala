@@ -263,7 +263,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 
-    "delete documents with inactive, active, unscrapable, scrape_wanted or scrape_later state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "delete documents with inactive, active, unscrapable, or scrape_later state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
       indexer.update()
       indexer.numDocs === 3
 
@@ -292,16 +292,6 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       indexer.search("content1").size === 1
       indexer.search("content2").size === 1
       indexer.search("content3").size === 0
-
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPE_WANTED)).head
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
-      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
-
-      indexer.update()
-      indexer.numDocs === 2
-      indexer.search("content1").size === 0
-      indexer.search("content2").size === 1
-      indexer.search("content3").size === 1
     })
 
     "retrieve article records from index" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {

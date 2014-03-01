@@ -426,7 +426,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
-    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_WANTED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
+    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })

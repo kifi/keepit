@@ -125,13 +125,13 @@ class BookmarkInterner @Inject() (
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
-      if (uri.state == SCRAPE_WANTED || uri.state == ACTIVE || uri.state == INACTIVE) {
+      if (uri.state == ACTIVE || uri.state == INACTIVE) {
         val date = source match {
           case BookmarkSource.bookmarkImport => currentDateTime.plus(Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY))
           case BookmarkSource.keeper => START_OF_TIME
           case _ => currentDateTime
         }
-        internUri(uri, date)
+        scraper.scheduleScrape(uri, date)
       }
 
       val (isNewKeep, bookmark) = internBookmark(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
@@ -147,12 +147,6 @@ class BookmarkInterner @Inject() (
         message = Some(s"Exception while loading one of the bookmarks of user $userId: ${e.getMessage} from: $rawBookmark source: $source"),
         userId = Some(userId)))
       None
-  }
-
-  def internUri(uri: NormalizedURI, date: DateTime = currentDateTime)(implicit session: RWSession): NormalizedURI = {
-    val savedUri = uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED))
-    Try(scraper.scheduleScrape(savedUri, date))
-    savedUri
   }
 
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
