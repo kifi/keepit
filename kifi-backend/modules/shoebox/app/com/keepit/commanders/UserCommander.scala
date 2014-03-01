@@ -106,20 +106,19 @@ class UserCommander @Inject() (
   fortytwoConfig: FortyTwoConfig) extends Logging {
 
   // factored/copied from UserController.friends() for mobile
-  def getFriendsDetails(userId:Id[User]):Seq[(BasicUser, Boolean, Boolean, Int)] = { // todo(ray): inefficient impl -- optimize
-    val res = timing(s"friends($userId) ALL") {
+  def getFriendsDetails(userId:Id[User], connCount:Boolean):Seq[(BasicUser, Boolean, Boolean, Int)] = { // todo(ray): inefficient impl -- optimize
+    timing(s"friends($userId) ALL") {
       db.readOnly { implicit s =>
         val searchFriends = timing(s"friends($userId) searchFriends") { searchFriendRepo.getSearchFriends(userId) }
         val connectionIds = timing(s"friends($userId) connectionIds") { userConnectionRepo.getConnectedUsers(userId) }
         val unfriendedIds = timing(s"friends($userId) unfriendedIds") { userConnectionRepo.getUnfriendedUsers(userId) }
         timing(s"friends($userId) post-processing++") {
           (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true)).map{ case (userId, unfriended) =>
-            (basicUserRepo.load(userId), searchFriends.contains(userId), unfriended, userConnectionRepo.getConnectionCount(userId))
+            (basicUserRepo.load(userId), searchFriends.contains(userId), unfriended, if (connCount) userConnectionRepo.getConnectionCount(userId) else -1)
           }
         }
       }
     }
-    res
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
