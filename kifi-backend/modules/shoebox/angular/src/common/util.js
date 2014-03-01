@@ -31,4 +31,14 @@ angular.module('util', [])
       }
     };
   }
-]);
+])
+
+.constant('keyIndices', {
+  KEY_UP: 38,
+  KEY_DOWN: 40,
+  KEY_ENTER: 13,
+  KEY_ESC: 27,
+  KEY_TAB: 9,
+  KEY_DEL: 46,
+  KEY_F2: 113
+});

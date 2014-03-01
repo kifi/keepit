@@ -1,5 +1,5 @@
 <div ng-controller="ProfileCtrl">
-  <div class="profile" data-template>
+  <div kf-profile-page class="profile" data-template>
     <div class="antiscroll-inner">
       <h2>Settings</h2>
       <div class="profile-container">
@@ -10,8 +10,8 @@
             <span class="profile-input-placeholder">
               <span class="profile-placeholder-first-name">{{me.firstName}}</span> <span class="profile-placeholder-last-name">{{me.lastName}}</span>
             </span>
-            <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{firstName}}" required novalidate>
-            <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{lastName}}" required novalidate>
+            <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{me.firstName}}" required novalidate>
+            <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{me.lastName}}" required novalidate>
             <a class="profile-input-edit" href="javascript:" style="display:none">Edit</a>
             <a class="profile-input-save" href="javascript:">Save</a>
           </div>
@@ -19,16 +19,17 @@
         <div class="profile-input-wrapper" data-name="description">
           <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
           <div class="profile-input-box">
-            <input class="profile-input-input" disabled type="text" name="description" placeholder="Enter your description tagline" value="{{description}}" maxlength="50">
-            <a class="profile-input-edit" href="javascript:">Edit</a>
+            <div kf-profile-email-input></div>
+            <input class="profile-input-input profile-description-input" ng-disabled="!isDescriptionEditingEnabled()" kf-focus-if focus-cond="isDescriptionEditingEnabled()" type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
+            <a class="profile-input-edit" href="javascript:" ng-click="activateDescriptionEditing()">Edit</a>
             <a class="profile-input-save" href="javascript:">Save</a>
           </div>
         </div>
         <div class="profile-input-wrapper profile-email" data-name="email">
           <div class="profile-input-title">Contact email</div>
           <div class="profile-input-box">
-            <input class="profile-input-input" disabled type="text" name="email" placeholder="Enter your email address" value="{{primaryEmail.address}}" required novalidate>
-            <a class="profile-input-edit" href="javascript:">Edit</a>
+            <input class="profile-input-input profile-email-input" ng-disabled="!isEmailEditingEnabled()" kf-focus-if focus-cond="isEmailEditingEnabled()" type="text" name="email" placeholder="Enter your email address" required novalidate>
+            <a class="profile-input-edit" href="javascript:" ng-click="activateEmailEditing()">Edit</a>
             <a class="profile-input-save" href="javascript:">Save</a>
           </div>
         </div>
