@@ -2,7 +2,7 @@ var snapshot = function () {
   'use strict';
   return {
   // Characters that must not be considered part of names/tokens.
-  delim: /[#\.:> ]/,
+  delim: /[#\.:>\t]/,
 
   // HTML IDs and class names may not contain any space characters.
   // www.w3.org/TR/html5/dom.html#the-id-attribute
@@ -81,10 +81,11 @@ var snapshot = function () {
     // We loosen up the selector slowly because multiple matches is failure.
 
     // 1. Allow a new ancestor to have been inserted in the parent chain.
-    var sel1 = sel.replace(/>/g, " "), ancDelim;
+    //    Note: using \t for descendant combinator and space to terminate unicode escape sequences
+    var sel1 = sel.replace(/>/g, "\t"), ancDelim;
     els = doc.querySelectorAll(sel1);
     switch (els.length) {
-      case 0: sel = sel1; ancDelim = " "; break;
+      case 0: sel = sel1; ancDelim = "\t"; break;
       case 1: return els[0];
       default: ancDelim = ">";
     }
