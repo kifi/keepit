@@ -31,15 +31,14 @@ class MobileUserController @Inject() (
   typeaheadCommander: TypeaheadCommander)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  // copied/factored from UserController.friends -- inefficient impl
-  def getFriendsDetails = JsonAction.authenticated { request =>
-    val res = userCommander.getFriendsDetails(request.userId, false).map { case (basicUser, searchFriend, unfriended, _) =>
-      (Json.toJson(basicUser)).asInstanceOf[JsObject] ++ Json.obj(
-        "searchFriend" -> searchFriend,
-        "unfriended" -> unfriended
-      )
+  def getFriendsDetails = JsonAction.authenticatedAsync { request =>
+    userCommander.getFriendsDetails(request.userId).map { res =>
+      val arr = res.map { case (basicUser, searchFriend, unfriended) =>
+        (Json.toJson(basicUser)).asInstanceOf[JsObject] ++ Json.obj(
+          "searchFriend" -> searchFriend,
+          "unfriended" -> unfriended) }
+      Ok(Json.obj("friends" -> arr))
     }
-    Ok(Json.obj("friends" -> res))
   }
 
   def getFriends() = JsonAction.authenticated { request =>
